@@ -57,7 +57,7 @@ versus what was *predicted*.
 - **Latest versions of everything** (tools, libraries, PDK, base images). An older version may be used only to confirm that something once worked (e.g. the gplugins DEVSIM plugin against the meshwell release it was written for); the item is then upgraded to the latest version and re-verified to give the right result. Each such "worked on old → verified on latest" step is recorded in the docs.
 - **Use popular pre-built containers that already contain the PDK and tooling** rather than building toolchains from scratch: base images on IIC-OSIC-TOOLS (`hpretl/iic-osic-tools`, latest tag, pinned by digest), which ships gf180mcu, ngspice, Xyce, KLayout and gdsfactory. Project images on ghcr.io are thin layers on top (DEVSIM, forks, project code). Only tools absent from such images (Charon/Trilinos) get their own build, starting from an existing popular image where one exists.
 - At most 2 concurrent subagents.
-- Public-only data (A2). MPW-18H1 data is private and must not be used in public artefacts.
+- Public-only data (A2). MPW-18H1 data was made public on 2026-10-18 (https://wafer.space/google-gf180mcu-mpw18h1/) and may be used like the other runs.
 
 ## 4. Starting facts (all public)
 
