@@ -94,6 +94,13 @@ Three verdict levels per device and per metric:
 - *Calibration targets* (may be used to tune the process description): long-channel Cgg–Vg (oxide, well/channel doping, flat-band), long-channel Vt and body effect, Vt(L) roll-off, subthreshold slope.
 - *Validation targets* (must never be tuned on; they are the evidence): Idsat, linear Id at high Vgs, gm, gds/output conductance, Vt at the narrow width, DIBL, all of the above at geometries not used in calibration.
 - Each tunable parameter, its value, its bounds, its public source and which target it was tuned against is recorded in a machine-readable process file and rendered in the docs.
+- *Parameter sources (my call).* Allowed, in order of preference: (1) PDK public docs (spec tables, layer/DRC rules — e.g. spacer, overlap, poly width); (2) values in the public SPICE card (TOXE/TOXP, NDEP, NSD, NGATE, XJ, LPE0, RDSW) used as **starting points and bounds**, never as fixed truths — BSIM parameters are fitted, not physical, and this is stated wherever used; (3) generic published 0.18 µm-class 5 V values with a citation. Every value carries a provenance tag: `pdk-doc`, `spice-card`, `literature`, or `calibrated`.
+- *Free-parameter budget (my call).* At most **8 calibrated parameters per device type** (n or p), shared across all geometries, e.g. channel peak doping + depth, LDD dose + depth, S/D junction depth, effective oxide, surface-mobility scale, contact resistivity. Adding a structural feature not documented by any public source (e.g. halo/pocket) counts against the budget and must be justified by a calibration-target residual that cannot otherwise be removed. If calibration targets themselves cannot reach tolerance within the budget, calibration stops, the best fit is published with a "Disagree"/"Same process" verdict and the residual is analysed (§6); the budget is not raised silently.
+- *Held-out geometries (my call, fixed before calibration).* Calibration may see W=10 at L = 10, 2 and Lmin (long-channel + roll-off endpoints). Held out for validation only: W=10 at L = 0.7 and 1, and the narrow 1.6/0.7. All metrics at held-out geometries are validation evidence; Idsat/gm/gds/DIBL are validation at every geometry.
+
+**SPICE reference conditions (my call).** The primary golden reference uses the PDK device as a designer would instantiate it from a schematic: the PDK's default instance parameters (AS/AD/PS/PD computed by the PDK's standard formulas, default SA/SB/SCA/SCB, nf=1, m=1). A secondary reference uses parameters extracted from the actual gdsfactory cell layout; the difference between the two is reported and attributed to `stress`/`rsd`/well-proximity. Both are fixed before any TCAD result is generated.
+
+**"Same process" window for metrics without a published spec (my call).** Taken from the PDK's own SPICE corners: the window is the envelope of TT/FF/SS/FS/SF at the same geometry and bias. Phase 1 therefore sweeps all five corners. Where the PDK publishes a spec min–max, the wider of the two windows is used and the choice is shown.
 
 **Tolerances (ITRS 2007 Modeling & Simulation, Table MS3, unless marked).**
 
@@ -219,6 +226,7 @@ Each phase ends with merged, reviewed work on `main`, published docs and passing
 - Resource defaults 16 GiB / 8 CPU per job, 128 GiB aggregate.
 - DEVSIM first, Charon as cross-check; ngspice primary SPICE, Xyce secondary.
 - MOSCAP before MOSFET.
+- Parameter-source hierarchy, 8-parameter calibration budget, held-out geometries, SPICE reference instance parameters, corner-envelope "Same process" window (all §5.2).
 - IIC-OSIC-TOOLS as the base container; latest gf180mcuD as primary reference, run-1/2 `d658698` as secondary.
 
 ## 15. Left to the builder
