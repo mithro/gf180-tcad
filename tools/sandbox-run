@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Run a command in the resource-limited gf180-tcad container sandbox.
+#   sandbox-run [--mem 16g] [--cpus 8] [--pids 4096] [--image REF] [--workdir DIR]
+#               [--network none|bridge] -- CMD...
+# Exit code is CMD's (137 on OOM kill). Only CMD's output goes to stdout.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MEM=16g CPUS=8 PIDS=4096 NETWORK=none WORKDIR="$PWD"
+IMAGE="$(head -n1 "$REPO/docker/IMAGE")"
+
+die() { echo "sandbox-run: $*" >&2; exit 2; }
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --mem) MEM="${2:?}"; shift 2 ;;
+        --cpus) CPUS="${2:?}"; shift 2 ;;
+        --pids) PIDS="${2:?}"; shift 2 ;;
+        --image) IMAGE="${2:?}"; shift 2 ;;
+        --workdir) WORKDIR="${2:?}"; shift 2 ;;
+        --network) NETWORK="${2:?}"; shift 2 ;;
+        --) shift; break ;;
+        *) die "unknown option: $1" ;;
+    esac
+done
+[ $# -gt 0 ] || die "no command given (use -- CMD...)"
+case "$NETWORK" in none|bridge) ;; *) die "--network must be none or bridge" ;; esac
+[ -d "$WORKDIR" ] || die "workdir does not exist: $WORKDIR"
+WORKDIR="$(cd "$WORKDIR" && pwd)"
+
+NAME="gf180tcad-$(cat /proc/sys/kernel/random/uuid)"
+cleanup() { docker rm -f "$NAME" > /dev/null 2>&1 || true; }
+trap 'cleanup; exit 130' INT
+trap 'cleanup; exit 143' TERM
+
+docker run --rm --name "$NAME" \
+    --entrypoint "" \
+    --cgroup-parent=gf180-tcad.slice --cgroupns=host \
+    --memory "$MEM" --memory-swap "$MEM" --cpus "$CPUS" --pids-limit "$PIDS" \
+    --network "$NETWORK" \
+    --read-only --tmpfs /tmp:rw,size=1g,exec \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp/home -e USER=gf180tcad -e LOGNAME=gf180tcad \
+    -e OMP_NUM_THREADS=1 -e OPENBLAS_NUM_THREADS=1 -e MKL_NUM_THREADS=1 \
+    -v "$REPO:/work/src:ro" -v "$WORKDIR:/work/out:rw" --workdir /work/out \
+    "$IMAGE" \
+    sh -c 'mkdir -p "$HOME" && exec "$@"' -- "$@" &
+PID=$!
+rc=0
+wait "$PID" || rc=$?
+# a trapped signal interrupts `wait` (rc>128 from our own signal is handled by traps)
+exit "$rc"

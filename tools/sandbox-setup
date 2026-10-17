@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# One-time (idempotent) host setup: install the systemd slice that caps the aggregate
+# memory/tasks of every sandboxed simulator container. Needs sudo.
+set -euo pipefail
+
+UNIT=/etc/systemd/system/gf180-tcad.slice
+CONTENT='[Unit]
+Description=gf180-tcad sandboxed simulator jobs (aggregate resource cap)
+
+[Slice]
+MemoryMax=128G
+MemorySwapMax=0
+TasksMax=32768
+'
+
+if [ -f "$UNIT" ] && [ "$(cat "$UNIT")" = "${CONTENT%$'\n'}" ]; then
+    echo "sandbox-setup: $UNIT already up to date" >&2
+else
+    printf '%s' "$CONTENT" | sudo tee "$UNIT" > /dev/null
+    sudo systemctl daemon-reload
+    echo "sandbox-setup: installed $UNIT" >&2
+fi
+systemctl show gf180-tcad.slice -p MemoryMax -p MemorySwapMax -p TasksMax >&2
