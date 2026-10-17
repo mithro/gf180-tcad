@@ -5,8 +5,9 @@
 set -euo pipefail
 
 UNIT=/etc/systemd/system/gf180-tcad.slice
-CONTENT='[Unit]
-Description=gf180-tcad sandboxed simulator jobs (aggregate resource cap)
+CONTENT='# Aggregate resource cap for all gf180-tcad sandbox containers.
+[Unit]
+Description=gf180-tcad simulation sandbox slice
 
 [Slice]
 MemoryMax=128G

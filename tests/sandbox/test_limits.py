@@ -3,6 +3,8 @@
 
 import os
 import subprocess
+import time
+from pathlib import Path
 
 import pytest
 
@@ -32,27 +34,79 @@ def test_oom_is_reported(tmp_path):
 
 
 def test_network_disabled(tmp_path):
-    with pytest.raises(sandbox.SandboxError):
+    with pytest.raises(sandbox.SandboxError) as exc:
         sandbox.run(
             ["python3", "-c", "import socket; socket.create_connection(('1.1.1.1',53),2)"],
             out_dir=tmp_path,
         )
+    assert "Network is unreachable" in exc.value.result.stderr
 
 
 def test_pids_limited(tmp_path):
-    # 200 background sleeps cannot all start under pids=64; the script exits 3 if they did.
+    # 200 background sleeps cannot all start under pids=64: bash hits fork errors (or the
+    # script exits 3 because fewer than 200 started).
     script = (
         "for i in $(seq 200); do sleep 30 & done; "
         'n=$(jobs -p | wc -l); kill $(jobs -p); [ "$n" -lt 200 ] && exit 3; exit 0'
     )
-    with pytest.raises(sandbox.SandboxError):
+    with pytest.raises(sandbox.SandboxError) as exc:
         sandbox.run(["bash", "-c", script], out_dir=tmp_path, pids=64)
+    res = exc.value.result
+    assert res.returncode == 3 or "Resource temporarily unavailable" in res.stderr
     assert _leftover_containers() == []
 
 
 def test_in_slice(tmp_path):
-    res = sandbox.run(["cat", "/proc/self/cgroup"], out_dir=tmp_path)
-    assert "gf180-tcad.slice" in res.stdout
+    proc = subprocess.Popen(
+        [str(sandbox.SANDBOX_RUN), "--workdir", str(tmp_path), "--", "sleep", "30"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    try:
+        names: list[str] = []
+        for _ in range(100):
+            names = _leftover_containers()
+            if names:
+                break
+            time.sleep(0.2)
+        assert names, "container did not start"
+        pid = subprocess.run(
+            ["docker", "inspect", "-f", "{{.State.Pid}}", names[0]],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        cgroup = Path(f"/proc/{pid}/cgroup").read_text()
+        assert "gf180-tcad.slice" in cgroup
+    finally:
+        subprocess.run(["docker", "rm", "-f", *_leftover_containers()], check=False)
+        proc.wait(timeout=30)
+        proc.stderr.close()
+    assert _leftover_containers() == []
+
+
+def test_memory_limit_applied(tmp_path):
+    res = sandbox.run(["cat", "/sys/fs/cgroup/memory.max"], out_dir=tmp_path, mem="1g")
+    assert res.stdout.strip() == str(2**30)
+
+
+def test_workdir_inside_repo_refused():
+    res = subprocess.run(
+        [str(sandbox.SANDBOX_RUN), "--workdir", str(sandbox.REPO_ROOT / "tests"), "--", "true"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert res.returncode == 2
+    assert "inside" in res.stderr
+
+
+def test_workdir_required():
+    res = subprocess.run(
+        [str(sandbox.SANDBOX_RUN), "--", "true"], capture_output=True, text=True, check=False
+    )
+    assert res.returncode == 2
+    assert "--workdir is required" in res.stderr
 
 
 def test_outputs_owned_by_user(tmp_path):
