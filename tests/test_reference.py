@@ -570,7 +570,7 @@ def test_reference_subset_hash_stable(tmp_path):
         trees.append(_tree(out))
     a, b = trees
     rel = NFET_LMIN.relpath.as_posix()
-    assert set(a) == {"provenance.json"} | {
+    assert set(a) == {"provenance.json", "envelope.json"} | {
         f"{rel}/{n}" for n in reference.expected_files("ngspice")
     }
     assert a == b
