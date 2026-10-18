@@ -16,18 +16,22 @@ def _strip_cmd_echo(text: str) -> list[str]:
     return [ln for ln in text.splitlines() if not ln.startswith("#    uv export")]
 
 
-@pytest.mark.parametrize(
-    ("group", "lock"),
-    [("image", "requirements.lock"), ("image-build", "build-requirements.lock")],
-)
-def test_requirements_lock_in_sync_with_uv_lock(group, lock):
+# image lock: main dependencies (gf180tcad runtime, e.g. numpy) + the `image` group.
+# build lock: build tooling only (`--only-group`), so it never pulls in runtime dependencies.
+EXPORTS = {
+    "requirements.lock": ["--group", "image"],
+    "build-requirements.lock": ["--only-group", "image-build"],
+}
+
+
+@pytest.mark.parametrize("lock", sorted(EXPORTS))
+def test_requirements_lock_in_sync_with_uv_lock(lock):
     assert shutil.which("uv"), "uv is required to check the docker/base lock files"
     cmd = [
         "uv",
         "export",
         "--locked",
-        "--group",
-        group,
+        *EXPORTS[lock],
         "--no-dev",
         "--no-emit-project",
         "--format",
