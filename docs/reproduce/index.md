@@ -46,7 +46,8 @@ uv run --locked python -m gf180tcad spice-reference \
 `pfet_05v0`) and `--geometry` (a geometry id such as `w10p0_l0p60`) can be
 repeated; the default is all of them, and `--engine` defaults to `both`.
 `--geometry` keeps, for each selected device, only the listed geometries that
-device has; a geometry that no selected device has is an error. For example, a single device at one corner:
+device has; a geometry that no selected device has is an error. For example,
+a single device at one corner:
 
 ```sh
 uv run --locked python -m gf180tcad spice-reference --engine ngspice \
@@ -116,35 +117,36 @@ described in {doc}`../limitations/engine-cross-check`.
 
 ## Cross-host determinism
 
-The committed reference is generated on the project's own machine. To show
-that the same bytes come out on a different host, the
+The committed reference is generated on the project's own machine, whose CPUs
+are Intel Xeon Gold 6152. To show that the same bytes come out on a different
+host, the
 [`crosscheck` workflow](https://github.com/mithro/gf180-tcad/blob/main/.github/workflows/crosscheck.yml)
-regenerates part of it on a GitHub-hosted runner (`ubuntu-latest`, a
-different CPU, kernel and Docker installation) and requires every file to
-be byte-identical, by sha256, to `results/MANIFEST.sha256`. There is no
-tolerance: a difference in the last digit of one float fails it.
+regenerates it on a GitHub-hosted runner (`ubuntu-latest`) and requires every
+file to be byte-identical, by sha256, to `results/MANIFEST.sha256`. The
+runner has a different CPU, kernel and Docker installation, and its CPU model
+varies from run to run; so far the runs have landed on AMD EPYC 9V45 and AMD
+EPYC 7763. There is no tolerance: a difference in the last digit of one float
+fails it.
 
-**Cross-checked on GitHub-hosted runners** are the 8 jobs listed in
-[`tests/crosscheck_subset.txt`](https://github.com/mithro/gf180-tcad/blob/main/tests/crosscheck_subset.txt).
-These are both engines at the `typical` corner for:
+**Everything is cross-checked on GitHub-hosted runners.** The
+[subset file](https://github.com/mithro/gf180-tcad/blob/main/tests/crosscheck_subset.txt)
+holds the single line `all`, which stands for every job of the reference:
+both engines, all five corners, both devices and all six geometries of each,
+120 jobs. Each job includes every sweep its engine runs (`idvg_lin`,
+`idvg_sat`, `idvd`, `ioff` and, for ngspice only, `cv`). The check covers
+all 660 CSV and metrics files, the provenance file and the corner envelope.
+Nothing is checked only locally.
 
-| device | geometries (W/L in µm) |
-|---|---|
-| `nfet_05v0` | 10/0.6 (Lmin), 1.6/0.7 |
-| `pfet_05v0` | 10/0.5 (Lmin), 1.6/0.7 |
+The subset file can instead list jobs one per line, as
+`<engine>/<corner>/<device>/<geometry_id>`, to cross-check part of the
+reference. The corner envelope is then not compared, because it is the
+min/max over all five corners and a partial run lacks some of them, so its
+envelope always differs from the committed one. The envelope is computed only
+by selecting from the metrics floats, and those are compared.
 
-Each job includes every sweep its engine runs: `idvg_lin`, `idvg_sat`,
-`idvd`, `ioff` and, for ngspice only, `cv`. So the check covers 44 CSV and
-`metrics.json` files, plus `provenance.json`.
-
-**Checked only locally** is everything else: the other four corners, the
-other four geometries of each device, and `envelope.json`. `make reproduce`
-regenerates all of these and checks them against the same manifest, but
-only on the machine it is run on.
-
-The workflow runs on pull requests that change `src/`, `tools/`, `docker/`,
-`results/`, the subset file or the workflow itself, and also weekly and on
-demand. Its steps are:
+The workflow runs on pull requests that change the sources, tools, image
+pin, results, project metadata, lock file, Makefile, subset file or the
+workflow itself, and also weekly and on demand. Its steps are:
 
 1. Free disk space and pull `docker/IMAGE` by its digest.
 2. Install the sandbox slice with `sudo tools/sandbox-setup`. Then, while
@@ -154,7 +156,7 @@ demand. Its steps are:
    limits. The same `tools/sandbox-run` is used as locally; the sandbox is
    never disabled.
 3. `tools/crosscheck-args` turns the subset file into `spice-reference`
-   filters (`--engine both --corner typical --device ... --geometry ...`).
+   filters (`--engine`, `--corner`, `--device` and `--geometry`).
    The jobs then run with `--jobs 3` (3 × 4 GiB, 1 CPU each, on a 4-CPU,
    16 GiB runner) into a temporary `--out`. They are never written to
    `results/spice`, because `--out` is replaced by what was run.
@@ -163,23 +165,19 @@ demand. Its steps are:
    prints one line per difference, as `<reason>: spice/<path>`, and exits
    non-zero if there is any. The reasons are:
    - `changed`: different bytes.
-   - `missing`: a committed file of a listed job, or `provenance.json`, was
-     not produced.
+   - `missing`: a committed file of a listed job was not produced, or the
+     provenance file (always required) or, for the full reference, the
+     envelope.
    - `not in manifest`: a produced file that was never committed.
    - `not in subset`: a produced job that is not listed.
    - `unknown job`: a listed job that has no committed files.
 
-   On success it prints `identical: 45 files of 8 jobs ...`. The output is
+   On success it prints `identical: 662 files of 120 jobs ...`. The output is
    also shown in the run's summary.
 5. On failure, an artefact named `crosscheck-differences` is uploaded. It
    holds the generated and committed copy of each differing file, a
    `diff -u` of each pair, the generator log, the runner and sandbox
    diagnostics, and the scratch directory of any job that failed.
-
-`envelope.json` is not compared. It is the min/max over all five corners,
-and a subset run has only `typical`, so its envelope always differs from the
-committed one. It is computed only by selecting from the `metrics.json`
-floats, and those are compared.
 
 `provenance.json` is compared. A change to the generator's sources changes
 `generator_sha256`, so the cross-check fails until the reference has been
