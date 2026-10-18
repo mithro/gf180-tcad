@@ -283,24 +283,35 @@ A second independent review checked the revised plan against the code on main, t
 
 **Context.** At gplugins v0.8.0 on Sept-2023 packages, `test_pin_waveguide` passed (276 s) and `DDComponent.ddsolver()` converged (5.8 s). `get_refined_mesh` has a `NameError` (`get_solver.py:359`). At v1.4.2 from its frozen lock, the import fails.
 
-Research reference: `scripts/install.sh`, `run.sh`, `run-dd.sh` and `dd_v080.py` in the research workdir `wd-v080/`. Re-create them here; do not copy host paths.
+**Sources of the checks** (all in the fork's history; no research scratch files are needed):
+- **PIN:** `git -C third_party/gplugins show v0.8.0:gplugins/devsim/test_devsim.py`, the body of `test_pin_waveguide`. It builds `get_simulation_xsection.PINWaveguide(core_width=500 nm, core_thickness=220 nm, slab_thickness=90 nm)`, runs `ddsolver()` and then `ramp_voltage`.
+- **PN slab (`DDComponent`):** `git -C third_party/gplugins show v0.8.0:gplugins/devsim/get_solver.py`, its `if __name__ == "__main__":` block (from l.412). It trims `straight_pn(length=10)` to `[[3,-4],[3,4],[5,4],[5,-4]]`, uses the anode/cathode layers (105,0)/(106,0) from VIAC∧NPP and VIAC∧PPP, and its `resolutions` dict, `xsection_bounds=[(4,-4),(4,4)]` and `mesh_scaling_factor=1e-4`.
+- `checks_v080.py` is these two blocks turned into named checks, with only the result recording added:
+  - `import`: `import gplugins.devsim`;
+  - `pin_test`: the PIN build plus `ddsolver()`;
+  - `ramp`: `ramp_voltage` on PIN to 0 and then −1 V, and on the PN slab to 0.1 and 0.2 V;
+  - `ddcomponent_mesh`: the `DDComponent(...)` construction;
+  - `ddsolver`: `c.ddsolver()` on the PN slab;
+  - `refine`: `c.get_refined_mesh(...)` exactly as in the block.
+- `checks_v142.py` runs the `import` check only, because the import is what fails.
 
 **Files (gf180-tcad):**
 - `src/gf180tcad/history/__init__.py`, `src/gf180tcad/history/__main__.py`;
 - `experiments/plugin-history/README.md`;
 - `experiments/plugin-history/v080.lock` (the hashed, resolved v0.8.0 set);
 - `experiments/plugin-history/checks_v080.py` and `checks_v142.py` (the in-venv check drivers);
-- `results/plugin-history/{v0.8.0,v1.4.2}.json`;
+- `results/plugin-history/{v0.8.0,v1.4.2}.json`, plus `results/plugin-history/v0.8.0-mesh0p5.json` (the PN slab at half mesh size, for Task 5's tolerance);
 - `tests/test_plugin_history.py`.
+- uv itself comes from `docker/tcad/build-requirements.lock` (Task 1). No new uv lock is added.
 
 The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator module (Global Constraints).
 
 **Interfaces:**
-- Produces: `python -m gf180tcad.history --version v0.8.0|v1.4.2 --out DIR`. It runs on the host, uses the base image, and works in these steps:
+- Produces: `python -m gf180tcad.history --version v0.8.0|v1.4.2 [--mesh-scale R] --out DIR`. `--mesh-scale R` (default 1) multiplies every value in the PN slab's `resolutions` dict by R, and is recorded in the JSON. The PIN check uses DEVSIM's own mesh and ignores it. The command runs on the host, uses the base image, and works in these steps:
   1. **Sources, on the host.** `git -C third_party/gplugins archive <tag> | tar -x -C <workdir>/gplugins`. CI submodule clones are shallow and have no tags, so the command first runs `git -C third_party/gplugins fetch --depth 1 origin tag <tag>` if the tag is missing.
   2. **Network-on install**, `sandbox.run(..., network=True)`:
      - All state lives in the workdir, because HOME is a 1 GiB tmpfs that disappears between containers. Set `UV_CACHE_DIR=/work/out/uvcache`, `UV_PYTHON_INSTALL_DIR=/work/out/uvpython` and `PIP_CACHE_DIR=/work/out/pipcache`.
-     - uv is pinned and hashed, installed with `/usr/bin/python3 -m pip --require-hashes` into `/work/out/toolvenv`.
+     - uv is pinned and hashed, installed from `docker/tcad/build-requirements.lock` (read from `/work/src`) with `/usr/bin/python3 -m pip --require-hashes` into `/work/out/toolvenv`.
      - **v0.8.0:** Python `3.11.17`. Install from `experiments/plugin-history/v080.lock` with `--require-hashes`. The lock was generated once, with `uv pip compile --exclude-newer 2023-09-20T18:00:00Z --exclude-newer-package klayout=2024-04-01T00:00:00Z`, from `-e ./gplugins[devsim,gmsh,tidy3d]`, `pytest` and `"klayout<0.29"`. The klayout exemption is required, because old 0.28 wheels carry 2024 upload dates. The lock keeps the record re-runnable after PyPI yanks.
      - **v1.4.2:** `uv sync --frozen --extra devsim --extra gmsh --extra tidy3d --extra dev`, with the base Python 3.12.
   3. **Network-off run**, `sandbox.run(...)` without network, of the fixed checks with `PDK` unset. These checks may access the network only in step 2; if tidy3d tries to reach the web in step 3, record the failure text.
@@ -319,7 +330,7 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - Not sandbox-marked: `test_history_json_has_no_timings_or_paths`.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement and run, then commit the JSON.
+- [ ] **Step 2:** Implement and run, then commit the JSON. This includes `--version v0.8.0 --mesh-scale 0.5` into `v0.8.0-mesh0p5.json`.
   - Two local runs must agree byte for byte.
   - `results/plugin-history` is **not** part of the GitHub crosscheck, because the old stack has no cross-host bit-identity guarantee. The docs say so.
 - [ ] **Step 3:** Docs: `docs/limitations/plugin-history.md`, giving the plugin's history (commits `a019e5a`, `0ce7b30`, `017cede`) and the "once worked" evidence. It has a placeholder section, "Re-verified on latest", which Tasks 4 and 5 fill in (spec §3). Requires the docs-links infrastructure on main. Then commit, open the PR, review and merge.
@@ -332,7 +343,14 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 
   `PYTHONPATH=/work/out` puts the worktree ahead of the image's `.pth` entry. Record the log in the PR.
 - **Fork CI.** Add a `devsim` job to `test_code.yml` that runs inside the pinned TCAD image: `docker run` of `ghcr.io/mithro/gf180-tcad-tcad@sha256:…`, the digest copied from gf180-tcad's `docker/TCAD_IMAGE` and recorded in the workflow. The fork CI then uses exactly the locked environment and does not resolve a new one. The job uses hosted runners and no secrets.
-- **Physics constants** are those in the Global Constraints table. The fork's material helpers take them as arguments: `gplugins/devsim/materials.py`, `set_silicon(device, region, *, T_K, eps_r, n_i_cm3, ...)` and `set_oxide(...)`. `simple_physics.SetSiliconParameters`/`SetOxideParameters` are never called with their defaults.
+  - The `docker run` reproduces `tools/sandbox-run`'s container settings (gf180-tcad `tools/sandbox-run:48-61`):
+    - `--read-only --tmpfs /tmp:rw,size=1g,exec`, `--network none` and a non-root `--user`;
+    - `-e HOME=/tmp/home`, `OMP_NUM_THREADS=1`, `OPENBLAS_NUM_THREADS=1` and `MKL_NUM_THREADS=1`;
+    - `NPY_DISABLE_CPU_FEATURES="X86_V3 X86_V4 AVX512_ICL AVX512_SPR"` (the same list as `sandbox-run:41`);
+    - the checkout mounted at `/work/out` (rw) with `PYTHONPATH=/work/out`.
+
+    A comment in the workflow names the gf180-tcad commit the settings were copied from. `PYTHON_CPU_COUNT=1` comes from the image.
+- **Physics constants** are those in the Global Constraints table. The fork's material helpers take them as arguments: `gplugins/devsim/materials.py`, `set_silicon(device, region, *, T_K, eps_r, n_i_cm3, mu_n, mu_p, tau_n, tau_p, ...)` and `set_oxide(...)`. `simple_physics.SetSiliconParameters`/`SetOxideParameters` are never called with their defaults.
 - **Submodule bumps are batched.** There is one gf180-tcad bump after Task 8 (bump 2 of 3), covering Tasks 4–8 together. Tasks 4–7 do not bump.
 
 ### Task 4 (fork): import and test `gplugins.devsim` on latest, no physics change
