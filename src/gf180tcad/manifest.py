@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 
@@ -67,25 +68,45 @@ def verify(root: Path, manifest: Path) -> list[str]:
 # A subset run (some jobs of the reference, regenerated elsewhere, e.g. on a GitHub-hosted runner)
 # is compared with the committed manifest byte for byte: sha256 equality, no tolerance.
 #
-# The tree's root ``envelope.json`` is excluded on both sides. It is the min/max over all five
-# corners of each (engine, device, geometry); a subset run has only some corners, so it writes an
-# envelope with those entries left out, which can never equal the committed one. The envelope is
-# pure min/max selection of the metrics.json floats, so those, which are compared, determine it.
+# The tree's root ``envelope.json`` is compared only when the subset is the whole reference
+# (every job of :func:`all_jobs`). It is the min/max over all five corners of each
+# (engine, device, geometry); a partial subset run lacks some corners, so it writes an envelope
+# with those entries left out, which can never equal the committed one, and it is excluded on
+# both sides. It is pure min/max selection of the metrics.json floats, which are compared.
 
 PROVENANCE = "provenance.json"
 ENVELOPE = "envelope.json"
 
 
+ALL = "all"
+
+
+def all_jobs() -> tuple[str, ...]:
+    """Relpaths of every job of the full reference (engines x corners x devices x geometries)."""
+    # imported here so that `manifest update` / `verify` do not load the generator
+    from gf180tcad import reference
+    from gf180tcad.devices import CORNERS, DEVICES
+
+    plan = reference.plan_jobs(reference.ENGINES, CORNERS, tuple(DEVICES))
+    return tuple(j.relpath.as_posix() for j in plan)
+
+
 def load_subset(path: Path) -> tuple[str, ...]:
     """Job relpaths ``<engine>/<corner>/<device>/<geometry_id>``, one per line, in file order.
 
-    ``#`` starts a comment line; blank lines are ignored. Raises ValueError on a malformed or
-    duplicate line or an empty subset.
+    ``#`` starts a comment line; blank lines are ignored. A single job line ``all`` stands for
+    :func:`all_jobs`, the full reference. Raises ValueError on a malformed or duplicate line,
+    ``all`` together with other job lines, or an empty subset.
     """
     jobs: list[str] = []
     for n, raw in enumerate(Path(path).read_text(encoding="utf-8").split("\n"), 1):
         line = raw.strip()
         if not line or line.startswith("#"):
+            continue
+        if line == ALL or ALL in jobs:
+            if jobs:
+                raise ValueError(f"{path}:{n}: {ALL!r} must be the only job line")
+            jobs.append(line)
             continue
         parts = line.split("/")
         if len(parts) != 4 or any(p in ("", ".", "..") for p in parts):
@@ -97,11 +118,16 @@ def load_subset(path: Path) -> tuple[str, ...]:
         jobs.append(line)
     if not jobs:
         raise ValueError(f"{path}: no jobs listed")
-    return tuple(jobs)
+    return all_jobs() if jobs == [ALL] else tuple(jobs)
 
 
 def verify_subset(
-    tree: Path, against: Path, prefix: str, jobs: tuple[str, ...]
+    tree: Path,
+    against: Path,
+    prefix: str,
+    jobs: tuple[str, ...],
+    *,
+    full: Iterable[str] | None = None,
 ) -> list[tuple[str, str]]:
     """``(manifest path, reason)`` for every difference of ``tree`` from ``against``, sorted.
 
@@ -111,19 +137,25 @@ def verify_subset(
     - ``changed``: listed in the manifest with a different sha256;
     - ``not in manifest``: a file of a listed job that the manifest does not have;
     - ``not in subset``: a file outside the listed jobs (other than provenance.json);
-    - ``missing``: a manifest entry of a listed job, or provenance.json, absent from ``tree``;
+    - ``missing``: a manifest entry of a listed job absent from ``tree``; also provenance.json
+      (always required) and, for a complete subset, envelope.json;
     - ``unknown job``: a listed job with no entry in the manifest at all.
 
-    ``envelope.json`` at the tree root is excluded (see the comment above).
+    ``envelope.json`` at the tree root is compared only if ``jobs`` is every job of ``full``
+    (default: the full reference, :func:`all_jobs`), and excluded otherwise (see the comment
+    above).
     """
     if not prefix.endswith("/"):
         raise ValueError(f"prefix must end with '/', got {prefix!r}")
+    complete = set(jobs) == set(all_jobs() if full is None else full)
+    roots = {PROVENANCE, ENVELOPE} if complete else {PROVENANCE}
     have = _scan(tree, Path(against))
-    have.pop(ENVELOPE, None)
+    if ENVELOPE not in roots:
+        have.pop(ENVELOPE, None)
     want = {r[len(prefix) :]: d for r, d in _load(against).items() if r.startswith(prefix)}
 
     def listed(rel: str) -> bool:
-        return rel == PROVENANCE or any(rel.startswith(j + "/") for j in jobs)
+        return rel in roots or any(rel.startswith(j + "/") for j in jobs)
 
     bad: list[tuple[str, str]] = []
     for rel, digest in have.items():
@@ -133,7 +165,8 @@ def verify_subset(
             bad.append((rel, "not in manifest"))
         elif want[rel] != digest:
             bad.append((rel, "changed"))
-    bad += [(rel, "missing") for rel in want if listed(rel) and rel not in have]
+    required = {rel for rel in want if listed(rel)} | roots
+    bad += [(rel, "missing") for rel in sorted(required) if rel not in have]
     bad += [(j + "/", "unknown job") for j in jobs if not any(r.startswith(j + "/") for r in want)]
     return sorted(((prefix + r, why) for r, why in bad), key=lambda t: t[0].encode("utf-8"))
 

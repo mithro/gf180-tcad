@@ -159,7 +159,7 @@ def _complete(setup):
     tree, m, _ = setup
     shutil.copytree(m.parent / "spice" / C, tree / C)
     shutil.copyfile(m.parent / "spice" / "envelope.json", tree / "envelope.json")
-    return lambda: manifest.verify_subset(tree, m, "spice/", (A, B, C), all_jobs=(C, B, A))
+    return lambda: manifest.verify_subset(tree, m, "spice/", (A, B, C), full=(C, B, A))
 
 
 def test_complete_subset_compares_envelope(setup):
@@ -184,8 +184,8 @@ def test_complete_subset_needs_committed_envelope(setup):
 def test_partial_subset_still_excludes_envelope(setup):
     tree, m, _ = setup
     (tree / "envelope.json").write_bytes(b"anything\n")
-    # (A, B) is not every job of all_jobs, so the envelope is not compared
-    assert manifest.verify_subset(tree, m, "spice/", (A, B), all_jobs=(A, B, C)) == []
+    # (A, B) is not every job of full, so the envelope is not compared
+    assert manifest.verify_subset(tree, m, "spice/", (A, B), full=(A, B, C)) == []
 
 
 def test_load_subset_all_expands_to_the_full_reference(tmp_path):
