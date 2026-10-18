@@ -18,7 +18,9 @@
       "units": "V",
       "bias": "Not specified on the page",
       "vt_definition": "Not defined on the page: only the heading 'Linear Threshold Voltage' (VT0).",
-      "definition_note": "The page gives VT0 only the heading 'Linear Threshold Voltage' with no bias or current criterion. Compared with vt_lin_maxgm (Vds = 0.1 V, linear extrapolation at maximum gm, the textbook definition of a linear Vt), the closest of our metrics; vt_lin_cc (100 nA*W/L constant current) is shown alongside in the docs but is not the compared metric."
+      "definition_note": "The page gives VT0 only the heading 'Linear Threshold Voltage' with no bias or current criterion. Compared with vt_lin_maxgm (Vds = 0.1 V, linear extrapolation at maximum gm, the textbook definition of a linear Vt), the closest of our metrics; vt_lin_cc (100 nA*W/L constant current) is shown alongside in the docs but is not the compared metric.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
+      "retrieved": "2026-10-18"
     },
     {
       "device": "nfet_05v0",
@@ -34,7 +36,9 @@
       "units": "uA/um",
       "bias": "|Vds| = |Vgs| = 5 V",
       "vt_definition": null,
-      "definition_note": "Idsat at |Vds| = |Vgs| = 5 V; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0 (same definition). The page publishes the pfet value negative; our metric is a magnitude, so the comparison uses the absolute values."
+      "definition_note": "Idsat at |Vds| = |Vgs| = 5 V; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0 (same definition). The page publishes the pfet value negative; our metric is a magnitude, so the comparison uses the absolute values.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
+      "retrieved": "2026-10-18"
     },
     {
       "device": "nfet_05v0",
@@ -50,7 +54,9 @@
       "units": "pA/um",
       "bias": "|Vds| = 5.5 V at 25 C",
       "vt_definition": null,
-      "definition_note": "Ioff at |Vds| = 5.5 V, 25 C; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C (same definition). The page publishes the pfet value negative and as a one-sided limit (min only); our metric is a magnitude, so the comparison is |Ioff| <= 10 pA/um."
+      "definition_note": "Ioff at |Vds| = 5.5 V, 25 C; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C (same definition). The page publishes the pfet value negative and as a one-sided limit (min only); our metric is a magnitude, so the comparison is |Ioff| <= 10 pA/um.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
+      "retrieved": "2026-10-18"
     },
     {
       "device": "nfet_05v0",
@@ -66,7 +72,9 @@
       "units": "V",
       "bias": "Not specified on the page",
       "vt_definition": null,
-      "definition_note": "No BVDSS metric in our reference (breakdown is not simulated); listed for completeness, not compared."
+      "definition_note": "No BVDSS metric in our reference (breakdown is not simulated); listed for completeness, not compared.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
+      "retrieved": "2026-10-18"
     },
     {
       "device": "pfet_05v0",
@@ -82,7 +90,9 @@
       "units": "V",
       "bias": "Not specified on the page",
       "vt_definition": "Not defined on the page: only the heading 'Linear Threshold Voltage' (VT0).",
-      "definition_note": "The page gives VT0 only the heading 'Linear Threshold Voltage' with no bias or current criterion. Compared with vt_lin_maxgm (Vds = 0.1 V, linear extrapolation at maximum gm, the textbook definition of a linear Vt), the closest of our metrics; vt_lin_cc (100 nA*W/L constant current) is shown alongside in the docs but is not the compared metric."
+      "definition_note": "The page gives VT0 only the heading 'Linear Threshold Voltage' with no bias or current criterion. Compared with vt_lin_maxgm (Vds = 0.1 V, linear extrapolation at maximum gm, the textbook definition of a linear Vt), the closest of our metrics; vt_lin_cc (100 nA*W/L constant current) is shown alongside in the docs but is not the compared metric.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
+      "retrieved": "2026-10-18"
     },
     {
       "device": "pfet_05v0",
@@ -98,7 +108,9 @@
       "units": "uA/um",
       "bias": "|Vds| = |Vgs| = 5 V",
       "vt_definition": null,
-      "definition_note": "Idsat at |Vds| = |Vgs| = 5 V; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0 (same definition). The page publishes the pfet value negative; our metric is a magnitude, so the comparison uses the absolute values."
+      "definition_note": "Idsat at |Vds| = |Vgs| = 5 V; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0 (same definition). The page publishes the pfet value negative; our metric is a magnitude, so the comparison uses the absolute values.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
+      "retrieved": "2026-10-18"
     },
     {
       "device": "pfet_05v0",
@@ -114,7 +126,9 @@
       "units": "pA/um",
       "bias": "|Vds| = 5.5 V at 25 C",
       "vt_definition": null,
-      "definition_note": "Ioff at |Vds| = 5.5 V, 25 C; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C (same definition). The page publishes the pfet value negative and as a one-sided limit (min only); our metric is a magnitude, so the comparison is |Ioff| <= 10 pA/um."
+      "definition_note": "Ioff at |Vds| = 5.5 V, 25 C; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C (same definition). The page publishes the pfet value negative and as a one-sided limit (min only); our metric is a magnitude, so the comparison is |Ioff| <= 10 pA/um.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
+      "retrieved": "2026-10-18"
     },
     {
       "device": "pfet_05v0",
@@ -130,7 +144,9 @@
       "units": "V",
       "bias": "Not specified on the page",
       "vt_definition": null,
-      "definition_note": "No BVDSS metric in our reference (breakdown is not simulated); listed for completeness, not compared."
+      "definition_note": "No BVDSS metric in our reference (breakdown is not simulated); listed for completeness, not compared.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
+      "retrieved": "2026-10-18"
     }
   ]
 }
