@@ -46,7 +46,7 @@ docker run --rm --name "$NAME" \
     --network "$NETWORK" \
     --read-only --tmpfs /tmp:rw,size=1g,exec \
     --user "$(id -u):$(id -g)" \
-    -e HOME=/tmp/home -e USER=gf180tcad -e LOGNAME=gf180tcad \
+    -e HOME=/tmp/home -e USER=gf180tcad -e LOGNAME=gf180tcad -e PYTHONPATH=/work/src/src \
     -e OMP_NUM_THREADS=1 -e OPENBLAS_NUM_THREADS=1 -e MKL_NUM_THREADS=1 \
     -v "$REPO:/work/src:ro" -v "$WORKDIR:/work/out:rw" --workdir /work/out \
     "$IMAGE" \
