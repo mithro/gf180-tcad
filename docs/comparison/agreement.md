@@ -138,7 +138,8 @@ unless marked *proposal*, which means no published standard exists.
 | Gate leakage | - | not compared (the SPICE {term}`card <model card>` has IGCMOD = 0) |
 
 Metrics are also reported as an error divided by {term}`σ_mismatch`, where
-σ_Vt = A_Vt / √(WL) ({ref}`Pelgrom 1989 <lit-pelgrom>`) and the PDK's A_Vt is about 11.6 mV·µm, to give a physical
+σ_ΔVt = A_Vt / √(W·L) for the Vt difference of a pair, with the effective W and L
+({ref}`Pelgrom 1989 <lit-pelgrom>`), and the PDK's A_Vt is about 11.6 mV·µm, to give a physical
 sense of scale. The value is the `par_vth = 0.01155` (V·µm) of the
 [`nfet_05v0` subcircuit](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L46950-L46963) in the
 PDK's ngspice model card (provenance tag `spice-card`). The card draws each device's Vt shift

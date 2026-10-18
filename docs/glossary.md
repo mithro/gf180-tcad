@@ -238,7 +238,8 @@ BVDSS
 
 σ_mismatch
 A_Vt
-  The mismatch scale σ_Vt = A_Vt / √(WL) ({ref}`Pelgrom 1989 <lit-pelgrom>`), used to express an error
+  The mismatch scale σ_ΔVt = A_Vt / √(W·L) of the {term}`Vt` difference of a pair, with the effective W
+  and L ({ref}`Pelgrom 1989 <lit-pelgrom>`), used to express an error
   in physical units. See {ref}`tolerances`.
 
 polarity-stripped
