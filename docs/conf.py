@@ -20,7 +20,7 @@ extensions = [
     "sphinx.ext.extlinks",
     "repo_roles",
 ]
-myst_enable_extensions = ["colon_fence", "dollarmath"]
+myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
 root_doc = "index"
 
@@ -40,6 +40,59 @@ html_show_copyright = False
 # from this repository alone.
 
 extlinks = {"doi": ("https://doi.org/%s", "doi:%s")}
+
+# Every tool or project is linked to its upstream page from one place. Write {{ ngspice }} at the
+# first mention on a page; tests/test_doc_links.py checks that the first mention is linked. Each
+# URL here was fetched (HTTP 200) when it was added; the linkcheck workflow re-checks them weekly.
+_TOOLS = {
+    "ngspice": ("ngspice", "https://ngspice.sourceforge.io/"),
+    "Xyce": ("Xyce", "https://xyce.sandia.gov/"),
+    "DEVSIM": ("DEVSIM", "https://devsim.org/"),
+    "Charon": ("Charon", "https://charon.sandia.gov/"),
+    "gdsfactory": ("gdsfactory", "https://gdsfactory.github.io/gdsfactory/"),
+    "KLayout": ("KLayout", "https://www.klayout.de/"),
+    "IIC_OSIC_TOOLS": ("IIC-OSIC-TOOLS", "https://github.com/iic-jku/IIC-OSIC-TOOLS"),
+    "open_pdks": ("open_pdks", "https://github.com/fossi-foundation/open-pdks"),
+    "gf180mcu_pdk": ("GF180MCU PDK", "https://github.com/google/gf180mcu-pdk"),
+    "gf180mcu_pdk_docs": (
+        "GF180MCU PDK documentation",
+        "https://gf180mcu-pdk.readthedocs.io/en/latest/",
+    ),
+    "gf180mcu_models": (
+        "GF180MCU primitives library",
+        "https://github.com/google/globalfoundries-pdk-libs-gf180mcu_fd_pr",
+    ),
+    "BSIM4_site": ("BSIM4", "https://bsim.berkeley.edu/models/bsim4/"),
+    "Docker": ("Docker", "https://docs.docker.com/"),
+    "docker_run": ("docker run", "https://docs.docker.com/reference/cli/docker/container/run/"),
+    "BuildKit": ("BuildKit", "https://docs.docker.com/build/buildkit/"),
+    "systemd": ("systemd", "https://systemd.io/"),
+    "uv": ("uv", "https://docs.astral.sh/uv/"),
+    "numpy": ("numpy", "https://numpy.org/"),
+    "matplotlib": ("matplotlib", "https://matplotlib.org/"),
+    "pytest": ("pytest", "https://docs.pytest.org/"),
+    "ruff": ("ruff", "https://docs.astral.sh/ruff/"),
+    "Sphinx": ("Sphinx", "https://www.sphinx-doc.org/"),
+    "MyST": ("MyST", "https://myst-parser.readthedocs.io/"),
+    "Read_the_Docs": ("Read the Docs", "https://about.readthedocs.com/"),
+    "GitHub_Actions": ("GitHub Actions", "https://docs.github.com/en/actions"),
+    "GitHub_hosted_runner": (
+        "GitHub-hosted runner",
+        "https://docs.github.com/en/actions/concepts/runners/github-hosted-runners",
+    ),
+    "ghcr": (
+        "GitHub Container Registry",
+        (
+            "https://docs.github.com/en/packages/working-with-a-github-packages-registry/"
+            "working-with-the-container-registry"
+        ),
+    ),
+    "wafer_space": ("wafer.space", "https://wafer.space/"),
+    "Tiny_Tapeout": ("Tiny Tapeout", "https://tinytapeout.com/"),
+    "SemiMod": ("SemiMod", "https://semimod.de/"),
+    "DMT_core": ("DMT-core", "https://gitlab.com/dmt-development/dmt-core"),
+}
+myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.items()}
 
 # docs/_generated/ is git-ignored and rebuilt from the committed SPICE reference at the start of
 # every build (builder-inited). Read the Docs installs only the docs dependency group, which does
