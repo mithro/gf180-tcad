@@ -21,6 +21,9 @@ bit. Differences from the ngspice netlist, each forced by Xyce 7.10 or the image
 - **cv** is not implemented for Xyce (out of scope): :func:`xyce_netlist` raises
   NotImplementedError.
 
+The working directory is guarded exactly as for ngspice: only :data:`OWN_FILES` and the
+caller's named ``inputs`` may be in it (:func:`gf180tcad.spice.common.prepare_out_dir`).
+
 Xyce always runs as a single process (plain ``Xyce``, never ``mpirun``) and :func:`run_xyce`
 requires the log's "Timing summary of 1 processor" line.
 
@@ -37,7 +40,7 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -60,6 +63,8 @@ NETLIST_NAME = "xyce.cir"
 LOG_NAME = "xyce.log"
 CSV_NAME = "out.csv"
 TIMEOUT_S = 600  # a hung Xyce (seen with a pathological diode) must not hold a slot forever
+TIMEOUT_EXIT = 124  # coreutils timeout(1)
+OWN_FILES = (NETLIST_NAME, LOG_NAME, CSV_NAME)
 
 # Xyce lib wrapper used for each device model (see the module docstring).
 XYCE_SUBCKT: dict[str, str] = {"nfet_05v0": "nfet_06v0", "pfet_05v0": "pfet_06v0"}
@@ -210,16 +215,22 @@ def processor_count(log: str) -> int:
 
 
 def run_xyce(
-    netlist: str, out_dir: Path, *, plan: BiasPlan | None = None, image: str | None = None
+    netlist: str,
+    out_dir: Path,
+    *,
+    plan: BiasPlan | None = None,
+    image: str | None = None,
+    inputs: Sequence[str] = (),
 ) -> SpiceResult:
     """Run ``netlist`` with serial Xyce in the sandbox, ``out_dir`` as working directory.
 
     Without ``plan`` the CSV columns are returned as read (keyed by header); with ``plan`` they
     are checked and mapped to result columns by :func:`gf180tcad.spice.common.assemble`.
+    ``out_dir`` may hold only :data:`OWN_FILES` (replaced) and the entries named in ``inputs``
+    (see :func:`gf180tcad.spice.common.prepare_out_dir`).
     """
     out_dir = Path(out_dir)
-    for name in (CSV_NAME, LOG_NAME):
-        (out_dir / name).unlink(missing_ok=True)  # never parse a previous run's output
+    common.prepare_out_dir(out_dir, OWN_FILES, inputs, error=XyceError)
     (out_dir / NETLIST_NAME).write_text(netlist, encoding="utf-8")
     cmd = ["sh", "-c", f"exec timeout {TIMEOUT_S} Xyce {NETLIST_NAME} > {LOG_NAME} 2>&1"]
     log_path = out_dir / LOG_NAME
@@ -229,12 +240,13 @@ def run_xyce(
         raise
     except sandbox.SandboxError as e:
         log = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
-        if e.result.returncode == 124:
+        if e.result.returncode == TIMEOUT_EXIT:
             raise XyceError(f"Xyce timed out after {TIMEOUT_S} s", log) from e
         scan_xyce_log(log)  # prefer the specific Xyce message, if the log has one
         raise XyceError(f"Xyce exited with status {e.result.returncode}", log) from e
     log = log_path.read_text(encoding="utf-8", errors="replace")
     warnings = scan_xyce_log(log)
+    common.check_out_dir(out_dir, OWN_FILES, inputs, log, error=XyceError)
     nproc = processor_count(log)
     if nproc != 1:
         raise XyceError(f"Xyce ran on {nproc} processors, expected exactly 1", log)

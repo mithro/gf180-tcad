@@ -5,11 +5,18 @@
 the sandbox (log in ``out_dir/ngspice.log``, raw file :data:`~gf180tcad.spice.netlist.RAW_NAME`
 written by the netlist's ``.control`` block) and parses the raw file.
 
+Working directory: ngspice reads ``.spiceinit`` from its cwd, and resolves the PDK lib's nested
+relative ``.lib 'sm141064.spice' ...`` lines in a way that can pick up a file in its cwd instead
+of the PDK's copy (seen in the sandbox with patched scratch libs). So ``out_dir`` may hold only
+this runner's own files (:data:`OWN_FILES`, replaced on each run) plus entries the caller names
+in ``inputs``; anything else refuses the run, and an unexpected file written by ngspice fails
+it (:func:`gf180tcad.spice.common.prepare_out_dir`). ngspice is killed after :data:`TIMEOUT_S`.
+
 Failure policy (a non-converged or skipped point must fail the run, never shorten the data):
 :class:`SpiceError` is raised for a non-zero exit, any log line containing "error", any
 convergence trouble (:data:`FATAL_PATTERNS`, matched case-insensitively; a singular-matrix or
 stepping-failure warning is fatal even when a later method succeeded), a missing or malformed
-raw file, a point count different from the plan, or bias values that differ from the plan's
+raw file, a timeout, a point count different from the plan, or bias values that differ from the plan's
 grid by more than :data:`GRID_TOL` volts. Every other log line containing "warning", and every
 recovery notice (a "...stepping..." line without "fail", "error", "converge", "abort" or
 "singular"; or "Convergence reached"), is kept in :attr:`SpiceResult.warnings`.
@@ -20,7 +27,7 @@ the kept warnings as ``.warnings``.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -63,6 +70,9 @@ BENIGN_PREFIXES = ("convergence reached",)
 
 # Sandbox limits for one ngspice job: single-threaded, a few MB of RSS in practice.
 MEM, CPUS, PIDS = "4g", 1, 256
+TIMEOUT_S = 600  # a hung ngspice must end as a reported failure, not hold a slot forever
+TIMEOUT_EXIT = 124  # coreutils timeout(1)
+OWN_FILES = (NETLIST_NAME, LOG_NAME, RAW_NAME)
 
 
 def scan_log(log: str) -> list[str]:
@@ -112,21 +122,27 @@ def assemble(
 
 
 def run_ngspice(
-    netlist: str, out_dir: Path, *, plan: BiasPlan | None = None, image: str | None = None
+    netlist: str,
+    out_dir: Path,
+    *,
+    plan: BiasPlan | None = None,
+    image: str | None = None,
+    inputs: Sequence[str] = (),
 ) -> SpiceResult:
     """Run ``netlist`` in the sandbox with ``out_dir`` as working directory.
 
     Without ``plan`` the raw vectors are returned as read; with ``plan`` they are checked and
     mapped to result columns by :func:`assemble`. ngspice's own exit code is checked too, but
     the sandbox's OOM error (:class:`~gf180tcad.sandbox.SandboxOOM`) is passed through.
+
+    ``out_dir`` may hold only :data:`OWN_FILES` (replaced) and the entries named in ``inputs``
+    (see :func:`gf180tcad.spice.common.prepare_out_dir`); ngspice is killed after
+    :data:`TIMEOUT_S` seconds, which raises :class:`SpiceError`.
     """
     out_dir = Path(out_dir)
-    if (out_dir / ".spiceinit").exists():
-        raise SpiceError(f"{out_dir}/.spiceinit exists; ngspice would read it from its cwd")
-    for name in (RAW_NAME, LOG_NAME):
-        (out_dir / name).unlink(missing_ok=True)  # never parse a previous run's output
+    common.prepare_out_dir(out_dir, OWN_FILES, inputs)
     (out_dir / NETLIST_NAME).write_text(netlist, encoding="utf-8")
-    cmd = ["sh", "-c", f"exec ngspice -b {NETLIST_NAME} > {LOG_NAME} 2>&1"]
+    cmd = ["sh", "-c", f"exec timeout {TIMEOUT_S} ngspice -b {NETLIST_NAME} > {LOG_NAME} 2>&1"]
     log_path = out_dir / LOG_NAME
     try:
         sandbox.run(cmd, out_dir=out_dir, mem=MEM, cpus=CPUS, pids=PIDS, image=image)
@@ -134,10 +150,13 @@ def run_ngspice(
         raise
     except sandbox.SandboxError as e:
         log = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+        if e.result.returncode == TIMEOUT_EXIT:
+            raise SpiceError(f"ngspice timed out after {TIMEOUT_S} s", log) from e
         scan_log(log)  # prefer the specific ngspice error, if the log has one
         raise SpiceError(f"ngspice exited with status {e.result.returncode}", log) from e
     log = log_path.read_text(encoding="utf-8", errors="replace")
     warnings = scan_log(log)
+    common.check_out_dir(out_dir, OWN_FILES, inputs, log)
     raw_path = out_dir / RAW_NAME
     if not raw_path.is_file():
         raise SpiceError(f"ngspice wrote no raw file {RAW_NAME}", log)
