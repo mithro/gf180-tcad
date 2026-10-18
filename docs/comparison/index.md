@@ -9,4 +9,5 @@ No matrix yet: the SPICE reference and TCAD have not run. The summary matrix
 :maxdepth: 1
 
 agreement
+pdk-spec-check
 ```
