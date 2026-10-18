@@ -15,6 +15,8 @@ on:
       - "docker/**"
       - "results/**"
       - "tests/crosscheck_subset.txt"
+      - "data/process/**"
+      - "tests/tcad/**"
       - "pyproject.toml"
       - "uv.lock"
       - "Makefile"
@@ -110,6 +112,12 @@ jobs:
             "$LOGS/sandbox-host.txt" "gf180-tcad.slice limits are not applied"
           check "^$slice/docker-[0-9a-f]*\.scope$" "$LOGS/sandbox-host.txt" \
             "the sandbox container did not run inside gf180-tcad.slice"
+      - name: Process files against the card in the image (sandbox tests)
+        run: |
+          # data/process/*.toml cite sm141064.ngspice lines; re-read them from the pinned image
+          uv run --locked pytest -m sandbox tests/tcad/test_process.py -v -rs \
+            > "$LOGS/process-card.log" 2>&1 || { cat "$LOGS/process-card.log"; exit 1; }
+          cat "$LOGS/process-card.log"
       - name: Regenerate the subset (temporary --out, never results/spice)
         run: |
           uv run --locked python tools/crosscheck-args tests/crosscheck_subset.txt > "$LOGS/args.txt"
