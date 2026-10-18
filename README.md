@@ -21,7 +21,9 @@ is a result yet.
 
 ## Documentation
 
-https://gf180-tcad.readthedocs.io (to be created)
+[![Documentation Status](https://readthedocs.org/projects/gf180-tcad/badge/?version=latest)](https://gf180-tcad.readthedocs.io/en/latest/)
+
+https://gf180-tcad.readthedocs.io/
 
 ## Development
 
