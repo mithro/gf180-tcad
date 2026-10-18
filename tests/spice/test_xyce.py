@@ -464,12 +464,23 @@ def test_xyce_two_runs_byte_identical(image_pdk, tmp_path, device):
     assert raw[0] == raw[1]
 
 
-_CASES = [
-    pytest.param(d, g, s, id=f"{d.name}-{geometry_id(g)}-{s}")
-    for d in (NFET, PFET)
-    for g in d.geometries
-    for s in ("idvg_sat", "idvd")
-]
+# ngspice runs the nfet_06v0 card (version=4.5) with its BSIM4v5 (4.5.0) code; Xyce's oldest
+# BSIM4 is 4.6.1. The resulting ~0.23 mV subthreshold shift is a ~0.56-0.61 % Id difference in
+# idvg_sat for every nfet geometry: see docs/limitations/engine-cross-check.md. The threshold is
+# NOT loosened; these cases are expected failures, strict so that a fix shows up as XPASS.
+_BSIM4_VERSION_XFAIL = pytest.mark.xfail(
+    strict=True,
+    reason="ngspice BSIM4v5 (version=4.5) vs Xyce BSIM4 4.6.1: "
+    "docs/limitations/engine-cross-check.md",
+)
+
+
+def _case(d, g, s):
+    marks = [_BSIM4_VERSION_XFAIL] if (d is NFET and s == "idvg_sat") else []
+    return pytest.param(d, g, s, id=f"{d.name}-{geometry_id(g)}-{s}", marks=marks)
+
+
+_CASES = [_case(d, g, s) for d in (NFET, PFET) for g in d.geometries for s in ("idvg_sat", "idvd")]
 
 
 @pytest.mark.sandbox

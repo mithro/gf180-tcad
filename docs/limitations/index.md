@@ -16,6 +16,9 @@ there.
   binned in L (the bin boundary is at 0.7 µm) and fitted to silicon, so it can
   be non-physical between bins. The BSIM parameters used as starting points are
   fitted values, not physical ones.
+- **ngspice and Xyce disagree by 0.6 % on the nfet in subthreshold.** The
+  nfet card declares BSIM4 `version=4.5`; ngspice runs it with BSIM4 4.5.0,
+  Xyce's oldest BSIM4 is 4.6.1. See {doc}`engine-cross-check`.
 - **Novelty.** No published DEVSIM- or Charon-versus-BSIM comparison for any
   open PDK was found, and no gf180mcu TCAD paper was found.
 
@@ -24,4 +27,5 @@ there.
 
 silicon-validation
 literature
+engine-cross-check
 ```
