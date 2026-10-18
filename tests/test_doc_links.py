@@ -154,7 +154,9 @@ def _word_regex(names, plural: bool) -> re.Pattern:
     for n in sorted(names, key=len, reverse=True):
         suffix = "(?:s|es)?" if plural and re.fullmatch(r"[A-Za-z][A-Za-z -]*", n) else ""
         alts.append(re.escape(n) + suffix)
-    return re.compile(r"(?<![\w.\-/])(?:" + "|".join(alts) + r")(?![\w\-])")
+    # A hyphen is a word boundary here ("DEVSIM-versus-BSIM", "TCAD-vs-SPICE"); the longest
+    # alternative wins, so "roll-off" is matched before any shorter term inside it.
+    return re.compile(r"(?<![\w./])(?:" + "|".join(alts) + r")(?!\w)")
 
 
 @cache
