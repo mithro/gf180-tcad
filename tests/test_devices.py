@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 import dataclasses
+import itertools
 
 import pytest
 
@@ -59,13 +60,13 @@ def test_corners_temps_order():
 
 def test_idvg_sweeps():
     s = {x.name: x for x in SWEEPS}
-    grid = tuple(i / 100 for i in range(501))
     for name, vds in (("idvg_lin", 0.1), ("idvg_sat", 5.0)):
         sw = s[name]
         assert sw.kind == "idvg"
         assert sw.vds == (vds,)
-        assert sw.vgs == grid
         assert len(sw.vgs) == 501
+        assert sw.vgs[0] == 0.0
+        assert sw.vgs[250] == 2.5
         assert sw.vgs[1] == 0.01
         assert sw.vgs[-1] == 5.0
         assert sw.vbs == (0.0, 1.0, 2.0)
@@ -76,7 +77,10 @@ def test_idvd():
     sw = next(x for x in SWEEPS if x.name == "idvd")
     assert sw.kind == "idvd"
     assert sw.vgs == (1.0, 2.0, 3.0, 4.0, 5.0)
-    assert sw.vds == tuple(i / 100 for i in range(501))
+    assert len(sw.vds) == 501
+    assert sw.vds[1] == 0.01
+    assert sw.vds[250] == 2.5
+    assert sw.vds[-1] == 5.0
     assert sw.vbs == (0.0,)
     assert sw.freq_hz is None
 
@@ -84,10 +88,11 @@ def test_idvd():
 def test_cv():
     sw = next(x for x in SWEEPS if x.name == "cv")
     assert sw.kind == "cv"
-    assert sw.vgs == tuple((i - 100) / 20 for i in range(201))
     assert len(sw.vgs) == 201
     assert sw.vgs[0] == -5.0
+    assert sw.vgs[1] == -4.95
     assert sw.vgs[100] == 0.0
+    assert sw.vgs[199] == 4.95
     assert sw.vgs[-1] == 5.0
     assert sw.vds == (0.0,)
     assert sw.vbs == (0.0,)
@@ -172,3 +177,9 @@ def test_geometry_precision_guard():
 def test_duplicate_geometry_ids_raise():
     with pytest.raises(ValueError):
         Device("d", 1, "m", (G, Geometry(10, 1, "calibration")))
+
+
+def test_grids_strictly_increasing():
+    for sw in SWEEPS:
+        for grid in (sw.vds, sw.vgs):
+            assert all(a < b for a, b in itertools.pairwise(grid)), sw.name
