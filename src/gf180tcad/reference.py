@@ -29,10 +29,10 @@ directories have no ``cv.csv`` and their ``metrics.json`` has no ``cgg_*`` keys.
 Every result file is deterministic: CSV meta lines hold only engine, corner, device,
 geometry_id, w_um, l_um, sweep, temp_c and units; ``provenance.json`` holds the contents of
 ``versions.json``, the pinned image reference (``docker/IMAGE``, with its digest) and
-:func:`generator_sha256` (of the :data:`GENERATOR_MODULES` only), and deliberately no git
-commit or date, so a regeneration anywhere gives the same bytes. Generation never compares
-the engines; the ngspice/Xyce cross-check (``docs/limitations/engine-cross-check.md``) is a
-separate test.
+:func:`generator_sha256` (of the :data:`GENERATOR_MODULES` and ``tools/sandbox-run`` only),
+and deliberately no git commit or date, so a regeneration anywhere gives the same bytes.
+Generation never compares the engines; the ngspice/Xyce cross-check
+(``docs/limitations/engine-cross-check.md``) is a separate test.
 """
 
 from __future__ import annotations
@@ -89,6 +89,9 @@ GENERATOR_MODULES = (
     "gf180tcad.spice.rawfile",
     "gf180tcad.spice.xyce",
 )
+# Non-module files that also shape the results: tools/sandbox-run sets the container's thread
+# environment (OMP/OPENBLAS/MKL_NUM_THREADS=1), its limits and the read-only source mount.
+GENERATOR_EXTRA_FILES = ("tools/sandbox-run",)
 _ENGINE_MEM = {"ngspice": ngspice.MEM, "xyce": xyce.MEM}
 _DC_COLUMNS = ("vd", "vg", "vb", "id", "ig", "ib")
 _CV_COLUMNS = ("vg", "cgg")
@@ -206,23 +209,35 @@ def module_relpath(name: str, repo_root: Path | None = None) -> Path:
     return init if (root / init).is_file() else base.with_suffix(".py")
 
 
-def generator_sha256(repo_root: Path | None = None) -> str:
-    """sha256 over the sorted ``(relpath, sha256)`` pairs of the :data:`GENERATOR_MODULES` files.
+def generator_files(repo_root: Path | None = None) -> list[str]:
+    """Repo-relative POSIX paths hashed by :func:`generator_sha256`, sorted by UTF-8 bytes.
 
-    The hashed text is one line ``<file sha256>  <relpath>\\n`` per module file, relpath
-    relative to the repo root in POSIX form, sorted by its UTF-8 bytes. It depends on file
-    contents and paths only (not on mtimes, the checkout location or git), so it is the same in
-    every clone.
-    A listed module that is missing raises FileNotFoundError.
+    The files of :data:`GENERATOR_MODULES` plus :data:`GENERATOR_EXTRA_FILES`. A missing one
+    raises FileNotFoundError.
     """
     root = Path(repo_root) if repo_root is not None else sandbox.REPO_ROOT
-    files = {}
+    files = []
     for name in GENERATOR_MODULES:
         rel = module_relpath(name, root)
         if not (root / rel).is_file():
             raise FileNotFoundError(f"generator module {name} not found: {root / rel}")
-        files[rel.as_posix()] = root / rel
-    lines = [f"{_sha256(files[r])}  {r}\n" for r in sorted(files, key=lambda s: s.encode())]
+        files.append(rel.as_posix())
+    for rel in GENERATOR_EXTRA_FILES:
+        if not (root / rel).is_file():
+            raise FileNotFoundError(f"generator file not found: {root / rel}")
+        files.append(rel)
+    return sorted(files, key=lambda s: s.encode())
+
+
+def generator_sha256(repo_root: Path | None = None) -> str:
+    """sha256 over the sorted ``(relpath, sha256)`` pairs of the :func:`generator_files`.
+
+    The hashed text is one line ``<file sha256>  <relpath>\\n`` per file, relpath relative
+    to the repo root in POSIX form, sorted by its UTF-8 bytes. It depends on file contents and
+    paths only (not on mtimes, the checkout location or git), so it is the same in every clone.
+    """
+    root = Path(repo_root) if repo_root is not None else sandbox.REPO_ROOT
+    lines = [f"{_sha256(root / r)}  {r}\n" for r in generator_files(root)]
     return hashlib.sha256("".join(lines).encode("utf-8")).hexdigest()
 
 
