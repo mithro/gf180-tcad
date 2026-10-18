@@ -51,7 +51,8 @@ jobs:
                          if not u.startswith(own) or u == own})
           # The same documented flaky hosts as docs/conf.py:linkcheck_ignore.
           flaky = ("https://doi.org/10.2172/", "https://doi.org/10.1103/",
-                   "https://www.semiconductors.org/", "https://semimod.de/")
+                   "https://www.semiconductors.org/", "https://semimod.de/",
+                   "https://man7.org/")
           bad = []
           for url in urls:
               if url.startswith(flaky):

@@ -25,6 +25,10 @@ Changes from the v0.8.0 code (also listed in docs/limitations/plugin-history.md)
   default contact ``cathode`` (the VIAC AND PPP contact, so forward bias), and the physical
   anchors recorded around it (NetDoping range, built-in potential, depletion width, the
   anode-cathode contact potential difference at each step);
+- **added**: the junction probe of the PN slab (``pn_junction``): the physical groups of the
+  mesh file, the Potential across the rib's junction on the bottom edge at every step, and each
+  silicon region's Potential range. It shows why the bias never reaches the junction: the mesh
+  has no ``core___slab90`` group, so the rib, which holds the junction, floats;
 - the PIN waveguide is solved, ramped and deleted before the PN slab is built (DEVSIM solves every
   device it holds at once, and DDComponent sets extended precision globally);
 - the -5 V ramp and the tidy3d ``make_waveguide`` mode solves of ``test_pin_waveguide`` are not
@@ -50,6 +54,9 @@ PIN_DEVICE = "MyDevice"  # hard-coded in v0.8.0 PINWaveguide
 PIN_VOLTAGES = (0.0, -1.0)
 PN_VOLTAGES = (0.1, 0.2)
 PN_VSTEP = 0.1
+#: The junction probe's offset to the neutral n and p sides of the rib's junction (> the
+#: ~0.075 um depletion half-width at 1e17 / 1e17, < the rib half-width), as in the fork's probe.
+JUNCTION_OFFSET_UM = 0.2
 
 
 def build_pin():
@@ -192,12 +199,37 @@ def _si_values(c, name) -> list[float]:
     return out
 
 
+def pn_junction(c) -> dict:
+    """Does the bias reach the junction itself? (an addition; see harness.junction_probe)
+
+    ``junction``: the Potential across the junction, which lies in the rib (``core``), on the
+    bottom edge. ``potential_range_by_region``: ``[min, max]`` Potential of each silicon region,
+    which shows where the extrema of ``potential_span_v`` lie.
+    """
+    import devsim
+
+    rows, ranges = {}, {}
+    for r in c.regions["si"]:
+        v = {
+            k: devsim.get_node_model_values(device=c.device, region=r, name=k)
+            for k in ("x", "y", "Potential", "NetDoping")
+        }
+        rows[r] = list(zip(v["x"], v["y"], v["Potential"], v["NetDoping"]))
+        ranges[r] = [min(v["Potential"]), max(v["Potential"])]
+    return {
+        "junction": harness.junction_probe(
+            rows, rib="core", slab="slab90", offset_um=JUNCTION_OFFSET_UM
+        ),
+        "potential_range_by_region": ranges,
+    }
+
+
 def pn_bias_state(c) -> dict:
     """Does the bias applied on the cathode reach the device?
 
     The mean Potential of each contact's nodes, their difference, and the Potential span (max -
     min) over the silicon, which is the built-in potential at equilibrium and drops by the
-    forward bias if the junction sees it.
+    forward bias if the junction sees it; then the junction probe (:func:`pn_junction`).
     """
     si = c.regions["si"]
     pot = {k: harness.contact_potential(c.device, k, si) for k in ("anode", "cathode")}
@@ -206,6 +238,7 @@ def pn_bias_state(c) -> dict:
         "contact_potential_v": pot,
         "anode_minus_cathode_v": pot["anode"] - pot["cathode"],
         "potential_span_v": max(potential) - min(potential),
+        **pn_junction(c),
     }
 
 
@@ -244,6 +277,8 @@ def describe_ddcomponent(c) -> dict:
         "devsim_regions": list(regions),
         "contacts": list(devsim.get_contact_list(device=c.device)),
         "interfaces": list(devsim.get_interface_list(device=c.device)),
+        # the mesh file ddsolver() wrote and DEVSIM read (an addition: is core___slab90 there?)
+        "msh_physical_groups": harness.msh2_physical_names(Path(c.temp_file_name)),
         "node_count_by_region": counts,
         "node_count": sum(counts.values()),
         "equilibrium": pn_equilibrium(c),

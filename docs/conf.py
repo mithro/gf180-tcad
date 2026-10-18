@@ -59,6 +59,9 @@ _TOOLS = {
     "gplugins": ("gplugins", "https://github.com/gdsfactory/gplugins"),
     "gplugins_fork": ("the gplugins fork", "https://github.com/mithro/gplugins"),
     "tidy3d": ("tidy3d", "https://docs.flexcompute.com/projects/tidy3d/"),
+    "pyvista": ("pyvista", "https://docs.pyvista.org/"),
+    "pydantic": ("pydantic", "https://docs.pydantic.dev/"),
+    "meshio": ("meshio", "https://github.com/nschloe/meshio"),
     "gf180mcu_gdsfactory": ("gf180mcu gdsfactory PDK", "https://pypi.org/project/gf180mcu/"),
     "scipy": ("scipy", "https://scipy.org/"),
     "IIC_OSIC_TOOLS": ("IIC-OSIC-TOOLS", "https://github.com/iic-jku/IIC-OSIC-TOOLS"),
@@ -156,6 +159,10 @@ linkcheck_ignore = [
     # (2003), and Misiakos & Tsamakis, J. Appl. Phys. 74, 3293 (1993).
     r"https://doi\.org/10\.1063/1\.1529297",
     r"https://doi\.org/10\.1063/1\.354551",
+    # Flaky host: man7.org (the Linux man pages, docs/reproduce/sandbox.md) intermittently hits
+    # linkcheck's read timeout from GitHub-hosted runners, even with retries; the pages were
+    # fetched (HTTP 200) when they were added.
+    r"https://man7\.org/",
 ]
 # ngspice.sourceforge.io answers 403 to Sphinx's default browser-like user agent, 200 to this.
 user_agent = "gf180-tcad-linkcheck (Sphinx; https://github.com/mithro/gf180-tcad)"
