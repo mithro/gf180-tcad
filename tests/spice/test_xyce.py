@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """Xyce netlist, log checks, CSV parsing, engine_diff, and real runs (-m sandbox)."""
 
+import dataclasses
 import json
 import math
 import re
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -14,8 +16,8 @@ from gf180tcad.devices import DEVICES, SWEEPS, Device, Geometry, geometry_id
 from gf180tcad.pdk import PdkInfo
 from gf180tcad.spice import xyce
 from gf180tcad.spice.common import SpiceError
-from gf180tcad.spice.netlist import bias_plan, instance_params
-from gf180tcad.spice.ngspice import simulate
+from gf180tcad.spice.netlist import bias_plan, instance_params, ngspice_netlist
+from gf180tcad.spice.ngspice import run_ngspice, simulate
 from gf180tcad.spice.xyce import (
     XYCE_VECTORS,
     engine_diff,
@@ -494,3 +496,60 @@ def test_engines_agree(image_pdk, tmp_path, device, g, sweep_name):
     d = engine_diff(a, b)
     print(f"engine_diff {device.name} {geometry_id(g)} {sweep_name} {d!r}")
     assert d < TOL, f"ngspice vs Xyce max relative Id difference {d:.3%} > {TOL:.1%}"
+
+
+# --- diagnostic: the nfet idvg_sat xfails are the BSIM4 4.5 vs 4.6.1 code difference --------
+
+# Patched scratch copy of the image's ngspice lib: the nfet_06v0 card's "version=4.5" becomes
+# "version=4.6" (ngspice then runs BSIM4v6 instead of BSIM4v5), and the lib's nested relative
+# ".lib 'sm141064.spice' ..." lines point at the copy itself, so ngspice cannot resolve them to
+# the PDK's unpatched file. Written inside the sandbox (the repo stays read-only).
+PATCHED_LIB_DIR = "lib"  # out_dir subdirectory, passed to run_ngspice as an explicit input
+PATCHED_LIB = f"/work/out/{PATCHED_LIB_DIR}/sm141064.ngspice"
+_PATCH_LIB = r"""
+import json, re
+from gf180tcad import pdk
+text = open(pdk.locate().ngspice_lib).read()
+start = text.index("\n.lib nfet_06v0_t\n")
+end = text.index("\n.endl nfet_06v0_t\n", start)
+section, n_version = re.subn(r"(?m)^\+ version=4\.5$", "+ version=4.6", text[start:end])
+text = text[:start] + section + text[end:]
+text, n_nested = re.subn(r"(?m)^\.lib 'sm141064\.spice' ", ".lib '@PATCHED_LIB@' ", text)
+open("/work/out/sm141064.ngspice", "w").write(text)
+print(json.dumps({"version": n_version, "nested": n_nested}))
+""".replace("@PATCHED_LIB@", PATCHED_LIB)
+
+
+@pytest.fixture(scope="session")
+def nfet_v46_lib(tmp_path_factory) -> Path:
+    d = tmp_path_factory.mktemp("nfet_v46_lib")
+    res = sandbox.run(["python3", "-c", _PATCH_LIB], out_dir=d)
+    counts = json.loads(res.stdout.splitlines()[-1])
+    assert counts["version"] == 2, counts  # both nfet_06v0 bins (0.6-0.7 and 0.7-50 um)
+    assert counts["nested"] > 0, counts
+    return d / "sm141064.ngspice"
+
+
+_DIAG_CASES = [pytest.param(g, id=f"nfet_05v0-{geometry_id(g)}-idvg_sat") for g in NFET.geometries]
+
+
+@pytest.mark.sandbox
+@pytest.mark.parametrize("g", _DIAG_CASES)
+def test_engines_agree_with_ngspice_forced_to_bsim4_4p6(image_pdk, nfet_v46_lib, tmp_path, g):
+    """Proves the cause in docs/limitations/engine-cross-check.md for each xfailed case."""
+    sweep = SW["idvg_sat"]
+    plan = bias_plan(NFET, sweep)
+    for d in ("ng", "ng46", "xy"):
+        (tmp_path / d).mkdir()
+    (tmp_path / "ng46" / PATCHED_LIB_DIR).mkdir()
+    shutil.copy(nfet_v46_lib, tmp_path / "ng46" / PATCHED_LIB_DIR / "sm141064.ngspice")
+    stock = simulate(NFET, g, sweep, "typical", 25.0, image_pdk, tmp_path / "ng")
+    pdk46 = dataclasses.replace(image_pdk, ngspice_lib=Path(PATCHED_LIB))
+    text = ngspice_netlist(NFET, g, sweep, "typical", 25.0, pdk46)
+    ng46 = run_ngspice(text, tmp_path / "ng46", plan=plan, inputs=(PATCHED_LIB_DIR,))
+    xy = simulate_xyce(NFET, g, sweep, "typical", 25.0, image_pdk, tmp_path / "xy")
+    d_stock, d_46 = engine_diff(stock, xy), engine_diff(ng46, xy)
+    print(f"diag {geometry_id(g)} stock={d_stock!r} forced_4.6={d_46!r}")
+    assert d_stock > TOL  # the xfailed comparison, as published
+    assert engine_diff(stock, ng46) > TOL  # the patch took effect in ngspice
+    assert d_46 < TOL
