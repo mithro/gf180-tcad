@@ -1,8 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 """docker/tcad/*.lock are reproducible from their sources.
 
-- requirements.lock is the exact `uv export` of the docker/tcad uv project (`--offline`, as
-  tests/test_requirements_lock.py does for the base image);
+- requirements.lock is the exact `uv export` of docker/tcad/uv.lock, and uv.lock is current
+  for docker/tcad/pyproject.toml. Both checks are fully offline and need no Python 3.13: uv's
+  own `--locked` / `uv lock --check` must find a 3.13 interpreter (requires-python ==3.13.*)
+  even offline, and the GitHub runners have none. So the export runs `--frozen` (reads only
+  uv.lock), and the pyproject-vs-lock check compares what uv records in uv.lock (requires-python,
+  exclude-newer and the root's requires-dist) with pyproject.toml directly;
 - gf180mcu.lock and build-requirements.lock are single-purpose `uv pip compile --no-deps` locks.
   Their header records the full command, including `--exclude-newer`, so re-running it later
   gives the same lock even after newer PyPI releases (needs network);
@@ -13,9 +17,13 @@ import re
 import shlex
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
+from packaging.utils import canonicalize_name
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TCAD = REPO_ROOT / "docker" / "tcad"
@@ -26,7 +34,7 @@ EXPORT = [
     "export",
     "--project",
     "docker/tcad",
-    "--locked",
+    "--frozen",
     "--offline",
     "--no-emit-project",
     "--format",
@@ -47,21 +55,8 @@ def _uv() -> str:
     return uv
 
 
-def _ensure_python_313(uv: str) -> None:
-    """uv export needs a Python 3.13 interpreter (requires-python ==3.13.*) to exist.
-
-    The GitHub runners have none, so fetch one first; this is the only online step, kept apart
-    from the export itself, which runs --offline.
-    """
-    found = subprocess.run(
-        [uv, "python", "find", "3.13"], check=False, capture_output=True, text=True
-    )
-    if found.returncode != 0:
-        subprocess.run([uv, "python", "install", "3.13"], check=True, capture_output=True)
-
-
 def test_tcad_lock_in_sync():
-    _ensure_python_313(_uv())
+    _uv()
     res = subprocess.run(EXPORT, check=False, cwd=REPO_ROOT, capture_output=True, text=True)
     assert res.returncode == 0, res.stderr
     have = (TCAD / "requirements.lock").read_text(encoding="utf-8")
@@ -69,6 +64,61 @@ def test_tcad_lock_in_sync():
         f"docker/tcad/requirements.lock is stale; regenerate with: "
         f"{shlex.join(EXPORT)} > docker/tcad/requirements.lock"
     )
+
+
+def _requirements(reqs) -> dict[str, SpecifierSet]:
+    return {canonicalize_name(r.name): r.specifier for r in reqs}
+
+
+def _lock_drift(pyproject: dict, lock: dict) -> list[str]:
+    """Differences between pyproject.toml and what uv.lock was resolved from (empty = current)."""
+    drift = []
+    if lock["requires-python"] != pyproject["project"]["requires-python"]:
+        drift.append("requires-python")
+    if lock["options"]["exclude-newer"] != pyproject["tool"]["uv"]["exclude-newer"]:
+        drift.append("exclude-newer")
+    (root,) = [p for p in lock["package"] if p.get("source") == {"virtual": "."}]
+    if canonicalize_name(root["name"]) != canonicalize_name(pyproject["project"]["name"]):
+        drift.append("name")
+    want = _requirements(Requirement(d) for d in pyproject["project"]["dependencies"])
+    have = {
+        canonicalize_name(d["name"]): SpecifierSet(d.get("specifier", ""))
+        for d in root["metadata"]["requires-dist"]
+    }
+    drift += [
+        f"dependency {n}" for n in sorted(set(want) | set(have)) if want.get(n) != have.get(n)
+    ]
+    return drift
+
+
+def _load_tcad_project() -> tuple[dict, dict]:
+    pyproject = tomllib.loads((TCAD / "pyproject.toml").read_text(encoding="utf-8"))
+    lock = tomllib.loads((TCAD / "uv.lock").read_text(encoding="utf-8"))
+    return pyproject, lock
+
+
+def test_tcad_uv_lock_matches_pyproject():
+    assert _lock_drift(*_load_tcad_project()) == [], "relock with: uv lock --project docker/tcad"
+
+
+def test_tcad_lock_drift_control():
+    """Positive control: every kind of pyproject change is detected."""
+    pyproject, lock = _load_tcad_project()
+    deps = pyproject["project"]["dependencies"]
+    changed = [
+        {**pyproject, "project": {**pyproject["project"], "dependencies": [*deps, "six"]}},
+        {
+            **pyproject,
+            "project": {
+                **pyproject["project"],
+                "dependencies": [d.replace("==2.11.1", "==2.11.0") for d in deps],
+            },
+        },
+        {**pyproject, "project": {**pyproject["project"], "requires-python": ">=3.13"}},
+        {**pyproject, "tool": {"uv": {**pyproject["tool"]["uv"], "exclude-newer": "2027-01-01"}}},
+    ]
+    for p in changed:
+        assert _lock_drift(p, lock), p
 
 
 def _recorded_command(name: str) -> list[str]:
