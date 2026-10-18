@@ -625,13 +625,13 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
 - **Transition:** the voltage shift ΔV at C = (Cmin + Cacc)/2, between the TCAD and SPICE curves, ≤ 50 mV. This is a **proposal; no published standard exists**, and it is labelled as such in the docs.
 - **"Same process" window:**
   - Plateaus use the per-bias corner envelope, built from the five corners' `results/spice/ngspice/<corner>/<device>/<gid>/cv.csv` (`gf180tcad.calibrate.envelope_cv`, pure min/max).
-  - Plateau per-area values are also checked against the public 6 V Cox spec, 1.8/2.3/2.8 fF/µm². It is added to `data/pdk_elec_spec.json` as a new entry for both devices, with `metric: "cox_ff_per_um2"`, from the public PDK page already cited there.
+  - Plateau per-area values are also checked against the public 6 V Cox spec, 1.8/2.3/2.8 fF/µm². It is added to `data/pdk_elec_spec.json` as a new entry for both devices, with `metric: "cox_ff_per_um2"`, taken from the public gf180mcu-pdk.readthedocs.io electrical-spec page that lists the 6 V Cox (design spec §4). The entry carries its own `source_url` and section, because the existing top-level `source_url` is the 5 V page (`elec_specs_3.html`).
   - `specwindow.window(metric, spec, envelope)` combines them. `specwindow.py` itself is not modified.
 - Xyce has no CV analysis, so the spec's 0.5 % engine check cannot apply to Cgg. ngspice is the only Cgg reference, and the docs say so.
 
 **Files:**
 - `src/gf180tcad/calibrate/__init__.py`, `src/gf180tcad/calibrate/cv.py`, `src/gf180tcad/calibrate/__main__.py`;
-- `data/pdk_elec_spec.json` (the Cox entry; `specwindow.load_spec` reads it, and test_specwindow is updated);
+- `data/pdk_elec_spec.json` (the Cox entry; `specwindow.load_spec` reads it unchanged). The SPICE spec-check page (`docgen._spec_status`) and `tests/test_specwindow.py` must handle a metric that SPICE does not extract: list it as "TCAD only", with a test;
 - `results/tcad/calibration/{nfet_05v0,pfet_05v0}.json`, `results/tcad/validation/{nfet_05v0,pfet_05v0}.json`;
 - `tests/test_calibrate_cv.py`.
 
