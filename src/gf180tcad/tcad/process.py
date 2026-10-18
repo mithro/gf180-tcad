@@ -9,15 +9,19 @@ an ``https://`` link. Values taken from the card cite its model line and the ``.
 of its ``.lib typical`` section that the card expression uses; :func:`eval_card_expr`
 evaluates those expressions.
 
-Exactly three parameters are free (:data:`TUNABLES`). They are the calibration tunables, and
-their numeric bounds are written into the files before any fit. All the other parameters are
-fixed. :meth:`ProcessDescription.with_values` returns a copy with new tunable values. The
-files never hold calibrated values: those are written under ``results/tcad/calibration/``.
+Exactly three parameters are free (:data:`TUNABLES`). They are the calibration tunables: they
+are tagged ``calibrated`` because they will be fitted, and instead of ``source`` each has a
+``start_source`` and a ``bounds_source``. The files hold only their starts and numeric bounds,
+written before any fit; fitted values are written under ``results/tcad/calibration/``. All the
+other parameters are fixed and never tagged ``calibrated``.
+:meth:`ProcessDescription.with_values` returns a copy with new tunable values.
 
 The upper bound of ``t_ox_eff_nm`` is TOXP + Δ. Δ is the charge-centroid allowance, computed
 by :func:`centroid_allowance_nm` from the BSIM4 4.5.0 charge-thickness model (CTM,
-``capMod=2``), evaluated with the card values. Poly depletion is never part of Δ: the
-poly-gate region of the TCAD MOS capacitors simulates it.
+``capMod=2``), evaluated with the card values over the accumulation and strong-inversion
+plateaus only (polarity·Vg ≤ −:data:`PLATEAU_V` and ≥ +:data:`PLATEAU_V`), which set the
+effective oxide. The window is recorded in each file's ``[centroid_allowance]`` table. Poly
+depletion is never part of Δ: the poly-gate region of the TCAD MOS capacitors simulates it.
 
 This module is TCAD code. It is not one of the SPICE generator modules
 (:data:`gf180tcad.reference.GENERATOR_MODULES`).
@@ -66,8 +70,12 @@ BSIM4_450_URL = "https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip"
 # The project-choice Δ, used only if the CTM equations could not be evaluated (they can).
 FALLBACK_DELTA_NM = 0.5
 
-# Gate biases of the SPICE ``cv`` sweep (V), over which Δ is maximised.
+# Gate biases of the SPICE ``cv`` sweep (V); Δ is maximised over those on the plateaus.
 CV_VG = next(s for s in SWEEPS if s.kind == "cv").vgs
+
+# The plateau window (V): accumulation is polarity·Vg ≤ −PLATEAU_V and strong inversion is
+# polarity·Vg ≥ +PLATEAU_V, the ±2 V plateau convention of the calibration (Task 12).
+PLATEAU_V = 2.0
 
 _SCHEMA = 1
 _KEYS = {
@@ -80,6 +88,7 @@ _KEYS = {
     "note",
     "bounds",
     "bounds_source",
+    "start_source",
     "card_key",
     "card_line",
     "card_params",
@@ -89,6 +98,8 @@ _KEYS = {
 _CARD_KEYS = {"file", "pdk_variant", "sha256", "model", "model_line", "tt_lib_line"}
 _CARD_REF = re.compile(re.escape(CARD_FILE) + r":([1-9][0-9]*)")
 _URL = re.compile(r"https://[^\s;]+")
+_REF_IN_TEXT = re.compile(re.escape(CARD_FILE) + r":[1-9][0-9]*|https://[^\s;)]+")
+_PROJECT_CHOICE = "project choice"
 
 
 @dataclass(frozen=True)
@@ -216,7 +227,9 @@ class Parameter:
     ``card_line``/``card_key`` name the card line ``+ card_key=expr`` the value comes from and
     ``card_params`` the ``.param`` lines its expression uses; ``value`` is the expression times
     ``card_scale``. ``bsim_name`` is the BSIM4 parameter it sets (default ``card_key``), used
-    by :meth:`ProcessDescription.card_values`.
+    by :meth:`ProcessDescription.card_values`. A tunable has ``start_source`` and
+    ``bounds_source`` (text that cites a card line or link, or says "project choice"); its
+    ``source`` holds the references cited in ``start_source``.
     """
 
     name: str
@@ -229,11 +242,21 @@ class Parameter:
     note: str
     bounds: tuple[float, float] | None = None
     bounds_source: str | None = None
+    start_source: str | None = None
     card_key: str | None = None
     card_line: int | None = None
     card_params: tuple[int, ...] = ()
     card_scale: float = 1.0
     bsim_name: str | None = None
+
+
+@dataclass(frozen=True)
+class CentroidAllowance:
+    """A file's ``[centroid_allowance]`` table: the plateau window (V) and the Δ (nm) it gives."""
+
+    plateau_v: float
+    delta_nm: float
+    note: str
 
 
 @dataclass(frozen=True)
@@ -243,6 +266,7 @@ class ProcessDescription:
     device: str
     polarity: str
     card: CardRef
+    centroid_allowance: CentroidAllowance
     params: Mapping[str, Parameter]
 
     def values(self) -> dict[str, float]:
@@ -309,18 +333,24 @@ def _int(x: object, what: str) -> int:
     return x
 
 
+def _justified(x: object, what: str) -> str:
+    """Text that cites a card line or an https:// link, or says it is a project choice."""
+    text = _text(x, what)
+    if not (_REF_IN_TEXT.search(text) or _PROJECT_CHOICE in text):
+        raise ValueError(f"{what} cites no {CARD_FILE}:<line> or link and is no project choice")
+    return text
+
+
 def _parameter(name: str, raw: Mapping) -> Parameter:
     unknown = set(raw) - _KEYS
     if unknown:
         raise ValueError(f"unknown keys {sorted(unknown)}")
-    for key in ("value", "unit", "provenance", "source", "fixed", "role", "note"):
+    for key in ("value", "unit", "provenance", "fixed", "role", "note"):
         if key not in raw:
             raise ValueError(f"missing {key!r}")
     provenance = raw["provenance"]
     if provenance not in TAGS:
         raise ValueError(f"provenance {provenance!r} is not one of {TAGS}")
-    if provenance == "calibrated":
-        raise ValueError("process files never hold calibrated values")
     fixed = raw["fixed"]
     if fixed is not True and fixed is not False:
         raise ValueError(f"fixed must be true or false, got {fixed!r}")
@@ -329,29 +359,48 @@ def _parameter(name: str, raw: Mapping) -> Parameter:
         raise ValueError(f"role {role!r} is not one of {ROLES}")
     if (role == "tunable") == fixed:
         raise ValueError(f"role {role!r} does not match fixed={fixed}")
+    if fixed:
+        if provenance == "calibrated":
+            raise ValueError("a fixed parameter is never tagged calibrated")
+        for key in ("bounds", "bounds_source", "start_source"):
+            if key in raw:
+                raise ValueError(f"a fixed parameter has no {key}")
+        if "source" not in raw:
+            raise ValueError("missing 'source'")
+        source = parse_source(_text(raw["source"], "source"))
+    else:
+        if provenance != "calibrated":
+            raise ValueError(f"a tunable is tagged calibrated, not {provenance!r}")
+        for key in ("bounds", "bounds_source", "start_source"):
+            if key not in raw:
+                raise ValueError(f"a tunable needs {key}")
+        if "source" in raw:
+            raise ValueError("a tunable has start_source and bounds_source, not source")
+        start_source = _justified(raw["start_source"], "start_source")
+        source = tuple(_REF_IN_TEXT.findall(start_source))
     p = Parameter(
         name=name,
         value=_number(raw["value"], "value"),
         unit=_text(raw["unit"], "unit"),
         provenance=provenance,
-        source=parse_source(_text(raw["source"], "source")),
+        source=source,
         fixed=fixed,
         role=role,
         note=_text(raw["note"], "note"),
     )
-    if fixed:
-        if "bounds" in raw or "bounds_source" in raw:
-            raise ValueError("a fixed parameter has no bounds")
-    else:
-        if "bounds" not in raw or "bounds_source" not in raw:
-            raise ValueError("a tunable needs bounds and bounds_source")
+    if not fixed:
         b = raw["bounds"]
         if not isinstance(b, list) or len(b) != 2:
             raise ValueError(f"bounds must be [lo, hi], got {b!r}")
         lo, hi = (_number(x, "bound") for x in b)
         if not lo <= p.value <= hi:
             raise ValueError(f"start {p.value!r} is not within bounds [{lo}, {hi}]")
-        p = replace(p, bounds=(lo, hi), bounds_source=_text(raw["bounds_source"], "bounds_source"))
+        p = replace(
+            p,
+            bounds=(lo, hi),
+            bounds_source=_justified(raw["bounds_source"], "bounds_source"),
+            start_source=start_source,
+        )
     if ("card_key" in raw) != ("card_line" in raw):
         raise ValueError("card_key and card_line go together")
     if "card_line" in raw:
@@ -380,15 +429,16 @@ def _parameter(name: str, raw: Mapping) -> Parameter:
 def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
     """Read and validate ``<data_dir>/<device>.toml`` (default :data:`DATA_DIR`).
 
-    Checks the provenance tags (no ``calibrated``), that every source is a card line or a
-    link, that exactly :data:`TUNABLES` are free and have bounds with lo ≤ start ≤ hi, and
-    that every cited card line of a card value is in its source.
+    Checks the provenance tags (``calibrated`` exactly on the tunables), that every source is
+    a card line or a link, that exactly :data:`TUNABLES` are free and have a start source and
+    bounds with lo ≤ start ≤ hi and a bounds source, that every cited card line of a card value
+    is in its source, and the ``[centroid_allowance]`` table.
     """
     if device not in DEVICES:
         raise ValueError(f"no process file for {device!r}; known: {DEVICES}")
     path = Path(data_dir or DATA_DIR) / f"{device}.toml"
     raw = tomllib.loads(path.read_text(encoding="utf-8"))
-    if set(raw) != {"schema", "device", "polarity", "card", "param"}:
+    if set(raw) != {"schema", "device", "polarity", "card", "centroid_allowance", "param"}:
         raise ValueError(f"{path}: top-level keys are {sorted(raw)}")
     if raw["schema"] != _SCHEMA or raw["device"] != device:
         raise ValueError(f"{path}: schema/device mismatch")
@@ -407,6 +457,18 @@ def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
         model_line=_int(card["model_line"], "model_line"),
         tt_lib_line=_int(card["tt_lib_line"], "tt_lib_line"),
     )
+    ca = raw["centroid_allowance"]
+    if set(ca) != {"plateau_v", "delta_nm", "note"}:
+        raise ValueError(f"{path}: [centroid_allowance] keys are {sorted(ca)}")
+    try:
+        plateau_v = _number(ca["plateau_v"], "plateau_v")
+        if plateau_v <= 0:
+            raise ValueError(f"plateau_v must be > 0, got {plateau_v!r}")
+        centroid_allowance = CentroidAllowance(
+            plateau_v, _number(ca["delta_nm"], "delta_nm"), _text(ca["note"], "note")
+        )
+    except ValueError as e:
+        raise ValueError(f"{path}: [centroid_allowance]: {e}") from None
     params = {}
     for name, p in raw["param"].items():
         try:
@@ -416,7 +478,9 @@ def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
     free = {n for n, p in params.items() if not p.fixed}
     if free != set(TUNABLES):
         raise ValueError(f"{path}: free parameters are {sorted(free)}, expected {TUNABLES}")
-    return ProcessDescription(device, raw["polarity"], card_ref, MappingProxyType(params))
+    return ProcessDescription(
+        device, raw["polarity"], card_ref, centroid_allowance, MappingProxyType(params)
+    )
 
 
 # --- the BSIM4 charge-thickness model (CTM) --------------------------------------------------
@@ -490,6 +554,7 @@ def ctm_x_dc_inv_sup_m(cv: Mapping[str, float], c: Constants = CONSTANTS) -> flo
 class Centroid:
     """The CTM charge thickness over a gate sweep (:func:`centroid`)."""
 
+    plateau_v: float
     x_dc_acc_max_m: float
     vg_at_max_v: float
     x_dc_inv_sup_m: float
@@ -503,21 +568,39 @@ def round_up_nm(x_nm: float) -> float:
 
 
 def centroid(
-    cv: Mapping[str, float], c: Constants = CONSTANTS, vg: Iterable[float] = CV_VG
+    cv: Mapping[str, float],
+    c: Constants = CONSTANTS,
+    vg: Iterable[float] = CV_VG,
+    plateau_v: float = PLATEAU_V,
 ) -> Centroid:
-    """X_DC over the gate biases ``vg`` and Δ = max X_DC·EPSROX/εsi, rounded up to 0.01 nm."""
-    acc = [(ctm_x_dc_acc_m(v, cv, c), v) for v in vg]
+    """X_DC on the plateaus of the gate biases ``vg``, and Δ, rounded up to 0.01 nm.
+
+    Accumulation is type·vg ≤ −``plateau_v``: there eqs. (7.3.2)/(7.3.3) apply, and X_DC grows
+    towards flat band, so its maximum is at the window edge. Strong inversion is
+    type·vg ≥ +``plateau_v``: there eq. (7.3.4) applies, bounded by its Vgsteff → 0
+    supremum. Depletion, where the accumulation formula saturates near Ldebye/3 and the
+    centroid says nothing about the oxide-capacitance plateaus, is left out.
+    Δ = max X_DC·EPSROX/εsi. Raises ``ValueError`` if either window holds no bias.
+    """
+    vg = tuple(vg)
+    acc = [(ctm_x_dc_acc_m(v, cv, c), v) for v in vg if cv["type"] * v <= -plateau_v]
+    if not acc or not any(cv["type"] * v >= plateau_v for v in vg):
+        raise ValueError(f"no gate bias on the accumulation or inversion plateau (±{plateau_v} V)")
     x_acc, v_max = max(acc)
     x_inv = ctm_x_dc_inv_sup_m(cv, c)
     x = max(x_acc, x_inv)
-    return Centroid(x_acc, v_max, x_inv, x, round_up_nm(x * cv["epsrox"] / c.eps_si * 1e9))
+    delta = round_up_nm(x * cv["epsrox"] / c.eps_si * 1e9)
+    return Centroid(plateau_v, x_acc, v_max, x_inv, x, delta)
 
 
 def centroid_allowance_nm(
-    card_values: Mapping[str, float], constants: Constants = CONSTANTS, vg: Iterable[float] = CV_VG
+    card_values: Mapping[str, float],
+    constants: Constants = CONSTANTS,
+    vg: Iterable[float] = CV_VG,
+    plateau_v: float = PLATEAU_V,
 ) -> float:
     """Δ (nm): the CTM charge-centroid allowance added to TOXP for the ``t_ox_eff`` bound."""
-    return centroid(card_values, constants, vg).delta_nm
+    return centroid(card_values, constants, vg, plateau_v).delta_nm
 
 
 def k1_doping_cm3(cv: Mapping[str, float], c: Constants = CONSTANTS) -> float:

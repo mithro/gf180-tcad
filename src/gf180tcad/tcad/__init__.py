@@ -7,6 +7,9 @@ changes to this package never touch ``results/spice/provenance.json``.
 
 from gf180tcad.sandbox import REPO_ROOT
 
+# TODO(Task 9b): add provenance(), which writes each TCAD tree root's provenance.json. It
+# hashes TCAD_GENERATOR_MODULES, which Task 9b defines here together with its import-graph test.
+
 # The file pinning the TCAD image by digest (``docker/TCAD_IMAGE``).
 TCAD_IMAGE_FILE = REPO_ROOT / "docker" / "TCAD_IMAGE"
 

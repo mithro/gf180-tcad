@@ -225,8 +225,9 @@ def test_centroid_window_excludes_depletion():
         res = process.centroid(cv)
         assert res.vg_at_max_v == -2.0 * cv["type"]
         assert res.delta_nm == delta
-        # the whole sweep would pick up the depletion end (about Ldebye/3)
-        assert process.centroid_allowance_nm(cv, plateau_v=0.0) == 1.10
+        # the whole sweep would pick up the depletion end (about Ldebye/3): 1.10 nm
+        full = max(process.ctm_x_dc_acc_m(v, cv) for v in process.CV_VG)
+        assert process.round_up_nm(full * cv["epsrox"] / 11.7 * 1e9) == 1.10 > delta
         with pytest.raises(ValueError, match="plateau"):
             process.centroid(cv, plateau_v=6.0)  # no bias of the sweep in the window
 
