@@ -507,16 +507,25 @@ def test_engines_agree(image_pdk, tmp_path, device, g, sweep_name):
 PATCHED_LIB_DIR = "lib"  # out_dir subdirectory, passed to run_ngspice as an explicit input
 PATCHED_LIB = f"/work/out/{PATCHED_LIB_DIR}/sm141064.ngspice"
 _PATCH_LIB = r"""
-import json, re
+import hashlib, json, re
 from gf180tcad import pdk
-text = open(pdk.locate().ngspice_lib).read()
+lib = pdk.locate().ngspice_lib
+text = open(lib).read()
+# every nested .lib target, in any form (indented, quoted or not), with its byte identity
+targets = sorted(set(re.findall(r"(?im)^[ \t]*\.lib[ \t]+'?([^'\s]+)'?[ \t]+\S+", text)))
+sha = lambda p: hashlib.sha256(open(p, "rb").read()).hexdigest()
+nested = {t: sha(lib.parent / t) for t in targets}
 start = text.index("\n.lib nfet_06v0_t\n")
 end = text.index("\n.endl nfet_06v0_t\n", start)
 section, n_version = re.subn(r"(?m)^\+ version=4\.5$", "+ version=4.6", text[start:end])
 text = text[:start] + section + text[end:]
-text, n_nested = re.subn(r"(?m)^\.lib 'sm141064\.spice' ", ".lib '@PATCHED_LIB@' ", text)
+n_nested = len(re.findall(r"(?i)sm141064\.spice", text))
+text = re.sub(r"(?i)sm141064\.spice", "@PATCHED_LIB@", text)
 open("/work/out/sm141064.ngspice", "w").write(text)
-print(json.dumps({"version": n_version, "nested": n_nested}))
+print(json.dumps({
+    "version": n_version, "nested": n_nested, "left": text.lower().count("sm141064.spice"),
+    "lib_sha": sha(lib), "nested_sha": nested, "mim_ngspice_sha": sha(lib.parent / "sm141064_mim.ngspice"),
+}))
 """.replace("@PATCHED_LIB@", PATCHED_LIB)
 
 
@@ -524,10 +533,54 @@ print(json.dumps({"version": n_version, "nested": n_nested}))
 def nfet_v46_lib(tmp_path_factory) -> Path:
     d = tmp_path_factory.mktemp("nfet_v46_lib")
     res = sandbox.run(["python3", "-c", _PATCH_LIB], out_dir=d)
-    counts = json.loads(res.stdout.splitlines()[-1])
-    assert counts["version"] == 2, counts  # both nfet_06v0 bins (0.6-0.7 and 0.7-50 um)
-    assert counts["nested"] > 0, counts
+    info = json.loads(res.stdout.splitlines()[-1])
+    assert info["version"] == 2, info  # both nfet_06v0 bins (0.6-0.7 and 0.7-50 um)
+    assert info["nested"] > 0 and info["left"] == 0, info  # no path back to the PDK's file
+    # The lib's nested targets are sm141064.spice (MOS, diodes, ...) and sm141064_mim.spice (MIM
+    # caps, unused here). Each must be byte-identical to the file the netlist names, so the
+    # stock run evaluates the same text whichever copy ngspice resolves.
+    assert set(info["nested_sha"]) == {"sm141064.spice", "sm141064_mim.spice"}, info
+    assert info["nested_sha"]["sm141064.spice"] == info["lib_sha"], info
+    assert info["nested_sha"]["sm141064_mim.spice"] == info["mim_ngspice_sha"], info
     return d / "sm141064.ngspice"
+
+
+def _bsim4_code(tmp_path: Path, pdk: PdkInfo, g: Geometry, lib_copy: Path | None) -> str:
+    """ngspice's BSIM4 implementation for the nfet at ``g`` (``showmod`` header)."""
+    text = ngspice_netlist(NFET, g, SW["ioff"], "typical", 25.0, pdk)
+    head = text.splitlines()[:8]  # title .. xdut
+    assert head[-1].startswith("xdut ")
+    netlist = (
+        "\n".join(
+            [*head, ".control", "set num_threads=1", "op", "showmod m.xdut.m0", ".endc", ".end"]
+        )
+        + "\n"
+    )
+    if lib_copy is not None:
+        (tmp_path / PATCHED_LIB_DIR).mkdir()
+        shutil.copy(lib_copy, tmp_path / PATCHED_LIB_DIR / "sm141064.ngspice")
+    (tmp_path / "showmod.cir").write_text(netlist)
+    sandbox.run(
+        ["sh", "-c", "exec ngspice -b showmod.cir > showmod.log 2>&1"],
+        out_dir=tmp_path,
+        mem="4g",
+        cpus=1,
+        pids=256,
+    )
+    found = set(re.findall(r"(BSIM4v\d) models", (tmp_path / "showmod.log").read_text()))
+    assert len(found) == 1, found
+    return found.pop()
+
+
+@pytest.mark.sandbox
+@pytest.mark.parametrize("l_um", [0.6, 10], ids=["bin_l0p6-0p7", "bin_l0p7-50"])
+def test_patched_lib_switches_bsim4_code_version(image_pdk, nfet_v46_lib, tmp_path, l_um):
+    g = _w10(NFET, l_um)
+    (tmp_path / "stock").mkdir()
+    (tmp_path / "patched").mkdir()
+    assert _bsim4_code(tmp_path / "stock", image_pdk, g, None) == "BSIM4v5"
+    pdk46 = dataclasses.replace(image_pdk, ngspice_lib=Path(PATCHED_LIB))
+    assert _bsim4_code(tmp_path / "patched", pdk46, g, nfet_v46_lib) == "BSIM4v6"
 
 
 _DIAG_CASES = [pytest.param(g, id=f"nfet_05v0-{geometry_id(g)}-idvg_sat") for g in NFET.geometries]
