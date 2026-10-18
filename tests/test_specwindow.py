@@ -36,39 +36,56 @@ def test_envelope_rejects_missing_metric_and_empty():
 # --- window --------------------------------------------------------------------------------
 
 
-def test_window_spec_wider():
+def test_window_spec_contains_envelope():
     w = specwindow.window("vt", (0.58, 0.82), (0.6, 0.7))
     assert (w.lo, w.hi, w.source, w.metric) == (0.58, 0.82, "spec", "vt")
 
 
-def test_window_envelope_wider():
+def test_window_envelope_contains_spec():
     w = specwindow.window("vt", (0.58, 0.82), (0.5, 0.9))
     assert (w.lo, w.hi, w.source) == (0.5, 0.9, "envelope")
 
 
-def test_window_tie_prefers_spec():
-    assert specwindow.window("m", (0.0, 1.0), (2.0, 3.0)).source == "spec"
+def test_window_identical_intervals_are_the_spec():
+    assert specwindow.window("m", (0.0, 1.0), (0.0, 1.0)).source == "spec"
 
 
-def test_window_is_the_one_wider_not_the_union():
-    w = specwindow.window("m", (0.0, 10.0), (9.0, 12.0))  # width 10 vs 3
-    assert (w.lo, w.hi, w.source) == (0.0, 10.0, "spec")
+def test_window_partial_overlap_is_the_hull():
+    w = specwindow.window("m", (0.0, 10.0), (9.0, 12.0))
+    assert (w.lo, w.hi, w.source) == (0.0, 12.0, "hull")
+    w = specwindow.window("m", (5.0, 10.0), (-1.0, 7.0))
+    assert (w.lo, w.hi, w.source) == (-1.0, 10.0, "hull")
 
 
-def test_window_one_sided_spec_is_infinitely_wide():
+def test_window_disjoint_is_the_hull():
+    w = specwindow.window("m", (0.0, 1.0), (3.0, 4.0))
+    assert (w.lo, w.hi, w.source) == (0.0, 4.0, "hull")
+    w = specwindow.window("m", (3.0, 4.0), (0.0, 1.0))
+    assert (w.lo, w.hi, w.source) == (0.0, 4.0, "hull")
+
+
+def test_window_keeps_spec_typ_and_tt_inside_the_hull():
+    w = specwindow.window("m", (0.0, 1.0), (3.0, 4.0))
+    assert w.contains(0.5) and w.contains(3.5)
+
+
+def test_window_one_sided_spec_stays_unbounded():
     w = specwindow.window("ioff", (-INF, 10.0), (0.1, 5.0))
     assert (w.lo, w.hi, w.source) == (-INF, 10.0, "spec")
+    w = specwindow.window("ioff", (-INF, 10.0), (0.1, 50.0))
+    assert (w.lo, w.hi, w.source) == (-INF, 50.0, "hull")
 
 
 def test_window_one_sided_magnitude_spec():
     w = specwindow.window("ioff", (0.0, 10.0), (0.1, 5.0))
     assert (w.lo, w.hi, w.source) == (0.0, 10.0, "spec")
     w = specwindow.window("ioff", (0.0, 10.0), (0.1, 50.0))
-    assert (w.lo, w.hi, w.source) == (0.1, 50.0, "envelope")
+    assert (w.lo, w.hi, w.source) == (0.0, 50.0, "hull")
 
 
 def test_window_both_unbounded_is_spec():
     assert specwindow.window("m", (-INF, INF), (0.0, 1.0)).source == "spec"
+    assert specwindow.window("m", (0.0, INF), (-1.0, 1.0)).hi == INF
 
 
 def test_window_contains_and_frozen():
@@ -81,6 +98,22 @@ def test_window_contains_and_frozen():
 def test_window_rejects_inverted():
     with pytest.raises(ValueError):
         specwindow.window("m", (2.0, 1.0), (0.0, 1.0))
+
+
+def test_envelope_tree_skips_incomplete_corner_sets(tmp_path):
+    def put(corner, device, gid, v):
+        d = tmp_path / "ngspice" / corner / device / gid
+        d.mkdir(parents=True)
+        (d / "metrics.json").write_text(json.dumps({"metrics": {"m": v}}))
+
+    for i, c in enumerate(CORNERS):
+        put(c, "nfet_05v0", "full", float(i))
+    for c in CORNERS[:3]:
+        put(c, "nfet_05v0", "partial", 1.0)
+    assert specwindow.envelope_tree(tmp_path) == {
+        "ngspice": {"nfet_05v0": {"full": {"m": [0.0, 4.0]}}}
+    }
+    assert specwindow.incomplete(tmp_path) == [("ngspice", "nfet_05v0", "partial")]
 
 
 # --- spec file -----------------------------------------------------------------------------

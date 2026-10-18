@@ -7,8 +7,8 @@ Two pieces:
   corners of the published SPICE reference. ``spice-reference`` writes the result as
   ``results/spice/envelope.json``, shaped ``{engine: {device: {geometry_id: {metric: [lo, hi]}}}}``.
   This is pure min/max selection of published floats; no arithmetic is done on them.
-- :func:`window`: the "Same process" agreement window for one metric, the *wider* of the PDK's
-  own spec min-max and the corner envelope, together with which of the two it is.
+- :func:`window`: the "Same process" agreement window for one metric, the hull of the PDK's
+  own spec min-max and the corner envelope, together with which of the two sets it.
 
 The spec table is ``data/pdk_elec_spec.json`` (public GF180MCU PDK documentation, see its
 ``source_url``). It is stored as published; :func:`spec_range` converts one entry to the
@@ -55,17 +55,12 @@ def envelope(
     }
 
 
-def envelope_tree(root: Path) -> dict:
-    """``{engine: {device: {geometry_id: {metric: [lo, hi]}}}}`` over the corners under ``root``.
-
-    ``root`` is a reference tree ``<engine>/<corner>/<device>/<geometry_id>/metrics.json``.
-    Corners that are present are used (all five in a full run); every engine/device/geometry
-    must have the same corners.
-    """
+def _collect(root: Path) -> dict[str, dict[tuple[str, str], dict[str, dict[str, float]]]]:
+    """``{engine: {(device, geometry_id): {corner: metrics}}}`` of the corners under ``root``."""
     root = Path(root)
     out: dict = {}
     for edir in sorted(p for p in root.iterdir() if p.is_dir()):
-        per: dict[tuple[str, str], dict[str, dict[str, float]]] = {}
+        per: dict = out.setdefault(edir.name, {})
         for corner in CORNERS:
             cdir = edir / corner
             if not cdir.is_dir():
@@ -74,11 +69,33 @@ def envelope_tree(root: Path) -> dict:
                 for gdir in sorted(p for p in ddir.iterdir() if p.is_dir()):
                     data = json.loads((gdir / METRICS_NAME).read_text(encoding="utf-8"))
                     per.setdefault((ddir.name, gdir.name), {})[corner] = data["metrics"]
-        if len({tuple(v) for v in per.values()}) > 1:
-            raise ValueError(f"{edir.name}: geometries have different corner sets")
+    return out
+
+
+def incomplete(root: Path) -> list[tuple[str, str, str]]:
+    """``(engine, device, geometry_id)`` under ``root`` that lack some corner of ``CORNERS``."""
+    return sorted(
+        (engine, device, gid)
+        for engine, per in _collect(root).items()
+        for (device, gid), by_corner in per.items()
+        if set(by_corner) != set(CORNERS)
+    )
+
+
+def envelope_tree(root: Path) -> dict:
+    """``{engine: {device: {geometry_id: {metric: [lo, hi]}}}}`` over the corners under ``root``.
+
+    ``root`` is a reference tree ``<engine>/<corner>/<device>/<geometry_id>/metrics.json``.
+    An entry is written only when all five corners of ``CORNERS`` are present, so a partial
+    envelope never looks complete; the others are listed by :func:`incomplete`.
+    """
+    out: dict = {}
+    for engine, per in _collect(root).items():
         for (device, gid), by_corner in per.items():
+            if set(by_corner) != set(CORNERS):
+                continue
             env = envelope(by_corner)
-            out.setdefault(edir.name, {}).setdefault(device, {})[gid] = {
+            out.setdefault(engine, {}).setdefault(device, {})[gid] = {
                 k: list(v) for k, v in env.items()
             }
     return out
@@ -95,9 +112,9 @@ def write_envelope(root: Path, path: Path | None = None) -> Path:
 class Window:
     """An agreement window ``[lo, hi]`` and where it came from.
 
-    ``source`` is ``"spec"`` (the PDK spec min-max) or ``"envelope"`` (the corner envelope),
-    whichever is wider; this is the window "which one is shown" in the docs. Open sides are
-    ``-inf`` / ``inf``.
+    ``source`` says which interval sets the window: ``"spec"`` (the PDK spec min-max),
+    ``"envelope"`` (the corner envelope) or ``"hull"`` (neither contains the other). This is the
+    "which one is shown" of the docs. Open sides are ``-inf`` / ``inf``.
     """
 
     metric: str
@@ -110,18 +127,24 @@ class Window:
 
 
 def window(metric: str, spec: tuple[float, float], envelope: tuple[float, float]) -> Window:
-    """The wider (by ``hi - lo``) of the spec interval and the corner envelope.
+    """The convex hull ``[min(lo), max(hi)]`` of the spec interval and the corner envelope.
 
-    A one-sided spec (an open side is ``-inf``/``inf``) has infinite width, so it is always
-    "wider" than a finite envelope; two infinite widths, and equal widths, resolve to the spec.
-    This is the wider *one*, not their union.
+    ``source`` says which one sets the window: ``"spec"`` if the spec contains the envelope
+    (including equal intervals), ``"envelope"`` if the envelope contains the spec, ``"hull"``
+    for partial overlap or disjoint intervals. An unbounded spec side (``-inf`` / ``inf``)
+    stays unbounded.
     """
     for name, (lo, hi) in (("spec", spec), ("envelope", envelope)):
         if not lo <= hi:
             raise ValueError(f"{metric}: {name} interval is inverted: ({lo}, {hi})")
-    if envelope[1] - envelope[0] > spec[1] - spec[0]:
-        return Window(metric, envelope[0], envelope[1], "envelope")
-    return Window(metric, spec[0], spec[1], "spec")
+    lo, hi = min(spec[0], envelope[0]), max(spec[1], envelope[1])
+    if (lo, hi) == tuple(spec):
+        source = "spec"
+    elif (lo, hi) == tuple(envelope):
+        source = "envelope"
+    else:
+        source = "hull"
+    return Window(metric, lo, hi, source)
 
 
 def load_spec(path: Path | None = None) -> dict:
