@@ -66,7 +66,7 @@ uv run --locked python -m gf180tcad spice-reference --engine ngspice \
 
 `--out` is *replaced* by the jobs that were run, so write a partial run to a
 directory of its own, not to {repo}`results/spice`. It must not exist, be empty, or
-be an earlier reference tree (one with a `provenance.json`, see {ref}`results-layout`); any
+be an earlier reference tree (one with a {repo}`provenance.json <results/spice/provenance.json>`, see {ref}`results-layout`); any
 other
 directory is refused.
 
