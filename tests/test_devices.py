@@ -144,3 +144,19 @@ G = Geometry(10, 1, "validation")
 def test_non_tuple_raises_type_error(make):
     with pytest.raises(TypeError):
         make()
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+@pytest.mark.parametrize(
+    "make",
+    [
+        lambda b: Geometry(b, 1, "validation"),
+        lambda b: Geometry(1, b, "validation"),
+        lambda b: Sweep("s", "idvg", (0.0, b), (0.0,), (0.0,)),
+        lambda b: Sweep("s", "idvg", (0.0,), (0.0, b), (0.0,)),
+        lambda b: Sweep("s", "idvg", (0.0,), (0.0,), (0.0, b)),
+    ],
+)
+def test_non_finite_raises(make, bad):
+    with pytest.raises(ValueError):
+        make(bad)
