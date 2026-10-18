@@ -43,8 +43,12 @@ def _write(tmp_path: Path, device: str, raw: dict) -> Path:
     for table, t in raw.items():
         if isinstance(t, dict) and table != "param":
             lines += [f"[{table}]"] + [f"{k} = {val(v)}" for k, v in t.items()]
+    scalars = {k: v for k, v in raw["param"].items() if not isinstance(v, dict)}
+    if scalars:  # malformed on purpose: a parameter that is not a table
+        lines += ["[param]"] + [f"{k} = {val(v)}" for k, v in scalars.items()]
     for name, p in raw["param"].items():
-        lines += [f"[param.{name}]"] + [f"{k} = {val(v)}" for k, v in p.items()]
+        if isinstance(p, dict):
+            lines += [f"[param.{name}]"] + [f"{k} = {val(v)}" for k, v in p.items()]
     (tmp_path / f"{device}.toml").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return tmp_path
 
@@ -132,6 +136,112 @@ def test_tunable_starts(device):
     assert "sm141064.ngspice:" in desc.params["t_ox_eff_nm"].start_source  # TOXE
     assert "sm141064.ngspice:" in desc.params["n_ch_cm3"].start_source  # NDEP
     assert "project choice" in desc.params["n_ch_cm3"].bounds_source
+
+
+@pytest.mark.parametrize("device", DEVICES)
+def test_source_kinds_are_structured(device):
+    """Whether a start or bound is a card value, derived or a project choice is a field."""
+    p = process.load(device).params
+    assert p["t_ox_eff_nm"].start_kind == "card"
+    assert p["t_ox_eff_nm"].bounds_kind == ("card", "derived")
+    assert p["n_ch_cm3"].start_kind == "card"
+    assert p["n_ch_cm3"].bounds_kind == ("project-choice", "project-choice")
+    assert p["dv_fb_v"].start_kind == "project-choice"
+    assert p["dv_fb_v"].bounds_kind == ("project-choice", "project-choice")
+    for q in p.values():
+        if q.fixed:
+            assert q.start_kind is None and q.bounds_kind is None, q.name
+
+
+@pytest.mark.parametrize(
+    ("edit", "match"),
+    [
+        ({"start_kind": "guess"}, "start_kind"),
+        ({"bounds_kind": ["card"]}, "bounds_kind"),
+        ({"bounds_kind": ["card", "nope"]}, "bounds_kind"),
+        ({"bounds_kind": ["card", "card"]}, "bounds_source"),  # the text cites no card line
+        ({"start_kind": "card"}, "start_source"),  # "project choice" text, no card line
+    ],
+)
+def test_source_kinds_checked(tmp_path, edit, match):
+    raw = _raw("nfet_05v0")
+    raw["param"]["dv_fb_v"].update(edit)
+    with pytest.raises(ValueError, match=f"dv_fb_v.*{match}"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+def test_spice_card_value_needs_a_card_line(tmp_path):
+    """A spice-card value cites its card line, unless it says what it is derived from."""
+    raw = _raw("nfet_05v0")
+    del raw["param"]["ngate_cm3"]["card_key"], raw["param"]["ngate_cm3"]["card_line"]
+    with pytest.raises(ValueError, match="ngate_cm3.*card_line"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+    raw = _raw("nfet_05v0")
+    del raw["param"]["cf_f_per_m"]["derived_from"]
+    with pytest.raises(ValueError, match="cf_f_per_m.*card_line"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+@pytest.mark.parametrize(
+    ("derived_from", "match"),
+    [(["nope"], "nope"), (["t_ox_eff_nm"], "t_ox_eff_nm"), ([], "derived_from"), ("toxe_nm", "")],
+)
+def test_derived_from_checked(tmp_path, derived_from, match):
+    raw = _raw("nfet_05v0")
+    raw["param"]["cf_f_per_m"]["derived_from"] = derived_from
+    with pytest.raises(ValueError, match=f"cf_f_per_m.*{match}"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+    raw = _raw("nfet_05v0")
+    raw["param"]["ngate_cm3"]["derived_from"] = ["ndep_cm3"]  # a card value is not derived
+    with pytest.raises(ValueError, match="ngate_cm3"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+def test_cf_is_derived():
+    for device in DEVICES:
+        cf = process.load(device).params["cf_f_per_m"]
+        assert cf.card_line is None and cf.derived_from == ("toxe_nm", "epsrox")
+
+
+@pytest.mark.parametrize(
+    ("table", "key", "value"),
+    [
+        ("param.t_ox_eff_nm", "bounds", [15.2, 17.0]),  # hi is not TOXP + delta
+        ("centroid_allowance", "delta_nm", 1.0),
+    ],
+)
+def test_t_ox_upper_bound_is_toxp_plus_delta(tmp_path, table, key, value):
+    raw = _raw("nfet_05v0")
+    t = raw
+    for part in table.split("."):
+        t = t[part]
+    t[key] = value
+    with pytest.raises(ValueError, match="TOXP"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [("model_line", "37055"), ("tt_lib_line", 105.0), ("sha256", 1), ("file", ""), ("model", 7)],
+)
+def test_card_table_types(tmp_path, key, value):
+    raw = _raw("nfet_05v0")
+    raw["card"][key] = value
+    with pytest.raises(ValueError, match=key):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+def test_param_must_be_a_table(tmp_path):
+    raw = _raw("nfet_05v0")
+    raw["param"]["bogus"] = 1.0
+    with pytest.raises(ValueError, match="bogus"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+@pytest.mark.parametrize("bad", [True, False, "0.1", None])
+def test_with_values_rejects_non_numbers(bad):
+    with pytest.raises(ValueError, match="dv_fb_v"):
+        process.load("nfet_05v0").with_values({"dv_fb_v": bad})
 
 
 @pytest.mark.parametrize(
