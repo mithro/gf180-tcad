@@ -299,3 +299,74 @@ role = "reference-bookkeeping"
 bsim_name = "cf"
 derived_from = ["toxe_nm", "epsrox"]
 note = "CF: outer fringing capacitance per width. The card sets no CF, so BSIM4 uses its default 2*EPSROX*eps0/pi*ln(1+4e-7/TOXE) (manual eq. 7.5.1), from TOXE and EPSROX. 1D only."
+
+[param.ckappas_v]
+value = 0.6
+unit = "V"
+provenance = "spice-card"
+source = "sm141064.ngspice:37099"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "ckappas"
+card_line = 37099
+note = "CKAPPAS: coefficient of the bias-dependent gate-source overlap (LDD) capacitance. 1D only: the BSIM4 capMod=2 bias-dependent overlap capacitance (manual section 7.5)."
+
+[param.ckappad_v]
+value = 0.6
+unit = "V"
+provenance = "spice-card"
+source = "sm141064.ngspice:37098"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "ckappad"
+card_line = 37098
+note = "CKAPPAD: coefficient of the bias-dependent gate-drain overlap (LDD) capacitance. 1D only: the BSIM4 capMod=2 bias-dependent overlap capacitance (manual section 7.5)."
+
+[param.cgbo_f_per_m]
+value = 1e-13
+unit = "F/m"
+provenance = "spice-card"
+source = "sm141064.ngspice:37084"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "cgbo"
+card_line = 37084
+note = "CGBO: gate-bulk overlap capacitance per channel length (BSIM4 multiplies it by LeffCV), 1D only."
+
+[param.dwc_nm]
+value = 0.0
+unit = "nm"
+provenance = "spice-card"
+source = "sm141064.ngspice:37120"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "dwc"
+card_line = 37120
+card_scale = 1e9
+note = "DWC: the width offset of the capacitance width WeffCV = W + XW - 2*DWC. Used only for the 1D area bookkeeping."
+
+[param.xl_nm]
+value = 0.0
+unit = "nm"
+provenance = "spice-card"
+source = "sm141064.ngspice:37380; sm141064.ngspice:112"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "xl"
+card_line = 37380
+card_params = [112]
+card_scale = 1e9
+note = "XL: the length offset of the mask/etch (LeffCV = L + XL - 2*DLC). Used only for the 1D area bookkeeping."
+
+[param.xw_nm]
+value = 0.0
+unit = "nm"
+provenance = "spice-card"
+source = "sm141064.ngspice:37392; sm141064.ngspice:113"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "xw"
+card_line = 37392
+card_params = [113]
+card_scale = 1e9
+note = "XW: the width offset of the mask/etch (WeffCV = W + XW - 2*DWC). Used only for the 1D area bookkeeping."
