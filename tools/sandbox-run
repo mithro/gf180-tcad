@@ -30,23 +30,57 @@ case "$NETWORK" in none|bridge) ;; *) die "--network must be none or bridge" ;; 
 [ -d "$WORKDIR" ] || die "workdir does not exist: $WORKDIR"
 WORKDIR="$(cd "$WORKDIR" && pwd -P)"
 REPO="$(cd "$REPO" && pwd -P)"
-# The workdir is mounted read-write. Refuse the filesystem root, $HOME (and its ancestors), the
-# repo, anything inside it and any ancestor of it: a container that can write the repo's .git
-# (hooks, config) escapes the sandbox. Unrelated directories ($TMPDIR scratch dirs, sibling
-# checkouts next to the repo) are fine. gf180tcad.sandbox.check_workdir applies the same rules.
-HOME_DIR=""
-if [ -n "${HOME:-}" ] && [ -d "$HOME" ]; then HOME_DIR="$(cd "$HOME" && pwd -P)"; fi
+# The workdir is mounted read-write. Refuse the filesystem root, $HOME (and its ancestors), and
+# every directory whose contents run on the host: the repo, the git dir and git common dir of
+# its checkout (hooks, config; for a worktree they are outside the repo) and the main working
+# tree that owns that common dir. For each, the directory itself, anything inside it and any
+# ancestor of it are refused. Unrelated directories ($TMPDIR scratch dirs, sibling checkouts
+# next to the repo) are fine. gf180tcad.sandbox.check_workdir applies the same rules.
 [ "$WORKDIR" != / ] || die "workdir must not be the filesystem root"
-case "$WORKDIR/" in
-    "$REPO"/*) die "workdir must not be the repo root or inside it: $WORKDIR" ;;
-esac
-case "$REPO/" in
-    "$WORKDIR"/*) die "workdir must not be an ancestor of the repo ($REPO): $WORKDIR" ;;
-esac
-if [ -n "$HOME_DIR" ]; then
-    case "$HOME_DIR/" in
-        "$WORKDIR"/*) die "workdir must not be \$HOME ($HOME_DIR) or an ancestor of it: $WORKDIR" ;;
+
+# refuse WHAT DIR: refuse the workdir if it is DIR, inside DIR or an ancestor of DIR.
+refuse() {
+    case "$WORKDIR/" in
+        "$2"/*) die "workdir must not be $1 ($2) or inside it: $WORKDIR" ;;
     esac
+    case "$2/" in
+        "$WORKDIR"/*) die "workdir must not be an ancestor of $1 ($2): $WORKDIR" ;;
+    esac
+}
+refuse "the repo root" "$REPO"
+
+# $HOME: from the environment, else the passwd entry; unknown means refuse to run.
+home_dir() {
+    local h="${HOME:-}" entry
+    if [ -z "$h" ] || [ ! -d "$h" ]; then
+        entry="$(getent passwd "$(id -u)")" || return 1
+        IFS=: read -r _ _ _ _ _ h _ <<< "$entry"
+        [ -n "$h" ] && [ -d "$h" ] || return 1
+    fi
+    (cd "$h" && pwd -P)
+}
+HOME_DIR="$(home_dir)" || die "cannot determine the home directory (\$HOME or passwd entry)"
+case "$HOME_DIR/" in
+    "$WORKDIR"/*) die "workdir must not be \$HOME ($HOME_DIR) or an ancestor of it: $WORKDIR" ;;
+esac
+
+# git: a checkout (.git dir or worktree .git file) must resolve, or nothing runs. The GIT_*
+# variables are dropped so they cannot point git at a decoy.
+if [ -e "$REPO/.git" ]; then
+    GIT="$(type -P git)" || die "git is not installed, cannot locate the git dirs of $REPO"
+    git_path() {
+        local out
+        out="$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR -u GIT_INDEX_FILE \
+            "$GIT" -C "$REPO" rev-parse --path-format=absolute "$1")" && [ -d "$out" ] &&
+            (cd "$out" && pwd -P)
+    }
+    GIT_COMMON="$(git_path --git-common-dir)" || die "cannot locate the git common dir of $REPO"
+    GIT_OWN="$(git_path --git-dir)" || die "cannot locate the git dir of $REPO"
+    refuse "the git common dir" "$GIT_COMMON"
+    refuse "the git dir" "$GIT_OWN"
+    if [ "$(basename "$GIT_COMMON")" = .git ]; then
+        refuse "the main git checkout" "$(dirname "$GIT_COMMON")"
+    fi
 fi
 
 # The aggregate cap is only real if tools/sandbox-setup installed the slice: otherwise docker

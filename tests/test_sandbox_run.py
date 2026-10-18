@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from git_worktree import GIT_VARS, make_worktree
 
 from gf180tcad import sandbox
 
@@ -24,9 +25,15 @@ GOOD_SLICE = "MemoryMax=137438953472\nMemorySwapMax=0\nTasksMax=32768\n"
 UNSET_SLICE = "MemoryMax=infinity\nMemorySwapMax=infinity\nTasksMax=infinity\n"
 
 
+REAL_GETENT = shutil.which("getent")
+
+
 @pytest.fixture
 def fakes(tmp_path):
-    """A PATH with fake docker/systemctl; returns a runner of tools/sandbox-run."""
+    """A PATH with fake docker/systemctl/getent; returns a runner of tools/sandbox-run.
+
+    The fake getent passes through to the real one unless ``FAKE_GETENT_OUT`` is set.
+    """
     bindir = tmp_path / "bin"
     bindir.mkdir()
     docker_log = tmp_path / "docker.args"
@@ -38,11 +45,17 @@ def fakes(tmp_path):
         'printf \'%s\' "$FAKE_SYSTEMCTL_OUT"\nexit "${FAKE_SYSTEMCTL_RC:-0}"\n',
         encoding="utf-8",
     )
+    (bindir / "getent").write_text(
+        '#!/bin/sh\nif [ -n "${FAKE_GETENT_RC:-}" ]; then exit "$FAKE_GETENT_RC"; fi\n'
+        'if [ -n "${FAKE_GETENT_OUT:-}" ]; then printf \'%s\\n\' "$FAKE_GETENT_OUT"; exit 0; fi\n'
+        f'exec {REAL_GETENT} "$@"\n',
+        encoding="utf-8",
+    )
     for f in bindir.iterdir():
         f.chmod(0o755)
 
-    def run(workdir, *, slice_out=GOOD_SLICE, rc=0, home=None):
-        env = {
+    def run(workdir, *, slice_out=GOOD_SLICE, rc=0, home=None, script=SANDBOX_RUN, env=None):
+        full = {
             **os.environ,
             "PATH": f"{bindir}{os.pathsep}{os.environ['PATH']}",
             "FAKE_DOCKER_LOG": str(docker_log),
@@ -51,15 +64,20 @@ def fakes(tmp_path):
             "FAKE_SYSTEMCTL_RC": str(rc),
         }
         if home is not None:
-            env["HOME"] = str(home)
+            full["HOME"] = str(home)
+        for k, v in (env or {}).items():
+            if v is None:
+                full.pop(k, None)
+            else:
+                full[k] = v
         if docker_log.exists():
             docker_log.unlink()
         res = subprocess.run(
-            [str(SANDBOX_RUN), "--workdir", str(workdir), "--", "true"],
+            [str(script), "--workdir", str(workdir), "--", "true"],
             capture_output=True,
             text=True,
             check=False,
-            env=env,
+            env=full,
         )
         args = docker_log.read_text(encoding="utf-8").splitlines() if docker_log.exists() else None
         return res, args
@@ -129,6 +147,118 @@ def test_sibling_of_the_repo_is_allowed(fakes):
         assert f"{sib.resolve()}:/work/out:rw" in args
     finally:
         shutil.rmtree(sib)
+
+
+# --- $HOME fallback -------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("home", [None, "/nonexistent/gf180tcad-home"], ids=["unset", "missing"])
+def test_home_falls_back_to_the_passwd_entry(fakes, tmp_path, home):
+    passwd_home = tmp_path / "pwhome"
+    passwd_home.mkdir()
+    env = {"HOME": home, "FAKE_GETENT_OUT": f"u:x:1000:1000::{passwd_home}:/bin/sh"}
+    res, args = fakes(passwd_home, env=env)
+    _refused(res, args)
+    assert "HOME" in res.stderr
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    res, args = fakes(scratch, env=env)
+    assert res.returncode == 0, res.stderr
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {"HOME": None, "FAKE_GETENT_RC": "2"},
+        {"HOME": None, "FAKE_GETENT_OUT": "u:x:1000:1000::/nonexistent/x:/bin/sh"},
+        {"HOME": None, "FAKE_GETENT_OUT": "garbage"},
+    ],
+    ids=["getent-fails", "passwd-home-missing", "garbage"],
+)
+def test_home_unknown_fails_closed(fakes, tmp_path, env):
+    res, args = fakes(tmp_path, env=env)
+    _refused(res, args)
+    assert "home directory" in res.stderr
+
+
+def test_home_unset_with_the_real_passwd_entry_runs(fakes, tmp_path):
+    res, args = fakes(tmp_path, env={"HOME": None})
+    assert res.returncode == 0, res.stderr
+    assert args is not None
+
+
+# --- git worktree: the common dir is outside the repo ------------------------------------
+
+
+GIT_CLEAN_ENV = dict.fromkeys(GIT_VARS)
+
+
+@pytest.fixture
+def worktree(tmp_path):
+    """A main checkout with a linked worktree ``wt`` that holds a copy of tools/sandbox-run."""
+    main, wt = make_worktree(tmp_path)
+    (wt / "tools").mkdir()
+    shutil.copy2(SANDBOX_RUN, wt / "tools" / "sandbox-run")
+    (wt / "docker").mkdir()
+    shutil.copy2(sandbox.REPO_ROOT / "docker" / "IMAGE", wt / "docker" / "IMAGE")
+    return main, wt
+
+
+@pytest.mark.parametrize(
+    "rel", ["main", "main/.git", "main/.git/hooks", "main/.git/worktrees/wt", "main/sub"]
+)
+def test_git_common_dir_and_main_checkout_refused(fakes, worktree, rel):
+    main, wt = worktree
+    target = main.parent / rel
+    target.mkdir(parents=True, exist_ok=True)
+    res, args = fakes(target, script=wt / "tools" / "sandbox-run", env=GIT_CLEAN_ENV)
+    _refused(res, args)
+    assert "git" in res.stderr or "checkout" in res.stderr
+
+
+def test_sibling_scratch_dir_of_a_worktree_allowed(fakes, worktree):
+    main, wt = worktree
+    scratch = main.parent / "scratch"
+    scratch.mkdir()
+    res, args = fakes(scratch, script=wt / "tools" / "sandbox-run", env=GIT_CLEAN_ENV)
+    assert res.returncode == 0, res.stderr
+    assert f"{scratch}:/work/out:rw" in args
+
+
+def test_misleading_git_environment_is_ignored(fakes, worktree, tmp_path):
+    main, wt = worktree
+    decoy = tmp_path / "decoy.git"
+    decoy.mkdir()
+    env = {"GIT_DIR": str(decoy), "GIT_COMMON_DIR": str(decoy)}
+    res, args = fakes(main / ".git" / "hooks", script=wt / "tools" / "sandbox-run", env=env)
+    _refused(res, args)
+
+
+def test_broken_git_checkout_fails_closed(fakes, worktree, tmp_path):
+    _, wt = worktree
+    (wt / ".git").write_text("gitdir: /nonexistent/gf180tcad\n", encoding="utf-8")
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    res, args = fakes(scratch, script=wt / "tools" / "sandbox-run", env=GIT_CLEAN_ENV)
+    _refused(res, args)
+    assert "git" in res.stderr
+
+
+def test_git_missing_fails_closed(fakes, worktree, tmp_path):
+    _, wt = worktree
+    nogit = tmp_path / "nogit"
+    nogit.mkdir()
+    for tool in ("bash", "cat", "head", "id", "dirname", "sort", "getent", "cut", "basename"):
+        found = shutil.which(tool)
+        if found:
+            (nogit / tool).symlink_to(found)
+    bindir = tmp_path / "bin"
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    env = {**GIT_CLEAN_ENV, "PATH": f"{bindir}{os.pathsep}{nogit}"}
+    res, args = fakes(scratch, script=wt / "tools" / "sandbox-run", env=env)
+    _refused(res, args)
+    assert "git" in res.stderr
 
 
 # --- container flags -----------------------------------------------------------------------
