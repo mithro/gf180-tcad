@@ -274,3 +274,26 @@ def test_forward_body_bias_is_rejected_pfet():
         pd_[name]["vb"] = -pd_[name]["vb"]
     with pytest.raises(MetricError, match="no points"):
         metrics.extract_all(FAKE_P, FAKE_P.geometries[0], pd_)
+
+
+def test_swapped_lin_and_sat_sweeps_are_rejected():
+    nd = nfet_data()
+    nd["idvg_lin"], nd["idvg_sat"] = nd["idvg_sat"], nd["idvg_lin"]
+    with pytest.raises(MetricError, match="Vds"):
+        metrics.extract_all(NFET, G, nd)
+
+
+def test_vds_of_each_sweep_is_checked_pointwise():
+    nd = nfet_data()
+    nd["idvg_sat"]["vd"] = nd["idvg_sat"]["vd"].copy()
+    nd["idvg_sat"]["vd"][-1] = 4.9
+    with pytest.raises(MetricError, match="Vds"):
+        metrics.extract_all(NFET, G, nd)
+
+
+@pytest.mark.parametrize(("vd", "vg"), [(5.0, 0.0), (-5.5, 0.0), (5.5, 0.1), (5.5, -0.1)], ids=str)
+def test_ioff_bias_point_is_checked(vd, vg):
+    nd = nfet_data()
+    nd["ioff"]["vd"], nd["ioff"]["vg"] = np.array([vd]), np.array([vg])
+    with pytest.raises(MetricError, match="ioff"):
+        metrics.extract_all(NFET, G, nd)

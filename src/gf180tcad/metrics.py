@@ -71,6 +71,7 @@ VBS_BODY_V = 2.0
 VGS_ON_V = 5.0
 VDS_LIN_V = 0.1
 VDS_SAT_V = 5.0
+VDS_OFF_V = 5.5
 _TOL = 1e-9  # V, grid-point matching
 
 
@@ -213,11 +214,13 @@ def _select(mask: np.ndarray, what: str) -> np.ndarray:
     return mask
 
 
-def _idvg(d: Mapping[str, np.ndarray], polarity: int, vbs_mag: float, what: str):
-    """(vgs, id, vds) magnitudes of the nested idvg sweep at the given |Vbs|."""
+def _idvg(d: Mapping[str, np.ndarray], polarity: int, vbs_mag: float, vds: float, what: str):
+    """(vgs, id) magnitudes of the nested idvg sweep at the given |Vbs|; every Vds must be ``vds``."""
     s = _strip(d, polarity, ("vd", "vg", "vb"), ("id",))
+    if not np.all(np.isclose(s["vd"], vds, rtol=0, atol=_TOL)):
+        raise MetricError(f"{what}: every Vds must be {vds} V")
     m = _select(np.isclose(-s["vb"], vbs_mag, rtol=0, atol=_TOL), f"{what} |Vbs|={vbs_mag}")
-    return s["vg"][m], s["id"][m], float(np.mean(s["vd"][m]))
+    return s["vg"][m], s["id"][m]
 
 
 def _at(x: np.ndarray, y: np.ndarray, x0: float, what: str) -> float:
@@ -238,13 +241,13 @@ def extract_all(
     p = device.polarity
     w, ln = g.w_um, g.l_um
 
-    vg, i_lin, vds_lin = _idvg(data["idvg_lin"], p, 0.0, "idvg_lin")
-    vt_mg = vt_maxgm(vg, i_lin, vds_lin)
+    vg, i_lin = _idvg(data["idvg_lin"], p, 0.0, VDS_LIN_V, "idvg_lin")
+    vt_mg = vt_maxgm(vg, i_lin, VDS_LIN_V)
     vt_lin = vt_cc(vg, i_lin, w, ln)
-    vg2, i_lin2, _ = _idvg(data["idvg_lin"], p, VBS_BODY_V, "idvg_lin")
+    vg2, i_lin2 = _idvg(data["idvg_lin"], p, VBS_BODY_V, VDS_LIN_V, "idvg_lin")
     vt_lin2 = vt_cc(vg2, i_lin2, w, ln)
 
-    vgs_s, i_sat, vds_sat = _idvg(data["idvg_sat"], p, 0.0, "idvg_sat")
+    vgs_s, i_sat = _idvg(data["idvg_sat"], p, 0.0, VDS_SAT_V, "idvg_sat")
     vt_sat = vt_cc(vgs_s, i_sat, w, ln)
 
     dv = _strip(data["idvd"], p, ("vd", "vg"), ("id",))
@@ -256,6 +259,11 @@ def extract_all(
     off = _strip(data["ioff"], p, ("vd", "vg"), ("id",))
     if off["id"].size != 1:
         raise MetricError("ioff sweep must hold exactly one point")
+    if not (
+        np.isclose(off["vg"][0], 0.0, rtol=0, atol=_TOL)
+        and np.isclose(off["vd"][0], VDS_OFF_V, rtol=0, atol=_TOL)
+    ):
+        raise MetricError(f"ioff: point must be at Vgs = 0 and polarity*Vds = {VDS_OFF_V} V")
 
     cv = _strip(data["cv"], p, ("vg",), ())
     cgg = np.asarray(data["cv"]["cgg"], dtype=float)
@@ -266,7 +274,7 @@ def extract_all(
         "vt_lin_maxgm": vt_mg,
         "vt_lin_cc": vt_lin,
         "vt_sat_cc": vt_sat,
-        "dibl_mv_per_v": dibl(vt_lin, vt_sat, vds_lin, vds_sat),
+        "dibl_mv_per_v": dibl(vt_lin, vt_sat, VDS_LIN_V, VDS_SAT_V),
         "body_effect_v": body_effect(vt_lin, vt_lin2),
         "idsat_ua_per_um": idsat_per_um(_at(vgs_s, i_sat, VGS_ON_V, "idvg_sat"), w),
         "id_lin_a": id_lin(vg, i_lin, vt_mg),
