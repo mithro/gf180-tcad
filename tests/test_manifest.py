@@ -83,3 +83,31 @@ def test_symlinks_rejected(tmp_path):
     (root / "dlink").symlink_to(tmp_path, target_is_directory=True)
     with pytest.raises(ValueError, match="dlink"):
         manifest.update(root, m)
+
+
+def test_root_must_be_directory(tmp_path):
+    m = tmp_path / "M.sha256"
+    m.write_bytes(b"")
+    (tmp_path / "f").write_bytes(b"")
+    for bad in (tmp_path / "missing", tmp_path / "f"):
+        for fn in (manifest.update, manifest.verify):
+            with pytest.raises(NotADirectoryError):
+                fn(bad, m)
+
+
+def test_duplicate_manifest_entry_rejected(tmp_path):
+    (tmp_path / "a").write_bytes(b"1")
+    m = tmp_path / "M.sha256"
+    manifest.update(tmp_path, m)
+    line = m.read_bytes()
+    m.write_bytes(line + line)
+    with pytest.raises(ValueError, match="duplicate"):
+        manifest.verify(tmp_path, m)
+
+
+@pytest.mark.parametrize("line", [b"nothex a\n", b"abc  a\n", b"0" * 64 + b" a\n"])
+def test_malformed_manifest_line_rejected(tmp_path, line):
+    m = tmp_path / "M.sha256"
+    m.write_bytes(line)
+    with pytest.raises(ValueError, match="malformed"):
+        manifest.verify(tmp_path, m)

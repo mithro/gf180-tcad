@@ -16,7 +16,10 @@ def _digest(p: Path) -> str:
 
 
 def _scan(root: Path, manifest: Path) -> dict[str, str]:
-    root = Path(root).resolve()
+    root = Path(root)
+    if not root.is_dir():
+        raise NotADirectoryError(f"manifest root is not an existing directory: {root}")
+    root = root.resolve()
     skip = Path(manifest).resolve()
     out = {}
     for p in sorted(root.rglob("*")):
@@ -45,6 +48,8 @@ def _load(manifest: Path) -> dict[str, str]:
             digest, sep, rel = line.partition("  ")
             if not sep or len(digest) != 64:
                 raise ValueError(f"{manifest}: malformed line {line!r}")
+            if rel in out:
+                raise ValueError(f"{manifest}: duplicate entry for {rel!r}")
             out[rel] = digest
     return out
 
