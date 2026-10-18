@@ -18,7 +18,8 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0
         with:
           version: "0.13.1"
-      - run: uv sync --locked
+      # --group docs: tests/test_docgen.py renders the plots and builds the docs.
+      - run: uv sync --locked --group docs
       - run: uv run ruff check
       - run: uv run ruff format --check
       - name: Generate de_DE.UTF-8 locale (so test_csv_bytes_stable_under_locale runs, not skips)
