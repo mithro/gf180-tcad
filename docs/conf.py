@@ -150,7 +150,15 @@ linkcheck_ignore = [
     # and pinned to the commit being built; checking them again would only hit GitHub's rate
     # limit.
     r"https://github\.com/mithro/gf180-tcad/(blob|tree)/",
+    # Flaky host: www.osti.gov (where doi:10.2172/... resolves) times out for automated clients.
+    # The DOI itself was checked against its Crossref record when it was added.
+    r"https://doi\.org/10\.2172/",
+    # Flaky host: link.aps.org (doi:10.1103/...) answers 403 to Python's HTTP client although it
+    # serves curl (checked when the DOI was added).
+    r"https://doi\.org/10\.1103/",
 ]
+# ngspice.sourceforge.io answers 403 to Sphinx's default browser-like user agent, 200 to this.
+user_agent = "gf180-tcad-linkcheck (Sphinx; https://github.com/mithro/gf180-tcad)"
 # GitHub renders line and heading anchors with JavaScript, so linkcheck cannot see them.
 linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
 linkcheck_retries = 3
