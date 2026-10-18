@@ -7,6 +7,15 @@ their exact extraction is in {py:mod}`gf180tcad.metrics`.
 ```{glossary}
 :sorted:
 
+dev-HEAD TCAD image
+  The TCAD image built from each upstream project's development HEAD ({{ DEVSIM }} from source,
+  {{ meshwell }}, {{ gdsfactory }}, the {{ gf180mcu_gdsfactory }} and {{ gmsh }}), pinned by
+  commit: the stack of the final results. See {ref}`tcad-dev-image`.
+
+stable TCAD image
+  The TCAD image built from the latest PyPI releases of the TCAD stack: the baseline for how
+  things used to work and for debugging. See {ref}`tcad-image`.
+
 TCAD
   Technology computer-aided design: physics-based device simulation, here with {{ DEVSIM }}
   cross-checked with {{ Charon }}. In this project it is the suspect being validated against the

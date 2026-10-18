@@ -172,7 +172,7 @@ leading hypothesis, and the junction probe confirms it:
 - **The junction drop never changes with bias.** It stays at 0.83450 V, the {term}`built-in potential`
   V_t ln(N_A N_D / n_i²) = 0.834503 V of the rib's own 1e17 / 1e17 cm⁻³ junction, with
   {term}`Boltzmann statistics` and the constants of DEVSIM's
-  [`simple_physics`](https://github.com/devsim/devsim/blob/main/python_packages/simple_physics.py)
+  [`simple_physics`](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/python_packages/simple_physics.py)
   (300 K).
 - **The Potential is discontinuous at the rib's bottom vertices**, by 0.46 V at equilibrium (0.73 V at
   mesh × 0.5). The jump grows by the applied bias, because only the slab moves.

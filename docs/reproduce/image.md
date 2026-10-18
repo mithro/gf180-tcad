@@ -76,6 +76,11 @@ reference in {repo}`docker/IMAGE` ({repo}`docker/tcad/build` passes it as `BASE_
 {term}`SPICE` jobs keep using the base image, so the committed SPICE reference does not depend
 on it.
 
+This is the {term}`stable TCAD image`, with the latest PyPI releases of the TCAD stack. The
+{term}`dev-HEAD TCAD image` ({ref}`tcad-dev-image`) has the same layout with each project at its
+upstream development HEAD; it is the stack of the final results, and this one is the baseline
+for how things used to work and for debugging.
+
 It adds a {{ uv }}-managed {{ Python }} 3.13, pinned to an exact patch release (uv checks the
 download against the sha256 it embeds for that version), and a venv at `/opt/gf180tcad-tcad`,
 first on `PATH`. The venv holds {{ DEVSIM }}, {{ meshwell }}, {{ gmsh }}, {{ gdsfactory }}, the
@@ -166,3 +171,94 @@ On the first push of step 1, the TCAD entry can also fail to pull a base that th
 not pushed yet (the two entries run in parallel). That failure is expected; it goes away on
 the next push, or with a re-run of the failed job once the base is pushed. The from-scratch
 rebuild of each entry runs even when the other entry failed.
+
+(tcad-dev-image)=
+
+## Dev-HEAD TCAD image
+
+There are two TCAD images. They share the base image, the {{ Python }} 3.13 patch release and
+the venv path, and differ only in where the TCAD stack comes from:
+
+- the {term}`dev-HEAD TCAD image`,
+  [`ghcr.io/mithro/gf180-tcad-tcad-dev`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-tcad-dev),
+  pinned by {repo}`docker/TCAD_DEV_IMAGE` and built from {repo}`docker/tcad-dev/`, has
+  {{ DEVSIM }}, {{ meshwell }}, {{ gdsfactory }}, the {{ gf180mcu_gdsfactory }} and {{ gmsh }} at
+  their upstream development HEADs. **It is the stack of the final results;**
+- the {term}`stable TCAD image` ({ref}`tcad-image`, {repo}`docker/TCAD_IMAGE`) has their latest
+  PyPI releases. It is kept as the baseline for "how it used to work" and for debugging: a
+  difference between the two images is a change upstream, not in this project.
+
+The results in {repo}`results/` are not yet switched over; until they are, TCAD consumers keep
+reading {repo}`docker/TCAD_IMAGE`.
+
+**Sources, pinned by commit.** {repo}`docker/tcad-dev/upstream.json` records each upstream
+project's repository, default branch, the HEAD commit when the image was pinned and that
+commit's date, its licence, the URL it is fetched from and that file's sha256. The build fetches
+every source at build time, inside the {{ Docker }} build, and fails if a hash differs. GitHub
+projects are the tarballs of exactly their commit (`codeload.github.com/<owner>/<repo>/tar.gz/<sha>`,
+or `github.com/<owner>/<repo>/archive/<sha>.tar.gz`, which redirects there). The Python
+dependencies that are not themselves dev HEADs come from a new lock resolved against the dev
+packages' own requirements, as for the stable image ({repo}`docker/tcad-dev/pyproject.toml`,
+{repo}`docker/tcad-dev/uv.lock`, exported with hashes to {repo}`docker/tcad-dev/requirements.lock`;
+uv records the sha256 of the URL sources too, so every sdist and wheel is hash-checked).
+{repo}`tests/test_tcad_dev_lock.py` checks that the locks reproduce and agree with
+{repo}`docker/tcad-dev/upstream.json`.
+
+- **DEVSIM** is compiled from source by {repo}`docker/tcad-dev/build-devsim.sh`, following
+  DEVSIM's own x86_64 release recipe
+  ([`scripts/build_manylinux_2_28.sh`](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/scripts/build_manylinux_2_28.sh)):
+  extended precision with the quad-precision `getrf`, [symdiff](https://github.com/devsim/symdiff)
+  and [umfpack_lgpl](https://github.com/devsim/umfpack_lgpl) at the commits of DEVSIM's
+  submodules, and BLAS/LAPACK loaded at run time from the base image's `DEVSIM_MATH_LIBS`
+  (the system OpenBLAS), as in the stable image. The quad-precision `getrf` is Fortran, and the
+  base image has no Fortran compiler, so the Ubuntu gfortran 13 packages of the base image's own
+  GCC 13.3 build are unpacked into a throwaway build stage only (from
+  [snapshot.ubuntu.com](https://snapshot.ubuntu.com/), hash-pinned). The image itself is the
+  base plus a copy of the venv and the uv-managed CPython: no compiler, source tree or download
+  is left in it ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_no_bytecode_and_no_compiler`).
+- **meshwell** and **gdsfactory** are built from their commit tarballs. meshwell takes its version
+  from git through [hatch-vcs](https://github.com/ofek/hatch-vcs), which a tarball cannot
+  give, so the build passes the version hatch-vcs reports at that commit.
+- **gf180mcu** is installed `--no-deps` from {repo}`docker/tcad-dev/gf180mcu.lock`: its HEAD still
+  pins `gdsfactory>=9.45,<=9.51`, and gdsfactory's HEAD is 10.0.0rc0.
+- **gmsh** is the dated development snapshot wheel that gmsh publishes at a fixed URL
+  ([gmsh.info/python-packages-dev](https://gmsh.info/python-packages-dev/gmsh/)); the wheel
+  reports the git revision of [gmsh `master`](https://gitlab.onelab.info/gmsh/gmsh) it was built
+  from, and {repo}`docker/tcad-dev/upstream.json` records that commit.
+
+**Pins and provenance.** As for the stable image: {repo}`docker/TCAD_DEV_IMAGE` holds the
+{term}`manifest digest`, {repo}`docker/tcad-dev/IMAGE_ID` the {term}`config digest` and
+{repo}`docker/tcad-dev/versions.json` the output of {repo}`docker/tcad-dev/probe_versions.py`
+run in the image. It has every key of the stable probe, plus `upstream`, the source list that the
+image carries, after the probe has checked it against the URL each package was installed from
+and the git revision gmsh reports. {repo}`tests/test_tcad_dev_image.py` checks the image itself.
+Run a command in it with
+
+```
+tools/sandbox-run --image "$(cat docker/TCAD_DEV_IMAGE)" --workdir DIR -- python3 ...
+```
+
+### Rebuild and verify the dev-HEAD image
+
+```
+docker/tcad-dev/build --no-cache
+```
+
+works like {repo}`docker/tcad/build`. Its `SOURCE_DATE_EPOCH` inputs are the Dockerfile, the
+three lock files, {repo}`docker/tcad-dev/upstream.json`, the two build scripts and
+{repo}`docker/IMAGE`. `--load` also loads the result into the local Docker image store (same
+image ID), so it can be run before it is pushed. The `image` workflow builds, checks and
+publishes it as its third matrix entry, `tcad-dev`, on {{ GitHub_hosted_runner }}s, exactly as
+the other two. A new package on the {{ ghcr }} is private: make it public after its first push
+({ref}`as for the stable image <tcad-image>`).
+
+### Moving to a newer dev HEAD
+
+1. Read the new HEAD commits with `git ls-remote` (anonymous https; never through an API
+   client), and their dates from a clone.
+2. Update {repo}`docker/tcad-dev/upstream.json` (commit, date and the sha256 of the new
+   tarball or wheel), the URL sources in {repo}`docker/tcad-dev/pyproject.toml`, the meshwell
+   version and `exclude-newer`; relock with the command in that file and re-run the recorded
+   `uv pip compile` commands of the two single locks.
+3. Rebuild twice (`--no-cache`), commit {repo}`docker/tcad-dev/IMAGE_ID` and
+   {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.
