@@ -111,3 +111,41 @@ def test_malformed_manifest_line_rejected(tmp_path, line):
     m.write_bytes(line)
     with pytest.raises(ValueError, match="malformed"):
         manifest.verify(tmp_path, m)
+
+
+@pytest.mark.parametrize(
+    "rel", [".spice.staging-abc123/x.csv", ".spice.old-xyz/spice/a.json", "spice/.hidden/b"]
+)
+def test_dot_directories_rejected(tmp_path, rel):
+    # spice-reference stages next to --out as .<name>.staging-*/.old-*; one left behind (e.g.
+    # after a kill -9) inside results/ must never be hashed into the manifest.
+    root = tmp_path / "results"
+    root.mkdir()
+    (root / "ok.csv").write_bytes(b"1")
+    (root / rel).parent.mkdir(parents=True)
+    (root / rel).write_bytes(b"x")
+    m = tmp_path / "M.sha256"
+    m.write_bytes(b"")
+    top = rel.split("/")[0] if rel.startswith(".") else "/".join(rel.split("/")[:2])
+    for fn in (manifest.update, manifest.verify):
+        with pytest.raises(ValueError, match="dot-directory") as exc:
+            fn(root, m)
+        assert top in str(exc.value)
+
+
+def test_dot_directory_rejected_by_verify_subset(tmp_path):
+    tree = tmp_path / "spice"
+    (tree / ".spice.staging-1").mkdir(parents=True)
+    against = tmp_path / "M.sha256"
+    against.write_bytes(b"")
+    with pytest.raises(ValueError, match="dot-directory"):
+        manifest.verify_subset(tree, against, "spice/", ("a/b/c/d",), full=("a/b/c/d",))
+
+
+def test_root_may_itself_be_under_a_dot_directory(tmp_path):
+    root = tmp_path / ".cache" / "results"
+    root.mkdir(parents=True)
+    (root / "a").write_bytes(b"1")
+    m = tmp_path / "M.sha256"
+    manifest.update(root, m)
+    assert manifest.verify(root, m) == []

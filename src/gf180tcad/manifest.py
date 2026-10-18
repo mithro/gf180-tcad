@@ -27,6 +27,12 @@ def _scan(root: Path, manifest: Path) -> dict[str, str]:
         rel = p.relative_to(root).as_posix()
         if p.is_symlink():
             raise ValueError(f"{rel}: symlinks are not allowed in a results tree")
+        if p.is_dir() and p.name.startswith("."):
+            # e.g. a .spice.staging-* or .spice.old-* left by an interrupted spice-reference
+            raise ValueError(
+                f"{rel}: dot-directory in a results tree (a leftover spice-reference staging "
+                "or .old- directory?); remove it before updating or verifying the manifest"
+            )
         if p.is_file() and p != skip:
             out[rel] = _digest(p)
     return out
