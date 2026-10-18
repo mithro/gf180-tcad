@@ -905,3 +905,60 @@ def test_repo_role_offline_rules(tmp_path, monkeypatch):
     monkeypatch.setattr(repo_roles, "classify", lambda path: "blob")
     assert repo_roles.test_lines("t.py", "test_a") == [1, 2]
     assert repo_roles.test_line("t.py", "test_a") is None
+
+
+# --- the docstring linker (docs/_ext/api_links.py) --------------------------------------------
+
+
+class _FakeApp:
+    def __init__(self):
+        sys.path.insert(0, str(DOCS))
+        sys.path.insert(0, str(DOCS / "_ext"))
+        try:
+            import importlib
+
+            conf = importlib.import_module("conf")
+            self.subs = dict(conf.myst_substitutions)
+        finally:
+            sys.path.remove(str(DOCS))
+
+    class config:
+        pass
+
+
+def _linker():
+    app = _FakeApp()
+    import api_links
+
+    app.config.myst_substitutions = app.subs
+    return api_links._Linker(app, set())
+
+
+def test_linker_short_names_are_case_sensitive():
+    lk = _linker()
+    line = lk.line("Capacitance in fF; the ss and tt corners are named in lower case.")
+    assert ":term:" not in line.split("corners")[0], line  # fF, ss, tt are not FF, SS, TT
+    lk = _linker()
+    assert ":term:`FF <FF>`" in lk.line("The FF corner is fast.")
+
+
+def test_linker_leaves_field_names_alone():
+    lk = _linker()
+    line = lk.line(":param corner: the process corner to run")
+    assert line.startswith(":param corner: "), line
+    assert ":term:`corner <corner>`" in line, line
+    assert _linker().line(":class:`gf180tcad.devices.Device` sweeps").startswith(":class:`")
+
+
+def test_linker_does_not_link_into_a_filename():
+    lk = _linker()
+    assert ":term:" not in lk.line("It writes provenance.json next to the CSVs.")
+    assert ":term:`provenance <provenance>`" in _linker().line("The provenance of a run.")
+
+
+def test_html_scan_short_names_are_case_sensitive():
+    page = (
+        '<html><body><div id="furo-main-content"><p>Capacitance in fF, and the ss and tt '
+        "values; it writes provenance.json.</p></div></body></html>"
+    )
+    assert check_html("u.html", page) == [], [str(q) for q in check_html("u.html", page)]
