@@ -1,12 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
-# Reproducible build of ghcr.io/mithro/gf180-tcad-base.
+# Reproducible builds of the two project images, one matrix entry each:
+#   base: ghcr.io/mithro/gf180-tcad-base  (docker/base/, pinned by docker/IMAGE)
+#   tcad: ghcr.io/mithro/gf180-tcad-tcad  (docker/tcad/, pinned by docker/TCAD_IMAGE; built FROM
+#         docker/IMAGE, which is public, so no login is needed to pull it)
 #   PRs:  push tag pr-<number>;  main: push latest and sha-<commit>;
 #   weekly schedule / manual dispatch: rebuild and verify only, never push or retag.
 # "Reproducible" = identical image config digest (image ID, covers layer diff_ids); the
-# manifest digest is reproducible too. Every build must equal docker/base/IMAGE_ID (config)
-# and docker/IMAGE (manifest, the image tools/sandbox-run uses); the rebuild job builds again
-# from scratch on a fresh runner and must match the first build as well. The provenance probe
-# is run in docker/IMAGE and must reproduce docker/base/versions.json exactly.
+# manifest digest is reproducible too. Every build must equal docker/<image>/IMAGE_ID (config)
+# and its pin file (manifest, the image tools/sandbox-run --image uses); the rebuild job builds
+# again from scratch on a fresh runner and must match the first build as well. The provenance
+# probe is run in the pinned image and must reproduce docker/<image>/versions.json exactly.
 name: image
 
 on:
@@ -29,16 +32,27 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  IMAGE_NAME: ghcr.io/mithro/gf180-tcad-base
   PUSH: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 jobs:
   build:
-    name: build-push
+    name: build-push (${{ matrix.image }})
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    outputs:
-      config: ${{ steps.build.outputs.config }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: base
+            name: ghcr.io/mithro/gf180-tcad-base
+            pin: docker/IMAGE
+          - image: tcad
+            name: ghcr.io/mithro/gf180-tcad-tcad
+            pin: docker/TCAD_IMAGE
+    env:
+      IMAGE_NAME: ${{ matrix.name }}
+      DIR: docker/${{ matrix.image }}
+      PIN: ${{ matrix.pin }}
     steps:
       - name: Free disk space
         run: |
@@ -67,43 +81,57 @@ jobs:
               args=(--push --tag "$IMAGE_NAME:latest" --tag "$IMAGE_NAME:sha-${{ github.sha }}")
             fi
           fi
-          config="$(docker/base/build "${args[@]}" --metadata meta.json)"
+          config="$("$DIR/build" "${args[@]}" --metadata meta.json)"
           manifest="$(jq -r '."containerimage.digest"' meta.json)"
           echo "config=$config" >> "$GITHUB_OUTPUT"
           echo "manifest=$manifest" >> "$GITHUB_OUTPUT"
           {
-            echo "### gf180-tcad-base (${{ github.event_name }}, push=$PUSH)"
+            echo "### ${IMAGE_NAME##*/} (${{ github.event_name }}, push=$PUSH)"
             echo "- config digest (image ID): \`$config\`"
-            echo "- committed docker/base/IMAGE_ID: \`$(cat docker/base/IMAGE_ID)\`"
+            echo "- committed $DIR/IMAGE_ID: \`$(cat "$DIR/IMAGE_ID")\`"
             echo "- built manifest: \`$IMAGE_NAME@$manifest\`"
-            echo "- committed docker/IMAGE: \`$(cat docker/IMAGE)\`"
+            echo "- committed $PIN: \`$(cat "$PIN")\`"
           } >> "$GITHUB_STEP_SUMMARY"
           cat meta.json
-      - name: Config digest matches docker/base/IMAGE_ID
+      - name: Config digest matches IMAGE_ID
         run: |
-          want="$(cat docker/base/IMAGE_ID)"
+          want="$(cat "$DIR/IMAGE_ID")"
           got="${{ steps.build.outputs.config }}"
-          [ "$got" = "$want" ] || { echo "::error::config digest $got != docker/base/IMAGE_ID $want"; exit 1; }
-      - name: Manifest matches docker/IMAGE
+          [ "$got" = "$want" ] || { echo "::error::config digest $got != $DIR/IMAGE_ID $want"; exit 1; }
+      - name: Manifest matches the pin file
         run: |
-          want="$(cat docker/IMAGE)"
+          want="$(cat "$PIN")"
           got="$IMAGE_NAME@${{ steps.build.outputs.manifest }}"
-          [ "$got" = "$want" ] || { echo "::error::built $got != docker/IMAGE $want"; exit 1; }
-      - name: versions.json matches the probe run in docker/IMAGE
+          [ "$got" = "$want" ] || { echo "::error::built $got != $PIN $want"; exit 1; }
+      - name: versions.json matches the probe run in the pinned image
         run: |
-          image="$(cat docker/IMAGE)"
+          image="$(cat "$PIN")"
           docker pull --quiet "$image"
           docker run --rm --network=none --read-only --tmpfs /tmp \
             -v "$PWD:/work/src:ro" -e PYTHONPATH=/work/src/src \
-            "$image" python3 /work/src/docker/base/probe_versions.py > probe.json
-          diff -u docker/base/versions.json probe.json \
-            || { echo "::error::docker/base/versions.json is stale (diff above)"; exit 1; }
+            "$image" python3 "/work/src/$DIR/probe_versions.py" > probe.json
+          diff -u "$DIR/versions.json" probe.json \
+            || { echo "::error::$DIR/versions.json is stale (diff above)"; exit 1; }
 
   rebuild:
-    name: reproducible
+    name: reproducible (${{ matrix.image }})
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: base
+            name: ghcr.io/mithro/gf180-tcad-base
+            pin: docker/IMAGE
+          - image: tcad
+            name: ghcr.io/mithro/gf180-tcad-tcad
+            pin: docker/TCAD_IMAGE
+    env:
+      IMAGE_NAME: ${{ matrix.name }}
+      DIR: docker/${{ matrix.image }}
+      PIN: ${{ matrix.pin }}
     steps:
       - name: Free disk space
         run: |
@@ -116,14 +144,12 @@ jobs:
           fetch-depth: 0
       - name: Rebuild from scratch and compare
         run: |
-          got="$(docker/base/build --no-cache --metadata meta.json)"
+          got="$("$DIR/build" --no-cache --metadata meta.json)"
           manifest="$IMAGE_NAME@$(jq -r '."containerimage.digest"' meta.json)"
-          first="${{ needs.build.outputs.config }}"
-          want="$(cat docker/base/IMAGE_ID)"
-          pinned="$(cat docker/IMAGE)"
+          want="$(cat "$DIR/IMAGE_ID")"
+          pinned="$(cat "$PIN")"
           cat meta.json
-          echo "rebuild=$got first=$first IMAGE_ID=$want manifest=$manifest IMAGE=$pinned"
-          echo "- rebuild config \`$got\` (first \`$first\`, IMAGE_ID \`$want\`); manifest \`$manifest\` (docker/IMAGE \`$pinned\`)" >> "$GITHUB_STEP_SUMMARY"
-          [ "$got" = "$first" ] || { echo "::error::rebuild $got != first build $first"; exit 1; }
-          [ "$got" = "$want" ] || { echo "::error::rebuild $got != docker/base/IMAGE_ID $want"; exit 1; }
-          [ "$manifest" = "$pinned" ] || { echo "::error::rebuild $manifest != docker/IMAGE $pinned"; exit 1; }
+          echo "rebuild=$got IMAGE_ID=$want manifest=$manifest pin=$pinned"
+          echo "- ${IMAGE_NAME##*/} rebuild config \`$got\` (IMAGE_ID \`$want\`); manifest \`$manifest\` ($PIN \`$pinned\`)" >> "$GITHUB_STEP_SUMMARY"
+          [ "$got" = "$want" ] || { echo "::error::rebuild $got != $DIR/IMAGE_ID $want"; exit 1; }
+          [ "$manifest" = "$pinned" ] || { echo "::error::rebuild $manifest != $PIN $pinned"; exit 1; }
