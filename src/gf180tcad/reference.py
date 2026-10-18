@@ -72,6 +72,7 @@ METRICS_NAME = "metrics.json"
 PROVENANCE_NAME = "provenance.json"
 VERSIONS = Path("docker") / "base" / "versions.json"
 IMAGE = Path("docker") / "IMAGE"
+COMMITTED_TREE = Path("results") / "spice"  # the published reference, relative to the repo
 # Every gf180tcad module the generator imports (tests check this against the import graph of
 # gf180tcad.reference and gf180tcad.__main__). Only these feed generator_sha256, so later code
 # elsewhere under src/ (e.g. TCAD) does not change the SPICE provenance.
@@ -534,6 +535,27 @@ def _swap(staging: Path, out: Path) -> None:
     shutil.rmtree(old)
 
 
+def check_committed_out(jobs: Sequence[Job], out: Path, repo_root: Path | None = None) -> None:
+    """Raise ValueError if ``out`` is the committed ``results/spice`` and ``jobs`` is partial.
+
+    ``spice-reference`` replaces ``--out`` as a whole, so a subset written to the committed tree
+    would silently drop every job it does not list. Only the full plan (every engine, corner,
+    device and geometry) may go there; a subset goes to any other directory. ``out`` is
+    compared after resolving symlinks and relative parts.
+    """
+    root = Path(repo_root) if repo_root is not None else sandbox.REPO_ROOT
+    committed = (root / COMMITTED_TREE).resolve()
+    if Path(out).resolve() != committed:
+        return
+    full = plan_jobs(ENGINES, CORNERS, tuple(DEVICES))
+    if set(jobs) != set(full):
+        raise ValueError(
+            f"--out {out} is the committed {COMMITTED_TREE.as_posix()}, which must hold every "
+            f"job of the reference ({len(full)}), but the filters select {len(jobs)}; write a "
+            "subset to another directory"
+        )
+
+
 # --- CLI ---------------------------------------------------------------------------------------
 
 
@@ -608,6 +630,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"spice-reference: {e}", file=sys.stderr)
         return 2
     jobs = plan_jobs(a.engines, a.corners, a.devices, a.geometries)
+    try:
+        check_committed_out(jobs, a.out)
+    except ValueError as e:
+        print(f"spice-reference: {e}", file=sys.stderr)
+        return 2
     print(f"{len(jobs)} jobs, {a.jobs} concurrent, {mem} per job, into {a.out}", flush=True)
     failures = generate(jobs, a.out, jobs_n=a.jobs, mem=mem, log=lambda s: print(s, flush=True))
     return 1 if failures else 0
