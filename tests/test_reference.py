@@ -147,6 +147,8 @@ def _fake_repo(root: Path) -> Path:
     (pkg / "tcad" / "__init__.py").write_text("")
     (pkg / "tcad" / "mesh.py").write_text("MESH = 1\n")  # later code the reference does not use
     (pkg / "manifest.py").write_text("# not used by the generator\n")
+    (root / "tools").mkdir()
+    (root / "tools" / "sandbox-run").write_text("#!/bin/sh\n# sets the thread environment\n")
     (root / "docker" / "base").mkdir(parents=True)
     (root / "docker" / "base" / "versions.json").write_text('{"ngspice": "47", "python": "3"}\n')
     (root / "docker" / "IMAGE").write_text("ghcr.io/x/y@sha256:" + "a" * 64 + "\n")
@@ -176,6 +178,24 @@ def test_generator_sha256_stable_and_sensitive(tmp_path):
         h2 = reference.generator_sha256(repo)
         assert h2 != h, name
         h = h2
+
+
+def test_generator_files_are_the_modules_plus_explicit_extras():
+    assert reference.GENERATOR_EXTRA_FILES == ("tools/sandbox-run",)
+    files = reference.generator_files(sandbox.REPO_ROOT)
+    modules = {_module_file(m).as_posix() for m in reference.GENERATOR_MODULES}
+    assert set(files) == modules | {"tools/sandbox-run"}
+    assert all((sandbox.REPO_ROOT / f).is_file() for f in files)
+
+
+def test_sandbox_run_is_hashed(tmp_path):
+    repo = _fake_repo(tmp_path / "r")
+    h = reference.generator_sha256(repo)
+    (repo / "tools" / "sandbox-run").write_text("#!/bin/sh\n# OMP_NUM_THREADS=8\n")
+    assert reference.generator_sha256(repo) != h
+    (repo / "tools" / "sandbox-run").unlink()
+    with pytest.raises(FileNotFoundError, match="sandbox-run"):
+        reference.generator_sha256(repo)
 
 
 def test_generator_sha256_needs_every_listed_module(tmp_path):
