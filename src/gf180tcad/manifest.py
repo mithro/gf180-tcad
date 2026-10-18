@@ -16,12 +16,15 @@ def _digest(p: Path) -> str:
 
 
 def _scan(root: Path, manifest: Path) -> dict[str, str]:
-    root = Path(root)
+    root = Path(root).resolve()
     skip = Path(manifest).resolve()
     out = {}
-    for p in root.rglob("*"):
-        if p.is_file() and p.resolve() != skip:
-            out[p.relative_to(root).as_posix()] = _digest(p)
+    for p in sorted(root.rglob("*")):
+        rel = p.relative_to(root).as_posix()
+        if p.is_symlink():
+            raise ValueError(f"{rel}: symlinks are not allowed in a results tree")
+        if p.is_file() and p != skip:
+            out[rel] = _digest(p)
     return out
 
 

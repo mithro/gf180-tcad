@@ -4,6 +4,8 @@
 import subprocess
 import sys
 
+import pytest
+
 from gf180tcad import manifest
 
 
@@ -60,3 +62,24 @@ def test_cli(tmp_path):
     (tmp_path / "b.csv").write_bytes(b"zzz")
     r = run("verify", str(tmp_path))
     assert r.returncode != 0 and "b.csv" in r.stdout + r.stderr
+
+
+def test_symlinks_rejected(tmp_path):
+    root = tmp_path / "r"
+    root.mkdir()
+    (tmp_path / "outside").write_bytes(b"x")
+    (root / "ok").write_bytes(b"1")
+    m = tmp_path / "M.sha256"
+    m.write_bytes(b"")
+    (root / "link").symlink_to(tmp_path / "outside")
+    for fn in (manifest.update, manifest.verify):
+        with pytest.raises(ValueError, match="link"):
+            fn(root, m)
+    (root / "link").unlink()
+    (root / "broken").symlink_to(tmp_path / "nonexistent")
+    with pytest.raises(ValueError, match="broken"):
+        manifest.update(root, m)
+    (root / "broken").unlink()
+    (root / "dlink").symlink_to(tmp_path, target_is_directory=True)
+    with pytest.raises(ValueError, match="dlink"):
+        manifest.update(root, m)
