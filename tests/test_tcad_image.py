@@ -81,16 +81,33 @@ def test_tcad_versions_json_matches_image(tmp_path):
     assert res.stdout == VERSIONS.read_text(encoding="utf-8")
 
 
+def _base_path() -> str:
+    """The base image's PATH, from its one definition (ENV PATH= in docker/base/Dockerfile)."""
+    text = (DOCKER / "base" / "Dockerfile").read_text(encoding="utf-8")
+    m = re.search(r"^ENV PATH=(\S+)", text, re.MULTILINE)
+    assert m, "no ENV PATH= in docker/base/Dockerfile"
+    return m.group(1)
+
+
 @pytest.mark.sandbox
 def test_tcad_environment(tmp_path):
+    keys = ["PDK", "PDK_ROOT", "PATH", "OPENBLAS_CORETYPE", "PYTHONDONTWRITEBYTECODE"]
     code = (
         "import json, os, sys; print(json.dumps([sys.prefix, sys.version.split()[0], "
-        "os.environ['PDK'], os.environ['PDK_ROOT'], os.environ['PATH'].split(':')[0]]))"
+        f"{{k: os.environ[k] for k in {keys!r}}}]))"
     )
     res = _run(["python3", "-c", code], tmp_path)
-    prefix, ver, pdk, pdk_root, path0 = json.loads(res.stdout)
-    assert (prefix, pdk, pdk_root, path0) == (VENV, "gf180mcu", "/foss/pdks", f"{VENV}/bin")
+    prefix, ver, env = json.loads(res.stdout)
+    assert prefix == VENV
     assert ver.startswith("3.13.")
+    assert env == {
+        "PDK": "gf180mcu",
+        "PDK_ROOT": "/foss/pdks",
+        # the TCAD venv first, then exactly the base image's PATH
+        "PATH": f"{VENV}/bin:{_base_path()}",
+        "OPENBLAS_CORETYPE": "Haswell",
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
 
 
 @pytest.mark.sandbox
@@ -228,6 +245,7 @@ def test_pytest_in_image(tmp_path):
 
 @pytest.mark.sandbox
 def test_tcad_venv_has_no_bytecode(tmp_path):
-    # .pyc files embed source mtimes and would break build reproducibility.
-    res = _run(["find", VENV, "-name", "*.pyc"], tmp_path)
+    # .pyc files embed source mtimes and would break build reproducibility; the CPython archive's
+    # own .pyc files in /opt/uv-python are stale after extraction, so they are deleted too.
+    res = _run(["find", VENV, "/opt/uv-python", "-name", "*.pyc"], tmp_path)
     assert res.stdout == ""

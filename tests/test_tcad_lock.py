@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """docker/tcad/*.lock are reproducible from their sources.
 
-- requirements.lock is the exact `uv export` of the docker/tcad uv project (offline, as
+- requirements.lock is the exact `uv export` of the docker/tcad uv project (`--offline`, as
   tests/test_requirements_lock.py does for the base image);
 - gf180mcu.lock and build-requirements.lock are single-purpose `uv pip compile --no-deps` locks.
   Their header records the full command, including `--exclude-newer`, so re-running it later
@@ -27,6 +27,7 @@ EXPORT = [
     "--project",
     "docker/tcad",
     "--locked",
+    "--offline",
     "--no-emit-project",
     "--format",
     "requirements-txt",
