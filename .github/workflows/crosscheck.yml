@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Cross-host determinism: regenerate the SPICE reference jobs listed in
-# tests/crosscheck_subset.txt on a GitHub-hosted runner, in the same pinned image and the same
+# tests/crosscheck_subset.txt ("all": the full reference) on a GitHub-hosted runner, in the same pinned image and the same
 # sandbox (tools/sandbox-setup + tools/sandbox-run), and require every file to be byte-identical
 # (sha256) to results/MANIFEST.sha256, which was generated locally. No tolerance anywhere.
 # The subset goes to a temporary --out, never results/spice: spice-reference replaces --out, so
@@ -15,6 +15,9 @@ on:
       - "docker/**"
       - "results/**"
       - "tests/crosscheck_subset.txt"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Makefile"
       - ".github/workflows/crosscheck.yml"
   schedule:
     - cron: "41 5 * * 2"
