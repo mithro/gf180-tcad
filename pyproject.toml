@@ -20,6 +20,9 @@ image = [
     "gdsfactory>=9.51.0",
     "numpy>=2.5.4",
 ]
+image-build = [
+    "setuptools>=84.0.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gf180tcad"]

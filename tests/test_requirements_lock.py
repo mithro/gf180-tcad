@@ -1,38 +1,42 @@
 # SPDX-License-Identifier: Apache-2.0
-"""docker/base/requirements.lock must be the exact `uv export` of the `image` group of uv.lock."""
+"""docker/base/*requirements.lock must be the exact `uv export` of their groups in uv.lock."""
 
 import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
-LOCK = REPO_ROOT / "docker" / "base" / "requirements.lock"
-EXPORT_CMD = [
-    "uv",
-    "export",
-    "--locked",
-    "--group",
-    "image",
-    "--no-dev",
-    "--no-emit-project",
-    "--format",
-    "requirements-txt",
-    "--hashes",
-]
+BASE = REPO_ROOT / "docker" / "base"
 
 
-def test_requirements_lock_in_sync_with_uv_lock():
-    assert shutil.which("uv"), "uv is required to check docker/base/requirements.lock"
-    res = subprocess.run(EXPORT_CMD, cwd=REPO_ROOT, capture_output=True, text=True, check=True)
-    # uv echoes the command line in the header; ignore only that line (--locked is ours).
-    want = [ln for ln in res.stdout.splitlines() if not ln.startswith("#    uv export")]
-    have = [
-        ln
-        for ln in LOCK.read_text(encoding="utf-8").splitlines()
-        if not ln.startswith("#    uv export")
+def _strip_cmd_echo(text: str) -> list[str]:
+    # uv echoes its command line in the header; ignore only that line (--locked is ours).
+    return [ln for ln in text.splitlines() if not ln.startswith("#    uv export")]
+
+
+@pytest.mark.parametrize(
+    ("group", "lock"),
+    [("image", "requirements.lock"), ("image-build", "build-requirements.lock")],
+)
+def test_requirements_lock_in_sync_with_uv_lock(group, lock):
+    assert shutil.which("uv"), "uv is required to check the docker/base lock files"
+    cmd = [
+        "uv",
+        "export",
+        "--locked",
+        "--group",
+        group,
+        "--no-dev",
+        "--no-emit-project",
+        "--format",
+        "requirements-txt",
+        "--hashes",
     ]
-    assert have == want, (
-        "docker/base/requirements.lock is stale; regenerate with: "
-        "uv export --group image --no-dev --no-emit-project --format requirements-txt "
-        "--hashes > docker/base/requirements.lock"
+    res = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True, check=True)
+    have = (BASE / lock).read_text(encoding="utf-8")
+    assert _strip_cmd_echo(have) == _strip_cmd_echo(res.stdout), (
+        f"docker/base/{lock} is stale; regenerate with: "
+        f"{' '.join(c for c in cmd if c != '--locked')} > docker/base/{lock}"
     )
