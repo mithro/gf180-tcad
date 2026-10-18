@@ -680,47 +680,131 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
 - [ ] **Step 4:** Commit `results/tcad/calibration/*.json` in a results-only commit. **Only then** run `validate_cv` and commit `results/tcad/validation/*.json` in a separate later commit. Regenerate the calibrated 1D and 2D result trees (`results/tcad/moscap{1d,2d}/<device>/calibrated/`), and run `make manifest`. Then open the PR, get it reviewed and merge.
 - [ ] **Budget note (Phase 3 carry-over).** These 3 parameters use 3 of the 8 per device type for all later phases. A Phase 3 channel profile may replace the uniform `n_ch` and must re-justify it.
 
-### Task 13: TCAD results, docs and cross-host check
+### Task 13a: TCAD results and docs pages
 
-**Files:** `src/gf180tcad/docgen.py` (MOSCAP pages: TCAD vs ngspice Cgg–Vg overlay with corner envelope, mesh-convergence plots, parameter table with provenance and budget use, verdicts), `docs/results/`, `docs/comparison/`, `docs/limitations/` (QS vs HF, no density-gradient, poly-depletion treatment, effective-oxide folding), `Makefile` (`reproduce` also regenerates TCAD results), `.github/workflows/crosscheck.yml` (add a coarse-mesh 1D MOSCAP job set in the TCAD image), `tests/test_docgen.py`
+Requires the docs-links infrastructure on main.
+
+**Files:**
+- `src/gf180tcad/docgen.py` (not a generator module). It renders MOSCAP pages from the committed `results/tcad/**` only:
+  - the TCAD vs ngspice Cgg–Vg overlay, with the per-bias corner envelope;
+  - the 1D intrinsic and parasitic split;
+  - mesh-convergence plots;
+  - **mesh pictures** of the 2D cross-section (spec §10b), rendered from the committed mesh file;
+  - the parameter table, with provenance, bounds, bound hits and budget use. The fixed reference-bookkeeping rows are listed separately.
+  - verdicts per plateau, the transition ΔV, and the validation geometries.
+- `docs/results/`, `docs/comparison/`.
+- `docs/limitations/`, which states:
+  - QS vs HF;
+  - no built-in density-gradient model in DEVSIM 2.11.1, with the effective-oxide folding;
+  - the poly-gate treatment;
+  - that DLC and the parasitics are reference bookkeeping;
+  - that Xyce has no CV analysis;
+  - that the ΔV ≤ 50 mV transition tolerance is a proposal;
+  - that `results/plugin-history` is not cross-checked.
+- `docs/conf.py:_TOOLS` gains the new tools; `docs/glossary.md` gains the new terms.
+- `tests/test_docgen.py`.
 
 - [ ] **Step 1:** Write the tests first:
-  - one page per device/geometry with TCAD data;
-  - determinism;
-  - the offline build;
+  - `test_moscap_page_per_device_geometry`;
+  - `test_moscap_pages_deterministic`;
+  - `test_docs_build_offline`;
   - `test_doc_links` covers the new pages.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. `make reproduce` regenerates SPICE and TCAD and verifies the manifest. The crosscheck workflow regenerates the coarse 1D MOSCAP set on a GitHub-hosted runner, byte-identical.
-- [ ] **Step 3:** Commit, open the PR, get it reviewed (including the dedicated missing-links review), and merge.
+- [ ] **Step 2:** Implement. Run the tests: they PASS. Commit, open the PR, get it reviewed (including the dedicated missing-links review), and merge.
+
+### Task 13b: `make reproduce` and the TCAD cross-host check
+
+**Context.**
+- `manifest.load_subset` accepts only 4-part `<engine>/<corner>/<device>/<geometry_id>` jobs, and expands `all` from the SPICE plan (`manifest.py:94-121`).
+- `verify_subset` always requires a root `provenance.json` (`:139-170`).
+- `manifest.py` is not a generator module, so it may change.
+
+**Files:**
+- `src/gf180tcad/manifest.py`: generalise the subset parser. A `kind` argument (`spice` | `tcad`) selects the job shape. TCAD jobs are `moscap1d/<device>`, 2 parts under the prefix `tcad/`; the SPICE behaviour is unchanged.
+- `tests/crosscheck_tcad_subset.txt` (the coarse 1D MOSCAP set, both devices, calibrated);
+- `tests/test_manifest_subset.py`;
+- `Makefile`: `reproduce` regenerates SPICE, then TCAD (1D, 2D, meshconv, calibration, validation), then verifies. `docs/reproduce/index.md` states the expected runtime, which is hours because of 2D meshconv. A `reproduce-quick` target runs only the cross-checked TCAD subset.
+- `.github/workflows/crosscheck.yml`: a second job, `crosscheck-tcad`, which:
+  - uses `actions/checkout` with `submodules: true`;
+  - pulls `docker/TCAD_IMAGE` by digest;
+  - runs the coarse 1D set into a temporary `--out`;
+  - runs `verify-subset --kind tcad --prefix tcad/`.
+
+  Add `third_party/**` and `data/process/**` to its paths.
+
+- [ ] **Step 1:** Write the tests first:
+  - `test_tcad_subset_parse`;
+  - `test_tcad_verify_subset_detects_change`;
+  - `test_spice_subset_unchanged`.
+
+  Run them: they FAIL.
+- [ ] **Step 2:** Implement. `make reproduce` on a clean `--recurse-submodules` clone regenerates SPICE and TCAD and verifies the manifest. The `crosscheck-tcad` job regenerates the coarse 1D MOSCAP set on a GitHub-hosted runner, byte-identical.
+- [ ] **Step 3:** Commit, open the PR, get it reviewed and merge.
 
 ### Task 14: secondary PDK `d658698` comparison (carried over from Phase 0–1 Task 15)
 
-**Files:** `src/gf180tcad/pdkdiff.py`, `tests/test_pdkdiff.py`, `data/pdk-d658698.sha256`, `results/spice-pdk-d658698/**`, `docs/comparison/pdk-versions.md`
+**Context.**
+- `spice-reference` lives in `reference.py`, which is a generator module. Adding `--pdk-root` there therefore changes SPICE provenance (Global Constraints).
+- `_image_pdk` checks the PDK against `docker/base/versions.json`, which would reject d658698.
+
+**Files:**
+- `src/gf180tcad/pdkdiff.py`, with its own entry point `python -m gf180tcad.pdkdiff run|compare`;
+- `data/pdk-d658698.sha256`, `data/pdk-d658698.versions.json` (the expected variant, commit and file sha256s);
+- `results/spice-pdk-d658698/**`;
+- `tests/test_pdkdiff.py`;
+- `docs/comparison/pdk-versions.md` (requires the docs-links infrastructure on main).
+
+**Decision:** `reference.py` is not modified.
+- `pdkdiff run` plans the same jobs as `reference.plan_jobs`, restricted to TT and ngspice.
+- It runs each job in the base image with `PDK_ROOT` pointing at the fetched PDK inside the workdir.
+- It checks the PDK with `pdk.check_against(info, "data/pdk-d658698.versions.json")`.
+- It writes the same file layout as `run_job`, through the generator's own functions, imported but not modified.
+
+If that proves impossible without editing a generator module, the PR also regenerates `results/spice`, as the Global Constraints require.
 
 **Interfaces:**
-- Consumes: `pdk.locate(pdk_root=…)`, and `spice-reference` with a new `--pdk-root` option.
-- Produces: the gf180mcu `d658698bd8bc` PDK, fetched with `ciel` inside the sandbox. Only the fetch step has network access. The files are pinned by hash in `data/pdk-d658698.sha256`.
+- Consumes: `pdk.locate(pdk_root=…)` (`pdk.py:44`) and `pdk.check_against(info, versions)`.
+- Produces: the gf180mcu `d658698bd8bc` PDK, fetched inside the sandbox with `ciel`, which comes from a hashed lock if it is not in the base image. Only the fetch step has network access. The files are pinned by hash in `data/pdk-d658698.sha256`.
 - Produces: a TT ngspice run of all geometries.
 - Produces: `pdkdiff.compare(a_metrics_dir, b_metrics_dir) -> dict`, a per-metric delta summary.
-- Produces: a docs page stating whether the run-1/2 PDK models differ from the latest for these devices, and re-checking the spec §4 card values against the latest card. The research already found that the run-2 card sha differs from the image's (`6edba54d…` vs `69a7ab87…`).
+- Produces: a docs page. It states whether the run-1/2 PDK models differ from the latest for these devices, and re-checks the spec §4 card values against the latest card. The research already found that the run-2 card sha differs from the image's (`6edba54d…` vs `69a7ab87…`).
 
-- [ ] **Step 1:** Write `test_pdkdiff_zero_for_identical` and `test_pdkdiff_reports_metric_delta`, then run them: they FAIL.
-- [ ] **Step 2:** Implement, then run them again: they PASS.
-- [ ] **Step 3:** Generate the results, update the manifest and write the page. Then commit, open the PR, get it reviewed, and merge.
+- [ ] **Step 1:** Write the tests first: `test_pdkdiff_zero_for_identical`, `test_pdkdiff_reports_metric_delta` and `test_reference_py_untouched` (the generator_sha256 is unchanged). Run them: they FAIL.
+- [ ] **Step 2:** Implement, then run the tests again: they PASS.
+- [ ] **Step 3:** Generate the results, update the manifest and write the page. Then commit, open the PR, get it reviewed and merge.
 
 ### Task 15 (optional, Phase 4 prep): backend seam in the plugin
 
 **Files (fork):** split `gplugins/devsim/get_solver.py` into `device_description.py` (mesh, regions, contacts, doping, bias plan) and `backends/devsim.py`.
 
-- [ ] **Step 1:** All existing fork tests pass unchanged through the new seam. No Charon code yet. Commit, open the PR, get it reviewed, merge, and bump the submodule.
+- [ ] **Step 1:** All existing fork tests pass unchanged through the new seam, verified with the fork-worktree pattern. No Charon code yet.
+- [ ] **Step 2:** Commit, open the PR, get it reviewed and merge. Then do **submodule bump 3 of 3**: the gf180-tcad TCAD results must be byte-identical before and after the bump. `make reproduce-quick` plus `make manifest` give no diff.
 
 ---
 
+## Risks
+
+- **Base image changes cascade.** Any change to `docker/IMAGE` forces a TCAD image rebuild, a new `docker/TCAD_IMAGE`, and regenerated TCAD results, because the TCAD image is built FROM the base digest.
+- **Plugin changes and the image.** A fork change that adds a dependency **does** require a TCAD image rebuild. "A plugin change never needs an image rebuild" holds only for pure-code changes.
+- **numpy dispatch names.** `NPY_DISABLE_CPU_FEATURES` names are tied to the numpy version. The TCAD lock pins the base lock's numpy, and `test_tcad_numpy_baseline` verifies it.
+- **Python 3.12 vs 3.13.** Python `repr` is the same in both. The cp312 and cp313 numpy wheels may differ in the last ulp, so TCAD and SPICE numbers are compared only within the TCAD image, and never bit-wise across images.
+- **DEVSIM solver selection.** A different `DEVSIM_MATH_LIBS`, or an MKL that appears in the image, would switch DEVSIM's solver and change the bits. `test_devsim_single_thread` asserts the OpenBLAS load line.
+- **The old stack.**
+  - The v0.8.0 run's tidy3d 2.4 may try network access under `--network none`.
+  - Old-stack results have no cross-host bit-identity guarantee, so `results/plugin-history` is not cross-checked.
+- **2D cost and convergence.**
+  - The spike failed to converge at r ≤ 1/4 with 1e-12. At 1e-10 it may converge but take hours.
+  - `make reproduce` runtime is stated in the docs.
+  - Concurrent jobs go through admission control.
+- **Interpreting Lmin and narrow width.** In 1D, Lmin and 1.6/0.7 results are dominated by the DLC and parasitic bookkeeping and by missing 2D/3D effects. They are pre-tagged `geometry-2d`/`spice-fit` so that a "Disagree" there is not over-read.
+- **Budget carry-over.** The 3 calibrated parameters use part of the 8-parameter budget for Phase 3 as well. A channel profile may later replace `n_ch`.
+- **The `t_ox_eff` upper bound** depends on a citation that Task 12 must find. If none is found, the bound stays TBD, and the fit reports a bound hit rather than hiding it.
+
 ## Phase exit
 
-- [ ] The fork's `gplugins.devsim` tests are green in fork CI on the latest stack, and the "once worked" record is committed.
+- [ ] The fork's `gplugins.devsim` tests are green in fork CI, inside the pinned TCAD image. The "once worked" record (including `DDComponent`) and its "re-verified on latest" numbers are committed and documented.
 - [ ] 1D and 2D MOSCAPs are mesh-converged (< 1 %). The C/Cox > 1 artefact is resolved or explained with numbers.
-- [ ] nfet and pfet Cgg–Vg reach |ΔCgg|/Cgg ≤ 5 % at the calibration geometries, or carry a published verdict with the §6 analysis. Held-out geometries are reported as validation.
-- [ ] `make reproduce` on a clean clone verifies; the GitHub cross-check is green, including TCAD; Read the Docs is green; docs-links checks pass.
+- [ ] At the calibration geometries, nfet and pfet Cgg–Vg reach both plateau maxima ≤ 5 % and a transition ΔV ≤ 50 mV (the latter a proposal). Otherwise they carry a published verdict with the §6 analysis. Held-out geometries are validated against the frozen `param_sha256` and reported.
+- [ ] `make reproduce` verifies on a clean `--recurse-submodules` clone. The GitHub cross-check is green for both SPICE and `crosscheck-tcad`. Read the Docs is green, and the docs-links checks pass. `results/spice/provenance.json` is unchanged from the Phase 1 exit, unless a PR regenerated it by the Global Constraints rule.
 - [ ] A whole-branch review of main since the Phase 1 exit is done and its findings fixed. The Phase 3 plan (2D MOSFET) is written.
