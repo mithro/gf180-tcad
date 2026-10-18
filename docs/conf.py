@@ -11,13 +11,21 @@ project = "gf180-tcad"
 author = "gf180-tcad contributors"
 copyright = "gf180-tcad contributors, Apache-2.0"
 
-extensions = ["myst_parser"]
+# docs/_ext/repo_roles.py: the {repo} and {test} roles (GitHub links checked offline against the
+# checkout; a wrong path is a warning, so -W fails the build).
+sys.path.insert(0, str(Path(__file__).parent / "_ext"))
+
+extensions = [
+    "myst_parser",
+    "sphinx.ext.extlinks",
+    "repo_roles",
+]
 myst_enable_extensions = ["colon_fence", "dollarmath"]
 source_suffix = {".md": "markdown"}
 root_doc = "index"
 
-# Internal design spec and plans are not reader-facing; _build is output.
-exclude_patterns = ["_build", "superpowers", "superpowers/**"]
+# Internal design spec and plans are not reader-facing; _build is output; _ext is code.
+exclude_patterns = ["_build", "_ext", "superpowers", "superpowers/**"]
 
 html_theme = "furo"
 html_title = "gf180-tcad"
@@ -25,6 +33,13 @@ html_title = "gf180-tcad"
 html_last_updated_fmt = None
 html_show_sphinx = False
 html_show_copyright = False
+
+# --- links -----------------------------------------------------------------------------------
+# Intersphinx stays off: it fetches inventories over the network, and the build must work
+# offline (tests/test_docgen.py::test_docs_build_offline). Every cross-reference below resolves
+# from this repository alone.
+
+extlinks = {"doi": ("https://doi.org/%s", "doi:%s")}
 
 # docs/_generated/ is git-ignored and rebuilt from the committed SPICE reference at the start of
 # every build (builder-inited). Read the Docs installs only the docs dependency group, which does
