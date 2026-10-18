@@ -117,3 +117,15 @@ def test_bad_header_rejected(tmp_path, mutate, match):
     p.write_bytes(_raw_bytes(header, np.zeros((1, 2))))
     with pytest.raises(ValueError, match=match):
         read_raw(p)
+
+
+def test_title_ending_in_binary_marker(tmp_path):
+    # The data marker is the line "Binary:", not the text anywhere in the header.
+    header = _header("real", ["a", "b"], "2")
+    header[0] = "Title: * netlist title ends in Binary:"
+    payload = np.array([[1.0, 2.0], [3.0, 4.0]])
+    p = tmp_path / "x.raw"
+    p.write_bytes(_raw_bytes(header, payload))
+    data = read_raw(p)
+    np.testing.assert_array_equal(data["a"], [1.0, 3.0])
+    np.testing.assert_array_equal(data["b"], [2.0, 4.0])

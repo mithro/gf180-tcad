@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-_BINARY = b"Binary:\n"
+_BINARY = b"\nBinary:\n"  # the marker is a whole line (a Title may end in "Binary:")
 
 
 def _header_value(fields: dict[str, str], key: str, path: Path) -> str:
@@ -33,7 +33,7 @@ def read_raw(path: Path) -> dict[str, np.ndarray]:
     end = blob.find(_BINARY)
     if end < 0:
         raise ValueError(f"{path}: not a binary raw file (no 'Binary:' line; use filetype=binary)")
-    lines = blob[:end].decode("ascii").split("\n")
+    lines = blob[:end].decode("ascii").split("\n")  # header, without the marker's leading \n
     fields: dict[str, str] = {}
     var_lines: list[str] = []
     in_vars = False
