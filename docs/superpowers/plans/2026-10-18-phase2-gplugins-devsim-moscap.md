@@ -131,7 +131,7 @@ A second independent review checked the revised plan against the code on main, t
 
   The literature citations for these constants are links. Every unit test with a hand value uses the same constants on both sides.
   - **Statistics are Boltzmann** (DEVSIM `simple_physics`-style models, with the constants above). The derived Vt = k_B·T/q is 25.6926 mV. The poly-gate flat band is Vfb = −V_t·ln(NGATE·N_A/n_i²): **−1.029 V** for the nfet (n⁺ 1e20 on p 1.7e17) and **+1.003 V** for the pfet (p⁺ 3.6e19 on n 1.7e17). Every test expects these Boltzmann values.
-  - Boltzmann statistics in the degenerate gates (1e20 and 3.6e19) place E_F beyond the band edge. The degenerate-pinned flat band is ≈ −0.99 V. This difference (≈ 40 mV) is absorbed by `dv_fb_v` and listed as a limitation (Task 13a).
+  - Boltzmann statistics in the degenerate gates (1e20 and 3.6e19) place E_F beyond the band edge. The degenerate-pinned nfet flat band is ≈ −0.99 V. This difference (≈ 40 mV) is absorbed by `dv_fb_v` and listed as a limitation (Task 13a).
 - **Result files.** Floats are written with `repr`, with `\n` line endings and sorted JSON keys. Write through `gf180tcad.io`, and never modify `io.py` (it is a generator module).
   - Register every result in `results/MANIFEST.sha256` (`make manifest`).
   - **TCAD results layout.** Results live under `results/tcad/`:
@@ -165,7 +165,7 @@ A second independent review checked the revised plan against the code on main, t
 
 ## Review Focus
 
-- **Quasi-static vs high-frequency C–V.** SPICE Cgg (BSIM4 capmod=2) is quasi-static and recovers to about Cox in inversion. A MOSCAP solved with AC at 1 MHz and only a body contact gives the high-frequency curve instead. A comparison must use matching physics: quasi-static/equilibrium in 1D, or S/D contacts tied to the body in 2D. A reviewer should reject any mismatched pairing.
+- **Quasi-static vs high-frequency C–V.** SPICE Cgg (BSIM4 capmod=2) is quasi-static and recovers to about Cox in inversion. A MOSCAP solved with AC at 1 MHz and only a body contact gives the high-frequency curve instead. A comparison must use matching physics: quasi-static/equilibrium in 1D, or, in 2D, S/D contacts held at the body potential by their own sources (Task 8). A reviewer should reject any mismatched pairing.
 - **Units.** DEVSIM works in cm (charge in C/cm², capacitance in F/cm²). gdsfactory, the SPICE data and the docs use µm and fF. Every conversion needs a unit test with a hand-computed value, for example Cox(15.2 nm) = 2.272 fF/µm², or 224.7 fF for W10/L10 with DLC = 54 nm.
 - **pfet MOSCAP.** The pfet MOSCAP has:
   - an n-type body (n-well);
@@ -977,12 +977,15 @@ If that proves impossible without editing a generator module, the PR also regene
   - Concurrent jobs go through admission control.
 - **Interpreting Lmin and narrow width.** In 1D, Lmin and 1.6/0.7 results are dominated by the DLC and parasitic bookkeeping and by missing 2D/3D effects. They are pre-tagged `geometry-2d`/`spice-fit` so that a "Disagree" there is not over-read.
 - **Budget carry-over.** The 3 calibrated parameters use part of the 8-parameter budget for Phase 3 as well. A channel profile may later replace `n_ch`.
-- **The `t_ox_eff` upper bound** depends on a citation that Task 12 must find. If none is found, the bound stays TBD, and the fit reports a bound hit rather than hiding it.
+- **The `t_ox_eff` bounds.**
+  - The upper bound TOXP + Δ is numeric from Task 9a onward. If the BSIM4 charge-centroid equations cannot be evaluated from public information, Δ falls back to 0.5 nm, labelled a project choice.
+  - The pfet accumulation side may hit the TOXE lower bound. The fit reports any bound hit; it never hides one.
+- **meshwell internals.** The fork replicates `generate_mesh`'s pipeline (Task 5) to control threading. A meshwell upgrade must re-check `orchestrator.py`, and `test_gmsh_threads_one` guards it.
 
 ## Phase exit
 
 - [ ] The fork's `gplugins.devsim` tests are green in fork CI, inside the pinned TCAD image. The "once worked" record (including `DDComponent`) and its "re-verified on latest" numbers are committed and documented.
 - [ ] 1D and 2D MOSCAPs are mesh-converged (< 1 %). The C/Cox > 1 artefact is resolved or explained with numbers.
-- [ ] At the calibration geometries, nfet and pfet Cgg–Vg reach both plateau maxima ≤ 5 % and a transition ΔV ≤ 50 mV (the latter a proposal). Otherwise they carry a published verdict with the §6 analysis. Held-out geometries are validated against the frozen `param_sha256` and reported.
+- [ ] At the calibration geometries, nfet and pfet Cgg–Vg reach both plateau maxima ≤ 5 % and both ΔV crossings ≤ 50 mV (the latter a proposal, and a recorded deviation from spec §5.2). Otherwise they carry a published verdict with the §6 analysis. Held-out geometries are validated against the frozen `param_sha256` and reported.
 - [ ] `make reproduce` verifies on a clean `--recurse-submodules` clone. The GitHub cross-check is green for both SPICE and `crosscheck-tcad`. Read the Docs is green, and the docs-links checks pass. `results/spice/provenance.json` is unchanged from the Phase 1 exit, unless a PR regenerated it by the Global Constraints rule.
 - [ ] A whole-branch review of main since the Phase 1 exit is done and its findings fixed. The Phase 3 plan (2D MOSFET) is written.
