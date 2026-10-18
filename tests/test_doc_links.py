@@ -135,14 +135,15 @@ def _term_index() -> dict[str, int]:
     return {t.lower(): i for i, entry in enumerate(glossary()) for t in entry}
 
 
-def _word_regex(names, plural: bool) -> re.Pattern:
+def _word_regex(names, plural: bool, behind: str = r"\w./-") -> re.Pattern:
     alts = []
     for n in sorted(names, key=len, reverse=True):
         suffix = "(?:s|es)?" if plural and re.fullmatch(r"[A-Za-z][A-Za-z -]*", n) else ""
         alts.append(re.escape(n) + suffix)
-    # A hyphen is a word boundary here ("DEVSIM-versus-BSIM", "TCAD-vs-SPICE"); the longest
-    # alternative wins, so "roll-off" is matched before any shorter term inside it.
-    return re.compile(r"(?<![\w./])(?:" + "|".join(alts) + r")(?!\w)")
+    # A term may be followed by a hyphen ("DEVSIM-versus-BSIM") but not preceded by one, so the
+    # tail of a compound or a name ("bias-sweep", "gf180-tcad", "spice-job") is not a use. The
+    # longest alternative wins, so "roll-off" is matched before any shorter term inside it.
+    return re.compile(rf"(?<![{behind}])(?:" + "|".join(alts) + r")(?!\w)")
 
 
 @cache
@@ -589,6 +590,7 @@ class _HtmlText(HTMLParser):
                 self._code_start = None
             elif tag == "a" and self._a_start is not None and "a" not in outer:
                 self.linked.append("".join(self.chars[self._a_start :]))
+                self.linked.append(self.stack[i][1].get("href", ""))
                 self._a_start = None
                 del self.stack[i:]
             elif tag == "dt" and self._dt_start is not None:
@@ -611,8 +613,10 @@ def _ci_term_regex() -> re.Pattern:
     names = [t for e in glossary() for t in e]
     sensitive = [n for n in names if n in _CASE_SENSITIVE_TERMS]
     other = [n for n in names if n not in _CASE_SENSITIVE_TERMS]
-    a = _word_regex(other, plural=True).pattern
-    b = _word_regex(sensitive, plural=True).pattern
+    # In the HTML a path has been rendered as code, so "/" may precede a term ("10/Lmin").
+    # "*" too: "j*2*pi*f*Cgg" is a formula, where reST cannot place a link.
+    a = _word_regex(other, plural=True, behind=r"\w.*-").pattern
+    b = _word_regex(sensitive, plural=True, behind=r"\w.*-").pattern
     return re.compile(f"(?i:{a})|{b}")
 
 
@@ -654,7 +658,7 @@ def check_html(name: str, html_text: str) -> list[Problem]:
         tok = body.rstrip("/")
         if "xref" in cls.split():
             bad(start, "html-unresolved-xref", f"`{body}` is a role that did not resolve")
-        if tok in files or tok in dirs:
+        if (tok in files or tok in dirs) and ("/" in body or "." in tok):  # not a bare `data`
             bad(start, "html-path", f"`{body}` is a tracked path but not a link")
         elif _HTML_IDENT.fullmatch(tok):
             bad(start, "html-identifier", f"`{body}` is not a {{py:...}} link")
@@ -676,13 +680,23 @@ def check_html(name: str, html_text: str) -> list[Problem]:
                 continue
             bad(m.start(), kind, f"{m.group(0)} is not a link")
 
+    # Prose is matched ignoring case. Code is case-sensitive and must be the whole span (the
+    # literal `cv` is the sweep; `rsd`, `ff` or `provenance.json` are other identifiers).
+    exact = {t: i for i, e in enumerate(glossary()) for t in e}
+    term_hits = []
+    for m in _ci_term_regex().finditer(s):
+        if not p.flags[m.start()][1]:
+            term_hits.append((m.start(), m.group(0), _ci_lookup(m.group(0))))
+    for start, end, _in_a, _skip, _cls in p.code:
+        body = s[start:end].strip()
+        if body in exact:
+            term_hits.append((start, body, exact[body]))
     is_glossary = name == "glossary.html"
     seen_terms: set[tuple[int, int]] = set()
-    for m in _ci_term_regex().finditer(s):
-        in_a, _in_code, skip, heading, dd = p.flags[m.start()]
+    for pos, word, idx in sorted(term_hits):
+        in_a, _in_code, skip, heading, dd = p.flags[pos]
         if skip or heading:
             continue
-        idx = _ci_lookup(m.group(0))
         if idx is None:
             continue
         if is_glossary:
@@ -696,12 +710,14 @@ def check_html(name: str, html_text: str) -> list[Problem]:
         seen_terms.add((region, idx))
         if not in_a:
             where = f" in the definition of {p.dd_terms[dd][0]!r}" if is_glossary else ""
-            bad(m.start(), "html-term", f"first use of {m.group(0)!r}{where} is not a link")
+            bad(pos, "html-term", f"first use of {word!r}{where} is not a link")
     if not is_glossary:
         seen_tools: set[str] = set()
         for m in _ci_tool_regex().finditer(s):
-            in_a, _in_code, skip, heading, _ = p.flags[m.start()]
+            in_a, in_code, skip, heading, _ = p.flags[m.start()]
             key = m.group(0).lower()
+            if in_code:
+                continue  # `bsim4*.out` is a file name, not the tool
             if skip or heading or key in seen_tools:
                 continue
             seen_tools.add(key)
@@ -864,3 +880,4 @@ def test_every_public_name_is_documented(built_html):
             f"{module}.{n}" for n in _public_names(module) if f'id="{module}.{n}"' not in page
         ]
     assert not missing, "not on the API pages:\n" + "\n".join(missing)
+
