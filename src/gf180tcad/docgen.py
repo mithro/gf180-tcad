@@ -24,6 +24,7 @@ import numpy as np
 
 from gf180tcad import io, plots, specwindow
 from gf180tcad.devices import CORNERS, DEVICES, Device, Geometry, geometry_id
+from gf180tcad.known import KNOWN_ENGINE_DIFFS
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.spice.xyce import engine_diff
 
@@ -33,7 +34,7 @@ TT = "typical"
 DIFF_SWEEPS = ("idvg_lin", "idvg_sat", "idvd", "ioff")
 DIFF_FLAG = 0.005  # design spec: more than 0.5 % between the engines flags the reference
 # Cases explained on the engine cross-check page (nfet BSIM4 version 4.5 vs Xyce 4.6.1).
-KNOWN_DIFFS = {("nfet_05v0", "idvg_sat")}
+KNOWN_DIFFS = KNOWN_ENGINE_DIFFS
 ENGINE_DOC = "/limitations/engine-cross-check"
 SPEC_DOC = "/comparison/pdk-spec-check"
 ID_FLOOR = 1e-15  # A, lower edge of the log-scale panels
@@ -89,9 +90,12 @@ def _series(cols: dict, sweep: str, pol: int) -> list[tuple[str | None, np.ndarr
     if sweep in ("idvg_lin", "idvg_sat"):
         m = cols["vb"] == 0.0
         return [(None, pol * cols["vg"][m], np.abs(cols["id"][m]))]
+    zero_vb = cols["vb"] == 0.0
+    if not np.any(zero_vb):
+        raise ValueError("idvd: no vb = 0 rows to plot")
     out = []
-    for v in sorted(set(np.abs(cols["vg"]).tolist())):
-        m = np.abs(cols["vg"]) == v
+    for v in sorted(set(np.abs(cols["vg"][zero_vb]).tolist())):
+        m = zero_vb & (np.abs(cols["vg"]) == v)
         out.append((f"|Vgs| = {fmt(v)} V", pol * cols["vd"][m], np.abs(cols["id"][m])))
     return out
 
@@ -295,7 +299,7 @@ def _engine_table(root) -> list[str]:
                     if (device.name, sweep) in KNOWN_DIFFS:
                         cell += f" {{doc}}`(known) <{ENGINE_DOC}>`"
                     else:
-                        cell += " **not yet explained**"
+                        cell += " **unexplained**"
                 cells.append(cell)
             rows.append(f"| `{device.name}` | `{gid}` | " + " | ".join(cells) + " |")
     return rows
@@ -327,7 +331,7 @@ def _summary_page(root, spec: dict, out: Path):
             "the bias points where either engine gives |Id| > 1 pA, at the typical corner and 25 C "
             "(`gf180tcad.spice.xyce.engine_diff`). The design threshold is 0.5 %. Cases above it "
             f"that are explained are marked known, see {{doc}}`{ENGINE_DOC}`. Anything else "
-            "above the threshold is marked not yet explained (the cross-check page covers only idvg_sat and idvd)."
+            "above the threshold is flagged unexplained in bold."
         ),
         "",
         *_engine_table(root),

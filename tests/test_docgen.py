@@ -13,6 +13,7 @@ pytest.importorskip("matplotlib", reason="needs the docs dependency group")
 
 from gf180tcad import docgen
 from gf180tcad.devices import DEVICES, geometry_id
+from gf180tcad.known import KNOWN_ENGINE_DIFFS
 from gf180tcad.sandbox import REPO_ROOT
 
 DOCS = REPO_ROOT / "docs"
@@ -63,7 +64,8 @@ def test_summary_lists_status_and_engine_diffs(tmp_path):
     assert "pdk-spec-check" in s and "engine-cross-check" in s
     # Six compared spec entries, all inside; nfet idvg_sat rows carry the known-case marker.
     assert s.count("| inside |") == 6
-    assert s.count("(known)") == 6
+    assert s.count("(known)") == 12  # nfet idvg_lin and idvg_sat, six geometries each
+    assert "**unexplained**" not in s
 
 
 def test_number_format_is_locale_independent():
@@ -72,23 +74,53 @@ def test_number_format_is_locale_independent():
     assert docgen.fmt(float("inf")) == "inf" and docgen.fmt(-float("inf")) == "-inf"
 
 
+_NO_NETWORK = textwrap.dedent(
+    """
+    import socket
+
+    def _blocked(*a, **k):
+        raise OSError("network disabled by test_docs_build_offline")
+
+    socket.socket.connect = _blocked
+    socket.socket.connect_ex = _blocked
+    socket.socket.sendto = _blocked
+    socket.create_connection = _blocked
+    socket.getaddrinfo = _blocked
+    socket.gethostbyname = _blocked
+    """
+)
+
+
+def test_offline_block_positive_control(tmp_path):
+    (tmp_path / "sitecustomize.py").write_text(_NO_NETWORK, encoding="utf-8")
+    code = textwrap.dedent(
+        """
+        import socket
+        for call in (
+            lambda: socket.create_connection(("127.0.0.1", 9)),
+            lambda: socket.getaddrinfo("example.com", 80),
+            lambda: socket.gethostbyname("example.com"),
+            lambda: socket.socket().sendto(b"x", ("127.0.0.1", 9)),
+        ):
+            try:
+                call()
+            except OSError as e:
+                assert "network disabled" in str(e), e
+            else:
+                raise SystemExit("network call was not blocked")
+        print("blocked")
+        """
+    )
+    env = {**os.environ, "PYTHONPATH": str(tmp_path)}
+    r = subprocess.run(
+        [sys.executable, "-c", code], env=env, capture_output=True, text=True, check=False
+    )
+    assert r.returncode == 0 and r.stdout.strip() == "blocked", r.stdout + r.stderr
+
+
 def test_docs_build_offline(tmp_path):
     pytest.importorskip("sphinx")
-    (tmp_path / "sitecustomize.py").write_text(
-        textwrap.dedent(
-            """
-            import socket
-
-            def _blocked(*a, **k):
-                raise OSError("network disabled by test_docs_build_offline")
-
-            socket.socket.connect = _blocked
-            socket.socket.connect_ex = _blocked
-            socket.create_connection = _blocked
-            """
-        ),
-        encoding="utf-8",
-    )
+    (tmp_path / "sitecustomize.py").write_text(_NO_NETWORK, encoding="utf-8")
     env = {**os.environ, "PYTHONPATH": str(tmp_path)}
     out = tmp_path / "html"
     log = tmp_path / "build.log"
@@ -101,3 +133,22 @@ def test_docs_build_offline(tmp_path):
     assert r.returncode == 0, log.read_text(encoding="utf-8")[-3000:]
     assert (out / "results" / "index.html").is_file()
     assert Path(out / "_images").is_dir()
+
+
+def test_known_diffs_single_source():
+    assert docgen.KNOWN_DIFFS is KNOWN_ENGINE_DIFFS
+    assert KNOWN_ENGINE_DIFFS == {("nfet_05v0", "idvg_sat"), ("nfet_05v0", "idvg_lin")}
+
+
+def test_idvd_series_selects_vb_zero():
+    import numpy as np
+
+    vd = np.tile(np.array([0.0, 1.0]), 4)
+    vg = np.repeat([1.0, 2.0], 4)
+    vb = np.tile(np.repeat([0.0, 1.0], 2), 2)
+    cols = {"vd": vd, "vg": vg, "vb": vb, "id": np.arange(8.0) + 1}
+    series = docgen._series(cols, "idvd", 1)
+    assert [list(y) for _, _, y in series] == [[1.0, 2.0], [5.0, 6.0]]
+    cols["vb"] = np.ones(8)
+    with pytest.raises(ValueError, match="vb"):
+        docgen._series(cols, "idvd", 1)
