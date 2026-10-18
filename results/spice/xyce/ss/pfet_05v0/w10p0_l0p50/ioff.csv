@@ -1,0 +1,11 @@
+# corner: ss
+# device: pfet_05v0
+# engine: xyce
+# geometry_id: w10p0_l0p50
+# l_um: 0.5
+# sweep: ioff
+# temp_c: 25.0
+# units: vd=V vg=V vb=V id=A ig=A ib=A
+# w_um: 10.0
+vd,vg,vb,id,ig,ib
+-5.5,0.0,0.0,-6.8405137847610835e-12,-6.047498152104788e-51,6.8404175002356506e-12

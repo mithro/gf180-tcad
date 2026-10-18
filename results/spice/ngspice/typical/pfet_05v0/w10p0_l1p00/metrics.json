@@ -1,0 +1,24 @@
+{
+  "corner": "typical",
+  "device": "pfet_05v0",
+  "engine": "ngspice",
+  "geometry_id": "w10p0_l1p00",
+  "l_um": 1.0,
+  "metrics": {
+    "body_effect_v": 0.7027557122779952,
+    "cgg_acc_ff": 24.996045840039052,
+    "cgg_inv_ff": 24.613031435050313,
+    "dibl_mv_per_v": 2.8213884286434388,
+    "gds_at_5v_s": 1.67490785685509e-05,
+    "gm_peak_s": 2.712583641040206e-05,
+    "id_lin_a": 1.2136336094946316e-05,
+    "idsat_ua_per_um": 118.58852599431202,
+    "ioff_pa_per_um": 0.6856737400084967,
+    "ss_mv_per_dec": 99.33504912250962,
+    "vt_lin_cc": -0.9331291055669683,
+    "vt_lin_maxgm": -0.8764290850619831,
+    "vt_sat_cc": -0.9193043022666154
+  },
+  "temp_c": 25.0,
+  "w_um": 10.0
+}

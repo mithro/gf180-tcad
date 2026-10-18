@@ -45,6 +45,8 @@ applied. The helper functions always take and return magnitudes.
     ``Id / W`` of the ``ioff`` sweep (Vgs = 0, Vds = 5.5 V).
 ``cgg_inv_ff`` / ``cgg_acc_ff`` [fF]
     ``cgg`` of the ``cv`` sweep (1 MHz) at polarity * Vg = +5 V (inversion) and -5 V (accumulation).
+    Only present when the data holds a ``cv`` sweep: :func:`extract_all` omits both keys when
+    ``"cv"`` is absent (the Xyce runner has no cv analysis).
 """
 
 from __future__ import annotations
@@ -242,7 +244,9 @@ def extract_all(
     """All metrics of one device/geometry from ``data`` = {sweep name -> column dict}.
 
     The columns are true signed volts/amps as produced by the SPICE runners (and later TCAD);
-    see the module docstring for the definition and sweep of every key.
+    see the module docstring for the definition and sweep of every key. ``idvg_lin``,
+    ``idvg_sat``, ``idvd`` and ``ioff`` are required (KeyError if absent). ``cv`` is optional:
+    without it (Xyce has no cv analysis) ``cgg_inv_ff`` and ``cgg_acc_ff`` are omitted.
     """
     p = device.polarity
     w, ln = g.w_um, g.l_um
@@ -271,12 +275,7 @@ def extract_all(
     ):
         raise MetricError(f"ioff: point must be at Vgs = 0 and polarity*Vds = {VDS_OFF_V} V")
 
-    cv = _strip(data["cv"], p, ("vg",), ())
-    cgg = np.asarray(data["cv"]["cgg"], dtype=float)
-    if not np.all(np.isfinite(cgg)):
-        raise MetricError("cv: non-finite cgg")
-
-    return {
+    out = {
         "vt_lin_maxgm": p * vt_mg,
         "vt_lin_cc": p * vt_lin,
         "vt_sat_cc": p * vt_sat,
@@ -288,6 +287,12 @@ def extract_all(
         "gds_at_5v_s": float(g_ds[-1]),
         "ss_mv_per_dec": subthreshold_slope(vg, i_lin, w),
         "ioff_pa_per_um": ioff_per_um(float(off["id"][0]), w),
-        "cgg_inv_ff": _at(cv["vg"], cgg, 5.0, "cv") * 1e15,
-        "cgg_acc_ff": _at(cv["vg"], cgg, -5.0, "cv") * 1e15,
     }
+    if "cv" in data:
+        cv = _strip(data["cv"], p, ("vg",), ())
+        cgg = np.asarray(data["cv"]["cgg"], dtype=float)
+        if not np.all(np.isfinite(cgg)):
+            raise MetricError("cv: non-finite cgg")
+        out["cgg_inv_ff"] = _at(cv["vg"], cgg, 5.0, "cv") * 1e15
+        out["cgg_acc_ff"] = _at(cv["vg"], cgg, -5.0, "cv") * 1e15
+    return out
