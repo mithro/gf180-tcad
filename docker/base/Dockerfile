@@ -8,14 +8,19 @@ ARG BASE_IMAGE
 ARG SOURCE_DATE_EPOCH
 
 USER root
-# Venv from the image's own /usr/bin/python3 (3.12.3); no pip inside it, no bytecode, hashes only.
+# Venv from the image's own /usr/bin/python3 (3.12.3): no pip inside it, no bytecode, hashes only,
+# wheels only -- except rectpack (sdist-only on PyPI), built from its hashed sdist with the locked
+# setuptools (installed first, then used via --no-build-isolation).
 RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirements.lock \
+    --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
     --mount=type=tmpfs,target=/tmp \
-    HOME=/tmp PIP_CONFIG_FILE=/dev/null /usr/bin/python3 -m venv --without-pip /opt/gf180tcad \
- && HOME=/tmp PIP_CONFIG_FILE=/dev/null /usr/bin/python3 -m pip --python /opt/gf180tcad/bin/python \
-        install --no-cache-dir --disable-pip-version-check --no-input --no-compile \
-        --require-hashes --no-deps --only-binary=:all: \
-        -r /run/gf180tcad/requirements.lock
+    export HOME=/tmp PIP_CONFIG_FILE=/dev/null \
+ && /usr/bin/python3 -m venv --without-pip /opt/gf180tcad \
+ && pip() { /usr/bin/python3 -m pip --python /opt/gf180tcad/bin/python install \
+        --no-cache-dir --disable-pip-version-check --no-input --no-compile \
+        --require-hashes --no-deps --only-binary=:all: "$@"; } \
+ && pip -r /run/gf180tcad/build-requirements.lock \
+ && pip --no-build-isolation --no-binary=rectpack -r /run/gf180tcad/requirements.lock
 USER 1000:1000
 
 ENV PATH=/opt/gf180tcad/bin:/foss/tools/ngspice/bin:/foss/tools/xyce/bin:/foss/tools/klayout:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
@@ -30,7 +35,12 @@ ENV PATH=/opt/gf180tcad/bin:/foss/tools/ngspice/bin:/foss/tools/xyce/bin:/foss/t
     TZ=UTC \
     OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
-    MKL_NUM_THREADS=1
+    MKL_NUM_THREADS=1 \
+    DEVSIM_MATH_LIBS=libopenblas.so.0 \
+    OPENBLAS_CORETYPE=Haswell
+
+# DEVSIM dlopen()s BLAS/LAPACK: use the image's system OpenBLAS. OPENBLAS_CORETYPE pins the
+# OpenBLAS kernel family (system and numpy/scipy wheels) so results do not depend on host CPU.
 
 LABEL org.opencontainers.image.source="https://github.com/mithro/gf180-tcad" \
       org.opencontainers.image.title="gf180-tcad-base" \
