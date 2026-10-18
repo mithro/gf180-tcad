@@ -23,7 +23,7 @@ REPO = Path(__file__).resolve().parents[1]
 RESULTS = REPO / "results" / "plugin-history"
 EXPERIMENT = REPO / "experiments" / "plugin-history"
 COMMITTED = ("v0.8.0.json", "v0.8.0-mesh0p5.json", "v1.4.2.json")
-CHECKS = ("import", "pin_test", "ddcomponent_mesh", "ddsolver", "ramp", "refine")
+CHECKS = ("import", "pin_test", "ddcomponent_mesh", "ddsolver", "ramp", "refine", "refined_solve")
 
 sys.path.insert(0, str(EXPERIMENT))
 import harness
@@ -39,7 +39,10 @@ def _load(name: str) -> dict:
 _TIMING_KEY = re.compile(r"(time|elapsed|duration|date|second|clock|timestamp)", re.IGNORECASE)
 # Host paths only: /work/out and /work/src are the fixed container mounts of tools/sandbox-run,
 # which appear in exception messages recorded verbatim (e.g. the v1.4.2 ImportError).
-_HOST_PATH = re.compile(r"(^|[\s'\"(=])/(home|tmp|usr|opt|root|var|proc|mnt|srv)/")
+# An allowlist: any absolute path must be under the fixed container mounts of tools/sandbox-run
+# (/work/out, /work/src), which appear in exception messages recorded verbatim.
+_ABS_PATH = re.compile(r"(?:^|(?<=[\s'\"(=:,\[]))/[A-Za-z][^\s'\")\],]*")
+_ALLOWED_PREFIXES = ("/work/out/", "/work/src/")
 
 
 def _walk(obj, where=""):
@@ -67,7 +70,8 @@ def test_history_json_has_no_timings_or_paths(name):
             if not where.startswith("/versions/"):  # package names (python-dateutil)
                 assert not _TIMING_KEY.search(key), f"{name}: timing-like key {where}"
         elif isinstance(value, str):
-            assert not _HOST_PATH.search(value), f"{name}: absolute path in {where}: {value!r}"
+            for path in _ABS_PATH.findall(value):
+                assert path.startswith(_ALLOWED_PREFIXES), f"{name}: path {path!r} in {where}"
             assert host not in value, f"{name}: host name in {where}"
             assert str(REPO) not in value, f"{name}: repo path in {where}"
         elif isinstance(value, float):
@@ -149,6 +153,12 @@ def test_failure_record_names_exception_and_gplugins_frame(tmp_path):
     }
 
 
+def test_abs_path_allowlist():
+    found = _ABS_PATH.findall("cannot import 'x' from 'y' (/work/out/gplugins/x.py) at /home/u/z")
+    assert found == ["/work/out/gplugins/x.py", "/home/u/z"]
+    assert _ABS_PATH.findall("1e-2 |NetDoping| a/b n/a") == []
+
+
 def test_depletion_width_on_a_row():
     # nodes of two rows; the row nearest y=1.1 is used; depleted where n, p < 1e-2 |NetDoping|
     x = [0.0, 1.0, 2.0, 3.0, 4.0, 0.0, 1.0]
@@ -201,6 +211,15 @@ def _assert_v080(data: dict) -> None:
     assert [b["v"] for b in dd["bias"]] == [0.1, 0.2]
     for b in dd["bias"]:
         assert set(b["currents"]) == {"anode", "cathode"}
+        assert set(b["contact_potential_v"]) == {"anode", "cathode"}
+        assert math.isfinite(b["anode_minus_cathode_v"])
+    eq = dd["equilibrium"]
+    assert eq["net_doping_min_cm3"] < 0 < eq["net_doping_max_cm3"]
+    assert eq["builtin_potential_v"] > 0
+    assert eq["depletion_width_um"] > 0
+    assert math.isfinite(eq["anode_minus_cathode_v"])
+    rs = checks["refined_solve"]
+    assert rs["status"] == "not_run" and "refine" in rs["reason"]
 
 
 def _assert_v142(data: dict) -> None:
