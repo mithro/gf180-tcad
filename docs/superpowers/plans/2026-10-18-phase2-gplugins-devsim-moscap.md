@@ -24,6 +24,37 @@ An independent review checked this plan against the code on main and the researc
 - **TCAD results carry their own `provenance.json`**, which pins the image, the fork commit and a content hash.
 - **Tasks 9 and 13 are each split in two.**
 
+### Second review
+
+A second independent review checked the revised plan against the code on main, the meshwell 2.5.2 source and the card. Its decisions:
+- **meshwell threading needs more than `n_threads=1`.** `generate_mesh` builds its meshing `ModelManager` without `n_threads` (`meshwell/orchestrator.py:246`), so it takes the import-time `cpu_count()` default. Its `_initialize` also calls `gmsh.finalize()`/`initialize()` (`model.py:89-94`), which wipes gmsh options set beforehand. So:
+  - the TCAD image sets `ENV PYTHON_CPU_COUNT=1` (Python 3.13 makes `os.cpu_count()` honour it);
+  - the fork calls `cad()` and then `mesh(model=ModelManager(n_threads=1), ...)` directly, and sets gmsh options (`Mesh.RandomSeed`, `Geometry.OCCParallel=0`) in `pre_2d_hook`;
+  - the tests that read `General.NumThreads == 1` after meshing stay.
+- **pytest is in the TCAD image**, because fork tests run inside it.
+- **TCAD locks are reproducible offline.** The main TCAD lock comes from a uv project in `docker/tcad/` (`uv export --locked`, as for the base). The two single-purpose locks record `--exclude-newer`. A test checks that the numpy pin equals the base lock's.
+- **The `t_ox_eff` upper bound is numeric before any fit.** It is TOXP + Δ, where Δ is the charge-centroid allowance only (BSIM4 ACDE/MOIN), computed in Task 9a. Poly depletion is never in Δ, because the poly-gate region simulates it. The fallback is TOXP + 0.5 nm, labelled a project choice. The three tunables and their bounds are written in Task 9a.
+- **The transition metric has two crossings.** ΔV is reported at both mid-capacitance crossings (depletion side: Vfb and doping; inversion side: Vt), each ≤ 50 mV (a proposal), with a five-corner "Same process" window per crossing. max |ΔC|/C in depletion is still reported. Replacing the spec §5.2 depletion-region ≤ 5 % with ΔV is a **deliberate spec deviation**: there, C goes from 82 to 144 fF within 0.2 V, so a relative-C metric measures the slope, not the agreement.
+- **Constants are complete.** n_i follows Altermatt et al. 2003 (9.65e9 cm⁻³ at 300 K) with a cited T-scaling. ε_si = 11.7 is tagged `literature` (Sze & Ng). Mobility and lifetimes are explicit and cited. Tests expect the Boltzmann-statistics flat band (−1.029 V nfet, +1.003 V pfet). Boltzmann statistics in the degenerate gate are a documented limitation.
+- **`dv_fb_v` is a lumped flat-band offset**, applied as a rigid gate-bias shift (exact in 1D). It is not described as fixed oxide charge. Its ±0.2 V is a project choice.
+- **Results layout:** `results/tcad/moscap{1d,2d}/<device>/{start,calibrated}/`. TCAD jobs have 3 parts. There is one `provenance.json` per tree root. The cross-check reruns exactly the committed configuration, and `verify_subset` gets `full=` explicitly.
+- **Every non-gate contact gets its own voltage source** in `sweep_cv`. The `tie` argument is gone. Charge conservation sums Cgx over every non-gate contact. The `tie` mechanics test moves to a minimal `create_2d_mesh` device in the fork.
+- **TCAD provenance is structural.** `TCAD_GENERATOR_MODULES` has an import-graph test (Task 9b). The plugin commit comes from `git -C third_party/gplugins rev-parse HEAD` with a clean-tree check.
+- Smaller fixes:
+  - `MeshSpec` gains `h_poly_nm`;
+  - the accumulation series test uses a metal gate;
+  - `moscap2d.simulate` takes `vg`, and `converge` takes a protocol;
+  - card expressions are evaluated at TT;
+  - the Cox spec-entry convention is defined;
+  - the TCAD image package is made public;
+  - fork CI reproduces the sandbox environment;
+  - the history CLI gains `--mesh-scale`;
+  - 1D contacts are `InterfaceRef(region, None)`;
+  - the calibration-set citation is corrected to `devices.py:81-92`;
+  - the pfet S/D doping is named, with a sensitivity test;
+  - meshconv, calibrate and validate have CLIs;
+  - the duplicate Review Focus bullet is removed.
+
 **Goal:** Restore the gdsfactory `gplugins.devsim` plugin in the `mithro/gplugins` fork. First prove it once worked on its original stack, then port it to the latest stack and re-verify it. Extend it with typed contacts, analytic doping and a C–V solver. Then use it from gf180-tcad to build mesh-converged 1D and 2D MOS capacitors whose Cgg–Vg is calibrated against the committed SPICE reference for `nfet_05v0`/`pfet_05v0`, with the results published reproducibly.
 
 **Architecture:** Plugin work happens on fork branches with PRs inside `mithro/gplugins`. gf180-tcad consumes the fork as a git submodule `third_party/gplugins`, pinned to a fork commit and mounted read-only into the sandbox with the rest of the repo, so a plugin change never needs an image rebuild. A new reproducible image `ghcr.io/mithro/gf180-tcad-tcad` adds a uv-managed CPython 3.13 venv on top of the pinned base image; meshwell ≥ 2.4 needs Python 3.13. TCAD jobs run in that image through the existing `tools/sandbox-run` (`--image`). SPICE jobs keep using the base image, so the committed SPICE reference is untouched. MOSCAP results are written with the same deterministic I/O and manifest as Phase 1, and the generated docs pages overlay TCAD against SPICE.
@@ -73,8 +104,12 @@ An independent review checked this plan against the code on main and the researc
     - `devsim.get_parameter(name="threads_available")` is 1, or unset, which means the default of 1;
     - the `Threads:` line of `/proc/self/status` is 1;
     - DEVSIM's start-up log says `Loading "libopenblas.so.0"` and mentions no MKL.
-  - **meshwell runs with `n_threads=1`.** Every `meshwell.orchestrator.generate_mesh(...)` call passes `n_threads=1`. meshwell 2.5.2 defaults to `cpu_count()` (88 on this host, 4 on GitHub runners) and then sets `General.NumThreads`, `Mesh.MaxNumThreads1D/2D/3D` and `Geometry.OCCParallel` from it (`meshwell/model.py:338-342`), which overwrites any options set earlier. A test reads `gmsh.option.getNumber("General.NumThreads") == 1` after meshing.
-  - **gmsh is pinned.** It runs with `Mesh.RandomSeed` fixed and `Geometry.OCCParallel=0`. Mesh files are written as MSH 2.2.
+  - **meshwell and gmsh run single-threaded.** meshwell 2.5.2 defaults `n_threads` to `os.cpu_count()` (88 on this host, 4 on GitHub runners). It then sets `General.NumThreads`, `Mesh.MaxNumThreads1D/2D/3D` and `Geometry.OCCParallel` from that value (`meshwell/model.py:336-342`). `generate_mesh(..., n_threads=1)` is **not enough**: it builds its meshing `ModelManager` without `n_threads` (`meshwell/orchestrator.py:246`), so that stage still uses `cpu_count()`. Two measures, both required:
+    - the TCAD image sets `ENV PYTHON_CPU_COUNT=1`, which Python 3.13 makes `os.cpu_count()` honour (Task 1);
+    - the fork never calls `generate_mesh`. It calls `meshwell.orchestrator.cad(..., n_threads=1)` and then `meshwell.mesh.mesh(..., model=ModelManager(n_threads=1, ...), n_threads=1)` directly (Task 5).
+
+    Tests read `gmsh.option.getNumber("General.NumThreads") == 1` after meshing (Tasks 1 and 5).
+  - **gmsh is pinned.** meshwell's `ModelManager._initialize` calls `gmsh.finalize()`/`gmsh.initialize()` (`model.py:89-94`), which resets every option set before it. So `Mesh.RandomSeed` (fixed) and `Geometry.OCCParallel=0` are set in `mesh(..., pre_2d_hook=...)`, after initialisation. Mesh files are written as MSH 2.2.
   - **The optimiser is deterministic.** Task 12 uses `scipy.optimize.least_squares(method="trf", jac="2-point")` with fixed `x0`, `diff_step`, `x_scale`, `ftol`/`xtol`/`gtol` and `max_nfev`. It has no random restarts and runs in the sandbox.
   - **Results are compared within one image.** Comparisons and verdicts between TCAD and SPICE are computed inside one stated image (the TCAD image), from SPICE CSVs parsed bit-exactly with `io.read_csv`. Numbers computed in different images are never compared bit-wise, because the cp312 and cp313 numpy wheels may differ in the last ulp.
   - Two runs must give byte-identical result files.
@@ -86,21 +121,36 @@ An independent review checked this plan against the code on main and the researc
   | ε0 | 8.8541878128e-14 F/cm | `literature`, CODATA 2018 |
   | q | 1.602176634e-19 C | `literature`, exact SI |
   | k_B | 1.380649e-23 J/K | `literature`, exact SI |
-  | ε_si | 11.7 | `spice-card`: the BSIM4 default EPSRSUB, since the card sets none |
-  | ε_ox | 3.9 | `spice-card`: EPSROX |
+  | ε_si | 11.7 | `literature`: Sze & Ng, *Physics of Semiconductor Devices*, 3rd ed., Appendix ([doi:10.1002/0470068329](https://doi.org/10.1002/0470068329)). It equals the BSIM4 EPSRSUB default; the card sets no EPSRSUB. |
+  | ε_ox | 3.9 | `spice-card`: EPSROX (`sm141064.ngspice`, nfet card) |
   | T | 298.15 K | `spice-card`: TNOM 25 °C, `sm141064.ngspice:37308` |
-  | n_i(T) | from a cited source | `literature` |
+  | n_i(300 K) | 9.65e9 cm⁻³ | `literature`: Altermatt et al., J. Appl. Phys. 93, 1598 (2003), [doi:10.1063/1.1529297](https://doi.org/10.1063/1.1529297) |
+  | n_i(T) | n_i(300 K)·(T/300)^2.54·exp(−6726 K·(1/T − 1/300 K)) → **8.266e9 cm⁻³** at 298.15 K | `literature`: the Misiakos & Tsamakis T-dependence, J. Appl. Phys. 74, 3293 (1993), [doi:10.1063/1.354551](https://doi.org/10.1063/1.354551), normalised to Altermatt's 300 K value |
+  | µ_n, µ_p | 1417, 470.5 cm²/(V·s), constant (no field or doping dependence in Phase 2) | `literature`: Masetti et al., IEEE TED 30, 764 (1983), µ_max, [doi:10.1109/T-ED.1983.21207](https://doi.org/10.1109/T-ED.1983.21207) |
+  | τ_n, τ_p (SRH) | 1e-5 s each; n1 = p1 = n_i (midgap trap) | `literature`: Sze & Ng ch. 1 (SRH recombination; the Task 6 PR quotes the page). QS C–V does not depend on them. The 1D HF argument (Task 8) holds for any τ ≥ 1e-9 s. |
 
   The literature citations for these constants are links. Every unit test with a hand value uses the same constants on both sides.
+  - **Statistics are Boltzmann** (DEVSIM `simple_physics`-style models, with the constants above). The derived Vt = k_B·T/q is 25.6926 mV. The poly-gate flat band is Vfb = −V_t·ln(NGATE·N_A/n_i²): **−1.029 V** for the nfet (n⁺ 1e20 on p 1.7e17) and **+1.003 V** for the pfet (p⁺ 3.6e19 on n 1.7e17). Every test expects these Boltzmann values.
+  - Boltzmann statistics in the degenerate gates (1e20 and 3.6e19) place E_F beyond the band edge. The degenerate-pinned flat band is ≈ −0.99 V. This difference (≈ 40 mV) is absorbed by `dv_fb_v` and listed as a limitation (Task 13a).
 - **Result files.** Floats are written with `repr`, with `\n` line endings and sorted JSON keys. Write through `gf180tcad.io`, and never modify `io.py` (it is a generator module).
   - Register every result in `results/MANIFEST.sha256` (`make manifest`).
-  - Every TCAD tree holds a root `provenance.json`, written by `gf180tcad.tcad.provenance()`. It contains:
+  - **TCAD results layout.** Results live under `results/tcad/`:
+    - `moscap1d/<device>/{start,calibrated}/` and `moscap2d/<device>/{start,calibrated}/`;
+    - `meshconv/{moscap1d,moscap2d}/<device>/`;
+    - `calibration/<device>.json` and `validation/<device>.json`.
+
+    A TCAD *job* is a 3-part path such as `moscap1d/nfet_05v0/calibrated`. Each *tree root* holds exactly one `provenance.json`: `results/tcad/moscap1d/provenance.json`, `results/tcad/moscap2d/provenance.json`, `results/tcad/meshconv/provenance.json`, `results/tcad/calibration/provenance.json` and `results/tcad/validation/provenance.json`.
+  - Each tree root's `provenance.json` is written by `gf180tcad.tcad.provenance()`. It contains:
     - the `docker/TCAD_IMAGE` reference;
     - the contents of `docker/tcad/versions.json`;
-    - `gplugins_commit`, taken on the host with `git ls-tree HEAD third_party/gplugins`, because the read-only mount cannot run git;
-    - `generator_sha256` over the TCAD modules, `third_party/gplugins/gplugins/devsim/**` and `data/process/*.toml`.
+    - `gplugins_commit`: taken on the host with `git -C third_party/gplugins rev-parse HEAD`, because the read-only mount cannot run git. Writing raises unless `git -C third_party/gplugins status --porcelain` is empty and the commit equals the gitlink in `git ls-tree HEAD third_party/gplugins`;
+    - `generator_sha256`, over the files of `gf180tcad.tcad.TCAD_GENERATOR_MODULES`, `tools/sandbox-run`, `third_party/gplugins/gplugins/devsim/**` and `data/process/*.toml`;
+    - for trees computed with calibrated values, the `param_sha256` and sha256 of `results/tcad/calibration/<device>.json`.
 
-    It deliberately holds no date. `tests/tcad/test_tcad_provenance.py` checks that the committed tree matches the current one, as `tests/test_results_provenance.py` does for SPICE.
+    It deliberately holds no date.
+  - **`TCAD_GENERATOR_MODULES`** (in `gf180tcad/tcad/__init__.py`, Task 9b) lists every gf180tcad module that the TCAD entry points import: `gf180tcad.tcad.__main__` and `gf180tcad.calibrate.__main__`. The list includes the shared modules (`gf180tcad.io`, `.devices`, `.sandbox`, …).
+    - `tests/tcad/test_tcad_provenance.py::test_tcad_generator_modules_match_the_import_graph` ties the list to the import graph, as the SPICE test does. Every later task that adds a TCAD module extends the list in the same PR.
+    - `tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` checks that every committed tree root's `provenance.json` matches the current one, as `tests/test_results_provenance.py` does for SPICE.
 - **Public data only.** Every process number cites a public source and carries a provenance tag: `pdk-doc`, `spice-card`, `literature` or `calibrated`. No NDA material.
 - **SPICE reference is the golden reference.** TCAD is never tuned on validation targets (spec §5.2).
 - **Documentation.** Every reference in the docs to a file, term, tool or code object is a link (`{repo}`, `{term}`, tool substitutions, `{py:*}`), as `tests/test_doc_links.py` enforces.
@@ -121,8 +171,7 @@ An independent review checked this plan against the code on main and the researc
   - an n-type body (n-well);
   - a p⁺ poly-gate region (NGATE 3.6e19, versus 1e20 n⁺ for the nfet).
 
-  The flat band follows from the gate and body doping: Vfb ≈ −0.99 V for the nfet and +0.99 V for the pfet. Accumulation is at +Vg for the pfet. Reuse the Phase 1 rule `polarity·vg` for inversion and accumulation.
-- **Units and constants.** Never use DEVSIM `simple_physics` defaults. Use the constants table above.
+  The flat band follows from the gate and body doping (Boltzmann, Global Constraints): Vfb = −1.029 V for the nfet and +1.003 V for the pfet. Accumulation is at +Vg for the pfet. Reuse the Phase 1 rule `polarity·vg` for inversion and accumulation.
 - **Silent non-convergence.** A bias point that fails to converge, or converges only at a relaxed tolerance, must fail the sweep, never be dropped or interpolated. The tolerance is recorded per point.
 - **Calibration leakage.** Only calibration geometries (W10 at L = 10, 2 and Lmin) and calibration targets (Cgg–Vg) may move parameters. Held-out geometries (L = 0.7, 1, 1.6/0.7) are computed after the parameters are frozen.
 
