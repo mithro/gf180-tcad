@@ -2,6 +2,28 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+## Changes after plan review
+
+An independent review checked this plan against the code on main and the research. The decisions below came out of it, and each is written into the task it affects.
+- **SPICE provenance is protected.** `tools/sandbox-run` and every module in `reference.GENERATOR_MODULES` feed `results/spice/provenance.json`, which `tests/test_results_provenance.py` checks. So Phase 2 does not touch them:
+  - TCAD has its own CLI, `python -m gf180tcad.tcad` / `gf180tcad.history`;
+  - the plugin path comes from a `.pth` file in the TCAD venv, not from the sandbox wrapper.
+- **Physics constants are explicit**, not DEVSIM's `simple_physics` defaults (ε_si = 11.1, T = 300 K, ε0 = 8.85e-14). Using those defaults would let a wrong permittivity leak into calibrated doping.
+- **Both MOSCAPs use a poly-gate region.** NGATE is a fixed `spice-card` value, so poly depletion comes from physics. The metal-gate "either/or" is dropped, because a single effective oxide cannot fit the pfet's 6 % accumulation/inversion asymmetry.
+- **The analytic references are exact.** They use the 1D Poisson–Boltzmann solution, not the depletion approximation; the depletion-approximation Cmin is a high-frequency quantity.
+- **QS vs AC tests respect the minority-carrier response time** (≈ 10² s with only a body contact). The 1 Hz equality is required only in accumulation and depletion.
+- **`t_ox_eff` may exceed TOXP.** The SPICE L10−L2 slope needs t_eff ≈ 16.4–16.7 nm. The upper bound adds a cited charge-centroid/poly allowance to TOXP, and the fit reports when it hits a bound.
+- **The agreement metric is defined.** It is the plateau max \|ΔCgg\|/Cgg ≤ 5 % in accumulation and in inversion. The transition region is judged by a voltage shift (≤ 50 mV, a proposal).
+- **Anti-goal A1 is enforced in code, not prose:** role guards, a frozen-result hash, and calibrated values kept only in `results/tcad/calibration/`.
+- **gmsh threading is fixed.** meshwell defaults to `n_threads=cpu_count()` and overwrites gmsh's thread options, so every call passes `n_threads=1`.
+- **The "once worked" record covers the path that actually broke.** That path is `DDComponent` with the mesher; the PIN path uses DEVSIM's own mesh and never broke.
+- **The fork gains a 1D stack builder.** gf180-tcad consumes it instead of building its own DEVSIM device.
+- **`MeshSpec` is defined before its first use**, in Task 9b.
+- **Submodule bumps are batched**: at Task 2, after Task 8, and at Task 15.
+- **Process files are TOML** (stdlib `tomllib`), with card line citations.
+- **TCAD results carry their own `provenance.json`**, which pins the image, the fork commit and a content hash.
+- **Tasks 9 and 13 are each split in two.**
+
 **Goal:** Restore the gdsfactory `gplugins.devsim` plugin in the `mithro/gplugins` fork. First prove it once worked on its original stack, then port it to the latest stack and re-verify it. Extend it with typed contacts, analytic doping and a C–V solver. Then use it from gf180-tcad to build mesh-converged 1D and 2D MOS capacitors whose Cgg–Vg is calibrated against the committed SPICE reference for `nfet_05v0`/`pfet_05v0`, with the results published reproducibly.
 
 **Architecture:** Plugin work happens on fork branches with PRs inside `mithro/gplugins`. gf180-tcad consumes the fork as a git submodule `third_party/gplugins`, pinned to a fork commit and mounted read-only into the sandbox with the rest of the repo, so a plugin change never needs an image rebuild. A new reproducible image `ghcr.io/mithro/gf180-tcad-tcad` adds a uv-managed CPython 3.13 venv on top of the pinned base image; meshwell ≥ 2.4 needs Python 3.13. TCAD jobs run in that image through the existing `tools/sandbox-run` (`--image`). SPICE jobs keep using the base image, so the committed SPICE reference is untouched. MOSCAP results are written with the same deterministic I/O and manifest as Phase 1, and the generated docs pages overlay TCAD against SPICE.
@@ -36,22 +58,71 @@
   - Every simulator, mesher and package install runs inside `tools/sandbox-run`. Installs that need network use `--network bridge`, in a separate step; runs use `--network none`.
   - Defaults are 16 GiB / 8 CPU per job. TCAD jobs may request less, never more than 16 GiB, without a ledgered ruling.
   - The aggregate slice limit is 128 GiB.
-- **Determinism.** Keep the Phase 0–1 environment: single-threaded BLAS/OMP, `OPENBLAS_CORETYPE=Haswell`, and numpy on baseline kernels (`NPY_DISABLE_CPU_FEATURES` from `tools/sandbox-run`). Additionally:
-  - DEVSIM runs single-threaded. Verify the thread count the way Task 8 of Phase 1 did for ngspice.
-  - gmsh is seeded deterministically, with `General.NumThreads=1` and `Mesh.MaxNumThreads*=1`.
+- **SPICE provenance is frozen.** `reference.GENERATOR_MODULES` (`src/gf180tcad/reference.py:78`) lists `gf180tcad`, `gf180tcad.__main__`, `.devices`, `.io`, `.metrics`, `.pdk`, `.reference`, `.sandbox`, `.specwindow` and `.spice.*`. Together with `tools/sandbox-run` (`GENERATOR_EXTRA_FILES`), they feed `results/spice/provenance.json`.
+  - `tests/test_results_provenance.py` fails on any change to them.
+  - `tests/test_reference.py::test_generator_modules_match_the_import_graph` ties the list to what `gf180tcad.__main__` imports.
+  - **No Phase 2 PR edits those files**, unless the same PR also does all of the following: regenerates `results/spice` (`python -m gf180tcad spice-reference --engine both --out results/spice`), runs `make manifest`, and passes crosscheck.
+  - TCAD code lives in the new subpackages `gf180tcad.tcad`, `gf180tcad.calibrate` and `gf180tcad.history`, with their own entry points. The TCAD image reference is a constant in `gf180tcad/tcad/__init__.py`, never in `sandbox.py`.
+- **Host vs image split (as for SPICE).** The two halves of each TCAD CLI command are:
+  - the host command, which reads `docker/TCAD_IMAGE` and calls `sandbox.run(cmd, out_dir=..., image=TCAD_IMAGE, mem=..., cpus=1)`;
+  - a `*-job` command, which runs inside the image and writes only to `/work/out`.
+
+  Note that `sandbox.run` refuses `image=` when it is already inside the sandbox (`sandbox.py:191-193`). Concurrent TCAD jobs go through an admission check (jobs × mem ≤ 128 GiB), as `reference.check_admission` does for SPICE.
+- **Determinism.** Keep the Phase 0–1 environment: single-threaded BLAS/OMP, `OPENBLAS_CORETYPE=Haswell`, `DEVSIM_MATH_LIBS=libopenblas.so.0` (inherited from the base image), and numpy on baseline kernels (`NPY_DISABLE_CPU_FEATURES` from `tools/sandbox-run`). In addition:
+  - **DEVSIM runs single-threaded.** `test_devsim_single_thread` (Task 1) asserts three things during a solve:
+    - `devsim.get_parameter(name="threads_available")` is 1, or unset, which means the default of 1;
+    - the `Threads:` line of `/proc/self/status` is 1;
+    - DEVSIM's start-up log says `Loading "libopenblas.so.0"` and mentions no MKL.
+  - **meshwell runs with `n_threads=1`.** Every `meshwell.orchestrator.generate_mesh(...)` call passes `n_threads=1`. meshwell 2.5.2 defaults to `cpu_count()` (88 on this host, 4 on GitHub runners) and then sets `General.NumThreads`, `Mesh.MaxNumThreads1D/2D/3D` and `Geometry.OCCParallel` from it (`meshwell/model.py:338-342`), which overwrites any options set earlier. A test reads `gmsh.option.getNumber("General.NumThreads") == 1` after meshing.
+  - **gmsh is pinned.** It runs with `Mesh.RandomSeed` fixed and `Geometry.OCCParallel=0`. Mesh files are written as MSH 2.2.
+  - **The optimiser is deterministic.** Task 12 uses `scipy.optimize.least_squares(method="trf", jac="2-point")` with fixed `x0`, `diff_step`, `x_scale`, `ftol`/`xtol`/`gtol` and `max_nfev`. It has no random restarts and runs in the sandbox.
+  - **Results are compared within one image.** Comparisons and verdicts between TCAD and SPICE are computed inside one stated image (the TCAD image), from SPICE CSVs parsed bit-exactly with `io.read_csv`. Numbers computed in different images are never compared bit-wise, because the cp312 and cp313 numpy wheels may differ in the last ulp.
   - Two runs must give byte-identical result files.
   - No timestamps, hostnames or host paths in results.
-- **Result files.** Floats are written with `repr`, with `\n` line endings and sorted JSON keys. Write through `gf180tcad.io`. Register every result in `results/MANIFEST.sha256` (`make manifest`).
+- **Physics constants (all TCAD, fork and gf180-tcad).** DEVSIM's `python_packages/simple_physics.py` hard-codes `eps_0=8.85e-14`, `eps_si=11.1`, `q=1.6e-19`, `n_i=1e10` and `T=300` (lines 13–20). None of these defaults is used. The fork's material setup takes these constants explicitly:
+
+  | Quantity | Value | Provenance |
+  |---|---|---|
+  | ε0 | 8.8541878128e-14 F/cm | `literature`, CODATA 2018 |
+  | q | 1.602176634e-19 C | `literature`, exact SI |
+  | k_B | 1.380649e-23 J/K | `literature`, exact SI |
+  | ε_si | 11.7 | `spice-card`: the BSIM4 default EPSRSUB, since the card sets none |
+  | ε_ox | 3.9 | `spice-card`: EPSROX |
+  | T | 298.15 K | `spice-card`: TNOM 25 °C, `sm141064.ngspice:37308` |
+  | n_i(T) | from a cited source | `literature` |
+
+  The literature citations for these constants are links. Every unit test with a hand value uses the same constants on both sides.
+- **Result files.** Floats are written with `repr`, with `\n` line endings and sorted JSON keys. Write through `gf180tcad.io`, and never modify `io.py` (it is a generator module).
+  - Register every result in `results/MANIFEST.sha256` (`make manifest`).
+  - Every TCAD tree holds a root `provenance.json`, written by `gf180tcad.tcad.provenance()`. It contains:
+    - the `docker/TCAD_IMAGE` reference;
+    - the contents of `docker/tcad/versions.json`;
+    - `gplugins_commit`, taken on the host with `git ls-tree HEAD third_party/gplugins`, because the read-only mount cannot run git;
+    - `generator_sha256` over the TCAD modules, `third_party/gplugins/gplugins/devsim/**` and `data/process/*.toml`.
+
+    It deliberately holds no date. `tests/tcad/test_tcad_provenance.py` checks that the committed tree matches the current one, as `tests/test_results_provenance.py` does for SPICE.
 - **Public data only.** Every process number cites a public source and carries a provenance tag: `pdk-doc`, `spice-card`, `literature` or `calibrated`. No NDA material.
 - **SPICE reference is the golden reference.** TCAD is never tuned on validation targets (spec §5.2).
-- **Documentation.** Every reference in the docs to a file, term, tool or code object is a link (`{repo}`, `{term}`, tool substitutions, `{py:*}`), as `tests/test_doc_links.py` enforces. Docs changes also get a dedicated missing-links review.
+- **Documentation.** Every reference in the docs to a file, term, tool or code object is a link (`{repo}`, `{term}`, tool substitutions, `{py:*}`), as `tests/test_doc_links.py` enforces.
+  - **Requires the docs-links infrastructure on main** (PR #15: `tests/test_doc_links.py`, `docs/glossary.md` and `docs/conf.py:_TOOLS`) before any docs-touching task starts.
+  - New tools (DEVSIM, meshwell, gmsh, gplugins, gf180mcu, scipy) are added to `docs/conf.py:_TOOLS`. New terms (MOSCAP, QS, HF C–V, effective oxide, poly depletion) are added to the glossary.
+  - Files inside the submodule are linked as `https://github.com/mithro/gplugins/blob/<pinned commit>/…`, because `git ls-files` does not list them.
+  - Docs changes also get a dedicated missing-links review.
+- **Submodule hygiene.** Every gf180-tcad worktree runs `git submodule update --init` after `git worktree add`.
+  - `[tool.ruff]` gets `extend-exclude = ["third_party"]` (Task 2), so that `ruff check`/`ruff format --check` never lint the fork.
+  - pytest is already confined to `testpaths = ["tests"]`.
 - **CI.** GitHub-hosted runners only, for the fork as well.
 
 ## Review Focus
 
 - **Quasi-static vs high-frequency C–V.** SPICE Cgg (BSIM4 capmod=2) is quasi-static and recovers to about Cox in inversion. A MOSCAP solved with AC at 1 MHz and only a body contact gives the high-frequency curve instead. A comparison must use matching physics: quasi-static/equilibrium in 1D, or S/D contacts tied to the body in 2D. A reviewer should reject any mismatched pairing.
 - **Units.** DEVSIM works in cm (charge in C/cm², capacitance in F/cm²). gdsfactory, the SPICE data and the docs use µm and fF. Every conversion needs a unit test with a hand-computed value, for example Cox(15.2 nm) = 2.272 fF/µm², or 224.7 fF for W10/L10 with DLC = 54 nm.
-- **pfet MOSCAP.** n-type body (n-well), p⁺ gate (NGATE 3.6e19 vs 1e20 for the nfet), and the work-function offset with the opposite sign. Accumulation is at +Vg. Reuse the Phase 1 rule `polarity·vg` for inversion and accumulation.
+- **pfet MOSCAP.** The pfet MOSCAP has:
+  - an n-type body (n-well);
+  - a p⁺ poly-gate region (NGATE 3.6e19, versus 1e20 n⁺ for the nfet).
+
+  The flat band follows from the gate and body doping: Vfb ≈ −0.99 V for the nfet and +0.99 V for the pfet. Accumulation is at +Vg for the pfet. Reuse the Phase 1 rule `polarity·vg` for inversion and accumulation.
+- **Units and constants.** Never use DEVSIM `simple_physics` defaults. Use the constants table above.
 - **Silent non-convergence.** A bias point that fails to converge, or converges only at a relaxed tolerance, must fail the sweep, never be dropped or interpolated. The tolerance is recorded per point.
 - **Calibration leakage.** Only calibration geometries (W10 at L = 10, 2 and Lmin) and calibration targets (Cgg–Vg) may move parameters. Held-out geometries (L = 0.7, 1, 1.6/0.7) are computed after the parameters are frozen.
 
