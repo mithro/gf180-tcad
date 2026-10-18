@@ -10,6 +10,8 @@ timestamps, hostnames or absolute host paths), and the documentation will
 be generated from those files, so the pages will never show numbers that cannot
 be reproduced.
 
+(one-command)=
+
 ## One command: `make reproduce`
 
 ```sh
@@ -31,6 +33,8 @@ manifest with:
 ```sh
 make manifest
 ```
+
+(partial-reference)=
 
 ## Running part of the reference
 
@@ -59,6 +63,8 @@ directory of its own, not to `results/spice`. It must not exist, be empty, or
 be an earlier reference tree (one with a `provenance.json`); any other
 directory is refused.
 
+(reproduce-how-it-works)=
+
 How it works:
 
 - **One job** is one engine, corner, device and geometry. It runs entirely
@@ -83,6 +89,8 @@ How it works:
   `gf180-tcad.slice`, so at most 32.
 - **Progress.** One line per finished job, with done/total, jobs per minute
   and the ETA, so a log file can be followed while it runs.
+
+(results-layout)=
 
 ## Layout of `results/spice`
 
@@ -114,6 +122,8 @@ results/spice/<engine>/<corner>/<device>/<geometry_id>/metrics.json
 Generation never compares the two engines. Each engine's results are
 published as they are; the ngspice/Xyce cross-check is a separate test,
 described in {doc}`../limitations/engine-cross-check`.
+
+(cross-host-determinism)=
 
 ## Cross-host determinism
 

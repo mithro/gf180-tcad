@@ -13,6 +13,8 @@ the tolerances below, **including on characteristics that were not used to tune
 it**. Every remaining mismatch is listed with a probable physical or modelling
 cause.
 
+(agreement-verdicts)=
+
 Each device and each metric gets one of three verdicts:
 
 | Verdict | Meaning |
@@ -22,6 +24,8 @@ Each device and each metric gets one of three verdicts:
 | **Disagree** | Outside the spec window: the TCAD is describing a different process. |
 
 ## Technical definition
+
+(comparison-space)=
 
 ### Comparison space
 
@@ -40,6 +44,8 @@ Each device and each metric gets one of three verdicts:
   between the two SPICE engines of more than 0.5 % flags a problem with the
   reference, not with the TCAD.
 
+(spice-reference-conditions)=
+
 ### SPICE reference conditions
 
 The primary golden reference uses the PDK device as a designer would
@@ -49,6 +55,8 @@ nf = 1, m = 1). A secondary reference uses parameters extracted from the actual
 gdsfactory cell layout; the difference between the two is reported and
 attributed to `stress`, `rsd` or well-proximity effects. Both are fixed before
 any TCAD result is generated.
+
+(calibration-validation)=
 
 ### Calibration and validation are kept apart
 
@@ -65,6 +73,8 @@ To stop the TCAD from being tuned to the answer, the targets are split.
   1.6/0.7 are held out for validation only. All metrics at held-out geometries
   are validation evidence, and Idsat, gm, gds and DIBL are validation at every
   geometry.
+
+(parameter-budget)=
 
 ### Parameter sources and budget
 
@@ -88,6 +98,8 @@ calibration stops, the best fit is published with a "Disagree" or "Same
 process" verdict, and the residual is analysed. The budget is not raised
 silently.
 
+(same-process-window)=
+
 ### The "Same process" window
 
 Where the PDK publishes a spec min-max, the window covers both the published
@@ -96,6 +108,8 @@ upper bound), and the page shows which one sets it (spec, envelope, or both);
 otherwise the corner envelope is used. The corner envelope is the envelope of the TT, FF, SS, FS and SF SPICE
 corners at the same geometry and bias, so the reference dataset sweeps all five
 corners.
+
+(tolerances)=
 
 ### Tolerances
 
@@ -121,6 +135,8 @@ Metrics are also reported as an error divided by σ_mismatch, where
 σ_Vt = A_Vt / √(WL) and the PDK's A_Vt is about 11.6 mV·µm, to give a physical
 sense of scale.
 
+(numerical-acceptance)=
+
 ### Numerical acceptance
 
 These are prerequisites: no comparison counts unless they pass.
@@ -135,6 +151,8 @@ These are prerequisites: no comparison counts unless they pass.
 - **DEVSIM versus Charon** on the identical mesh and identical models: at most
   1 % on Id and 2 mV on Vt. A larger difference is a simulator problem and
   blocks process conclusions.
+
+(mismatch-taxonomy)=
 
 ## Mismatch taxonomy
 

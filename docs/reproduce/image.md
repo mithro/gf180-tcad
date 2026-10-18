@@ -6,6 +6,8 @@ is based on the public IIC-OSIC-TOOLS image
 (`hpretl/iic-osic-tools@sha256:306585de35d198e70ea58950f77147c86f56c698726a19afea9f1c83009557be`,
 pinned by digest in `docker/base/Dockerfile`).
 
+(image-pinning)=
+
 ## How the image is pinned
 
 Two files commit the identity of the image:
@@ -22,6 +24,8 @@ dependencies installed in the image are hash-pinned in
 `docker/base/requirements.lock` and `docker/base/build-requirements.lock`, which
 are exact `uv export` outputs of `uv.lock` (a test checks that they stay in
 sync).
+
+(image-rebuild)=
 
 ## Rebuild and verify
 

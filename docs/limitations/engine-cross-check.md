@@ -18,6 +18,8 @@ The threshold is not loosened. **Twelve of the 36 cases fail:** `idvg_lin`
 expected failures that point to this page, so a fix would show up as an
 unexpected pass.
 
+(engine-cause)=
+
 ## Cause: different BSIM4 code versions for the nfet card
 
 The nfet model card (`nfet_06v0`, used by `nfet_05v0`) declares
@@ -73,6 +75,8 @@ leakage (≈ 1e-12 S × 5 V) plus junction leakage,
 With ngspice forced to 4.6, every nfet geometry agrees: `idvg_lin` 3.9e-5 to
 2.3e-4, `idvg_sat` 2.7e-4 to 3.6e-3, `idvd` 1.0e-7 to 1.4e-7.
 
+(engine-regression-test)=
+
 ### Regression test
 
 The sandbox test `test_engines_agree_with_ngspice_forced_to_bsim4_4p6` in
@@ -100,6 +104,8 @@ subdirectory of the working directory. It asserts three things:
 | W10/L2 | 5.58e-3 | 1.93e-4 | 5.61e-3 | 1.85e-3 |
 | W10/L10 | 5.60e-3 | 1.59e-4 | 5.59e-3 | 2.28e-3 |
 | W1.6/L0.7 | 5.55e-3 | 3.9e-5 | 5.76e-3 | 2.73e-4 |
+
+(engine-consequence)=
 
 ## Consequence for the reference
 
@@ -133,6 +139,8 @@ real ambiguity in the reference, because the same card gives a 0.6 %
 difference in subthreshold current depending on which BSIM4 release evaluates
 it.
 
+(engine-other-differences)=
+
 ## Other differences between the two libraries (checked, harmless here)
 
 - **Missing 5 V wrappers.** The image's Xyce library has no `nfet_05v0` /
@@ -152,6 +160,8 @@ it.
 - **Temperature.** Xyce ignores `.temp` and would run at 27 °C. The Xyce
   netlist therefore sets `.options device temp=25.0`. A netlist line that
   Xyce does not recognise fails the run.
+
+(working-directory-guard)=
 
 ## Working-directory guard
 

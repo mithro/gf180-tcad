@@ -4,6 +4,8 @@ Sanity check of the SPICE golden reference against the PDK's own public electric
 specification, and the definition of the "Same process" window used in
 {doc}`agreement`.
 
+(pdk-source)=
+
 ## Source
 
 The spec values are copied as published from section "3.0 Medium Voltage Devices (5V)" of the
@@ -19,6 +21,8 @@ metric is a magnitude, so the pfet spec is compared as its absolute value (Idsat
 uA/um). One-sided limits become an interval from 0 (a magnitude cannot be negative): Ioff
 `<= 10` pA/um is `[0, 10]` for both devices.
 
+(pdk-definition-notes)=
+
 ## Definition notes
 
 - **VT0.** The page only says "Linear threshold voltage" and gives no bias or current
@@ -31,6 +35,8 @@ uA/um). One-sided limits become an interval from 0 (a magnitude cannot be negati
   definition.
 - **BVDSS** (n: min 8.5, typ 11; p: typ -10.5, max -8.5 V) is published but breakdown is not
   simulated, so it is not compared.
+
+(pdk-tt-against-spec)=
 
 ## TT against the spec
 
@@ -47,6 +53,8 @@ All six compared values are inside the published spec window.
 
 The NE2 values agree with the typical column to within 3 % (VT0 0.718 vs 0.70 V, Idsat 500.3
 vs 500 uA/um). Ioff is below the typical 1 pA/um for both devices, well inside the limit.
+
+(pdk-same-process-window)=
 
 ## The "Same process" window
 

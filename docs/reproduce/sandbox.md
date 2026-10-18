@@ -3,6 +3,8 @@
 Every simulator run goes through `tools/sandbox-run` (or the Python wrapper
 `gf180tcad.sandbox.run`). Nothing is run directly on the host.
 
+(sandbox-host-setup)=
+
 ## One-time host setup
 
 `tools/sandbox-setup` (idempotent, needs `sudo`) installs the systemd unit
@@ -14,6 +16,8 @@ Every simulator run goes through `tools/sandbox-run` (or the Python wrapper
 | `MemoryMax` | `128G` | all sandbox containers together, never more than 128 GiB |
 | `MemorySwapMax` | `0` | the slice itself never swaps |
 | `TasksMax` | `32768` | all sandbox containers together, at most 32768 tasks |
+
+(sandbox-per-run-limits)=
 
 ## Per-run limits
 
@@ -41,6 +45,8 @@ Other properties of the container:
   `1` for determinism;
 - the image defaults to the one pinned in `docker/IMAGE` (see
   {doc}`image`); `--image` overrides it.
+
+(sandbox-failure-behaviour)=
 
 ## Failure behaviour
 

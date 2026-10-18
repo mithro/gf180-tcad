@@ -20,7 +20,7 @@ No published DEVSIM- or Charon-versus-BSIM comparison for any open PDK was
 found, and no gf180mcu TCAD paper was found, so this work is novel and should
 be read with that in mind.
 
-The documentation has four sections, plus the API reference.
+The documentation has four sections, plus a glossary and the API reference.
 
 ```{toctree}
 :maxdepth: 2
@@ -29,5 +29,6 @@ reproduce/index
 results/index
 comparison/index
 limitations/index
+glossary
 api/index
 ```
