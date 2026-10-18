@@ -1,0 +1,11 @@
+# corner: typical
+# device: nfet_05v0
+# engine: ngspice
+# geometry_id: w10p0_l0p70
+# l_um: 0.7
+# sweep: ioff
+# temp_c: 25.0
+# units: vd=V vg=V vb=V id=A ig=A ib=A
+# w_um: 10.0
+vd,vg,vb,id,ig,ib
+5.5,0.0,0.0,5.7340798775840085e-12,0.0,-5.526505927500476e-12

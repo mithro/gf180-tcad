@@ -1,0 +1,11 @@
+# corner: fs
+# device: pfet_05v0
+# engine: ngspice
+# geometry_id: w1p6_l0p70
+# l_um: 0.7
+# sweep: ioff
+# temp_c: 25.0
+# units: vd=V vg=V vb=V id=A ig=A ib=A
+# w_um: 1.6
+vd,vg,vb,id,ig,ib
+-5.5,0.0,0.0,-5.794476010123617e-12,0.0,5.794462595383683e-12

@@ -1,0 +1,22 @@
+{
+  "corner": "ss",
+  "device": "nfet_05v0",
+  "engine": "xyce",
+  "geometry_id": "w1p6_l0p70",
+  "l_um": 0.7,
+  "metrics": {
+    "body_effect_v": 0.583578636792982,
+    "dibl_mv_per_v": 14.826765453524242,
+    "gds_at_5v_s": 7.241104869729065e-06,
+    "gm_peak_s": 2.3084586216604188e-05,
+    "id_lin_a": 1.0195325319813507e-05,
+    "idsat_ua_per_um": 364.4406889667012,
+    "ioff_pa_per_um": 3.438832637636531,
+    "ss_mv_per_dec": 94.17888641538782,
+    "vt_lin_cc": 0.8295505513371999,
+    "vt_lin_maxgm": 0.8438724816710341,
+    "vt_sat_cc": 0.7568994006149311
+  },
+  "temp_c": 25.0,
+  "w_um": 1.6
+}
