@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Build tooling of the TCAD image: uv (installs Python 3.13 and the venv) and setuptools (the
+# hashed build constraint for rectpack, which is sdist-only on PyPI).
+uv==0.13.1
+setuptools
