@@ -24,6 +24,10 @@ class Geometry:
             raise ValueError(f"w and l must be finite, got w={self.w_um} l={self.l_um}")
         if not self.w_um > 0 or not self.l_um > 0:
             raise ValueError(f"w and l must be > 0, got w={self.w_um} l={self.l_um}")
+        if float(f"{self.w_um:.1f}") != self.w_um or float(f"{self.l_um:.2f}") != self.l_um:
+            raise ValueError(
+                f"w must have at most 1 decimal and l at most 2, got w={self.w_um} l={self.l_um}"
+            )
         if self.role not in _ROLES:
             raise ValueError(f"role must be one of {_ROLES}, got {self.role!r}")
 
@@ -42,6 +46,9 @@ class Device:
             raise TypeError("geometries must be a tuple")
         if not self.geometries:
             raise ValueError("geometries must be non-empty")
+        ids = [geometry_id(g) for g in self.geometries]
+        if len(set(ids)) != len(ids):
+            raise ValueError(f"duplicate geometry ids in {ids}")
 
 
 @dataclass(frozen=True)
