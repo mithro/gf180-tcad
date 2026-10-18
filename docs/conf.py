@@ -144,6 +144,19 @@ def _fix_docstring(app, what, name, obj, options, lines):
     lines[:] = [_MAGNITUDE.sub(r"\\|\1\\|", line) for line in lines]
 
 
+# --- linkcheck (the linkcheck workflow; never part of the offline html build) ---------------
+linkcheck_ignore = [
+    # {repo}/{test} links are validated offline against the checkout by docs/_ext/repo_roles.py,
+    # and pinned to the commit being built; checking them again would only hit GitHub's rate
+    # limit.
+    r"https://github\.com/mithro/gf180-tcad/(blob|tree)/",
+]
+# GitHub renders line and heading anchors with JavaScript, so linkcheck cannot see them.
+linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
+linkcheck_retries = 3
+linkcheck_timeout = 30
+linkcheck_rate_limit_timeout = 120.0
+
 # docs/_generated/ is git-ignored and rebuilt from the committed SPICE reference at the start of
 # every build (builder-inited). Read the Docs installs only the docs dependency group, which does
 # not install gf180tcad itself, so put the source tree on sys.path: it is the least fragile
