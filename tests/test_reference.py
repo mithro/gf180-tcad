@@ -535,6 +535,45 @@ def test_cli_rejects_jobs_over_budget(capsys):
     assert "33" in err and "128 GiB" in err
 
 
+def test_plan_geometry_filter():
+    jobs = reference.plan_jobs(
+        ("ngspice",), ("typical",), tuple(DEVICES), geometries=("w10p0_l0p60", "w1p6_l0p70")
+    )
+    assert [(j.device, j.geometry) for j in jobs] == [
+        ("nfet_05v0", "w10p0_l0p60"), ("nfet_05v0", "w1p6_l0p70"), ("pfet_05v0", "w1p6_l0p70"),
+    ]  # fmt: skip
+    # None keeps every geometry
+    assert reference.plan_jobs(("xyce",), ("ss",), ("pfet_05v0",), geometries=None) == (
+        reference.plan_jobs(("xyce",), ("ss",), ("pfet_05v0",))
+    )
+
+
+def test_cli_geometry_filter_is_repeatable():
+    a = reference.parse_args(
+        ["spice-reference", "--corner", "typical", "--geometry", "w10p0_l0p60",
+         "--geometry", "w10p0_l0p50", "--geometry", "w1p6_l0p70", "--out", "o"]
+    )  # fmt: skip
+    assert a.geometries == ("w10p0_l0p50", "w10p0_l0p60", "w1p6_l0p70")
+    jobs = reference.plan_jobs(a.engines, a.corners, a.devices, geometries=a.geometries)
+    assert len(jobs) == 8  # the cross-check subset: 2 engines x (2 + 2) device geometries
+    assert reference.parse_args(["spice-reference", "--out", "o"]).geometries is None
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["spice-reference", "--out", "o", "--geometry", "w9p0_l0p60"],  # no device has it
+        # pfet's Lmin with only nfet selected: the filter would silently drop it
+        ["spice-reference", "--out", "o", "--device", "nfet_05v0", "--geometry", "w10p0_l0p50"],
+    ],
+)
+def test_cli_rejects_unknown_geometry(argv, capsys):
+    with pytest.raises(SystemExit) as exc:
+        reference.parse_args(argv)
+    assert exc.value.code == 2
+    assert "is not a geometry of any selected device" in capsys.readouterr().err
+
+
 def test_cli_spice_job_arguments():
     a = reference.parse_args(
         ["spice-job", "--engine", "ngspice", "--corner", "typical", "--device", "nfet_05v0",
