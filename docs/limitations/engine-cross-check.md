@@ -68,6 +68,34 @@ identically to scratch copies of both libraries.
 With ngspice forced to 4.6, every nfet geometry agrees: `idvg_sat` 2.7e-4 to
 3.6e-3, `idvd` 1.0e-7 to 1.4e-7.
 
+### Regression test
+
+The sandbox test `test_engines_agree_with_ngspice_forced_to_bsim4_4p6` in
+`tests/spice/test_xyce.py` guards this explanation against regressions. It
+runs each of the six expected-failure cases on a patched scratch copy of the
+image's ngspice library. The copy is written inside the sandbox, so the
+repository stays read-only. It differs from the PDK library in two ways:
+
+- The nfet card's `version=4.5` becomes `4.6`.
+- The library's nested `.lib 'sm141064.spice'` lines point at the copy
+  itself.
+
+The test passes the copy to the runner as an explicit input in a
+subdirectory of the working directory. It asserts three things:
+
+- Stock ngspice against Xyce exceeds 0.005, which is the expected failure.
+- Stock against patched ngspice exceeds 0.005, so the patch took effect.
+- Patched ngspice against Xyce stays below 0.005.
+
+| Geometry | Stock ngspice vs Xyce | ngspice at 4.6 vs Xyce |
+|---|---|---|
+| W10/L0.6 | 6.05e-3 | 3.64e-3 |
+| W10/L0.7 | 5.80e-3 | 1.93e-3 |
+| W10/L1 | 5.71e-3 | 1.87e-3 |
+| W10/L2 | 5.61e-3 | 1.85e-3 |
+| W10/L10 | 5.59e-3 | 2.28e-3 |
+| W1.6/L0.7 | 5.76e-3 | 2.73e-4 |
+
 ## Consequence for the reference
 
 The reference stays ngspice with the PDK as published, including the
@@ -101,4 +129,20 @@ BSIM4 release evaluates it. The other cross-check cases all pass:
   - The `*_dss` subcircuits use different junction diode levels. They are not
     used here.
 - **Temperature.** Xyce ignores `.temp` and would run at 27 °C. The Xyce
-  netlist therefore sets `.options device temp=25.0`.
+  netlist therefore sets `.options device temp=25.0`. A netlist line that
+  Xyce does not recognise fails the run.
+
+## Working-directory guard
+
+The PDK libraries pull in their sections through relative
+`.lib 'sm141064.spice' <section>` lines. While the scratch libraries above
+were being patched, ngspice resolved those lines to a copy other than the one
+next to the top-level library. A stray `sm141064.spice` in a simulator's
+working directory could therefore replace the PDK models without any warning.
+
+Both runners therefore refuse to start in a working directory that holds
+anything other than their own files: the netlist, the log and the data file,
+which are replaced on each run. The only other entries allowed are ones the
+caller names explicitly as inputs. Foreign files are never deleted, and a run
+in which the simulator writes any other file fails. Both runners also kill
+the simulator after 600 s.
