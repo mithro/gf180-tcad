@@ -1,31 +1,41 @@
 # gf180-tcad
 
-Open-source TCAD for the GlobalFoundries GF180MCU process, validated against the
-PDK's own SPICE models.
+Open-source [TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD) for the GlobalFoundries
+[GF180MCU](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-GF180MCU) process ([open PDK](https://github.com/google/gf180mcu-pdk)),
+validated against the [PDK](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-PDK)'s own [SPICE](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE) models.
 
 ## What and why
 
-This project builds a scriptable TCAD flow (structures from gdsfactory layouts,
-simulated with [DEVSIM](https://devsim.net/) and cross-checked with Charon) for
+This project builds a scriptable TCAD flow (structures from
+[gdsfactory](https://gdsfactory.github.io/gdsfactory/) layouts, simulated with
+[DEVSIM](https://devsim.org/) and cross-checked with [Charon](https://charon.sandia.gov/)) for
 GF180MCU transistors, and measures, quantitatively, reproducibly and in public,
 how closely it agrees with the PDK SPICE models.
 
-The SPICE models are the golden reference; the TCAD is the suspect. Mismatches
-are documented with their probable cause rather than hidden. Only once the TCAD
-has earned confidence will it be used to extend or create SPICE models.
+The SPICE models are the [golden reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-golden-reference); the TCAD is the
+suspect. Mismatches are documented with their probable cause rather than hidden. Only once the
+TCAD has earned confidence will it be used to extend or create SPICE models.
 
 ## Status
 
-Phase 0 (foundations and SPICE reference dataset) is in progress. Nothing here
-is a result yet.
+[Phase 0](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Phase-0) (foundations and SPICE reference dataset) is in progress. Nothing
+here is a result yet. The current limitations are listed on the
+[limitations page](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html).
 
 ## Documentation
 
 [![Documentation Status](https://readthedocs.org/projects/gf180-tcad/badge/?version=latest)](https://gf180-tcad.readthedocs.io/en/latest/)
 
-https://gf180-tcad.readthedocs.io/
+The documentation is at [gf180-tcad.readthedocs.io](https://gf180-tcad.readthedocs.io/en/latest/). To regenerate the
+SPICE reference yourself, see [Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html); its
+[cross-host determinism](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-determinism) section says on which
+hosts the results are byte-identical.
 
 ## Development
+
+Needs [uv](https://docs.astral.sh/uv/); the checks are [pytest](https://docs.pytest.org/) and
+[ruff](https://docs.astral.sh/ruff/). Tests marked [`sandbox`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-sandbox) run simulators through
+[`tools/sandbox-run`](tools/sandbox-run) and are excluded here.
 
 ```
 uv sync
@@ -38,4 +48,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution rules.
 
 ## Licence
 
-Apache-2.0, see [LICENSE](LICENSE).
+[Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0), see [LICENSE](LICENSE).
