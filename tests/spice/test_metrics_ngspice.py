@@ -23,8 +23,9 @@ def test_ngspice_smoke_plausible_ranges(image_pdk, tmp_path, device, capsys):
     m = metrics.extract_all(device, g, data)
     with capsys.disabled():
         print(f"\nSMOKE {device.name} {g}: {m}")
-    assert 0.4 < m["vt_lin_maxgm"] < 1.0
-    assert 0.4 < m["vt_lin_cc"] < 1.0
+    for key in ("vt_lin_maxgm", "vt_lin_cc", "vt_sat_cc"):
+        assert 0.4 < device.polarity * m[key] < 1.0, key  # Vt carries the polarity sign
+        assert (m[key] > 0) == (device.polarity > 0), key
     lo, hi = (300, 700) if device.polarity > 0 else (100, 500)  # pfet has ~2-3x lower mobility
     assert lo < m["idsat_ua_per_um"] < hi
     assert m["body_effect_v"] > 0

@@ -8,19 +8,25 @@ undefined (no crossing, too few fit points, non-finite or non-increasing inputs)
 ``device.polarity`` (never ``abs()``, so a sign error shows up as an error instead of being
 hidden), then splits the nested sweeps by their outer-axis value.
 
-Definitions (all at 25 C, the voltages of ``gf180tcad.devices.SWEEPS``):
+Definitions (all at 25 C, the voltages of ``gf180tcad.devices.SWEEPS``).
 
-``vt_lin_maxgm`` [V]
+Sign convention of the results of :func:`extract_all`: the three ``vt_*`` keys are reported as
+``device.polarity * magnitude`` (nfet positive, pfet negative, matching the PDK convention, e.g.
+a pfet VT0 of about -0.83 V). Every other key is a magnitude (positive for both polarities);
+``dibl_mv_per_v`` and ``body_effect_v`` are computed from the Vt magnitudes before the sign is
+applied. The helper functions always take and return magnitudes.
+
+``vt_lin_maxgm`` [V, signed by polarity]
     ``idvg_lin`` (Vds = 0.1 V) at |Vbs| = 0. Linear extrapolation of Id(Vgs) at the point of
     maximum gm = dId/dVgs (first maximum): ``Vgs* - Id*/gm* - Vds/2``.
-``vt_lin_cc`` [V]
+``vt_lin_cc`` [V, signed by polarity]
     Constant-current Vt on the same curve: the first Vgs (increasing) where
     ``Id = 100 nA * W/L``, log-linear interpolation between the bracketing points.
-``vt_sat_cc`` [V]
+``vt_sat_cc`` [V, signed by polarity]
     The same constant-current Vt on ``idvg_sat`` (Vds = 5 V) at |Vbs| = 0.
-``dibl_mv_per_v`` [mV/V]
+``dibl_mv_per_v`` [mV/V, magnitude]
     ``(vt_lin_cc - vt_sat_cc) / (5.0 - 0.1) * 1000``.
-``body_effect_v`` [V]
+``body_effect_v`` [V, magnitude]
     ``vt_lin_cc(|Vbs| = 2 V) - vt_lin_cc(|Vbs| = 0)`` from ``idvg_lin`` (positive for both
     polarities: reverse body bias raises |Vt|).
 ``idsat_ua_per_um`` [uA/um]
@@ -271,9 +277,9 @@ def extract_all(
         raise MetricError("cv: non-finite cgg")
 
     return {
-        "vt_lin_maxgm": vt_mg,
-        "vt_lin_cc": vt_lin,
-        "vt_sat_cc": vt_sat,
+        "vt_lin_maxgm": p * vt_mg,
+        "vt_lin_cc": p * vt_lin,
+        "vt_sat_cc": p * vt_sat,
         "dibl_mv_per_v": dibl(vt_lin, vt_sat, VDS_LIN_V, VDS_SAT_V),
         "body_effect_v": body_effect(vt_lin, vt_lin2),
         "idsat_ua_per_um": idsat_per_um(_at(vgs_s, i_sat, VGS_ON_V, "idvg_sat"), w),

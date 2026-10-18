@@ -206,6 +206,7 @@ def test_maxgm_without_positive_gm():
 
 # --- extract_all --------------------------------------------------------------------------
 
+VT_KEYS = ("vt_lin_maxgm", "vt_lin_cc", "vt_sat_cc")
 KEYS = {
     "vt_lin_maxgm", "vt_lin_cc", "vt_sat_cc", "dibl_mv_per_v", "body_effect_v",
     "idsat_ua_per_um", "id_lin_a", "gm_peak_s", "gds_at_5v_s", "ss_mv_per_dec",
@@ -247,7 +248,11 @@ def test_extract_all_pfet_identical_to_nfet():
     mp = metrics.extract_all(FAKE_P, FAKE_P.geometries[0], pd_)
     assert mp.keys() == mn.keys()
     for k in mn:
-        assert mp[k] == pytest.approx(mn[k], rel=1e-12), k
+        # only the three Vt keys carry the device polarity; every other key is a magnitude
+        expected = -mn[k] if k in VT_KEYS else mn[k]
+        assert mp[k] == pytest.approx(expected, rel=1e-12), k
+    assert all(mn[k] > 0 and mp[k] < 0 for k in VT_KEYS)
+    assert mp["body_effect_v"] > 0 and mp["dibl_mv_per_v"] > 0
 
 
 def test_extract_all_sign_error_is_not_hidden():
