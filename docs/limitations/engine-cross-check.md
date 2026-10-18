@@ -1,35 +1,41 @@
 # SPICE engine cross-check (ngspice vs Xyce)
 
-The SPICE reference is computed with ngspice and cross-checked with Xyce on
-the same PDK model cards, bias grid and instance parameters. The spec says a
-difference of more than 0.5 % between the two engines flags a problem with the
-reference itself. The check is `test_engines_agree` in `tests/spice/test_xyce.py`.
-It covers every geometry of `nfet_05v0` and `pfet_05v0`, for `idvg_lin`,
-`idvg_sat` and `idvd`, at the typical corner and 25 °C. The metric is the maximum of
+The {term}`SPICE` reference is computed with {{ ngspice }} and cross-checked with {{ Xyce }}
+on the same {term}`PDK` {term}`model cards <model card>`, bias grid and instance parameters.
+The {ref}`definition of agreement <comparison-space>` says a difference of more than 0.5 %
+between the two engines flags a problem with the reference itself. The check is
+{test}`tests/spice/test_xyce.py::test_engines_agree`. It covers every geometry of
+{term}`nfet_05v0` and {term}`pfet_05v0`, for the {term}`sweeps <sweep>` `idvg_lin`,
+`idvg_sat` and `idvd`, at the {term}`typical corner` and 25 °C. The metric
+({term}`engine_diff`, {py:func}`gf180tcad.spice.xyce.engine_diff`) is the maximum of
 |Id,ngspice − Id,Xyce| / max(|Id,ngspice|, |Id,Xyce|), taken over the bias
 points where either engine gives |Id| > 1 pA. That threshold is the order of the
-gmin leakage floor: every junction carries a conductance gmin = 1e-12 S, so at
+{term}`gmin` leakage floor: every junction carries a conductance gmin = 1e-12 S, so at
 Vds = 5 V about 5 pA flows even with the device off. Points below 1 pA, such
 as Vds = 0 where Id is about 1e-20 A, carry no meaningful device current and
 are excluded.
 
 The threshold is not loosened. **Twelve of the 36 cases fail:** `idvg_lin`
-(0.555 to 0.562 %) and `idvg_sat` (0.56 to 0.61 %) for all six `nfet_05v0` geometries. They are marked as strict
-expected failures that point to this page, so a fix would show up as an
+(0.555 to 0.562 %) and `idvg_sat` (0.56 to 0.61 %) for all six `nfet_05v0` geometries. They are marked as
+{term}`strict expected failures <strict expected failure>` (listed in
+{py:data}`gf180tcad.known.KNOWN_ENGINE_DIFFS`) that point to this page, so a fix would show up as an
 unexpected pass.
 
 (engine-cause)=
 
 ## Cause: different BSIM4 code versions for the nfet card
 
-The nfet model card (`nfet_06v0`, used by `nfet_05v0`) declares
+The nfet model card ({term}`nfet_06v0`, used by `nfet_05v0`) declares
 `version=4.5`. The pfet card (`pfet_06v0`) declares `version=4.6` in the
-ngspice library and no version in the Xyce library.
+ngspice library and no version in the Xyce library (the libraries of the
+{{ gf180mcu_models }}, installed in the image by {{ open_pdks }}).
 
-- **ngspice 47** chooses its BSIM4 implementation from `version`.
-  `showmod m.xdut.m0` in the image reports `BSIM4v5 models` (version 4.5) for
+- **ngspice 47** ({repo}`docker/base/versions.json`) chooses its {term}`BSIM4`
+  implementation from `version`. `showmod m.xdut.m0`
+  ([ngspice manual](https://ngspice.sourceforge.io/docs.html)) in the image reports `BSIM4v5 models` (version 4.5) for
   the nfet and `BSIM4v6 models` for the pfet.
-- **Xyce 7.10** has no BSIM4 older than 4.6.1. Its log says: "Device model
+- **Xyce 7.10** has no BSIM4 older than 4.6.1
+  ([Xyce documentation](https://xyce.sandia.gov/documentation-tutorials/)). Its log says: "Device model
   NFET_06V0.1: Model card specifies BSIM4 version 4.5 which is older than the
   oldest version supported in Xyce (4.6.1). Using oldest version available."
 
@@ -58,7 +64,8 @@ identically to scratch copies of both libraries.
 - **`toxp = toxe`, no `ngate`, `dvt2 = 0`, no `vbm`, all `jts*` = 0, no
   `lp`/`up`/`eu`, `w0 = 0`, `lint = ll = 0`, `k3 = 0`, `etab = 0`, no
   `dsub`, `dvt0 = 0`, `nfactor = 1`:** engine_diff stays 5.57e-3 to 5.62e-3.
-  `lpe0 = 0` makes it larger (3.1e-2).
+  `lpe0 = 0` makes it larger (3.1e-2). The parameters are described in the
+  {ref}`BSIM4 manual <lit-bsim4>`.
 - **ngspice `version` set to 4.6, 4.7 or 4.8** (all three give identical
   results): the difference goes away.
 
@@ -79,15 +86,16 @@ With ngspice forced to 4.6, every nfet geometry agrees: `idvg_lin` 3.9e-5 to
 
 ### Regression test
 
-The sandbox test `test_engines_agree_with_ngspice_forced_to_bsim4_4p6` in
-`tests/spice/test_xyce.py` guards this explanation against regressions. It
-runs each of the twelve expected-failure cases on a patched scratch copy of the
-image's ngspice library. The copy is written inside the sandbox, so the
+The {term}`sandbox` test
+{test}`tests/spice/test_xyce.py::test_engines_agree_with_ngspice_forced_to_bsim4_4p6` guards
+this explanation against regressions. It runs each of the twelve expected-failure cases on a
+patched scratch copy of the {doc}`image's </reproduce/image>` ngspice library. The copy is written inside the sandbox, so the
 repository stays read-only. It differs from the PDK library in two ways:
 
 - The nfet card's `version=4.5` becomes `4.6`.
 - The library's nested `.lib 'sm141064.spice'` lines point at the copy
-  itself.
+  itself ([ngspice model library](https://github.com/google/globalfoundries-pdk-libs-gf180mcu_fd_pr/tree/main/models/ngspice)
+  in the {{ gf180mcu_models }}).
 
 The test passes the copy to the runner as an explicit input in a
 subdirectory of the working directory. It asserts three things:
@@ -124,7 +132,7 @@ proves the cause, but it does not give an independent check of the published
 The Xyce cross-check claims exactly the following, at the typical corner and
 25 °C, within 0.5 %:
 
-| Device | Sweep | Max engine_diff |
+| Device | Sweep | Max {term}`engine_diff` |
 |---|---|---|
 | nfet | `idvd` | 0.37 % |
 | pfet | `idvd` | 1e-6 |
@@ -134,7 +142,7 @@ The Xyce cross-check claims exactly the following, at the typical corner and
 The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA.
 
 For scale, the effect of the nfet version is small next to the
-TCAD-vs-SPICE comparison: about 0.23 mV of threshold voltage. It is still a
+{term}`TCAD`-vs-SPICE comparison ({doc}`../comparison/agreement`): about 0.23 mV of {term}`threshold voltage <Vt>`. It is still a
 real ambiguity in the reference, because the same card gives a 0.6 %
 difference in subthreshold current depending on which BSIM4 release evaluates
 it.
@@ -158,7 +166,8 @@ it.
   - The `*_dss` subcircuits use different junction diode levels. They are not
     used here.
 - **Temperature.** Xyce ignores `.temp` and would run at 27 °C. The Xyce
-  netlist therefore sets `.options device temp=25.0`. A netlist line that
+  netlist therefore sets `.options device temp=25.0` (Xyce Reference Guide, on the
+  [Xyce documentation page](https://xyce.sandia.gov/documentation-tutorials/)). A netlist line that
   Xyce does not recognise fails the run.
 
 (working-directory-guard)=
@@ -175,5 +184,7 @@ Both runners therefore refuse to start in a working directory that holds
 anything other than their own files: the netlist, the log and the data file,
 which are replaced on each run. The only other entries allowed are ones the
 caller names explicitly as inputs. Foreign files are never deleted, and a run
-in which the simulator writes any other file fails. Both runners also kill
-the simulator after 600 s.
+in which the simulator writes any other file fails
+({py:func}`gf180tcad.spice.common.prepare_out_dir`). Both runners also kill
+the simulator after 600 s ({py:data}`gf180tcad.spice.ngspice.TIMEOUT_S`,
+{py:data}`gf180tcad.spice.xyce.TIMEOUT_S`).
