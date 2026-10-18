@@ -851,12 +851,14 @@ Requires the docs-links infrastructure on main.
   - mesh-convergence plots;
   - **mesh pictures** of the 2D cross-section (spec §10b), rendered from the committed mesh file;
   - the parameter table, with provenance, bounds, bound hits and budget use. The fixed reference-bookkeeping rows are listed separately.
-  - verdicts per plateau, the transition ΔV, and the validation geometries.
+  - verdicts per plateau, both ΔV crossings, the reported depletion |ΔC|/C, and the validation geometries.
+  - Every number and verdict is read from the committed `results/tcad/calibration` and `validation` JSON, which were computed in the TCAD image (Global Constraints, Determinism). docgen does no TCAD-vs-SPICE arithmetic of its own; it only renders.
 - `docs/results/`, `docs/comparison/`.
 - `docs/limitations/`, which states:
   - QS vs HF;
   - no built-in density-gradient model in DEVSIM 2.11.1, with the effective-oxide folding;
-  - the poly-gate treatment;
+  - the poly-gate treatment, and **Boltzmann statistics in the degenerate poly gate**: the flat band is −1.029 V (Boltzmann) against ≈ −0.99 V when degenerate-pinned, a ≈ 40 mV difference absorbed by `dv_fb_v`;
+  - the **spec §5.2 deviation**: depletion-region ≤ 5 % is replaced by the two ΔV crossings, for the reason and numbers in Task 12;
   - that DLC and the parasitics are reference bookkeeping;
   - that Xyce has no CV analysis;
   - that the ΔV ≤ 50 mV transition tolerance is a proposal;
@@ -881,25 +883,41 @@ Requires the docs-links infrastructure on main.
 - `manifest.py` is not a generator module, so it may change.
 
 **Files:**
-- `src/gf180tcad/manifest.py`: generalise the subset parser. A `kind` argument (`spice` | `tcad`) selects the job shape. TCAD jobs are `moscap1d/<device>`, 2 parts under the prefix `tcad/`; the SPICE behaviour is unchanged.
-- `tests/crosscheck_tcad_subset.txt` (the coarse 1D MOSCAP set, both devices, calibrated);
+- `src/gf180tcad/manifest.py`: generalise the subset parser.
+  - A `kind` argument (`spice` | `tcad`) selects the job shape. The SPICE behaviour is unchanged.
+  - TCAD jobs are 3-part `<tree>/<device>/<params>` paths under the prefix `tcad/`, with `<tree>` ∈ {`moscap1d`, `moscap2d`} and `<params>` ∈ {`start`, `calibrated`}, e.g. `moscap1d/nfet_05v0/calibrated` (Global Constraints, results layout).
+  - `all` expands to `tcad_all_jobs()`, which is every such combination.
+  - For `kind="tcad"`, `verify_subset` requires `<tree>/provenance.json` for every tree named by the jobs, in place of the single root `provenance.json`. It never handles `envelope.json`.
+  - It is called with **`full=tcad_all_jobs()` passed explicitly**, so that "complete" is never judged against the SPICE `all_jobs()` default (`manifest.py:150`).
+- `tests/crosscheck_tcad_subset.txt`: `moscap1d/nfet_05v0/calibrated` and `moscap1d/pfet_05v0/calibrated`. The cross-check reruns **exactly the committed configuration** (the same MeshSpec from `selected.json`, the same vg grid, tolerances and calibrated values), not a cheaper variant. The 1D runs are cheap enough at the committed mesh.
 - `tests/test_manifest_subset.py`;
-- `Makefile`: `reproduce` regenerates SPICE, then TCAD (1D, 2D, meshconv, calibration, validation), then verifies. `docs/reproduce/index.md` states the expected runtime, which is hours because of 2D meshconv. A `reproduce-quick` target runs only the cross-checked TCAD subset.
+- `Makefile`, whose targets each call the host CLIs:
+  - `reproduce` regenerates SPICE, then TCAD in dependency order, then runs `manifest verify`:
+    1. `tcad-meshconv`: `python -m gf180tcad.tcad meshconv --dim 1|2` for both devices;
+    2. `tcad-start`: `moscap --dim 1|2 --params start`;
+    3. `tcad-calibrate`: `python -m gf180tcad.calibrate run`;
+    4. `tcad-calibrated`: `moscap --dim 1|2 --params calibrated`;
+    5. `tcad-validate`: `python -m gf180tcad.calibrate validate`.
+  - `docs/reproduce/index.md` states the expected runtime, which is hours because of 2D meshconv.
+  - `reproduce-quick` runs only the cross-checked TCAD subset.
 - `.github/workflows/crosscheck.yml`: a second job, `crosscheck-tcad`, which:
   - uses `actions/checkout` with `submodules: true`;
   - pulls `docker/TCAD_IMAGE` by digest;
-  - runs the coarse 1D set into a temporary `--out`;
+  - runs the jobs of `tests/crosscheck_tcad_subset.txt` into a temporary `--out` tree root;
   - runs `verify-subset --kind tcad --prefix tcad/`.
 
-  Add `third_party/**` and `data/process/**` to its paths.
+  Add `third_party/**`, `data/process/**`, `docker/TCAD_IMAGE`, `src/gf180tcad/tcad/**` and `results/tcad/**` to its paths.
 
 - [ ] **Step 1:** Write the tests first:
-  - `test_tcad_subset_parse`;
+  - `test_tcad_subset_parse`: 3-part jobs are accepted, and 2-part or unknown `<tree>`/`<params>` values raise;
+  - `test_tcad_all_expands`;
   - `test_tcad_verify_subset_detects_change`;
+  - `test_tcad_verify_requires_tree_provenance`;
+  - `test_tcad_full_passed_explicitly`: a TCAD subset is never "complete" against the SPICE plan;
   - `test_spice_subset_unchanged`.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. `make reproduce` on a clean `--recurse-submodules` clone regenerates SPICE and TCAD and verifies the manifest. The `crosscheck-tcad` job regenerates the coarse 1D MOSCAP set on a GitHub-hosted runner, byte-identical.
+- [ ] **Step 2:** Implement. `make reproduce` on a clean `--recurse-submodules` clone regenerates SPICE and TCAD and verifies the manifest. The `crosscheck-tcad` job regenerates the committed calibrated 1D MOSCAP jobs on a GitHub-hosted runner, byte-identical.
 - [ ] **Step 3:** Commit, open the PR, get it reviewed and merge.
 
 ### Task 14: secondary PDK `d658698` comparison (carried over from Phase 0–1 Task 15)
