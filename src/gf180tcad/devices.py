@@ -5,6 +5,7 @@ All bias values are non-negative magnitudes (except the ``cv`` gate sweep, which
 -5..5 V as specified); the netlister applies device polarity later.
 """
 
+import math
 from dataclasses import dataclass
 from typing import Literal
 
@@ -19,6 +20,8 @@ class Geometry:
     role: Literal["calibration", "validation"]
 
     def __post_init__(self) -> None:
+        if not (math.isfinite(self.w_um) and math.isfinite(self.l_um)):
+            raise ValueError(f"w and l must be finite, got w={self.w_um} l={self.l_um}")
         if not self.w_um > 0 or not self.l_um > 0:
             raise ValueError(f"w and l must be > 0, got w={self.w_um} l={self.l_um}")
         if self.role not in _ROLES:
@@ -58,6 +61,8 @@ class Sweep:
                 raise TypeError(f"{field} must be a tuple")
             if not getattr(self, field):
                 raise ValueError(f"{field} must be non-empty")
+            if not all(math.isfinite(v) for v in getattr(self, field)):
+                raise ValueError(f"{field} must contain only finite values")
 
 
 def geometry_id(g: Geometry) -> str:
