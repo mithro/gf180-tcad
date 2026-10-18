@@ -233,8 +233,12 @@ def _reset(app, env, docnames):
 
 
 _PY = "https://docs.python.org/3/library/"
-_BUILTINS = {"str", "int", "float", "bool", "bytes", "dict", "list", "tuple", "set", "frozenset",
-             "object", "type"}  # fmt: skip
+# The anchor each builtin has in the Python documentation (checked: the ids exist on the pages).
+_BUILTINS = {
+    **{n: "stdtypes.html#" + n for n in ("str", "bytes", "dict", "list", "tuple", "set",
+                                         "frozenset")},
+    **{n: "functions.html#" + n for n in ("int", "float", "bool", "object", "type")},
+}  # fmt: skip
 _EXTERNAL = {
     "None": _PY + "constants.html#None",
     "pathlib.Path": _PY + "pathlib.html#pathlib.Path",
@@ -242,13 +246,13 @@ _EXTERNAL = {
     "argparse.Namespace": _PY + "argparse.html#argparse.Namespace",
     "numpy.ndarray": "https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html",
     # Sphinx splits the string annotation "tuple[float, ...]" of a NamedTuple field at the comma.
-    "'tuple[float": _PY + "functions.html#tuple",
+    "'tuple[float": _PY + "stdtypes.html#tuple",
 }
 
 
 def external_url(target: str) -> str | None:
     if target in _BUILTINS:
-        return _PY + f"functions.html#{target}"
+        return _PY + _BUILTINS[target]
     if re.fullmatch(r"collections\.abc\.\w+", target):
         return _PY + f"collections.abc.html#{target}"
     return _EXTERNAL.get(target)
