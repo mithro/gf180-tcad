@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("matplotlib", reason="needs the docs dependency group")
+
 from gf180tcad import docgen
 from gf180tcad.devices import DEVICES, geometry_id
 from gf180tcad.sandbox import REPO_ROOT
@@ -43,10 +45,10 @@ def test_svg_deterministic():
 
 def test_pages_cover_all_geometries(tmp_path):
     docgen.generate(tmp_path)
-    expected = {
-        f"{name}/{geometry_id(g)}.md" for name, d in DEVICES.items() for g in d.geometries
+    expected = {f"{name}/{geometry_id(g)}.md" for name, d in DEVICES.items() for g in d.geometries}
+    pages = {
+        str(p.relative_to(tmp_path / "results")) for p in (tmp_path / "results").glob("*/*.md")
     }
-    pages = {str(p.relative_to(tmp_path / "results")) for p in (tmp_path / "results").glob("*/*.md")}
     assert len(expected) == 12
     assert pages == expected
     page = (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60.md").read_text(encoding="utf-8")
@@ -94,7 +96,7 @@ def test_docs_build_offline(tmp_path):
         r = subprocess.run(
             [sys.executable, "-m", "sphinx", "-W", "-b", "html", "-d", str(tmp_path / "dt"),
              str(DOCS), str(out)],
-            env=env, stdout=f, stderr=subprocess.STDOUT, timeout=900,
+            check=False, env=env, stdout=f, stderr=subprocess.STDOUT, timeout=900,
         )  # fmt: skip
     assert r.returncode == 0, log.read_text(encoding="utf-8")[-3000:]
     assert (out / "results" / "index.html").is_file()
