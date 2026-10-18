@@ -156,6 +156,10 @@ linkcheck_ignore = [
     # (2003), and Misiakos & Tsamakis, J. Appl. Phys. 74, 3293 (1993).
     r"https://doi\.org/10\.1063/1\.1529297",
     r"https://doi\.org/10\.1063/1\.354551",
+    # Flaky host: man7.org (the Linux man pages, docs/reproduce/sandbox.md) intermittently hits
+    # linkcheck's read timeout from GitHub-hosted runners, even with retries; the pages were
+    # fetched (HTTP 200) when they were added.
+    r"https://man7\.org/",
 ]
 # ngspice.sourceforge.io answers 403 to Sphinx's default browser-like user agent, 200 to this.
 user_agent = "gf180-tcad-linkcheck (Sphinx; https://github.com/mithro/gf180-tcad)"
