@@ -35,6 +35,16 @@ whenever a pull of `main` moves the submodule pin:
 git submodule update --init
 ```
 
+To have `git pull`, `git checkout` and `git switch` update the submodule checkout to the pinned
+commit automatically, set
+[`submodule.recurse`](https://git-scm.com/docs/git-config#Documentation/git-config.txt-submodulerecurse)
+once per clone (worktrees share the setting); the first checkout of a new worktree still needs
+`git submodule update --init`:
+
+```sh
+git config submodule.recurse true
+```
+
 The {term}`SPICE` reference ({ref}`one-command`) does not need the submodule. The TCAD image
 ({doc}`image`) does not install gplugins: it imports it from the submodule, which
 {repo}`tools/sandbox-run` mounts read-only with the rest of the repository at `/work/src`.
