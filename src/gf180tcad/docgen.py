@@ -25,16 +25,14 @@ import numpy as np
 from gf180tcad import io, metrics, plots, specwindow
 from gf180tcad.devices import CORNERS, DEVICES, Device, Geometry, geometry_id
 from gf180tcad.known import KNOWN_ENGINE_DIFFS
+from gf180tcad.layout import METRICS_NAME
 from gf180tcad.reference import engine_sweeps
 from gf180tcad.sandbox import REPO_ROOT
-from gf180tcad.specwindow import METRICS_NAME
-from gf180tcad.spice.xyce import engine_diff
+from gf180tcad.spice.xyce import ENGINE_DIFF_THRESHOLD, engine_diff
 
 RESULTS = REPO_ROOT / "results" / "spice"
-ENGINES = ("ngspice", "xyce")
 TT = "typical"
 DIFF_SWEEPS = ("idvg_lin", "idvg_sat", "idvd", "ioff")
-DIFF_FLAG = 0.005  # design spec: more than 0.5 % between the engines flags the reference
 # Cases explained on the engine cross-check page (nfet BSIM4 version 4.5 vs Xyce 4.6.1).
 KNOWN_DIFFS = KNOWN_ENGINE_DIFFS
 ENGINE_DOC = "/limitations/engine-cross-check"
@@ -316,7 +314,7 @@ def _engine_table(root) -> list[str]:
                 b = _cols(root, "xyce", TT, device.name, gid, sweep)
                 d = engine_diff(a, b)
                 cell = f"{fmt(100 * d, 3)} %"
-                if d > DIFF_FLAG:
+                if d > ENGINE_DIFF_THRESHOLD:
                     if (device.name, sweep) in KNOWN_DIFFS:
                         cell += f" {{doc}}`(known) <{ENGINE_DOC}>`"
                     else:

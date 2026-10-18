@@ -48,7 +48,7 @@ def case_sensitive(name: str) -> bool:
 
 
 QUALIFY = {
-    ":data:`GRID_TOL`": ":data:`~gf180tcad.spice.common.GRID_TOL`",
+    ":data:`GRID_TOL`": ":data:`~gf180tcad.devices.GRID_TOL`",
     ":attr:`SpiceResult.warnings`": ":attr:`~gf180tcad.spice.common.SpiceResult.warnings`",
 }
 _MAGNITUDE = re.compile(r"\|(\w+)\|")

@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from gf180tcad import manifest
-from gf180tcad.reference import ENGINES
+from gf180tcad.layout import ENGINES
 
 
 def args(jobs: tuple[str, ...]) -> list[str]:

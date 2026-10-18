@@ -55,7 +55,7 @@ from collections.abc import Mapping
 
 import numpy as np
 
-from gf180tcad.devices import Device, Geometry
+from gf180tcad.devices import GRID_TOL, Device, Geometry
 
 __all__ = [
     "MetricError",
@@ -80,7 +80,6 @@ VGS_ON_V = 5.0
 VDS_LIN_V = 0.1
 VDS_SAT_V = 5.0
 VDS_OFF_V = 5.5
-_TOL = 1e-9  # V, grid-point matching
 CV_METRICS = ("cgg_inv_ff", "cgg_acc_ff")  # only extracted when the data holds a cv sweep
 
 
@@ -226,14 +225,14 @@ def _select(mask: np.ndarray, what: str) -> np.ndarray:
 def _idvg(d: Mapping[str, np.ndarray], polarity: int, vbs_mag: float, vds: float, what: str):
     """(vgs, id) magnitudes of the nested idvg sweep at the given |Vbs|; every Vds must be ``vds``."""
     s = _strip(d, polarity, ("vd", "vg", "vb"), ("id",))
-    if not np.all(np.isclose(s["vd"], vds, rtol=0, atol=_TOL)):
+    if not np.all(np.isclose(s["vd"], vds, rtol=0, atol=GRID_TOL)):
         raise MetricError(f"{what}: every Vds must be {vds} V")
-    m = _select(np.isclose(-s["vb"], vbs_mag, rtol=0, atol=_TOL), f"{what} |Vbs|={vbs_mag}")
+    m = _select(np.isclose(-s["vb"], vbs_mag, rtol=0, atol=GRID_TOL), f"{what} |Vbs|={vbs_mag}")
     return s["vg"][m], s["id"][m]
 
 
 def _at(x: np.ndarray, y: np.ndarray, x0: float, what: str) -> float:
-    k = np.flatnonzero(np.isclose(x, x0, rtol=0, atol=_TOL))
+    k = np.flatnonzero(np.isclose(x, x0, rtol=0, atol=GRID_TOL))
     if k.size != 1:
         raise MetricError(f"{what}: expected exactly one point at {x0} V, found {k.size}")
     return float(y[k[0]])
@@ -262,17 +261,17 @@ def extract_all(
     vt_sat = vt_cc(vgs_s, i_sat, w, ln)
 
     dv = _strip(data["idvd"], p, ("vd", "vg"), ("id",))
-    m = _select(np.isclose(dv["vg"], VGS_ON_V, rtol=0, atol=_TOL), "idvd Vgs=5")
+    m = _select(np.isclose(dv["vg"], VGS_ON_V, rtol=0, atol=GRID_TOL), "idvd Vgs=5")
     g_ds = gds(dv["vd"][m], dv["id"][m])
-    if not np.isclose(dv["vd"][m][-1], VDS_SAT_V, rtol=0, atol=_TOL):
+    if not np.isclose(dv["vd"][m][-1], VDS_SAT_V, rtol=0, atol=GRID_TOL):
         raise MetricError("idvd: curve does not end at Vds = 5 V")
 
     off = _strip(data["ioff"], p, ("vd", "vg"), ("id",))
     if off["id"].size != 1:
         raise MetricError("ioff sweep must hold exactly one point")
     if not (
-        np.isclose(off["vg"][0], 0.0, rtol=0, atol=_TOL)
-        and np.isclose(off["vd"][0], VDS_OFF_V, rtol=0, atol=_TOL)
+        np.isclose(off["vg"][0], 0.0, rtol=0, atol=GRID_TOL)
+        and np.isclose(off["vd"][0], VDS_OFF_V, rtol=0, atol=GRID_TOL)
     ):
         raise MetricError(f"ioff: point must be at Vgs = 0 and polarity*Vds = {VDS_OFF_V} V")
 

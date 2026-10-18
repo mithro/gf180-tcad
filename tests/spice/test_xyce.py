@@ -20,6 +20,7 @@ from gf180tcad.spice.common import SpiceError
 from gf180tcad.spice.netlist import bias_plan, instance_params, ngspice_netlist
 from gf180tcad.spice.ngspice import run_ngspice, simulate
 from gf180tcad.spice.xyce import (
+    ENGINE_DIFF_THRESHOLD,
     XYCE_VECTORS,
     engine_diff,
     processor_count,
@@ -43,7 +44,7 @@ PDK = PdkInfo(
 )
 NFET, PFET = DEVICES["nfet_05v0"], DEVICES["pfet_05v0"]
 SW = {s.name: s for s in SWEEPS}
-TOL = 0.005  # spec: engines differing by more than 0.5 % flags a reference problem
+TOL = ENGINE_DIFF_THRESHOLD  # spec: engines differing by more than 0.5 % flags the reference
 
 
 def _lines(text: str) -> list[str]:

@@ -24,10 +24,10 @@ from pathlib import Path
 
 import numpy as np
 
+from gf180tcad.devices import GRID_TOL
 from gf180tcad.spice.netlist import BiasPlan
 
 LOG_TAIL_LINES = 40
-GRID_TOL = 1e-9  # V; ngspice's .dc accumulates the step, ~1e-13 V off after 500 steps
 
 # result column -> (engine vector name, factor applied to it)
 Vectors = Mapping[str, tuple[str, float]]

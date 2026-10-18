@@ -280,6 +280,9 @@ def simulate_xyce(
 
 
 ENGINE_DIFF_FLOOR = 1e-12  # A
+# Design spec: ngspice and Xyce differing by more than 0.5 % (an engine_diff above this) flags a
+# problem with the reference, not with the TCAD.
+ENGINE_DIFF_THRESHOLD = 0.005
 BIAS_COLUMNS = ("vd", "vg", "vb")
 
 

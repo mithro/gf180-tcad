@@ -58,18 +58,16 @@ from pathlib import Path
 
 from gf180tcad import io, metrics, sandbox, specwindow
 from gf180tcad.devices import CORNERS, DEVICES, SWEEPS, TEMPS_C, Geometry, Sweep, geometry_id
+from gf180tcad.layout import ENGINES, METRICS_NAME, PROVENANCE_NAME
 from gf180tcad.pdk import PdkInfo, check_against, locate
 from gf180tcad.spice import ngspice, xyce
 from gf180tcad.spice.ngspice import simulate
 from gf180tcad.spice.xyce import simulate_xyce
 
-ENGINES = ("ngspice", "xyce")
 BUDGET_BYTES = 128 << 30  # gf180-tcad.slice MemoryMax
 DEFAULT_JOBS = 8
 JOB_CPUS = 1  # both runners are single-threaded
 JOB_PIDS = max(ngspice.PIDS, xyce.PIDS)
-METRICS_NAME = "metrics.json"
-PROVENANCE_NAME = "provenance.json"
 VERSIONS = Path("docker") / "base" / "versions.json"
 IMAGE = Path("docker") / "IMAGE"
 COMMITTED_TREE = Path("results") / "spice"  # the published reference, relative to the repo
@@ -81,6 +79,7 @@ GENERATOR_MODULES = (
     "gf180tcad.__main__",
     "gf180tcad.devices",
     "gf180tcad.io",
+    "gf180tcad.layout",
     "gf180tcad.metrics",
     "gf180tcad.pdk",
     "gf180tcad.reference",

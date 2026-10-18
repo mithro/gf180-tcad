@@ -25,5 +25,7 @@ Source: {repo}`src/gf180tcad/spice/xyce.py`.
 
 .. autodata:: gf180tcad.spice.xyce.ENGINE_DIFF_FLOOR
 
+.. autodata:: gf180tcad.spice.xyce.ENGINE_DIFF_THRESHOLD
+
 .. autodata:: gf180tcad.spice.xyce.BIAS_COLUMNS
 ```

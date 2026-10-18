@@ -7,7 +7,5 @@ Source: {repo}`src/gf180tcad/spice/common.py`.
 
 .. autodata:: gf180tcad.spice.common.LOG_TAIL_LINES
 
-.. autodata:: gf180tcad.spice.common.GRID_TOL
-
 .. autodata:: gf180tcad.spice.common.Vectors
 ```

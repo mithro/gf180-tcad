@@ -13,6 +13,7 @@ gf180tcad.devices
 gf180tcad.docgen
 gf180tcad.io
 gf180tcad.known
+gf180tcad.layout
 gf180tcad.manifest
 gf180tcad.metrics
 gf180tcad.pdk

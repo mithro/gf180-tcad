@@ -7,8 +7,4 @@ Source: {repo}`src/gf180tcad/specwindow.py`.
 
 .. autodata:: gf180tcad.specwindow.SPEC_PATH
    :no-value:
-
-.. autodata:: gf180tcad.specwindow.ENVELOPE_NAME
-
-.. autodata:: gf180tcad.specwindow.METRICS_NAME
 ```

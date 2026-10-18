@@ -9,6 +9,8 @@ Source: {repo}`src/gf180tcad/devices.py`.
 
 .. autodata:: gf180tcad.devices.SWEEPS
 
+.. autodata:: gf180tcad.devices.GRID_TOL
+
 .. autodata:: gf180tcad.devices.CORNERS
 
 .. autodata:: gf180tcad.devices.TEMPS_C
