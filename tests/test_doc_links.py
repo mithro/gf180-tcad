@@ -143,7 +143,8 @@ def _word_regex(names, plural: bool, behind: str = r"\w./-") -> re.Pattern:
     # A term may be followed by a hyphen ("DEVSIM-versus-BSIM") but not preceded by one, so the
     # tail of a compound or a name ("bias-sweep", "gf180-tcad", "spice-job") is not a use. The
     # longest alternative wins, so "roll-off" is matched before any shorter term inside it.
-    return re.compile(rf"(?<![{behind}])(?:" + "|".join(alts) + r")(?!\w)")
+    # Not followed by a word character, nor by "." and one ("provenance.json" is a file name).
+    return re.compile(rf"(?<![{behind}])(?:" + "|".join(alts) + r")(?!\w|\.\w)")
 
 
 @cache
@@ -516,6 +517,13 @@ _HTML_SKIP_TAGS = {"pre", "script", "style", "nav", "aside"}
 # Verdict names are ordinary English words in lower case ("the engines agree"), so they are
 # matched with their capital letter only. Every other term and tool is matched ignoring case.
 _CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process"}
+
+
+def _case_sensitive(name: str) -> bool:
+    """Same rule as docs/_ext/api_links.py: verdicts and short names with a capital letter."""
+    return name in _CASE_SENSITIVE_TERMS or (len(name) <= 5 and name != name.lower())
+
+
 _HTML_IDENT = re.compile(r"gf180tcad(?:\.\w+)*")
 _HTML_TEST = re.compile(r"(?<![\w/])test_\w+")
 
@@ -613,8 +621,8 @@ class _HtmlText(HTMLParser):
 @cache
 def _ci_term_regex() -> re.Pattern:
     names = [t for e in glossary() for t in e]
-    sensitive = [n for n in names if n in _CASE_SENSITIVE_TERMS]
-    other = [n for n in names if n not in _CASE_SENSITIVE_TERMS]
+    sensitive = [n for n in names if _case_sensitive(n)]
+    other = [n for n in names if not _case_sensitive(n)]
     # In the HTML a path has been rendered as code, so "/" may precede a term ("10/Lmin").
     # "*" too: "j*2*pi*f*Cgg" is a formula, where reST cannot place a link.
     a = _word_regex(other, plural=True, behind=r"\w.*-").pattern
@@ -777,7 +785,7 @@ def test_every_reference_in_the_html_is_a_link(built_html):
 _HTML_BAD = """<html><body><div id="furo-main-content"><h1>Title about the TCAD and Xyce</h1>
 <p>Uses <code class="docutils literal"><span class="pre">tools/sandbox-run</span></code>,
 <code class="xref py py-func docutils literal"><span class="pre">nope()</span></code>, the module
-gf180tcad.metrics, the test test_engines_agree and a ngspice run on the tcad.</p>
+gf180tcad.metrics, the test test_engines_agree and a ngspice run on the Golden Reference.</p>
 <pre>tools/sandbox-run gf180tcad.metrics ngspice</pre>
 <p>Run <code class="docutils literal">sudo tools/sandbox-setup</code>.</p>
 </div></body></html>"""
@@ -810,7 +818,7 @@ def test_positive_control_html_detector_fires(kind):
 
 def test_positive_control_html_details():
     problems = [str(q) for q in check_html("control.html", _HTML_BAD)]
-    assert any("tcad" in q and "html-term" in q for q in problems), "terms ignore case"
+    assert any("'Golden Reference'" in q for q in problems), "long terms ignore case"
     assert any("tools/sandbox-setup (inside" in q for q in problems), "paths in commands"
     assert not any("'TCAD'" in q or "'Xyce'" in q for q in problems), "headings are skipped"
     heading = "<h1>The gf180tcad.metrics module</h1>"
@@ -937,7 +945,7 @@ def _linker():
 def test_linker_short_names_are_case_sensitive():
     lk = _linker()
     line = lk.line("Capacitance in fF; the ss and tt corners are named in lower case.")
-    assert ":term:" not in line.split("corners")[0], line  # fF, ss, tt are not FF, SS, TT
+    assert not re.search(r":term:`(fF|ss|tt)\b", line), line  # fF, ss, tt are not FF, SS, TT
     lk = _linker()
     assert ":term:`FF <FF>`" in lk.line("The FF corner is fast.")
 
@@ -946,7 +954,7 @@ def test_linker_leaves_field_names_alone():
     lk = _linker()
     line = lk.line(":param corner: the process corner to run")
     assert line.startswith(":param corner: "), line
-    assert ":term:`corner <corner>`" in line, line
+    assert ":term:" in line.removeprefix(":param corner: "), line  # the description is prose
     assert _linker().line(":class:`gf180tcad.devices.Device` sweeps").startswith(":class:`")
 
 

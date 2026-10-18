@@ -35,12 +35,24 @@ from sphinx.errors import ExtensionError
 
 DOCS = Path(__file__).resolve().parents[1]
 ROOT = DOCS.parent
-CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process"}
+CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process"}  # verdicts; lower case is a verb
+
+
+def case_sensitive(name: str) -> bool:
+    """Match ``name`` with its exact capitalisation?
+
+    The verdicts, and every short name with a capital letter (TT, FF, SS corner names, PDK, Vt,
+    Cgg, Lmin, BSIM...): in lower or mixed case those are other words or units ("fF", "tt").
+    """
+    return name in CASE_SENSITIVE_TERMS or (len(name) <= 5 and name != name.lower())
+
+
 QUALIFY = {
     ":data:`GRID_TOL`": ":data:`~gf180tcad.spice.common.GRID_TOL`",
     ":attr:`SpiceResult.warnings`": ":attr:`~gf180tcad.spice.common.SpiceResult.warnings`",
 }
 _MAGNITUDE = re.compile(r"\|(\w+)\|")
+_FIELD = re.compile(r"^\s*:\w[^:`]*:(?!`)")
 # Inline markup that is left alone: roles, literals, hyperlinks, explicit targets, URLs.
 _PROTECTED = re.compile(
     r"(?P<strong>\*\*[^*]+\*\*|\*[^*\s][^*]*\*)"  # reST cannot nest a role in emphasis
@@ -74,7 +86,8 @@ def word_regex(names, *, plural: bool, ignore_case: bool) -> re.Pattern:
         suffix = "(?:s|es)?" if plural and re.fullmatch(r"[A-Za-z][A-Za-z -]*", n) else ""
         alts.append(re.escape(n) + suffix)
     flags = re.IGNORECASE if ignore_case else 0
-    return re.compile(r"(?<![\w./-])(?:" + "|".join(alts) + r")(?!\w)", flags)
+    # Not followed by a word character, nor by "." and one ("provenance.json" is a file name).
+    return re.compile(r"(?<![\w./-])(?:" + "|".join(alts) + r")(?!\w|\.\w)", flags)
 
 
 @functools.cache
@@ -82,9 +95,9 @@ def tables(substitutions: tuple[tuple[str, str], ...]):
     entries = glossary_entries()
     index = {t.lower(): i for i, e in enumerate(entries) for t in e}
     names = [t for e in entries for t in e]
-    ci = word_regex([n for n in names if n not in CASE_SENSITIVE_TERMS], plural=True,
+    ci = word_regex([n for n in names if not case_sensitive(n)], plural=True,
                     ignore_case=True)  # fmt: skip
-    cs = word_regex([n for n in names if n in CASE_SENSITIVE_TERMS], plural=True,
+    cs = word_regex([n for n in names if case_sensitive(n)], plural=True,
                     ignore_case=False)  # fmt: skip
     tools = {}
     for _key, value in substitutions:
@@ -176,6 +189,9 @@ class _Linker:
     def line(self, line: str) -> str:
         if line.lstrip().startswith(".."):
             return line
+        field = _FIELD.match(line)  # ":param corner: ..." -- the field name is not prose
+        if field:
+            return field.group(0) + self.line(line[field.end() :])
         for a, b in QUALIFY.items():
             line = line.replace(a, b)
         out, pos = [], 0
