@@ -532,6 +532,36 @@ The inversion response time with only a body contact is ≈ 2·τ_g·N_A/n_i ≈
 | CGSL=CGDL | 1.5e-10 F/m (37088) | 5.25e-11 F/m (38116) | 1D parasitics, *fixed* |
 | CF | none: BSIM4 default 2·ε_ox/π·ln(1+4e-7/TOXE) ≈ 7.3e-11 F/m | the same | 1D parasitics, *fixed* |
 | TNOM | 25 °C (37308) | 25 °C (38254) | T = 298.15 K |
+| EPSROX | 3.9 (37126) | 3.9 (38144) | ε_ox |
+| ACDE | 0.3 (37397) | 0.7 (38095) | charge-centroid allowance Δ (below) |
+| MOIN | 15 (37201) | 15 (38197) | charge-centroid allowance Δ (below) |
+
+**Card values are expressions at TT.** Several card entries are expressions in corner parameters, e.g. `toxe='1.52e-008+nfet_06v0_tox'` and `cgso='1e-010*nfet_06v0_cgso'`.
+- The stated values are the expressions evaluated with the `.param` values of the card's `.lib typical` section, which starts at card l.105 (e.g. `nfet_06v0_tox=0` at l.114, `nfet_06v0_cgso=1` at l.115, `pfet_06v0_dtox=0` at l.127, `pfet_06v0_dcgso=1` at l.129).
+- The TOML `source` cites both the model line and the `.param` line.
+- The evaluator handles only `number`, `+`, `*` and parameter names, and raises on anything else.
+
+**Calibration tunables (3 of the 8-parameter budget per device type).** These are written into the TOML files here, with numeric bounds, before any fit. Task 12 only reads them.
+
+| Name | Start (n / p) | Bounds (n / p) | `bounds_source` |
+|---|---|---|---|
+| `t_ox_eff_nm` | TOXE: 15.2 / 15.6 | lower: TOXE, 15.2 / 15.6. Upper: TOXP + Δ, i.e. 16.0 + Δ_n / 15.6 + Δ_p | TOXE/TOXP card lines, and Δ below |
+| `n_ch_cm3` | NDEP: 1.7e17 / 1.7e17 | lower: 0.5 × the K1-implied doping N = (K1·Cox(TOXE))²/(2·q·ε_si·ε0), i.e. 6.30e16 / 6.78e16. Upper: 2 × NDEP = 3.4e17 | lower: K1 and TOXE card lines plus the BSIM4 K1 definition ([BSIM4 manual](https://bsim.berkeley.edu/models/bsim4/)). Upper: the factor of 2 is a **project choice**; no public channel profile exists. |
+| `dv_fb_v` | 0 | −0.2 / +0.2 V | **Project choice.** It is a lumped flat-band offset (below). |
+
+- **Δ, the charge-centroid allowance only.** Poly depletion is never part of Δ: the poly-gate region simulates it directly (Task 6). Δ is computed here, before any fit:
+  - Take the BSIM4 v4.5 charge-thickness (CTM, `capMod=2`) centroid X_DC: the `Tcen` expressions, which use ACDE (accumulation/depletion) and MOIN, NDEP, TOXP, VTH0 and the surface potential (inversion). Cite the BSIM4 v4.5 manual's charge-thickness model section, quoting its equation numbers ([BSIM4 manual](https://bsim.berkeley.edu/models/bsim4/)).
+  - Evaluate X_DC with the TT card values over the cv sweep range (|Vg| ≤ 5 V).
+  - Set Δ = max over biases of X_DC·ε_ox/ε_si, rounded up to 0.01 nm.
+  - The calculation is a small committed function, `process.centroid_allowance_nm(card_values, constants)`, with a hand-checked unit test. The docs show the numbers.
+  - **Fallback:** if the CTM equations cannot be evaluated from public information, Δ = 0.5 nm. It is then labelled a **project choice** in `bounds_source`, and the docs say why.
+- **Expected outcome.** The SPICE slopes (Task 9b) imply a total CET of 16.4/16.6 nm (nfet acc/inv) and 15.7/16.7 nm (pfet). Those CETs already include poly depletion and the classical Si accumulation/inversion layer, which the model simulates (≈ 0.2 nm each; ≈ 0.5 nm for the p⁺ 3.6e19 poly). So the oxide actually needed is ≈ 16.2 nm for the nfet and ≈ 15.5–16.0 nm for the pfet. The pfet accumulation side may hit the TOXE lower bound: that is a reported result, not a failure.
+- **`dv_fb_v` is a lumped offset.** It is applied as a rigid gate-bias shift, `vg_device = vg − dv_fb_v` (Task 9b), which is exact for a 1D MOSCAP. It lumps together:
+  - Boltzmann statistics in the degenerate gate (≈ 40 mV, Global Constraints);
+  - SPICE's empirical flat band;
+  - interface and fixed charge.
+
+  It is **not** a fixed-oxide-charge parameter. For scale only: 3e11 cm⁻² of charge at the interface would shift Vfb by q·Q/Cox = 0.21 V.
 
 The *fixed* rows are **reference-model bookkeeping**, tagged `spice-card (reference bookkeeping, fixed)`:
 - They describe how BSIM4 splits the SPICE Cgg into an intrinsic part and extrinsic parts. They are not process data.
@@ -540,9 +570,9 @@ The *fixed* rows are **reference-model bookkeeping**, tagged `spice-card (refere
 
 NGATE is a fixed doping input of the poly-gate region; it is not calibrated.
 
-The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. The pfet S/D doping in 2D comes from a cited `literature` value (Task 11).
+The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. The pfet S/D doping in 2D is `sd_peak_cm3` = 1e20, tagged `literature` (Task 11 gives the citation and a sensitivity test).
 
-**Files:** `data/process/nfet_05v0.toml`, `data/process/pfet_05v0.toml`, `src/gf180tcad/tcad/__init__.py` (`TCAD_IMAGE` constant, `provenance()`), `src/gf180tcad/tcad/process.py`, `tests/tcad/test_process.py`
+**Files:** `data/process/nfet_05v0.toml`, `data/process/pfet_05v0.toml`, `src/gf180tcad/tcad/__init__.py` (`TCAD_IMAGE` constant, `provenance()`), `src/gf180tcad/tcad/process.py` (loader, card-expression evaluator, `centroid_allowance_nm`), `tests/tcad/test_process.py`
 
 **Interfaces:**
 - **TOML schema.** Each parameter is a table with these keys:
@@ -562,7 +592,11 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
   `ProcessDescription.with_values(mapping) -> ProcessDescription` returns a copy with tunables replaced. It raises if a value is outside the bounds or names a fixed parameter.
 
 - [ ] **Step 1:** Write the tests first:
-  - `test_card_values_and_lines`: every card-line citation, re-read from the card in the base image (sandbox-marked), holds the stated value;
+  - `test_card_values_and_lines`: every card-line citation, re-read from the card in the base image (sandbox-marked), holds the stated value once evaluated with the TT `.param` values;
+  - `test_card_expression_evaluator`: hand cases (`'1.52e-008+nfet_06v0_tox'` with tox=0 gives 1.52e-8; an unknown operator raises);
+  - `test_tunables_present`: both files hold exactly `t_ox_eff_nm`, `n_ch_cm3` and `dv_fb_v` as non-fixed parameters, with numeric bounds;
+  - `test_k1_bound_recomputed`: the `n_ch_cm3` lower bound equals 0.5·(K1·Cox(TOXE))²/(2·q·ε_si·ε0), recomputed from the card values and the Global Constraints constants (relative 1e-6);
+  - `test_centroid_allowance`: `centroid_allowance_nm` matches a hand-evaluated bias point, and the TOML upper bound equals TOXP + Δ. Under the fallback, the test asserts Δ = 0.5 and the "project choice" label;
   - `test_bounds_enforced`;
   - `test_fixed_cannot_change`;
   - `test_no_calibrated_values_in_data`.
