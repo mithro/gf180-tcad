@@ -20,6 +20,10 @@ def _check_text(kind: str, s: str, forbidden: str) -> None:
 def write_csv(path: Path, columns: Mapping[str, Sequence[float]], meta: Mapping[str, str]) -> None:
     """Write ``# key: value`` header lines (sorted keys), a column-name row, then data rows."""
     names = list(columns)
+    if not names:
+        raise ValueError("write_csv needs at least one column")
+    if "" in names:
+        raise ValueError("column names must be non-empty")
     data = [[float(x) for x in columns[n]] for n in names]
     if len({len(c) for c in data}) > 1:
         raise ValueError("all CSV columns must have the same length")

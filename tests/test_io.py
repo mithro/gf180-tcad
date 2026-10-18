@@ -117,3 +117,9 @@ def test_json_handles_numpy(tmp_path):
         "f": 0.5,
         "p": "a",
     }
+
+
+@pytest.mark.parametrize("cols", [{}, {"": [1.0]}, {"x": [1.0], "": [2.0]}])
+def test_csv_rejects_empty_columns_or_names(tmp_path, cols):
+    with pytest.raises(ValueError, match="column"):
+        write_csv(tmp_path / "a.csv", cols, {})
