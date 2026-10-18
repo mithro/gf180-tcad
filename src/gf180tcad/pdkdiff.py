@@ -483,6 +483,18 @@ def _sandboxed(sb, cmd, wd: Path, log_name: str, **kw):
     return res
 
 
+def _check_out(out: Path) -> None:
+    """Refuse an ``out`` that is, holds or lies inside the golden reference ``results/spice``."""
+    golden = (sandbox.REPO_ROOT / reference.COMMITTED_TREE).resolve()
+    o = out.resolve()
+    if o == golden or golden.is_relative_to(o) or o.is_relative_to(golden):
+        raise ValueError(f"--out {out} would replace the golden reference {golden}")
+    if out.exists() and (
+        not out.is_dir() or (any(out.iterdir()) and not (out / PROVENANCE_NAME).is_file())
+    ):
+        raise ValueError(f"--out {out} exists and is not an earlier pdkdiff tree; refusing")
+
+
 def run(
     out: Path,
     *,
@@ -500,6 +512,7 @@ def run(
     On any failure ``out`` is left as it was, the scratch directory is kept and 1 is returned.
     """
     reference.check_admission(jobs_n, ngspice.MEM)
+    _check_out(Path(out))
     if scratch_root is not None:
         Path(scratch_root).mkdir(parents=True, exist_ok=True)
         if Path(scratch_root).resolve().is_relative_to(sandbox.REPO_ROOT):

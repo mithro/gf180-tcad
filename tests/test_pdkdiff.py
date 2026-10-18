@@ -383,6 +383,7 @@ def test_run_failure_keeps_out_and_scratch(tmp_path):
     out = tmp_path / "result"
     out.mkdir()
     (out / "keep").write_text("old")
+    (out / "provenance.json").write_text("{}")
     rc = pdkdiff.run(
         out, scratch_root=tmp_path / "scratch", jobs_n=2, sb=fake_sb, pins_file=pins_file,
         reference_dir=tmp_path, commit="d" * 40, log=lambda s: None,
@@ -390,6 +391,18 @@ def test_run_failure_keeps_out_and_scratch(tmp_path):
     assert rc == 1
     assert (out / "keep").read_text() == "old"
     assert list((tmp_path / "scratch").iterdir())  # kept for inspection
+
+
+@pytest.mark.parametrize("out", [SPICE, SPICE / "ngspice", REPO / "results", REPO])
+def test_run_refuses_the_golden_reference(out):
+    with pytest.raises(ValueError, match="golden reference"):
+        pdkdiff.run(out, sb=None, log=lambda s: None)
+
+
+def test_run_refuses_unrelated_nonempty_out(tmp_path):
+    (tmp_path / "x").write_text("x")
+    with pytest.raises(ValueError, match="not an earlier pdkdiff tree"):
+        pdkdiff.run(tmp_path, sb=None, log=lambda s: None)
 
 
 def test_run_refuses_scratch_in_repo(tmp_path):
