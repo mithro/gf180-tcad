@@ -91,3 +91,18 @@ def test_one_uv_version_for_ci_and_read_the_docs():
     rtd = (ROOT / ".readthedocs.yaml").read_text(encoding="utf-8")
     assert "uv latest" not in rtd
     assert f"asdf install uv {uv}" in rtd and f"asdf global uv {uv}" in rtd
+
+
+def test_crosscheck_runs_the_sandbox_card_fidelity_test():
+    """The card-line test of the process files needs Docker; crosscheck has the sandbox."""
+    lines = _lines("crosscheck.yml")
+    runs = [ln for ln in lines if "pytest" in ln]
+    assert any(
+        "uv run --locked pytest -m sandbox tests/tcad/test_process.py" in ln for ln in runs
+    ), runs
+    paths = {ln.strip() for ln in lines[: lines.index("  schedule:")]}
+    assert {'- "data/process/**"', '- "tests/tcad/**"'} <= paths
+    # after the sandbox is set up and the image is pulled
+    i = next(i for i, ln in enumerate(lines) if "pytest -m sandbox" in ln)
+    assert lines.index("      - name: Pull docker/IMAGE by digest") < i
+    assert lines.index("      - run: uv sync --locked") < i
