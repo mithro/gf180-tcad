@@ -618,30 +618,36 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
   - area (L − 2·DLC)·W = 98.92 µm²;
   - 224.73 fF for W10/L10.
 
-**Files:** `src/gf180tcad/tcad/mesh.py` (MeshSpec), `src/gf180tcad/tcad/moscap1d.py`, `src/gf180tcad/tcad/__main__.py`, `src/gf180tcad/tcad/analytic.py` (exact Poisson–Boltzmann reference), `tests/tcad/test_mesh.py`, `tests/tcad/test_moscap1d.py`, `tests/tcad/test_analytic.py`
+**Files:** `src/gf180tcad/tcad/mesh.py` (MeshSpec), `src/gf180tcad/tcad/moscap1d.py`, `src/gf180tcad/tcad/__main__.py`, `src/gf180tcad/tcad/analytic.py` (exact Poisson–Boltzmann reference), `src/gf180tcad/tcad/__init__.py` (adds `TCAD_GENERATOR_MODULES`), `tests/tcad/test_mesh.py`, `tests/tcad/test_moscap1d.py`, `tests/tcad/test_analytic.py`, `tests/tcad/test_tcad_provenance.py`
 
 **Interfaces:**
-- Produces: `@dataclass(frozen=True) MeshSpec(h_ox_nm, h_si_surface_nm, h_si_bulk_nm, grading)` and `MeshSpec.scaled(r)`.
+- Produces: `TCAD_GENERATOR_MODULES` and the two provenance tests, as specified in the Global Constraints ("Result files"). This task creates `tests/tcad/test_tcad_provenance.py`. Tasks 10, 11 and 12 extend the module list when they add modules, and the import-graph test fails if they do not.
+- Produces: `@dataclass(frozen=True) MeshSpec(h_poly_nm, h_ox_nm, h_si_surface_nm, h_si_bulk_nm, grading)` and `MeshSpec.scaled(r)`.
+  - `h_poly_nm` is the spacing at the poly/oxide interface, graded into the poly bulk. Poly depletion contributes to C in inversion, so the poly is refined with everything else.
   - `grading` is the maximum ratio between neighbouring spacings.
   - `scaled(r)` multiplies every h by r and keeps `grading` fixed. This is the "uniform refinement" of spec §5.2.
   - `MeshSpec.to_mesh1d(layers) -> gplugins.devsim.Mesh1D`.
-  - `MeshSpec.to_resolution_specs(...)` gives meshwell `ConstantInField(h_ox)` on the oxide, plus `ThresholdField(sizemin=h_si_surface, sizemax=h_si_bulk, distmax=…)` on the Si/oxide interface curve. It is used in Task 11.
+  - `MeshSpec.to_resolution_specs(...)` gives meshwell `ConstantInField(h_ox)` on the oxide, `ThresholdField(sizemin=h_si_surface, sizemax=h_si_bulk, distmax=…)` on the Si/oxide interface curve, and `ThresholdField(sizemin=h_poly, …)` on the poly/oxide curve. It is used in Task 11.
+  - `MeshSpec.DEFAULT_1D` is a fixed starting spec. Task 10 replaces it with the selected converged level, and from then on every 1D result uses `results/tcad/meshconv/moscap1d/<device>/selected.json`.
 - Produces: `@dataclass(frozen=True) MoscapCV(device, vg, c_per_area_ff_um2, points, method, constants, mesh)`.
   - `area_scaled(geometry) -> (vg, cgg_intrinsic_ff, cgg_parasitic_ff, cgg_total_ff)`.
   - The area is `(L − 2·DLC)·W`, for 1D only. The parasitic term is reported separately and never folded in silently.
   - The parasitic term is computed with the **exact BSIM4 v4.5 capMod=2 overlap equations** (CGSO, CGSL, CKAPPAS, VFBCV) plus CF, citing the BSIM4 manual section ([BSIM4 manual](https://bsim.berkeley.edu/models/bsim4/)).
   - It is cross-checked against the SPICE intercept: the L10/L2 fit implies ≈ 4.0 fF at W10 for the nfet, against 3.45–6.45 fF from the card.
 - Produces: `moscap1d.simulate(proc, *, vg, method="qs", mesh: MeshSpec, rel_tol=1e-10) -> MoscapCV`.
-  - It builds with `gplugins.devsim.create_1d_stack`, using an n⁺ (nfet) or p⁺ (pfet) poly-gate region at NGATE, then oxide, then uniform silicon at `n_ch`.
-  - It sweeps with `gplugins.devsim.sweep_cv`.
+  - It builds with `gplugins.devsim.create_1d_stack`, using an n⁺ (nfet) or p⁺ (pfet) poly-gate region at NGATE, then oxide (`t_ox_eff_nm`), then uniform silicon at `n_ch_cm3`. The contacts are `InterfaceRef("gate_poly", None)` and `InterfaceRef("body", None)`.
+  - It sweeps with `gplugins.devsim.sweep_cv`, applying `dv_fb_v` as a **rigid gate-bias shift**: the device is solved at `vg − dv_fb_v`, and the result is reported at `vg`. This is exact for a 1D MOSCAP. Task 11 uses the same shift in 2D.
   - `CVResult` is converted from F/cm² to fF/µm² (1 F/cm² = 1e7 fF/µm², one helper, unit-tested).
 - Produces: `analytic.lf_cv_uniform(n_cm3, t_ox_nm, gate_doping, vg, constants) -> c_per_area`. It is the exact 1D Poisson–Boltzmann low-frequency C–V, built from the semiconductor charge function Q_s(ψ_s) (Sze & Ng, *Physics of Semiconductor Devices*, 3rd ed., ch. 4, [doi:10.1002/0470068329](https://doi.org/10.1002/0470068329)), solved to 1e-12. Poly depletion is included by applying the same charge function to the gate.
-- Produces: CLI `python -m gf180tcad.tcad moscap --device D --dim 1 --out DIR` (host), and `moscap-job` (in the image). It writes:
-  - `results/tcad/moscap1d/<device>/per_area.csv` (vg, c_per_area, rel_error, iterations);
-  - `per_area.meta.json`;
-  - `provenance.json`.
+- Produces: CLI `python -m gf180tcad.tcad moscap --device D --dim 1 --params start|calibrated --out ROOT` (host), and `moscap-job` (in the image).
+  - `ROOT` is the tree root, e.g. `results/tcad/moscap1d`.
+  - `--params calibrated` loads `results/tcad/calibration/<device>.json`, and refuses if it is absent.
+  - The command writes:
+    - `ROOT/<device>/<params>/per_area.csv` (vg, c_per_area, rel_error, iterations);
+    - `ROOT/<device>/<params>/per_area.meta.json` (including the MeshSpec used);
+    - `ROOT/provenance.json`, the one per tree root (Global Constraints).
 
-  Per-geometry values are derived from `per_area.csv` by `area_scaled`; they are not separate simulations. Runs with the spice-card start values are written under `results/tcad/moscap1d/<device>/start/`, so they are never mistaken for calibrated results.
+  Per-geometry values are derived from `per_area.csv` by `area_scaled`; they are not separate simulations. The job `moscap1d/<device>/start` holds the spice-card start values and `moscap1d/<device>/calibrated` the Task 12 values, so start results are never mistaken for calibrated ones.
 
 - [ ] **Step 1:** Write the tests first:
   - `test_units`: Cox(15.2 nm) = 2.2718 fF/µm² and W10/L10 = 224.73 fF, both within 1e-4 relative, with the Global Constraints constants. Also check the F/cm² → fF/µm² conversion.
@@ -649,20 +655,28 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
   - `test_flatband_exact`: at flat band, C = series(Cox, ε_s/L_D) within 0.1 %.
   - `test_mirror`: stack B (n-body N, p⁺ gate) gives C_B(vg) = C_A(−vg) within 1e-9 relative, where stack A is a p-body N with an n⁺ gate at the same |N|, NGATE and t_ox.
   - `test_parasitics_match_spice_intercept`: within 25 %. This is a sanity check of the BSIM4 bookkeeping only.
+  - `test_dv_fb_rigid_shift`: C(vg; dv_fb = 0.1) = C(vg − 0.1; dv_fb = 0) within 1e-12 relative.
+  - `test_mesh_poly_refined`: `scaled(0.5)` halves the poly spacing too.
   - `test_byte_identical` (sandbox): two runs give byte-identical outputs.
+  - `tests/tcad/test_tcad_provenance.py` (see Interfaces).
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS. Commit the `start/` results, run `make manifest`, then open the PR, get it reviewed and merge.
+- [ ] **Step 2:** Implement. Run the tests: they PASS. Commit the `moscap1d/<device>/start` results, run `make manifest`, then open the PR, get it reviewed and merge.
 
 ### Task 10: mesh-convergence tooling
 
 **Context.** In the spike, depletion C moved by 2 % between meshes a and b. Spec §5.2 requires that uniform refinement changes every metric by less than 1 %.
 
-**Files:** `src/gf180tcad/tcad/meshconv.py`, `tests/tcad/test_meshconv.py`, `results/tcad/meshconv/moscap1d/**`, `docs/limitations/` (page section; requires the docs-links infrastructure on main)
+**Files:** `src/gf180tcad/tcad/meshconv.py`, `src/gf180tcad/tcad/__main__.py` (the `meshconv` commands), `src/gf180tcad/tcad/__init__.py` (extend `TCAD_GENERATOR_MODULES`), `tests/tcad/test_meshconv.py`, `results/tcad/meshconv/moscap1d/**`, `docs/limitations/` (page section; requires the docs-links infrastructure on main)
 
 **Interfaces:**
 - Consumes: `MeshSpec` (Task 9b).
-- Produces: `converge(simulate: Callable[[MeshSpec], MoscapCV], spec: MeshSpec, levels=(1, 2**-0.5, 0.5, 2**-1.5)) -> ConvergenceReport`.
+- Produces: `class CVCurve(Protocol)` with the attributes `vg: tuple[float, ...]`, `c_per_area_ff_um2: tuple[float, ...]` and `node_count: int`. Both `MoscapCV` (Task 9b) and `MoscapCV2D` (Task 11) satisfy it.
+- Produces: `converge(simulate: Callable[[MeshSpec], CVCurve], spec: MeshSpec, levels=(1, 2**-0.5, 0.5, 2**-1.5)) -> ConvergenceReport`.
+- Produces: CLI `python -m gf180tcad.tcad meshconv --device D --dim 1|2 --out ROOT` (host; `ROOT` = `results/tcad/meshconv`), and `meshconv-job` (in the image).
+  - It writes `ROOT/moscap{1d,2d}/<device>/report.json`, plus `selected.json` (the selected `MeshSpec`), plus `ROOT/provenance.json`.
+  - It always uses the spice-card start values.
+  - The 2D levels run as separate sandbox jobs under the admission check (jobs × mem ≤ 128 GiB).
 - The report holds, per level:
   - the curves;
   - node counts;
@@ -679,7 +693,7 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
 
   Run them: they FAIL.
 - [ ] **Step 2:** Implement. Run the tests: they PASS.
-- [ ] **Step 3:** Run the converge study for both devices with start values. Commit `results/tcad/meshconv/moscap1d/**`, then run `make manifest`.
+- [ ] **Step 3:** Run `meshconv --dim 1` for both devices. Commit `results/tcad/meshconv/moscap1d/**`. If the selected spec differs from `MeshSpec.DEFAULT_1D`, regenerate `results/tcad/moscap1d/<device>/start` with it. Then run `make manifest`.
 - [ ] **Step 4: 1D C/Cox check.** Show that 1D C/Cox < 1 at |Vg| = 5 V. Classical accumulation and inversion add a series capacitance, so C/Cox > 1 is impossible in 1D. This isolates the spike's artefact to 2D. The artefact itself is diagnosed in Task 11.
 - [ ] **Step 5:** Commit, open the PR, get it reviewed and merge.
 
