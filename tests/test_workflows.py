@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """GitHub Actions hygiene: pinned actions, minimal permissions, timeouts, one uv version.
 
-Checked by line patterns (no YAML parser needed). ``image.yml`` is pinned by the Phase 2 image
-work and is not checked here yet.
+Checked by line patterns (no YAML parser needed). ``image.yml`` grants ``packages: write`` to its
+build-push job only, below the workflow-level ``contents: read``.
 """
 
 import re
@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
-CHECKED = ("ci.yml", "crosscheck.yml", "linkcheck.yml")
+CHECKED = ("ci.yml", "crosscheck.yml", "linkcheck.yml", "image.yml")
 USES = re.compile(r"^\s*-?\s*uses:\s*(\S+)(.*)$")
 PINNED = re.compile(r"^[\w.-]+/[\w.-]+(/[\w./-]+)?@[0-9a-f]{40}$")
 COMMENT = re.compile(r"^\s+# v\d+\.\d+\.\d+$")

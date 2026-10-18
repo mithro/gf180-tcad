@@ -11,7 +11,10 @@ import ast
 import re
 from pathlib import Path
 
-import yaml
+from optional import importorskip
+
+# pyyaml comes with the docs group (myst-parser), which CI installs.
+yaml = importorskip("yaml")
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "image.yml"
