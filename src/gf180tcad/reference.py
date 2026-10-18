@@ -38,6 +38,8 @@ separate test.
 from __future__ import annotations
 
 import argparse
+import ctypes
+import errno
 import hashlib
 import json
 import os
@@ -403,7 +405,8 @@ def generate(
     failures: list[Failure] = []
     t_start = time.monotonic()
     try:
-        with ThreadPoolExecutor(jobs_n) as pool:
+        pool = ThreadPoolExecutor(jobs_n)
+        try:
             futures = [pool.submit(one, j) for j in jobs]
             for done, fut in enumerate(as_completed(futures), 1):
                 job, secs, fail = fut.result()
@@ -412,6 +415,13 @@ def generate(
                 status = "FAILED" if fail else "ok"
                 el = time.monotonic() - t_start
                 log(progress_line(done, len(jobs), el, job, status, secs))
+        except BaseException:
+            # Ctrl-C (or any error here): drop the queued jobs, let the running ones end (their
+            # containers get the same SIGINT from the terminal), then clean up and re-raise.
+            pool.shutdown(wait=True, cancel_futures=True)
+            log(f"interrupted; {out} was not changed; scratch dirs are under {run_dir}")
+            raise
+        pool.shutdown(wait=True)
         if failures:
             failures.sort(key=lambda f: f.job)
             log(f"{len(failures)} of {len(jobs)} jobs FAILED; {out} was not changed:")
@@ -441,15 +451,51 @@ def _check_replaceable(out: Path) -> None:
         )
 
 
+_AT_FDCWD = -100
+_RENAME_EXCHANGE = 2  # linux/fs.h
+
+
+def _exchange(a: Path, b: Path) -> bool:
+    """Atomically exchange two paths with renameat2(RENAME_EXCHANGE).
+
+    Returns False (nothing changed) if the kernel, libc or filesystem does not support it;
+    raises OSError on any other failure (nothing changed either).
+    """
+    fn = getattr(ctypes.CDLL(None, use_errno=True), "renameat2", None)
+    if fn is None:
+        return False
+    rc = fn(_AT_FDCWD, os.fsencode(a), _AT_FDCWD, os.fsencode(b), _RENAME_EXCHANGE)
+    if rc == 0:
+        return True
+    err = ctypes.get_errno()
+    if err in (errno.EINVAL, errno.ENOSYS, errno.EOPNOTSUPP):
+        return False
+    raise OSError(err, os.strerror(err), str(a), None, str(b))
+
+
 def _swap(staging: Path, out: Path) -> None:
-    """Replace ``out`` by ``staging`` (both in the same directory)."""
-    if out.exists():
-        old = Path(tempfile.mkdtemp(prefix=f".{out.name}.old-", dir=out.parent))
-        os.rename(out, old / out.name)
+    """Replace ``out`` by the complete ``staging`` tree (both in the same directory).
+
+    If ``out`` exists the two are exchanged atomically, so ``out`` is never missing, even if
+    the process is killed; the old tree (now at ``staging``) is then deleted. Where the
+    exchange is unsupported, ``out`` is renamed aside and ``staging`` renamed into place; if
+    that second rename fails, the old tree is renamed back before the error is re-raised.
+    """
+    if not out.exists():
         os.rename(staging, out)
-        shutil.rmtree(old)
-    else:
+        return
+    if _exchange(staging, out):
+        shutil.rmtree(staging)
+        return
+    old = Path(tempfile.mkdtemp(prefix=f".{out.name}.old-", dir=out.parent))
+    os.rename(out, old / out.name)
+    try:
         os.rename(staging, out)
+    except BaseException:
+        os.rename(old / out.name, out)
+        old.rmdir()
+        raise
+    shutil.rmtree(old)
 
 
 # --- CLI ---------------------------------------------------------------------------------------
