@@ -232,6 +232,17 @@ The plugin is fixed in {{ gplugins_fork }} and runs on the latest stack:
 fork at [`400f842`](https://github.com/mithro/gplugins/commit/400f8423d7b0d1aac48eea1c0145342d0c1f766a) through the
 {repo}`third_party/gplugins <.gitmodules>` submodule. All file links below are at that commit.
 
+**Where the numbers come from.** Every latest-stack value in this section is one that the
+linked fork tests assert or record. They ran in the fork's own CI, in the TCAD image, at the
+pinned `400f842`, and their values are quoted here from those runs. This repository does not
+measure them:
+- its own tests check only that the submodule is pinned on the fork's main and that
+  `import gplugins` resolves to the submodule in the TCAD image
+  ({test}`tests/test_submodule.py::test_submodule_pinned_on_fork_main`,
+  {test}`tests/test_submodule.py::test_plugin_imports_from_submodule`);
+- its sandbox rebuild ({ref}`plugin-history-reproducibility`) recomputes only the v0.8.0 side,
+  {repo}`results/plugin-history/v0.8.0.json` and {repo}`results/plugin-history/v0.8.0-mesh0p5.json`.
+
 | Fork PR | What it changes | Merge commit |
 |---|---|---|
 | [mithro/gplugins#2](https://github.com/mithro/gplugins/pull/2) | `import gplugins.devsim` on the latest stack (lazy {{ tidy3d }} and pyvista imports, the pydantic `Extra` removal, the `get_refined_mesh` `NameError`, `delete_device`, silicon models only on regions with NetDoping) and a CI check in the TCAD image | [`4b0a07a`](https://github.com/mithro/gplugins/commit/4b0a07a78b5a282bb15cee230dc906aa17ee2529) |
