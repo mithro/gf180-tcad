@@ -577,6 +577,9 @@ wheels = [
 name = "gf180tcad"
 version = "0.1.0.dev0"
 source = { editable = "." }
+dependencies = [
+    { name = "numpy" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -593,6 +596,7 @@ image-build = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "numpy", specifier = ">=2.5.4" }]
 
 [package.metadata.requires-dev]
 dev = [
