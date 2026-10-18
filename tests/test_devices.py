@@ -33,9 +33,7 @@ def test_geometries_in_order(name, expected):
     assert got == expected
 
 
-@pytest.mark.parametrize(
-    "name,lmin,", [("nfet_05v0", 0.6), ("pfet_05v0", 0.5)]
-)
+@pytest.mark.parametrize("name,lmin", [("nfet_05v0", 0.6), ("pfet_05v0", 0.5)])
 def test_roles(name, lmin):
     geoms = DEVICES[name].geometries
     cal = {(g.w_um, g.l_um) for g in geoms if g.role == "calibration"}
