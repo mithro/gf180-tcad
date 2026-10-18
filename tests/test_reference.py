@@ -84,7 +84,9 @@ def test_full_plan():
 
 def test_subset_plan():
     jobs = reference.plan_jobs(("ngspice",), ("typical",), ("nfet_05v0",))
-    assert [j.geometry for j in jobs] == sorted(geometry_id(g) for g in DEVICES["nfet_05v0"].geometries)
+    assert [j.geometry for j in jobs] == sorted(
+        geometry_id(g) for g in DEVICES["nfet_05v0"].geometries
+    )
     assert {(j.engine, j.corner, j.device) for j in jobs} == {("ngspice", "typical", "nfet_05v0")}
 
 
@@ -201,7 +203,9 @@ def _fake_runner(fail=(), omit=None):
 
 def _tree(root: Path) -> dict[str, bytes]:
     return {
-        p.relative_to(root).as_posix(): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()
+        p.relative_to(root).as_posix(): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
     }
 
 
@@ -320,7 +324,9 @@ def test_spice_job_writes_csvs_and_metrics(monkeypatch, tmp_path, engine):
     monkeypatch.setattr(reference, "_image_pdk", lambda: calls.append("checked") or "PDK")
     monkeypatch.setattr(reference, "simulate", _fake_simulate("ngspice"))
     monkeypatch.setattr(reference, "simulate_xyce", _fake_simulate("xyce"))
-    monkeypatch.setattr(reference.metrics, "extract_all", lambda d, g, data: {"k": float(len(data))})
+    monkeypatch.setattr(
+        reference.metrics, "extract_all", lambda d, g, data: {"k": float(len(data))}
+    )
     job = Job(engine, "typical", "nfet_05v0", "w10p0_l0p60")
     reference.run_job(job, tmp_path)
     assert calls == ["checked"]
@@ -423,7 +429,9 @@ def test_reference_subset_hash_stable(tmp_path):
         trees.append(_tree(out))
     a, b = trees
     rel = NFET_LMIN.relpath.as_posix()
-    assert set(a) == {"provenance.json"} | {f"{rel}/{n}" for n in reference.expected_files("ngspice")}
+    assert set(a) == {"provenance.json"} | {
+        f"{rel}/{n}" for n in reference.expected_files("ngspice")
+    }
     assert a == b
     m = json.loads(a[f"{rel}/metrics.json"])["metrics"]
     assert 0.5 < m["vt_lin_cc"] < 0.9 and 300 < m["idsat_ua_per_um"] < 700
