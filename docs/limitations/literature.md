@@ -2,6 +2,9 @@
 
 The initial reference list. Items marked **unverified** have not yet been
 checked and must be checked before they are cited as support for any claim.
+Only the items the spec flags `[verify]` are marked unverified, but no citation
+on this page has been checked against its source yet, and the annotations are
+summaries, not claims taken from the papers.
 
 ## Tolerances
 
