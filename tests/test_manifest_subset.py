@@ -236,7 +236,7 @@ def test_cli_ok(setup):
     tree, m, subset = setup
     r = _cli(tree, "--against", m, "--prefix", "spice/", "--subset", subset)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "identical" in r.stdout and "5 files" in r.stdout and "2 jobs" in r.stdout
+    assert "identical: 5 files of 2 jobs" in r.stdout and "envelope.json excluded" in r.stdout
 
 
 def test_cli_prints_each_mismatch_and_fails(setup):
@@ -321,3 +321,13 @@ def test_committed_full_tree_verifies_including_envelope(tmp_path):
     assert manifest.verify_subset(tree, COMMITTED, "spice/", jobs) == [
         ("spice/envelope.json", "changed")
     ]
+
+
+def test_cli_complete_counts_and_compares_envelope(tmp_path):
+    tree = tmp_path / "spice"
+    shutil.copytree(SPICE, tree)
+    r = _cli(tree, "--against", COMMITTED, "--prefix", "spice/", "--subset", SUBSET)
+    assert r.returncode == 0, r.stdout + r.stderr
+    n = sum(1 for p in tree.rglob("*") if p.is_file())
+    assert f"identical: {n} files of 120 jobs" in r.stdout
+    assert "envelope.json compared" in r.stdout and "excluded" not in r.stdout
