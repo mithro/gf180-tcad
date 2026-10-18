@@ -79,3 +79,9 @@ def test_environment(tmp_path):
         ["sh", "-c", 'echo "$PDK $PDK_ROOT $OMP_NUM_THREADS $USER $HOME"'], out_dir=tmp_path
     )
     assert res.stdout.split() == ["gf180mcuD", "/foss/pdks", "1", "gf180tcad", "/tmp/home"]
+
+
+def test_venv_has_no_bytecode(tmp_path):
+    # .pyc files embed source mtimes and would break build reproducibility.
+    res = sandbox.run(["find", "/opt/gf180tcad", "-name", "*.pyc"], out_dir=tmp_path)
+    assert res.stdout == ""

@@ -10,17 +10,19 @@ ARG SOURCE_DATE_EPOCH
 USER root
 # Venv from the image's own /usr/bin/python3 (3.12.3): no pip inside it, no bytecode, hashes only,
 # wheels only -- except rectpack (sdist-only on PyPI), built from its hashed sdist with the locked
-# setuptools (installed first, then used via --no-build-isolation).
+# setuptools (installed first, then used via --no-build-isolation). Bytecode embeds source mtimes,
+# so none may be written (the setuptools build would otherwise leave .pyc files).
 RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirements.lock \
     --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
     --mount=type=tmpfs,target=/tmp \
-    export HOME=/tmp PIP_CONFIG_FILE=/dev/null \
+    export HOME=/tmp PIP_CONFIG_FILE=/dev/null PYTHONDONTWRITEBYTECODE=1 \
  && /usr/bin/python3 -m venv --without-pip /opt/gf180tcad \
  && pip() { /usr/bin/python3 -m pip --python /opt/gf180tcad/bin/python install \
         --no-cache-dir --disable-pip-version-check --no-input --no-compile \
         --require-hashes --no-deps --only-binary=:all: "$@"; } \
  && pip -r /run/gf180tcad/build-requirements.lock \
- && pip --no-build-isolation --no-binary=rectpack -r /run/gf180tcad/requirements.lock
+ && pip --no-build-isolation --no-binary=rectpack -r /run/gf180tcad/requirements.lock \
+ && test -z "$(find /opt/gf180tcad -name '*.pyc' -print -quit)"
 USER 1000:1000
 
 ENV PATH=/opt/gf180tcad/bin:/foss/tools/ngspice/bin:/foss/tools/xyce/bin:/foss/tools/klayout:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \

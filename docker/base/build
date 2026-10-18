@@ -10,7 +10,7 @@
 set -euo pipefail
 
 BUILDKIT_IMAGE="moby/buildkit:v0.34.0@sha256:b059f8d7226d0b326bc871af489a5dddf65e36af4d20d14251b072974d9ee87c"
-BUILDER="gf180tcad-buildkit-v0.34.0"
+BUILDER="buildkit_v0.34.0_gf180tcad"
 NAME="ghcr.io/mithro/gf180-tcad-base"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
@@ -34,7 +34,7 @@ if [ "${#TAGS[@]}" -eq 0 ]; then
     TAGS=("$NAME:local")
 fi
 
-INPUTS=(docker/base/Dockerfile docker/base/requirements.lock)
+INPUTS=(docker/base/Dockerfile docker/base/requirements.lock docker/base/build-requirements.lock)
 if [ -n "$(git -C "$REPO" status --porcelain -- "${INPUTS[@]}")" ]; then
     echo "build: uncommitted changes in ${INPUTS[*]}; commit them first" >&2
     exit 2
