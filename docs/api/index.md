@@ -18,6 +18,7 @@ gf180tcad.known
 gf180tcad.layout
 gf180tcad.manifest
 gf180tcad.metrics
+gf180tcad.pdkdiff
 gf180tcad.pdk
 gf180tcad.plots
 gf180tcad.reference

@@ -63,6 +63,7 @@ _TOOLS = {
     "scipy": ("scipy", "https://scipy.org/"),
     "IIC_OSIC_TOOLS": ("IIC-OSIC-TOOLS", "https://github.com/iic-jku/IIC-OSIC-TOOLS"),
     "open_pdks": ("open_pdks", "https://github.com/fossi-foundation/open-pdks"),
+    "Ciel": ("Ciel", "https://github.com/fossi-foundation/ciel"),
     "gf180mcu_pdk": ("GF180MCU PDK", "https://github.com/fossi-foundation/gf180mcu-pdk"),
     "gf180mcu_pdk_docs": (
         "GF180MCU PDK documentation",

@@ -14,5 +14,6 @@ summarised, with the current numbers, on the generated
 
 agreement
 pdk-spec-check
+pdk-versions
 process-data
 ```
