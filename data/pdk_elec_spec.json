@@ -36,7 +36,7 @@
       "units": "uA/um",
       "bias": "|Vds| = |Vgs| = 5 V",
       "vt_definition": null,
-      "definition_note": "Idsat at |Vds| = |Vgs| = 5 V; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0 (same definition). The page publishes the pfet value negative; our metric is a magnitude, so the comparison uses the absolute values.",
+      "definition_note": "Idsat at |Vds| = |Vgs| = 5 V; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0 (same definition). Both are positive for the nfet, so the values are compared as published.",
       "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
       "retrieved": "2026-10-18"
     },
@@ -54,7 +54,7 @@
       "units": "pA/um",
       "bias": "|Vds| = 5.5 V at 25 C",
       "vt_definition": null,
-      "definition_note": "Ioff at |Vds| = 5.5 V, 25 C; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C (same definition). The page publishes the pfet value negative and as a one-sided limit (min only); our metric is a magnitude, so the comparison is |Ioff| <= 10 pA/um.",
+      "definition_note": "Ioff at |Vds| = 5.5 V, 25 C; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C (same definition). The page leaves the min cell blank, so the limit is max-only (Ioff <= 10 pA/um); as our metric is a magnitude the comparison interval is [0, 10].",
       "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
       "retrieved": "2026-10-18"
     },

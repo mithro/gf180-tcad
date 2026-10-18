@@ -213,3 +213,9 @@ def test_envelope_json_shape_and_contains_tt():
             assert (lo, hi) == (min(corner_vals), max(corner_vals))
             n += 1
     assert n == 12 * 13 + 12 * 11
+
+
+def test_nfet_notes_do_not_describe_the_pfet():
+    for e in specwindow.load_spec()["entries"]:
+        if e["device"] == "nfet_05v0":
+            assert "pfet" not in (e["definition_note"] or "").lower(), e["symbol"]
