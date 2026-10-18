@@ -90,11 +90,11 @@ silently.
 
 ### The "Same process" window
 
-For a metric that the PDK publishes a spec min-max for, the spec window is
-used. For a metric without a published spec, the window is the envelope of the
-TT, FF, SS, FS and SF SPICE corners at the same geometry and bias, so the
-reference dataset sweeps all five corners. Where both exist, the wider window
-is used and the choice is shown.
+Where the PDK publishes a spec min-max, the wider of the spec window and the
+corner envelope is used, and which one is shown; otherwise the corner envelope
+is used. The corner envelope is the envelope of the TT, FF, SS, FS and SF SPICE
+corners at the same geometry and bias, so the reference dataset sweeps all five
+corners.
 
 ### Tolerances
 
