@@ -47,9 +47,23 @@ def _uv() -> str:
     return uv
 
 
+def _ensure_python_313(uv: str) -> None:
+    """uv export needs a Python 3.13 interpreter (requires-python ==3.13.*) to exist.
+
+    The GitHub runners have none, so fetch one first; this is the only online step, kept apart
+    from the export itself, which runs --offline.
+    """
+    found = subprocess.run(
+        [uv, "python", "find", "3.13"], check=False, capture_output=True, text=True
+    )
+    if found.returncode != 0:
+        subprocess.run([uv, "python", "install", "3.13"], check=True, capture_output=True)
+
+
 def test_tcad_lock_in_sync():
-    _uv()
-    res = subprocess.run(EXPORT, cwd=REPO_ROOT, capture_output=True, text=True, check=True)
+    _ensure_python_313(_uv())
+    res = subprocess.run(EXPORT, check=False, cwd=REPO_ROOT, capture_output=True, text=True)
+    assert res.returncode == 0, res.stderr
     have = (TCAD / "requirements.lock").read_text(encoding="utf-8")
     assert _strip_cmd_echo(have) == _strip_cmd_echo(res.stdout), (
         f"docker/tcad/requirements.lock is stale; regenerate with: "
