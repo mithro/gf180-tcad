@@ -13,17 +13,17 @@ TCAD
   {term}`golden reference`. See {doc}`index`.
 
 SPICE
-  Circuit simulation with compact models. Here the PDK's {term}`BSIM4`
+  Circuit simulation with compact models. Here the {term}`PDK`'s {term}`BSIM4`
   {term}`model cards <model card>`, evaluated by {{ ngspice }} (primary) and {{ Xyce }}
   (secondary). See {ref}`comparison-space`.
 
 golden reference
-  The PDK SPICE models, against which the TCAD is judged: "the SPICE models are the golden
+  The {term}`PDK` {term}`SPICE` models, against which the {term}`TCAD` is judged: "the SPICE models are the golden
   reference; the TCAD is the suspect". See {doc}`index`.
 
 PDK
   Process design kit. Here the open {{ gf180mcu_pdk }}, its public documentation
-  ({{ gf180mcu_pdk_docs }}) and its model cards, installed in the image by {{ open_pdks }}. See
+  ({{ gf180mcu_pdk_docs }}) and its {term}`model cards <model card>`, installed in the image by {{ open_pdks }}. See
   {doc}`comparison/pdk-spec-check`.
 
 GF180MCU
@@ -32,31 +32,31 @@ GF180MCU
 
 BSIM4
 BSIM
-  The Berkeley compact MOSFET model ({{ BSIM4_site }}) used by the PDK cards. It is empirical,
-  binned in L and fitted to silicon, so it can be non-physical between {term}`bins <bin>`. See
+  The Berkeley compact MOSFET model ({{ BSIM4_site }}) used by the {term}`PDK` {term}`cards <model card>`. It is empirical,
+  {term}`binned <bin>` in L and fitted to silicon, so it can be non-physical between {term}`bins <bin>`. See
   {doc}`limitations/index` and {ref}`BSIM4 manual <lit-bsim4>`.
 
 model card
 card
-  The BSIM4 parameter set of one device in the PDK model library ({{ gf180mcu_models }}), for
-  example the `nfet_06v0` card, with its declared `version`. See
+  The {term}`BSIM4` parameter set of one device in the {term}`PDK` model library ({{ gf180mcu_models }}), for
+  example the {term}`nfet_06v0` card, with its declared `version`. See
   {doc}`limitations/engine-cross-check`.
 
 bin
 binned
 L bin
-  A gate-length range covered by one set of fitted BSIM4 parameters. The boundary inside the
+  A gate-length range covered by one set of fitted {term}`BSIM4` parameters. The boundary inside the
   comparison space is at L = 0.7 µm. See {ref}`comparison-space`.
 
 nfet_05v0
 pfet_05v0
   The 5 V n- and p-channel devices compared here. They are wrappers around the
-  {term}`nfet_06v0` and {term}`pfet_06v0` BSIM4 cards, differing only in the mismatch parameter.
+  {term}`nfet_06v0` and {term}`pfet_06v0` {term}`BSIM4` {term}`cards <model card>`, differing only in the mismatch parameter.
   See {ref}`comparison-space`.
 
 nfet_06v0
 pfet_06v0
-  The 6 V devices whose BSIM4 cards the 5 V devices wrap; one thick-oxide ({term}`Dualgate`)
+  The 6 V devices whose {term}`BSIM4` {term}`cards <model card>` the 5 V devices wrap; one thick-oxide ({term}`Dualgate`)
   recipe serves both. See {ref}`comparison-space`.
 
 Dualgate
@@ -74,7 +74,7 @@ geometry_id
 
 corner
 process corner
-  A process corner of the PDK model library: {term}`TT` and the {term}`FF`, {term}`SS corner`,
+  A process corner of the {term}`PDK` model library: {term}`TT` and the {term}`FF`, {term}`SS corner`,
   {term}`FS` and {term}`SF` corners. On the command line they are `typical`, `ff`, `ss`, `fs`
   and `sf`. See {ref}`same-process-window`.
 
@@ -87,17 +87,17 @@ FF
 SS corner
 FS
 SF
-  The four process corners of the PDK model library besides {term}`TT`. With TT they make the
+  The four {term}`process corners <corner>` of the {term}`PDK` model library besides {term}`TT`. With TT they make the
   five corners of the {term}`corner envelope`. The SS corner is not the
   {term}`subthreshold slope`. See {ref}`same-process-window`.
 
 corner envelope
-  The min and max of a metric over the five corners (TT, FF, SS, FS, SF), per engine, device
+  The min and max of a metric over the five {term}`corners <corner>` ({term}`TT`, {term}`FF`, SS, FS, SF), per engine, device
   and geometry, at the same bias. Published as {repo}`results/spice/envelope.json`. See
   {ref}`same-process-window` and {ref}`pdk-same-process-window`.
 
 spec window
-  The PDK's published min-max of a metric. A one-sided limit becomes an interval from 0, because
+  The {term}`PDK`'s published min-max of a metric. A one-sided limit becomes an interval from 0, because
   a magnitude cannot be negative. See {doc}`comparison/pdk-spec-check`.
 
 hull
@@ -107,7 +107,7 @@ hull
 "Same process" window
   The interval used for the {term}`Same process` verdict: the {term}`hull` of the
   {term}`spec window` and the {term}`corner envelope`, or the corner envelope alone where the
-  PDK publishes no spec. The results pages say which one sets it (`spec`, `envelope` or `hull`).
+  {term}`PDK` publishes no spec. The results pages say which one sets it (`spec`, `envelope` or `hull`).
   See {ref}`same-process-window`.
 
 Agree
@@ -115,26 +115,26 @@ Agree
   {ref}`the verdicts <agreement-verdicts>`.
 
 Same process
-  Verdict for a device and metric: outside the {term}`tolerance` but inside the PDK's own
-  min-max {term}`spec window`. The TCAD device is plausibly *a* GF180 device, not *the* typical
+  Verdict for a device and metric: outside the {term}`tolerance` but inside the {term}`PDK`'s own
+  min-max {term}`spec window`. The {term}`TCAD` device is plausibly *a* GF180 device, not *the* typical
   one. See {ref}`the verdicts <agreement-verdicts>`.
 
 Disagree
-  Verdict for a device and metric: outside the {term}`spec window`; the TCAD is describing a
+  Verdict for a device and metric: outside the {term}`spec window`; the {term}`TCAD` is describing a
   different process. See {ref}`the verdicts <agreement-verdicts>`.
 
 tolerance
-  The allowed TCAD-versus-SPICE error of a metric, from the ITRS 2007 Modeling and Simulation
-  chapter, Table MS3 ({ref}`ITRS 2007 <lit-itrs>`), unless marked *proposal*. See {ref}`tolerances`.
+  The allowed {term}`TCAD`-versus-SPICE error of a metric, from the {ref}`ITRS 2007 <lit-itrs>` Modeling and Simulation
+  chapter, Table MS3, unless marked *proposal*. See {ref}`tolerances`.
 
 calibration target
-  A characteristic the {term}`process description` may be tuned on: long-channel Cgg-Vg,
-  long-channel Vt and body effect, Vt(L) roll-off and subthreshold slope. See
+  A characteristic the {term}`process description` may be tuned on: long-channel {term}`Cgg`-Vg,
+  long-channel {term}`Vt` and {term}`body effect`, Vt(L) {term}`roll-off <Vt roll-off>` and {term}`subthreshold slope`. See
   {ref}`calibration-validation`.
 
 validation target
-  A characteristic that must never be tuned on, because it is the evidence: Idsat, linear Id,
-  gm, gds, Vt at the narrow width, DIBL, and everything at the
+  A characteristic that must never be tuned on, because it is the evidence: {term}`Idsat`, {term}`linear Id`,
+  {term}`gm`, {term}`gds`, {term}`Vt` at the narrow width, {term}`DIBL`, and everything at the
   {term}`held-out geometries <held-out geometry>`. See {ref}`calibration-validation`.
 
 held-out geometry
@@ -162,32 +162,32 @@ threshold voltage
   polarity (nfet positive, pfet negative). See {py:mod}`gf180tcad.metrics`.
 
 VT0
-  The PDK spec's "linear threshold voltage", compared with {term}`vt_lin_maxgm`. See
+  The {term}`PDK` spec's "linear {term}`threshold voltage <Vt>`", compared with {term}`vt_lin_maxgm`. See
   {ref}`pdk-definition-notes`.
 
 vt_lin_maxgm
 max-gm Vt
-  Vt by linear extrapolation of Id(Vgs) at the point of maximum {term}`gm` on `idvg_lin`
+  {term}`Vt` by linear extrapolation of Id(Vgs) at the point of maximum {term}`gm` on {term}`idvg_lin`
   (Vds = 0.1 V): Vgs* - Id*/gm* - Vds/2. See {py:func}`gf180tcad.metrics.vt_maxgm`.
 
 vt_lin_cc
 vt_sat_cc
 constant-current Vt
-  Vt as the first Vgs where Id = 100 nA·W/L, on `idvg_lin` and on `idvg_sat` respectively. See
+  {term}`Vt` as the first Vgs where Id = 100 nA·W/L, on {term}`idvg_lin` and on `idvg_sat` respectively. See
   {py:func}`gf180tcad.metrics.vt_cc`.
 
 Vt roll-off
 roll-off
-  The change of Vt with gate length: Vt(Lmin) - Vt(10 µm). See {ref}`tolerances`.
+  The change of {term}`Vt` with gate length: Vt({term}`Lmin`) - Vt(10 µm). See {ref}`tolerances`.
 
 body effect
 body_effect_v
-  The Vt shift under reverse body bias: `vt_lin_cc` at |Vbs| = 2 V minus `vt_lin_cc` at
+  The {term}`Vt` shift under reverse body bias: {term}`vt_lin_cc` at |Vbs| = 2 V minus `vt_lin_cc` at
   |Vbs| = 0. See {py:func}`gf180tcad.metrics.body_effect`.
 
 DIBL
 dibl_mv_per_v
-  Drain-induced barrier lowering: (`vt_lin_cc` - `vt_sat_cc`) / (5.0 V - 0.1 V), in mV/V. See
+  Drain-induced barrier lowering: ({term}`vt_lin_cc` - `vt_sat_cc`) / (5.0 V - 0.1 V), in mV/V. See
   {py:func}`gf180tcad.metrics.dibl`.
 
 subthreshold slope
@@ -208,32 +208,32 @@ ioff_pa_per_um
 
 linear Id
 id_lin_a
-  The total Id on `idvg_lin` at Vgs = `vt_lin_maxgm` + 0.5 V. See
+  The total Id on {term}`idvg_lin` at Vgs = {term}`vt_lin_maxgm` + 0.5 V. See
   {py:func}`gf180tcad.metrics.id_lin`.
 
 gm
 gm_peak_s
-  Transconductance dId/dVgs; `gm_peak_s` is its maximum on `idvg_lin`. See
+  Transconductance dId/dVgs; `gm_peak_s` is its maximum on {term}`idvg_lin`. See
   {py:func}`gf180tcad.metrics.gm`.
 
 gds
 gds_at_5v_s
-  Output conductance dId/dVds; `gds_at_5v_s` is taken at Vgs = Vds = 5 V on `idvd`. See
+  Output conductance dId/dVds; `gds_at_5v_s` is taken at Vgs = Vds = 5 V on {term}`idvd`. See
   {py:func}`gf180tcad.metrics.gds`.
 
 Cgg
 cgg_inv_ff
 cgg_acc_ff
-  Total gate capacitance, from the `cv` sweep at 1 MHz: `cgg_inv_ff` at +5 V (inversion) and
-  `cgg_acc_ff` at -5 V (accumulation), in fF. Only ngspice runs the `cv` sweep. See
+  Total gate capacitance, from the {term}`cv` sweep at 1 MHz: `cgg_inv_ff` at +5 V (inversion) and
+  `cgg_acc_ff` at -5 V (accumulation), in {term}`fF <FF>`. Only ngspice runs the `cv` sweep. See
   {py:mod}`gf180tcad.metrics`.
 
 Rsd
-  Source/drain series resistance (contact, silicide and {term}`LDD`). The SPICE card has RDSW
+  Source/drain series resistance (contact, silicide and {term}`LDD`). The {term}`SPICE` {term}`card <model card>` has RDSW
   2175 Ω·µm. See {ref}`mismatch-taxonomy`.
 
 BVDSS
-  Drain-source breakdown voltage. The PDK publishes it, but breakdown is not simulated, so it is
+  Drain-source breakdown voltage. The {term}`PDK` publishes it, but breakdown is not simulated, so it is
   not compared. See {ref}`pdk-definition-notes`.
 
 σ_mismatch
@@ -251,16 +251,16 @@ idvg_sat
 idvd
 cv
   One simulated bias family: `idvg_lin` (Id-Vg at Vds = 0.1 V), `idvg_sat` (Id-Vg at
-  Vds = 5 V), `idvd` (Id-Vd), `ioff` (Vgs = 0, Vds = 5.5 V) and `cv` (Cgg-Vg, ngspice only).
+  Vds = 5 V), `idvd` (Id-Vd), `ioff` (Vgs = 0, Vds = 5.5 V) and `cv` ({term}`Cgg`-Vg, ngspice only).
   Each is one `<sweep>.csv`. See {py:data}`gf180tcad.devices.SWEEPS` and {ref}`results-layout`.
 
 gmin
-  The small conductance (1e-12 S) that SPICE puts across every junction. At Vds = 5 V it lets
+  The small conductance (1e-12 S) that {term}`SPICE` puts across every junction. At Vds = 5 V it lets
   about 5 pA flow with the device off, a leakage floor. See {doc}`limitations/engine-cross-check`.
 
 engine cross-check
-  The ngspice-versus-Xyce comparison of the SPICE reference. A difference above 0.5 % flags a
-  problem with the reference, not with the TCAD. See {ref}`comparison-space` and
+  The ngspice-versus-Xyce comparison of the {term}`SPICE` reference. A difference above 0.5 % flags a
+  problem with the reference, not with the {term}`TCAD`. See {ref}`comparison-space` and
   {doc}`limitations/engine-cross-check`.
 
 engine_diff
@@ -275,26 +275,26 @@ xfail
   {doc}`limitations/engine-cross-check`.
 
 job
-  One engine, corner, device and geometry of the SPICE reference, run as one {term}`sandbox`
+  One engine, {term}`corner`, device and geometry of the {term}`SPICE` reference, run as one {term}`sandbox`
   container. See {ref}`how the reference runs <reproduce-how-it-works>`.
 
 sandbox
-  The resource-limited container wrapper {repo}`tools/sandbox-run` (Python:
+  The resource-limited container wrapper {repo}`tools/sandbox-run` ({{ Python }}:
   {py:func}`gf180tcad.sandbox.run`) through which every simulator run goes. See
   {doc}`reproduce/sandbox`.
 
 slice
 gf180-tcad.slice
   The {{ systemd }} slice unit (a {term}`cgroup`) that caps the aggregate memory and tasks of all
-  sandbox containers together. See {ref}`sandbox-host-setup`.
+  {term}`sandbox` containers together. See {ref}`sandbox-host-setup`.
 
 cgroup
   Linux control group ([cgroup v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)). The
-  sandbox containers run with `gf180-tcad.slice` as their cgroup parent. See
+  {term}`sandbox` containers run with {term}`gf180-tcad.slice` as their cgroup parent. See
   {ref}`sandbox-per-run-limits`.
 
 OOM
-  Out of memory. An OOM-killed sandbox run exits with 137
+  Out of memory. An OOM-killed {term}`sandbox` run exits with 137
   ({py:data}`gf180tcad.sandbox.OOM_EXIT`), which {py:func}`gf180tcad.sandbox.run` raises as
   {py:class}`~gf180tcad.sandbox.SandboxOOM`. See {ref}`sandbox-failure-behaviour`.
 
@@ -303,7 +303,7 @@ manifest
   the results against it. See {ref}`one-command`.
 
 manifest digest
-  The digest of the image manifest
+  The digest of the image {term}`manifest`
   ([OCI image manifest](https://github.com/opencontainers/image-spec/blob/main/manifest.md)),
   recorded in {repo}`docker/IMAGE`; it selects the image to run. See {ref}`image-pinning`.
 
@@ -315,7 +315,7 @@ image ID
   {ref}`image-pinning`.
 
 provenance
-  The recorded tool and PDK versions ({repo}`docker/base/versions.json`) and the generator
+  The recorded tool and {term}`PDK` versions ({repo}`docker/base/versions.json`) and the generator
   identity, both written to {repo}`results/spice/provenance.json`. See {ref}`image-pinning` and
   {ref}`results-layout`.
 
@@ -327,8 +327,8 @@ generator_sha256
 Phase 0
 Phase 1
 Phases 0 and 1
-  The project phases so far: foundations (Phase 0) and the SPICE reference dataset (Phase 1).
-  Later phases add the TCAD. See the
+  The project phases so far: foundations (Phase 0) and the {term}`SPICE` reference dataset (Phase 1).
+  Later phases add the {term}`TCAD`. See the
   {repo}`design spec, section 13 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#13-phases>`.
 
 Gummel symmetry test
@@ -348,12 +348,12 @@ LOD
 wafer.space run
 ws-run1
 ws-run2
-  A {{ wafer_space }} GF180MCU shuttle run ([run 1](https://github.com/wafer-space/ws-run1),
+  A {{ wafer_space }} {term}`GF180MCU` shuttle run ([run 1](https://github.com/wafer-space/ws-run1),
   [run 2](https://github.com/wafer-space/ws-run2)). Some designs on runs 1 and 2 carry candidate
   test structures. See {doc}`limitations/silicon-validation`.
 
 x86-64-v2
-  The x86-64 microarchitecture level of the baseline kernels of {{ numpy }}. The sandbox pins
+  The x86-64 microarchitecture level of the baseline kernels of {{ numpy }}. The {term}`sandbox` pins
   numpy to them, so hosts with different SIMD extensions compute the same bits. See
   {ref}`cross-host-determinism`.
 
