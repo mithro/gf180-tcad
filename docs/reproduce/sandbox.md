@@ -22,7 +22,7 @@ starts `CMD` in a Docker container with these defaults:
 
 | Limit | Default | Option |
 |---|---|---|
-| Memory | 16 GiB, swap equal to memory (`--memory` = `--memory-swap`) | `--mem` |
+| Memory | 16 GiB, no swap (`--memory-swap` set equal to `--memory`) | `--mem` |
 | CPUs | 8 | `--cpus` |
 | Processes | 4096 | `--pids` |
 | Network | `--network=none` (no network at all) | `--network bridge` to opt in |
