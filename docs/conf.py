@@ -109,7 +109,13 @@ autodoc_member_order = "bysource"
 # Show default values as written in the source, not their repr: REPO_ROOT-style defaults would
 # otherwise put an absolute host path into the HTML.
 autodoc_preserve_defaults = True
-autodoc_default_options = {"members": True, "undoc-members": True}
+# ignore-module-all: a module's __all__ may re-export names defined elsewhere
+# (gf180tcad.spice.ngspice re-exports SpiceError); documenting them twice makes a short
+# reference resolve to either copy, differently in parallel and serial builds.
+autodoc_default_options = {"members": True, "undoc-members": True, "ignore-module-all": True}
+# viewcode should show gf180tcad only; following imported members also renders pages for
+# collections.abc and pathlib, and only in parallel builds.
+viewcode_follow_imported_members = False
 # Intersphinx is off (offline build). Standard-library and numpy types in signatures are linked
 # to their upstream documentation by docs/_ext/api_links.py instead (a fixed table, no network);
 # any other unresolved reference fails the build.

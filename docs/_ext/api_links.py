@@ -13,8 +13,8 @@ every docstring as it is read (the source files stay byte-identical):
 - the first use on each API page of every glossary term (``docs/glossary.md``) and every tool
   (``docs/conf.py:_TOOLS``, the same tables the Markdown pages use) becomes a ``:term:`` or an
   upstream link, matched ignoring case except for the three verdict words;
-- two short cross-module names are qualified so they resolve (``GRID_TOL``,
-  ``SpiceResult.warnings``);
+- short references to names a module imports from another gf180tcad module are qualified to
+  the defining module, where they are documented (plus ``GRID_TOL``, a plain float);
 - standard-library and numpy types in signatures (which intersphinx would resolve, but it needs
   the network) are linked to their upstream documentation from a fixed table;
 - ``|Vgs|``-style magnitudes are escaped (reST would read them as substitutions), and module
@@ -26,6 +26,7 @@ from __future__ import annotations
 import ast
 import functools
 import re
+import sys
 from pathlib import Path
 
 import repo_roles
@@ -201,6 +202,38 @@ class _Linker:
         return _MAGNITUDE.sub(r"\\|\1\\|", "".join(out))
 
 
+_PY_ROLE = re.compile(r":(?:py:)?(class|func|data|attr|exc|meth|obj):`(~?)([A-Za-z_][\w.]*)`")
+
+
+def _module_of(name: str):
+    parts = name.split(".")
+    for i in range(len(parts), 0, -1):
+        mod = sys.modules.get(".".join(parts[:i]))
+        if mod is not None:
+            return mod
+    return None
+
+
+def qualify_imported(line: str, module) -> str:
+    """``:class:`SpiceError``` in a module that imports it from elsewhere -> its real home.
+
+    Re-exported names are documented once, where they are defined (``ignore-module-all``), so a
+    short reference must name that module to resolve.
+    """
+    if module is None:
+        return line
+
+    def fix(m: re.Match) -> str:
+        role, _tilde, target = m.groups()
+        obj = getattr(module, target.split(".")[0], None)
+        home = getattr(obj, "__module__", None)
+        if home and home.startswith("gf180tcad") and home != module.__name__:
+            return f":{role}:`~{home}.{target}`"
+        return m.group(0)
+
+    return _PY_ROLE.sub(fix, line)
+
+
 def process_docstring(app, what, name, obj, options, lines):
     if (
         what == "data"
@@ -210,8 +243,17 @@ def process_docstring(app, what, name, obj, options, lines):
     ):
         lines.clear()
     docname = app.env.docname
+    page_module = docname.removeprefix("api/")
+    home = getattr(obj, "__module__", None) if what in ("function", "class", "exception") else None
+    if isinstance(home, str) and home != page_module:
+        # autodoc reads the docstring of an imported member before it decides to leave it out;
+        # it must not use up the page's first uses.
+        lines[:] = [_MAGNITUDE.sub(r"\\|\1\\|", line) for line in lines]
+        return
     seen = app.env.__dict__.setdefault("_api_links_seen", {}).setdefault(docname, set())
     linker = _Linker(app, seen)
+    module = _module_of(name)
+    lines[:] = [qualify_imported(line, module) for line in lines]
     out, block_indent = [], None
     for line in lines:
         indent = len(line) - len(line.lstrip())
@@ -273,4 +315,6 @@ def setup(app):
     app.connect("autodoc-process-docstring", process_docstring)
     app.connect("missing-reference", resolve_external)
     app.connect("env-before-read-docs", _reset)
-    return {"parallel_read_safe": False, "parallel_write_safe": True, "version": "1"}
+    # The first-use state is per document and a document is read in one process, so parallel
+    # reads (Read the Docs uses -j auto) give the same result; nothing needs merging.
+    return {"parallel_read_safe": True, "parallel_write_safe": True, "version": "1"}
