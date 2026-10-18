@@ -14,10 +14,12 @@ from decimal import Decimal
 from functools import cache
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from gf180tcad import io
 from gf180tcad.devices import DEVICES, geometry_id
+from gf180tcad.metrics import SS_I_HI, SS_I_LO
 from gf180tcad.spice.xyce import engine_diff
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +46,42 @@ def diff(device: str, sweep: str, gid: str | None = None) -> float:
 
 def diffs(device: str, sweeps: tuple[str, ...]) -> list[float]:
     return [diff(device, s, geometry_id(g)) for s in sweeps for g in DEVICES[device].geometries]
+
+
+def _sat_tt(engine: str) -> tuple:
+    """nfet 10/0.6 ``idvg_sat`` (Vds = 5 V) at Vbs = 0, typical corner: Vg and Id."""
+    c = _cols(engine, N, NLMIN, "idvg_sat")
+    m = c["vb"] == 0.0
+    return c["vg"][m], c["id"][m]
+
+
+def vg_at(engine: str, i0: float) -> float:
+    """First Vg where Id reaches ``i0``, log-linear between the bracketing points."""
+    vg, i = _sat_tt(engine)
+    k = int(np.flatnonzero(i >= i0)[0])
+    y0, y1 = np.log10(i[k - 1]), np.log10(i[k])
+    return float(vg[k - 1] + (np.log10(i0) - y0) * (vg[k] - vg[k - 1]) / (y1 - y0))
+
+
+def shift_mv(i0: float) -> float:
+    """|Vg(Xyce) - Vg(ngspice)| at Id = ``i0``, in mV."""
+    return 1000 * abs(vg_at("xyce", i0) - vg_at("ngspice", i0))
+
+
+def subthreshold_excess() -> float:
+    """Max of Id,Xyce / Id,ngspice - 1 where Id/W is in the SS window [1e-11, 1e-8] A/um."""
+    _, a = _sat_tt("ngspice")
+    _, b = _sat_tt("xyce")
+    w = 10.0
+    m = (a / w > SS_I_LO) & (a / w < SS_I_HI)
+    return float(np.max(b[m] / a[m] - 1))
+
+
+def _at5() -> float:
+    """Relative Id difference of the engines at Vgs = 5 V on that curve."""
+    _, a = _sat_tt("ngspice")
+    _, b = _sat_tt("xyce")
+    return float(abs(b[-1] - a[-1]) / max(abs(a[-1]), abs(b[-1])))
 
 
 def metric(device: str, gid: str, name: str) -> float:
@@ -104,6 +142,32 @@ CASES = [
         )
         for w, l in GEOMS
     ),
+    # the subthreshold evidence table (nfet 10/0.6, typical, Vds = 5 V, Vbs = 0)
+    *(
+        (
+            ENGINE_PAGE,
+            rf"^\| {label} \(Vds = 5 V\) \| {NUM} V \| {NUM} V \| \u2212{NUM} mV \|$",
+            lambda i0=i0: [vg_at("ngspice", i0), vg_at("xyce", i0), shift_mv(i0)],
+        )
+        for label, i0 in (("1 nA", 1e-9), ("100 nA", 1e-7), ("1 \u00b5A", 1e-6))
+    ),
+    (
+        ENGINE_PAGE,
+        (
+            rf"current is a nearly constant {NUM} % higher\. That is\na gate-voltage shift of "
+            rf"about {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
+        ),
+        lambda: [
+            100 * subthreshold_excess(),
+            shift_mv(1e-9),
+            _at5(),
+        ],
+    ),
+    (
+        ENGINE_PAGE,
+        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\): about {NUM} mV of",
+        lambda: [shift_mv(1e-9)],
+    ),
     # pdk-spec-check.md: the TT column
     *(
         (
@@ -144,16 +208,23 @@ CASES = [
 
 
 def rounds_to(written: str, value: float) -> bool:
-    """Is ``written`` the value ``value`` rounded at the last digit written?"""
+    """Is ``written`` the value ``value`` rounded to the significant digits written?
+
+    ``written`` has n significant digits (``0.365``: 3, ``5.60e-3``: 3, ``7e-7``: 1); the
+    value rounded to n significant digits must equal it. So ``1e-6`` does not pass for
+    6.6e-7 (that rounds to ``7e-7``), although it is within half a unit of its last digit.
+    """
     d = Decimal(written)
-    half = Decimal(5) * Decimal(10) ** (d.as_tuple().exponent - 1)
-    return abs(Decimal(repr(value)) - d) <= half
+    n = len(d.as_tuple().digits)
+    return Decimal(format(value, f".{n - 1}e")) == d
 
 
 def test_rounds_to():
     assert rounds_to("0.365", 0.3647) and not rounds_to("0.37", 0.3647)
     assert rounds_to("0.221", 0.2209) and not rounds_to("0.23", 0.2209)
-    assert rounds_to("5.62e-3", 0.005619) and rounds_to("1e-6", 6.6e-7)
+    assert rounds_to("5.62e-3", 0.005619) and rounds_to("5.60e-3", 0.005598)
+    assert rounds_to("7e-7", 6.6e-7) and not rounds_to("1e-6", 6.6e-7)
+    assert rounds_to("0.6", 0.6052) and rounds_to("25", 25.36) and not rounds_to("0.60", 0.6052)
     assert rounds_to("-0.8421", -0.84209854) and not rounds_to("-0.8421", 0.8421)
 
 
