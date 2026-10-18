@@ -456,6 +456,8 @@ def test_positive_control_outside_sphinx():
         ("{repo}`tools/no-such-file`", "not a file or directory tracked by git"),
         ("{repo}`docs/_generated/results/index.md`", "not a file or directory tracked by git"),
         ("{test}`tests/test_doc_links.py::test_no_such_test`", "no function"),
+        ("{repo}`tools/sandbox-run#L999999`", "is outside the"),
+        ("{repo}`README.md#no-such-heading`", "is not a heading of"),
     ],
 )
 def test_repo_role_rejects_bad_targets(tmp_path, source, message):
@@ -881,3 +883,25 @@ def test_every_public_name_is_documented(built_html):
         ]
     assert not missing, "not on the API pages:\n" + "\n".join(missing)
 
+
+def test_repo_role_offline_rules(tmp_path, monkeypatch):
+    sys.path.insert(0, str(DOCS / "_ext"))
+    try:
+        import repo_roles
+    finally:
+        sys.path.remove(str(DOCS / "_ext"))
+    # Without git, .gitignore decides what is not linkable.
+    assert repo_roles.ignored("docs/_generated/results/index.md")
+    assert repo_roles.ignored("src/gf180tcad/__pycache__/x.pyc")
+    assert not repo_roles.ignored("docs/conf.py")
+    # Fragments: lines and Markdown headings.
+    assert repo_roles.fragment_error("tools/sandbox-run", "L1") is None
+    assert repo_roles.fragment_error("tools/sandbox-run", "L999999")
+    assert repo_roles.fragment_error("README.md", "development") is None
+    assert repo_roles.fragment_error("README.md", "nope")
+    # A test name defined twice is ambiguous: no line, and the role warns.
+    (tmp_path / "t.py").write_text("def test_a():\n    def test_a():\n        pass\n", "utf-8")
+    monkeypatch.setattr(repo_roles, "ROOT", tmp_path)
+    monkeypatch.setattr(repo_roles, "classify", lambda path: "blob")
+    assert repo_roles.test_lines("t.py", "test_a") == [1, 2]
+    assert repo_roles.test_line("t.py", "test_a") is None
