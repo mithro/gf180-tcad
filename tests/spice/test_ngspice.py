@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """ngspice runner: log checks, result assembly, and real runs in the sandbox (-m sandbox)."""
 
-import shutil
-
 import numpy as np
 import pytest
 
@@ -169,9 +167,15 @@ def test_idvg_nfet_w10_l0p6_runs(image_pdk, tmp_path):
     np.testing.assert_array_equal(res["vb"], np.repeat([0.0, -1.0, -2.0], 501))
     assert np.all(res["vd"] == 5.0)
     idv = res["id"].reshape(3, 501)
-    assert np.all(np.diff(idv, axis=1) > 0), "Id must rise monotonically with Vgs at Vds = 5"
+    d_id = np.diff(idv, axis=1)
+    # Under reverse Vbs the off-state Id sits on a flat ~6 pA drain-junction leakage floor where
+    # ngspice's branch current carries ~7e-15 A of round-off, so allow dips of that size there;
+    # above 1 nA it must rise strictly.
+    assert np.all(d_id > -1e-13), "Id must not fall with Vgs at Vds = 5"
+    assert np.all(d_id[idv[:, 1:] > 1e-9] > 0)
     assert np.all(idv[:, -1] > 1e-3)  # on-state, current into the drain is positive for nfet
-    assert np.all(idv[0] > idv[1]) and np.all(idv[1] > idv[2])  # reverse body bias lowers Id
+    on = idv[:, 100:]  # Vgs >= 1 V (below, junction leakage grows with reverse Vbs)
+    assert np.all(on[0] > on[1]) and np.all(on[1] > on[2])  # reverse body bias lowers Id
 
 
 @pytest.mark.sandbox
@@ -271,12 +275,9 @@ def test_num_threads_honoured(image_pdk, tmp_path):
 
 @pytest.mark.sandbox
 def test_stale_raw_is_not_reused(image_pdk, tmp_path):
-    good = tmp_path / "good"
-    good.mkdir()
-    simulate(NFET, NFET.geometries[0], SW["ioff"], "typical", 25.0, image_pdk, good)
-    typo = Device("nfet_05v0", 1, "nfet_05v0_typo", NFET.geometries)
-    shutil.copytree(good, tmp_path / "again")
-    with pytest.raises(SpiceError):
-        simulate(
-            typo, NFET.geometries[0], SW["ioff"], "typical", 25.0, image_pdk, tmp_path / "again"
-        )
+    simulate(NFET, NFET.geometries[0], SW["ioff"], "typical", 25.0, image_pdk, tmp_path)
+    assert (tmp_path / RAW_NAME).is_file()
+    # a clean ngspice run that writes no raw file must not pick up the previous run's
+    no_write = "* no write\nr1 a 0 1k\nv1 a 0 dc 1\n.control\nop\n.endc\n.end\n"
+    with pytest.raises(SpiceError, match="no raw file"):
+        run_ngspice(no_write, tmp_path)
