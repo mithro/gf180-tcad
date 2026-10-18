@@ -350,6 +350,40 @@ depletion width
   {ref}`plugin-history record <plugin-history-results>` measures it on one mesh row, as the span
   of the nodes where both carrier densities are below 1e-2 |NetDoping|.
 
+built-in potential
+  The voltage that builds up across a p-n junction at equilibrium, with no bias applied. In
+  detail: with {term}`Boltzmann statistics` and full ionisation it is
+  V_bi = (k_B T / q) ln(N_A N_D / n_i²), the difference of the electrostatic potentials of the
+  neutral n and p sides ({ref}`Sze and Ng 2006, ch. 2 <lit-sze>`). A forward bias V lowers the
+  drop across the junction to V_bi − V. See {ref}`the junction probe <plugin-history-junction>`.
+
+ideality factor
+  How closely a diode follows the ideal exponential law. In detail: n in
+  I = I0 (exp(V / (n V_t)) − 1), with V_t = k_B T / q. It is 1 for pure diffusion current
+  ({ref}`Shockley 1949 <lit-shockley>`) and near 2 when recombination in the depletion region
+  dominates ({ref}`Sah, Noyce and Shockley 1957 <lit-sah>`). See {ref}`plugin-history-latest-junction`.
+
+depletion approximation
+  The textbook model of a p-n junction: free carriers are absent inside the depletion region
+  and the doping is exactly neutralised outside it. In detail: the space charge is
+  ±q N up to the depletion edges, and Poisson's equation then gives the {term}`depletion widths <depletion width>` from
+  the {term}`built-in potential` and the doping, x_d = √(2 ε V_bi N_A / (q N_D (N_A + N_D)))
+  on the n side ({ref}`Sze and Ng 2006, ch. 2 <lit-sze>`). See {ref}`plugin-history-latest-pn`.
+
+ohmic contact
+  A metal-semiconductor contact that passes current in both directions with negligible
+  resistance. In detail: a device simulator such as {{ DEVSIM }} models it by fixing the
+  carrier densities at the contact to their equilibrium, charge-neutral values, so the contact
+  Potential is the applied bias plus the equilibrium potential of the local doping,
+  V_t asinh(N / 2 n_i) ({ref}`Sze and Ng 2006, ch. 3 <lit-sze>`). See {ref}`plugin-history-latest-pn`.
+
+Boltzmann statistics
+  The non-degenerate approximation of carrier statistics. In detail: the Fermi-Dirac
+  occupation is replaced by its Boltzmann tail, so n = n_i exp((ψ − φ_n) / V_t) and
+  p = n_i exp((φ_p − ψ) / V_t). It holds while the Fermi level stays a few k_B T away from the
+  band edges, and fails in degenerately doped regions ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`).
+  See {ref}`the junction probe <plugin-history-junction>`.
+
 drift-diffusion
 density-gradient
   The classical carrier-transport model, and its quantum correction ({ref}`Ancona and Iafrate 1989 <lit-ancona>`). See {ref}`mismatch-taxonomy`.

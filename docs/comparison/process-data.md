@@ -91,7 +91,7 @@ before any fit.
 - **The `n_ch_cm3` upper bound** of 2 × NDEP is a project choice, because no public channel
   profile exists.
 - **`dv_fb_v` is a lumped flat-band offset.** Its start of 0 and its ±0.2 V bounds are project
-  choices. It is applied as a rigid gate-bias shift. It lumps together Boltzmann statistics in
+  choices. It is applied as a rigid gate-bias shift. It lumps together {term}`Boltzmann statistics` in
   the degenerate gate, SPICE's empirical flat band, and interface and fixed charge. It is not a
   fixed-oxide-charge parameter.
 

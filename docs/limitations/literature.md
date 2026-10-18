@@ -38,6 +38,26 @@ item, it does not check what the annotation says about it.
 
 ## Physics models
 
+(lit-sze)=
+
+- Sze and Ng, *Physics of Semiconductor Devices*, 3rd ed., Wiley, 2006,
+  {doi}`10.1002/0470068329`: ch. 2, the p-n junction ({term}`built-in potential`, the
+  {term}`depletion approximation`, the {term}`ideality factor`); ch. 1, carrier statistics
+  ({term}`Boltzmann statistics`); ch. 3, metal-semiconductor and {term}`ohmic contacts <ohmic contact>`.
+
+(lit-shockley)=
+
+- Shockley, "The theory of p-n junctions in semiconductors and p-n junction transistors", Bell
+  Syst. Tech. J. 28(3), 435-489, 1949, {doi}`10.1002/j.1538-7305.1949.tb03645.x`: the ideal
+  diode law, {term}`ideality factor` 1.
+
+(lit-sah)=
+
+- Sah, Noyce and Shockley, "Carrier generation and recombination in p-n junctions and p-n
+  junction characteristics", Proc. IRE 45(9), 1228-1243, 1957,
+  {doi}`10.1109/JRPROC.1957.278528`: recombination in the depletion region, {term}`ideality factor`
+  near 2.
+
 (lit-caughey)=
 
 - Caughey and Thomas, Proc. IEEE 55(12), 1967, {doi}`10.1109/PROC.1967.6123`: velocity
