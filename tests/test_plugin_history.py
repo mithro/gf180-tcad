@@ -7,6 +7,7 @@ check drivers in ``experiments/plugin-history`` with no network. They are slow (
 and are run with ``pytest -m sandbox``. The others only read committed files.
 """
 
+import importlib.util
 import json
 import math
 import re
@@ -25,7 +26,7 @@ COMMITTED = ("v0.8.0.json", "v0.8.0-mesh0p5.json", "v1.4.2.json")
 CHECKS = ("import", "pin_test", "ddcomponent_mesh", "ddsolver", "ramp", "refine")
 
 sys.path.insert(0, str(EXPERIMENT))
-import harness  # noqa: E402  (experiments/plugin-history/harness.py, stdlib only)
+import harness
 
 
 def _load(name: str) -> dict:
@@ -36,7 +37,9 @@ def _load(name: str) -> dict:
 
 
 _TIMING_KEY = re.compile(r"(time|elapsed|duration|date|second|clock|timestamp)", re.IGNORECASE)
-_HOST_PATH = re.compile(r"(^|[\s'\"(=])/(work|home|tmp|usr|opt|root|var|proc)/")
+# Host paths only: /work/out and /work/src are the fixed container mounts of tools/sandbox-run,
+# which appear in exception messages recorded verbatim (e.g. the v1.4.2 ImportError).
+_HOST_PATH = re.compile(r"(^|[\s'\"(=])/(home|tmp|usr|opt|root|var|proc|mnt|srv)/")
 
 
 def _walk(obj, where=""):
@@ -61,10 +64,12 @@ def test_history_json_has_no_timings_or_paths(name):
     host = socket.gethostname()
     for where, key, value in _walk(data):
         if key is not None:
-            assert not _TIMING_KEY.search(key), f"{name}: timing-like key {where}"
+            if not where.startswith("/versions/"):  # package names (python-dateutil)
+                assert not _TIMING_KEY.search(key), f"{name}: timing-like key {where}"
         elif isinstance(value, str):
             assert not _HOST_PATH.search(value), f"{name}: absolute path in {where}: {value!r}"
             assert host not in value, f"{name}: host name in {where}"
+            assert str(REPO) not in value, f"{name}: repo path in {where}"
         elif isinstance(value, float):
             assert math.isfinite(value)
 
@@ -132,10 +137,10 @@ def test_failure_record_names_exception_and_gplugins_frame(tmp_path):
     src = tmp_path / "gplugins" / "gplugins" / "devsim"
     src.mkdir(parents=True)
     (src / "get_solver.py").write_text("def f():\n    return c.x\n", encoding="utf-8")
-    ns: dict = {}
-    code = compile((src / "get_solver.py").read_text("utf-8"), str(src / "get_solver.py"), "exec")
-    exec(code, ns)
-    rec = harness.run_check(ns["f"], gplugins_root=tmp_path / "gplugins")[0]
+    spec = importlib.util.spec_from_file_location("fake_get_solver", src / "get_solver.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    rec = harness.run_check(module.f, gplugins_root=tmp_path / "gplugins")[0]
     assert rec == {
         "status": "fail",
         "exception_type": "NameError",
@@ -228,3 +233,12 @@ def test_v142_import_broken(tmp_path):
 def test_io_is_the_writer():
     # the record is written through gf180tcad.io (repr floats, sorted keys)
     assert history.write_json is io.write_json
+
+
+def test_doc_quotes_the_record():
+    page = (REPO / "docs" / "limitations" / "plugin-history.md").read_text(encoding="utf-8")
+    full, half = _load("v0.8.0.json"), _load("v0.8.0-mesh0p5.json")
+    w0, w1 = (b["depletion_width_um"] for b in full["pin"]["bias"])
+    assert f"{w0:.3g} µm at 0 V and {w1:.3g} µm at −1 V" in page
+    assert f"has {full['ddcomponent']['node_count']} mesh nodes" in page
+    assert f"gives {half['ddcomponent']['node_count']} nodes" in page

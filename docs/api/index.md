@@ -11,6 +11,8 @@ gf180tcad
 gf180tcad.__main__
 gf180tcad.devices
 gf180tcad.docgen
+gf180tcad.history
+gf180tcad.history.__main__
 gf180tcad.io
 gf180tcad.known
 gf180tcad.layout
