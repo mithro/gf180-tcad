@@ -228,6 +228,19 @@ cgg_acc_ff
   `cgg_acc_ff` at -5 V (accumulation), in {term}`fF <FF>`. Only ngspice runs the `cv` sweep. See
   {py:mod}`gf180tcad.metrics`.
 
+C–V
+quasi-static
+QS
+  Capacitance–voltage: the gate capacitance {term}`Cgg` against the gate bias. The quasi-static
+  (QS, low-frequency) curve is the equilibrium one and recovers to about the oxide capacitance in
+  inversion; {term}`BSIM4` `capMod=2` gives it. A {term}`MOSCAP` solved by small-signal AC with only
+  a body contact gives the high-frequency curve instead. See {ref}`plugin-history-latest`.
+
+MOSCAP
+MOS capacitor
+  A poly-gate, oxide and body stack without source and drain, simulated by the {term}`TCAD` to
+  compare its {term}`C–V` with the {term}`SPICE` {term}`Cgg`. See {ref}`plugin-history-latest`.
+
 Rsd
   Source/drain series resistance (contact, silicide and {term}`LDD`). The {term}`SPICE` {term}`card <model card>` has RDSW
   2175 Ω·µm. See {ref}`mismatch-taxonomy`.
@@ -335,7 +348,7 @@ Phases 0 and 1
 Phase 2
 Phase 3
 Phase 3 entry gate
-  The next phases: a MOS capacitor in {{ DEVSIM }} (Phase 2), then the 2D MOSFET (Phase 3). The
+  The next phases: a {term}`MOS capacitor <MOSCAP>` in {{ DEVSIM }} (Phase 2), then the 2D MOSFET (Phase 3). The
   Phase 3 entry gate is the list of what must exist before any MOSFET {term}`TCAD` result,
   including the deviations from the design spec still open at the end of
   {term}`Phases 0 and 1`. See
