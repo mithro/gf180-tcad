@@ -245,6 +245,7 @@ def test_success_writes_only_published_files(tmp_path):
 def test_success_replaces_an_existing_tree(tmp_path):
     out = tmp_path / "spice"
     out.mkdir()
+    (out / "provenance.json").write_text("{}\n")
     (out / "stale.csv").write_text("old\n")
     assert _gen(tmp_path, JOBS[:1], _fake_runner(), out) == []
     assert "stale.csv" not in _tree(out)
@@ -255,6 +256,7 @@ def test_failure_leaves_no_partial_tree(tmp_path, existing):
     out = tmp_path / "results" / "spice"
     if existing:
         out.mkdir(parents=True)
+        (out / "provenance.json").write_text("{}\n")
         (out / "keep.csv").write_text("previous good result\n")
     before = _tree(out) if existing else None
     bad = JOBS[1]
@@ -439,3 +441,21 @@ def test_reference_subset_hash_stable(tmp_path):
     for blob in a.values():
         text = blob.decode("utf-8")
         assert str(tmp_path) not in text and "/work/" not in text and "\r" not in text
+
+
+def test_refuses_to_replace_a_directory_that_is_not_a_reference_tree(tmp_path):
+    out = tmp_path / "home"
+    out.mkdir()
+    (out / "precious.txt").write_text("not a results tree\n")
+    with pytest.raises(ValueError, match="provenance.json"):
+        _gen(tmp_path, JOBS[:1], _fake_runner(), out)
+    assert _tree(out) == {"precious.txt": b"not a results tree\n"}
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["home", "scratch"]
+    assert list((tmp_path / "scratch").iterdir()) == []
+
+
+def test_replaces_an_empty_directory(tmp_path):
+    out = tmp_path / "spice"
+    out.mkdir()
+    assert _gen(tmp_path, JOBS[:1], _fake_runner(), out) == []
+    assert "provenance.json" in _tree(out)

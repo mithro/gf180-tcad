@@ -335,6 +335,7 @@ def generate(
     """
     check_admission(jobs_n, mem)
     out = Path(out).absolute()
+    _check_replaceable(out)
     out.parent.mkdir(parents=True, exist_ok=True)
     run_dir = Path(tempfile.mkdtemp(prefix="gf180tcad-spice-reference-", dir=scratch_root))
     if run_dir.resolve().is_relative_to(sandbox.REPO_ROOT):
@@ -393,9 +394,20 @@ def generate(
             shutil.rmtree(staging)
 
 
+def _check_replaceable(out: Path) -> None:
+    """``out`` must be absent, an empty directory or an earlier reference tree."""
+    if out.is_symlink() or (out.exists() and not out.is_dir()):
+        raise ValueError(f"--out {out} exists and is not a directory")
+    if out.is_dir() and any(out.iterdir()) and not (out / PROVENANCE_NAME).is_file():
+        raise ValueError(
+            f"--out {out} is a non-empty directory without {PROVENANCE_NAME}, so it is not an "
+            "earlier reference tree; refusing to replace it"
+        )
+
+
 def _swap(staging: Path, out: Path) -> None:
     """Replace ``out`` by ``staging`` (both in the same directory)."""
-    if out.exists() or out.is_symlink():
+    if out.exists():
         old = Path(tempfile.mkdtemp(prefix=f".{out.name}.old-", dir=out.parent))
         os.rename(out, old / out.name)
         os.rename(staging, out)
