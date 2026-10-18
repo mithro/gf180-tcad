@@ -90,9 +90,10 @@ silently.
 
 ### The "Same process" window
 
-Where the PDK publishes a spec min-max, the wider of the spec window and the
-corner envelope is used, and which one is shown; otherwise the corner envelope
-is used. The corner envelope is the envelope of the TT, FF, SS, FS and SF SPICE
+Where the PDK publishes a spec min-max, the window covers both the published
+spec and the corner envelope (their hull: the lowest lower bound and the highest
+upper bound), and the page shows which one sets it (spec, envelope, or both);
+otherwise the corner envelope is used. The corner envelope is the envelope of the TT, FF, SS, FS and SF SPICE
 corners at the same geometry and bias, so the reference dataset sweeps all five
 corners.
 

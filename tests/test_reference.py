@@ -302,7 +302,12 @@ def _fake_runner(fail=(), omit=None):
             (Path(scratch) / "debug.log").write_text("boom\n")
             raise RuntimeError(f"simulated failure of {job.relpath}")
         for name in reference.expected_files(job.engine):
-            if name != omit:
+            if name == omit:
+                continue
+            if name == "metrics.json":
+                m = {"metrics": {"idsat_ua_per_um": 100.0 + CORNERS.index(job.corner)}}
+                (Path(scratch) / name).write_text(json.dumps(m))
+            else:
                 (Path(scratch) / name).write_text(f"{job.relpath}/{name}\n")
         (Path(scratch) / "work").mkdir()
         (Path(scratch) / "work" / "ngspice.log").write_text("not published\n")
@@ -321,15 +326,9 @@ def _tree(root: Path) -> dict[str, bytes]:
 def _gen(tmp_path, jobs, runner, out, **kw):
     scratch = tmp_path / "scratch"
     scratch.mkdir(exist_ok=True)
+    kw.setdefault("log", lambda *a: None)
     return reference.generate(
-        jobs,
-        out,
-        jobs_n=2,
-        mem="4g",
-        runner=runner,
-        scratch_root=scratch,
-        log=lambda *a: None,
-        **kw,
+        jobs, out, jobs_n=2, mem="4g", runner=runner, scratch_root=scratch, **kw
     )
 
 
@@ -341,14 +340,47 @@ def test_success_writes_only_published_files(tmp_path):
     failures = _gen(tmp_path, JOBS, _fake_runner(), out)
     assert failures == []
     tree = _tree(out)
-    expected = {"provenance.json"} | {
+    expected = {"provenance.json", "envelope.json"} | {
         f"{j.relpath.as_posix()}/{n}" for j in JOBS for n in reference.expected_files(j.engine)
     }
     assert set(tree) == expected
     assert json.loads(tree["provenance.json"]) == reference.provenance()
+    # one corner only: no complete envelope, so no entries
+    assert json.loads(tree["envelope.json"]) == {}
     # no staging/old dirs left next to the output, scratch dirs of good jobs deleted
     assert sorted(p.name for p in out.parent.iterdir()) == ["spice"]
     assert list((tmp_path / "scratch").rglob("*.csv")) == []
+
+
+def test_envelope_spans_all_corners_and_is_generated_in_staging(tmp_path):
+    jobs = reference.plan_jobs(("ngspice",), CORNERS, ("nfet_05v0",))
+    out = tmp_path / "spice"
+    notes = []
+    assert _gen(tmp_path, jobs, _fake_runner(), out, log=notes.append) == []
+    assert not any(n.startswith("envelope:") for n in notes)
+    env = json.loads((out / "envelope.json").read_text())
+    n = len(DEVICES["nfet_05v0"].geometries)
+    assert set(env) == {"ngspice"} and len(env["ngspice"]["nfet_05v0"]) == n
+    for gid, m in env["ngspice"]["nfet_05v0"].items():
+        assert m == {"idsat_ua_per_um": [100.0, 100.0 + len(CORNERS) - 1]}, gid
+
+
+def test_partial_corner_set_is_noted_and_left_out(tmp_path):
+    jobs = reference.plan_jobs(("ngspice",), CORNERS[:2], ("nfet_05v0",))
+    out = tmp_path / "spice"
+    notes = []
+    assert _gen(tmp_path, jobs, _fake_runner(), out, log=notes.append) == []
+    assert json.loads((out / "envelope.json").read_text()) == {}
+    (note,) = [n for n in notes if n.startswith("envelope:")]
+    assert "incomplete" in note and "6" in note
+
+
+def test_failed_run_keeps_the_old_envelope(tmp_path):
+    out = tmp_path / "spice"
+    assert _gen(tmp_path, JOBS[:1], _fake_runner(), out) == []
+    before = _tree(out)
+    assert _gen(tmp_path, JOBS, _fake_runner(fail=JOBS[1:2]), out)
+    assert _tree(out) == before
 
 
 def test_success_replaces_an_existing_tree(tmp_path):
@@ -539,7 +571,7 @@ def test_reference_subset_hash_stable(tmp_path):
         trees.append(_tree(out))
     a, b = trees
     rel = NFET_LMIN.relpath.as_posix()
-    assert set(a) == {"provenance.json"} | {
+    assert set(a) == {"provenance.json", "envelope.json"} | {
         f"{rel}/{n}" for n in reference.expected_files("ngspice")
     }
     assert a == b
