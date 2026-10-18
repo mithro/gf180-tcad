@@ -15,7 +15,7 @@ pytestmark = pytest.mark.sandbox
 
 def _leftover_containers() -> list[str]:
     out = subprocess.run(
-        ["docker", "ps", "-a", "--filter", "name=gf180tcad-", "--format", "{{.Names}}"],
+        ["docker", "ps", "-a", "--filter", "name=^gf180tcad-", "--format", "{{.Names}}"],
         check=True,
         capture_output=True,
         text=True,
