@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Reproducible build of the gf180-tcad dev-HEAD TCAD image (used locally and by
+# .github/workflows/image.yml).
+#   docker/tcad-dev/build [--push] [--tag REF]... [--no-cache] [--metadata FILE] [--load]
+# --load also loads the image into the local docker image store as $NAME:local (its image ID is
+# the same config digest), so that tools/sandbox-run --image can run it before it is pushed.
+# Prints the image config digest (== `docker/tcad-dev/IMAGE_ID` when reproducible) on stdout.
+#
+# A copy of docker/tcad/build with the dev-HEAD inputs. The image is built FROM the pinned base image
+# (BASE_IMAGE = docker/IMAGE), so docker/IMAGE is a build input and dates the build too.
+# Reproducibility: a pinned BuildKit (docker-container driver), SOURCE_DATE_EPOCH = commit time of
+# the last change to the build inputs (so committing IMAGE_ID/TCAD_IMAGE/versions.json does not
+# change it), rewrite-timestamp=true, no provenance/SBOM attestations, single platform.
+set -euo pipefail
+
+BUILDKIT_IMAGE="moby/buildkit:v0.34.0@sha256:b059f8d7226d0b326bc871af489a5dddf65e36af4d20d14251b072974d9ee87c"
+BUILDER="buildkit_v0.34.0_gf180tcad"
+NAME="ghcr.io/mithro/gf180-tcad-tcad-dev"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$HERE/../.." && pwd)"
+
+PUSH=false NO_CACHE=() TAGS=() METADATA="" LOAD=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --push) PUSH=true; shift ;;
+        --tag) TAGS+=("${2:?}"); shift 2 ;;
+        --no-cache) NO_CACHE=(--no-cache); shift ;;
+        --metadata) METADATA="${2:?}"; shift 2 ;;
+        --load) LOAD=(--output "type=docker,name=$NAME:local,rewrite-timestamp=true"); shift ;;
+        *) echo "build: unknown option: $1" >&2; exit 2 ;;
+    esac
+done
+if [ -z "$METADATA" ]; then
+    METADATA="$(mktemp)"
+    trap 'rm -f "$METADATA"' EXIT
+fi
+if [ "${#TAGS[@]}" -eq 0 ]; then
+    "$PUSH" && { echo "build: --push needs at least one --tag" >&2; exit 2; }
+    TAGS=("$NAME:local")
+fi
+
+INPUTS=(docker/tcad-dev/Dockerfile docker/tcad-dev/requirements.lock docker/tcad-dev/gf180mcu.lock
+        docker/tcad-dev/build-requirements.lock docker/tcad-dev/upstream.json
+        docker/tcad-dev/fetch_sources.py docker/tcad-dev/build-devsim.sh docker/IMAGE)
+if [ -n "$(git -C "$REPO" status --porcelain -- "${INPUTS[@]}")" ]; then
+    echo "build: uncommitted changes in ${INPUTS[*]}; commit them first" >&2
+    exit 2
+fi
+SOURCE_DATE_EPOCH="$(git -C "$REPO" log -1 --format=%ct -- "${INPUTS[@]}")"
+[ -n "$SOURCE_DATE_EPOCH" ] || { echo "build: cannot date ${INPUTS[*]} (shallow clone?)" >&2; exit 2; }
+export SOURCE_DATE_EPOCH
+echo "build: SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" >&2
+
+BASE_IMAGE="$(head -n1 "$REPO/docker/IMAGE")"
+case "$BASE_IMAGE" in
+    ghcr.io/mithro/gf180-tcad-base@sha256:*) ;;
+    *) echo "build: docker/IMAGE is not a pinned base image: $BASE_IMAGE" >&2; exit 2 ;;
+esac
+echo "build: BASE_IMAGE=$BASE_IMAGE" >&2
+
+if ! docker buildx inspect "$BUILDER" >&2; then
+    docker buildx create --name "$BUILDER" --driver docker-container \
+        --driver-opt "image=$BUILDKIT_IMAGE" >&2
+fi
+
+NAMES="$(IFS=,; echo "${TAGS[*]}")"
+docker buildx build --builder "$BUILDER" --progress plain \
+    --platform linux/amd64 --provenance=false --sbom=false \
+    "${NO_CACHE[@]}" \
+    --build-arg "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" \
+    --build-arg "BASE_IMAGE=$BASE_IMAGE" \
+    --output "type=image,\"name=$NAMES\",push=$PUSH,rewrite-timestamp=true" "${LOAD[@]}" \
+    --metadata-file "$METADATA" \
+    "$HERE" >&2
+
+python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["containerimage.config.digest"])' \
+    "$METADATA"
