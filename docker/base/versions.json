@@ -5,6 +5,7 @@
   "gdsfactory": "9.51.0",
   "gf180mcu_variant": "gf180mcuD",
   "klayout": "0.30.12",
+  "klayout_python": "0.30.12",
   "ngspice": "47",
   "open_pdks_commit": "1689ac3f2dc763876eaf967227c7dfe831b031ae",
   "pdk_root": "/foss/pdks",

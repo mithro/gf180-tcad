@@ -16,6 +16,7 @@ KEYS = {
     "xyce",
     "xyce_parallel",
     "klayout",
+    "klayout_python",
     "gdsfactory",
     "devsim",
     "pdk_root",

@@ -51,7 +51,10 @@ def probe() -> dict[str, str]:
         "xyce_parallel": (
             "mpi-capable, run single-process" if "Parallel with MPI" in xyce_caps else "serial"
         ),
+        # The KLayout CLI from the base image (/foss/tools/klayout) ...
         "klayout": _match(r"^KLayout (\S+)", _tool_output("klayout", "-b", "-v"), "KLayout"),
+        # ... and the klayout Python module in the venv (a gdsfactory dependency).
+        "klayout_python": version("klayout"),
         "gdsfactory": version("gdsfactory"),
         "devsim": version("devsim"),
         "pdk_root": str(pdk_root),
