@@ -197,6 +197,6 @@ That is a result to report, not a failure.
 The files hold only starts and bounds. {py:func}`gf180tcad.tcad.process.load` requires the
 `calibrated` tag on exactly the tunables, each with its start and bounds sources and kinds, and
 rejects it on every fixed parameter. The calibration (Task 12) will write the fitted values to
-its own result files under `results/tcad/`, not to these files.
+its own result files under {repo}`results/tcad/`, not to these files.
 {py:meth}`gf180tcad.tcad.process.ProcessDescription.with_values` applies such values to a loaded
 description. It refuses fixed parameters, non-numbers and values outside the bounds.
