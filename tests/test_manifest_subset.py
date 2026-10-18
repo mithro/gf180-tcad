@@ -4,10 +4,11 @@
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
-from gf180tcad import manifest
+from gf180tcad import manifest, reference
 
 A = "ngspice/typical/nfet_05v0/w10p0_l0p60"
 B = "xyce/typical/pfet_05v0/w10p0_l0p50"
@@ -197,3 +198,49 @@ def test_cli_requires_against_and_subset(setup):
     tree, m, subset = setup
     assert _cli(tree, "--subset", subset).returncode == 2
     assert _cli(tree, "--against", m).returncode == 2
+
+
+# --- the real subset file and committed results -----------------------------------------------
+
+REPO = Path(__file__).resolve().parents[1]
+SUBSET = REPO / "tests" / "crosscheck_subset.txt"
+
+
+def _filters(jobs):
+    """Per field, the sorted distinct values, as the crosscheck workflow derives its filters."""
+    return [sorted({j.split("/")[i] for j in jobs}) for i in range(4)]
+
+
+def test_crosscheck_subset_is_the_ruled_eight_jobs():
+    jobs = manifest.load_subset(SUBSET)
+    assert len(jobs) == 8
+    engines, corners, devices, _ = _filters(jobs)
+    assert engines == ["ngspice", "xyce"] and corners == ["typical"]
+    assert devices == ["nfet_05v0", "pfet_05v0"]
+    # nfet W10/Lmin 0.6, pfet W10/Lmin 0.5, both W1.6/L0.7
+    assert {"/".join(j.split("/")[2:]) for j in jobs} == {
+        "nfet_05v0/w10p0_l0p60", "nfet_05v0/w1p6_l0p70",
+        "pfet_05v0/w10p0_l0p50", "pfet_05v0/w1p6_l0p70",
+    }  # fmt: skip
+
+
+def test_crosscheck_filters_plan_exactly_the_listed_jobs():
+    jobs = manifest.load_subset(SUBSET)
+    engines, corners, devices, geometries = _filters(jobs)
+    plan = reference.plan_jobs(engines, corners, devices, geometries=geometries)
+    assert sorted(j.relpath.as_posix() for j in plan) == sorted(jobs)
+
+
+def test_committed_subset_verifies_against_committed_manifest(tmp_path):
+    """The listed jobs copied out of results/spice pass, with every sweep of each engine."""
+    jobs = manifest.load_subset(SUBSET)
+    spice = REPO / "results" / "spice"
+    tree = tmp_path / "tree"
+    for j in jobs:
+        shutil.copytree(spice / j, tree / j)
+        assert sorted(p.name for p in (tree / j).iterdir()) == list(
+            reference.expected_files(j.split("/")[0])
+        )
+    shutil.copyfile(spice / "provenance.json", tree / "provenance.json")
+    m = REPO / "results" / "MANIFEST.sha256"
+    assert manifest.verify_subset(tree, m, "spice/", jobs) == []
