@@ -25,6 +25,7 @@ RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirement
  && test -z "$(find /opt/gf180tcad -name '*.pyc' -print -quit)"
 USER 1000:1000
 
+# PATH deliberately replaces the base PATH (venv + simulators first); test_simulators_on_path pins it.
 ENV PATH=/opt/gf180tcad/bin:/foss/tools/ngspice/bin:/foss/tools/xyce/bin:/foss/tools/klayout:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     VIRTUAL_ENV=/opt/gf180tcad \
     PYTHONDONTWRITEBYTECODE=1 \
