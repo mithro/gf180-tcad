@@ -1,4 +1,4 @@
-# gf180tcad.known
+# {py:mod}`gf180tcad.known`
 
 Source: {repo}`src/gf180tcad/known.py`.
 

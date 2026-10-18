@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Sphinx configuration for the gf180-tcad documentation."""
 
-import re
 import shutil
 import sys
 from pathlib import Path
@@ -22,6 +21,7 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.viewcode",
     "repo_roles",
+    "api_links",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
@@ -109,39 +109,12 @@ autodoc_member_order = "bysource"
 # otherwise put an absolute host path into the HTML.
 autodoc_preserve_defaults = True
 autodoc_default_options = {"members": True, "undoc-members": True}
-# Intersphinx is off (offline build), so standard-library and numpy types in signatures cannot
-# resolve. They are ignored explicitly here; gf180tcad's own names are not, so a reference to a
-# renamed or removed gf180tcad object still fails the build.
-nitpick_ignore_regex = [
-    (r"py:class", r"(pathlib|collections\.abc|subprocess|argparse|numpy)\..*"),
-    # Sphinx splits the string annotation of a NamedTuple field (tuple[float, ...]) at the comma.
-    (r"py:class", r"'tuple\[float"),
-]
-# Short names in docstrings of the generator modules (reference.GENERATOR_MODULES) that resolve
-# only from another module. Editing those docstrings would change generator_sha256 and force a
-# regeneration of the SPICE reference for a documentation-only change, so they are ignored here;
-# their targets are on the API pages (gf180tcad.spice.common.GRID_TOL and .SpiceResult).
-nitpick_ignore = [
-    ("py:data", "GRID_TOL"),
-    ("py:attr", "SpiceResult.warnings"),
-]
-_MAGNITUDE = re.compile(r"\|(\w+)\|")
-
-
-def _fix_docstring(app, what, name, obj, options, lines):
-    """Adapt plain-text docstrings to reST without editing them (see nitpick_ignore above).
-
-    Module constants without a doc comment would show their type's docstring (dict, tuple), and
-    the docstrings write magnitudes as |Vgs|, which reST would read as a substitution.
-    """
-    if (
-        what == "data"
-        and lines
-        and type(obj).__doc__
-        and "\n".join(lines).strip() == (type(obj).__doc__.strip())
-    ):
-        lines.clear()
-    lines[:] = [_MAGNITUDE.sub(r"\\|\1\\|", line) for line in lines]
+# Intersphinx is off (offline build). Standard-library and numpy types in signatures are linked
+# to their upstream documentation by docs/_ext/api_links.py instead (a fixed table, no network);
+# any other unresolved reference fails the build.
+# Docstrings are linked as autodoc reads them by docs/_ext/api_links.py (repo paths, tests,
+# gf180tcad names, first use of glossary terms and tools per page), so the generator modules,
+# whose bytes are hashed into generator_sha256, are never edited for documentation.
 
 
 # --- linkcheck (the linkcheck workflow; never part of the offline html build) ---------------
@@ -189,4 +162,3 @@ def _generate_results(app):
 
 def setup(app):
     app.connect("builder-inited", _generate_results)
-    app.connect("autodoc-process-docstring", _fix_docstring)

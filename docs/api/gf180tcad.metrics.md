@@ -1,4 +1,4 @@
-# gf180tcad.metrics
+# {py:mod}`gf180tcad.metrics`
 
 Source: {repo}`src/gf180tcad/metrics.py`.
 

@@ -1,4 +1,4 @@
-# gf180tcad.io
+# {py:mod}`gf180tcad.io`
 
 Source: {repo}`src/gf180tcad/io.py`.
 

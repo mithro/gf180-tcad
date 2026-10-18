@@ -1,4 +1,4 @@
-# gf180tcad.plots
+# {py:mod}`gf180tcad.plots`
 
 Source: {repo}`src/gf180tcad/plots.py`.
 

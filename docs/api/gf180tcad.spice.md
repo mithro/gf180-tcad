@@ -1,4 +1,4 @@
-# gf180tcad.spice
+# {py:mod}`gf180tcad.spice`
 
 Source: {repo}`src/gf180tcad/spice/__init__.py`.
 

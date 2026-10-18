@@ -1,4 +1,4 @@
-# gf180tcad.devices
+# {py:mod}`gf180tcad.devices`
 
 Source: {repo}`src/gf180tcad/devices.py`.
 

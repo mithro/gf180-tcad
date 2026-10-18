@@ -1,4 +1,4 @@
-# gf180tcad.spice.ngspice
+# {py:mod}`gf180tcad.spice.ngspice`
 
 Source: {repo}`src/gf180tcad/spice/ngspice.py`.
 

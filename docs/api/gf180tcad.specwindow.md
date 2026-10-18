@@ -1,4 +1,4 @@
-# gf180tcad.specwindow
+# {py:mod}`gf180tcad.specwindow`
 
 Source: {repo}`src/gf180tcad/specwindow.py`.
 

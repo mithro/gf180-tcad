@@ -1,6 +1,6 @@
 # API reference
 
-The Python package {py:mod}`gf180tcad` ({repo}`src/gf180tcad/`), generated from its docstrings by
+The {{ Python }} package {py:mod}`gf180tcad` ({repo}`src/gf180tcad/`), generated from its docstrings by
 [autodoc](https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html). Each page also
 links the highlighted source. Code identifiers elsewhere in these pages link here.
 

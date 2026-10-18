@@ -1,4 +1,4 @@
-# gf180tcad.pdk
+# {py:mod}`gf180tcad.pdk`
 
 Source: {repo}`src/gf180tcad/pdk.py`.
 

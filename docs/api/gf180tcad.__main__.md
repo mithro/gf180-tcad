@@ -1,4 +1,4 @@
-# gf180tcad.__main__
+# {py:mod}`gf180tcad.__main__`
 
 Source: {repo}`src/gf180tcad/__main__.py`.
 

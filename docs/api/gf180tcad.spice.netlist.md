@@ -1,4 +1,4 @@
-# gf180tcad.spice.netlist
+# {py:mod}`gf180tcad.spice.netlist`
 
 Source: {repo}`src/gf180tcad/spice/netlist.py`.
 

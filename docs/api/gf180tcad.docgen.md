@@ -1,4 +1,4 @@
-# gf180tcad.docgen
+# {py:mod}`gf180tcad.docgen`
 
 Source: {repo}`src/gf180tcad/docgen.py`.
 

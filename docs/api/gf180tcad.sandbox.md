@@ -1,4 +1,4 @@
-# gf180tcad.sandbox
+# {py:mod}`gf180tcad.sandbox`
 
 Source: {repo}`src/gf180tcad/sandbox.py`.
 

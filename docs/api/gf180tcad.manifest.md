@@ -1,4 +1,4 @@
-# gf180tcad.manifest
+# {py:mod}`gf180tcad.manifest`
 
 Source: {repo}`src/gf180tcad/manifest.py`.
 
