@@ -451,6 +451,12 @@ def generate(
         # Corner envelope (pure min/max of the staged, published floats): written here so the
         # atomic swap never drops it and `make reproduce` regenerates it.
         specwindow.write_envelope(staging)
+        skipped = specwindow.incomplete(staging)
+        if skipped:
+            log(
+                f"envelope: {len(skipped)} incomplete (engine, device, geometry) entries "
+                f"omitted: fewer than the {len(CORNERS)} corners present"
+            )
         io.write_json(staging / PROVENANCE_NAME, provenance(repo_root))
         _swap(staging, out)
         shutil.rmtree(run_dir)
