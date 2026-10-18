@@ -9,8 +9,9 @@ working directory, under the enclosing container's memory, CPU, PID and network 
 
 The marker alone never enables this direct mode: :func:`check_confined` must also prove that
 the process is confined (``/.dockerenv`` exists, the cgroup v2 ``memory.max`` and ``pids.max``
-are finite, and ``/sys/class/net`` lists no interface but ``lo``). If the marker is set and any
-of these fails, :class:`SandboxNotConfined` is raised; there is no fallback.
+are finite, ``/work/src`` is mounted read-only and ``/sys/class/net`` lists no interface but
+``lo``). If the marker is set and any of these fails, :class:`SandboxNotConfined` is raised;
+there is no fallback.
 """
 
 import os
@@ -55,6 +56,27 @@ def _finite_limit(path: Path, problems: list[str]) -> None:
         problems.append(f"cgroup {name} is not a number: {text!r}")
 
 
+SOURCE_MOUNT = "/work/src"  # where tools/sandbox-run mounts the repo, read-only
+
+
+def _source_read_only(root: Path, problems: list[str]) -> None:
+    """``/work/src`` exists and its visible (last) mount in mountinfo has the ``ro`` option."""
+    if not (root / SOURCE_MOUNT.lstrip("/")).is_dir():
+        problems.append(f"{SOURCE_MOUNT} is missing")
+        return
+    try:
+        lines = (root / "proc" / "self" / "mountinfo").read_text(encoding="utf-8").splitlines()
+    except OSError as e:
+        problems.append(f"/proc/self/mountinfo is unreadable: {e}")
+        return
+    # fields: id parent major:minor root mount-point mount-options ... - fstype source super-opts
+    mounts = [f for f in (ln.split() for ln in lines) if len(f) > 5 and f[4] == SOURCE_MOUNT]
+    if not mounts:
+        problems.append(f"{SOURCE_MOUNT} is not a mount point in /proc/self/mountinfo")
+    elif "ro" not in mounts[-1][5].split(","):
+        problems.append(f"{SOURCE_MOUNT} is not mounted read-only (options {mounts[-1][5]})")
+
+
 def check_confined(root: Path | None = None) -> None:
     """Raise :class:`SandboxNotConfined` unless the process is confined like a sandbox container.
 
@@ -63,6 +85,8 @@ def check_confined(root: Path | None = None) -> None:
     - ``/.dockerenv`` exists;
     - ``/proc/self/cgroup`` has a cgroup v2 line (``0::<path>``), and ``memory.max`` and
       ``pids.max`` of that cgroup under ``/sys/fs/cgroup`` are finite numbers (not ``max``);
+    - ``/work/src`` (the repo) exists and its visible mount in ``/proc/self/mountinfo`` has the
+      ``ro`` option;
     - ``/sys/class/net`` exists and has no network interface (directory entry) but ``lo``.
 
     Every failed check is listed in the error.
@@ -84,6 +108,7 @@ def check_confined(root: Path | None = None) -> None:
             cg = root / "sys" / "fs" / "cgroup" / v2[0].strip().lstrip("/")
             for name in ("memory.max", "pids.max"):
                 _finite_limit(cg / name, problems)
+    _source_read_only(root, problems)
     net = root / "sys" / "class" / "net"
     if not net.is_dir():
         problems.append("/sys/class/net is missing")
