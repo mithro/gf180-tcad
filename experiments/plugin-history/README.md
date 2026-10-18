@@ -75,7 +75,7 @@ ramp, and the quantities recorded around it, are additions of this record. They 
 - the silicon Potential span at each step;
 - the junction probe: the physical groups of the mesh file (`msh_physical_groups`), the
   Potential across the rib's junction on the bottom edge at each step (`junction`: its drop and
-  the rib/slab jump at the rib's corners), and each silicon region's Potential range. It shows
+  the rib/slab jump at the rib's bottom vertices), and each silicon region's Potential range. It shows
   that v0.8.0's mesh has no `core___slab90` group, so the rib floats and the bias never reaches
   the junction. Its definitions are those of the probe in the fork's
   [`gplugins/devsim/tests/test_mesh.py`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py#L248).
