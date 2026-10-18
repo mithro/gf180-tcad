@@ -265,95 +265,165 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - `results/plugin-history` is **not** part of the GitHub crosscheck, because the old stack has no cross-host bit-identity guarantee. The docs say so.
 - [ ] **Step 3:** Docs: `docs/limitations/plugin-history.md`, giving the plugin's history (commits `a019e5a`, `0ce7b30`, `017cede`) and the "once worked" evidence. It has a placeholder section, "Re-verified on latest", which Tasks 4 and 5 fill in (spec §3). Requires the docs-links infrastructure on main. Then commit, open the PR, review and merge.
 
+### Fork-task conventions (Tasks 4–8, 15)
+
+- **Verification in the TCAD image, before any submodule bump.** Run the fork worktree as the sandbox workdir:
+
+  `tools/sandbox-run --image "$(cat docker/TCAD_IMAGE)" --workdir /home/tim/github/wafer-space/gplugins-worktrees/<branch> -- env PYTHONPATH=/work/out python -m pytest -p no:cacheprovider gplugins/devsim -m "not tidy3d"`
+
+  `PYTHONPATH=/work/out` puts the worktree ahead of the image's `.pth` entry. Record the log in the PR.
+- **Fork CI.** Add a `devsim` job to `test_code.yml` that runs inside the pinned TCAD image: `docker run` of `ghcr.io/mithro/gf180-tcad-tcad@sha256:…`, the digest copied from gf180-tcad's `docker/TCAD_IMAGE` and recorded in the workflow. The fork CI then uses exactly the locked environment and does not resolve a new one. The job uses hosted runners and no secrets.
+- **Physics constants** are those in the Global Constraints table. The fork's material helpers take them as arguments: `gplugins/devsim/materials.py`, `set_silicon(device, region, *, T_K, eps_r, n_i_cm3, ...)` and `set_oxide(...)`. `simple_physics.SetSiliconParameters`/`SetOxideParameters` are never called with their defaults.
+- **Submodule bumps are batched.** There is one gf180-tcad bump after Task 8 (bump 2 of 3), covering Tasks 4–8 together. Tasks 4–7 do not bump.
+
 ### Task 4 (fork): import and test `gplugins.devsim` on latest, no physics change
 
 **Context.** These latest-stack failures are documented:
-- `pydantic.Extra`/`Config`;
-- `get_refined_mesh` uses `c` instead of `self`;
-- `delete_device` signature;
-- silicon models are applied to non-silicon regions;
+- `pydantic.Extra`/`Config` (`get_solver.py:24,142`);
+- `get_refined_mesh` uses `c` instead of `self` (`:359-371`);
+- `delete_device` signature (`:326`);
+- silicon models are applied to non-silicon regions (`:220-227`);
 - `__init__` imports tidy3d unconditionally;
-- the PIN test asserts nothing.
+- the PIN test asserts nothing (`test_devsim.py:20-21`).
 
-**Files (fork):** `gplugins/devsim/__init__.py`, `gplugins/devsim/get_solver.py`, `gplugins/devsim/test_devsim.py` (split DEVSIM-only from tidy3d), `pyproject.toml` (un-exclude devsim; add devsim to the test extras), the CI matrix
+**Files (fork):**
+- `gplugins/devsim/__init__.py`: lazy-import the tidy3d parts;
+- `gplugins/devsim/get_solver.py`;
+- `gplugins/devsim/test_devsim.py`: split the DEVSIM-only tests from the tidy3d tests, and register the `tidy3d` marker in `pyproject.toml`;
+- `pyproject.toml`: un-exclude devsim; the devsim extra requires Python ≥ 3.13 and `meshwell~=2.5`;
+- `.github/workflows/test_code.yml`: the TCAD-image devsim job.
 
 **Interfaces:**
 - Produces: `pytest gplugins/devsim -m "not tidy3d"` green in fork CI and inside the TCAD image.
 
-- [ ] **Step 1:** Add real assertions to the PIN test first: the contact currents at two biases and the depletion width, with the expected values taken from `results/plugin-history/v0.8.0.json`. Run on latest: it FAILS on import.
-- [ ] **Step 2:** Fix only what's needed to import and run. Make no physics or default changes.
-- [ ] **Step 3:** Run it: it PASSES. The PIN numbers should match v0.8.0 within 1e-6 relative. If DEVSIM 2.6.3 → 2.11.1 or the mesher changes move them more, do not loosen the threshold silently: record the measured difference, attribute it with evidence (e.g. same mesh read into both DEVSIM versions), and set the tolerance to the justified value in the test with a comment. This is the "re-verified on latest" evidence.
-- [ ] **Step 4:** Commit, open the PR (fork), review and merge. Then bump the submodule in gf180-tcad with its own small PR.
+- [ ] **Step 1:** Add real assertions to the PIN test first, as `test_pin_currents_match_v080` and `test_pin_depletion_width_match_v080`. Copy the expected values as constants from gf180-tcad `results/plugin-history/v0.8.0.json` (biases 0 and −1 V; depletion width with the Task 3 definition), and cite the file and gf180-tcad commit in a comment. Run on latest: it FAILS on import.
+- [ ] **Step 2:** Fix only what's needed to import and run. Make no physics or default changes; the new material constants come in Task 6.
+- [ ] **Step 3:** Run it: it PASSES. The PIN numbers should match v0.8.0 within 1e-6 relative.
+  - If DEVSIM 2.6.3 → 2.11.1 moves them more, do not loosen the threshold silently.
+  - Record the measured difference and attribute it with evidence, e.g. by reading the same mesh into both DEVSIM versions.
+  - Set the tolerance to the justified value in the test, with a comment.
+- [ ] **Step 4:** Commit, open the PR (fork), review and merge. Append the numbers to the gf180-tcad "Re-verified on latest" section (Task 3 page) in the after-Task-8 bump PR.
 
 ### Task 5 (fork): port `create_2Duz_simulation` meshing to meshwell 2.5
 
-**Context.** meshwell 2.5.2 provides `generate_mesh(..., global_scaling, gmsh_version)` and `resolution_specs` (`ConstantInField`, `ThresholdField`, …). DEVSIM 2.11 reads MSH 2.2. The fork's `gplugins/meshwell/get_meshwell_cross_section.py` and `gplugins/femwell/mode_solver.py` `__main__` blocks import the removed `meshwell.cad`. gdsfactory 9 cells are locked: use `.copy()` before `trim`.
+**Context.**
+- meshwell 2.5.2 provides `generate_mesh(entities, dim, output_mesh, **kw)` with `global_scaling`, `gmsh_version` and `n_threads`.
+- It also provides `resolution_specs` (`ConstantInField`, `ThresholdField`, …).
+- DEVSIM 2.11 reads MSH 2.2. Physical names come out as `a___b` and `a___None`.
+- The fork's `gplugins/meshwell/get_meshwell_cross_section.py` and `gplugins/femwell/mode_solver.py` `__main__` blocks import the removed `meshwell.cad`.
+- gdsfactory 9 cells are locked: use `.copy()` before `trim`, and `gf.boolean` (not `gf.geometry`).
 
 **Files (fork):** `gplugins/devsim/get_simulation.py`, `gplugins/meshwell/get_meshwell_cross_section.py`, `gplugins/femwell/mode_solver.py`, `gplugins/devsim/tests/test_mesh.py`
 
 **Interfaces:**
-- Produces: `create_2Duz_simulation(component, xsection_bounds, layer_stack, resolutions: dict[str, list[ResolutionSpec]], ...) -> DDComponent`. It returns the same regions, contacts and interfaces as v0.8.0 for the PN-slab example.
+- Produces: `create_2Duz_simulation(component, xsection_bounds, layer_stack, resolutions: dict[str, list[ResolutionSpec]], ...) -> DDComponent`.
+  - It calls `generate_mesh(..., global_scaling=1e-4, gmsh_version=2.2, n_threads=1)`.
+  - For the PN-slab example, it returns the same regions, contacts and interfaces as the v0.8.0 record.
 - The interface naming scheme `a___b`/`a___None` is kept and documented.
 
-- [ ] **Step 1:** Write `test_mesh.py` first. The PN-slab example must build a DEVSIM device whose region, contact and interface names equal the v0.8.0 record. Node count must be within a stated, justified tolerance, and two builds must give an identical mesh file. Run it: it FAILS (`NotImplementedError`).
-- [ ] **Step 2:** Implement with meshwell 2.5.2 and gmsh `General.NumThreads=1`. Run it: it PASSES. Fix the two `meshwell.cad` `__main__` blocks.
-- [ ] **Step 3:** Commit, PR, review, merge, submodule bump.
+- [ ] **Step 1:** Write `test_mesh.py` first.
+  - `test_pn_slab_names_match_v080`: the PN-slab device has the v0.8.0 region, contact and interface names.
+  - `test_pn_slab_currents_match_v080`: the anode/cathode currents after the ramp to 0.1 and 0.2 V match `ddcomponent` in `v0.8.0.json`. The tolerance comes from refining both meshers: rerun v0.8.0 and latest at 2× resolution and set the tolerance to the larger of the two self-differences. Record the measured values and the tolerance in a comment. Node count is reported but not asserted; the OCC pipeline differs from meshwell 1.0.1.
+  - `test_mesh_deterministic`: two builds give byte-identical `.msh` files.
+  - `test_gmsh_threads_one`: `General.NumThreads == 1` after meshing.
 
-### Task 6 (fork): typed contacts and interfaces
+  Run them: they FAIL (`NotImplementedError`).
+- [ ] **Step 2:** Implement with meshwell 2.5.2. Run the tests: they PASS. Fix the two `meshwell.cad` `__main__` blocks.
+- [ ] **Step 3:** Commit, open the PR, review and merge. Record the re-verification numbers for the gf180-tcad Task 3 page; they land in the after-Task-8 bump PR.
 
-**Context.** `CreateOxideContact` has no work-function term, so the gate offset has to be applied as a bias offset: about +0.56 V for n⁺ poly and −0.56 V for p⁺. The alternative is a poly-silicon gate region, as in DEVSIM `testing/mos_2d.py`.
+### Task 6 (fork): materials, typed contacts, interfaces and the 1D stack builder
 
-**Files (fork):** `gplugins/devsim/contacts.py` (new), `gplugins/devsim/get_simulation.py`, `gplugins/devsim/get_solver.py`, `gplugins/devsim/tests/test_contacts.py`
+**Context.**
+- `CreateOxideContact` has no work-function term.
+- Both MOSCAPs use a **poly-silicon gate region** (DEVSIM `testing/mos_2d.py` structure), with NGATE doping and an ohmic contact on top. Poly depletion and the gate work function then follow from the physics.
+- `workfunction_offset_v` stays in the API for metal gates. Phase 2 uses it only in the parallel-plate and offset tests.
+
+**Files (fork):** `gplugins/devsim/materials.py` (new), `gplugins/devsim/contacts.py` (new), `gplugins/devsim/stack1d.py` (new), `gplugins/devsim/get_simulation.py`, `gplugins/devsim/get_solver.py`, `gplugins/devsim/tests/test_contacts.py`, `gplugins/devsim/tests/test_stack1d.py`
 
 **Interfaces:**
+- Produces: `@dataclass(frozen=True) LayerRef(layer: tuple[int, int])` and `InterfaceRef(a: str, b: str | None)`. `b=None` means the outer boundary (`a___None`).
 - Produces: `@dataclass(frozen=True) Contact(name: str, location: LayerRef | InterfaceRef, kind: Literal["ohmic", "gate"], workfunction_offset_v: float = 0.0, circuit: bool = False)`.
-- Produces: interfaces chosen by material pair: Si/oxide gets continuous potential; Si/Si gets drift-diffusion continuity.
+- Produces: `materials.Constants` (frozen dataclass), with defaults from the Global Constraints table. Also produces `set_silicon(...)` and `set_oxide(...)`.
+- Produces: `@dataclass(frozen=True) Layer1D(name: str, material: Literal["silicon", "oxide"], thickness_um: float, doping: DopingProfile | None)`. DopingProfile comes from Task 7; until then, constants only.
+- Produces: `create_1d_stack(name, layers: Sequence[Layer1D], contacts: Sequence[Contact], mesh: Mesh1D, constants: Constants) -> DDComponent`. It builds the device with `devsim.create_1d_mesh`.
+  - `Mesh1D(spacing_um: Mapping[str, tuple[float, float]])` gives the start and end spacing per layer, with geometric grading in between.
+  - gf180-tcad's `MeshSpec` (Task 9b) maps onto it.
+- Produces: interfaces chosen by material pair. Si/oxide and poly/oxide get continuous potential; Si/Si gets drift-diffusion continuity.
 - The old `contact_info` dict keeps working through an adapter, with a deprecation note.
 
-- [ ] **Step 1:** Write the test first: a parallel-plate oxide device gives C = εox·A/t within 0.1 %, measured through `get_contact_charge` (dQ/dV) AND through small-signal AC (`circuit_element` + `solve(type="ac")`, the `testing/ssac_cap.py` pattern). A second check confirms the work-function offset shifts the flat-band voltage of a 1D MOS stack by the offset within 1 mV. Run it: it FAILS.
-- [ ] **Step 2:** Implement. Run it: it PASSES. Then commit, PR, review, merge, and bump the submodule.
+- [ ] **Step 1:** Write the tests first:
+  - `test_parallel_plate_charge` and `test_parallel_plate_ac`: an oxide-only 1D stack gives C = ε_ox·ε0/t. It is measured through `get_contact_charge` (dQ/dV), and through small-signal AC (`circuit_element` + `solve(type="ac")`, the `testing/ssac_cap.py` pattern). Each agrees within 1e-6 relative (the field is uniform, so this is exact up to solver tolerance).
+  - `test_workfunction_offset_shifts_vfb`: on a 1D metal-gate/oxide/p-Si stack, the flat band moves by exactly the offset, within 1 mV. Vfb is the Vg where the gate charge is 0.
+  - `test_constants_not_simple_physics_defaults`: the region parameters read back as ε_si = 11.7·ε0 and T = 298.15.
+  - `test_poly_gate_flatband`: a p-Si 1.7e17 / 15.2 nm oxide / n⁺ 1e20 poly stack gives Vfb = −V_t·ln(NGATE·N_A/n_i²) within 1 mV. This value is ≈ −1.0 V at 298.15 K. The pfet case is the mirror.
+
+  Run them: they FAIL.
+- [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, review and merge.
 
 ### Task 7 (fork): doping from analytic profiles
 
-**Context.** `gplugins/process` has Gaussian and skewed-Gaussian implant profiles, which the plugin does not use. Reading `silicon_diffused_gaussian_profile` suggests a missing factor of 2 in the exponent and a missing µm→cm prefactor. These are unconfirmed until tested.
+**Context.** `gplugins/process` has Gaussian and skewed-Gaussian implant profiles, which the plugin does not use. Reading `silicon_diffused_gaussian_profile` suggests two bugs, both unconfirmed until tested:
+- the exponent is missing a factor of 2 (`diffusion.py:132`);
+- the prefactor is missing the µm→cm factor (`:131`).
 
-**Files (fork):** `gplugins/devsim/doping.py`, `gplugins/process/diffusion.py` (fix only after a failing test proves the bug), `gplugins/devsim/tests/test_doping.py`
+**Files (fork):** `gplugins/devsim/doping.py`, `gplugins/process/diffusion.py` (fixed only after a failing test proves the bug), `gplugins/devsim/tests/test_doping.py`
 
 **Interfaces:**
-- Produces: `DopingProfile` callables `(x_um, y_um) -> cm⁻³` for `constant`, `gaussian(peak, depth, straggle)`, `erfc(surface, xj)` and `lateral(straggle)`. They accept gdsfactory `technology.processes` `ImplantGaussian`/`DopingConstant`. The doping is assigned to DEVSIM `NetDoping` / `Donors` / `Acceptors` node models.
+- Produces: `DopingProfile` callables `(x_um, y_um) -> cm⁻³` for `constant`, `gaussian(peak, depth, straggle)`, `erfc(surface, xj)` and `lateral(straggle)`.
+  - They accept gdsfactory `technology.processes` `ImplantGaussian`/`DopingConstant`.
+  - The doping is assigned to DEVSIM `NetDoping` / `Donors` / `Acceptors` node models, as node-model expressions where possible.
+  - `Layer1D.doping` and the 2D builder both take a `DopingProfile`.
 
 - [ ] **Step 1:** Write the tests first:
-  - the integrated dose of the assigned doping equals the input dose within 0.5 %;
-  - `silicon_diffused_gaussian_profile` at t=0 equals `silicon_gaussian_profile`;
-  - a uniform 1.7e17 region gives the analytic bulk potential within 0.1 mV.
+  - `test_dose_conserved`: the integrated dose of the assigned doping equals the input dose within 0.5 %;
+  - `test_diffused_equals_gaussian_at_t0`: `silicon_diffused_gaussian_profile` at t=0 equals `silicon_gaussian_profile` (relative 1e-12);
+  - `test_uniform_bulk_potential`: a uniform 1.7e17 region gives the analytic bulk potential −V_t·ln(N_A/n_i) within 0.1 mV, using the Task 6 constants.
 
   Run them: they FAIL wherever a bug exists.
-- [ ] **Step 2:** Implement and fix. Run the tests: they PASS. Then commit, open the PR, get it reviewed, merge, and bump the submodule.
+- [ ] **Step 2:** Implement and fix. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
 
 ### Task 8 (fork): C–V solver API
 
 **Context.** There are two routes:
-- quasi-static `C = dQgate/dVg`, a central difference of `get_contact_charge`;
-- small-signal AC, using `ssac_imag`/(−2πf).
+- quasi-static: `C = dQgate/dVg`, a central difference of `get_contact_charge`;
+- small-signal AC: `ssac_imag`/(−2πf).
 
-The spike's tolerance failures at relative 1e-12 point to using the spec's 1e-10 with extended precision (`extended_solver`/`extended_model`/`extended_equation`).
+The spike failed to converge at relative 1e-12. Use the spec's 1e-10, with extended precision (`extended_solver`, `extended_model`, `extended_equation`).
+
+The inversion response time with only a body contact is ≈ 2·τ_g·N_A/n_i ≈ 2·1e-5 s·1.7e7 ≈ 3e2 s (Nicollian & Brews), so 1D AC is the HF curve in inversion at any practical frequency.
 
 **Files (fork):** `gplugins/devsim/cv.py` (new), `gplugins/devsim/tests/test_cv.py`
 
 **Interfaces:**
-- Produces: `sweep_cv(device, gate: str, vg: Sequence[float], *, method: Literal["qs", "ac"], freq_hz: float | None = None, rel_tol: float = 1e-10, abs_tol: float = ..., tie: Sequence[str] = ()) -> CVResult`.
-  - `CVResult` holds `vg`, `cgg_f`, and per-point `{converged, iterations, rel_error}`.
-  - For `ac` with `tie` contacts, it also holds `cgx_f` per contact, for the charge-conservation check.
-- Any non-converged point raises `CVConvergenceError` listing the points. It never drops them.
+- Produces: `sweep_cv(device, gate: str, vg: Sequence[float], *, method: Literal["qs", "ac"], freq_hz: float | None = None, dv_qs: float = 1e-3, rel_tol: float = 1e-10, abs_tol: float = 1e-12, tie: Sequence[str] = ()) -> CVResult`.
+  - **QS:** each grid point is solved at vg ± `dv_qs` and differenced centrally. Neighbouring grid points are never used.
+  - **`tie`:** names contacts that each get their own voltage source at the gate's reference DC bias (0 V). With `ac`, each source's AC current is read.
+  - **`abs_tol`:** the DEVSIM `absolute_error` on the potential update, in V.
+- Produces: `@dataclass(frozen=True) CVResult`. Its fields:
+  - `vg`;
+  - `cgg`;
+  - `unit: Literal["F/cm^2", "F/cm"]`, depending on mesh dimension;
+  - `points: tuple[PointInfo(converged, iterations, rel_error, abs_error), ...]`;
+  - `cgx: Mapping[str, tuple[float, ...]]`, for `ac` with `tie`, where Cgx = −∂Qg/∂Vx, so Cgg = Σ_x Cgx;
+  - `method`, `freq_hz`, `dv_qs`.
 
-- [ ] **Step 1:** Write the tests first, on a 1D MOS stack:
-  - QS and AC at 1 Hz agree within 0.1 %;
-  - accumulation C approaches the series combination of Cox and silicon within 0.5 %;
-  - forcing a non-convergent tolerance raises `CVConvergenceError`;
-  - AC charge conservation, Cgg = −ΣCgx, holds within 0.1 % when contacts are tied.
+  Use `solve(..., info=True)` for the per-point info.
+- Any non-converged point raises `CVConvergenceError(points: list[float])`. So does a point that converges only at a relaxed tolerance. It never drops or interpolates points.
+
+- [ ] **Step 1:** Write the tests first, on a 1D poly/oxide/Si stack from `create_1d_stack`:
+  - `test_qs_equals_ac_low_freq_acc_dep`: QS and AC at 1 Hz agree within 0.1 % for `polarity·vg ≤ Vfb + 0.3 V` (accumulation and depletion only).
+  - `test_ac_inversion_is_hf`: at 1 MHz, 1D AC in strong inversion is below QS by more than 30 %. This shows the HF behaviour is understood, not hidden.
+  - `test_accumulation_series_exact`: accumulation C equals the series combination of Cox and the exact Poisson–Boltzmann semiconductor capacitance C_s(ψ_s) within 0.5 %. ψ_s is taken from the solution, and C_s comes from the Sze & Ng ch. 4 charge function, with a link.
+  - `test_qs_step_converged`: halving `dv_qs` changes C by less than 0.01 % at every point.
+  - `test_nonconvergence_raises`: forcing `rel_tol=1e-16` with a low iteration limit raises `CVConvergenceError`.
+  - Charge conservation with tied S/D contacts is tested in 2D (Task 11), because a 1D stack has no S/D. This task tests the `tie` mechanics on a 1D stack with an extra side contact on a two-region silicon. `test_tie_cgx_sum`: Cgg = Σ Cgx within 1e-6.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed, merge, and bump the submodule.
+- [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
+- [ ] **Step 3: submodule bump 2 of 3.** Open a gf180-tcad PR that does three things:
+  - bumps `third_party/gplugins` to the fork main containing Tasks 4–8;
+  - runs the Task 2 tests;
+  - fills in the "Re-verified on latest" section of `docs/limitations/plugin-history.md` with the Task 4 and 5 numbers and tolerances.
 
 ### Task 9: process files and 1D MOSCAP (gf180-tcad)
 
