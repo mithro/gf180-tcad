@@ -1,0 +1,24 @@
+{
+  "corner": "typical",
+  "device": "nfet_05v0",
+  "engine": "ngspice",
+  "geometry_id": "w10p0_l0p70",
+  "l_um": 0.7,
+  "metrics": {
+    "body_effect_v": 0.5793791334286673,
+    "cgg_acc_ff": 16.438983543899926,
+    "cgg_inv_ff": 18.78379883608347,
+    "dibl_mv_per_v": 16.9558147498295,
+    "gds_at_5v_s": 5.907051914277872e-05,
+    "gm_peak_s": 0.00017790822623986458,
+    "id_lin_a": 7.824825746294119e-05,
+    "idsat_ua_per_um": 442.0912920970466,
+    "ioff_pa_per_um": 0.5734079877584008,
+    "ss_mv_per_dec": 91.83454158737192,
+    "vt_lin_cc": 0.7093452373482967,
+    "vt_lin_maxgm": 0.7324339434615111,
+    "vt_sat_cc": 0.6262617450741321
+  },
+  "temp_c": 25.0,
+  "w_um": 10.0
+}
