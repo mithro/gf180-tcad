@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Input of v080.lock (see README.md): gplugins v0.8.0 with the extras its DEVSIM plugin needs,
+# pytest, and klayout < 0.29. setuptools and wheel of the same date are the hashed build
+# constraints for the three sdist-only packages (antlr4-python3-runtime, flatdict, rectpack).
+# Compiled in a directory holding this file and the `git archive` of v0.8.0 as ./gplugins.
+-e ./gplugins[devsim,gmsh,tidy3d]
+pytest
+klayout<0.29
+setuptools
+wheel
