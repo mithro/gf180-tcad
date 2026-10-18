@@ -40,7 +40,9 @@ def _write(tmp_path: Path, device: str, raw: dict) -> Path:
         return repr(v)
 
     lines = [f"{k} = {val(v)}" for k, v in raw.items() if not isinstance(v, dict)]
-    lines += ["[card]"] + [f"{k} = {val(v)}" for k, v in raw["card"].items()]
+    for table, t in raw.items():
+        if isinstance(t, dict) and table != "param":
+            lines += [f"[{table}]"] + [f"{k} = {val(v)}" for k, v in t.items()]
     for name, p in raw["param"].items():
         lines += [f"[param.{name}]"] + [f"{k} = {val(v)}" for k, v in p.items()]
     (tmp_path / f"{device}.toml").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -88,8 +90,13 @@ def test_files_load(device):
     for p in desc.params.values():
         assert p.provenance in process.TAGS
         assert p.role in process.ROLES
-        assert p.source, p.name
         assert p.note, p.name
+        if p.fixed:
+            assert p.source, p.name
+            assert p.provenance != "calibrated", p.name
+        else:  # a tunable: tagged calibrated, with the source of its start and of its bounds
+            assert p.provenance == "calibrated", p.name
+            assert p.start_source and p.bounds_source, p.name
 
 
 @pytest.mark.parametrize("device", DEVICES)
@@ -103,7 +110,8 @@ def test_tunables_present(device):
         lo, hi = p.bounds
         assert all(isinstance(b, float) and math.isfinite(b) for b in (lo, hi))
         assert lo <= p.value <= hi
-        assert p.bounds_source
+        assert p.provenance == "calibrated"
+        assert p.start_source and p.bounds_source
     for p in desc.params.values():
         if p.fixed:
             assert p.bounds is None and p.role != "tunable", p.name
@@ -120,6 +128,9 @@ def test_tunable_starts(device):
     assert desc.params["n_ch_cm3"].bounds[1] == 2 * v["ndep_cm3"]
     assert desc.params["dv_fb_v"].bounds == (-0.2, 0.2)
     assert "project choice" in desc.params["dv_fb_v"].bounds_source
+    assert "project choice" in desc.params["dv_fb_v"].start_source
+    assert "sm141064.ngspice:" in desc.params["t_ox_eff_nm"].start_source  # TOXE
+    assert "sm141064.ngspice:" in desc.params["n_ch_cm3"].start_source  # NDEP
     assert "project choice" in desc.params["n_ch_cm3"].bounds_source
 
 
@@ -180,28 +191,44 @@ def test_centroid_allowance_hand_point():
     Φs (eq. 2.2.7) = 0.4 + vt·ln(1.7e17/ni) = 0.822426 V;
     Vfbzb (eq. 7.2.14, long channel) = 0.67314 − Φs − 0.9·√Φs = −0.965475 V;
     Ldebye = √(11.7·ε0·vt/(q·1.7e23 m⁻³)) = 9.88534 nm, Xmax = Ldebye/3 = 3.29511 nm;
-    ACDE·(NDEP/2e16)^−0.25 = 0.3·8.5^−0.25 = 0.175698.
-    At Vg = −5 V: field (−5 + 0.965475)/(1.6e-8 m·1e8) = −2.52158 MV/cm,
-    raw X_DC = 3.29511·exp(0.175698·−2.52158) = 2.11574 nm, δx = 1e-3·TOXE = 0.0152 nm,
-    X0 = 3.29511 − 2.11574 − 0.0152 = 1.16417 nm,
-    X_DC = 3.29511 − ½(1.16417 + √(1.16417² + 4·0.0152·3.29511)) = 2.08940 nm.
-    At Vg = +5 V the same steps give 3.27885 nm, the maximum over the sweep.
+    ACDE·(NDEP/2e16)^−0.25 = 0.3·8.5^−0.25 = 0.175698; δx = 1e-3·TOXE = 0.0152 nm.
+    At Vg = −2 V (edge of the accumulation plateau): field (−2 + 0.965475)/(1.6e-8 m·1e8)
+    = −0.646578 MV/cm, raw X_DC = 3.29511·exp(0.175698·−0.646578) = 2.94126 nm,
+    X0 = 3.29511 − 2.94126 − 0.0152 = 0.33865 nm,
+    X_DC = 3.29511 − ½(0.33865 + √(0.33865² + 4·0.0152·3.29511)) = 2.84515 nm.
+    X_DC rises towards flat band, so this is the accumulation-plateau maximum; at Vg = −5 V
+    the same steps give 2.08940 nm. In depletion (Vg = +5 V, outside the plateaus) the
+    formula saturates near Xmax: 3.27885 nm, which is not used.
     Inversion (eq. 7.3.4) at Vgsteff → 0: 4(VTH0 − VFB − Φs) = 4·0.9·√Φs = 3.26476 V,
-    1.9 nm/(1 + (3.26476/3.2)^0.7) = 0.943339 nm.
-    Δ = 3.27885·3.9/11.7 = 1.09295 nm, rounded up to 1.10 nm.
+    1.9 nm/(1 + (3.26476/3.2)^0.7) = 0.943339 nm (an upper bound on the inversion plateau).
+    Δ = 2.84515·3.9/11.7 = 0.948383 nm, rounded up to 0.95 nm.
     """
     cv = process.load("nfet_05v0").card_values()
     c = process.CONSTANTS
     assert math.isclose(process.bsim4_ni_cm3(c), 1.23019e10, rel_tol=1e-5)
     assert math.isclose(process.bsim4_phi_s_v(cv, c), 0.822426, rel_tol=1e-6)
     assert math.isclose(process.bsim4_vfbzb_v(cv, c), -0.965475, rel_tol=1e-6)
+    assert math.isclose(process.ctm_x_dc_acc_m(-2.0, cv, c), 2.84515e-9, rel_tol=1e-5)
     assert math.isclose(process.ctm_x_dc_acc_m(-5.0, cv, c), 2.08940e-9, rel_tol=1e-5)
     assert math.isclose(process.ctm_x_dc_acc_m(5.0, cv, c), 3.27885e-9, rel_tol=1e-5)
     assert math.isclose(process.ctm_x_dc_inv_sup_m(cv, c), 0.943339e-9, rel_tol=1e-5)
     res = process.centroid(cv, c)
-    assert res.vg_at_max_v == 5.0
-    assert math.isclose(res.x_dc_max_m, 3.27885e-9, rel_tol=1e-5)
-    assert process.centroid_allowance_nm(cv, c) == 1.10
+    assert res.plateau_v == 2.0 and res.vg_at_max_v == -2.0
+    assert math.isclose(res.x_dc_max_m, 2.84515e-9, rel_tol=1e-5)
+    assert process.centroid_allowance_nm(cv, c) == 0.95
+
+
+def test_centroid_window_excludes_depletion():
+    """Only polarity·Vg ≤ −2 V and ≥ +2 V count; the depletion saturation of X_DC does not."""
+    for device, delta in (("nfet_05v0", 0.95), ("pfet_05v0", 0.79)):
+        cv = process.load(device).card_values()
+        res = process.centroid(cv)
+        assert res.vg_at_max_v == -2.0 * cv["type"]
+        assert res.delta_nm == delta
+        # the whole sweep would pick up the depletion end (about Ldebye/3)
+        assert process.centroid_allowance_nm(cv, plateau_v=0.0) == 1.10
+        with pytest.raises(ValueError, match="plateau"):
+            process.centroid(cv, plateau_v=6.0)  # no bias of the sweep in the window
 
 
 def test_centroid_allowance_rounds_up():
@@ -213,12 +240,16 @@ def test_centroid_allowance_rounds_up():
 @pytest.mark.parametrize("device", DEVICES)
 def test_centroid_allowance(device):
     desc = process.load(device)
-    delta = process.centroid_allowance_nm(desc.card_values())
-    assert delta == 1.10  # computed from the BSIM4 CTM, not the 0.5 nm fallback
+    ca = desc.centroid_allowance
+    assert ca.plateau_v == process.PLATEAU_V == 2.0
+    delta = process.centroid_allowance_nm(desc.card_values(), plateau_v=ca.plateau_v)
+    # computed from the BSIM4 CTM over the plateaus, not the 0.5 nm fallback
+    assert delta == ca.delta_nm == {"nfet_05v0": 0.95, "pfet_05v0": 0.79}[device]
     hi = desc.params["t_ox_eff_nm"].bounds[1]
     assert math.isclose(hi, desc.values()["toxp_nm"] + delta, rel_tol=1e-12)
     src = desc.params["t_ox_eff_nm"].bounds_source
     assert "7.3.2" in src and "7.3.4" in src and "project choice" not in src
+    assert "2 V" in src and "2 V" in ca.note
 
 
 def test_centroid_vfbzb_inside_the_sweep():
@@ -250,6 +281,8 @@ def test_bounds_enforced(tmp_path):
         {"bounds": [17.1, 15.2]},
         {"bounds": [15.2]},
         {"bounds_source": None},
+        {"start_source": None},
+        {"start_source": "my notebook"},
     ):
         raw = _raw("nfet_05v0")
         p = raw["param"]["t_ox_eff_nm"]
@@ -275,14 +308,41 @@ def test_fixed_cannot_change():
 
 
 def test_no_calibrated_values_in_data(tmp_path):
-    for f in sorted(DATA.glob("*.toml")):
-        assert "calibrated" not in {
-            p["provenance"] for p in tomllib.loads(f.read_text())["param"].values()
-        }
+    """Only the tunables carry the calibrated tag, and the files hold their starts."""
     assert sorted(f.stem for f in DATA.glob("*.toml")) == sorted(DEVICES)
+    for f in sorted(DATA.glob("*.toml")):
+        for name, p in tomllib.loads(f.read_text(encoding="utf-8"))["param"].items():
+            assert (p["provenance"] == "calibrated") == (p["role"] == "tunable"), name
     raw = _raw("nfet_05v0")
-    raw["param"]["n_ch_cm3"]["provenance"] = "calibrated"
-    with pytest.raises(ValueError, match="calibrated"):
+    raw["param"]["ndep_cm3"]["provenance"] = "calibrated"
+    with pytest.raises(ValueError, match="ndep_cm3.*calibrated"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+@pytest.mark.parametrize("tag", ["spice-card", "literature", "pdk-doc"])
+def test_tunable_must_be_tagged_calibrated(tmp_path, tag):
+    raw = _raw("nfet_05v0")
+    raw["param"]["n_ch_cm3"]["provenance"] = tag
+    with pytest.raises(ValueError, match="n_ch_cm3.*calibrated"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+def test_tunable_needs_both_sources(tmp_path):
+    for key in ("start_source", "bounds_source"):
+        raw = _raw("pfet_05v0")
+        del raw["param"]["dv_fb_v"][key]
+        with pytest.raises(ValueError, match="dv_fb_v"):
+            process.load("pfet_05v0", data_dir=_write(tmp_path, "pfet_05v0", raw))
+    raw = _raw("pfet_05v0")
+    raw["param"]["ngate_cm3"]["start_source"] = "sm141064.ngspice:38200"  # fixed: no start
+    with pytest.raises(ValueError, match="ngate_cm3"):
+        process.load("pfet_05v0", data_dir=_write(tmp_path, "pfet_05v0", raw))
+
+
+def test_centroid_allowance_table_checked(tmp_path):
+    raw = _raw("nfet_05v0")
+    raw["centroid_allowance"]["plateau_v"] = -1.0
+    with pytest.raises(ValueError, match="plateau_v"):
         process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
 
 
