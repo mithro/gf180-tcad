@@ -241,7 +241,9 @@ def test_cv_netlist():
     assert "ac lin 1 1000000.0 1000000.0" in lines
     # Current into the gate is -i(vg) = j*2*pi*f*Cgg*vac (vac = 1), so Cgg = -imag(i(vg))/(2*pi*f)
     assert "let {$resplot}.cgg[{$resplot}.k] = -imag(i(vg))/(2*pi*1000000.0)" in lines
-    assert "let {$resplot}.vg[{$resplot}.k] = $v" in lines
+    # vg is read back from the circuit (the source's DC value after alter), not the loop variable
+    assert "let {$resplot}.vg[{$resplot}.k] = @vg[dc]" in lines
+    assert lines.index("alter vg dc = $v") < lines.index("ac lin 1 1000000.0 1000000.0")
     assert lines[-4:] == ["setplot $resplot", f"write {RAW_NAME} vg cgg", ".endc", ".end"]
 
 

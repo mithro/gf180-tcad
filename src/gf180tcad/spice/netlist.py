@@ -254,7 +254,11 @@ def ngspice_netlist(
 def _cv_control(plan: BiasPlan) -> list[str]:
     """One ``ac`` point per gate bias; results collected into a single plot and written once.
 
-    ``vg`` starts as a 1e30 sentinel, so a point the loop skipped cannot pass the grid check.
+    ``vg`` records ``@vg[dc]``, the gate source's DC value read back from the circuit after the
+    ``ac`` run, not the loop variable: if ``alter`` had not taken effect the grid check fails
+    (shown in the sandbox: with the ``alter`` line removed the check fails by 10 V, whereas
+    recording ``$v`` passed with a constant Cgg). ``vg`` starts as a 1e30 sentinel, so a point the
+    loop skipped cannot pass the grid check either.
     """
     f = repr(float(plan.freq_hz))
     n = len(plan.inner.values)
@@ -271,7 +275,7 @@ def _cv_control(plan: BiasPlan) -> list[str]:
         "alter vg dc = $v",
         f"ac lin 1 {f} {f}",
         f"let {{$resplot}}.cgg[{{$resplot}}.k] = -imag(i(vg))/(2*pi*{f})",
-        "let {$resplot}.vg[{$resplot}.k] = $v",
+        "let {$resplot}.vg[{$resplot}.k] = @vg[dc]",
         "let {$resplot}.k = {$resplot}.k + 1",
         "destroy $curplot",
         "end",
