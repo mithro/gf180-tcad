@@ -224,11 +224,17 @@ def test_crosscheck_subset_is_the_ruled_eight_jobs():
     }  # fmt: skip
 
 
-def test_crosscheck_filters_plan_exactly_the_listed_jobs():
-    jobs = manifest.load_subset(SUBSET)
-    engines, corners, devices, geometries = _filters(jobs)
-    plan = reference.plan_jobs(engines, corners, devices, geometries=geometries)
-    assert sorted(j.relpath.as_posix() for j in plan) == sorted(jobs)
+def test_crosscheck_args_plan_exactly_the_listed_jobs():
+    """tools/crosscheck-args (what the workflow passes to spice-reference) plans the subset."""
+    r = subprocess.run(
+        [sys.executable, str(REPO / "tools" / "crosscheck-args"), str(SUBSET)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    a = reference.parse_args(["spice-reference", *r.stdout.splitlines(), "--out", "o"])
+    plan = reference.plan_jobs(a.engines, a.corners, a.devices, a.geometries)
+    assert sorted(j.relpath.as_posix() for j in plan) == sorted(manifest.load_subset(SUBSET))
 
 
 def test_committed_subset_verifies_against_committed_manifest(tmp_path):
