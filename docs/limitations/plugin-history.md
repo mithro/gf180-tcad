@@ -27,7 +27,7 @@ All commits are linked in {{ gplugins_fork }}, which carries the upstream histor
   [`gplugins.gmsh`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/gmsh/__init__.py), which [`get_simulation.py`](https://github.com/mithro/gplugins/blob/f47ed3de80b99bafc960955b3d6925e947d4fc0f/gplugins/devsim/get_simulation.py#L23-L27) still
   imports. From then on [`import gplugins.devsim`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/__init__.py) fails, and [v1.4.2](https://github.com/mithro/gplugins/tree/v1.4.2) still fails the same way.
 - **Mesher removed**: [`017cede`](https://github.com/mithro/gplugins/commit/017cede91e322426144bd1cb5dc8ede78b830878) (2025-11-09),
-  first released in [v2.0.0](https://github.com/mithro/gplugins/tree/v2.0.0), moved `gplugins.gmsh` to the new {{ meshwell }} API. [`create_2Duz_simulation`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation.py#L32),
+  first released in [v2.0.0](https://github.com/mithro/gplugins/tree/v2.0.0), moved `gplugins.gmsh` to the new {{ meshwell }} API. [`create_2Duz_simulation`](https://github.com/mithro/gplugins/blob/208784df45f1db8b262f356ee2a67fa3808c3e1e/gplugins/devsim/get_simulation.py#L71),
   the mesher behind `DDComponent`, now raises [`NotImplementedError`](https://docs.python.org/3/library/exceptions.html#NotImplementedError) ("uz_xsection_mesh has been removed").
 
 The PIN waveguide never needed gmsh. The path that broke is `DDComponent` with the mesher,
@@ -68,26 +68,26 @@ The checks come from two blocks of the v0.8.0 source:
 
 | Check | What runs |
 |---|---|
-| {repo}`import <experiments/plugin-history/checks_v080.py#L288>` | [`import gplugins.devsim`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/__init__.py) |
+| {repo}`import <experiments/plugin-history/checks_v080.py#L303>` | [`import gplugins.devsim`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/__init__.py) |
 | {repo}`pin_test <experiments/plugin-history/checks_v080.py#L55>` | the PIN waveguide build and [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L385) |
-| {repo}`ramp <experiments/plugin-history/checks_v080.py#L95>` | [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L420) of the PIN waveguide to 0 and −1 V, and (added) of the PN-slab cathode to 0.1 and 0.2 V |
+| {repo}`ramp <experiments/plugin-history/checks_v080.py#L95>` ({repo}`PN part <experiments/plugin-history/checks_v080.py#L253>`) | [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L420) of the PIN waveguide to 0 and −1 V, and (added) of the PN-slab cathode to 0.1 and 0.2 V |
 | {repo}`ddcomponent_mesh <experiments/plugin-history/checks_v080.py#L180>` | the PN-slab `DDComponent(...)` |
-| {repo}`ddsolver <experiments/plugin-history/checks_v080.py#L288>` | [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L204) on the PN slab (meshing with gmsh, then solving) |
+| {repo}`ddsolver <experiments/plugin-history/checks_v080.py#L322>` | [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L204) on the PN slab (meshing with gmsh, then solving) |
 | {repo}`refine <experiments/plugin-history/checks_v080.py#L269>` | [`get_refined_mesh`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L328) on the PN slab, as in the block |
-| {repo}`refined_solve <experiments/plugin-history/checks_v080.py#L288>` | the block's last step, a second `DDComponent` solved with `global_meshsize_array`; recorded as not run, because it needs the output of `refine` |
+| {repo}`refined_solve <experiments/plugin-history/checks_v080.py#L345>` | the block's last step, a second `DDComponent` solved with `global_meshsize_array`; recorded as not run, because it needs the output of `refine` |
 
 (plugin-history-changes)=
 
 ### Changes from the v0.8.0 code
 
-- **Generic PDK activated first.** `get_layer_stack()` in the block needs an active PDK.
+- **Generic PDK activated first.** [`get_layer_stack()`](https://github.com/gdsfactory/gdsfactory/blob/v7.6.1/gdsfactory/pdk.py#L758) in the block needs an active PDK.
 - **Layer map.** gdsfactory 7.6.1 has no `gf.tech` module, so the block's
-  [`gf.tech.LayerMap()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L425) raises `AttributeError`. The
-  driver uses the generic layer map `gdsfactory.generic_tech.LAYER`.
+  [`gf.tech.LayerMap()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L425) raises [`AttributeError`](https://docs.python.org/3/library/exceptions.html#AttributeError). The
+  driver uses the generic layer map [`gdsfactory.generic_tech.LAYER`](https://github.com/gdsfactory/gdsfactory/blob/v7.6.1/gdsfactory/generic_tech/__init__.py#L13).
 - **PIN before PN.** The PIN waveguide is solved, ramped and deleted before the PN slab is
   built. DEVSIM solves every device it holds at once, and `DDComponent` turns on extended
   precision globally, so this order gives each block the solver state it has on its own.
-- **Dropped from [`test_pin_waveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/test_devsim.py#L4-L31).** Its −5 V ramp and its tidy3d mode solves
+- **Dropped from [`test_pin_waveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/test_devsim.py#L4-L31).** Its −5 V ramp and its {{ tidy3d }} mode solves
   ([`make_waveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L485)).
 - **Added.** The PN-slab ramp, and the physical quantities recorded around it (below).
 - **Never reached.** The block's second solve on the refined mesh
@@ -132,22 +132,28 @@ below 1e-2 |[`NetDoping`](https://devsim.net/models.html#node-models)|.
 | Quantity | v0.8.0 | v0.8.0, PN mesh × 0.5 |
 |---|---|---|
 | PIN depletion width at 0 V / −1 V (row nearest the rib's vertical centre) | 0.069 / 0.138 µm | the same |
-| PN-slab NetDoping range | -1.1e+18 … 1.1e+18 cm⁻³ | -1.1e+18 … 1.1e+18 cm⁻³ |
-| PN-slab built-in potential (max − min Potential over the silicon) | 1.3613 V | 1.6267 V |
-| PN-slab depletion width at equilibrium (bottom edge, y = 0) | 0.0386 µm | 0.0688 µm |
+| PN-slab NetDoping range | −1.1e+18 … 1.1e+18 cm⁻³ | −1.1e+18 … 1.1e+18 cm⁻³ |
+| PN-slab Potential span over the silicon at equilibrium (recorded as `builtin_potential_v`; non-physical, see below) | 1.3613 V | 1.6267 V |
+| PN-slab depletion width at equilibrium (bottom edge, y = 0) | 0.0386 µm (2 depleted nodes) | 0.0688 µm (8 depleted nodes) |
 | PN-slab mesh nodes (sum over its four DEVSIM regions) | 3523 | 11326 |
 | PN-slab anode − cathode contact potential at 0 / 0.1 / 0.2 V | 0.9587 / 0.8587 / 0.7587 V | 0.9587 / 0.8587 / 0.7587 V |
 | PN-slab Potential span over the silicon at 0 / 0.1 / 0.2 V | 1.3613 / 1.3613 / 1.3613 V | 1.6267 / 1.6267 / 1.6267 V |
 
 The PN slab's mesh is unstructured and has no row at mid-height. Its bottom edge is the only
 mesh row through the junction, which lies under the rib, so both silicon regions are used there.
+The PN-slab depletion width is limited by the mesh. At full mesh it rests on 2 depleted nodes,
+and at mesh × 0.5 on 8. The × 0.5 value is above an ideal abrupt-junction estimate of about
+0.048 µm. The re-verification compares it at mesh × 0.5 or finer, or allows a difference of
+about one element.
 
-**The applied bias reaches the contacts but not the junction.** The anode − cathode contact
-potential falls by exactly the 0.1 V step each time. The Potential span over the silicon, which
-should fall by the forward bias, does not change.
-It is also larger than the equilibrium contact potential difference (the ideal built-in
-potential between the ±1.1e18 cm⁻³ contacts), and it changes with the mesh, both signs of a
-non-physical potential somewhere in the silicon.
+**Leading hypothesis for the re-verification: the applied bias does not reach the junction.**
+The anode − cathode contact potential falls by exactly the 0.1 V step each time, and at
+equilibrium it matches the ideal built-in potential of the ±1.1e18 cm⁻³ contacts (≈ 0.957 V).
+The Potential span over the silicon is larger than that, set by extrema beyond the contact
+potentials (±0.479 V), and it changes with the mesh, so it is a non-physical value. That it does
+not change with bias therefore says nothing about the junction potential. Together with the
+near-zero currents, though, it suggests that the bias stops at the contacts. The re-verification
+on the latest stack has to test this.
 
 **All recorded currents are below the solver's current floor.**
 - **PN slab:** below 1e-26 A/cm. The anode current is the same at both biases, and at half mesh
@@ -160,7 +166,7 @@ not that its answer is right.
 **What the re-verification compares.** The port to the latest stack
 ({ref}`plugin-history-latest`) compares these quantities:
 - the depletion widths;
-- the built-in potential and NetDoping range;
+- the built-in potential (the equilibrium anode − cathode contact potential) and the NetDoping range;
 - the region, contact and interface names;
 - the node counts;
 - whether the applied bias reaches the device.
