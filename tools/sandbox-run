@@ -34,6 +34,12 @@ case "$WORKDIR/" in
     "$REPO"/*) die "workdir must not be the repo root or inside it: $WORKDIR" ;;
 esac
 
+# numpy picks SIMD kernels at run time by CPU, and they are not bit-identical (log10 differs
+# by 1 ulp between AVX-512 and AVX2), so results would depend on the host CPU. Disable every
+# numpy dispatch target so all x86-64-v2 hosts run the same baseline kernels; disabling a
+# target the CPU lacks is silent. tests/sandbox/test_numpy_dispatch.py checks this.
+NPY_BASELINE_ONLY="X86_V3 X86_V4 AVX512_ICL AVX512_SPR"
+
 NAME="gf180tcad-$(cat /proc/sys/kernel/random/uuid)"
 cleanup() { docker rm -f "$NAME" > /dev/null 2>&1 || true; }
 trap 'cleanup; exit 130' INT
@@ -48,6 +54,7 @@ docker run --rm --name "$NAME" \
     --user "$(id -u):$(id -g)" \
     -e HOME=/tmp/home -e USER=gf180tcad -e LOGNAME=gf180tcad -e PYTHONPATH=/work/src/src \
     -e OMP_NUM_THREADS=1 -e OPENBLAS_NUM_THREADS=1 -e MKL_NUM_THREADS=1 \
+    -e "NPY_DISABLE_CPU_FEATURES=$NPY_BASELINE_ONLY" \
     -e GF180TCAD_IN_SANDBOX=1 \
     -v "$REPO:/work/src:ro" -v "$WORKDIR:/work/out:rw" --workdir /work/out \
     "$IMAGE" \
