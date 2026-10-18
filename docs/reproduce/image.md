@@ -63,3 +63,85 @@ Pull requests push the tag `pr-<number>`, `main` pushes `latest` and
 `sha-<commit>` ([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions));
 the weekly and manual runs only rebuild and verify. Cross-host byte-identity of the results
 is described in {ref}`cross-host-determinism`.
+
+(tcad-image)=
+
+## TCAD image
+
+{term}`TCAD` {term}`jobs <job>` run in a second image,
+[`ghcr.io/mithro/gf180-tcad-tcad`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-tcad),
+built from {repo}`docker/tcad/` **on top of the pinned base image**: its `FROM` is the
+reference in {repo}`docker/IMAGE` ({repo}`docker/tcad/build` passes it as `BASE_IMAGE`).
+{term}`SPICE` jobs keep using the base image, so the committed SPICE reference does not depend
+on it.
+
+It adds a {{ uv }}-managed {{ Python }} 3.13, pinned to an exact patch release (uv checks the
+download against the sha256 it embeds for that version), and a venv at `/opt/gf180tcad-tcad`,
+first on `PATH`. The venv holds {{ DEVSIM }}, {{ meshwell }}, {{ gmsh }}, {{ gdsfactory }}, the
+{{ gf180mcu_gdsfactory }}, {{ scipy }}, {{ pytest }} and the runtime dependencies of
+{{ gplugins }}. Python 3.13 is needed because meshwell ≥ 2.4 requires it; the base venv is 3.12.
+
+- **gplugins is not installed.** A `gf180tcad-gplugins.pth` file in the venv puts
+  `/work/src/third_party/gplugins` (the submodule, mounted read-only with the repository) on
+  `sys.path`. A pure-code plugin change therefore needs no image rebuild; a plugin change that
+  adds a dependency does.
+- **Environment.** `PDK=gf180mcu`: gdsfactory imports `$PDK` as a module and activates it, so
+  the base value (`gf180mcuD`, the {{ open_pdks }} variant) would break it. The open_pdks files
+  are still read from `$PDK_ROOT/gf180mcuD`. `PYTHON_CPU_COUNT=1` makes `os.cpu_count()` return 1,
+  so meshwell's `n_threads=cpu_count()` defaults keep gmsh single-threaded. The rest of the
+  environment (thread variables, `DEVSIM_MATH_LIBS`, `OPENBLAS_CORETYPE`, …) is inherited from
+  the base image.
+- **Locks.** The package set is a non-package uv project, {repo}`docker/tcad/pyproject.toml`,
+  with its own {repo}`docker/tcad/uv.lock` (which records `exclude-newer`).
+  {repo}`docker/tcad/requirements.lock` is its hashed export,
+  `uv export --project docker/tcad --locked --no-emit-project --format requirements-txt --hashes`.
+  The gf180mcu package pins `gdsfactory~=9.40`, so it is installed `--no-deps` from its own
+  lock, {repo}`docker/tcad/gf180mcu.lock`. uv, and setuptools (the hash-checked build constraint
+  for the sdist-only `rectpack`), come from {repo}`docker/tcad/build-requirements.lock`. Both are
+  [`uv pip compile`](https://docs.astral.sh/uv/reference/cli/#uv-pip-compile) `--no-deps`
+  `--generate-hashes` outputs whose header records the whole command, including
+  `--exclude-newer`, so re-running it reproduces them. {repo}`tests/test_tcad_lock.py` checks all
+  three, and that {{ numpy }} equals the base lock's numpy.
+- **Pins and provenance.** {repo}`docker/TCAD_IMAGE` holds the reference with the {term}`manifest digest`,
+  {repo}`docker/tcad/IMAGE_ID` the config digest and {repo}`docker/tcad/versions.json` the output
+  of {repo}`docker/tcad/probe_versions.py` run in the image. {repo}`tests/test_tcad_image.py`
+  checks the image itself (its tests run in the {term}`sandbox`).
+
+Run a command in it with
+
+```
+tools/sandbox-run --image "$(cat docker/TCAD_IMAGE)" --workdir DIR -- python3 ...
+```
+
+or {py:func}`gf180tcad.sandbox.run` with `image=`.
+
+### Rebuild and verify the TCAD image
+
+```
+docker/tcad/build --no-cache
+```
+
+works like the base build ({ref}`image-rebuild`). Its `SOURCE_DATE_EPOCH` inputs are the
+Dockerfile, the three lock files and {repo}`docker/IMAGE`: the base digest is the `FROM`, so it
+dates the build. The `image` workflow is a matrix over `{base, tcad}`. Each image has its own
+build, `IMAGE_ID`, pinned-manifest and versions-probe checks and its own from-scratch rebuild
+job. The TCAD entry pulls the public base image by digest, so scheduled runs need no login.
+
+### Package visibility
+
+New packages on the {{ ghcr }} are private. After the first push of a new package, make it
+public, so that the fork CI and the GitHub cross-check can pull it without credentials: on the
+[package settings page](https://github.com/users/mithro/packages/container/gf180-tcad-tcad/settings),
+choose *Change visibility → Public*. Then check the pull with no registry credentials:
+
+```
+DOCKER_CONFIG="$(mktemp -d)" docker pull "$(cat docker/TCAD_IMAGE)"
+```
+
+### Changing the base image
+
+The TCAD image, its digests and every TCAD result depend on {repo}`docker/IMAGE`. A pull request
+that changes the base image updates {repo}`docker/IMAGE` first; the TCAD entry of the `image`
+workflow then fails its digest checks, which is expected. A follow-up pull request rebuilds the
+TCAD image, commits the new {repo}`docker/tcad/IMAGE_ID`, {repo}`docker/TCAD_IMAGE` and
+{repo}`docker/tcad/versions.json`, and regenerates the TCAD results.
