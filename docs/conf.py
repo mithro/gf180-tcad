@@ -147,6 +147,9 @@ linkcheck_ignore = [
     # but 200 elsewhere; both were fetched when they were added.
     r"https://www\.semiconductors\.org/",
     r"https://semimod\.de/",
+    # onlinelibrary.wiley.com (where doi:10.1002/0470068329, Sze & Ng, resolves) answers 403 to
+    # GitHub-hosted runners; the DOI was checked against its Crossref record when it was added.
+    r"https://doi\.org/10\.1002/0470068329",
 ]
 # ngspice.sourceforge.io answers 403 to Sphinx's default browser-like user agent, 200 to this.
 user_agent = "gf180-tcad-linkcheck (Sphinx; https://github.com/mithro/gf180-tcad)"
