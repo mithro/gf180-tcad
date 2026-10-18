@@ -258,6 +258,17 @@ def test_doc_quotes_the_record():
     page = (REPO / "docs" / "limitations" / "plugin-history.md").read_text(encoding="utf-8")
     full, half = _load("v0.8.0.json"), _load("v0.8.0-mesh0p5.json")
     w0, w1 = (b["depletion_width_um"] for b in full["pin"]["bias"])
-    assert f"{w0:.3g} µm at 0 V and {w1:.3g} µm at −1 V" in page
-    assert f"has {full['ddcomponent']['node_count']} mesh nodes" in page
-    assert f"gives {half['ddcomponent']['node_count']} nodes" in page
+    assert f"| {w0:.3g} / {w1:.3g} µm |" in page
+    cells = []
+    for d in (full, half):
+        dd = d["ddcomponent"]
+        eq, steps = dd["equilibrium"], [dd["equilibrium"], *dd["bias"]]
+        cells += [
+            f"{eq['builtin_potential_v']:.4f} V",
+            f"{eq['depletion_width_um']:.3g} µm",
+            f"| {dd['node_count']} |" if d is full else f"| {dd['node_count']} |\n",
+            " / ".join(f"{s['anode_minus_cathode_v']:.4f}" for s in steps) + " V",
+            " / ".join(f"{s['potential_span_v']:.4f}" for s in steps) + " V",
+        ]
+    for cell in cells:
+        assert cell in page, cell
