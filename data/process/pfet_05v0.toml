@@ -46,7 +46,7 @@ start_kind = "card"
 fixed = false
 role = "tunable"
 bounds = [6.784667224101955e16, 3.4e17]
-bounds_source = "lower: 0.5 x the doping K1 implies, (K1*Cox(TOXE))^2/(2*q*eps_si*eps0), from K1 (sm141064.ngspice:38162) and TOXE (sm141064.ngspice:38255) with the BSIM4 K1 definition (https://bsim.berkeley.edu/models/bsim4/). upper: 2 x NDEP; the factor of 2 is a project choice, as no public channel profile exists."
+bounds_source = "lower: 0.5 x the doping K1 implies, (K1*Cox(TOXE))^2/(2*q*eps_si*eps0), from K1 (sm141064.ngspice:38162) and TOXE (sm141064.ngspice:38255) with the BSIM4 K1 definition (https://bsim.berkeley.edu/models/bsim4/). The factor 0.5 is a project choice: a margin because K1 equals the body factor gamma1 only when K2 = 0, and the card has K2 = 8.936e-3 (sm141064.ngspice:38163). upper: 2 x NDEP; the factor of 2 is a project choice, as no public channel profile exists."
 bounds_kind = ["project-choice", "project-choice"]
 note = "Uniform n-body (n-well) doping of the MOS capacitor. Starts at NDEP."
 
@@ -113,6 +113,17 @@ role = "bound-basis"
 card_key = "k1"
 card_line = 38162
 note = "K1, first-order body-effect coefficient: gives the n_ch_cm3 lower bound."
+
+[param.k2_v]
+value = 8.936e-3
+unit = "1"
+provenance = "spice-card"
+source = "sm141064.ngspice:38163"
+fixed = true
+role = "bound-basis"
+card_key = "k2"
+card_line = 38163
+note = "K2, second-order body-effect coefficient. It is not zero, so K1 is only approximately the body factor gamma1 = sqrt(2*q*eps_si*N)/Cox: the reason for the 0.5 margin on the n_ch_cm3 lower bound."
 
 [param.vth0_v]
 value = -0.8978

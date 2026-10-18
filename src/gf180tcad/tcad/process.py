@@ -113,10 +113,23 @@ _PROJECT_CHOICE = "project choice"
 class Constants:
     """Physical constants of the plan's constants table (no DEVSIM ``simple_physics`` default).
 
-    ``q_c`` and ``k_b_j_per_k`` are exact SI; ``eps0_f_per_cm`` is CODATA 2018; ``eps_si`` is
-    Sze & Ng, *Physics of Semiconductor Devices*, 3rd ed., Appendix
-    (https://doi.org/10.1002/0470068329), equal to the BSIM4 EPSRSUB default; ``t_k`` is the
-    card's TNOM of 25 °C.
+    This is the one table of TCAD constants; later tasks take theirs from here.
+
+    - ``q_c`` and ``k_b_j_per_k``: exact SI. ``eps0_f_per_cm``: CODATA 2018.
+    - ``eps_si``: Sze & Ng, *Physics of Semiconductor Devices*, 3rd ed., Appendix
+      (https://doi.org/10.1002/0470068329), equal to the BSIM4 EPSRSUB default.
+    - ``t_k``: the card's TNOM of 25 °C.
+    - ``n_i300_cm3``: n_i at 300 K, Altermatt et al., J. Appl. Phys. 93, 1598 (2003)
+      (https://doi.org/10.1063/1.1529297). :attr:`n_i_cm3` scales it to ``t_k`` with the
+      Misiakos & Tsamakis T-dependence, J. Appl. Phys. 74, 3293 (1993)
+      (https://doi.org/10.1063/1.354551): (T/300)^2.54·exp(−6726 K·(1/T − 1/300 K)), which
+      gives 8.266e9 cm⁻³ at 298.15 K.
+    - ``mu_n_cm2_per_vs``, ``mu_p_cm2_per_vs``: constant mobilities, the µ_max of Masetti et
+      al., IEEE TED 30, 764 (1983) (https://doi.org/10.1109/T-ED.1983.21207); no field or
+      doping dependence in Phase 2.
+    - ``tau_n_s``, ``tau_p_s``: SRH lifetimes with a midgap trap, from Sze & Ng ch. 1 (SRH
+      recombination; the page number is unverified, to be quoted by Task 6). Quasi-static
+      C–V does not depend on them.
     """
 
     q_c: float = 1.602176634e-19
@@ -124,11 +137,22 @@ class Constants:
     eps0_f_per_cm: float = 8.8541878128e-14
     eps_si: float = 11.7
     t_k: float = 298.15
+    n_i300_cm3: float = 9.65e9
+    mu_n_cm2_per_vs: float = 1417.0
+    mu_p_cm2_per_vs: float = 470.5
+    tau_n_s: float = 1e-5
+    tau_p_s: float = 1e-5
 
     @property
     def vt_v(self) -> float:
         """Thermal voltage k_B·T/q (V)."""
         return self.k_b_j_per_k * self.t_k / self.q_c
+
+    @property
+    def n_i_cm3(self) -> float:
+        """Intrinsic density at ``t_k`` (cm⁻³), Misiakos & Tsamakis scaling of ``n_i300_cm3``."""
+        t = self.t_k
+        return self.n_i300_cm3 * (t / 300.0) ** 2.54 * math.exp(-6726.0 * (1 / t - 1 / 300.0))
 
 
 # The constants used by every TCAD calculation.
@@ -544,11 +568,13 @@ def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
 # --- the BSIM4 charge-thickness model (CTM) --------------------------------------------------
 #
 # Equation numbers are those of the BSIM4.5.0 MOSFET Model User's Manual (UC Berkeley, in
-# BSIM4_450_URL, doc/BSIM450_Manu.tar), with two places where the manual's text and its own
-# reference code (src/b4temp.c, src/b4ld.c of the same release) differ settled by the code:
+# BSIM4_450_URL, doc/BSIM450_Manu.tar), with three places where the manual's text and its own
+# reference code (src/b4temp.c, src/b4ld.c of the same release, which ngspice runs) differ
+# settled by the code:
 #   - eq. (7.3.2) prints VFBeff in the exponent; b4ld.c uses Vfbzb. VFBeff equals Vgb
 #     throughout accumulation (eq. 7.2.13), which would make X_DC bias independent there.
 #   - "Ldebye" is not defined in the manual; b4temp.c:1111 uses sqrt(εsi·vt/(q·NDEP)).
+#   - the manual gives δx = 1e-3·TOXE; b4ld.c uses LINK = 1e-3·TOXP.
 
 
 def bsim4_ni_cm3(c: Constants = CONSTANTS) -> float:
@@ -584,14 +610,15 @@ def ctm_x_dc_acc_m(vg: float, cv: Mapping[str, float], c: Constants = CONSTANTS)
 
     Eqs. (7.3.2) and (7.3.3): X_DC = Ldebye/3·exp(ACDE·(NDEP/2e16)^−0.25·E), with E the
     field (type·vg − Vfbzb)/TOXP in MV/cm, smoothed to stay below Xmax = Ldebye/3 with
-    δx = 1e-3·TOXE. The gate bias is used for Vgse (no poly depletion: an upper bound).
+    δx = LINK = 1e-3·TOXP (b4ld.c; the manual's text says TOXE). The gate bias is used for
+    Vgse (no poly depletion: an upper bound).
     """
     eps_si_f_per_m = c.eps_si * c.eps0_f_per_cm * 100
     ldebye = math.sqrt(eps_si_f_per_m * c.vt_v / (c.q_c * cv["ndep"] * 1e6))
     x_max = ldebye / 3
     field_mv_per_cm = (cv["type"] * vg - bsim4_vfbzb_v(cv, c)) / (cv["toxp"] * 1e8)
     x_dc = x_max * math.exp(cv["acde"] * (cv["ndep"] / 2e16) ** -0.25 * field_mv_per_cm)
-    dx = 1e-3 * cv["toxe"]
+    dx = 1e-3 * cv["toxp"]
     x0 = x_max - x_dc - dx
     return x_max - 0.5 * (x0 + math.sqrt(x0 * x0 + 4 * dx * x_max))
 
