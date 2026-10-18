@@ -1,0 +1,37 @@
+{
+  "generator_sha256": "f7aa3188c9e565eb7fb8dda263cbc69716390f37fd8d1fb5ae186caf46a41c62",
+  "image": "ghcr.io/mithro/gf180-tcad-base@sha256:aedc07956fa71f33094decf80828a13e75ace36cb2426f720b0817aa9aca99b6",
+  "image_versions": {
+    "base_image": "hpretl/iic-osic-tools@sha256:306585de35d198e70ea58950f77147c86f56c698726a19afea9f1c83009557be",
+    "design_ngspice_sha256": "7e222f050318388f37543a64fbd0be55cc15e4b93f57501a09f7c159c4c9e561",
+    "devsim": "2.11.0",
+    "gdsfactory": "9.51.0",
+    "gf180mcu_variant": "gf180mcuD",
+    "klayout": "0.30.12",
+    "klayout_python": "0.30.12",
+    "ngspice": "47",
+    "open_pdks_commit": "1689ac3f2dc763876eaf967227c7dfe831b031ae",
+    "pdk_root": "/foss/pdks",
+    "python": "3.12.3",
+    "sm141064_ngspice_sha256": "69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8",
+    "sm141064_xyce_sha256": "d3fba5094b1d5e841938b7eeb15645990caa166a47014dbac765639ad45821bb",
+    "xyce": "7.10-opensource",
+    "xyce_parallel": "mpi-capable, run single-process"
+  },
+  "pdk": {
+    "ciel_data_source": "static-web:https://fossi-foundation.github.io/ciel-releases",
+    "ciel_libraries": [
+      "gf180mcu_fd_pr"
+    ],
+    "ciel_pdk_family": "gf180mcu",
+    "design_ngspice_sha256": "7e222f050318388f37543a64fbd0be55cc15e4b93f57501a09f7c159c4c9e561",
+    "gf180mcu_fd_pr_commit": "b6866b82e2bd560a29f3576c19106ff7b8b41b10",
+    "gf180mcu_variant": "gf180mcuD",
+    "open_pdks_commit": "d658698bd8bcf4e05fc7b5991a701247ba0d744c",
+    "open_pdks_version": "1.0.604",
+    "sm141064_ngspice_sha256": "f6f4a96e18fc5ad11270ad3451aaecc7ac37fc81eb61e15b0d7d94c7bc594a24",
+    "sm141064_xyce_sha256": "ec0c2c77ac564eaad59058008c9ceafe14e450c4dde107859ebfcd5c54cfbce1"
+  },
+  "pdk_pins_sha256": "64c5e6c93fdfba7ac037e283e9a544cc017cff65ae7e5fd4cb9da6e5dd7e1ef4",
+  "pdkdiff_sha256": "487438f71836a4cbeb73a318e124728c95113706cdb06c1bd97e46b809cd71d9"
+}

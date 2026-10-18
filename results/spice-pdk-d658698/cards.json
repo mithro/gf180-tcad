@@ -1,0 +1,1297 @@
+{
+  "files": {
+    "gf180mcuD/.config/nodeinfo.json": {
+      "a": "460e142642be1745293ba3fa3e93142468bb01bb2e2ac79fbdd9f7621ec8c57b",
+      "b": "0ea0c472252bf04c5979204ef689cf66353a59d79d7ddab343e1d2da4b4a24e9",
+      "same": false
+    },
+    "gf180mcuD/libs.tech/ngspice/design.ngspice": {
+      "a": "7e222f050318388f37543a64fbd0be55cc15e4b93f57501a09f7c159c4c9e561",
+      "b": "7e222f050318388f37543a64fbd0be55cc15e4b93f57501a09f7c159c4c9e561",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/ngspice/design.spice": {
+      "a": "7e222f050318388f37543a64fbd0be55cc15e4b93f57501a09f7c159c4c9e561",
+      "b": "7e222f050318388f37543a64fbd0be55cc15e4b93f57501a09f7c159c4c9e561",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/ngspice/sm141064.ngspice": {
+      "a": "f6f4a96e18fc5ad11270ad3451aaecc7ac37fc81eb61e15b0d7d94c7bc594a24",
+      "b": "69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8",
+      "same": false
+    },
+    "gf180mcuD/libs.tech/ngspice/sm141064.spice": {
+      "a": "f6f4a96e18fc5ad11270ad3451aaecc7ac37fc81eb61e15b0d7d94c7bc594a24",
+      "b": "69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8",
+      "same": false
+    },
+    "gf180mcuD/libs.tech/ngspice/sm141064_mim.ngspice": {
+      "a": "9b85cd009968d9aeb6b61046b24a63f39d6a463c4e4aee3949c8fd183c06666f",
+      "b": "9b85cd009968d9aeb6b61046b24a63f39d6a463c4e4aee3949c8fd183c06666f",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/ngspice/sm141064_mim.spice": {
+      "a": "9b85cd009968d9aeb6b61046b24a63f39d6a463c4e4aee3949c8fd183c06666f",
+      "b": "9b85cd009968d9aeb6b61046b24a63f39d6a463c4e4aee3949c8fd183c06666f",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/ngspice/smbb000149.ngspice": {
+      "a": "8a8d44d5f13d4a097e86fab598e97e82bb726af1cc01eb6d500739766dfd9363",
+      "b": "8a8d44d5f13d4a097e86fab598e97e82bb726af1cc01eb6d500739766dfd9363",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/ngspice/smbb000149.spice": {
+      "a": "8a8d44d5f13d4a097e86fab598e97e82bb726af1cc01eb6d500739766dfd9363",
+      "b": "8a8d44d5f13d4a097e86fab598e97e82bb726af1cc01eb6d500739766dfd9363",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/xyce/design.spice": {
+      "a": "173621af70f65ece0cef9c8d51f1ebdabaf762db5ef1592f86ab4fb0d50bbd0b",
+      "b": "173621af70f65ece0cef9c8d51f1ebdabaf762db5ef1592f86ab4fb0d50bbd0b",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/xyce/design.xyce": {
+      "a": "173621af70f65ece0cef9c8d51f1ebdabaf762db5ef1592f86ab4fb0d50bbd0b",
+      "b": "173621af70f65ece0cef9c8d51f1ebdabaf762db5ef1592f86ab4fb0d50bbd0b",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/xyce/sm141064.spice": {
+      "a": "ec0c2c77ac564eaad59058008c9ceafe14e450c4dde107859ebfcd5c54cfbce1",
+      "b": "d3fba5094b1d5e841938b7eeb15645990caa166a47014dbac765639ad45821bb",
+      "same": false
+    },
+    "gf180mcuD/libs.tech/xyce/sm141064.xyce": {
+      "a": "ec0c2c77ac564eaad59058008c9ceafe14e450c4dde107859ebfcd5c54cfbce1",
+      "b": "d3fba5094b1d5e841938b7eeb15645990caa166a47014dbac765639ad45821bb",
+      "same": false
+    },
+    "gf180mcuD/libs.tech/xyce/sm141064_mim.spice": {
+      "a": "0f8754ddf38c5117351cd53811b80aa1078d9f4c3da2f4f64e8d524337c99664",
+      "b": "0f8754ddf38c5117351cd53811b80aa1078d9f4c3da2f4f64e8d524337c99664",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/xyce/sm141064_mim.xyce": {
+      "a": "0f8754ddf38c5117351cd53811b80aa1078d9f4c3da2f4f64e8d524337c99664",
+      "b": "0f8754ddf38c5117351cd53811b80aa1078d9f4c3da2f4f64e8d524337c99664",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/xyce/smbb000149.spice": {
+      "a": "5fe1aaaf991798f8542e1c42472379afdb118b39050b7a366579ccaffe144225",
+      "b": "5fe1aaaf991798f8542e1c42472379afdb118b39050b7a366579ccaffe144225",
+      "same": true
+    },
+    "gf180mcuD/libs.tech/xyce/smbb000149.xyce": {
+      "a": "5fe1aaaf991798f8542e1c42472379afdb118b39050b7a366579ccaffe144225",
+      "b": "5fe1aaaf991798f8542e1c42472379afdb118b39050b7a366579ccaffe144225",
+      "same": true
+    }
+  },
+  "libraries": {
+    "sm141064.ngspice": {
+      "changed": [
+        "res"
+      ],
+      "only_in_a": [],
+      "only_in_b": [],
+      "same": 49
+    },
+    "sm141064.xyce": {
+      "changed": [
+        "res"
+      ],
+      "only_in_a": [],
+      "only_in_b": [],
+      "same": 49
+    }
+  },
+  "models": {
+    "nfet_06v0.0": {
+      "acde": {
+        "a": {
+          "expr": "0.3",
+          "line": 37059,
+          "tt": 0.3
+        },
+        "b": {
+          "expr": "0.3",
+          "line": 37059,
+          "tt": 0.3
+        },
+        "same": true
+      },
+      "alpha0": {
+        "a": {
+          "expr": "-1.88e-007",
+          "line": 37067,
+          "tt": -1.88e-07
+        },
+        "b": {
+          "expr": "-1.88e-007",
+          "line": 37067,
+          "tt": -1.88e-07
+        },
+        "same": true
+      },
+      "beta0": {
+        "a": {
+          "expr": "36.6",
+          "line": 37072,
+          "tt": 36.6
+        },
+        "b": {
+          "expr": "36.6",
+          "line": 37072,
+          "tt": 36.6
+        },
+        "same": true
+      },
+      "capmod": {
+        "a": {
+          "expr": "2",
+          "line": 37080,
+          "tt": 2.0
+        },
+        "b": {
+          "expr": "2",
+          "line": 37080,
+          "tt": 2.0
+        },
+        "same": true
+      },
+      "cgdl": {
+        "a": {
+          "expr": "1.5e-010*nfet_06v0_cgdo",
+          "line": 37085,
+          "tt": 1.5e-10
+        },
+        "b": {
+          "expr": "1.5e-010*nfet_06v0_cgdo",
+          "line": 37085,
+          "tt": 1.5e-10
+        },
+        "same": true
+      },
+      "cgdo": {
+        "a": {
+          "expr": "1e-010*nfet_06v0_cgdo",
+          "line": 37086,
+          "tt": 1e-10
+        },
+        "b": {
+          "expr": "1e-010*nfet_06v0_cgdo",
+          "line": 37086,
+          "tt": 1e-10
+        },
+        "same": true
+      },
+      "cgsl": {
+        "a": {
+          "expr": "1.5e-010*nfet_06v0_cgso",
+          "line": 37088,
+          "tt": 1.5e-10
+        },
+        "b": {
+          "expr": "1.5e-010*nfet_06v0_cgso",
+          "line": 37088,
+          "tt": 1.5e-10
+        },
+        "same": true
+      },
+      "cgso": {
+        "a": {
+          "expr": "1e-010*nfet_06v0_cgso",
+          "line": 37089,
+          "tt": 1e-10
+        },
+        "b": {
+          "expr": "1e-010*nfet_06v0_cgso",
+          "line": 37089,
+          "tt": 1e-10
+        },
+        "same": true
+      },
+      "dlc": {
+        "a": {
+          "expr": "5.4e-8",
+          "line": 37104,
+          "tt": 5.4e-08
+        },
+        "b": {
+          "expr": "5.4e-8",
+          "line": 37104,
+          "tt": 5.4e-08
+        },
+        "same": true
+      },
+      "epsrox": {
+        "a": {
+          "expr": "3.9",
+          "line": 37126,
+          "tt": 3.9
+        },
+        "b": {
+          "expr": "3.9",
+          "line": 37126,
+          "tt": 3.9
+        },
+        "same": true
+      },
+      "igbmod": {
+        "a": {
+          "expr": "0",
+          "line": 37134,
+          "tt": 0.0
+        },
+        "b": {
+          "expr": "0",
+          "line": 37134,
+          "tt": 0.0
+        },
+        "same": true
+      },
+      "igcmod": {
+        "a": {
+          "expr": "0",
+          "line": 37135,
+          "tt": 0.0
+        },
+        "b": {
+          "expr": "0",
+          "line": 37135,
+          "tt": 0.0
+        },
+        "same": true
+      },
+      "k1": {
+        "a": {
+          "expr": "0.9",
+          "line": 37147,
+          "tt": 0.9
+        },
+        "b": {
+          "expr": "0.9",
+          "line": 37147,
+          "tt": 0.9
+        },
+        "same": true
+      },
+      "k2": {
+        "a": {
+          "expr": "-0.001",
+          "line": 37148,
+          "tt": -0.001
+        },
+        "b": {
+          "expr": "-0.001",
+          "line": 37148,
+          "tt": -0.001
+        },
+        "same": true
+      },
+      "lmax": {
+        "a": {
+          "expr": "5.0001e-005",
+          "line": 37176,
+          "tt": 5.0001e-05
+        },
+        "b": {
+          "expr": "5.0001e-005",
+          "line": 37176,
+          "tt": 5.0001e-05
+        },
+        "same": true
+      },
+      "lmin": {
+        "a": {
+          "expr": "7e-007",
+          "line": 37177,
+          "tt": 7e-07
+        },
+        "b": {
+          "expr": "7e-007",
+          "line": 37177,
+          "tt": 7e-07
+        },
+        "same": true
+      },
+      "lpe0": {
+        "a": {
+          "expr": "1.63e-007",
+          "line": 37182,
+          "tt": 1.63e-07
+        },
+        "b": {
+          "expr": "1.63e-007",
+          "line": 37182,
+          "tt": 1.63e-07
+        },
+        "same": true
+      },
+      "moin": {
+        "a": {
+          "expr": "15",
+          "line": 37201,
+          "tt": 15.0
+        },
+        "b": {
+          "expr": "15",
+          "line": 37201,
+          "tt": 15.0
+        },
+        "same": true
+      },
+      "ndep": {
+        "a": {
+          "expr": "1.7e+017",
+          "line": 37202,
+          "tt": 1.7e+17
+        },
+        "b": {
+          "expr": "1.7e+017",
+          "line": 37202,
+          "tt": 1.7e+17
+        },
+        "same": true
+      },
+      "ngate": {
+        "a": {
+          "expr": "1e+020",
+          "line": 37204,
+          "tt": 1e+20
+        },
+        "b": {
+          "expr": "1e+020",
+          "line": 37204,
+          "tt": 1e+20
+        },
+        "same": true
+      },
+      "nsd": {
+        "a": {
+          "expr": "1e+020",
+          "line": 37217,
+          "tt": 1e+20
+        },
+        "b": {
+          "expr": "1e+020",
+          "line": 37217,
+          "tt": 1e+20
+        },
+        "same": true
+      },
+      "rdsw": {
+        "a": {
+          "expr": "2175",
+          "line": 37284,
+          "tt": 2175.0
+        },
+        "b": {
+          "expr": "2175",
+          "line": 37284,
+          "tt": 2175.0
+        },
+        "same": true
+      },
+      "tnom": {
+        "a": {
+          "expr": "25",
+          "line": 37308,
+          "tt": 25.0
+        },
+        "b": {
+          "expr": "25",
+          "line": 37308,
+          "tt": 25.0
+        },
+        "same": true
+      },
+      "toxe": {
+        "a": {
+          "expr": "1.52e-008+nfet_06v0_tox",
+          "line": 37309,
+          "tt": 1.52e-08
+        },
+        "b": {
+          "expr": "1.52e-008+nfet_06v0_tox",
+          "line": 37309,
+          "tt": 1.52e-08
+        },
+        "same": true
+      },
+      "toxp": {
+        "a": {
+          "expr": "1.6e-008+nfet_06v0_tox",
+          "line": 37311,
+          "tt": 1.6e-08
+        },
+        "b": {
+          "expr": "1.6e-008+nfet_06v0_tox",
+          "line": 37311,
+          "tt": 1.6e-08
+        },
+        "same": true
+      },
+      "u0": {
+        "a": {
+          "expr": "0.052500014",
+          "line": 37319,
+          "tt": 0.052500014
+        },
+        "b": {
+          "expr": "0.052500014",
+          "line": 37319,
+          "tt": 0.052500014
+        },
+        "same": true
+      },
+      "vsat": {
+        "a": {
+          "expr": "103999.98*nfet_06v0_vsat",
+          "line": 37336,
+          "tt": 103999.98
+        },
+        "b": {
+          "expr": "103999.98*nfet_06v0_vsat",
+          "line": 37336,
+          "tt": 103999.98
+        },
+        "same": true
+      },
+      "vth0": {
+        "a": {
+          "expr": "0.67314+nfet_06v0_vth0",
+          "line": 37337,
+          "tt": 0.67314
+        },
+        "b": {
+          "expr": "0.67314+nfet_06v0_vth0",
+          "line": 37337,
+          "tt": 0.67314
+        },
+        "same": true
+      },
+      "xj": {
+        "a": {
+          "expr": "1.5e-007",
+          "line": 37377,
+          "tt": 1.5e-07
+        },
+        "b": {
+          "expr": "1.5e-007",
+          "line": 37377,
+          "tt": 1.5e-07
+        },
+        "same": true
+      }
+    },
+    "nfet_06v0.1": {
+      "acde": {
+        "a": {
+          "expr": "0.3",
+          "line": 37397,
+          "tt": 0.3
+        },
+        "b": {
+          "expr": "0.3",
+          "line": 37397,
+          "tt": 0.3
+        },
+        "same": true
+      },
+      "alpha0": {
+        "a": {
+          "expr": "-1.88e-007",
+          "line": 37405,
+          "tt": -1.88e-07
+        },
+        "b": {
+          "expr": "-1.88e-007",
+          "line": 37405,
+          "tt": -1.88e-07
+        },
+        "same": true
+      },
+      "beta0": {
+        "a": {
+          "expr": "36.6",
+          "line": 37410,
+          "tt": 36.6
+        },
+        "b": {
+          "expr": "36.6",
+          "line": 37410,
+          "tt": 36.6
+        },
+        "same": true
+      },
+      "capmod": {
+        "a": {
+          "expr": "2",
+          "line": 37418,
+          "tt": 2.0
+        },
+        "b": {
+          "expr": "2",
+          "line": 37418,
+          "tt": 2.0
+        },
+        "same": true
+      },
+      "cgdl": {
+        "a": {
+          "expr": "1.5e-010*nfet_06v0_cgdo",
+          "line": 37423,
+          "tt": 1.5e-10
+        },
+        "b": {
+          "expr": "1.5e-010*nfet_06v0_cgdo",
+          "line": 37423,
+          "tt": 1.5e-10
+        },
+        "same": true
+      },
+      "cgdo": {
+        "a": {
+          "expr": "1e-010*nfet_06v0_cgdo",
+          "line": 37424,
+          "tt": 1e-10
+        },
+        "b": {
+          "expr": "1e-010*nfet_06v0_cgdo",
+          "line": 37424,
+          "tt": 1e-10
+        },
+        "same": true
+      },
+      "cgsl": {
+        "a": {
+          "expr": "1.5e-010*nfet_06v0_cgso",
+          "line": 37426,
+          "tt": 1.5e-10
+        },
+        "b": {
+          "expr": "1.5e-010*nfet_06v0_cgso",
+          "line": 37426,
+          "tt": 1.5e-10
+        },
+        "same": true
+      },
+      "cgso": {
+        "a": {
+          "expr": "1e-010*nfet_06v0_cgso",
+          "line": 37427,
+          "tt": 1e-10
+        },
+        "b": {
+          "expr": "1e-010*nfet_06v0_cgso",
+          "line": 37427,
+          "tt": 1e-10
+        },
+        "same": true
+      },
+      "dlc": {
+        "a": {
+          "expr": "5.4e-8",
+          "line": 37442,
+          "tt": 5.4e-08
+        },
+        "b": {
+          "expr": "5.4e-8",
+          "line": 37442,
+          "tt": 5.4e-08
+        },
+        "same": true
+      },
+      "epsrox": {
+        "a": {
+          "expr": "3.9",
+          "line": 37464,
+          "tt": 3.9
+        },
+        "b": {
+          "expr": "3.9",
+          "line": 37464,
+          "tt": 3.9
+        },
+        "same": true
+      },
+      "igbmod": {
+        "a": {
+          "expr": "0",
+          "line": 37472,
+          "tt": 0.0
+        },
+        "b": {
+          "expr": "0",
+          "line": 37472,
+          "tt": 0.0
+        },
+        "same": true
+      },
+      "igcmod": {
+        "a": {
+          "expr": "0",
+          "line": 37473,
+          "tt": 0.0
+        },
+        "b": {
+          "expr": "0",
+          "line": 37473,
+          "tt": 0.0
+        },
+        "same": true
+      },
+      "k1": {
+        "a": {
+          "expr": "0.9",
+          "line": 37485,
+          "tt": 0.9
+        },
+        "b": {
+          "expr": "0.9",
+          "line": 37485,
+          "tt": 0.9
+        },
+        "same": true
+      },
+      "k2": {
+        "a": {
+          "expr": "-0.001",
+          "line": 37486,
+          "tt": -0.001
+        },
+        "b": {
+          "expr": "-0.001",
+          "line": 37486,
+          "tt": -0.001
+        },
+        "same": true
+      },
+      "lmax": {
+        "a": {
+          "expr": "7e-007",
+          "line": 37514,
+          "tt": 7e-07
+        },
+        "b": {
+          "expr": "7e-007",
+          "line": 37514,
+          "tt": 7e-07
+        },
+        "same": true
+      },
+      "lmin": {
+        "a": {
+          "expr": "6e-007",
+          "line": 37515,
+          "tt": 6e-07
+        },
+        "b": {
+          "expr": "6e-007",
+          "line": 37515,
+          "tt": 6e-07
+        },
+        "same": true
+      },
+      "lpe0": {
+        "a": {
+          "expr": "1.63e-007",
+          "line": 37520,
+          "tt": 1.63e-07
+        },
+        "b": {
+          "expr": "1.63e-007",
+          "line": 37520,
+          "tt": 1.63e-07
+        },
+        "same": true
+      },
+      "moin": {
+        "a": {
+          "expr": "15",
+          "line": 37539,
+          "tt": 15.0
+        },
+        "b": {
+          "expr": "15",
+          "line": 37539,
+          "tt": 15.0
+        },
+        "same": true
+      },
+      "ndep": {
+        "a": {
+          "expr": "1.7e+017",
+          "line": 37540,
+          "tt": 1.7e+17
+        },
+        "b": {
+          "expr": "1.7e+017",
+          "line": 37540,
+          "tt": 1.7e+17
+        },
+        "same": true
+      },
+      "ngate": {
+        "a": {
+          "expr": "1e+020",
+          "line": 37542,
+          "tt": 1e+20
+        },
+        "b": {
+          "expr": "1e+020",
+          "line": 37542,
+          "tt": 1e+20
+        },
+        "same": true
+      },
+      "nsd": {
+        "a": {
+          "expr": "1e+020",
+          "line": 37555,
+          "tt": 1e+20
+        },
+        "b": {
+          "expr": "1e+020",
+          "line": 37555,
+          "tt": 1e+20
+        },
+        "same": true
+      },
+      "rdsw": {
+        "a": {
+          "expr": "2175",
+          "line": 37622,
+          "tt": 2175.0
+        },
+        "b": {
+          "expr": "2175",
+          "line": 37622,
+          "tt": 2175.0
+        },
+        "same": true
+      },
+      "tnom": {
+        "a": {
+          "expr": "25",
+          "line": 37646,
+          "tt": 25.0
+        },
+        "b": {
+          "expr": "25",
+          "line": 37646,
+          "tt": 25.0
+        },
+        "same": true
+      },
+      "toxe": {
+        "a": {
+          "expr": "1.52e-008+nfet_06v0_tox",
+          "line": 37647,
+          "tt": 1.52e-08
+        },
+        "b": {
+          "expr": "1.52e-008+nfet_06v0_tox",
+          "line": 37647,
+          "tt": 1.52e-08
+        },
+        "same": true
+      },
+      "toxp": {
+        "a": {
+          "expr": "1.6e-008+nfet_06v0_tox",
+          "line": 37649,
+          "tt": 1.6e-08
+        },
+        "b": {
+          "expr": "1.6e-008+nfet_06v0_tox",
+          "line": 37649,
+          "tt": 1.6e-08
+        },
+        "same": true
+      },
+      "u0": {
+        "a": {
+          "expr": "0.052500361",
+          "line": 37657,
+          "tt": 0.052500361
+        },
+        "b": {
+          "expr": "0.052500361",
+          "line": 37657,
+          "tt": 0.052500361
+        },
+        "same": true
+      },
+      "vsat": {
+        "a": {
+          "expr": "64848.09*nfet_06v0_vsat",
+          "line": 37674,
+          "tt": 64848.09
+        },
+        "b": {
+          "expr": "64848.09*nfet_06v0_vsat",
+          "line": 37674,
+          "tt": 64848.09
+        },
+        "same": true
+      },
+      "vth0": {
+        "a": {
+          "expr": "0.67314+nfet_06v0_vth0",
+          "line": 37675,
+          "tt": 0.67314
+        },
+        "b": {
+          "expr": "0.67314+nfet_06v0_vth0",
+          "line": 37675,
+          "tt": 0.67314
+        },
+        "same": true
+      },
+      "xj": {
+        "a": {
+          "expr": "1.5e-007",
+          "line": 37715,
+          "tt": 1.5e-07
+        },
+        "b": {
+          "expr": "1.5e-007",
+          "line": 37715,
+          "tt": 1.5e-07
+        },
+        "same": true
+      }
+    },
+    "pfet_06v0.0": {
+      "acde": {
+        "a": {
+          "expr": "0.7",
+          "line": 38095,
+          "tt": 0.7
+        },
+        "b": {
+          "expr": "0.7",
+          "line": 38095,
+          "tt": 0.7
+        },
+        "same": true
+      },
+      "alpha0": {
+        "a": {
+          "expr": "9.6e-7",
+          "line": 38099,
+          "tt": 9.6e-07
+        },
+        "b": {
+          "expr": "9.6e-7",
+          "line": 38099,
+          "tt": 9.6e-07
+        },
+        "same": true
+      },
+      "beta0": {
+        "a": {
+          "expr": "50.8",
+          "line": 38104,
+          "tt": 50.8
+        },
+        "b": {
+          "expr": "50.8",
+          "line": 38104,
+          "tt": 50.8
+        },
+        "same": true
+      },
+      "capmod": {
+        "a": {
+          "expr": "2",
+          "line": 38109,
+          "tt": 2.0
+        },
+        "b": {
+          "expr": "2",
+          "line": 38109,
+          "tt": 2.0
+        },
+        "same": true
+      },
+      "cgdl": {
+        "a": {
+          "expr": "5.25e-11*pfet_06v0_dcgdo",
+          "line": 38114,
+          "tt": 5.25e-11
+        },
+        "b": {
+          "expr": "5.25e-11*pfet_06v0_dcgdo",
+          "line": 38114,
+          "tt": 5.25e-11
+        },
+        "same": true
+      },
+      "cgdo": {
+        "a": {
+          "expr": "7.71e-11*pfet_06v0_dcgdo",
+          "line": 38115,
+          "tt": 7.71e-11
+        },
+        "b": {
+          "expr": "7.71e-11*pfet_06v0_dcgdo",
+          "line": 38115,
+          "tt": 7.71e-11
+        },
+        "same": true
+      },
+      "cgsl": {
+        "a": {
+          "expr": "5.25e-11*pfet_06v0_dcgso",
+          "line": 38116,
+          "tt": 5.25e-11
+        },
+        "b": {
+          "expr": "5.25e-11*pfet_06v0_dcgso",
+          "line": 38116,
+          "tt": 5.25e-11
+        },
+        "same": true
+      },
+      "cgso": {
+        "a": {
+          "expr": "7.71e-11*pfet_06v0_dcgso",
+          "line": 38117,
+          "tt": 7.71e-11
+        },
+        "b": {
+          "expr": "7.71e-11*pfet_06v0_dcgso",
+          "line": 38117,
+          "tt": 7.71e-11
+        },
+        "same": true
+      },
+      "dlc": {
+        "a": {
+          "expr": "7.4e-9",
+          "line": 38129,
+          "tt": 7.4e-09
+        },
+        "b": {
+          "expr": "7.4e-9",
+          "line": 38129,
+          "tt": 7.4e-09
+        },
+        "same": true
+      },
+      "epsrox": {
+        "a": {
+          "expr": "3.9",
+          "line": 38144,
+          "tt": 3.9
+        },
+        "b": {
+          "expr": "3.9",
+          "line": 38144,
+          "tt": 3.9
+        },
+        "same": true
+      },
+      "igbmod": {
+        "a": {
+          "expr": "0",
+          "line": 38150,
+          "tt": 0.0
+        },
+        "b": {
+          "expr": "0",
+          "line": 38150,
+          "tt": 0.0
+        },
+        "same": true
+      },
+      "igcmod": {
+        "a": {
+          "expr": "0",
+          "line": 38151,
+          "tt": 0.0
+        },
+        "b": {
+          "expr": "0",
+          "line": 38151,
+          "tt": 0.0
+        },
+        "same": true
+      },
+      "k1": {
+        "a": {
+          "expr": "0.9588",
+          "line": 38162,
+          "tt": 0.9588
+        },
+        "b": {
+          "expr": "0.9588",
+          "line": 38162,
+          "tt": 0.9588
+        },
+        "same": true
+      },
+      "k2": {
+        "a": {
+          "expr": "8.936e-3",
+          "line": 38163,
+          "tt": 0.008936
+        },
+        "b": {
+          "expr": "8.936e-3",
+          "line": 38163,
+          "tt": 0.008936
+        },
+        "same": true
+      },
+      "lmax": {
+        "a": {
+          "expr": "50.01e-6",
+          "line": 38176,
+          "tt": 5.001e-05
+        },
+        "b": {
+          "expr": "50.01e-6",
+          "line": 38176,
+          "tt": 5.001e-05
+        },
+        "same": true
+      },
+      "lmin": {
+        "a": {
+          "expr": "0.5e-6",
+          "line": 38177,
+          "tt": 5e-07
+        },
+        "b": {
+          "expr": "0.5e-6",
+          "line": 38177,
+          "tt": 5e-07
+        },
+        "same": true
+      },
+      "lpe0": {
+        "a": {
+          "expr": "-4.4e-8",
+          "line": 38178,
+          "tt": -4.4e-08
+        },
+        "b": {
+          "expr": "-4.4e-8",
+          "line": 38178,
+          "tt": -4.4e-08
+        },
+        "same": true
+      },
+      "moin": {
+        "a": {
+          "expr": "15",
+          "line": 38197,
+          "tt": 15.0
+        },
+        "b": {
+          "expr": "15",
+          "line": 38197,
+          "tt": 15.0
+        },
+        "same": true
+      },
+      "ndep": {
+        "a": {
+          "expr": "1.7e17",
+          "line": 38198,
+          "tt": 1.7e+17
+        },
+        "b": {
+          "expr": "1.7e17",
+          "line": 38198,
+          "tt": 1.7e+17
+        },
+        "same": true
+      },
+      "ngate": {
+        "a": {
+          "expr": "3.6e19",
+          "line": 38200,
+          "tt": 3.6e+19
+        },
+        "b": {
+          "expr": "3.6e19",
+          "line": 38200,
+          "tt": 3.6e+19
+        },
+        "same": true
+      },
+      "nsd": {
+        "a": {
+          "expr": "6e16",
+          "line": 38207,
+          "tt": 6e+16
+        },
+        "b": {
+          "expr": "6e16",
+          "line": 38207,
+          "tt": 6e+16
+        },
+        "same": true
+      },
+      "rdsw": {
+        "a": {
+          "expr": "1.426e3",
+          "line": 38245,
+          "tt": 1426.0
+        },
+        "b": {
+          "expr": "1.426e3",
+          "line": 38245,
+          "tt": 1426.0
+        },
+        "same": true
+      },
+      "tnom": {
+        "a": {
+          "expr": "25",
+          "line": 38254,
+          "tt": 25.0
+        },
+        "b": {
+          "expr": "25",
+          "line": 38254,
+          "tt": 25.0
+        },
+        "same": true
+      },
+      "toxe": {
+        "a": {
+          "expr": "1.56e-8+pfet_06v0_dtox",
+          "line": 38255,
+          "tt": 1.56e-08
+        },
+        "b": {
+          "expr": "1.56e-8+pfet_06v0_dtox",
+          "line": 38255,
+          "tt": 1.56e-08
+        },
+        "same": true
+      },
+      "toxp": {
+        "a": null,
+        "b": null,
+        "same": true
+      },
+      "u0": {
+        "a": {
+          "expr": "0.0151",
+          "line": 38260,
+          "tt": 0.0151
+        },
+        "b": {
+          "expr": "0.0151",
+          "line": 38260,
+          "tt": 0.0151
+        },
+        "same": true
+      },
+      "vsat": {
+        "a": {
+          "expr": "8.55e4",
+          "line": 38273,
+          "tt": 85500.0
+        },
+        "b": {
+          "expr": "8.55e4",
+          "line": 38273,
+          "tt": 85500.0
+        },
+        "same": true
+      },
+      "vth0": {
+        "a": {
+          "expr": "-0.8978+pfet_06v0_dvth0",
+          "line": 38274,
+          "tt": -0.8978
+        },
+        "b": {
+          "expr": "-0.8978+pfet_06v0_dvth0",
+          "line": 38274,
+          "tt": -0.8978
+        },
+        "same": true
+      },
+      "xj": {
+        "a": {
+          "expr": "1.5e-7",
+          "line": 38291,
+          "tt": 1.5e-07
+        },
+        "b": {
+          "expr": "1.5e-7",
+          "line": 38291,
+          "tt": 1.5e-07
+        },
+        "same": true
+      }
+    }
+  },
+  "subckts": {
+    "nfet_05v0": {
+      "same": true
+    },
+    "pfet_05v0": {
+      "same": true
+    }
+  },
+  "tt_params": {
+    "a": {
+      "nfet_06v0_cgdo": 1.0,
+      "nfet_06v0_cgso": 1.0,
+      "nfet_06v0_nvt_cgdo": 1e-10,
+      "nfet_06v0_nvt_cgso": 1e-10,
+      "nfet_06v0_nvt_tox": 1.52e-08,
+      "nfet_06v0_nvt_u0": 0.070102,
+      "nfet_06v0_nvt_vth0": -0.039,
+      "nfet_06v0_nvt_xl": 0.0,
+      "nfet_06v0_nvt_xw": 0.0,
+      "nfet_06v0_tox": 0.0,
+      "nfet_06v0_vsat": 1.0,
+      "nfet_06v0_vth0": 0.0,
+      "nfet_06v0_xl": 0.0,
+      "nfet_06v0_xw": 0.0,
+      "pfet_06v0_dcgdo": 1.0,
+      "pfet_06v0_dcgso": 1.0,
+      "pfet_06v0_dtox": 0.0,
+      "pfet_06v0_dvth0": 0.0,
+      "pfet_06v0_dxl": 0.0,
+      "pfet_06v0_dxw": 0.0,
+      "rsh_nplus_u_m": 60.0,
+      "rsh_pplus_u_m": 185.0
+    },
+    "b": {
+      "nfet_06v0_cgdo": 1.0,
+      "nfet_06v0_cgso": 1.0,
+      "nfet_06v0_nvt_cgdo": 1e-10,
+      "nfet_06v0_nvt_cgso": 1e-10,
+      "nfet_06v0_nvt_tox": 1.52e-08,
+      "nfet_06v0_nvt_u0": 0.070102,
+      "nfet_06v0_nvt_vth0": -0.039,
+      "nfet_06v0_nvt_xl": 0.0,
+      "nfet_06v0_nvt_xw": 0.0,
+      "nfet_06v0_tox": 0.0,
+      "nfet_06v0_vsat": 1.0,
+      "nfet_06v0_vth0": 0.0,
+      "nfet_06v0_xl": 0.0,
+      "nfet_06v0_xw": 0.0,
+      "pfet_06v0_dcgdo": 1.0,
+      "pfet_06v0_dcgso": 1.0,
+      "pfet_06v0_dtox": 0.0,
+      "pfet_06v0_dvth0": 0.0,
+      "pfet_06v0_dxl": 0.0,
+      "pfet_06v0_dxw": 0.0,
+      "rsh_nplus_u_m": 60.0,
+      "rsh_pplus_u_m": 185.0
+    },
+    "same": true
+  }
+}
