@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Print the spice-reference filter arguments for a subset file, one per line.
 
-    tools/crosscheck-args tests/crosscheck_subset.txt
+    uv run --locked python tools/crosscheck-args tests/crosscheck_subset.txt
 
 Per field of the listed ``<engine>/<corner>/<device>/<geometry_id>`` jobs, the distinct values
 become --engine/--corner/--device/--geometry filters. The filters select a cross product, so
@@ -13,10 +13,8 @@ missed one); tests/test_manifest_subset.py checks that they plan exactly the lis
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from gf180tcad import manifest  # noqa: E402
-from gf180tcad.reference import ENGINES  # noqa: E402
+from gf180tcad import manifest
+from gf180tcad.reference import ENGINES
 
 
 def args(jobs: tuple[str, ...]) -> list[str]:
