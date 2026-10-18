@@ -84,7 +84,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/sbx"
           tools/sandbox-run --mem 4g --cpus 1 --pids 256 --workdir "$RUNNER_TEMP/sbx" -- \
-            sh -c 'cat /proc/self/cgroup; for f in memory.max memory.swap.max pids.max cpu.max; do echo "$f=$(cat /sys/fs/cgroup/$f)"; done; sleep 5' \
+            sh -c 'cat /proc/self/cgroup; for f in memory.max memory.swap.max pids.max cpu.max; do echo "$f=$(cat /sys/fs/cgroup/$f)"; done; python3 -W error -c "import numpy._core._multiarray_umath as m; print(\"numpy dispatch enabled=\" + \",\".join(f for f in m.__cpu_dispatch__ if m.__cpu_features__.get(f)))"; sleep 5' \
             > "$LOGS/sandbox-check.txt" 2>&1 &
           pid=$!
           sleep 3
@@ -104,6 +104,7 @@ jobs:
           check '^memory.swap.max=0$' "$LOGS/sandbox-check.txt" "container may swap"
           check '^pids.max=256$' "$LOGS/sandbox-check.txt" "container pids.max is not 256"
           check '^cpu.max=100000 100000$' "$LOGS/sandbox-check.txt" "container cpu.max is not 1 CPU"
+          check '^numpy dispatch enabled=$' "$LOGS/sandbox-check.txt" "numpy is not on its baseline kernels"
           [ -n "$cg" ] || { echo "::error::gf180-tcad.slice has no cgroup (not active)"; exit 1; }
           check '^slice memory.max=137438953472 memory.swap.max=0 pids.max=32768$' \
             "$LOGS/sandbox-host.txt" "gf180-tcad.slice limits are not applied"
