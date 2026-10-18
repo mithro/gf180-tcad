@@ -425,79 +425,176 @@ The inversion response time with only a body contact is ≈ 2·τ_g·N_A/n_i ≈
   - runs the Task 2 tests;
   - fills in the "Re-verified on latest" section of `docs/limitations/plugin-history.md` with the Task 4 and 5 numbers and tolerances.
 
-### Task 9: process files and 1D MOSCAP (gf180-tcad)
+### Task 9a: process data files and loader (gf180-tcad)
 
-**Context.** These values are taken from the image's card. All are tagged `spice-card` and serve as starting points and bounds, never as fixed truths:
+**Context.** These values are taken from the image's card: `/foss/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice`, sha256 `69a7ab87…de8bc8`, as in `docker/base/versions.json`. nfet values are from `.model nfet_06v0.0` and pfet values from `.model pfet_06v0.0` (l.38091). All are tagged `spice-card` and serve as starting points and bounds, never as fixed truths, except where marked *fixed* below.
 
-| Parameter | nfet | pfet |
-|---|---|---|
-| TOXE | 15.2 nm | 15.6 nm |
-| TOXP | 16.0 nm | — |
-| NDEP | 1.7e17 | 1.7e17 |
-| NGATE | 1e20 | 3.6e19 |
-| XJ | 0.15 µm | — |
-| DLC | 54 nm | 7.4 nm |
-| CGSO/CGDO | 1e-10 F/m | 7.71e-11 F/m |
-| CGSL/CGDL | 1.5e-10 F/m | 5.25e-11 F/m |
+| Parameter | nfet (card line) | pfet (card line) | Use |
+|---|---|---|---|
+| TOXE | 15.2 nm (37309) | 15.6 nm (38255) | `t_ox_eff` lower bound and start |
+| TOXP | 16.0 nm (37311) | none, = TOXE | basis of the `t_ox_eff` upper bound |
+| NDEP | 1.7e17 (37202) | 1.7e17 (38198) | `n_ch` start |
+| K1 | 0.9 (37147) | 0.9588 (38162) | `n_ch` lower bound (below) |
+| NGATE | 1e20 (37204) | 3.6e19 (38200) | poly-gate doping, *fixed* |
+| XJ | 0.15 µm (37377) | 0.15 µm (38291) | S/D depth, 2D |
+| DLC | 54 nm (37104) | 7.4 nm (38129) | 1D area bookkeeping, *fixed* |
+| CGSO=CGDO | 1e-10 F/m (37089) | 7.71e-11 F/m (38117) | 1D parasitics, *fixed* |
+| CGSL=CGDL | 1.5e-10 F/m (37088) | 5.25e-11 F/m (38116) | 1D parasitics, *fixed* |
+| CF | none: BSIM4 default 2·ε_ox/π·ln(1+4e-7/TOXE) ≈ 7.3e-11 F/m | the same | 1D parasitics, *fixed* |
+| TNOM | 25 °C (37308) | 25 °C (38254) | T = 298.15 K |
 
-SPICE W10/L10 TT is the target to match:
-- nfet: 212.26 fF in accumulation, 212.51 fF in inversion, a minimum of 80.14 fF at 0.4 V;
-- pfet: 222.43 / 210.28 fF.
+The *fixed* rows are **reference-model bookkeeping**, tagged `spice-card (reference bookkeeping, fixed)`:
+- They describe how BSIM4 splits the SPICE Cgg into an intrinsic part and extrinsic parts. They are not process data.
+- They apply only to the 1D comparison (Task 12), never to 2D, where S/D geometry gives the overlap physically.
+- They are listed separately and do not count against the 8-parameter budget. The docs state this, with the reason.
 
-**Files:** `data/process/nfet_05v0.yaml`, `data/process/pfet_05v0.yaml` (each value has a provenance tag and source citation, e.g. a card file plus line or a PDK doc URL), `src/gf180tcad/process.py`, `src/gf180tcad/tcad/__init__.py`, `src/gf180tcad/tcad/moscap1d.py`, `tests/tcad/test_process.py`, `tests/tcad/test_moscap1d.py`
+NGATE is a fixed doping input of the poly-gate region; it is not calibrated.
+
+The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. The pfet S/D doping in 2D comes from a cited `literature` value (Task 11).
+
+**Files:** `data/process/nfet_05v0.toml`, `data/process/pfet_05v0.toml`, `src/gf180tcad/tcad/__init__.py` (`TCAD_IMAGE` constant, `provenance()`), `src/gf180tcad/tcad/process.py`, `tests/tcad/test_process.py`
 
 **Interfaces:**
-- Produces: `process.load(device: str) -> ProcessDescription`. It validates the provenance tags and bounds, and every `calibrated` value must lie within its bounds.
-- Produces: `moscap1d.simulate(proc, *, vg, method="qs", mesh: MeshSpec, rel_tol=1e-10) -> CVResult`, scaled to fF using `area_um2 = (L − 2·DLC)·W`. The parasitic overlap and fringe estimate is reported separately and never folded in silently.
-- Produces: CLI `python -m gf180tcad tcad-moscap --device D --dim 1 --out DIR`. It runs in the TCAD image and writes `results/tcad/moscap1d/<device>/<geometry_id>/{cv.csv,meta.json}`.
+- **TOML schema.** Each parameter is a table with these keys:
+  - `value`, `unit`;
+  - `provenance` ∈ {`pdk-doc`, `spice-card`, `literature`, `calibrated`};
+  - `source` (a URL, or `sm141064.ngspice:<line>` plus the card sha256);
+  - `fixed: bool`, and `bounds = [lo, hi]` with `bounds_source` for tunables;
+  - `note`.
+
+  The files are read with stdlib `tomllib`, so no new dependency is needed. These files never hold calibrated values; those live in `results/tcad/calibration/*.json` (Task 12).
+- Produces: `process.load(device: str) -> ProcessDescription`, a frozen dataclass. It validates:
+  - the tags;
+  - that bounds exist for every non-fixed parameter;
+  - lo ≤ start ≤ hi;
+  - that every `source` is a link or a card-line reference.
+
+  `ProcessDescription.with_values(mapping) -> ProcessDescription` returns a copy with tunables replaced. It raises if a value is outside the bounds or names a fixed parameter.
 
 - [ ] **Step 1:** Write the tests first:
-  - unit conversions: Cox(15.2 nm) = 2.272 fF/µm², 224.7 fF for W10/L10;
-  - the depletion-approximation Cmin and flat-band C match the analytic values within 1 % for uniform doping;
-  - two sandbox runs give byte-identical CSVs;
-  - the pfet curve is the polarity mirror of an nfet stack with swapped doping types.
+  - `test_card_values_and_lines`: every card-line citation, re-read from the card in the base image (sandbox-marked), holds the stated value;
+  - `test_bounds_enforced`;
+  - `test_fixed_cannot_change`;
+  - `test_no_calibrated_values_in_data`.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement with a DEVSIM-native 1D mesh (`create_1d_mesh`). Use either a gate offset or a poly region, and record which. Run the tests: they PASS. Then commit, open the PR, get it reviewed, and merge.
+- [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
 
-### Task 10: mesh-convergence tooling, and the C/Cox > 1 artefact
+### Task 9b: 1D MOSCAP and `MeshSpec` (gf180-tcad)
 
-**Context.** In the spike, 2D C/Cox was ≈ 1.004–1.006 at |Vg| = 5 V, which is unphysical, and depletion C moved by 2 % between meshes. Spec §5.2 requires that uniform refinement changes every metric by less than 1 %.
+**Context.**
+- **SPICE targets, W10/L10 TT:**
+  - nfet: 212.26 fF in accumulation, 212.51 fF in inversion, minimum 80.14 fF at 0.4 V;
+  - pfet: 222.43 / 210.28 fF.
+- **Intrinsic per-area C.** The SPICE slope (Cgg(L10) − Cgg(L2))/(8 µm·W) does not depend on DLC or the parasitics. Values from `results/spice/ngspice/typical/*/w10p0_l{10p00,2p00}/metrics.json`:
+  - nfet: 2.106 (acc) / 2.083 (inv) fF/µm²;
+  - pfet: 2.195 / 2.064 fF/µm².
+- **Hand checks:**
+  - Cox(15.2 nm) = 2.2718 fF/µm² (exact ε0);
+  - area (L − 2·DLC)·W = 98.92 µm²;
+  - 224.73 fF for W10/L10.
 
-**Files:** `src/gf180tcad/tcad/meshconv.py`, `tests/tcad/test_meshconv.py`, `results/tcad/meshconv/**`, `docs/limitations/` (page section)
+**Files:** `src/gf180tcad/tcad/mesh.py` (MeshSpec), `src/gf180tcad/tcad/moscap1d.py`, `src/gf180tcad/tcad/__main__.py`, `src/gf180tcad/tcad/analytic.py` (exact Poisson–Boltzmann reference), `tests/tcad/test_mesh.py`, `tests/tcad/test_moscap1d.py`, `tests/tcad/test_analytic.py`
 
 **Interfaces:**
 - Produces: `@dataclass(frozen=True) MeshSpec(h_ox_nm, h_si_surface_nm, h_si_bulk_nm, grading)` and `MeshSpec.scaled(r)`.
-- Produces: `converge(simulate, spec, levels=(1, 2**-0.5, 0.5, 2**-1.5), metric="cgg") -> ConvergenceReport`. The report holds per-level curves, node counts, the max relative change against the next finer level, the Richardson estimate, the observed order, and the selected level, which is the coarsest with < 1 % at every bias.
+  - `grading` is the maximum ratio between neighbouring spacings.
+  - `scaled(r)` multiplies every h by r and keeps `grading` fixed. This is the "uniform refinement" of spec §5.2.
+  - `MeshSpec.to_mesh1d(layers) -> gplugins.devsim.Mesh1D`.
+  - `MeshSpec.to_resolution_specs(...)` gives meshwell `ConstantInField(h_ox)` on the oxide, plus `ThresholdField(sizemin=h_si_surface, sizemax=h_si_bulk, distmax=…)` on the Si/oxide interface curve. It is used in Task 11.
+- Produces: `@dataclass(frozen=True) MoscapCV(device, vg, c_per_area_ff_um2, points, method, constants, mesh)`.
+  - `area_scaled(geometry) -> (vg, cgg_intrinsic_ff, cgg_parasitic_ff, cgg_total_ff)`.
+  - The area is `(L − 2·DLC)·W`, for 1D only. The parasitic term is reported separately and never folded in silently.
+  - The parasitic term is computed with the **exact BSIM4 v4.5 capMod=2 overlap equations** (CGSO, CGSL, CKAPPAS, VFBCV) plus CF, citing the BSIM4 manual section ([BSIM4 manual](https://bsim.berkeley.edu/models/bsim4/)).
+  - It is cross-checked against the SPICE intercept: the L10/L2 fit implies ≈ 4.0 fF at W10 for the nfet, against 3.45–6.45 fF from the card.
+- Produces: `moscap1d.simulate(proc, *, vg, method="qs", mesh: MeshSpec, rel_tol=1e-10) -> MoscapCV`.
+  - It builds with `gplugins.devsim.create_1d_stack`, using an n⁺ (nfet) or p⁺ (pfet) poly-gate region at NGATE, then oxide, then uniform silicon at `n_ch`.
+  - It sweeps with `gplugins.devsim.sweep_cv`.
+  - `CVResult` is converted from F/cm² to fF/µm² (1 F/cm² = 1e7 fF/µm², one helper, unit-tested).
+- Produces: `analytic.lf_cv_uniform(n_cm3, t_ox_nm, gate_doping, vg, constants) -> c_per_area`. It is the exact 1D Poisson–Boltzmann low-frequency C–V, built from the semiconductor charge function Q_s(ψ_s) (Sze & Ng, *Physics of Semiconductor Devices*, 3rd ed., ch. 4, [doi:10.1002/0470068329](https://doi.org/10.1002/0470068329)), solved to 1e-12. Poly depletion is included by applying the same charge function to the gate.
+- Produces: CLI `python -m gf180tcad.tcad moscap --device D --dim 1 --out DIR` (host), and `moscap-job` (in the image). It writes:
+  - `results/tcad/moscap1d/<device>/per_area.csv` (vg, c_per_area, rel_error, iterations);
+  - `per_area.meta.json`;
+  - `provenance.json`.
+
+  Per-geometry values are derived from `per_area.csv` by `area_scaled`; they are not separate simulations. Runs with the spice-card start values are written under `results/tcad/moscap1d/<device>/start/`, so they are never mistaken for calibrated results.
 
 - [ ] **Step 1:** Write the tests first:
-  - on a uniform-doping 1D case the converged C approaches the analytic Poisson solution, with observed order ≈ 2 (between 1.5 and 2.5);
-  - the selected level satisfies < 1 % against the next finer one;
-  - the report JSON is deterministic.
+  - `test_units`: Cox(15.2 nm) = 2.2718 fF/µm² and W10/L10 = 224.73 fF, both within 1e-4 relative, with the Global Constraints constants. Also check the F/cm² → fF/µm² conversion.
+  - `test_matches_exact_poisson_boltzmann`: for uniform doping, the TCAD QS curve matches `analytic.lf_cv_uniform` within 0.1 % at every bias, including flat band and the LF minimum. The depletion approximation is **not** a reference, because its Cmin is an HF quantity and is off by several percent.
+  - `test_flatband_exact`: at flat band, C = series(Cox, ε_s/L_D) within 0.1 %.
+  - `test_mirror`: stack B (n-body N, p⁺ gate) gives C_B(vg) = C_A(−vg) within 1e-9 relative, where stack A is a p-body N with an n⁺ gate at the same |N|, NGATE and t_ox.
+  - `test_parasitics_match_spice_intercept`: within 25 %. This is a sanity check of the BSIM4 bookkeeping only.
+  - `test_byte_identical` (sandbox): two runs give byte-identical outputs.
+
+  Run them: they FAIL.
+- [ ] **Step 2:** Implement. Run the tests: they PASS. Commit the `start/` results, run `make manifest`, then open the PR, get it reviewed and merge.
+
+### Task 10: mesh-convergence tooling
+
+**Context.** In the spike, depletion C moved by 2 % between meshes a and b. Spec §5.2 requires that uniform refinement changes every metric by less than 1 %.
+
+**Files:** `src/gf180tcad/tcad/meshconv.py`, `tests/tcad/test_meshconv.py`, `results/tcad/meshconv/moscap1d/**`, `docs/limitations/` (page section; requires the docs-links infrastructure on main)
+
+**Interfaces:**
+- Consumes: `MeshSpec` (Task 9b).
+- Produces: `converge(simulate: Callable[[MeshSpec], MoscapCV], spec: MeshSpec, levels=(1, 2**-0.5, 0.5, 2**-1.5)) -> ConvergenceReport`.
+- The report holds, per level:
+  - the curves;
+  - node counts;
+  - the max relative change against the next finer level, at every bias;
+  - the Richardson estimate;
+  - the observed order p = log(|C₁−C₂|/|C₂−C₃|)/log(√2), per bias and as a median.
+
+  It also holds the selected level, which is the coarsest with < 1 % at every bias. Solver tolerance, `dv_qs` and the constants are fixed across levels. Runtimes are kept out of the JSON.
+
+- [ ] **Step 1:** Write the tests first:
+  - `test_converges_to_exact`: on a uniform-doping 1D case, the finest level matches `analytic.lf_cv_uniform` within 0.05 %, and the median observed order is between 1.5 and 2.5;
+  - `test_selected_level_criterion`: the selected level is < 1 % against the next finer one;
+  - `test_report_deterministic`: the report JSON is deterministic.
 
   Run them: they FAIL.
 - [ ] **Step 2:** Implement. Run the tests: they PASS.
-- [ ] **Step 3:** Diagnose the C/Cox > 1 artefact from evidence. Candidates are contact-charge discretisation at oxide/contact corner nodes, side boundaries, and Boltzmann statistics in strong accumulation. Fix the cause, or document it with numbers if it is below tolerance and explained. Never paper over it.
-- [ ] **Step 4:** Commit, open the PR, get it reviewed, and merge.
+- [ ] **Step 3:** Run the converge study for both devices with start values. Commit `results/tcad/meshconv/moscap1d/**`, then run `make manifest`.
+- [ ] **Step 4: 1D C/Cox check.** Show that 1D C/Cox < 1 at |Vg| = 5 V. Classical accumulation and inversion add a series capacitance, so C/Cox > 1 is impossible in 1D. This isolates the spike's artefact to 2D. The artefact itself is diagnosed in Task 11.
+- [ ] **Step 5:** Commit, open the PR, get it reviewed and merge.
 
-### Task 11: 2D MOSCAP from gdsfactory geometry
+### Task 11: 2D MOSCAP from gdsfactory geometry, and the C/Cox > 1 artefact
 
-**Context.** `gf180mcu.cap_mos` and `nfet(volt="5.0V")` build under gdsfactory 9.51. Their LayerStack is illustrative, with no gate oxide and no doping, so the vertical stack comes from `data/process/*.yaml`.
+**Context.**
+- `gf180mcu.cells` `nfet(volt="5.0V")` and `pfet(volt="5.0V")` build under gdsfactory 9.51 and contain Dualgate `(55,0)`. These are the devices the SPICE reference describes. `cap_mos` is a different device with its own SPICE model, and is not used.
+- The gf180mcu LayerStack is illustrative (`gf180mcu/layers.py:121-`), with no gate oxide and no doping, so the vertical stack comes from `data/process/*.toml`.
+- Spike evidence for the artefact (research §5.4):
+  - At 15.2 nm, C/Cox is 1.0039 at −5 V.
+  - With the same structure at 16 nm, it is 0.9909. These disagree by about 1.3 %, which points to normalisation or contact area rather than physics.
+  - Candidates: contact-charge discretisation at the oxide/contact corner nodes, side boundaries, and statistics (DEVSIM ships `python_packages/fermi_physics.py`).
 
-**Files:** `src/gf180tcad/tcad/stack.py` (build a gdsfactory LayerStack plus doping from a ProcessDescription), `src/gf180tcad/tcad/moscap2d.py`, `tests/tcad/test_moscap2d.py`
+**Files:** `src/gf180tcad/tcad/stack.py`, `src/gf180tcad/tcad/moscap2d.py`, `tests/tcad/test_moscap2d.py`, `results/tcad/meshconv/moscap2d/**`, `docs/limitations/` (artefact section)
+- `stack.py` builds a gdsfactory LayerStack plus a `DopingProfile` from a `ProcessDescription`. It **requires Dualgate `(55,0)` over the gate** to select the thick oxide, and raises otherwise (cf. spec §7, ISHI).
 
 **Interfaces:**
-- Produces: `moscap2d.simulate(proc, geometry, *, with_sd: bool, method, mesh, freq_hz=None) -> CVResult`, built through `gplugins.devsim` (Tasks 5–8). It uses a cross-section across the gate. When `with_sd` is true, n⁺ (or p⁺) S/D are tied to the body, so a 1 MHz AC run can supply the inversion charge.
-- CLI `tcad-moscap --dim 2`.
+- Produces: `moscap2d.simulate(proc, geometry: devices.Geometry, *, with_sd: bool, method: Literal["qs", "ac"], mesh: MeshSpec, freq_hz: float | None = None) -> MoscapCV2D`.
+  - It builds the cell `nfet`/`pfet(volt="5.0V", w_gate=geometry.w_um, l_gate=geometry.l_um)` and cuts a uz cross-section across the gate (along L).
+  - The device is built through `gplugins.devsim.create_2Duz_simulation`, with the Task 6 contacts and Task 7 doping, using `MeshSpec.to_resolution_specs` and `n_threads=1`.
+  - Per-area values use the drawn L·W; DLC and the parasitics are never applied in 2D.
+  - When `with_sd` is true:
+    - the nfet uses n⁺ S/D at NSD 1e20 (`spice-card`, `sm141064.ngspice:37217`), with XJ 0.15 µm and Gaussian lateral straggle;
+    - the pfet uses p⁺ S/D at a cited `literature` value;
+    - S/D are tied to the body (`tie=("source", "drain")`), so a 1 MHz AC run can supply the inversion charge. The channel RC time at L10 is ~1e-9 s.
+- CLI `python -m gf180tcad.tcad moscap --dim 2`.
 
 - [ ] **Step 1:** Write the tests first:
-  - with S/D removed and a uniform stack, 2D Cgg per area equals the 1D result within 0.5 %;
-  - with S/D, 1 MHz AC recovers to inversion as SPICE does, and charge conservation holds within 0.1 %;
-  - the mesh is converged per Task 10;
-  - two runs give byte-identical results.
+  - `test_2d_equals_1d_without_sd`: with S/D removed, a uniform stack, and a gate spanning the full domain with Neumann sides (no gate-edge fringe), 2D Cgg per area equals the 1D result within 0.5 %.
+  - `test_ac_1mhz_recovers_inversion`: with S/D, 1 MHz AC recovers to inversion as SPICE does (C_inv/C_acc > 0.9).
+  - `test_charge_conservation`: Cgg = Σ Cgx (gate, body, source, drain) within 0.1 % (spec §5.2).
+  - `test_2d_mesh_converged`: the mesh is converged per Task 10 (< 1 %).
+  - `test_dualgate_required`: `stack.py` raises if Dualgate is missing.
+  - `test_byte_identical` (sandbox): two runs give byte-identical results.
+  - `test_c_over_cox_le_1`: 2D C/Cox ≤ 1 at |Vg| = 5 V without S/D, after the artefact fix.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed, and merge.
+- [ ] **Step 2:** Implement. Diagnose the C/Cox > 1 artefact from evidence: fix the cause, or document it with numbers if it is below tolerance and explained. Never paper over it.
+- [ ] **Step 3:** Run the 2D converge study. Expect hours at the finest level; the spike's failures to converge at r ≤ 1/4 were at 1e-12, and this study uses 1e-10. Commit the results, run `make manifest`, then open the PR, get it reviewed and merge.
 
 ### Task 12: calibrate against SPICE Cgg–Vg
 
