@@ -318,6 +318,8 @@ def run_job_sandboxed(job: Job, scratch: Path, mem: str) -> None:
     ]  # fmt: skip
     try:
         res = sandbox.run(cmd, out_dir=scratch, mem=mem, cpus=JOB_CPUS, pids=JOB_PIDS)
+    except sandbox.SandboxNotConfined:
+        raise  # no process ran, so there is no result to log; keep the real message
     except sandbox.SandboxError as e:
         _save_log(scratch, e.result.stdout, e.result.stderr)
         tail = "\n".join((e.result.stderr or "").rstrip("\n").splitlines()[-30:])
