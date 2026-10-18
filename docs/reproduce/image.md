@@ -39,7 +39,8 @@ prints the config digest on stdout. It must equal `docker/base/IMAGE_ID`. The
 build refuses to run if the build inputs have uncommitted changes.
 
 The `image` GitHub Actions workflow (`.github/workflows/image.yml`) checks this
-on pull requests, on pushes to `main`, weekly, and on manual dispatch:
+on pull requests and on pushes to `main` (only when `docker/**` or
+`image.yml` changes), and weekly and on manual dispatch (always):
 
 1. build, and require the config digest to equal `docker/base/IMAGE_ID` and the
    manifest digest to equal `docker/IMAGE`;
