@@ -598,25 +598,87 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
 
 ### Task 12: calibrate against SPICE Cgg–Vg
 
-**Context.** At TOXE 15.2 nm, effective oxide is the dominant knob. Poly depletion (1–1.5 % n, 3–4 % p), quantum confinement (2–3 %) and the TOXE→TOXP gap (5.3 %) are each comparable to the 5 % tolerance. DEVSIM has no density-gradient model, so confinement is folded into the effective oxide and documented as such.
+**Context.**
+- At TOXE 15.2 nm, effective oxide is the dominant knob.
+- Poly depletion is now physical: the poly-gate region at the fixed NGATE.
+- Quantum confinement (≈ 2–3 %) is not modelled. DEVSIM 2.11.1 has **no built-in** density-gradient model: its `python_packages` hold only `simple_physics`, `mos_physics`, `fermi_physics`, `Klaassen`, `model_create`, `simple_dd`, `ramp` and `pythonmesh`. A custom-equation DG model (Ancona–Iafrate) is possible but deferred, so confinement is folded into `t_ox_eff` and documented.
+- The SPICE intrinsic slope (Task 9b) needs t_eff ≈ 16.4 / 16.6 nm (nfet acc / inv) and 15.7 / 16.7 nm (pfet acc / inv) under classical physics. So `t_ox_eff` may legitimately exceed TOXP.
 
-**Files:** `src/gf180tcad/calibrate/__init__.py`, `src/gf180tcad/calibrate/cv.py`, `results/tcad/calibration/{nfet_05v0,pfet_05v0}.json`, `data/process/*.yaml` (calibrated values written back with `calibrated` provenance and the target used), `tests/test_calibrate_cv.py`
+**Calibrated parameters (3 of the 8-parameter budget per device type):**
+
+| Parameter | Start | Bounds | Bounds source |
+|---|---|---|---|
+| `t_ox_eff_nm` | TOXE | lower: TOXE (15.2 n / 15.6 p) | `spice-card` |
+| | | upper: TOXP + Δ_centroid+poly | Δ is **TBD in Task 12 from a cited source**. Candidate: the BSIM4 v4.5 charge-centroid (ACDE, MOIN) and poly-depletion equations evaluated with the card values ([BSIM4 manual](https://bsim.berkeley.edu/models/bsim4/)). |
+| `n_ch_cm3` | NDEP 1.7e17 | lower: 0.5 × the K1-implied doping, N = (K1·Cox)²/(2·q·ε_si) → 6.3e16 n, 6.8e16 p | K1 and NDEP from the card (Task 9a lines), and the BSIM4 K1 definition |
+| | | upper: 2 × NDEP = 3.4e17 | The factor of 2 is a stated project choice; no public channel profile exists. |
+| `dv_fb_v` | 0 | ±0.2 V | Shift from fixed oxide charge, Q_f ≤ ~3e11 cm⁻²: q·Q_f/Cox ≈ 0.21 V. Source: Sze & Ng ch. 4 ([doi:10.1002/0470068329](https://doi.org/10.1002/0470068329)) [verify]. |
+
+The work function itself comes from the poly-gate physics, not from a parameter. The fit **must report** any parameter within 1e-3 of a bound; hitting a bound is published, not hidden.
+
+**Agreement metric (spec §5.2, Cgg ≤ 5 %).** Regions are defined in `u = polarity·vg`, using SPICE's own curve:
+- **accumulation plateau:** u ≤ u_fb − 1.0 V;
+- **inversion plateau:** u ≥ u_t + 1.0 V.
+
+Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at which SPICE C, rising from its minimum, reaches (Cmin + C_inv)/2. Both are computed once from the TT ngspice curve and recorded.
+- **Plateau metric:** max |ΔCgg|/Cgg_SPICE over each plateau, ≤ 5 % each.
+- **Transition:** the voltage shift ΔV at C = (Cmin + Cacc)/2, between the TCAD and SPICE curves, ≤ 50 mV. This is a **proposal; no published standard exists**, and it is labelled as such in the docs.
+- **"Same process" window:**
+  - Plateaus use the per-bias corner envelope, built from the five corners' `results/spice/ngspice/<corner>/<device>/<gid>/cv.csv` (`gf180tcad.calibrate.envelope_cv`, pure min/max).
+  - Plateau per-area values are also checked against the public 6 V Cox spec, 1.8/2.3/2.8 fF/µm². It is added to `data/pdk_elec_spec.json` as a new entry for both devices, with `metric: "cox_ff_per_um2"`, from the public PDK page already cited there.
+  - `specwindow.window(metric, spec, envelope)` combines them. `specwindow.py` itself is not modified.
+- Xyce has no CV analysis, so the spec's 0.5 % engine check cannot apply to Cgg. ngspice is the only Cgg reference, and the docs say so.
+
+**Files:**
+- `src/gf180tcad/calibrate/__init__.py`, `src/gf180tcad/calibrate/cv.py`, `src/gf180tcad/calibrate/__main__.py`;
+- `data/pdk_elec_spec.json` (the Cox entry; `specwindow.load_spec` reads it, and test_specwindow is updated);
+- `results/tcad/calibration/{nfet_05v0,pfet_05v0}.json`, `results/tcad/validation/{nfet_05v0,pfet_05v0}.json`;
+- `tests/test_calibrate_cv.py`.
+
+`data/process/*.toml` is **not** written: calibrated values live only in `results/tcad/calibration/*.json`.
 
 **Interfaces:**
-- Produces: `calibrate_cv(device, *, geometries=CALIBRATION_GEOMETRIES, params=("t_ox_eff_nm", "n_ch_cm3", "v_fb_v"), bounds from the process file) -> CalibrationResult`. Fit with at most 3 parameters of the 8-parameter budget, and record how much of the budget is used. The fit is deterministic: a fixed starting point and a deterministic optimiser (no random restarts), or a seeded one.
-- Produces: per-region residuals for accumulation, depletion and inversion; the verdict per spec §5 (Agree / Same process / Disagree, with the window from `specwindow.window`); and the validation results at the held-out geometries, computed only after freezing.
+- Produces: `calibrate_cv(device, *, geometries: Sequence[Geometry], params=("t_ox_eff_nm", "n_ch_cm3", "dv_fb_v")) -> CalibrationResult`. Bounds come from `process.load(device)`.
+  - **Guards that raise `CalibrationLeak`:**
+    - any geometry has `role != "calibration"` (`devices.Geometry.role`; the calibration set is W10 at L = 10, 2 and Lmin, `devices.py:152-166`);
+    - any target is not the TT ngspice `cv` sweep;
+    - any parameter is not a non-fixed tunable.
+  - **Model:** 1D (`moscap1d`) at the three calibration geometries, through `area_scaled`, with the fixed DLC and parasitic bookkeeping (Task 9b). Lmin is dominated by that bookkeeping, and the docs say so.
+  - **Optimiser:** `scipy.optimize.least_squares(method="trf", jac="2-point")`.
+    - The residuals are the plateau relative errors at every grid point, plus the transition ΔV scaled by 50 mV.
+    - `x0` is the start values; `x_scale`, `diff_step=1e-4`, `ftol=xtol=gtol=1e-10` and `max_nfev=200` are fixed.
+    - It runs in the sandbox via `python -m gf180tcad.calibrate run` (host) and `calibrate-job` (image).
+  - `CalibrationResult` holds:
+    - the values;
+    - the bound hits;
+    - `budget_used = 3` of 8;
+    - the geometries used;
+    - per-region residuals;
+    - the verdict per spec §5 (Agree / Same process / Disagree, with the window and its `source`);
+    - `param_sha256`, a hash of the sorted values that freezes the result.
+- Produces: `validate_cv(device, frozen: CalibrationResult) -> ValidationResult`.
+  - It runs at the held-out geometries (L = 0.7, 1, and 1.6/0.7) and, for the 2D check, at the calibration geometries too.
+  - It raises unless `frozen` was loaded from the committed `results/tcad/calibration/<device>.json`, and its `param_sha256` matches that file.
+  - It records the hash. Results at 1.6/0.7 and Lmin are pre-tagged with the causes `geometry-2d` and `spice-fit`.
 
 - [ ] **Step 1:** Write the tests first, on synthetic data built from the 1D model:
-  - the calibration recovers known parameters within 0.5 %;
-  - a test asserts that validation geometries are never passed to the fitter;
-  - bounds are enforced.
+  - `test_recovers_known_params`: `t_ox_eff` and `n_ch` within 0.5 %, and `dv_fb` within 1 mV absolute;
+  - `test_validation_geometry_raises`: passing any `role="validation"` geometry raises `CalibrationLeak`;
+  - `test_non_cv_target_raises`;
+  - `test_fixed_param_raises`;
+  - `test_bounds_enforced_and_hits_reported`;
+  - `test_validate_requires_frozen_hash`: an edited value raises;
+  - `test_deterministic`: two fits are byte-identical;
+  - `test_envelope_cv`;
+  - `test_metric_regions`: hand-built curves exercise the plateau and ΔV logic.
 
   Run them: they FAIL.
 - [ ] **Step 2:** Implement. Run the tests: they PASS.
-- [ ] **Step 3:** Calibrate both devices on W10/L10, L2 and Lmin at TT, with ngspice as reference. Apply the overlap and fringe estimate from the card explicitly (CGSO/CGDO, CGSL, CF) and document it.
-  - Target: |ΔCgg|/Cgg ≤ 5 % at every bias.
+- [ ] **Step 3:** Fix Δ (the `t_ox_eff` upper bound) from the cited source, and record the calculation in the docs. Calibrate both devices at TT, with ngspice as the reference.
+  - Target: both plateaus ≤ 5 %, and the transition ΔV ≤ 50 mV.
   - If the target is not reached within budget, publish the best fit with its verdict and the §6 mismatch analysis. Never raise the budget silently.
-- [ ] **Step 4:** Commit the results (results-only commit), run `make manifest`, then open the PR, get it reviewed, and merge.
+- [ ] **Step 4:** Commit `results/tcad/calibration/*.json` in a results-only commit. **Only then** run `validate_cv` and commit `results/tcad/validation/*.json` in a separate later commit. Regenerate the calibrated 1D and 2D result trees (`results/tcad/moscap{1d,2d}/<device>/calibrated/`), and run `make manifest`. Then open the PR, get it reviewed and merge.
+- [ ] **Budget note (Phase 3 carry-over).** These 3 parameters use 3 of the 8 per device type for all later phases. A Phase 3 channel profile may replace the uniform `n_ch` and must re-justify it.
 
 ### Task 13: TCAD results, docs and cross-host check
 
