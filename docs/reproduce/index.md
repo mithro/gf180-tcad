@@ -149,8 +149,8 @@ host, the `crosscheck` {{ GitHub_Actions }} workflow
 (`ubuntu-latest`) and requires every file to be byte-identical, by sha256, to the
 {term}`manifest` {repo}`results/MANIFEST.sha256`. The
 runner has a different CPU, kernel and Docker installation, and its CPU model
-varies from run to run; so far the runs have landed on AMD EPYC 9V45 and AMD
-EPYC 7763. There is no {term}`tolerance`: a difference in the last digit of one float
+varies from run to run. The full reference has passed on an AMD EPYC 7763; the only
+pass on an AMD EPYC 9V45 was an earlier 8-job subset, before the numpy fix below. There is no {term}`tolerance`: a difference in the last digit of one float
 fails it.
 
 **Everything is cross-checked on GitHub-hosted runners.** The
