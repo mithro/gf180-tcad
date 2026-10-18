@@ -56,14 +56,14 @@ _TOOLS = {
     "KLayout": ("KLayout", "https://www.klayout.de/"),
     "IIC_OSIC_TOOLS": ("IIC-OSIC-TOOLS", "https://github.com/iic-jku/IIC-OSIC-TOOLS"),
     "open_pdks": ("open_pdks", "https://github.com/fossi-foundation/open-pdks"),
-    "gf180mcu_pdk": ("GF180MCU PDK", "https://github.com/google/gf180mcu-pdk"),
+    "gf180mcu_pdk": ("GF180MCU PDK", "https://github.com/fossi-foundation/gf180mcu-pdk"),
     "gf180mcu_pdk_docs": (
         "GF180MCU PDK documentation",
         "https://gf180mcu-pdk.readthedocs.io/en/latest/",
     ),
     "gf180mcu_models": (
         "GF180MCU primitives library",
-        "https://github.com/google/globalfoundries-pdk-libs-gf180mcu_fd_pr",
+        "https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr",
     ),
     "BSIM4_site": ("BSIM4", "https://bsim.berkeley.edu/models/bsim4/"),
     "Docker": ("Docker", "https://docs.docker.com/"),

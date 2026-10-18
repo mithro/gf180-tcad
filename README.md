@@ -1,7 +1,7 @@
 # gf180-tcad
 
 Open-source [TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD) for the GlobalFoundries
-[GF180MCU](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-GF180MCU) process ([open PDK](https://github.com/google/gf180mcu-pdk)),
+[GF180MCU](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-GF180MCU) process ([open PDK](https://github.com/fossi-foundation/gf180mcu-pdk)),
 validated against the [PDK](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-PDK)'s own [SPICE](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE) models.
 
 ## What and why
