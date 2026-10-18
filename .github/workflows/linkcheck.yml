@@ -41,8 +41,12 @@ jobs:
         run: |
           uv run --no-project python - <<'EOF'
           import re, sys, urllib.request
+          # Links into the published docs are checked offline against docs/ by
+          # tests/test_doc_links.py (the pages of a PR are not published yet).
+          own = "https://gf180-tcad.readthedocs.io/en/latest/"
           urls = sorted({u for f in ("README.md", "CONTRIBUTING.md")
-                         for u in re.findall(r"\((https://[^)\s]+)\)", open(f).read())})
+                         for u in re.findall(r"\((https://[^)\s]+)\)", open(f).read())
+                         if not u.startswith(own) or u == own})
           bad = []
           for url in urls:
               req = urllib.request.Request(url, headers={"User-Agent": "gf180-tcad-linkcheck"})

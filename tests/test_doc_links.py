@@ -16,7 +16,10 @@ never written as a link at all. This test scans the Markdown sources (``docs/**`
 - ``unlinked-tool``: the first mention on a page of a tool or project that is not linked (its
   ``{{ substitution }}`` from ``docs/conf.py``, or a Markdown link);
 - ``bare-url``: a URL written as plain text instead of a link;
-- ``http``: an ``http://`` URL (``https`` only).
+- ``http``: an ``http://`` URL (``https`` only);
+- ``broken-link``: a Markdown link into this repository (relative, or ``blob``/``tree`` on
+  GitHub) to an untracked path, or into the published docs (README/CONTRIBUTING link to
+  ``gf180-tcad.readthedocs.io``) to a page or anchor that the sources do not define.
 
 Each detector has a positive control below that proves it fires.
 """
@@ -40,6 +43,9 @@ GLOSSARY = DOCS / "glossary.md"
 CONF = DOCS / "conf.py"
 OUTSIDE_SPHINX = ("README.md", "CONTRIBUTING.md")
 GLOSSARY_URL = "gf180-tcad.readthedocs.io/en/latest/glossary.html"
+RTD = re.compile(
+    r"https://gf180-tcad\.readthedocs\.io/en/latest/(?P<page>[^#]*?)(?:\.html)?(?:#(?P<anchor>.*))?$"
+)
 
 # Tool and project names whose first mention on a page must be linked. Each is a key of
 # docs/conf.py:_TOOLS (checked below), so the docs can write {{ key }}.
@@ -234,10 +240,17 @@ def check(name: str, text: str, *, sphinx: bool = True, terms: bool = True) -> l
                     if idx is not None:
                         events.append((pos, "term", idx, True))
             gh = re.match(r"https://github\.com/mithro/gf180-tcad/(?:blob|tree)/[^/]+/(.+)", url)
+            local = None
             if gh:
-                repo_targets.add(gh.group(1).split("#")[0].rstrip("/"))
-            elif url and not re.match(r"[a-z]+:", url):
-                repo_targets.add(url.split("#")[0].rstrip("/"))
+                local = gh.group(1).split("#")[0].rstrip("/")
+            elif url and not re.match(r"([a-z]+:|#)", url):
+                local = url.split("#")[0].rstrip("/")
+            if local is not None:
+                repo_targets.add(local)
+                if local not in files and local not in dirs:
+                    bad(pos, "broken-link", f"{url}: {local} is not tracked by git")
+            if (rtd := RTD.match(url)) and not _rtd_target_exists(rtd["page"], rtd["anchor"]):
+                bad(pos, "broken-link", f"{url}: no such page or anchor in docs/")
         elif m.group("url") and not m.group("autolink"):
             bad(pos, "bare-url", f"{m.group('url')} -> [text]({m.group('url')})")
         elif m.group("autolink"):
@@ -288,6 +301,27 @@ def check(name: str, text: str, *, sphinx: bool = True, terms: bool = True) -> l
             how = f"{{{{ {TOOLS[key]} }}}}" if sphinx else "a Markdown link"
             bad(pos, "unlinked-tool", f"first mention of {key!r} is not {how}")
     return problems
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^\w.]+", "-", text.replace('"', "")).strip("-").lower()
+
+
+@cache
+def _rtd_target_exists(page: str, anchor: str | None) -> bool:
+    """Does docs/ define the published page (and its anchor)? Mirrors Sphinx's ids."""
+    page = page.strip("/") or "index"
+    src = DOCS / f"{page}.md"
+    if not src.is_file():
+        return False
+    if not anchor:
+        return True
+    if anchor.startswith("term-"):
+        return page == "glossary" and _slug(anchor[5:]) in {_slug(t) for t in _all_terms()}
+    text = src.read_text(encoding="utf-8")
+    ids = set(re.findall(r"^\(([\w-]+)\)=$", text, re.MULTILINE))
+    ids |= {_slug(re.sub(r"`", "", h)) for h in re.findall(r"^#+ (.*)$", text, re.MULTILINE)}
+    return anchor.lower() in ids
 
 
 @cache
@@ -365,7 +399,7 @@ _BAD = textwrap.dedent(
 
     Every run goes through `tools/sandbox-run`, see `gf180tcad.sandbox.run` and
     `test_engines_agree`. The TCAD is compared with ngspice. See http://example.org and
-    https://example.org/page for more.
+    https://example.org/page for more, and [a missing file](tools/no-such-tool).
 
     ```sh
     tools/sandbox-run -- true
@@ -389,7 +423,7 @@ _GOOD = textwrap.dedent(
 
 @pytest.mark.parametrize(
     "kind", ["bare-path", "bare-identifier", "bare-test", "unlinked-term", "unlinked-tool",
-             "bare-url", "http"],
+             "bare-url", "http", "broken-link"],
 )  # fmt: skip
 def test_positive_control_detector_fires(kind):
     found = {p.kind for p in check("control.md", _BAD)}
@@ -415,6 +449,19 @@ def test_positive_control_outside_sphinx():
         "through [`tools/sandbox-run`](tools/sandbox-run) and [ngspice](https://ngspice.org/)."
     )
     assert check("README.md", good, sphinx=False) == []
+    broken = (
+        "See [the tool](tools/no-such-tool), [docs](https://gf180-tcad.readthedocs.io/en/latest/"
+        "nope.html), [a term](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Nope)"
+        " and [a section](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#nope)."
+    )
+    problems = [p for p in check("README.md", broken, sphinx=False) if p.kind == "broken-link"]
+    assert len(problems) == 4, problems
+    fine = (
+        "[x](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-determinism)"
+        " [y](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process-window)"
+        " [z](https://github.com/mithro/gf180-tcad/blob/main/docker/IMAGE)"
+    )
+    assert [p for p in check("README.md", fine, sphinx=False) if p.kind == "broken-link"] == []
 
 
 # --- positive control for the {repo}/{test} roles: a wrong path fails the -W build -----------
