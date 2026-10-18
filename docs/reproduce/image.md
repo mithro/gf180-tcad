@@ -131,8 +131,9 @@ job. The TCAD entry pulls the public base image by digest, so scheduled runs nee
 
 New packages on the {{ ghcr }} are private. After the first push of a new package, make it
 public, so that the fork CI and the GitHub cross-check can pull it without credentials: on the
-[package settings page](https://github.com/users/mithro/packages/container/gf180-tcad-tcad/settings),
-choose *Change visibility → Public*. Then check the pull with no registry credentials:
+package page, choose *Package settings → Change visibility → Public* (see
+[configuring a package's visibility](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)).
+Then check the pull with no registry credentials:
 
 ```
 DOCKER_CONFIG="$(mktemp -d)" docker pull "$(cat docker/TCAD_IMAGE)"
