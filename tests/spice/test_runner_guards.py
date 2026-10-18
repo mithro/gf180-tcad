@@ -116,11 +116,54 @@ def test_explicit_inputs_are_allowed(tmp_path, fake_sandbox, engine):
 
 @pytest.mark.parametrize("engine", RUNNERS)
 def test_file_written_by_the_simulator_is_an_error(tmp_path, fake_sandbox, engine):
-    # e.g. ngspice's BSIM4 parameter check writes bsim4v5.out next to the netlist
     run, writer, _ = RUNNERS[engine]
-    fake_sandbox(writer, extra="bsim4v5.out")
-    with pytest.raises(SpiceError, match="bsim4v5.out"):
+    fake_sandbox(writer, extra="other.dat")
+    with pytest.raises(SpiceError, match="other.dat"):
         run("* x\n.end\n", tmp_path)
+
+
+@pytest.mark.parametrize("engine", RUNNERS)
+def test_own_name_that_is_a_directory_is_spice_error(tmp_path, fake_sandbox, engine):
+    run, writer, mod = RUNNERS[engine]
+    calls = fake_sandbox(writer)
+    (tmp_path / mod.LOG_NAME).mkdir()
+    with pytest.raises(SpiceError, match="directory"):
+        run("* x\n.end\n", tmp_path)
+    assert calls == []
+
+
+BSIM4_REPORT = (
+    "BSIM4v5: mosfet m.xdut.m0, model nfet_06v0.1:\n"
+    "Warning: Pbswgd = 0.01 is less than 0.1. Pbswgd is set to 0.1.\n"
+)
+
+
+@pytest.mark.parametrize("name", ["bsim4v5.out", "bsim4v6.out", "bsim4v7.out", "bsim4.out"])
+def test_ngspice_bsim4_report_is_read_into_warnings_and_deleted(
+    tmp_path, fake_sandbox, monkeypatch, name
+):
+    def writer(out_dir, extra):
+        _fake_ngspice(out_dir)
+        (out_dir / name).write_text(BSIM4_REPORT)
+
+    fake_sandbox(writer)
+    res = ngspice.run_ngspice("* x\n.end\n", tmp_path)
+    assert res.warnings == (
+        f"{name}: BSIM4v5: mosfet m.xdut.m0, model nfet_06v0.1:",
+        f"{name}: Warning: Pbswgd = 0.01 is less than 0.1. Pbswgd is set to 0.1.",
+    )
+    assert not (tmp_path / name).exists()
+    # a report left over from an older run is the runner's own file: replaced, not refused
+    (tmp_path / name).write_text("stale\n")
+    fake_sandbox(_fake_ngspice)
+    assert ngspice.run_ngspice("* x\n.end\n", tmp_path).warnings == ()
+    assert not (tmp_path / name).exists()
+
+
+def test_xyce_has_no_optional_report_files(tmp_path, fake_sandbox):
+    fake_sandbox(_fake_xyce, extra="bsim4v5.out")
+    with pytest.raises(SpiceError, match="bsim4v5.out"):
+        xyce.run_xyce("* x\n.end\n", tmp_path)
 
 
 # --- timeout --------------------------------------------------------------------------------
