@@ -320,8 +320,7 @@ def _fake_simulate(engine):
 
 
 @pytest.mark.parametrize("engine", ["ngspice", "xyce"])
-def test_spice_job_writes_csvs_and_metrics(monkeypatch, tmp_path, engine):
-    monkeypatch.setenv(sandbox.IN_SANDBOX_ENV, "1")
+def test_spice_job_writes_csvs_and_metrics(inside, monkeypatch, tmp_path, engine):
     calls = []
     monkeypatch.setattr(reference, "_image_pdk", lambda: calls.append("checked") or "PDK")
     monkeypatch.setattr(reference, "simulate", _fake_simulate("ngspice"))

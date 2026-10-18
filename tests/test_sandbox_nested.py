@@ -7,14 +7,13 @@ working directory) under the enclosing container's limits. These tests use harml
 commands, never a simulator.
 """
 
+import os
+from pathlib import Path
+
 import pytest
+from confined_root import make_confined_root
 
 from gf180tcad import sandbox
-
-
-@pytest.fixture
-def inside(monkeypatch):
-    monkeypatch.setenv(sandbox.IN_SANDBOX_ENV, "1")
 
 
 def test_sandbox_run_sets_the_marker():
@@ -58,3 +57,110 @@ def test_marker_must_be_exactly_one(monkeypatch, tmp_path):
     monkeypatch.setenv(sandbox.IN_SANDBOX_ENV, "yes")
     with pytest.raises(ValueError, match=sandbox.IN_SANDBOX_ENV):
         sandbox.run(["true"], out_dir=tmp_path)
+
+
+# --- confinement proof: the marker alone never enables direct mode ------------------------
+
+
+def test_fake_confined_root_passes(tmp_path):
+    sandbox.check_confined(make_confined_root(tmp_path))
+
+
+def test_nested_cgroup_path_is_followed(tmp_path):
+    sandbox.check_confined(make_confined_root(tmp_path, cgroup="/docker/abc"))
+
+
+def _break(root: Path, case: str) -> str:
+    cg = root / "sys" / "fs" / "cgroup"
+    if case == "no_dockerenv":
+        (root / ".dockerenv").unlink()
+        return "/.dockerenv"
+    if case == "memory_unlimited":
+        (cg / "memory.max").write_text("max\n")
+        return "memory.max"
+    if case == "memory_missing":
+        (cg / "memory.max").unlink()
+        return "memory.max"
+    if case == "pids_unlimited":
+        (cg / "pids.max").write_text("max\n")
+        return "pids.max"
+    if case == "pids_garbage":
+        (cg / "pids.max").write_text("lots\n")
+        return "pids.max"
+    if case == "no_cgroup_v2_line":
+        (root / "proc" / "self" / "cgroup").write_text("1:memory:/\n")
+        return "cgroup v2"
+    if case == "no_proc_cgroup":
+        (root / "proc" / "self" / "cgroup").unlink()
+        return "cgroup"
+    if case == "network_interface":
+        (root / "sys" / "class" / "net" / "eth0").mkdir()
+        return "eth0"
+    if case == "no_sys_class_net":
+        for p in (root / "sys" / "class" / "net").iterdir():
+            p.rmdir() if p.is_dir() else p.unlink()
+        (root / "sys" / "class" / "net").rmdir()
+        return "/sys/class/net"
+    raise AssertionError(case)
+
+
+CASES = [
+    "no_dockerenv", "memory_unlimited", "memory_missing", "pids_unlimited", "pids_garbage",
+    "no_cgroup_v2_line", "no_proc_cgroup", "network_interface", "no_sys_class_net",
+]  # fmt: skip
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_each_confinement_failure_is_reported(tmp_path, case):
+    root = make_confined_root(tmp_path)
+    what = _break(root, case)
+    with pytest.raises(sandbox.SandboxNotConfined, match="not confined") as exc:
+        sandbox.check_confined(root)
+    assert what in str(exc.value)
+    assert isinstance(exc.value, sandbox.SandboxError)
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_marker_with_unconfined_root_never_runs_the_command(monkeypatch, tmp_path, case):
+    root = make_confined_root(tmp_path / "root")
+    _break(root, case)
+    monkeypatch.setenv(sandbox.IN_SANDBOX_ENV, "1")
+    monkeypatch.setattr(sandbox, "CONFINEMENT_ROOT", root)
+    out = tmp_path / "out"
+    out.mkdir()
+    with pytest.raises(sandbox.SandboxNotConfined):
+        sandbox.run(["sh", "-c", "echo ran > ran.txt"], out_dir=out)
+    with pytest.raises(sandbox.SandboxNotConfined):
+        sandbox.in_sandbox()
+    assert not (out / "ran.txt").exists()
+
+
+@pytest.mark.skipif(os.path.exists("/.dockerenv"), reason="the test host is itself a container")
+def test_marker_on_the_real_host_is_refused(monkeypatch, tmp_path):
+    monkeypatch.setenv(sandbox.IN_SANDBOX_ENV, "1")
+    with pytest.raises(sandbox.SandboxNotConfined):
+        sandbox.run(["sh", "-c", "echo ran > ran.txt"], out_dir=tmp_path)
+    assert not (tmp_path / "ran.txt").exists()
+
+
+def test_no_marker_means_not_inside(monkeypatch):
+    monkeypatch.delenv(sandbox.IN_SANDBOX_ENV, raising=False)
+    assert sandbox.in_sandbox() is False
+
+
+# --- the real container ------------------------------------------------------------------
+
+
+@pytest.mark.sandbox
+def test_real_container_is_confined(tmp_path):
+    code = "from gf180tcad import sandbox; sandbox.check_confined(); print(sandbox.in_sandbox())"
+    res = sandbox.run(["python3", "-c", code], out_dir=tmp_path, mem="1g", cpus=1, pids=64)
+    assert res.stdout.strip() == "True"
+
+
+@pytest.mark.sandbox
+def test_real_container_with_network_is_not_confined(tmp_path):
+    code = "from gf180tcad import sandbox; sandbox.in_sandbox()"
+    with pytest.raises(sandbox.SandboxError) as exc:
+        sandbox.run(["python3", "-c", code], out_dir=tmp_path, network=True)
+    assert "not confined" in exc.value.result.stderr
