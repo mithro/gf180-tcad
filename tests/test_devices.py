@@ -160,3 +160,15 @@ def test_non_tuple_raises_type_error(make):
 def test_non_finite_raises(make, bad):
     with pytest.raises(ValueError):
         make(bad)
+
+
+def test_geometry_precision_guard():
+    with pytest.raises(ValueError):
+        Geometry(10, 0.605, "validation")
+    with pytest.raises(ValueError):
+        Geometry(1.64, 1, "validation")
+
+
+def test_duplicate_geometry_ids_raise():
+    with pytest.raises(ValueError):
+        Device("d", 1, "m", (G, Geometry(10, 1, "calibration")))
