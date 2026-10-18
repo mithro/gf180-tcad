@@ -137,6 +137,27 @@ both engines, all five corners, both devices and all six geometries of each,
 all 660 CSV and metrics files, the provenance file and the corner envelope.
 Nothing is checked only locally.
 
+**What we found and fixed.** The first full cross-check
+([run](https://github.com/mithro/gf180-tcad/actions/runs/39115902279), on an
+AMD EPYC 7763) failed. Every raw simulator CSV was identical, but five
+`metrics.json` files differed in the last digits: Vt, subthreshold slope and
+the DIBL derived from them. The cause was numpy's run-time SIMD dispatch.
+numpy picks a kernel for each operation by CPU feature level, and its
+`log10` kernels for AVX-512 and for AVX2 differ by one ulp on some inputs.
+The local Xeon and an earlier EPYC 9V45 runner both have AVX-512; the
+EPYC 7763 has only AVX2. The sandbox now pins numpy to its baseline
+(x86-64-v2) kernels by disabling every dispatch target with
+`NPY_DISABLE_CPU_FEATURES`, so all such hosts compute the same bits. The
+reference was regenerated: no CSV changed, and the largest change to a
+published metric was 5.7e-15 relative (51 ulp, in a DIBL value). Commits
+[1731912](https://github.com/mithro/gf180-tcad/commit/1731912) (the fix) and
+[6205cb9](https://github.com/mithro/gf180-tcad/commit/6205cb9) (the
+regenerated results); the cross-check then passed on an AMD EPYC 7763
+([run](https://github.com/mithro/gf180-tcad/actions/runs/39116857613)). A
+sandbox test checks that numpy reports no dispatch target enabled in the
+container, and that the baseline results equal those with only the AVX-512
+targets disabled; the workflow checks the former on the runner too.
+
 The subset file can instead list jobs one per line, as
 `<engine>/<corner>/<device>/<geometry_id>`, to cross-check part of the
 reference. The corner envelope is then not compared, because it is the

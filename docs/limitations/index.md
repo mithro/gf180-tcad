@@ -19,6 +19,10 @@ there.
 - **ngspice and Xyce disagree by 0.6 % on the nfet in subthreshold.** The
   nfet card declares BSIM4 `version=4.5`; ngspice runs it with BSIM4 4.5.0,
   Xyce's oldest BSIM4 is 4.6.1. See {doc}`engine-cross-check`.
+- **Cross-host identity has limits.** Byte-identical results are guaranteed
+  only on x86-64-v2 or newer hosts, and verified only on the hardware listed
+  in {doc}`../reproduce/index` (an Intel Xeon Gold 6152 and the GitHub-hosted
+  AMD EPYC 9V45 and 7763 runners).
 - **Novelty.** No published DEVSIM- or Charon-versus-BSIM comparison for any
   open PDK was found, and no gf180mcu TCAD paper was found.
 
