@@ -2,7 +2,7 @@
 # Plugin history: the gplugins DEVSIM plugin once worked
 
 This directory holds the inputs of a re-runnable record. The record shows that the
-[gdsfactory gplugins](https://github.com/gdsfactory/gplugins) DEVSIM plugin worked at
+[gdsfactory gplugins](https://github.com/gdsfactory/gplugins) [DEVSIM](https://devsim.org/) plugin worked at
 gplugins [v0.8.0](https://github.com/mithro/gplugins/tree/v0.8.0) on its Sept-2023 stack, and
 that its import is broken at [v1.4.2](https://github.com/mithro/gplugins/tree/v1.4.2). The
 gplugins sources come from the tags of [our fork](https://github.com/mithro/gplugins), the
@@ -58,12 +58,12 @@ uv run --locked pytest -m sandbox tests/test_plugin_history.py
 
 | Check | Code it runs |
 |---|---|
-| `import` | `import gplugins.devsim` |
+| `import` | [`import gplugins.devsim`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/__init__.py) |
 | `pin_test` | [`PINWaveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L101)`(core_width=500 nm, core_thickness=220 nm, slab_thickness=90 nm).ddsolver()`, from [`test_pin_waveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/test_devsim.py#L4-L31) |
 | `ramp` | [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L420) of the PIN `left` contact to 0 and then −1 V. **Added:** [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L243-L245) of the PN slab on its default contact `cathode`, to 0.1 and then 0.2 V. |
-| `ddcomponent_mesh` | [`DDComponent`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L43)`(...)` of the [`get_solver.py` `__main__` block](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L412-L524) (the trimmed `straight_pn`) |
+| `ddcomponent_mesh` | [`DDComponent`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L43)`(...)` of the [`get_solver.py` `__main__` block](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L412-L524) (the trimmed [`straight_pn`](https://github.com/gdsfactory/gdsfactory/blob/v7.6.1/gdsfactory/components/straight_pin.py#L90)) |
 | `ddsolver` | `c.ddsolver()` on that PN slab |
-| `refine` | `c.get_refined_mesh(...)`, exactly as in the block |
+| `refine` | `c.`[`get_refined_mesh`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L328)`(...)`, exactly as in the block |
 | `refined_solve` | The block's second solve on the refined mesh. It is always recorded as not run, because it needs the result of `refine`. |
 
 **The `__main__` block solves only at equilibrium.** It never calls `ramp_voltage`. The PN-slab
@@ -80,9 +80,9 @@ The other changes from the v0.8.0 code:
   extended precision globally, so this order gives each block the solver state it would have on
   its own.
 - **Dropped from `test_pin_waveguide`.** The test ramps to −5 V and then solves the optical modes
-  with tidy3d. Neither step is part of the record.
+  with [tidy3d](https://docs.flexcompute.com/projects/tidy3d/). Neither step is part of the record.
 - **Generic PDK activated first.** The block needs an active PDK.
-- **Layer map.** It is `gdsfactory.generic_tech.LAYER`. gdsfactory 7.6.1 has no `gf.tech`
+- **Layer map.** It is [`gdsfactory.generic_tech.LAYER`](https://github.com/gdsfactory/gdsfactory/blob/v7.6.1/gdsfactory/generic_tech/__init__.py#L13). gdsfactory 7.6.1 has no `gf.tech`
   module, so the block's [`gf.tech.LayerMap()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L425) raises
   `AttributeError`.
 
@@ -103,13 +103,13 @@ uv pip compile --python-version 3.11.17 --python-platform x86_64-manylinux_2_28 
 ```
 
 - **[`--exclude-newer`](https://docs.astral.sh/uv/reference/cli/#uv-pip-compile--exclude-newer)** is the v0.8.0 release time.
-- **`--exclude-newer-package`** exempts klayout, because the last 0.28 wheels were uploaded in
+- **[`--exclude-newer-package`](https://docs.astral.sh/uv/reference/cli/#uv-pip-compile--exclude-newer-package)** exempts klayout, because the last 0.28 wheels were uploaded in
   2024.
-- **gplugins is left out of the lock.** Its source comes from the tag, and a `.pth` file puts
+- **gplugins is left out of the lock.** Its source comes from the tag, and a [`.pth` file](https://docs.python.org/3/library/site.html) puts
   it on `sys.path`, so nothing unhashed is installed.
 - **The input also asks for `setuptools` and `wheel`.** Pinned to 2023, they are the hashed build
   constraints for the three sdist-only packages: antlr4-python3-runtime, flatdict and rectpack.
   flatdict 4.0.1 needs `pkg_resources`, which today's setuptools no longer has.
 
-The v1.4.2 record needs no lock of its own. It uses `uv sync --frozen` with the `uv.lock` of the
+The v1.4.2 record needs no lock of its own. It uses [`uv sync --frozen`](https://docs.astral.sh/uv/reference/cli/#uv-sync--frozen) with the `uv.lock` of the
 tag.
