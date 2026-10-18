@@ -18,7 +18,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 GPLUGINS_ROOT = Path("/work/out/gplugins")  # the `git archive` of the tag (see gf180tcad.history)
-CHECKS = ("import", "pin_test", "ddcomponent_mesh", "ddsolver", "ramp", "refine")
+CHECKS = ("import", "pin_test", "ddcomponent_mesh", "ddsolver", "ramp", "refine", "refined_solve")
 
 # The `resolutions` dict of the `if __name__ == "__main__":` block of gplugins v0.8.0
 # gplugins/devsim/get_solver.py (the PN slab of straight_pn).
@@ -94,6 +94,23 @@ def contact_currents(device: str, contacts) -> dict[str, dict[str, float]]:
         )
         out[contact] = {"electron": e, "hole": h, "total": e + h}
     return out
+
+
+def contact_potential(device: str, contact: str, regions) -> float:
+    """Mean ``Potential`` (V) over the nodes of ``contact``, found in whichever of ``regions``."""
+    import devsim
+
+    for region in regions:
+        try:
+            elements = devsim.get_element_node_list(device=device, region=region, contact=contact)
+        except devsim.error:
+            continue
+        if not elements:
+            continue
+        nodes = sorted({i for element in elements for i in element})
+        pot = devsim.get_node_model_values(device=device, region=region, name="Potential")
+        return sum(pot[i] for i in nodes) / len(nodes)
+    raise ValueError(f"contact {contact!r} has no nodes in regions {list(regions)}")
 
 
 def depletion_width(x, y, n, p, net_doping, *, y_target: float):

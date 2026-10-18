@@ -13,12 +13,25 @@ with only the result recording added:
   ``straight_pn(length=10)`` trimmed to ``[[3,-4],[3,4],[5,4],[5,-4]]``, the anode/cathode contact
   layers (105, 0)/(106, 0) from VIAC AND NPP / VIAC AND PPP, its ``resolutions``,
   ``xsection_bounds=[(4,-4),(4,4)]`` and ``mesh_scaling_factor=1e-4``; ``DDComponent(...)``,
-  ``ddsolver()``, ``ramp_voltage`` of the cathode to 0.1 and 0.2 V, then
-  ``get_refined_mesh(...)`` exactly as in the block.
+  ``ddsolver()``, then ``get_refined_mesh(...)`` exactly as in the block. The block solves only at
+  equilibrium; it never calls ``ramp_voltage``.
 
-Two changes to the block are needed to run it outside a notebook: the generic PDK is activated
-first (``get_layer_stack()`` needs an active PDK), and the layer map is
-``gdsfactory.generic_tech.LAYER`` (the block's ``gf.tech.LayerMap()``).
+Changes from the v0.8.0 code (also listed in docs/limitations/plugin-history.md):
+
+- the generic PDK is activated first (``get_layer_stack()`` needs an active PDK);
+- the layer map is ``gdsfactory.generic_tech.LAYER``: gdsfactory 7.6.1 has no ``gf.tech``, so the
+  block's ``gf.tech.LayerMap()`` raises AttributeError;
+- **added**: ``ramp_voltage`` of the PN slab to 0.1 and 0.2 V, on ``DDComponent.ramp_voltage``'s
+  default contact ``cathode`` (the VIAC AND PPP contact, so forward bias), and the physical
+  anchors recorded around it (NetDoping range, built-in potential, depletion width, the
+  anode-cathode contact potential difference at each step);
+- the PIN waveguide is solved, ramped and deleted before the PN slab is built (DEVSIM solves every
+  device it holds at once, and DDComponent sets extended precision globally);
+- the -5 V ramp and the tidy3d ``make_waveguide`` mode solves of ``test_pin_waveguide`` are not
+  run;
+- the block's second ``DDComponent`` and ``ddsolver(global_meshsize_array=...)`` after
+  ``get_refined_mesh`` are never reached, because ``get_refined_mesh`` raises; they are recorded
+  as the ``refined_solve`` check, not run.
 
 Usage: ``python checks_v080.py --mesh-scale R --out RAW.json``. ``R`` multiplies every value of
 the PN slab's ``resolutions``; the PIN check uses DEVSIM's own mesh and ignores it.
@@ -170,6 +183,54 @@ def build_ddcomponent(mesh_scale: float):
     return DDComponent(**pn_slab_inputs(mesh_scale))
 
 
+def _si_values(c, name) -> list[float]:
+    import devsim
+
+    out = []
+    for r in c.regions["si"]:
+        out += devsim.get_node_model_values(device=c.device, region=r, name=name)
+    return out
+
+
+def pn_bias_state(c) -> dict:
+    """Does the bias applied on the cathode reach the device?
+
+    The mean Potential of each contact's nodes, their difference, and the Potential span (max -
+    min) over the silicon, which is the built-in potential at equilibrium and drops by the
+    forward bias if the junction sees it.
+    """
+    si = c.regions["si"]
+    pot = {k: harness.contact_potential(c.device, k, si) for k in ("anode", "cathode")}
+    potential = _si_values(c, "Potential")
+    return {
+        "contact_potential_v": pot,
+        "anode_minus_cathode_v": pot["anode"] - pot["cathode"],
+        "potential_span_v": max(potential) - min(potential),
+    }
+
+
+def pn_equilibrium(c) -> dict:
+    """Physical anchors of the solved PN slab at equilibrium (all contacts at 0 V).
+
+    The depletion width is taken on the device's bottom edge (y = 0), the only mesh row through
+    the junction: the gmsh mesh is unstructured, so the slab has no mid-height row. Under the rib
+    (which holds the junction) that edge belongs to the ``core`` region, so both silicon regions
+    are used.
+    """
+    doping, potential = _si_values(c, "NetDoping"), _si_values(c, "Potential")
+    cols = [_si_values(c, k) for k in ("x", "y", "Electrons", "Holes", "NetDoping")]
+    width_cm, y_cut_cm, nodes = harness.depletion_width(*cols, y_target=0.0)
+    return {
+        "net_doping_min_cm3": min(doping),
+        "net_doping_max_cm3": max(doping),
+        "builtin_potential_v": max(potential) - min(potential),
+        "depletion_width_um": width_cm * 1e4,
+        "depletion_cut_y_um": y_cut_cm * 1e4,
+        "depleted_nodes": nodes,
+        **pn_bias_state(c),
+    }
+
+
 def describe_ddcomponent(c) -> dict:
     import devsim
 
@@ -185,16 +246,22 @@ def describe_ddcomponent(c) -> dict:
         "interfaces": list(devsim.get_interface_list(device=c.device)),
         "node_count_by_region": counts,
         "node_count": sum(counts.values()),
+        "equilibrium": pn_equilibrium(c),
     }
 
 
 def ramp_pn(c) -> list[dict]:
+    # an addition: the v0.8.0 block never ramps; DDComponent.ramp_voltage's default contact
     out = []
     for ind, voltage in enumerate(PN_VOLTAGES):
         vinit = 0.0 if ind == 0 else PN_VOLTAGES[ind - 1]
         c.ramp_voltage(Vfinal=voltage, Vstep=PN_VSTEP, Vinit=vinit, contact_name="cathode")
         out.append(
-            {"v": voltage, "currents": harness.contact_currents(c.device, ("anode", "cathode"))}
+            {
+                "v": voltage,
+                "currents": harness.contact_currents(c.device, ("anode", "cathode")),
+                **pn_bias_state(c),
+            }
         )
     return out
 
@@ -270,6 +337,12 @@ def main(argv=None) -> int:
         checks["refine"], _ = harness.run_check(lambda: refine(dd))
     else:
         skip("refine", "ddsolver")
+    # The block's last step: a new DDComponent solved on the refined mesh,
+    # ddsolver(global_meshsize_array=meshing_field). It needs refine's result.
+    if checks["refine"]["status"] == "pass":
+        checks["refined_solve"] = harness.not_run("refine passed, but this driver stops at refine")
+    else:
+        skip("refined_solve", "refine (it needs get_refined_mesh's meshing field)")
 
     result["versions"] = harness.versions()
     harness.write(args.out, result)
