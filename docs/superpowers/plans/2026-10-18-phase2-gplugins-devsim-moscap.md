@@ -707,24 +707,29 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
   - With the same structure at 16 nm, it is 0.9909. These disagree by about 1.3 %, which points to normalisation or contact area rather than physics.
   - Candidates: contact-charge discretisation at the oxide/contact corner nodes, side boundaries, and statistics (DEVSIM ships `python_packages/fermi_physics.py`).
 
-**Files:** `src/gf180tcad/tcad/stack.py`, `src/gf180tcad/tcad/moscap2d.py`, `tests/tcad/test_moscap2d.py`, `results/tcad/meshconv/moscap2d/**`, `docs/limitations/` (artefact section)
+**Files:** `src/gf180tcad/tcad/stack.py`, `src/gf180tcad/tcad/moscap2d.py`, `src/gf180tcad/tcad/__init__.py` (extend `TCAD_GENERATOR_MODULES`), `data/process/pfet_05v0.toml` (adds `sd_peak_cm3`), `tests/tcad/test_moscap2d.py`, `results/tcad/meshconv/moscap2d/**`, `results/tcad/moscap2d/<device>/start/**`, `docs/limitations/` (artefact section)
 - `stack.py` builds a gdsfactory LayerStack plus a `DopingProfile` from a `ProcessDescription`. It **requires Dualgate `(55,0)` over the gate** to select the thick oxide, and raises otherwise (cf. spec §7, ISHI).
 
 **Interfaces:**
-- Produces: `moscap2d.simulate(proc, geometry: devices.Geometry, *, with_sd: bool, method: Literal["qs", "ac"], mesh: MeshSpec, freq_hz: float | None = None) -> MoscapCV2D`.
+- Produces: `moscap2d.simulate(proc, geometry: devices.Geometry, *, vg: Sequence[float], with_sd: bool, method: Literal["qs", "ac"], mesh: MeshSpec, freq_hz: float | None = None, rel_tol: float = 1e-10) -> MoscapCV2D`.
+  - `MoscapCV2D` satisfies Task 10's `CVCurve` protocol, and also carries `cgx` (from `CVResult.cgx`) and the geometry.
+  - `dv_fb_v` is applied as the same rigid gate-bias shift as in 1D (Task 9b).
   - It builds the cell `nfet`/`pfet(volt="5.0V", w_gate=geometry.w_um, l_gate=geometry.l_um)` and cuts a uz cross-section across the gate (along L).
-  - The device is built through `gplugins.devsim.create_2Duz_simulation`, with the Task 6 contacts and Task 7 doping, using `MeshSpec.to_resolution_specs` and `n_threads=1`.
+  - The device is built through `gplugins.devsim.create_2Duz_simulation`, with the Task 6 contacts and Task 7 doping, using `MeshSpec.to_resolution_specs`. Meshing goes through the fork's single-thread `mesh_xsection` (Task 5).
   - Per-area values use the drawn L·W; DLC and the parasitics are never applied in 2D.
   - When `with_sd` is true:
     - the nfet uses n⁺ S/D at NSD 1e20 (`spice-card`, `sm141064.ngspice:37217`), with XJ 0.15 µm and Gaussian lateral straggle;
-    - the pfet uses p⁺ S/D at a cited `literature` value;
-    - S/D are tied to the body (`tie=("source", "drain")`), so a 1 MHz AC run can supply the inversion charge. The channel RC time at L10 is ~1e-9 s.
-- CLI `python -m gf180tcad.tcad moscap --dim 2`.
+    - the pfet uses p⁺ S/D with `sd_peak_cm3` = 1e20, XJ 0.15 µm (card l.38291) and the same straggle model. The peak is tagged `literature`: Plummer, Deal & Griffin, *Silicon VLSI Technology* (Prentice Hall, 2000), ch. 2, the CMOS process flow's p⁺ S/D implant. The PR quotes the page. The value is not load-bearing for C–V, which `test_pfet_sd_doping_insensitive` shows;
+    - source, drain and body are all non-gate contacts, so `sweep_cv` holds each at 0 V with its own source (Task 8). A 1 MHz AC run can therefore supply the inversion charge from S/D. The channel RC time at L10 is ~1e-9 s.
+- CLI `python -m gf180tcad.tcad moscap --device D --dim 2 --params start|calibrated --geometry <gid> --out results/tcad/moscap2d` (host), and `moscap-job` (image).
+  - It writes `results/tcad/moscap2d/<device>/<params>/<gid>/cv.csv`, `cgx.csv` and `mesh.msh` (the mesh picture source for Task 13a).
+  - It writes `results/tcad/moscap2d/provenance.json` at the tree root.
 
 - [ ] **Step 1:** Write the tests first:
   - `test_2d_equals_1d_without_sd`: with S/D removed, a uniform stack, and a gate spanning the full domain with Neumann sides (no gate-edge fringe), 2D Cgg per area equals the 1D result within 0.5 %.
   - `test_ac_1mhz_recovers_inversion`: with S/D, 1 MHz AC recovers to inversion as SPICE does (C_inv/C_acc > 0.9).
-  - `test_charge_conservation`: Cgg = Σ Cgx (gate, body, source, drain) within 0.1 % (spec §5.2).
+  - `test_charge_conservation`: Cgg = Σ_{x ≠ gate} Cxg over **every non-gate contact** (body, source, drain), within 0.1 % (spec §5.2). The set of summed contacts equals the device's non-gate contact list.
+  - `test_pfet_sd_doping_insensitive`: pfet Cgg changes by < 0.1 % at every bias for `sd_peak_cm3` in {5e19, 1e20, 2e20}.
   - `test_2d_mesh_converged`: the mesh is converged per Task 10 (< 1 %).
   - `test_dualgate_required`: `stack.py` raises if Dualgate is missing.
   - `test_byte_identical` (sandbox): two runs give byte-identical results.
@@ -732,7 +737,7 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
 
   Run them: they FAIL.
 - [ ] **Step 2:** Implement. Diagnose the C/Cox > 1 artefact from evidence: fix the cause, or document it with numbers if it is below tolerance and explained. Never paper over it.
-- [ ] **Step 3:** Run the 2D converge study. Expect hours at the finest level; the spike's failures to converge at r ≤ 1/4 were at 1e-12, and this study uses 1e-10. Commit the results, run `make manifest`, then open the PR, get it reviewed and merge.
+- [ ] **Step 3:** Run `meshconv --dim 2` for both devices, then the `start` 2D runs at the calibration geometries with the selected spec. Expect hours at the finest level; the spike's failures to converge at r ≤ 1/4 were at 1e-12, and this study uses 1e-10. Commit the results, run `make manifest`, then open the PR, get it reviewed and merge.
 
 ### Task 12: calibrate against SPICE Cgg–Vg
 
