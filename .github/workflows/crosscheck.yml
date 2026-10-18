@@ -1,0 +1,162 @@
+# SPDX-License-Identifier: Apache-2.0
+# Cross-host determinism: regenerate the SPICE reference jobs listed in
+# tests/crosscheck_subset.txt ("all": the full reference) on a GitHub-hosted runner, in the same pinned image and the same
+# sandbox (tools/sandbox-setup + tools/sandbox-run), and require every file to be byte-identical
+# (sha256) to results/MANIFEST.sha256, which was generated locally. No tolerance anywhere.
+# The subset goes to a temporary --out, never results/spice: spice-reference replaces --out, so
+# a subset written there would replace the full tree. See docs/reproduce/index.md.
+name: crosscheck
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tools/**"
+      - "docker/**"
+      - "results/**"
+      - "tests/crosscheck_subset.txt"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Makefile"
+      - ".github/workflows/crosscheck.yml"
+  schedule:
+    - cron: "41 5 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crosscheck-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  crosscheck:
+    name: crosscheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Directories
+        run: |
+          {
+            echo "OUT=$RUNNER_TEMP/crosscheck/spice"
+            echo "LOGS=$RUNNER_TEMP/crosscheck-logs"
+            # spice-reference keeps a failed job's scratch dir (with its job.log) under $TMPDIR
+            echo "TMPDIR=$RUNNER_TEMP/tmp"
+          } >> "$GITHUB_ENV"
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
+          df -h /
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Prepare directories
+        run: mkdir -p "$LOGS" "$TMPDIR" "$(dirname "$OUT")"
+      - name: Runner
+        run: |
+          {
+            echo "## runner"; uname -a; nproc; free -g; df -h /
+            echo "## cpu"; lscpu
+            echo "## docker"; docker version
+            docker info --format 'cgroup driver={{.CgroupDriver}} version={{.CgroupVersion}}'
+            echo "## systemd"; systemctl --version
+          } > "$LOGS/runner.txt" 2>&1
+          cat "$LOGS/runner.txt"
+      - name: Sandbox setup (gf180-tcad.slice)
+        run: |
+          sudo tools/sandbox-setup > "$LOGS/sandbox-setup.txt" 2>&1 || { cat "$LOGS/sandbox-setup.txt"; exit 1; }
+          cat "$LOGS/sandbox-setup.txt"
+      - name: Pull docker/IMAGE by digest
+        run: |
+          image="$(cat docker/IMAGE)"
+          case "$image" in *@sha256:*) ;; *) echo "::error::docker/IMAGE is not pinned by digest: $image"; exit 1 ;; esac
+          time docker pull --quiet "$image"
+          docker image inspect "$image" --format 'id={{.Id}} size={{.Size}}'
+          df -h /
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+      - run: uv sync --locked
+      - name: Sandbox check (container limits and slice placement)
+        run: |
+          mkdir -p "$RUNNER_TEMP/sbx"
+          tools/sandbox-run --mem 4g --cpus 1 --pids 256 --workdir "$RUNNER_TEMP/sbx" -- \
+            sh -c 'cat /proc/self/cgroup; for f in memory.max memory.swap.max pids.max cpu.max; do echo "$f=$(cat /sys/fs/cgroup/$f)"; done; python3 -W error -c "import numpy._core._multiarray_umath as m; print(\"numpy dispatch enabled=\" + \",\".join(f for f in m.__cpu_dispatch__ if m.__cpu_features__.get(f)))"; sleep 5' \
+            > "$LOGS/sandbox-check.txt" 2>&1 &
+          pid=$!
+          sleep 3
+          # "gf180-tcad.slice" nests as gf180.slice/gf180-tcad.slice; ask systemd for the path
+          cg="$(systemctl show gf180-tcad.slice -p ControlGroup --value)"
+          slice="/sys/fs/cgroup$cg"
+          {
+            echo "## host: gf180-tcad.slice while a sandbox container runs"
+            systemctl show gf180-tcad.slice -p ActiveState -p MemoryMax -p MemorySwapMax -p TasksMax -p ControlGroup
+            echo "slice memory.max=$(cat "$slice/memory.max") memory.swap.max=$(cat "$slice/memory.swap.max") pids.max=$(cat "$slice/pids.max")"
+            find "$slice" -mindepth 1 -maxdepth 1 -type d
+          } > "$LOGS/sandbox-host.txt" 2>&1 || true
+          wait "$pid"
+          cat "$LOGS/sandbox-check.txt" "$LOGS/sandbox-host.txt"
+          check() { grep -q "$1" "$2" || { echo "::error::$3 (see $(basename "$2"))"; exit 1; }; }
+          check '^memory.max=4294967296$' "$LOGS/sandbox-check.txt" "container memory.max is not 4 GiB"
+          check '^memory.swap.max=0$' "$LOGS/sandbox-check.txt" "container may swap"
+          check '^pids.max=256$' "$LOGS/sandbox-check.txt" "container pids.max is not 256"
+          check '^cpu.max=100000 100000$' "$LOGS/sandbox-check.txt" "container cpu.max is not 1 CPU"
+          check '^numpy dispatch enabled=$' "$LOGS/sandbox-check.txt" "numpy is not on its baseline kernels"
+          [ -n "$cg" ] || { echo "::error::gf180-tcad.slice has no cgroup (not active)"; exit 1; }
+          check '^slice memory.max=137438953472 memory.swap.max=0 pids.max=32768$' \
+            "$LOGS/sandbox-host.txt" "gf180-tcad.slice limits are not applied"
+          check "^$slice/docker-[0-9a-f]*\.scope$" "$LOGS/sandbox-host.txt" \
+            "the sandbox container did not run inside gf180-tcad.slice"
+      - name: Regenerate the subset (temporary --out, never results/spice)
+        run: |
+          uv run --locked python tools/crosscheck-args tests/crosscheck_subset.txt > "$LOGS/args.txt"
+          mapfile -t args < "$LOGS/args.txt"
+          echo "spice-reference ${args[*]} --jobs 3 --out $OUT"
+          # 3 jobs x (4 GiB, 1 CPU) per job, the engine default: 12 GiB of the runner's 16 GiB
+          uv run --locked python -m gf180tcad spice-reference "${args[@]}" --jobs 3 --out "$OUT" \
+            > "$LOGS/spice-reference.log" 2>&1 || { cat "$LOGS/spice-reference.log"; exit 1; }
+          cat "$LOGS/spice-reference.log"
+      - name: verify-subset against results/MANIFEST.sha256
+        run: |
+          rc=0
+          uv run --locked python -m gf180tcad.manifest verify-subset "$OUT" \
+            --against results/MANIFEST.sha256 --prefix spice/ --subset tests/crosscheck_subset.txt \
+            > "$LOGS/verify-subset.txt" 2>&1 || rc=$?
+          cat "$LOGS/verify-subset.txt"
+          {
+            echo "### crosscheck: verify-subset (exit $rc)"
+            echo '```'
+            cat "$LOGS/verify-subset.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+      - name: Collect differing files
+        if: failure()
+        run: |
+          d="$RUNNER_TEMP/crosscheck-artefact"
+          mkdir -p "$d/generated" "$d/committed"
+          cp -r "$LOGS" "$d/logs"
+          # verify-subset lines: "<reason>: spice/<relpath>"
+          if [ -f "$LOGS/verify-subset.txt" ]; then
+            sed -n 's/^[a-z ]*: spice\///p' "$LOGS/verify-subset.txt" > "$d/paths.txt"
+            while IFS= read -r rel; do
+              case "$rel" in */) continue ;; esac
+              if [ -f "$OUT/$rel" ]; then mkdir -p "$d/generated/$(dirname "$rel")"; cp "$OUT/$rel" "$d/generated/$rel"; fi
+              if [ -f "results/spice/$rel" ]; then mkdir -p "$d/committed/$(dirname "$rel")"; cp "results/spice/$rel" "$d/committed/$rel"; fi
+              if [ -f "$OUT/$rel" ] && [ -f "results/spice/$rel" ]; then
+                diff -u "results/spice/$rel" "$OUT/$rel" >> "$d/diff.txt" || true
+              fi
+            done < "$d/paths.txt"
+          fi
+          # failed jobs' scratch dirs (job.log and simulator workdirs), if generation failed
+          find "$TMPDIR" -maxdepth 1 -name 'gf180tcad-spice-reference-*' -exec cp -r {} "$d/" \;
+          ls -R "$d" > "$d/listing.txt"
+      - uses: actions/upload-artifact@v7.0.2
+        if: failure()
+        with:
+          name: crosscheck-differences
+          path: ${{ runner.temp }}/crosscheck-artefact
+          retention-days: 30

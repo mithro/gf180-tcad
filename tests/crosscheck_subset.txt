@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Jobs of the SPICE reference that .github/workflows/crosscheck.yml regenerates on a
+# GitHub-hosted runner and compares byte for byte with results/MANIFEST.sha256
+# (python -m gf180tcad.manifest verify-subset).
+#
+# One job per line, <engine>/<corner>/<device>/<geometry_id>, for a partial list; or the
+# single line "all" for every job of the reference (both engines x all corners x both
+# devices x every geometry, 120 jobs). Only a complete subset also compares envelope.json.
+all

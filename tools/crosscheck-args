@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Print the spice-reference filter arguments for a subset file, one per line.
+
+    uv run --locked python tools/crosscheck-args tests/crosscheck_subset.txt
+
+Per field of the listed ``<engine>/<corner>/<device>/<geometry_id>`` jobs, the distinct values
+become --engine/--corner/--device/--geometry filters. The filters select a cross product, so
+``manifest verify-subset`` afterwards fails if they planned any job that is not listed (or
+missed one); tests/test_manifest_subset.py checks that they plan exactly the listed jobs.
+"""
+
+import sys
+from pathlib import Path
+
+from gf180tcad import manifest
+from gf180tcad.reference import ENGINES
+
+
+def args(jobs: tuple[str, ...]) -> list[str]:
+    engines, corners, devices, geometries = (
+        sorted({j.split("/")[i] for j in jobs}) for i in range(4)
+    )
+    if len(engines) > 1 and set(engines) != set(ENGINES):
+        raise ValueError(f"cannot express engines {engines} as one --engine")
+    out = ["--engine", "both" if set(engines) == set(ENGINES) else engines[0]]
+    for flag, values in (("--corner", corners), ("--device", devices), ("--geometry", geometries)):
+        for v in values:
+            out += [flag, v]
+    return out
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit("usage: tools/crosscheck-args SUBSET_FILE")
+    print("\n".join(args(manifest.load_subset(Path(sys.argv[1])))))

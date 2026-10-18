@@ -15,6 +15,9 @@ dependencies = [
     "numpy>=2.5.4",
 ]
 
+[project.urls]
+Documentation = "https://gf180-tcad.readthedocs.io/"
+
 [dependency-groups]
 dev = ["pytest", "ruff"]
 docs = [

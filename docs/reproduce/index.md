@@ -39,12 +39,15 @@ make manifest
 ```sh
 uv run --locked python -m gf180tcad spice-reference \
     [--engine ngspice|xyce|both] [--corner C ...] [--device D ...] \
-    [--jobs N] --out results/spice
+    [--geometry G ...] [--jobs N] --out results/spice
 ```
 
-`--corner` (`typical`, `ff`, `ss`, `fs`, `sf`) and `--device` (`nfet_05v0`,
-`pfet_05v0`) can be repeated; the default is all of them, and `--engine`
-defaults to `both`. For example, a single device at one corner:
+`--corner` (`typical`, `ff`, `ss`, `fs`, `sf`), `--device` (`nfet_05v0`,
+`pfet_05v0`) and `--geometry` (a geometry id such as `w10p0_l0p60`) can be
+repeated; the default is all of them, and `--engine` defaults to `both`.
+`--geometry` keeps, for each selected device, only the listed geometries that
+device has; a geometry that no selected device has is an error. For example,
+a single device at one corner:
 
 ```sh
 uv run --locked python -m gf180tcad spice-reference --engine ngspice \
@@ -111,6 +114,95 @@ results/spice/<engine>/<corner>/<device>/<geometry_id>/metrics.json
 Generation never compares the two engines. Each engine's results are
 published as they are; the ngspice/Xyce cross-check is a separate test,
 described in {doc}`../limitations/engine-cross-check`.
+
+## Cross-host determinism
+
+The committed reference is generated on the project's own machine, whose CPUs
+are Intel Xeon Gold 6152. To show that the same bytes come out on a different
+host, the
+[`crosscheck` workflow](https://github.com/mithro/gf180-tcad/blob/main/.github/workflows/crosscheck.yml)
+regenerates it on a GitHub-hosted runner (`ubuntu-latest`) and requires every
+file to be byte-identical, by sha256, to `results/MANIFEST.sha256`. The
+runner has a different CPU, kernel and Docker installation, and its CPU model
+varies from run to run; so far the runs have landed on AMD EPYC 9V45 and AMD
+EPYC 7763. There is no tolerance: a difference in the last digit of one float
+fails it.
+
+**Everything is cross-checked on GitHub-hosted runners.** The
+[subset file](https://github.com/mithro/gf180-tcad/blob/main/tests/crosscheck_subset.txt)
+holds the single line `all`, which stands for every job of the reference:
+both engines, all five corners, both devices and all six geometries of each,
+120 jobs. Each job includes every sweep its engine runs (`idvg_lin`,
+`idvg_sat`, `idvd`, `ioff` and, for ngspice only, `cv`). The check covers
+all 660 CSV and metrics files, the provenance file and the corner envelope.
+Nothing is checked only locally.
+
+**What we found and fixed.** The first full cross-check
+([run](https://github.com/mithro/gf180-tcad/actions/runs/39115902279), on an
+AMD EPYC 7763) failed. Every raw simulator CSV was identical, but five
+`metrics.json` files differed in the last digits: Vt, subthreshold slope and
+the DIBL derived from them. The cause was numpy's run-time SIMD dispatch.
+numpy picks a kernel for each operation by CPU feature level, and its
+`log10` kernels for AVX-512 and for AVX2 differ by one ulp on some inputs.
+The local Xeon and an earlier EPYC 9V45 runner both have AVX-512; the
+EPYC 7763 has only AVX2. The sandbox now pins numpy to its baseline
+(x86-64-v2) kernels by disabling every dispatch target with
+`NPY_DISABLE_CPU_FEATURES`, so all such hosts compute the same bits. The
+reference was regenerated: no CSV changed, and the largest change to a
+published metric was 5.7e-15 relative (51 ulp, in a DIBL value). Commits
+[1731912](https://github.com/mithro/gf180-tcad/commit/1731912) (the fix) and
+[6205cb9](https://github.com/mithro/gf180-tcad/commit/6205cb9) (the
+regenerated results); the cross-check then passed on an AMD EPYC 7763
+([run](https://github.com/mithro/gf180-tcad/actions/runs/39116857613)). A
+sandbox test checks that numpy reports no dispatch target enabled in the
+container, and that the baseline results equal those with only the AVX-512
+targets disabled; the workflow checks the former on the runner too.
+
+The subset file can instead list jobs one per line, as
+`<engine>/<corner>/<device>/<geometry_id>`, to cross-check part of the
+reference. The corner envelope is then not compared, because it is the
+min/max over all five corners and a partial run lacks some of them, so its
+envelope always differs from the committed one. The envelope is computed only
+by selecting from the metrics floats, and those are compared.
+
+The workflow runs on pull requests that change the sources, tools, image
+pin, results, project metadata, lock file, Makefile, subset file or the
+workflow itself, and also weekly and on demand. Its steps are:
+
+1. Free disk space and pull `docker/IMAGE` by its digest.
+2. Install the sandbox slice with `sudo tools/sandbox-setup`. Then, while
+   one container started by `tools/sandbox-run` is running, check that the
+   container has the limits of a reference job (4 GiB memory, no swap, 1 CPU,
+   256 PIDs) and that it runs inside `gf180-tcad.slice` with the slice's
+   limits. The same `tools/sandbox-run` is used as locally; the sandbox is
+   never disabled.
+3. `tools/crosscheck-args` turns the subset file into `spice-reference`
+   filters (`--engine`, `--corner`, `--device` and `--geometry`).
+   The jobs then run with `--jobs 3` (3 × 4 GiB, 1 CPU each, on a 4-CPU,
+   16 GiB runner) into a temporary `--out`. They are never written to
+   `results/spice`, because `--out` is replaced by what was run.
+4. `python -m gf180tcad.manifest verify-subset <out> --against
+   results/MANIFEST.sha256 --prefix spice/ --subset tests/crosscheck_subset.txt`
+   prints one line per difference, as `<reason>: spice/<path>`, and exits
+   non-zero if there is any. The reasons are:
+   - `changed`: different bytes.
+   - `missing`: a committed file of a listed job was not produced, or the
+     provenance file (always required) or, for the full reference, the
+     envelope.
+   - `not in manifest`: a produced file that was never committed.
+   - `not in subset`: a produced job that is not listed.
+   - `unknown job`: a listed job that has no committed files.
+
+   On success it prints `identical: 662 files of 120 jobs ...`. The output is
+   also shown in the run's summary.
+5. On failure, an artefact named `crosscheck-differences` is uploaded. It
+   holds the generated and committed copy of each differing file, a
+   `diff -u` of each pair, the generator log, the runner and sandbox
+   diagnostics, and the scratch directory of any job that failed.
+
+`provenance.json` is compared. A change to the generator's sources changes
+`generator_sha256`, so the cross-check fails until the reference has been
+regenerated and the manifest updated, the same as `make reproduce`.
 
 ```{toctree}
 :maxdepth: 1
