@@ -170,6 +170,40 @@ def test_depletion_width_on_a_row():
     assert (width, y_cut, count) == (2.0, 1.0, 3)
 
 
+def test_msh2_physical_names(tmp_path):
+    msh = tmp_path / "temp.msh2"
+    msh.write_text(
+        "$MeshFormat\n2.2 0 8\n$EndMeshFormat\n$PhysicalNames\n3\n"
+        '1 3 "slab90___anode"\n2 1 "core"\n2 2 "slab90"\n$EndPhysicalNames\n$Nodes\n0\n',
+        encoding="utf-8",
+    )
+    assert harness.msh2_physical_names(msh) == ["core", "slab90", "slab90___anode"]
+
+
+def test_junction_probe_on_the_bottom_row():
+    # bottom-edge rows (x cm, y cm, Potential, NetDoping) of a rib "core" on a slab "slab90";
+    # the junction is midway between x = 3e-4 (n) and 4e-4 (p) cm, i.e. 3.5 um
+    rows = {
+        "core": [
+            (2.0e-4, 0.0, 0.40, 1e17),
+            (3.0e-4, 0.0, 0.30, 1e17),
+            (3.3e-4, 0.0, 0.25, 1e17),
+            (3.5e-4, 0.0, -0.05, 0.0),  # the metallurgical junction itself
+            (3.7e-4, 0.0, -0.35, -1e17),
+            (4.0e-4, 0.0, -0.40, -1e17),
+            (5.0e-4, 0.0, -0.45, -1e17),
+            (3.5e-4, 1e-5, 9.0, 1e17),  # not on the bottom row
+        ],
+        "slab90": [(2.0e-4, 0.0, 0.10, 1e17), (5.0e-4, 0.0, -0.05, -1e17)],
+    }
+    j = harness.junction_probe(rows, rib="core", slab="slab90", offset_um=0.2)
+    assert j["x_um"] == pytest.approx(3.5, abs=1e-12)
+    assert j["n_v"] == 0.25 and j["p_v"] == -0.35  # nodes nearest 3.3 and 3.7 um
+    assert j["drop_v"] == 0.25 - -0.35
+    assert j["junction_v"] == -0.05
+    assert j["boundary_jump_v"] == max(abs(0.40 - 0.10), abs(-0.45 - -0.05))
+
+
 def test_v080_lock_is_hashed_and_era_pinned():
     text = (EXPERIMENT / "v080.lock").read_text(encoding="utf-8")
     assert "--exclude-newer 2023-09-20T18:00:00Z" in text
@@ -184,6 +218,42 @@ def test_v080_lock_is_hashed_and_era_pinned():
 
 
 # --- sandbox: rebuild the record --------------------------------------------------------------
+
+#: The Boltzmann built-in potential Vt ln(N_A N_D / n_i^2) of the rib's 1e17 / 1e17 junction,
+#: with the DEVSIM simple_physics constants v0.8.0's DDComponent solves with (300 K).
+_VT_SIMPLE = 1.3806503e-23 * 300 / 1.6e-19
+_VBI_RIB = _VT_SIMPLE * math.log(1e17 * 1e17 / 1e10**2)
+#: The v0.8.0 mesh's physical groups: no core___slab90, so the rib is not coupled to the slab.
+V080_MSH_GROUPS = ["anode", "cathode", "core", "slab90", "slab90___anode", "slab90___cathode"]
+
+
+def _assert_v080_junction(dd: dict) -> None:
+    """The bias never reaches the rib's junction: v0.8.0's rib floats (Task 5 junction probe)."""
+    assert dd["msh_physical_groups"] == V080_MSH_GROUPS
+    assert "core___slab90" not in dd["interfaces"]
+    states = [dd["equilibrium"], *dd["bias"]]
+    first = states[0]["junction"]
+    for s in states:
+        j = s["junction"]
+        assert abs(j["drop_v"] - _VBI_RIB) < 1e-4, j  # the floating rib's own built-in
+        assert abs(j["drop_v"] - first["drop_v"]) < 1e-9, j  # unchanged by the bias
+        assert abs(j["junction_v"] - first["junction_v"]) < 1e-9, j
+        assert j["boundary_jump_v"] > 0.05, j  # rib and slab disagree at the rib's corners
+        # the recorded Potential span is the anode contact minus the floating rib's minimum
+        rng = s["potential_range_by_region"]
+        assert s["potential_span_v"] == rng["slab90"][1] - rng["core"][0]
+        assert abs(rng["slab90"][1] - s["contact_potential_v"]["anode"]) < 1e-9
+
+
+def test_committed_v080_junction_probe():
+    full, half = _load("v0.8.0.json"), _load("v0.8.0-mesh0p5.json")
+    for d in (full, half):
+        _assert_v080_junction(d["ddcomponent"])
+    jf, jh = (d["ddcomponent"]["equilibrium"]["junction"] for d in (full, half))
+    assert round(jf["drop_v"], 5) == round(jh["drop_v"], 5) == 0.8345
+    assert round(jf["boundary_jump_v"], 2) == 0.46
+    # the rib's absolute Potential is set by the mesh, not by the bias
+    assert round(jf["junction_v"], 5) == -0.47002 and round(jh["junction_v"], 5) == -0.67054
 
 
 def _assert_v080(data: dict) -> None:
@@ -220,6 +290,7 @@ def _assert_v080(data: dict) -> None:
     assert math.isfinite(eq["anode_minus_cathode_v"])
     rs = checks["refined_solve"]
     assert rs["status"] == "not_run" and "refine" in rs["reason"]
+    _assert_v080_junction(dd)
 
 
 def _assert_v142(data: dict) -> None:
@@ -270,5 +341,11 @@ def test_doc_quotes_the_record():
             " / ".join(f"{s['anode_minus_cathode_v']:.4f}" for s in steps) + " V",
             " / ".join(f"{s['potential_span_v']:.4f}" for s in steps) + " V",
         ]
+    for d in (full, half):
+        dd = d["ddcomponent"]
+        steps = [dd["equilibrium"], *dd["bias"]]
+        cells.append(" / ".join(f"{s['junction']['drop_v']:.5f}" for s in steps) + " V")
+        cells.append(f"{dd['equilibrium']['junction']['boundary_jump_v']:.2f} V")
+        cells.append(f"{dd['equilibrium']['junction']['junction_v']:.5f} V".replace("-", "−"))
     for cell in cells:
         assert cell in page, cell
