@@ -12,7 +12,8 @@ there.
   to compare yet.
 - **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
-  the port to the latest stack is in progress in {{ gplugins_fork }}. See {doc}`plugin-history`.
+  it is now fixed in {{ gplugins_fork }} and re-verified on the latest stack. See
+  {doc}`plugin-history`.
 - **Unverified citations.** Several literature items have not been checked yet
   and are marked "unverified". See {doc}`literature`.
 - **The SPICE models are a reference, not the truth.** {term}`BSIM4` is empirical,

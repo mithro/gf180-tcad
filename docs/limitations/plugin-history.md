@@ -68,13 +68,13 @@ The checks come from two blocks of the v0.8.0 source:
 
 | Check | What runs |
 |---|---|
-| {repo}`import <experiments/plugin-history/checks_v080.py#L303>` | [`import gplugins.devsim`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/__init__.py) |
-| {repo}`pin_test <experiments/plugin-history/checks_v080.py#L55>` | the PIN waveguide build and [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L385) |
-| {repo}`ramp <experiments/plugin-history/checks_v080.py#L95>` ({repo}`PN part <experiments/plugin-history/checks_v080.py#L253>`) | [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L420) of the PIN waveguide to 0 and −1 V, and (added) of the PN-slab cathode to 0.1 and 0.2 V |
-| {repo}`ddcomponent_mesh <experiments/plugin-history/checks_v080.py#L180>` | the PN-slab `DDComponent(...)` |
-| {repo}`ddsolver <experiments/plugin-history/checks_v080.py#L322>` | [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L204) on the PN slab (meshing with gmsh, then solving) |
-| {repo}`refine <experiments/plugin-history/checks_v080.py#L269>` | [`get_refined_mesh`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L328) on the PN slab, as in the block |
-| {repo}`refined_solve <experiments/plugin-history/checks_v080.py#L345>` | the block's last step, a second `DDComponent` solved with `global_meshsize_array`; recorded as not run, because it needs the output of `refine` |
+| {repo}`import <experiments/plugin-history/checks_v080.py#L338>` | [`import gplugins.devsim`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/__init__.py) |
+| {repo}`pin_test <experiments/plugin-history/checks_v080.py#L62>` | the PIN waveguide build and [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L385) |
+| {repo}`ramp <experiments/plugin-history/checks_v080.py#L102>` ({repo}`PN part <experiments/plugin-history/checks_v080.py#L288>`) | [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L420) of the PIN waveguide to 0 and −1 V, and (added) of the PN-slab cathode to 0.1 and 0.2 V |
+| {repo}`ddcomponent_mesh <experiments/plugin-history/checks_v080.py#L187>` | the PN-slab `DDComponent(...)` |
+| {repo}`ddsolver <experiments/plugin-history/checks_v080.py#L357>` | [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L204) on the PN slab (meshing with gmsh, then solving) |
+| {repo}`refine <experiments/plugin-history/checks_v080.py#L304>` | [`get_refined_mesh`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L328) on the PN slab, as in the block |
+| {repo}`refined_solve <experiments/plugin-history/checks_v080.py#L375>` | the block's last step, a second `DDComponent` solved with `global_meshsize_array`; recorded as not run, because it needs the output of `refine` |
 
 (plugin-history-changes)=
 
@@ -138,6 +138,10 @@ below 1e-2 |[`NetDoping`](https://devsim.net/models.html#node-models)|.
 | PN-slab mesh nodes (sum over its four DEVSIM regions) | 3523 | 11326 |
 | PN-slab anode − cathode contact potential at 0 / 0.1 / 0.2 V | 0.9587 / 0.8587 / 0.7587 V | 0.9587 / 0.8587 / 0.7587 V |
 | PN-slab Potential span over the silicon at 0 / 0.1 / 0.2 V | 1.3613 / 1.3613 / 1.3613 V | 1.6267 / 1.6267 / 1.6267 V |
+| PN-slab mesh physical groups (`msh_physical_groups`) | anode, cathode, core, slab90, slab90\_\_\_anode, slab90\_\_\_cathode: **no core\_\_\_slab90** | the same |
+| PN-slab junction drop ψ(x_j − 0.2 µm) − ψ(x_j + 0.2 µm) at 0 / 0.1 / 0.2 V (bottom edge, x_j = 4.0 µm) | 0.83450 / 0.83450 / 0.83450 V | 0.83450 / 0.83450 / 0.83450 V |
+| PN-slab Potential at the junction ψ(x_j), equilibrium | −0.47002 V | −0.67054 V |
+| PN-slab rib/slab Potential jump at the rib's two bottom vertices, equilibrium (`boundary_jump_v`) | 0.46 V | 0.73 V |
 
 The PN slab's mesh is unstructured and has no row at mid-height. Its bottom edge is the only
 mesh row through the junction, which lies under the rib, so both silicon regions are used there.
@@ -146,14 +150,43 @@ and at mesh × 0.5 on 8. The × 0.5 value is above an ideal abrupt-junction esti
 0.048 µm. The re-verification compares it at mesh × 0.5 or finer, or allows a difference of
 about one element.
 
-**Leading hypothesis for the re-verification: the applied bias does not reach the junction.**
-The anode − cathode contact potential falls by exactly the 0.1 V step each time, and at
-equilibrium it matches the ideal built-in potential of the ±1.1e18 cm⁻³ contacts (≈ 0.957 V).
-The Potential span over the silicon is larger than that, set by extrema beyond the contact
-potentials (±0.479 V), and it changes with the mesh, so it is a non-physical value. That it does
-not change with bias therefore says nothing about the junction potential. Together with the
-near-zero currents, though, it suggests that the bias stops at the contacts. The re-verification
-on the latest stack has to test this.
+The rows from `msh_physical_groups` on are the record's **junction probe**
+({repo}`pn_junction <experiments/plugin-history/checks_v080.py#L202>`, with
+{repo}`junction_probe <experiments/plugin-history/harness.py#L145>` and
+{repo}`msh2_physical_names <experiments/plugin-history/harness.py#L134>`). It uses the
+definitions of the fork's latest-stack probe
+([`_junction`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py#L248)): x_j is the metallurgical
+junction on the bottom edge, ψ(x_j ∓ 0.2 µm) are the neutral n and p sides inside the rib, and
+the jump is the larger Potential difference between the `core` and `slab90` nodes at the rib's
+two bottom vertices. Each record also holds the Potential range of each silicon region at every
+step (`potential_range_by_region`).
+
+(plugin-history-junction)=
+
+**The bias does not reach the junction, because the rib floats.** This was the record's
+leading hypothesis, and the junction probe confirms it:
+- **The mesh has no `core___slab90` group.** v0.8.0's mesher never tagged the boundary between
+  the rib (`core`), which holds the whole pn junction, and the slab (`slab90`). So the DEVSIM
+  device has no interface there, and the rib is a region with no path to either contact. The
+  contacts are on the slab, so the bias moves the slab and the contact potentials only.
+- **The junction drop never changes with bias.** It stays at 0.83450 V, the Boltzmann built-in
+  potential V_t ln(N_A N_D / n_i²) = 0.834503 V of the rib's own 1e17 / 1e17 cm⁻³ junction
+  (DEVSIM's `simple_physics` constants, 300 K).
+- **The Potential is discontinuous at the rib's bottom vertices**, by 0.46 V at equilibrium (0.73 V at
+  mesh × 0.5). The jump grows by the applied bias, because only the slab moves.
+- **The rib's absolute Potential depends on the mesh** (ψ(x_j) is −0.47002 V at full mesh and
+  −0.67054 V at × 0.5), because nothing fixes it. This explains the non-physical Potential
+  span: it is the anode contact potential (+0.4793 V, the slab's maximum) minus the floating
+  rib's minimum, 0.4793 + 0.8820 = 1.3613 V and 0.4793 + 1.1474 = 1.6267 V
+  ({test}`tests/test_plugin_history.py::test_committed_v080_junction_probe`).
+
+The anode − cathode contact potential still falls by exactly the 0.1 V step each time. At
+equilibrium it matches the ideal built-in potential of the ±1.1e18 cm⁻³ contacts (≈ 0.957 V),
+because it is set by the ohmic contact doping alone.
+
+Why the old mesher dropped the boundary is plausible but not proven. v0.8.0's mesher tags an
+interface only for line segments that two polygons share exactly, and the trapezoidal rib
+(10° sidewall) and the slab cut evidently share none.
 
 **All recorded currents are below the solver's current floor.**
 - **PN slab:** below 1e-26 A/cm. The anode current is the same at both biases, and at half mesh
@@ -193,6 +226,110 @@ one host only.
 
 ## Re-verified on latest
 
-To be filled in by the port of the plugin to the latest stack (devsim 2.11, meshwell 2.5,
-gdsfactory 9) in {{ gplugins_fork }}. It recomputes the quantities above there, compares them
-with this record and states the allowed difference.
+The plugin is fixed in {{ gplugins_fork }} and runs on the latest stack:
+{{ DEVSIM }} 2.11.1, {{ meshwell }} 2.5.2, {{ gmsh }} 4.15.2, {{ gdsfactory }} 9.51.0 and
+{{ Python }} 3.13, in the {term}`TCAD` image ({repo}`docker/TCAD_IMAGE`). gf180-tcad pins the
+fork at [`400f842`](https://github.com/mithro/gplugins/commit/400f8423d7b0d1aac48eea1c0145342d0c1f766a) through the
+{repo}`third_party/gplugins <.gitmodules>` submodule. All file links below are at that commit.
+
+| Fork PR | What it changes | Merge commit |
+|---|---|---|
+| [mithro/gplugins#2](https://github.com/mithro/gplugins/pull/2) | `import gplugins.devsim` on the latest stack (lazy {{ tidy3d }} and pyvista imports, the pydantic `Extra` removal, the `get_refined_mesh` `NameError`, `delete_device`, silicon models only on regions with NetDoping) and a CI check in the TCAD image | [`4b0a07a`](https://github.com/mithro/gplugins/commit/4b0a07a78b5a282bb15cee230dc906aa17ee2529) |
+| [mithro/gplugins#4](https://github.com/mithro/gplugins/pull/4) | [`create_2Duz_simulation`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/get_simulation.py#L41) meshes again, with meshwell 2.5 ([`mesh_xsection`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/meshing.py#L104), single-threaded, fixed seed, MSH 2.2); physical names from meshio's `field_data`, without which no interface was added | [`ddbf280`](https://github.com/mithro/gplugins/commit/ddbf280e001f83439bb67756544c0a5ad1a63528) |
+| [mithro/gplugins#3](https://github.com/mithro/gplugins/pull/3) | analytic doping profiles ([`doping.py`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/doping.py)) | [`b519c87`](https://github.com/mithro/gplugins/commit/b519c87e79882baa71fb89bb77c2956b9ff56257) |
+| [mithro/gplugins#5](https://github.com/mithro/gplugins/pull/5) | typed contacts, materials from cited constants and the 1D stack builder ([`stack1d.py`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/stack1d.py)) | [`400f842`](https://github.com/mithro/gplugins/commit/400f8423d7b0d1aac48eea1c0145342d0c1f766a) |
+
+The PRs #2 and #4 are the port that this section re-verifies. #3 and #5 extend the plugin for
+the MOS capacitors and do not change the paths below.
+
+(plugin-history-latest-pin)=
+
+### PIN waveguide: bit-identical
+
+The PIN waveguide uses DEVSIM's own tensor mesh, so the port changes only its imports. On the
+latest stack its depletion widths are **bit-identical** to v0.8.0's
+([`test_pin_depletion_width_match_v080`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/test_devsim.py#L134)):
+
+| Quantity | v0.8.0 (devsim 2.6.3, Python 3.11) | latest (devsim 2.11.1, Python 3.13) | difference |
+|---|---|---|---|
+| depletion width at 0 V | 0.06898074973467581 µm | 0.06898074973467581 µm | 0 |
+| depletion width at −1 V | 0.13782918124914934 µm | 0.13782918124914934 µm | 0 |
+| cut row y, depleted nodes at 0 / −1 V | 0.11027488009949704 µm, 51 / 82 | the same | 0 |
+
+The test allows 1e-6 relative; the measured difference is 0. The contact currents are
+bit-identical too, and stay below the 1e-13 A/cm floor
+([`test_pin_currents_below_floor`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/test_devsim.py#L144)). They are
+still nonzero at 0 V and left + right ≠ 0, so they remain solver noise.
+
+(plugin-history-latest-pn)=
+
+### PN slab: the anchors
+
+The PN slab is the one of {repo}`experiments/plugin-history/checks_v080.py`, ported to
+gdsfactory 9 in the fork's
+[`tests/test_mesh.py`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py) and meshed by meshwell, not
+by v0.8.0's mesher. Each allowed difference is the larger of the two meshers' self-differences, mesh × 1
+against × 0.5: v0.8.0's from {repo}`results/plugin-history/v0.8.0.json` and
+{repo}`results/plugin-history/v0.8.0-mesh0p5.json`, the port's from the same `resolutions` at
+both scales
+([`test_pn_slab_physical_anchors_match_v080`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py#L366)).
+
+| Anchor | v0.8.0, × 1 / × 0.5 | latest, × 1 / × 0.5 | allowed difference | result |
+|---|---|---|---|---|
+| regions → material | Aluminum: anode, cathode; si: slab90, core | the same | exact | match |
+| DEVSIM regions / contacts | anode, cathode, core, slab90 / anode, cathode | the same | exact | match |
+| interfaces | slab90\_\_\_anode, slab90\_\_\_cathode | the same **plus core\_\_\_slab90** | exact | the fix, see below |
+| anode − cathode at 0 V | 0.9586540658880733 / …742 V | within 8.9e-16 V of v0.8.0 (port self-difference 0) | 8.9e-16 V (4 {term}`ulp` of 1 V) | match |
+| anode − cathode at 0.1 / 0.2 V | 0.85865 / 0.75865 V | the same, within the allowed difference | 8.9e-16 V | match |
+| step per 0.1 V of bias | 0.1 V | 0.1 V | the same + 2 ulp | match |
+| NetDoping range | ±1.1e18 cm⁻³ | ±1.1e18 cm⁻³ | exact | match |
+| depletion width (bottom edge), compared at × 0.5 | 0.03863 / 0.06883 µm | 0.06000 / 0.06000 µm | 0.0302 µm (v0.8.0's self-difference); Δ = 0.0088 µm | match |
+| the same, against the depletion approximation (0.06664 µm) | – | 0.06000 µm at × 0.5 | one bottom-edge node spacing, 0.0100 µm; Δ = 0.0066 µm | match |
+| node count (reported, not asserted) | 3523 / 11326 | 3384 / 10424 | – | – |
+
+The anode − cathode potential is a boundary-condition check, not a mesh check: it is the
+ohmic-contact difference 2 V_t ln(1.1e18 / n_i), set by the contact doping alone, which is why
+both self-differences are at the ulp level. The depletion width is a difference of two node
+positions, so it is quantised to the node spacing; the port's × 1 = × 0.5 equality is a
+coincidence of that.
+
+(plugin-history-latest-junction)=
+
+### PN slab: the bias now reaches the junction
+
+The port meshes the rib/slab boundary, so its device has the `core___slab90` interface, and
+the plugin adds it like every other `a___b` group of the mesh
+([`get_simulation.py`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/get_simulation.py#L189)). This is the cause of
+v0.8.0's "bias does not reach the junction" ({ref}`the junction probe <plugin-history-junction>`), now fixed. It is
+an extra interface compared with v0.8.0, kept deliberately: dropping it would mean adding code
+to reproduce a defect of the old mesher.
+
+[`test_pn_slab_currents_explained`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py#L462) solves
+the same mesh both ways on the latest stack (mesh × 1):
+
+| Device | V_cathode | junction drop | rib/slab jump | I_anode / I_cathode |
+|---|---|---|---|---|
+| v0.8.0 topology (`core___slab90` left out of DEVSIM) | 0 / 0.1 / 0.2 V | 0.834504 V at every step | 0.118 V | below 1e-26 A/cm |
+| as ported (every interface) | 0 V | 0.834504 V | 0 | below 1e-26 A/cm |
+| | 0.1 V | 0.734504 V | 0 | −9.749e-15 / 9.749e-15 A/cm |
+| | 0.2 V | 0.634504 V | 0 | −1.005e-13 / 1.005e-13 A/cm |
+
+- **Leaving the interface out reproduces v0.8.0's signatures:** a constant junction drop at the
+  rib's built-in potential, currents below the noise floor and a nonzero rib/slab jump. The
+  floating rib's absolute Potential differs from v0.8.0's, because only the initial guess and
+  the mesh set it, so only differences inside the rib are compared.
+- **As ported, the bias reaches the junction.** The drop falls by exactly the applied 0.1 V per
+  step, 0.8345 → 0.7345 → 0.6345 V (asserted within 1e-3 V), and the two regions agree at the
+  bottom vertices (jump below 1e-6 V).
+- **The forward current is conserved and grows like a diode's.** Anode = −cathode within 1e-6
+  relative, and the current grows from 9.7e-15 to 1.0e-13 A/cm between 0.1 and 0.2 V. For
+  I = I0 (exp(V / n V_t) − 1), I2 / I1 = exp(a) + 1 with a = 0.1 V / (n V_t), so the implied
+  ideality n = 0.1 V / (V_t ln(I2 / I1 − 1)) is **1.73**, within the [1, 2] the test asserts.
+
+The v0.8.0 side of this comparison is the junction probe of the record
+({ref}`plugin-history-numbers`), which {py:func}`python -m gf180tcad.history --version v0.8.0
+<gf180tcad.history.main>` recomputes on the 2023 stack. The docstring of
+[`test_pn_slab_currents_explained`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py#L462) still
+cites those numbers as measured ad hoc. Their committed source is
+{repo}`experiments/plugin-history/checks_v080.py`, and the values are in
+{repo}`results/plugin-history/v0.8.0.json` and {repo}`results/plugin-history/v0.8.0-mesh0p5.json`.

@@ -14,7 +14,7 @@ gplugins sources come from the tags of [our fork](https://github.com/mithro/gplu
 |---|---|
 | [`checks_v080.py`](checks_v080.py) | The check driver for v0.8.0. It runs in the v0.8.0 venv inside the sandbox. |
 | [`checks_v142.py`](checks_v142.py) | The check driver for v1.4.2. It runs only the `import` check. |
-| [`harness.py`](harness.py) | Helpers shared by both drivers (standard library only): check recording, versions, currents, contact potentials and depletion width. |
+| [`harness.py`](harness.py) | Helpers shared by both drivers (standard library only): check recording, versions, currents, contact potentials, depletion width, the MSH 2.2 physical names and the junction probe. |
 | [`v080.in`](v080.in) | The input of `v080.lock`. |
 | [`v080.lock`](v080.lock) | The resolved, hashed v0.8.0 package set. It keeps the record re-runnable after PyPI yanks. |
 
@@ -72,7 +72,13 @@ ramp, and the quantities recorded around it, are additions of this record. They 
 - the built-in potential;
 - the depletion width on the bottom-edge mesh row;
 - the anode and cathode contact-node potentials at each step;
-- the silicon Potential span at each step.
+- the silicon Potential span at each step;
+- the junction probe: the physical groups of the mesh file (`msh_physical_groups`), the
+  Potential across the rib's junction on the bottom edge at each step (`junction`: its drop and
+  the rib/slab jump at the rib's corners), and each silicon region's Potential range. It shows
+  that v0.8.0's mesh has no `core___slab90` group, so the rib floats and the bias never reaches
+  the junction. Its definitions are those of the probe in the fork's
+  [`gplugins/devsim/tests/test_mesh.py`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py#L248).
 
 The other changes from the v0.8.0 code:
 - **PIN before PN.** The PIN waveguide is solved, ramped and deleted before the PN slab is
