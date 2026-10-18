@@ -11,7 +11,7 @@ Everything written here is licensed [Apache-2.0](LICENSE). New source files carr
   [`git worktree add`](https://git-scm.com/docs/git-worktree), run
   [`git submodule update --init`](https://git-scm.com/docs/git-submodule) in the new worktree
   (and clone with [`git clone --recurse-submodules`](https://git-scm.com/docs/git-clone)), so that
-  the [`third_party/gplugins`](https://github.com/mithro/gf180-tcad/tree/main/third_party)
+  the [`third_party/gplugins`](https://github.com/mithro/gplugins)
   submodule is checked out. See
   [Getting the source](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#getting-the-source).
 - Small logical commits.
