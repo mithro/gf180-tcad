@@ -151,14 +151,23 @@ def geometry_of(device: str, gid: str) -> Geometry:
     raise ValueError(f"unknown geometry {gid!r} for {device} (known: {known})")
 
 
-def plan_jobs(engines: Iterable[str], corners: Iterable[str], devices: Iterable[str]) -> list[Job]:
+def plan_jobs(
+    engines: Iterable[str],
+    corners: Iterable[str],
+    devices: Iterable[str],
+    geometries: Iterable[str] | None = None,
+) -> list[Job]:
+    """Sorted jobs of the cross product; ``geometries`` (geometry_ids) keeps only those, per
+    device (a device without a listed geometry gets none; ``None`` keeps every geometry)."""
     corners, devices = tuple(corners), tuple(devices)
+    keep = None if geometries is None else set(geometries)
     return sorted(
         Job(e, c, d, geometry_id(g))
         for e in engines
         for c in corners
         for d in devices
         for g in DEVICES[d].geometries
+        if keep is None or geometry_id(g) in keep
     )
 
 
@@ -544,6 +553,11 @@ def _parser() -> argparse.ArgumentParser:
         "--device", action="append", choices=tuple(DEVICES), help="repeatable; default: all"
     )
     ref.add_argument(
+        "--geometry",
+        action="append",
+        help="geometry_id, e.g. w10p0_l0p60; repeatable; default: every geometry of each device",
+    )
+    ref.add_argument(
         "--jobs", type=int, default=DEFAULT_JOBS, help="concurrent jobs (N x 4 GiB <= 128 GiB)"
     )
     ref.add_argument("--out", type=Path, required=True, help="results directory to replace")
@@ -563,6 +577,16 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         a.engines = ENGINES if a.engine == "both" else (a.engine,)
         a.corners = tuple(c for c in CORNERS if c in set(a.corner or CORNERS))
         a.devices = tuple(d for d in DEVICES if d in set(a.device or DEVICES))
+        a.geometries = None
+        if a.geometry:
+            known = {geometry_id(g) for d in a.devices for g in DEVICES[d].geometries}
+            for gid in a.geometry:
+                if gid not in known:
+                    ap.error(
+                        f"--geometry {gid} is not a geometry of any selected device "
+                        f"(known: {sorted(known)})"
+                    )
+            a.geometries = tuple(sorted(set(a.geometry)))
     else:
         try:
             geometry_of(a.device, a.geometry)
@@ -583,7 +607,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except AdmissionError as e:
         print(f"spice-reference: {e}", file=sys.stderr)
         return 2
-    jobs = plan_jobs(a.engines, a.corners, a.devices)
+    jobs = plan_jobs(a.engines, a.corners, a.devices, a.geometries)
     print(f"{len(jobs)} jobs, {a.jobs} concurrent, {mem} per job, into {a.out}", flush=True)
     failures = generate(jobs, a.out, jobs_n=a.jobs, mem=mem, log=lambda s: print(s, flush=True))
     return 1 if failures else 0
