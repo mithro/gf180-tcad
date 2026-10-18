@@ -101,12 +101,30 @@ def _break(root: Path, case: str) -> str:
             p.rmdir() if p.is_dir() else p.unlink()
         (root / "sys" / "class" / "net").rmdir()
         return "/sys/class/net"
+    mountinfo = root / "proc" / "self" / "mountinfo"
+    if case == "no_work_src":
+        (root / "work" / "src").rmdir()
+        return "/work/src"
+    if case == "no_mountinfo":
+        mountinfo.unlink()
+        return "mountinfo"
+    if case == "work_src_not_a_mount":
+        mountinfo.write_text("986 900 0:60 / / ro,relatime - overlay overlay rw\n")
+        return "/work/src"
+    if case == "work_src_rw":
+        mountinfo.write_text(mountinfo.read_text().replace("/work/src ro,", "/work/src rw,"))
+        return "read-only"
+    if case == "work_src_remounted_rw":  # the last mount on a mount point is the visible one
+        with mountinfo.open("a") as f:
+            f.write("997 986 254:124 /home/u/repo /work/src rw,relatime - ext4 /dev/sda1 rw\n")
+        return "read-only"
     raise AssertionError(case)
 
 
 CASES = [
     "no_dockerenv", "memory_unlimited", "memory_missing", "pids_unlimited", "pids_garbage",
     "no_cgroup_v2_line", "no_proc_cgroup", "network_interface", "no_sys_class_net",
+    "no_work_src", "no_mountinfo", "work_src_not_a_mount", "work_src_rw", "work_src_remounted_rw",
 ]  # fmt: skip
 
 

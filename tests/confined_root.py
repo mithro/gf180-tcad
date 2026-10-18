@@ -16,4 +16,11 @@ def make_confined_root(root: Path, *, cgroup: str = "/") -> Path:
     (net / "lo").mkdir(parents=True)
     (net / "bonding_masters").write_text("\n")  # a plain file, not an interface (real kernels)
     (root / ".dockerenv").write_text("")
+    (root / "work" / "src").mkdir(parents=True)
+    (root / "work" / "out").mkdir(parents=True)
+    (root / "proc" / "self" / "mountinfo").write_text(
+        "986 900 0:60 / / ro,relatime - overlay overlay rw\n"
+        "995 986 254:124 /home/u/repo /work/src ro,relatime - ext4 /dev/sda1 rw\n"
+        "996 986 0:34 /tmp/x /work/out rw,nosuid,nodev - tmpfs tmpfs rw\n"
+    )
     return root
