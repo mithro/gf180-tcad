@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+# LF everywhere; results are hashed byte for byte, so never convert their line endings.
+* text=auto eol=lf
+results/** -text
