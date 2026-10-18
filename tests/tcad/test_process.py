@@ -263,6 +263,27 @@ def test_brief_values(device, toxe_nm, toxp_nm, k1, ngate, dlc_nm, cgso, cgsl, a
     assert v["acde_m_per_v"] == acde and v["moin"] == 15.0 and v["capmod"] == 2.0
 
 
+def test_constants_n_i():
+    """n_i: Altermatt 2003 at 300 K, Misiakos & Tsamakis T-dependence (the plan's table)."""
+    c = process.CONSTANTS
+    t = c.t_k
+    expected = 9.65e9 * (t / 300) ** 2.54 * math.exp(-6726 * (1 / t - 1 / 300))
+    assert math.isclose(c.n_i_cm3, expected, rel_tol=1e-12)
+    assert math.isclose(c.n_i_cm3, 8.266e9, rel_tol=1e-3)
+    assert math.isclose(replace(c, t_k=300.0).n_i_cm3, 9.65e9, rel_tol=1e-12)
+    doc = process.Constants.__doc__
+    assert "10.1063/1.1529297" in doc and "10.1063/1.354551" in doc
+
+
+def test_constants_transport():
+    c = process.CONSTANTS
+    assert (c.mu_n_cm2_per_vs, c.mu_p_cm2_per_vs) == (1417.0, 470.5)
+    assert c.tau_n_s == c.tau_p_s == 1e-5
+    doc = process.Constants.__doc__
+    assert "10.1109/T-ED.1983.21207" in doc  # Masetti
+    assert "unverified" in doc  # the Sze & Ng page for the lifetimes is not checked
+
+
 def test_temperature_is_tnom():
     for device in DEVICES:
         assert process.load(device).values()["tnom_c"] + 273.15 == process.CONSTANTS.t_k
@@ -279,6 +300,11 @@ def test_k1_bound_recomputed(device):
     assert math.isclose(lo, 0.5 * n_k1, rel_tol=1e-6)
     expected = {"nfet_05v0": 6.30e16, "pfet_05v0": 6.78e16}[device]  # the brief's values
     assert math.isclose(lo, expected, rel_tol=1e-3)
+    # the 0.5 is a project choice: a margin because K1 ≈ γ1 only holds when K2 = 0
+    p = desc.params["n_ch_cm3"]
+    assert p.bounds_kind[0] == "project-choice"
+    assert "0.5" in p.bounds_source and "K2" in p.bounds_source
+    assert v["k2_v"] != 0.0
 
 
 @pytest.mark.parametrize("device", DEVICES)
@@ -301,30 +327,31 @@ def test_centroid_allowance_hand_point():
     Φs (eq. 2.2.7) = 0.4 + vt·ln(1.7e17/ni) = 0.822426 V;
     Vfbzb (eq. 7.2.14, long channel) = 0.67314 − Φs − 0.9·√Φs = −0.965475 V;
     Ldebye = √(11.7·ε0·vt/(q·1.7e23 m⁻³)) = 9.88534 nm, Xmax = Ldebye/3 = 3.29511 nm;
-    ACDE·(NDEP/2e16)^−0.25 = 0.3·8.5^−0.25 = 0.175698; δx = 1e-3·TOXE = 0.0152 nm.
+    ACDE·(NDEP/2e16)^−0.25 = 0.3·8.5^−0.25 = 0.175698;
+    δx = LINK = 1e-3·TOXP = 0.016 nm (b4ld.c; the manual's text says TOXE).
     At Vg = −2 V (edge of the accumulation plateau): field (−2 + 0.965475)/(1.6e-8 m·1e8)
     = −0.646578 MV/cm, raw X_DC = 3.29511·exp(0.175698·−0.646578) = 2.94126 nm,
-    X0 = 3.29511 − 2.94126 − 0.0152 = 0.33865 nm,
-    X_DC = 3.29511 − ½(0.33865 + √(0.33865² + 4·0.0152·3.29511)) = 2.84515 nm.
+    X0 = 3.29511 − 2.94126 − 0.016 = 0.337853 nm,
+    X_DC = 3.29511 − ½(0.337853 + √(0.337853² + 4·0.016·3.29511)) = 2.84113 nm.
     X_DC rises towards flat band, so this is the accumulation-plateau maximum; at Vg = −5 V
-    the same steps give 2.08940 nm. In depletion (Vg = +5 V, outside the plateaus) the
-    formula saturates near Xmax: 3.27885 nm, which is not used.
+    the same steps give 2.08806 nm. In depletion (Vg = +5 V, outside the plateaus) the
+    formula saturates near Xmax: 3.27801 nm, which is not used.
     Inversion (eq. 7.3.4) at Vgsteff → 0: 4(VTH0 − VFB − Φs) = 4·0.9·√Φs = 3.26476 V,
     1.9 nm/(1 + (3.26476/3.2)^0.7) = 0.943339 nm (an upper bound on the inversion plateau).
-    Δ = 2.84515·3.9/11.7 = 0.948383 nm, rounded up to 0.95 nm.
+    Δ = 2.84113·3.9/11.7 = 0.947043 nm, rounded up to 0.95 nm.
     """
     cv = process.load("nfet_05v0").card_values()
     c = process.CONSTANTS
     assert math.isclose(process.bsim4_ni_cm3(c), 1.23019e10, rel_tol=1e-5)
     assert math.isclose(process.bsim4_phi_s_v(cv, c), 0.822426, rel_tol=1e-6)
     assert math.isclose(process.bsim4_vfbzb_v(cv, c), -0.965475, rel_tol=1e-6)
-    assert math.isclose(process.ctm_x_dc_acc_m(-2.0, cv, c), 2.84515e-9, rel_tol=1e-5)
-    assert math.isclose(process.ctm_x_dc_acc_m(-5.0, cv, c), 2.08940e-9, rel_tol=1e-5)
-    assert math.isclose(process.ctm_x_dc_acc_m(5.0, cv, c), 3.27885e-9, rel_tol=1e-5)
+    assert math.isclose(process.ctm_x_dc_acc_m(-2.0, cv, c), 2.84113e-9, rel_tol=1e-5)
+    assert math.isclose(process.ctm_x_dc_acc_m(-5.0, cv, c), 2.08806e-9, rel_tol=1e-5)
+    assert math.isclose(process.ctm_x_dc_acc_m(5.0, cv, c), 3.27801e-9, rel_tol=1e-5)
     assert math.isclose(process.ctm_x_dc_inv_sup_m(cv, c), 0.943339e-9, rel_tol=1e-5)
     res = process.centroid(cv, c)
     assert res.plateau_v == 2.0 and res.vg_at_max_v == -2.0
-    assert math.isclose(res.x_dc_max_m, 2.84515e-9, rel_tol=1e-5)
+    assert math.isclose(res.x_dc_max_m, 2.84113e-9, rel_tol=1e-5)
     assert process.centroid_allowance_nm(cv, c) == 0.95
 
 
@@ -340,6 +367,19 @@ def test_centroid_window_excludes_depletion():
         assert process.round_up_nm(full * cv["epsrox"] / 11.7 * 1e9) == 1.10 > delta
         with pytest.raises(ValueError, match="plateau"):
             process.centroid(cv, plateau_v=6.0)  # no bias of the sweep in the window
+
+
+def test_delta_x_follows_the_reference_code():
+    """δx = LINK = 1e-3·TOXP (b4ld.c), not the manual's 1e-3·TOXE: they differ for the nfet.
+
+    With the manual's δx = 0.0152 nm the nfet plateau-edge X_DC would be 2.84515 nm (still
+    Δ = 0.95 nm); with the code's 0.016 nm it is 2.84113 nm.
+    """
+    cv = process.load("nfet_05v0").card_values()
+    assert cv["toxp"] != cv["toxe"]
+    x = process.ctm_x_dc_acc_m(-2.0, cv)
+    assert math.isclose(x, 2.84113e-9, rel_tol=1e-5)
+    assert not math.isclose(x, 2.84515e-9, rel_tol=1e-4)
 
 
 def test_centroid_allowance_rounds_up():
