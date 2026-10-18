@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: Apache-2.0
+# Reproducible build of ghcr.io/mithro/gf180-tcad-base.
+#   PRs:  push tag pr-<number>;  main: push latest and sha-<commit>.
+# "Reproducible" = identical image config digest (image ID, covers layer diff_ids): the
+# rebuild job builds again from scratch on a fresh runner and must match both the first
+# build and the committed docker/base/IMAGE_ID.
+name: image
+
+on:
+  push:
+    branches: [main]
+    paths: ["docker/**", ".github/workflows/image.yml"]
+  pull_request:
+    paths: ["docker/**", ".github/workflows/image.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/mithro/gf180-tcad-base
+
+jobs:
+  build:
+    name: build-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      config: ${{ steps.build.outputs.config }}
+      manifest: ${{ steps.build.outputs.manifest }}
+    steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
+          df -h /
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        id: build
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            tags=(--tag "$IMAGE_NAME:pr-${{ github.event.pull_request.number }}")
+          else
+            tags=(--tag "$IMAGE_NAME:latest" --tag "$IMAGE_NAME:sha-${{ github.sha }}")
+          fi
+          config="$(docker/base/build --push "${tags[@]}" --metadata meta.json)"
+          manifest="$(jq -r '."containerimage.digest"' meta.json)"
+          echo "config=$config" >> "$GITHUB_OUTPUT"
+          echo "manifest=$manifest" >> "$GITHUB_OUTPUT"
+          {
+            echo "### gf180-tcad-base"
+            echo "- config digest (image ID): \`$config\`"
+            echo "- committed docker/base/IMAGE_ID: \`$(cat docker/base/IMAGE_ID)\`"
+            echo "- pushed: \`$IMAGE_NAME@$manifest\`"
+            echo "- committed docker/IMAGE: \`$(cat docker/IMAGE)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat meta.json
+      - name: Config digest matches docker/base/IMAGE_ID
+        run: |
+          want="$(cat docker/base/IMAGE_ID)"
+          got="${{ steps.build.outputs.config }}"
+          [ "$got" = "$want" ] || { echo "::error::config digest $got != docker/base/IMAGE_ID $want"; exit 1; }
+
+  rebuild:
+    name: reproducible
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
+          df -h /
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Rebuild from scratch and compare
+        run: |
+          got="$(docker/base/build --no-cache --metadata meta.json)"
+          first="${{ needs.build.outputs.config }}"
+          want="$(cat docker/base/IMAGE_ID)"
+          cat meta.json
+          echo "rebuild=$got first=$first IMAGE_ID=$want"
+          echo "- rebuild config digest: \`$got\` (first build \`$first\`, IMAGE_ID \`$want\`)" >> "$GITHUB_STEP_SUMMARY"
+          [ "$got" = "$first" ] || { echo "::error::rebuild $got != first build $first"; exit 1; }
+          [ "$got" = "$want" ] || { echo "::error::rebuild $got != docker/base/IMAGE_ID $want"; exit 1; }
