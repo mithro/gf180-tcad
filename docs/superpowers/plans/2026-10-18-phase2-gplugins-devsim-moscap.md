@@ -224,20 +224,46 @@ An independent review checked this plan against the code on main and the researc
 
 **Context.** At gplugins v0.8.0 on Sept-2023 packages, `test_pin_waveguide` passed (276 s) and `DDComponent.ddsolver()` converged (5.8 s). `get_refined_mesh` has a `NameError` (`get_solver.py:359`). At v1.4.2 from its frozen lock, the import fails.
 
-**Files (gf180-tcad):** `experiments/plugin-history/README.md`, `experiments/plugin-history/run.py`, `results/plugin-history/{v0.8.0,v1.4.2}.json`, `tests/test_plugin_history.py`
+Research reference: `scripts/install.sh`, `run.sh`, `run-dd.sh` and `dd_v080.py` in the research workdir `wd-v080/`. Re-create them here; do not copy host paths.
+
+**Files (gf180-tcad):**
+- `src/gf180tcad/history/__init__.py`, `src/gf180tcad/history/__main__.py`;
+- `experiments/plugin-history/README.md`;
+- `experiments/plugin-history/v080.lock` (the hashed, resolved v0.8.0 set);
+- `experiments/plugin-history/checks_v080.py` and `checks_v142.py` (the in-venv check drivers);
+- `results/plugin-history/{v0.8.0,v1.4.2}.json`;
+- `tests/test_plugin_history.py`.
+
+The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator module (Global Constraints).
 
 **Interfaces:**
-- Produces: `python -m gf180tcad plugin-history --version v0.8.0|v1.4.2 --out DIR` runs in two sandbox steps:
-  1. a network-on install: `uv` with `--exclude-newer 2023-09-20T18:00Z` and Python 3.11 for v0.8.0, the frozen `uv.lock` for v1.4.2, into a venv in the workdir;
-  2. a network-off run of the fixed checks.
-- Produces: a result JSON holding:
-  - the resolved versions;
-  - the pass/fail of each check: import, PIN test, ddsolver converge, refine;
-  - the PIN numbers (contact currents and depletion width), or the exact exception text.
+- Produces: `python -m gf180tcad.history --version v0.8.0|v1.4.2 --out DIR`. It runs on the host, uses the base image, and works in these steps:
+  1. **Sources, on the host.** `git -C third_party/gplugins archive <tag> | tar -x -C <workdir>/gplugins`. CI submodule clones are shallow and have no tags, so the command first runs `git -C third_party/gplugins fetch --depth 1 origin tag <tag>` if the tag is missing.
+  2. **Network-on install**, `sandbox.run(..., network=True)`:
+     - All state lives in the workdir, because HOME is a 1 GiB tmpfs that disappears between containers. Set `UV_CACHE_DIR=/work/out/uvcache`, `UV_PYTHON_INSTALL_DIR=/work/out/uvpython` and `PIP_CACHE_DIR=/work/out/pipcache`.
+     - uv is pinned and hashed, installed with `/usr/bin/python3 -m pip --require-hashes` into `/work/out/toolvenv`.
+     - **v0.8.0:** Python `3.11.17`. Install from `experiments/plugin-history/v080.lock` with `--require-hashes`. The lock was generated once, with `uv pip compile --exclude-newer 2023-09-20T18:00:00Z --exclude-newer-package klayout=2024-04-01T00:00:00Z`, from `-e ./gplugins[devsim,gmsh,tidy3d]`, `pytest` and `"klayout<0.29"`. The klayout exemption is required, because old 0.28 wheels carry 2024 upload dates. The lock keeps the record re-runnable after PyPI yanks.
+     - **v1.4.2:** `uv sync --frozen --extra devsim --extra gmsh --extra tidy3d --extra dev`, with the base Python 3.12.
+  3. **Network-off run**, `sandbox.run(...)` without network, of the fixed checks with `PDK` unset. These checks may access the network only in step 2; if tidy3d tries to reach the web in step 3, record the failure text.
+- Produces: a result JSON (`gf180tcad.io.write_json`, no timings) holding:
+  - `versions`, the resolved package versions;
+  - `checks`, the pass/fail of each check: `import`, `pin_test`, `ddcomponent_mesh`, `ddsolver`, `ramp`, `refine`. A failed check records its exact exception type and message.
+  - `pin`: the contact currents at V = 0 and −1 V of the PINWaveguide ramp. `depletion_width_um` is defined as the width of the region where n and p are both < 1e-2·|NetDoping|, measured along the waveguide-centre cut.
+  - `ddcomponent`: the region, contact and interface names; the node count; and the anode/cathode contact currents after `ramp_voltage` to 0.1 and 0.2 V. Task 5 re-verifies these, because this is the path that broke. The PIN path uses DEVSIM's own mesh and still works today.
 
-- [ ] **Step 1:** Write the test first, sandbox-marked and allowed to be slow. Assert the v0.8.0 JSON has import ✓, PIN ✓ and ddsolver ✓, with the PIN numbers present. Assert v1.4.2 has the import failure recorded.
-- [ ] **Step 2:** Implement and run. Commit the JSON. Two runs must agree on everything except timings, and timings stay out of the committed JSON.
-- [ ] **Step 3:** Docs: a page under `docs/limitations/` (or `docs/reproduce/`) giving the plugin's history and the "once worked" evidence. Then commit, open the PR, review and merge.
+- [ ] **Step 1:** Write the tests first, sandbox-marked and allowed to be slow.
+  - `test_v080_once_worked`:
+    - `import`, `pin_test`, `ddcomponent_mesh`, `ddsolver` and `ramp` all pass;
+    - `refine` fails with `NameError` (the `c`/`self` bug at `get_solver.py:359`);
+    - the numbers are present.
+  - `test_v142_import_broken`: the import fails with an `ImportError` naming `fuse_polygons`.
+  - Not sandbox-marked: `test_history_json_has_no_timings_or_paths`.
+
+  Run them: they FAIL.
+- [ ] **Step 2:** Implement and run, then commit the JSON.
+  - Two local runs must agree byte for byte.
+  - `results/plugin-history` is **not** part of the GitHub crosscheck, because the old stack has no cross-host bit-identity guarantee. The docs say so.
+- [ ] **Step 3:** Docs: `docs/limitations/plugin-history.md`, giving the plugin's history (commits `a019e5a`, `0ce7b30`, `017cede`) and the "once worked" evidence. It has a placeholder section, "Re-verified on latest", which Tasks 4 and 5 fill in (spec §3). Requires the docs-links infrastructure on main. Then commit, open the PR, review and merge.
 
 ### Task 4 (fork): import and test `gplugins.devsim` on latest, no physics change
 
