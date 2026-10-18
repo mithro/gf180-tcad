@@ -119,7 +119,7 @@ class BiasPlan:
     """Terminal voltages (polarity applied) for one sweep; ``outer`` varies slowest."""
 
     kind: str
-    fixed: dict[str, float]
+    fixed: tuple[tuple[str, float], ...]  # (terminal, volts) pairs: immutable and hashable
     inner: Axis
     outer: Axis | None
     freq_hz: float | None
@@ -139,7 +139,7 @@ class BiasPlan:
             elif self.outer is not None and t == self.outer.terminal:
                 col = np.repeat(np.array(self.outer.values, dtype=np.float64), n_in)
             else:
-                col = np.full(n_in * n_out, self.fixed[t], dtype=np.float64)
+                col = np.full(n_in * n_out, dict(self.fixed)[t], dtype=np.float64)
             cols[f"v{t}"] = col
         return cols
 
@@ -182,7 +182,7 @@ def bias_plan(device: Device, sweep: Sweep) -> BiasPlan:
         fixed[t] = signed[t][0]
     return BiasPlan(
         kind=sweep.kind,
-        fixed=fixed,
+        fixed=tuple(fixed.items()),
         inner=Axis(inner, signed[inner]),
         outer=Axis(outer, signed[outer]) if outer else None,
         freq_hz=sweep.freq_hz,
@@ -213,7 +213,7 @@ def ngspice_netlist(
     if not _MODEL_RE.fullmatch(device.spice_model):
         raise ValueError(f"bad spice model name {device.spice_model!r}")
     plan = bias_plan(device, sweep)
-    start = {**plan.fixed, plan.inner.terminal: plan.inner.values[0]}
+    start = {**dict(plan.fixed), plan.inner.terminal: plan.inner.values[0]}
     if plan.outer is not None:
         start[plan.outer.terminal] = plan.outer.values[0]
 

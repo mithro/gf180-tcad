@@ -128,6 +128,14 @@ def test_bias_plan_cv_polarity():
     np.testing.assert_array_equal(bias_plan(PFET, SW["cv"]).grid()["vg"], -VCV + 0.0)
 
 
+def test_bias_plan_is_immutable_and_hashable():
+    plan = bias_plan(NFET, SW["idvg_sat"])
+    assert plan.fixed == (("d", 5.0),)
+    assert hash(plan) == hash(bias_plan(NFET, SW["idvg_sat"]))
+    assert plan == bias_plan(NFET, SW["idvg_sat"])
+    assert dict(bias_plan(NFET, SW["cv"]).fixed) == {"d": 0.0, "b": 0.0}
+
+
 def test_bias_plan_rejects_unsupported_shapes():
     with pytest.raises(ValueError, match="vds"):
         bias_plan(NFET, Sweep("x", "idvg", vds=(0.1, 5.0), vgs=(0.0, 1.0), vbs=(0.0,)))
