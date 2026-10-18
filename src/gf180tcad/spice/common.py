@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
@@ -56,9 +57,19 @@ class SpiceResult(dict):
         self.warnings: tuple[str, ...] = tuple(warnings)
 
 
-def _foreign(out_dir: Path, own: Iterable[str], inputs: Iterable[str]) -> list[str]:
+def _is_optional(name: str, optional: Iterable[str]) -> bool:
+    return any(fnmatch.fnmatchcase(name, pattern) for pattern in optional)
+
+
+def _foreign(
+    out_dir: Path, own: Iterable[str], inputs: Iterable[str], optional: Iterable[str]
+) -> list[str]:
     allowed = set(own) | set(inputs)
-    return sorted(p.name for p in out_dir.iterdir() if p.name not in allowed)
+    return sorted(
+        p.name
+        for p in out_dir.iterdir()
+        if p.name not in allowed and not _is_optional(p.name, optional)
+    )
 
 
 def prepare_out_dir(
@@ -66,27 +77,35 @@ def prepare_out_dir(
     own: Iterable[str],
     inputs: Iterable[str] = (),
     *,
+    optional: Iterable[str] = (),
     error: type[SpiceError] = SpiceError,
 ) -> None:
-    """Refuse foreign entries in ``out_dir``; delete the runner's ``own`` files from a past run.
+    """Refuse foreign entries in ``out_dir``; delete the runner's own files from a past run.
 
-    ``inputs`` names extra top-level entries (files or directories) the caller placed there on
-    purpose, e.g. a patched model library in a subdirectory; they must not be ``own`` names.
-    Foreign entries are never deleted.
+    Only the top level of ``out_dir`` is checked (an explicitly named input directory is not
+    looked into). ``own`` are the runner's output names, ``optional`` glob patterns of files the
+    simulator may or may not write (e.g. ngspice's ``bsim4*.out``); both are deleted before the
+    run, and must be regular files. ``inputs`` names extra top-level entries (files or
+    directories) the caller placed there on purpose, e.g. a patched model library in a
+    subdirectory; they must not be own names. Foreign entries are never deleted.
     """
-    own, inputs = tuple(own), tuple(inputs)
-    clash = sorted(set(own) & set(inputs))
+    own, inputs, optional = tuple(own), tuple(inputs), tuple(optional)
+    clash = sorted(n for n in inputs if n in own or _is_optional(n, optional))
     if clash:
         raise ValueError(f"inputs {clash} are the runner's own output names")
-    foreign = _foreign(out_dir, own, inputs)
+    foreign = _foreign(out_dir, own, inputs, optional)
     if foreign:
         raise error(
             f"{out_dir} holds files this {error.engine} run did not write: {foreign}. A model "
             "or init file there (e.g. .spiceinit, *.spice, *.lib) could be read instead of the "
             "PDK's; use an empty directory or name deliberate inputs explicitly"
         )
-    for name in own:
-        (out_dir / name).unlink(missing_ok=True)  # never parse a previous run's output
+    stale = [p for p in out_dir.iterdir() if p.name in own or _is_optional(p.name, optional)]
+    for p in stale:
+        if p.is_dir() or not (p.is_file() or p.is_symlink()):
+            raise error(f"{p} is a directory or special file, not a previous {error.engine} output")
+    for p in stale:
+        p.unlink()  # never parse a previous run's output
 
 
 def check_out_dir(
@@ -95,12 +114,26 @@ def check_out_dir(
     inputs: Iterable[str] = (),
     log: str = "",
     *,
+    optional: Iterable[str] = (),
     error: type[SpiceError] = SpiceError,
-) -> None:
-    """After a run: fail if the simulator wrote any entry other than ``own`` (and ``inputs``)."""
-    extra = _foreign(out_dir, own, inputs)
+) -> list[str]:
+    """After a run: collect and delete optional reports; fail on any other new entry.
+
+    Returns each line of each ``optional`` file the simulator wrote, prefixed with the file
+    name (``"bsim4v5.out: Warning: ..."``), in name order, and deletes those files. Any entry
+    other than ``own``, ``inputs`` and optional files raises ``error``.
+    """
+    optional = tuple(optional)
+    extra = _foreign(out_dir, own, inputs, optional)
     if extra:
         raise error(f"{error.engine} wrote unexpected files in {out_dir}: {extra}", log)
+    notes = []
+    for p in sorted(out_dir.iterdir()):
+        if p.name not in set(own) | set(inputs) and _is_optional(p.name, optional):
+            text = p.read_text(encoding="utf-8", errors="replace")
+            notes += [f"{p.name}: {line.strip()}" for line in text.splitlines() if line.strip()]
+            p.unlink()
+    return notes
 
 
 def assemble(

@@ -246,7 +246,7 @@ def run_xyce(
         raise XyceError(f"Xyce exited with status {e.result.returncode}", log) from e
     log = log_path.read_text(encoding="utf-8", errors="replace")
     warnings = scan_xyce_log(log)
-    common.check_out_dir(out_dir, OWN_FILES, inputs, log, error=XyceError)
+    warnings += common.check_out_dir(out_dir, OWN_FILES, inputs, log, error=XyceError)
     nproc = processor_count(log)
     if nproc != 1:
         raise XyceError(f"Xyce ran on {nproc} processors, expected exactly 1", log)

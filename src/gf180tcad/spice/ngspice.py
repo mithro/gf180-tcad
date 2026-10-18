@@ -5,20 +5,21 @@
 the sandbox (log in ``out_dir/ngspice.log``, raw file :data:`~gf180tcad.spice.netlist.RAW_NAME`
 written by the netlist's ``.control`` block) and parses the raw file.
 
-Working directory: ngspice reads ``.spiceinit`` from its cwd, and resolves the PDK lib's nested
-relative ``.lib 'sm141064.spice' ...`` lines in a way that can pick up a file in its cwd instead
-of the PDK's copy (seen in the sandbox with patched scratch libs). So ``out_dir`` may hold only
-this runner's own files (:data:`OWN_FILES`, replaced on each run) plus entries the caller names
-in ``inputs``; anything else refuses the run, and an unexpected file written by ngspice fails
+Working directory: ngspice reads ``.spiceinit`` from its cwd, and it resolved the PDK lib's
+nested relative ``.lib 'sm141064.spice' ...`` lines to a file in its cwd rather than the copy
+next to the top-level lib (seen in the sandbox with patched scratch libs). So ``out_dir`` may
+hold only this runner's own files (:data:`OWN_FILES`, replaced on each run), optional BSIM4
+reports (:data:`OPTIONAL_FILES`, read into the warnings and deleted) and the entries the caller
+names in ``inputs``; anything else refuses the run, and any other file written by ngspice fails
 it (:func:`gf180tcad.spice.common.prepare_out_dir`). ngspice is killed after :data:`TIMEOUT_S`.
 
 Failure policy (a non-converged or skipped point must fail the run, never shorten the data):
 :class:`SpiceError` is raised for a non-zero exit, any log line containing "error", any
 convergence trouble (:data:`FATAL_PATTERNS`, matched case-insensitively; a singular-matrix or
 stepping-failure warning is fatal even when a later method succeeded), a missing or malformed
-raw file, a timeout, a point count different from the plan, or bias values that differ from the plan's
-grid by more than :data:`GRID_TOL` volts. Every other log line containing "warning", and every
-recovery notice (a "...stepping..." line without "fail", "error", "converge", "abort" or
+raw file, a timeout, a point count different from the plan, or bias values that differ from the
+plan's grid by more than :data:`GRID_TOL` volts. Every other log line containing "warning", and
+every recovery notice (a "...stepping..." line without "fail", "error", "converge", "abort" or
 "singular"; or "Convergence reached"), is kept in :attr:`SpiceResult.warnings`.
 
 The result is a :class:`SpiceResult`: a ``dict[str, np.ndarray]`` of columns that also carries
@@ -73,6 +74,11 @@ MEM, CPUS, PIDS = "4g", 1, 256
 TIMEOUT_S = 600  # a hung ngspice must end as a reported failure, not hold a slot forever
 TIMEOUT_EXIT = 124  # coreutils timeout(1)
 OWN_FILES = (NETLIST_NAME, LOG_NAME, RAW_NAME)
+# ngspice's BSIM4 parameter check (checkModel) may write its warnings to bsim4v5.out,
+# bsim4v6.out, bsim4v7.out or bsim4.out in the cwd (names from the ngspice 47 binary). Such a
+# file is an expected optional output: its lines go into SpiceResult.warnings, prefixed with the
+# file name, and it is deleted.
+OPTIONAL_FILES = ("bsim4*.out",)
 
 
 def scan_log(log: str) -> list[str]:
@@ -140,7 +146,7 @@ def run_ngspice(
     :data:`TIMEOUT_S` seconds, which raises :class:`SpiceError`.
     """
     out_dir = Path(out_dir)
-    common.prepare_out_dir(out_dir, OWN_FILES, inputs)
+    common.prepare_out_dir(out_dir, OWN_FILES, inputs, optional=OPTIONAL_FILES)
     (out_dir / NETLIST_NAME).write_text(netlist, encoding="utf-8")
     cmd = ["sh", "-c", f"exec timeout {TIMEOUT_S} ngspice -b {NETLIST_NAME} > {LOG_NAME} 2>&1"]
     log_path = out_dir / LOG_NAME
@@ -156,7 +162,7 @@ def run_ngspice(
         raise SpiceError(f"ngspice exited with status {e.result.returncode}", log) from e
     log = log_path.read_text(encoding="utf-8", errors="replace")
     warnings = scan_log(log)
-    common.check_out_dir(out_dir, OWN_FILES, inputs, log)
+    warnings += common.check_out_dir(out_dir, OWN_FILES, inputs, log, optional=OPTIONAL_FILES)
     raw_path = out_dir / RAW_NAME
     if not raw_path.is_file():
         raise SpiceError(f"ngspice wrote no raw file {RAW_NAME}", log)
