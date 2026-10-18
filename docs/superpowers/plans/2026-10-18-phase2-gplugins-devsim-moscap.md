@@ -477,21 +477,23 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 
 The spike failed to converge at relative 1e-12. Use the spec's 1e-10, with extended precision (`extended_solver`, `extended_model`, `extended_equation`).
 
-The inversion response time with only a body contact is ≈ 2·τ_g·N_A/n_i ≈ 2·1e-5 s·1.7e7 ≈ 3e2 s (Nicollian & Brews), so 1D AC is the HF curve in inversion at any practical frequency.
+The inversion response time with only a body contact is ≈ 2·τ_g·N_A/n_i ≈ 2·1e-5 s·2.1e7 ≈ 4e2 s (Nicollian & Brews; τ and n_i from the Global Constraints table). So 1D AC is the HF curve in inversion at any practical frequency.
+
+**Contacts and sources.** Every non-gate contact of the device gets its own voltage source, held at 0 V DC. The gate gets the swept source. Nothing is "tied" by choice, so no contact can be left out of the AC measurement.
 
 **Files (fork):** `gplugins/devsim/cv.py` (new), `gplugins/devsim/tests/test_cv.py`
 
 **Interfaces:**
-- Produces: `sweep_cv(device, gate: str, vg: Sequence[float], *, method: Literal["qs", "ac"], freq_hz: float | None = None, dv_qs: float = 1e-3, rel_tol: float = 1e-10, abs_tol: float = 1e-12, tie: Sequence[str] = ()) -> CVResult`.
-  - **QS:** each grid point is solved at vg ± `dv_qs` and differenced centrally. Neighbouring grid points are never used.
-  - **`tie`:** names contacts that each get their own voltage source at the gate's reference DC bias (0 V). With `ac`, each source's AC current is read.
+- Produces: `sweep_cv(device, gate: str, vg: Sequence[float], *, method: Literal["qs", "ac"], freq_hz: float | None = None, dv_qs: float = 1e-3, rel_tol: float = 1e-10, abs_tol: float = 1e-12) -> CVResult`. There is no `tie` argument.
+  - **QS:** each grid point is solved at vg ± `dv_qs` and differenced centrally. Neighbouring grid points are never used. Every non-gate contact stays at 0 V.
+  - **AC:** the AC excitation is on the gate source only. The AC current of every non-gate source is read.
   - **`abs_tol`:** the DEVSIM `absolute_error` on the potential update, in V.
 - Produces: `@dataclass(frozen=True) CVResult`. Its fields:
   - `vg`;
   - `cgg`;
   - `unit: Literal["F/cm^2", "F/cm"]`, depending on mesh dimension;
   - `points: tuple[PointInfo(converged, iterations, rel_error, abs_error), ...]`;
-  - `cgx: Mapping[str, tuple[float, ...]]`, for `ac` with `tie`, where Cgx = −∂Qg/∂Vx, so Cgg = Σ_x Cgx;
+  - `cgx: Mapping[str, tuple[float, ...]]`, for `ac`, keyed by **every non-gate contact**. Here Cxg = −∂Q_x/∂Vg is the charge response of contact x to the gate excitation, read from x's AC current. Charge conservation is Cgg = Σ_{x ≠ gate} Cxg, with the sum over every non-gate contact (spec §5.2: Cgg = −(Cgd + Cgs + Cgb));
   - `method`, `freq_hz`, `dv_qs`.
 
   Use `solve(..., info=True)` for the per-point info.
@@ -500,10 +502,11 @@ The inversion response time with only a body contact is ≈ 2·τ_g·N_A/n_i ≈
 - [ ] **Step 1:** Write the tests first, on a 1D poly/oxide/Si stack from `create_1d_stack`:
   - `test_qs_equals_ac_low_freq_acc_dep`: QS and AC at 1 Hz agree within 0.1 % for `polarity·vg ≤ Vfb + 0.3 V` (accumulation and depletion only).
   - `test_ac_inversion_is_hf`: at 1 MHz, 1D AC in strong inversion is below QS by more than 30 %. This shows the HF behaviour is understood, not hidden.
-  - `test_accumulation_series_exact`: accumulation C equals the series combination of Cox and the exact Poisson–Boltzmann semiconductor capacitance C_s(ψ_s) within 0.5 %. ψ_s is taken from the solution, and C_s comes from the Sze & Ng ch. 4 charge function, with a link.
+  - `test_accumulation_series_exact`: on a **metal-gate** 1D stack (`kind="gate"` contact on the oxide), so that no gate-side capacitance enters, accumulation C equals the series combination of Cox and the exact Poisson–Boltzmann semiconductor capacitance C_s(ψ_s) within 0.5 %. ψ_s is taken from the solution, and C_s comes from the Sze & Ng ch. 4 charge function, with a link. With a poly gate, the n⁺ poly's own accumulation capacitance (≈ 0.3–0.9 % of Cox) would sit inside the tolerance.
   - `test_qs_step_converged`: halving `dv_qs` changes C by less than 0.01 % at every point.
   - `test_nonconvergence_raises`: forcing `rel_tol=1e-16` with a low iteration limit raises `CVConvergenceError`.
-  - Charge conservation with tied S/D contacts is tested in 2D (Task 11), because a 1D stack has no S/D. This task tests the `tie` mechanics on a 1D stack with an extra side contact on a two-region silicon. `test_tie_cgx_sum`: Cgg = Σ Cgx within 1e-6.
+  - `test_cgx_sum_2d`: a 1D line cannot carry a third contact, so this test uses a minimal 2D device built directly with `devsim.create_2d_mesh`. It is a rectangle of oxide on p-Si, with a gate contact on top, a body contact at the bottom and one side ohmic contact on n⁺ silicon. At 1 kHz, in depletion and in inversion, Cgg = Σ_{x ≠ gate} Cxg over body and side contacts within 1e-6 relative, and both Cxg are non-zero in inversion. The full S/D case is tested again in Task 11.
+  - `test_every_non_gate_contact_sourced`: on the same device, `CVResult.cgx` has exactly the non-gate contact names.
 
   Run them: they FAIL.
 - [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
