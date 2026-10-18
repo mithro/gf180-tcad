@@ -33,6 +33,7 @@ import sys
 import textwrap
 from dataclasses import dataclass
 from functools import cache
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -47,34 +48,13 @@ RTD = re.compile(
     r"https://gf180-tcad\.readthedocs\.io/en/latest/(?P<page>[^#]*?)(?:\.html)?(?:#(?P<anchor>.*))?$"
 )
 
-# Tool and project names whose first mention on a page must be linked. Each is a key of
-# docs/conf.py:_TOOLS (checked below), so the docs can write {{ key }}.
-TOOLS = {
-    "ngspice": "ngspice",
-    "Xyce": "Xyce",
-    "DEVSIM": "DEVSIM",
-    "Charon": "Charon",
-    "gdsfactory": "gdsfactory",
-    "KLayout": "KLayout",
-    "IIC-OSIC-TOOLS": "IIC_OSIC_TOOLS",
-    "open_pdks": "open_pdks",
-    "Docker": "Docker",
-    "BuildKit": "BuildKit",
-    "systemd": "systemd",
-    "uv": "uv",
-    "numpy": "numpy",
-    "matplotlib": "matplotlib",
-    "pytest": "pytest",
-    "ruff": "ruff",
-    "Sphinx": "Sphinx",
-    "MyST": "MyST",
-    "Read the Docs": "Read_the_Docs",
-    "GitHub Actions": "GitHub_Actions",
-    "wafer.space": "wafer_space",
-    "Tiny Tapeout": "Tiny_Tapeout",
-    "SemiMod": "SemiMod",
-    "DMT-core": "DMT_core",
-}
+
+# Tool and project names whose first mention on a page must be linked: the display texts of
+# docs/conf.py:_TOOLS, mapped to their substitution key ({{ key }}).
+@cache
+def tools() -> dict[str, str]:
+    return {text: key for key, (text, _url) in conf_tools().items()}
+
 
 # Fenced blocks whose content is code, not prose (other directives, e.g. admonitions, are prose).
 _CODE_FENCE_INFO = re.compile(r"^(|\w[\w+-]*|\{(toctree|eval-rst|code-block|code)\}.*)$")
@@ -172,7 +152,7 @@ def _term_regex() -> re.Pattern:
 
 @cache
 def _tool_regex() -> re.Pattern:
-    return _word_regex(TOOLS, plural=False)
+    return _word_regex(tools(), plural=False)
 
 
 def _role_target(body: str) -> str:
@@ -223,11 +203,13 @@ def check(name: str, text: str, *, sphinx: bool = True, terms: bool = True) -> l
                 idx = term_index.get(_role_target(body).lower())
                 if idx is not None:
                     events.append((pos, "term", idx, True))
+                for tl in _tool_regex().finditer(body):  # e.g. {term}`BSIM4` is a link too
+                    events.append((pos, "tool", tl.group(0), True))
             elif rname in ("repo", "test"):
                 repo_targets.add(_role_target(body).lstrip("~").split("#")[0].split("::")[0])
         elif m.group("subst"):
             key = m.group("skey")
-            for tool, k in TOOLS.items():
+            for tool, k in tools().items():
                 if k == key:
                     events.append((pos, "tool", tool, True))
         elif m.group("link"):
@@ -298,7 +280,7 @@ def check(name: str, text: str, *, sphinx: bool = True, terms: bool = True) -> l
             how = "{term}`...`" if sphinx else f"a link to https://{GLOSSARY_URL}"
             bad(pos, "unlinked-term", f"first use of {entry[0]!r} is not {how}")
         elif kind == "tool":
-            how = f"{{{{ {TOOLS[key]} }}}}" if sphinx else "a Markdown link"
+            how = f"{{{{ {tools()[key]} }}}}" if sphinx else "a Markdown link"
             bad(pos, "unlinked-tool", f"first mention of {key!r} is not {how}")
     return problems
 
@@ -377,9 +359,9 @@ def test_every_reference_is_a_link(generated):
     assert not problems, f"{len(problems)} unlinked references:\n" + "\n".join(map(str, problems))
 
 
-def test_tool_keys_exist_in_conf():
+def test_tool_urls_are_https():
     keys = conf_tools()
-    assert set(TOOLS.values()) <= set(keys), set(TOOLS.values()) - set(keys)
+    assert {"ngspice", "Xyce", "DEVSIM", "Charon", "numpy"} <= set(keys)
     for key, (text, url) in keys.items():
         assert url.startswith("https://"), (key, url)
 
@@ -513,3 +495,372 @@ def test_repo_role_links_the_commit(tmp_path):
         and "def test_docs_build_offline"
         in ((ROOT / "tests/test_docgen.py").read_text(encoding="utf-8").splitlines()[line - 1])
     )
+
+
+# --- the built HTML: autodoc content, generated pages and everything the sources expand to ----
+#
+# The source scan above cannot see docstrings, which autodoc pulls in at build time. This scan
+# reads the HTML of an offline -W build (the same build as test_docs_build_offline) and applies
+# the rules to what a reader sees: every check is "outside an <a>", in the main content, not in
+# code blocks, signatures, navigation or headings' permalinks.
+
+_HTML_BLOCK = {
+    "p", "div", "li", "td", "th", "tr", "table", "dd", "dt", "section", "h1", "h2", "h3", "h4",
+    "h5", "h6", "pre", "ul", "ol", "dl", "blockquote", "figcaption", "caption", "article",
+}  # fmt: skip
+_HTML_VOID = {"br", "img", "hr", "meta", "link", "input", "wbr", "source"}
+_HTML_SKIP_TAGS = {"pre", "script", "style", "nav", "aside"}
+# Verdict names are ordinary English words in lower case ("the engines agree"), so they are
+# matched with their capital letter only. Every other term and tool is matched ignoring case.
+_CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process"}
+_HTML_IDENT = re.compile(r"gf180tcad(?:\.\w+)*")
+_HTML_TEST = re.compile(r"(?<![\w/])test_\w+")
+
+
+class _HtmlText(HTMLParser):
+    """Flatten a page to text, with per-character flags and the code spans."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.stack: list[tuple[str, dict]] = []
+        self.chars: list[str] = []
+        self.flags: list[tuple[bool, bool, bool, bool, int]] = []
+        self.code: list[tuple[int, int, bool, bool, str]] = []  # start, end, in_a, skip, class
+        self.linked: list[str] = []  # text of every <a>, for "linked elsewhere on the page"
+        self.dd = -1  # index of the current glossary <dd>
+        self.dd_terms: list[list[str]] = []  # term names (<dt>) of each <dd>
+        self._pending_dt: list[str] = []
+        self._code_start: tuple[int, str] | None = None
+        self._a_start: int | None = None
+        self._dt_start: int | None = None
+
+    def _state(self) -> tuple[bool, bool, bool, bool, int]:
+        tags = [t for t, _ in self.stack]
+        in_a = "a" in tags
+        skip = (
+            bool(_HTML_SKIP_TAGS & set(tags))
+            or not any(a.get("id") == "furo-main-content" for _, a in self.stack)
+            or any(
+                {"headerlink", "sig", "toctree-wrapper", "viewcode-link"}
+                & set(a.get("class", "").split())
+                or (t == "dt" and a.get("id", "").startswith("term-"))
+                for t, a in self.stack
+            )
+        )
+        heading = bool({"h1", "h2", "h3", "h4", "h5", "h6"} & set(tags))
+        in_dd = "dd" in tags
+        return in_a, "code" in tags, skip, heading, self.dd if in_dd else -1
+
+    def _add(self, s: str) -> None:
+        f = self._state()
+        self.chars.extend(s)
+        self.flags.extend([f] * len(s))
+
+    def handle_starttag(self, tag, attrs):
+        a = {k: (v or "") for k, v in attrs}
+        if tag in _HTML_BLOCK:
+            self._add("\n")
+        if tag in _HTML_VOID:
+            return
+        if tag == "dt" and a.get("id", "").startswith("term-"):
+            self._dt_start = len(self.chars)
+        if tag == "dd":
+            self.dd += 1
+            self.dd_terms.append(self._pending_dt)
+            self._pending_dt = []
+        self.stack.append((tag, a))
+        if tag == "code" and self._code_start is None:
+            self._code_start = (len(self.chars), a.get("class", ""))
+        if tag == "a" and self._a_start is None:
+            self._a_start = len(self.chars)
+
+    def handle_endtag(self, tag):
+        if tag in _HTML_VOID:
+            return
+        for i in range(len(self.stack) - 1, -1, -1):
+            if self.stack[i][0] != tag:
+                continue
+            outer = [t for t, _ in self.stack[:i]]
+            if tag == "code" and self._code_start is not None and "code" not in outer:
+                start, cls = self._code_start
+                del self.stack[i:]
+                in_a, _, skip, _, _ = self._state()
+                self.code.append((start, len(self.chars), in_a, skip, cls))
+                self._code_start = None
+            elif tag == "a" and self._a_start is not None and "a" not in outer:
+                self.linked.append("".join(self.chars[self._a_start :]))
+                self._a_start = None
+                del self.stack[i:]
+            elif tag == "dt" and self._dt_start is not None:
+                name = "".join(self.chars[self._dt_start :]).strip().rstrip("¶").strip()
+                self._pending_dt.append(name)
+                self._dt_start = None
+                del self.stack[i:]
+            else:
+                del self.stack[i:]
+            break
+        if tag in _HTML_BLOCK:
+            self._add("\n")
+
+    def handle_data(self, data):
+        self._add(data)
+
+
+@cache
+def _ci_term_regex() -> re.Pattern:
+    names = [t for e in glossary() for t in e]
+    sensitive = [n for n in names if n in _CASE_SENSITIVE_TERMS]
+    other = [n for n in names if n not in _CASE_SENSITIVE_TERMS]
+    a = _word_regex(other, plural=True).pattern
+    b = _word_regex(sensitive, plural=True).pattern
+    return re.compile(f"(?i:{a})|{b}")
+
+
+@cache
+def _ci_tool_regex() -> re.Pattern:
+    return re.compile(_word_regex(tools(), plural=False).pattern, re.IGNORECASE)
+
+
+def _ci_lookup(word: str) -> int | None:
+    index = _term_index()
+    w = word.lower()
+    for cand in (w, w[:-1] if w.endswith("s") else None, w[:-2] if w.endswith("es") else None):
+        if cand and cand in index:
+            return index[cand]
+    return None
+
+
+def check_html(name: str, html_text: str) -> list[Problem]:
+    """All problems on one built page (``name`` is its path relative to the HTML root)."""
+    files, dirs = tracked()
+    p = _HtmlText()
+    p.feed(html_text)
+    s = "".join(p.chars)
+    linked = "\n".join(p.linked)
+    problems: list[Problem] = []
+
+    def bad(pos: int, kind: str, msg: str) -> None:
+        ctx = re.sub(r"\s+", " ", s[max(0, pos - 40) : pos + 60]).strip()
+        problems.append(Problem(name, 0, kind, f"{msg} [...{ctx}...]"))
+
+    def outside(pos: int) -> bool:
+        in_a, _in_code, skip, _heading, _dd = p.flags[pos]
+        return not in_a and not skip
+
+    for start, end, in_a, skip, cls in p.code:
+        if in_a or skip:
+            continue
+        body = re.sub(r"\s+", " ", s[start:end]).strip()
+        tok = body.rstrip("/")
+        if "xref" in cls.split():
+            bad(start, "html-unresolved-xref", f"`{body}` is a role that did not resolve")
+        if tok in files or tok in dirs:
+            bad(start, "html-path", f"`{body}` is a tracked path but not a link")
+        elif _HTML_IDENT.fullmatch(tok):
+            bad(start, "html-identifier", f"`{body}` is not a {{py:...}} link")
+        elif re.fullmatch(r"(\S+::)?test_\w+", tok):
+            bad(start, "html-test", f"`{body}` is not a {{test}} link")
+        elif " " in body:  # a command: its paths and identifiers must be linked on the page
+            for word in body.split():
+                w = word.strip("'\"(),;:").rstrip("/")
+                if (("/" in w and (w in files or w in dirs)) or _HTML_IDENT.fullmatch(w)) and (
+                    w not in linked
+                ):
+                    bad(start, "html-path", f"{w} (inside `{body}`) is never linked on the page")
+    for rx, kind in ((_HTML_IDENT, "html-identifier"), (_HTML_TEST, "html-test")):
+        for m in rx.finditer(s):
+            in_a, in_code, skip, heading, _ = p.flags[m.start()]
+            if in_a or in_code or skip:
+                continue
+            if kind == "html-identifier" and "." not in m.group(0) and m.group(0) in linked:
+                continue
+            bad(m.start(), kind, f"{m.group(0)} is not a link")
+
+    is_glossary = name == "glossary.html"
+    seen_terms: set[tuple[int, int]] = set()
+    for m in _ci_term_regex().finditer(s):
+        in_a, _in_code, skip, heading, dd = p.flags[m.start()]
+        if skip or heading:
+            continue
+        idx = _ci_lookup(m.group(0))
+        if idx is None:
+            continue
+        if is_glossary:
+            if dd < 0 or {t.lower() for t in glossary()[idx]} & {t.lower() for t in p.dd_terms[dd]}:
+                continue  # outside a definition, or the entry's own name
+            region = dd
+        else:
+            region = -1
+        if (region, idx) in seen_terms:
+            continue
+        seen_terms.add((region, idx))
+        if not in_a:
+            where = f" in the definition of {p.dd_terms[dd][0]!r}" if is_glossary else ""
+            bad(m.start(), "html-term", f"first use of {m.group(0)!r}{where} is not a link")
+    if not is_glossary:
+        seen_tools: set[str] = set()
+        for m in _ci_tool_regex().finditer(s):
+            in_a, _in_code, skip, heading, _ = p.flags[m.start()]
+            key = m.group(0).lower()
+            if skip or heading or key in seen_tools:
+                continue
+            seen_tools.add(key)
+            if not in_a:
+                bad(m.start(), "html-tool", f"first mention of {m.group(0)!r} is not a link")
+    return problems
+
+
+def _offline_build(out: Path) -> Path:
+    """sphinx-build -W of docs/ with every socket call blocked; returns the HTML directory."""
+    pytest.importorskip("sphinx")
+    pytest.importorskip("matplotlib", reason="needs the docs dependency group")
+    (out / "sitecustomize.py").write_text(
+        "import socket\n"
+        "def _blocked(*a, **k):\n"
+        "    raise OSError('network disabled by test_doc_links')\n"
+        "socket.socket.connect = socket.create_connection = socket.getaddrinfo = _blocked\n",
+        encoding="utf-8",
+    )
+    env = {**__import__("os").environ, "PYTHONPATH": str(out)}
+    html = out / "html"
+    r = subprocess.run(
+        [sys.executable, "-m", "sphinx", "-W", "-q", "-b", "html", "-d", str(out / "dt"),
+         str(DOCS), str(html)],
+        capture_output=True, text=True, env=env, check=False, timeout=900,
+    )  # fmt: skip
+    assert r.returncode == 0, (r.stdout + r.stderr)[-3000:]
+    return html
+
+
+@pytest.fixture(scope="module")
+def built_html(tmp_path_factory) -> Path:
+    return _offline_build(tmp_path_factory.mktemp("htmlbuild"))
+
+
+def _html_pages(root: Path) -> list[Path]:
+    skip_dirs = {"_modules", "_static", "_sources", "_images"}
+    skip_names = {"genindex.html", "search.html", "py-modindex.html"}
+    return [
+        p for p in sorted(root.rglob("*.html"))
+        if not skip_dirs & set(p.relative_to(root).parts) and p.name not in skip_names
+    ]  # fmt: skip
+
+
+def test_every_reference_in_the_html_is_a_link(built_html):
+    problems = [
+        q for page in _html_pages(built_html)
+        for q in check_html(str(page.relative_to(built_html)), page.read_text(encoding="utf-8"))
+    ]  # fmt: skip
+    assert not problems, f"{len(problems)} unlinked references in the HTML:\n" + "\n".join(
+        map(str, problems)
+    )
+
+
+_HTML_BAD = """<html><body><div id="furo-main-content"><h1>Title about the TCAD and Xyce</h1>
+<p>Uses <code class="docutils literal"><span class="pre">tools/sandbox-run</span></code>,
+<code class="xref py py-func docutils literal"><span class="pre">nope()</span></code>, the module
+gf180tcad.metrics, the test test_engines_agree and a ngspice run on the tcad.</p>
+<pre>tools/sandbox-run gf180tcad.metrics ngspice</pre>
+<p>Run <code class="docutils literal">sudo tools/sandbox-setup</code>.</p>
+</div></body></html>"""
+
+_HTML_GOOD = """<html><body><div id="furo-main-content">
+<p>Uses <a href="x"><code class="docutils literal">tools/sandbox-run</code></a>, the module
+<a href="m"><code class="xref py py-mod">gf180tcad.metrics</code></a>, the test
+<a href="t"><code>test_engines_agree</code></a> and <a href="n">ngspice</a> on the
+<a href="g"><span class="xref std std-term">TCAD</span></a>; later ngspice and TCAD again.</p>
+<p>Run <code class="docutils literal">sudo tools/sandbox-setup</code>
+(<a href="s"><code>tools/sandbox-setup</code></a>). The engines agree.</p>
+</div></body></html>"""
+
+_HTML_GLOSSARY = """<html><body><div id="furo-main-content"><dl class="glossary">
+<dt id="term-hull">hull<a class="headerlink" href="#term-hull">¶</a></dt>
+<dd><p>Of two intervals, as in the corner envelope.</p></dd>
+<dt id="term-corner-envelope">corner envelope<a class="headerlink" href="#x">¶</a></dt>
+<dd><p>The corner envelope uses the <a href="#term-hull">hull</a>.</p></dd>
+</dl></div></body></html>"""
+
+
+@pytest.mark.parametrize(
+    "kind", ["html-path", "html-unresolved-xref", "html-identifier", "html-test", "html-term",
+             "html-tool"],
+)  # fmt: skip
+def test_positive_control_html_detector_fires(kind):
+    found = {q.kind for q in check_html("control.html", _HTML_BAD)}
+    assert kind in found, (kind, [str(q) for q in check_html("control.html", _HTML_BAD)])
+
+
+def test_positive_control_html_details():
+    problems = [str(q) for q in check_html("control.html", _HTML_BAD)]
+    assert any("tcad" in q and "html-term" in q for q in problems), "terms ignore case"
+    assert any("tools/sandbox-setup (inside" in q for q in problems), "paths in commands"
+    assert not any("'TCAD'" in q or "'Xyce'" in q for q in problems), "headings are skipped"
+    heading = "<h1>The gf180tcad.metrics module</h1>"
+    assert any(
+        "gf180tcad.metrics" in str(q)
+        for q in check_html(
+            "h.html",
+            _HTML_GOOD.replace(
+                '<div id="furo-main-content">', '<div id="furo-main-content">' + heading
+            ),
+        )
+    )
+    assert check_html("control.html", _HTML_GOOD) == []
+
+
+def test_positive_control_html_glossary_cross_references():
+    problems = [str(q) for q in check_html("glossary.html", _HTML_GLOSSARY)]
+    assert len(problems) == 1 and "corner envelope" in problems[0] and "'hull'" in problems[0], (
+        problems
+    )
+
+
+# --- the API reference is complete ------------------------------------------------------------
+
+
+def _modules() -> list[str]:
+    import pkgutil
+
+    sys.path.insert(0, str(ROOT / "src"))
+    try:
+        import gf180tcad
+    finally:
+        sys.path.remove(str(ROOT / "src"))
+    return ["gf180tcad"] + sorted(
+        m.name for m in pkgutil.walk_packages(gf180tcad.__path__, "gf180tcad.")
+    )
+
+
+def _public_names(module: str) -> list[str]:
+    """Public names defined in ``module``'s own source (top-level def, class or assignment)."""
+    rel = module.replace(".", "/")
+    src = ROOT / "src" / (f"{rel}/__init__.py" if (ROOT / "src" / rel).is_dir() else f"{rel}.py")
+    names = []
+    for node in ast.parse(src.read_text(encoding="utf-8")).body:
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            names.append(node.name)
+        elif isinstance(node, ast.Assign):
+            names += [t.id for t in node.targets if isinstance(t, ast.Name)]
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            names.append(node.target.id)
+    return [n for n in dict.fromkeys(names) if not n.startswith("_")]
+
+
+def test_every_module_has_an_api_page_in_the_toctree():
+    index = (DOCS / "api" / "index.md").read_text(encoding="utf-8")
+    toc = re.search(r"```\{toctree\}\n(.*?)```", index, re.DOTALL).group(1).split()
+    for module in _modules():
+        page = DOCS / "api" / f"{module}.md"
+        assert page.is_file(), f"no API page docs/api/{module}.md"
+        assert f".. automodule:: {module}\n" in page.read_text(encoding="utf-8"), page
+        assert module in toc, f"{module} is not in the docs/api/index.md toctree"
+
+
+def test_every_public_name_is_documented(built_html):
+    missing = []
+    for module in _modules():
+        page = (built_html / "api" / f"{module}.html").read_text(encoding="utf-8")
+        missing += [
+            f"{module}.{n}" for n in _public_names(module) if f'id="{module}.{n}"' not in page
+        ]
+    assert not missing, "not on the API pages:\n" + "\n".join(missing)
