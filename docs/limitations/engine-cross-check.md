@@ -4,8 +4,8 @@ The SPICE reference is computed with ngspice and cross-checked with Xyce on
 the same PDK model cards, bias grid and instance parameters. The spec says a
 difference of more than 0.5 % between the two engines flags a problem with the
 reference itself. The check is `test_engines_agree` in `tests/spice/test_xyce.py`.
-It covers every geometry of `nfet_05v0` and `pfet_05v0`, for `idvg_sat` and
-`idvd`, at the typical corner and 25 °C. The metric is the maximum of
+It covers every geometry of `nfet_05v0` and `pfet_05v0`, for `idvg_lin`,
+`idvg_sat` and `idvd`, at the typical corner and 25 °C. The metric is the maximum of
 |Id,ngspice − Id,Xyce| / max(|Id,ngspice|, |Id,Xyce|), taken over the bias
 points where either engine gives |Id| > 1 pA. That threshold is the order of the
 gmin leakage floor: every junction carries a conductance gmin = 1e-12 S, so at
@@ -13,8 +13,8 @@ Vds = 5 V about 5 pA flows even with the device off. Points below 1 pA, such
 as Vds = 0 where Id is about 1e-20 A, carry no meaningful device current and
 are excluded.
 
-The threshold is not loosened. **Six of the 24 cases fail:** `idvg_sat` for
-all six `nfet_05v0` geometries, by 0.56 to 0.61 %. They are marked as strict
+The threshold is not loosened. **Twelve of the 36 cases fail:** `idvg_lin`
+(0.555 to 0.562 %) and `idvg_sat` (0.56 to 0.61 %) for all six `nfet_05v0` geometries. They are marked as strict
 expected failures that point to this page, so a fix would show up as an
 unexpected pass.
 
@@ -70,14 +70,14 @@ identically to scratch copies of both libraries.
 leakage (≈ 1e-12 S × 5 V) plus junction leakage,
   Vgs = 0.01 V. The subthreshold gate-voltage shift becomes 0.000 mV.
 
-With ngspice forced to 4.6, every nfet geometry agrees: `idvg_sat` 2.7e-4 to
-3.6e-3, `idvd` 1.0e-7 to 1.4e-7.
+With ngspice forced to 4.6, every nfet geometry agrees: `idvg_lin` 3.9e-5 to
+2.3e-4, `idvg_sat` 2.7e-4 to 3.6e-3, `idvd` 1.0e-7 to 1.4e-7.
 
 ### Regression test
 
 The sandbox test `test_engines_agree_with_ngspice_forced_to_bsim4_4p6` in
 `tests/spice/test_xyce.py` guards this explanation against regressions. It
-runs each of the six expected-failure cases on a patched scratch copy of the
+runs each of the twelve expected-failure cases on a patched scratch copy of the
 image's ngspice library. The copy is written inside the sandbox, so the
 repository stays read-only. It differs from the PDK library in two ways:
 
@@ -92,14 +92,14 @@ subdirectory of the working directory. It asserts three things:
 - Stock against patched ngspice exceeds 0.005, so the patch took effect.
 - Patched ngspice against Xyce stays below 0.005.
 
-| Geometry | Stock ngspice vs Xyce | ngspice at 4.6 vs Xyce |
-|---|---|---|
-| W10/L0.6 | 6.05e-3 | 3.64e-3 |
-| W10/L0.7 | 5.80e-3 | 1.93e-3 |
-| W10/L1 | 5.71e-3 | 1.87e-3 |
-| W10/L2 | 5.61e-3 | 1.85e-3 |
-| W10/L10 | 5.59e-3 | 2.28e-3 |
-| W1.6/L0.7 | 5.76e-3 | 2.73e-4 |
+| Geometry | `idvg_lin` stock | `idvg_lin` at 4.6 | `idvg_sat` stock | `idvg_sat` at 4.6 |
+|---|---|---|---|---|
+| W10/L0.6 | 5.62e-3 | 1.47e-4 | 6.05e-3 | 3.64e-3 |
+| W10/L0.7 | 5.59e-3 | 2.32e-4 | 5.80e-3 | 1.93e-3 |
+| W10/L1 | 5.57e-3 | 1.29e-4 | 5.71e-3 | 1.87e-3 |
+| W10/L2 | 5.58e-3 | 1.93e-4 | 5.61e-3 | 1.85e-3 |
+| W10/L10 | 5.60e-3 | 1.59e-4 | 5.59e-3 | 2.28e-3 |
+| W1.6/L0.7 | 5.55e-3 | 3.9e-5 | 5.76e-3 | 2.73e-4 |
 
 ## Consequence for the reference
 
@@ -110,7 +110,7 @@ reproduce it.
 
 **For the nfet, the gate sweep is not independently cross-checked to 0.5 %.**
 This covers subthreshold through moderate inversion. The second engine
-disagrees there by 0.56 to 0.61 % for every geometry, and the cause is the
+disagrees there by 0.55 to 0.61 % for every geometry, and the cause is the
 BSIM4 release, not a netlist or library error. The diagnostic test above
 proves the cause, but it does not give an independent check of the published
 4.5 evaluation.
@@ -122,6 +122,7 @@ The Xyce cross-check claims exactly the following, at the typical corner and
 |---|---|---|
 | nfet | `idvd` | 0.37 % |
 | pfet | `idvd` | 1e-6 |
+| pfet | `idvg_lin` | 0.02 % |
 | pfet | `idvg_sat` | 0.23 % |
 
 The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA.

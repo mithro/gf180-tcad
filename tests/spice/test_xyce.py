@@ -13,6 +13,7 @@ import pytest
 
 from gf180tcad import io, sandbox
 from gf180tcad.devices import DEVICES, SWEEPS, Device, Geometry, geometry_id
+from gf180tcad.known import KNOWN_ENGINE_DIFFS
 from gf180tcad.pdk import PdkInfo
 from gf180tcad.spice import xyce
 from gf180tcad.spice.common import SpiceError
@@ -468,7 +469,7 @@ def test_xyce_two_runs_byte_identical(image_pdk, tmp_path, device):
 
 # ngspice runs the nfet_06v0 card (version=4.5) with its BSIM4v5 (4.5.0) code; Xyce's oldest
 # BSIM4 is 4.6.1. The resulting ~0.23 mV subthreshold shift is a ~0.56-0.61 % Id difference in
-# idvg_sat for every nfet geometry: see docs/limitations/engine-cross-check.md. The threshold is
+# idvg_sat and idvg_lin for every nfet geometry: see docs/limitations/engine-cross-check.md. The threshold is
 # NOT loosened; these cases are expected failures, strict so that a fix shows up as XPASS.
 _BSIM4_VERSION_XFAIL = pytest.mark.xfail(
     strict=True,
@@ -478,11 +479,16 @@ _BSIM4_VERSION_XFAIL = pytest.mark.xfail(
 
 
 def _case(d, g, s):
-    marks = [_BSIM4_VERSION_XFAIL] if (d is NFET and s == "idvg_sat") else []
+    marks = [_BSIM4_VERSION_XFAIL] if (d.name, s) in KNOWN_ENGINE_DIFFS else []
     return pytest.param(d, g, s, id=f"{d.name}-{geometry_id(g)}-{s}", marks=marks)
 
 
-_CASES = [_case(d, g, s) for d in (NFET, PFET) for g in d.geometries for s in ("idvg_sat", "idvd")]
+_CASES = [
+    _case(d, g, s)
+    for d in (NFET, PFET)
+    for g in d.geometries
+    for s in ("idvg_lin", "idvg_sat", "idvd")
+]
 
 
 @pytest.mark.sandbox
@@ -583,14 +589,20 @@ def test_patched_lib_switches_bsim4_code_version(image_pdk, nfet_v46_lib, tmp_pa
     assert _bsim4_code(tmp_path / "patched", pdk46, g, nfet_v46_lib) == "BSIM4v6"
 
 
-_DIAG_CASES = [pytest.param(g, id=f"nfet_05v0-{geometry_id(g)}-idvg_sat") for g in NFET.geometries]
+_DIAG_CASES = [
+    pytest.param(g, s, id=f"nfet_05v0-{geometry_id(g)}-{s}")
+    for s in ("idvg_lin", "idvg_sat")
+    for g in NFET.geometries
+]
 
 
 @pytest.mark.sandbox
-@pytest.mark.parametrize("g", _DIAG_CASES)
-def test_engines_agree_with_ngspice_forced_to_bsim4_4p6(image_pdk, nfet_v46_lib, tmp_path, g):
+@pytest.mark.parametrize(("g", "sweep_name"), _DIAG_CASES)
+def test_engines_agree_with_ngspice_forced_to_bsim4_4p6(
+    image_pdk, nfet_v46_lib, tmp_path, g, sweep_name
+):
     """Proves the cause in docs/limitations/engine-cross-check.md for each xfailed case."""
-    sweep = SW["idvg_sat"]
+    sweep = SW[sweep_name]
     plan = bias_plan(NFET, sweep)
     for d in ("ng", "ng46", "xy"):
         (tmp_path / d).mkdir()
@@ -602,7 +614,7 @@ def test_engines_agree_with_ngspice_forced_to_bsim4_4p6(image_pdk, nfet_v46_lib,
     ng46 = run_ngspice(text, tmp_path / "ng46", plan=plan, inputs=(PATCHED_LIB_DIR,))
     xy = simulate_xyce(NFET, g, sweep, "typical", 25.0, image_pdk, tmp_path / "xy")
     d_stock, d_46 = engine_diff(stock, xy), engine_diff(ng46, xy)
-    print(f"diag {geometry_id(g)} stock={d_stock!r} forced_4.6={d_46!r}")
+    print(f"diag {geometry_id(g)} {sweep_name} stock={d_stock!r} forced_4.6={d_46!r}")
     assert d_stock > TOL  # the xfailed comparison, as published
     assert engine_diff(stock, ng46) > TOL  # the patch took effect in ngspice
     assert d_46 < TOL
