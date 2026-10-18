@@ -97,10 +97,13 @@ results/spice/<engine>/<corner>/<device>/<geometry_id>/metrics.json
 - `provenance.json` holds the contents of `docker/base/versions.json`, the
   pinned image reference with its digest (`docker/IMAGE`) and
   `generator_sha256`. That is the sha256 over the sorted (path, sha256) pairs
-  of `src/gf180tcad/**/*.py`. There is deliberately no git commit and no date,
-  so a regeneration on any machine gives the same bytes. Any change to the
-  generator code changes `generator_sha256`, and so the reference has to be
-  regenerated (and the manifest updated) together with such a change.
+  of the source files of the modules the generator imports, listed explicitly
+  in `gf180tcad.reference.GENERATOR_MODULES` (a test checks the list against
+  the import graph). There is deliberately no git commit and no date, so a
+  regeneration on any machine gives the same bytes. A change to one of those
+  modules changes `generator_sha256`, so the reference has to be regenerated
+  (and the manifest updated) together with such a change. Code elsewhere under
+  `src/`, such as later TCAD modules, does not affect it.
 
 Generation never compares the two engines. Each engine's results are
 published as they are; the ngspice/Xyce cross-check is a separate test,

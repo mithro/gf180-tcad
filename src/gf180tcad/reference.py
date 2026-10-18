@@ -29,9 +29,10 @@ directories have no ``cv.csv`` and their ``metrics.json`` has no ``cgg_*`` keys.
 Every result file is deterministic: CSV meta lines hold only engine, corner, device,
 geometry_id, w_um, l_um, sweep, temp_c and units; ``provenance.json`` holds the contents of
 ``versions.json``, the pinned image reference (``docker/IMAGE``, with its digest) and
-:func:`generator_sha256`, and deliberately no git commit or date, so a regeneration anywhere
-gives the same bytes. Generation never compares the engines; the ngspice/Xyce cross-check
-(``docs/limitations/engine-cross-check.md``) is a separate test.
+:func:`generator_sha256` (of the :data:`GENERATOR_MODULES` only), and deliberately no git
+commit or date, so a regeneration anywhere gives the same bytes. Generation never compares
+the engines; the ngspice/Xyce cross-check (``docs/limitations/engine-cross-check.md``) is a
+separate test.
 """
 
 from __future__ import annotations
@@ -67,7 +68,25 @@ METRICS_NAME = "metrics.json"
 PROVENANCE_NAME = "provenance.json"
 VERSIONS = Path("docker") / "base" / "versions.json"
 IMAGE = Path("docker") / "IMAGE"
-GENERATOR_DIR = Path("src") / "gf180tcad"
+# Every gf180tcad module the generator imports (tests check this against the import graph of
+# gf180tcad.reference and gf180tcad.__main__). Only these feed generator_sha256, so later code
+# elsewhere under src/ (e.g. TCAD) does not change the SPICE provenance.
+GENERATOR_MODULES = (
+    "gf180tcad",
+    "gf180tcad.__main__",
+    "gf180tcad.devices",
+    "gf180tcad.io",
+    "gf180tcad.metrics",
+    "gf180tcad.pdk",
+    "gf180tcad.reference",
+    "gf180tcad.sandbox",
+    "gf180tcad.spice",
+    "gf180tcad.spice.common",
+    "gf180tcad.spice.netlist",
+    "gf180tcad.spice.ngspice",
+    "gf180tcad.spice.rawfile",
+    "gf180tcad.spice.xyce",
+)
 _ENGINE_MEM = {"ngspice": ngspice.MEM, "xyce": xyce.MEM}
 _DC_COLUMNS = ("vd", "vg", "vb", "id", "ig", "ib")
 _CV_COLUMNS = ("vg", "cgg")
@@ -177,15 +196,30 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def generator_sha256(repo_root: Path | None = None) -> str:
-    """sha256 over the sorted ``(relpath, sha256)`` pairs of ``src/gf180tcad/**/*.py``.
+def module_relpath(name: str, repo_root: Path | None = None) -> Path:
+    """Repo-relative source file of module ``name`` (``__init__.py`` for a package)."""
+    root = Path(repo_root) if repo_root is not None else sandbox.REPO_ROOT
+    base = Path("src", *name.split("."))
+    init = base / "__init__.py"
+    return init if (root / init).is_file() else base.with_suffix(".py")
 
-    The hashed text is one line ``<file sha256>  <relpath>\\n`` per file, relpath relative to
-    the repo root in POSIX form, sorted by its UTF-8 bytes. It depends on file contents and
-    paths only (not on mtimes, the checkout location or git), so it is the same in every clone.
+
+def generator_sha256(repo_root: Path | None = None) -> str:
+    """sha256 over the sorted ``(relpath, sha256)`` pairs of the :data:`GENERATOR_MODULES` files.
+
+    The hashed text is one line ``<file sha256>  <relpath>\\n`` per module file, relpath
+    relative to the repo root in POSIX form, sorted by its UTF-8 bytes. It depends on file
+    contents and paths only (not on mtimes, the checkout location or git), so it is the same in
+    every clone.
+    A listed module that is missing raises FileNotFoundError.
     """
     root = Path(repo_root) if repo_root is not None else sandbox.REPO_ROOT
-    files = {p.relative_to(root).as_posix(): p for p in (root / GENERATOR_DIR).rglob("*.py")}
+    files = {}
+    for name in GENERATOR_MODULES:
+        rel = module_relpath(name, root)
+        if not (root / rel).is_file():
+            raise FileNotFoundError(f"generator module {name} not found: {root / rel}")
+        files[rel.as_posix()] = root / rel
     lines = [f"{_sha256(files[r])}  {r}\n" for r in sorted(files, key=lambda s: s.encode())]
     return hashlib.sha256("".join(lines).encode("utf-8")).hexdigest()
 
