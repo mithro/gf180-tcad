@@ -1,36 +1,44 @@
 # PDK spec check
 
-Sanity check of the SPICE golden reference against the PDK's own public electrical
-specification, and the definition of the "Same process" window used in
-{doc}`agreement`.
+Sanity check of the {term}`SPICE` {term}`golden reference` against the {term}`PDK`'s own
+public electrical specification, and the definition of the {term}`"Same process" window` used
+in {doc}`agreement` ({ref}`same-process-window`).
+
+(pdk-source)=
 
 ## Source
 
-The spec values are copied as published from section "3.0 Medium Voltage Devices (5V)" of the
-GF180MCU PDK documentation,
-<https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html>
-(public page, retrieved 2026-10-18), into `data/pdk_elec_spec.json`. Only this public page is
-used. The devices are NE2 (`nfet_05v0`, W/L 10/0.6) and PE2 (`pfet_05v0`, W/L 10/0.5). Our
-values are the ngspice TT (typical, 25 C) results in `results/spice/ngspice/typical`.
+The spec values are copied as published from
+[section "3.0 Medium Voltage Devices (5V)" of the {term}`GF180MCU` PDK documentation](https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html)
+(public page, retrieved 2026-10-18), into {repo}`data/pdk_elec_spec.json`. Only this public
+page is used. The devices are NE2 ({term}`nfet_05v0`, W/L 10/0.6) and PE2 ({term}`pfet_05v0`,
+W/L 10/0.5). Our values are the {{ ngspice }} {term}`TT` (typical, 25 C) results in
+{repo}`results/spice/ngspice/typical`.
 
-The page publishes pfet currents and voltages with their sign (PE2 Idsat -280/-240/-200
-uA/um). Our `vt_*` metrics are signed by polarity, so VT0 is compared as published; every other
-metric is a magnitude, so the pfet spec is compared as its absolute value (Idsat 200 to 280
-uA/um). One-sided limits become an interval from 0 (a magnitude cannot be negative): Ioff
-`<= 10` pA/um is `[0, 10]` for both devices.
+The page publishes pfet currents and voltages with their sign (PE2 {term}`Idsat`
+-280/-240/-200 uA/um). Our `vt_*` metrics ({py:mod}`gf180tcad.metrics`) are signed by
+polarity, so {term}`VT0` is compared as published; every other metric is a magnitude, so the
+pfet spec is compared as its absolute value (Idsat 200 to 280 uA/um). One-sided limits become
+an interval from 0 (a magnitude cannot be negative): {term}`Ioff` `<= 10` pA/um is `[0, 10]`
+for both devices.
+
+(pdk-definition-notes)=
 
 ## Definition notes
 
-- **VT0.** The page only says "Linear threshold voltage" and gives no bias or current
-  criterion. It is compared with `vt_lin_maxgm` (Vds = 0.1 V, linear extrapolation at maximum
-  gm), the textbook linear Vt and the closest of our metrics. The constant-current `vt_lin_cc`
-  (100 nA * W/L) differs from it by 25 mV (n) and 58 mV (p) but is also inside the spec window.
+- **VT0.** The page only says "Linear {term}`threshold voltage <Vt>`" and gives no bias or current
+  criterion. It is compared with {term}`vt_lin_maxgm` (Vds = 0.1 V, linear extrapolation at
+  maximum {term}`gm`), the textbook linear Vt and the closest of our metrics. The
+  constant-current {term}`vt_lin_cc` (100 nA * W/L) differs from it by 25 mV (n) and 58 mV (p)
+  but is also inside the {term}`spec window`.
 - **Idsat.** |Vds| = |Vgs| = 5 V on the page; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0.
   Same definition.
 - **Ioff.** |Vds| = 5.5 V at 25 C on the page; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C. Same
   definition.
-- **BVDSS** (n: min 8.5, typ 11; p: typ -10.5, max -8.5 V) is published but breakdown is not
+- **{term}`BVDSS`** (n: min 8.5, typ 11; p: typ -10.5, max -8.5 V) is published but breakdown is not
   simulated, so it is not compared.
+
+(pdk-tt-against-spec)=
 
 ## TT against the spec
 
@@ -48,19 +56,23 @@ All six compared values are inside the published spec window.
 The NE2 values agree with the typical column to within 3 % (VT0 0.718 vs 0.70 V, Idsat 500.3
 vs 500 uA/um). Ioff is below the typical 1 pA/um for both devices, well inside the limit.
 
+(pdk-same-process-window)=
+
 ## The "Same process" window
 
 For each metric the "Same process" window covers both
 
 1. the PDK spec min-max (above), and
-2. the corner envelope: the min and max of the metric over the TT, FF, SS, FS and SF corners,
-   per engine, device and geometry, published as `results/spice/envelope.json` (only for
-   entries where all five corners were generated).
+2. the {term}`corner envelope`: the min and max of the metric over the TT, {term}`FF`,
+   {term}`SS <SS corner>`, {term}`FS` and {term}`SF` {term}`corners <corner>`, per engine,
+   device and geometry, published as {repo}`results/spice/envelope.json` (only for entries
+   where all five corners were generated).
 
-The window is their hull: the lowest lower bound and the highest upper bound. When one interval
+The window is their {term}`hull`: the lowest lower bound and the highest upper bound. When one interval
 contains the other this is simply the wider one; otherwise (partial overlap or disjoint) it
 keeps both the TT value and the published typical inside the window.
-`gf180tcad.specwindow.window` returns the window with a flag, `"spec"`, `"envelope"` or
+{py:func}`gf180tcad.specwindow.window` returns the window with a flag, `"spec"`, `"envelope"` or
 `"hull"`, saying which one sets it (what the page shows). An open side of a one-sided spec stays
-open. The envelope is generated by `python -m gf180tcad spice-reference` itself, so
-`make reproduce` regenerates it.
+open. The envelope is generated by `python -m gf180tcad spice-reference`
+({ref}`partial-reference`) itself, so `make reproduce` ({repo}`Makefile`, {ref}`one-command`)
+regenerates it.

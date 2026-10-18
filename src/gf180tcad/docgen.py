@@ -5,8 +5,8 @@
 only committed files (``results/spice/**``, ``data/pdk_elec_spec.json``) and writes only the
 output directory it is given (``docs/_generated``). Nothing here is a published result: the
 tables and plots are presentation of the committed dataset. The one derived quantity, the
-ngspice-vs-Xyce maximum relative difference, is computed with :func:`engine_diff` on the host
-from the committed CSVs.
+ngspice-vs-Xyce maximum relative difference, is computed with
+:func:`~gf180tcad.spice.xyce.engine_diff` on the host from the committed CSVs.
 
 Plots are drawn against polarity-stripped axes (|Vgs|, |Vds|, |Id|) so the nfet and the pfet
 look alike. Numbers in tables use :func:`fmt` (fixed significant figures, locale independent),
@@ -201,7 +201,7 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
     rows = [
         (
             "| Metric | Unit | TT ngspice | TT Xyce | Envelope [lo, hi] (5 corners, ngspice) "
-            "| Spec window (set by) |"
+            '| {term}`"Same process" window` (set by) |'
         ),
         "|---|---|---|---|---|---|",
     ]
@@ -209,12 +209,14 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
         lo, hi = env[name]
         if name in specs:
             w = specwindow.window(name, specwindow.spec_range(specs[name]), (lo, hi))
-            sw = f"{_interval(w.lo, w.hi)} ({w.source})"
+            source = "{term}`hull`" if w.source == "hull" else w.source
+            sw = f"{_interval(w.lo, w.hi)} ({source})"
         else:
             sw = "-"
         x = fmt(xy[name]) if xy is not None and name in xy else "-"
         rows.append(
-            f"| `{name}` | {_unit(name)} | {fmt(tt[name])} | {x} | {_interval(lo, hi)} | {sw} |"
+            f"| {{term}}`{name}` | {_unit(name)} | {fmt(tt[name])} | {x} | {_interval(lo, hi)} "
+            f"| {sw} |"
         )
     return rows
 
@@ -227,11 +229,14 @@ def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict
         f"# {device.name}, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} um",
         "",
         (
-            f"Geometry `{gid}` ({g.role}). SPICE reference at 25 C from `results/spice`. Axes are "
-            "polarity-stripped (|Vgs|, |Vds|, |Id|), so the nfet and the pfet look alike. "
-            "The shaded band is the min-max over the TT, FF, SS, FS and SF corners (ngspice); the "
-            "solid line is ngspice TT and the dashed line is Xyce TT. Xyce has no C-V sweep. "
-            "Summary and engine differences: {doc}`../index`."
+            f"{{term}}`{device.name}`, {{term}}`geometry <geometry id>` `{gid}` "
+            f"({{ref}}`{g.role} <calibration-validation>`). {{term}}`SPICE` reference at 25 C "
+            "from {repo}`results/spice`. Axes are {term}`polarity-stripped` (|Vgs|, |Vds|, |Id|), "
+            "so the nfet and the pfet look alike. The shaded band is the {term}`corner envelope`, "
+            "the min-max over the {term}`TT`, {term}`FF`, {term}`SS <SS corner>`, {term}`FS` and "
+            "{term}`SF` {term}`corners <corner>` ({{ ngspice }}); the solid line is ngspice TT "
+            "and the dashed line is {{ Xyce }} TT. Xyce has no C-V {term}`sweep` "
+            "({ref}`results-layout`). Summary and engine differences: {doc}`../index`."
         ),
         "",
     ]
@@ -250,10 +255,11 @@ def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict
     lines += [
         "",
         (
-            "Envelope and spec window are in the units of the metric. The spec window is the hull of "
-            "the PDK spec min-max and the corner envelope, and the word in brackets says which sets "
-            f"it (see {{doc}}`{SPEC_DOC}`). A dash means the PDK publishes no spec for this metric "
-            "at this geometry."
+            "The last two columns are in the units of the metric. The last column is the "
+            '{term}`"Same process" window`: the {term}`hull` of the {term}`PDK` '
+            "{term}`spec window` and the corner envelope, and the word in brackets says which "
+            "sets it (see {ref}`pdk-same-process-window`). A dash means the PDK publishes no spec "
+            "for this metric at this geometry."
         ),
         "",
     ]
@@ -271,16 +277,18 @@ def _spec_status(root, spec: dict) -> list[str]:
         v = _metrics(root, "ngspice", TT, e["device"], e["geometry_id"])[e["metric"]]
         lo, hi = specwindow.spec_range(e)
         status = "inside" if lo <= v <= hi else "OUTSIDE"
+        page = f"{e['device']}/{e['geometry_id']}"
         rows.append(
-            f"| `{e['device']}` {fmt(e['w_um'])}/{fmt(e['l_um'])} | {e['symbol']} "
-            f"| `{e['metric']}` | {fmt(v)} | {_interval(lo, hi)} | {status} |"
+            f"| {{term}}`{e['device']}` {{doc}}`{fmt(e['w_um'])}/{fmt(e['l_um'])} <{page}>` "
+            f"| {{term}}`{e['symbol']}` | {{term}}`{e['metric']}` | {fmt(v)} | {_interval(lo, hi)} "
+            f"| {status} |"
         )
     return rows
 
 
 def _engine_table(root) -> list[str]:
     rows = [
-        "| Device | Geometry | " + " | ".join(f"`{s}`" for s in DIFF_SWEEPS) + " |",
+        "| Device | Geometry | " + " | ".join(f"{{term}}`{s}`" for s in DIFF_SWEEPS) + " |",
         "|---|---|" + "---|" * len(DIFF_SWEEPS),
     ]
     for device in DEVICES.values():
@@ -299,9 +307,13 @@ def _engine_table(root) -> list[str]:
                     if (device.name, sweep) in KNOWN_DIFFS:
                         cell += f" {{doc}}`(known) <{ENGINE_DOC}>`"
                     else:
-                        cell += " **unexplained**"
+                        cell += f" **unexplained** ({{doc}}`{ENGINE_DOC}`)"
                 cells.append(cell)
-            rows.append(f"| `{device.name}` | `{gid}` | " + " | ".join(cells) + " |")
+            rows.append(
+                f"| {{term}}`{device.name}` | {{doc}}`{gid} <{device.name}/{gid}>` | "
+                + " | ".join(cells)
+                + " |"
+            )
     return rows
 
 
@@ -310,16 +322,18 @@ def _summary_page(root, spec: dict, out: Path):
         "# SPICE reference results",
         "",
         (
-            "Pages generated at documentation build time from the committed SPICE reference "
-            "dataset (`results/spice`). There is no TCAD result yet: these plots and tables are the "
-            "golden reference that TCAD will later be compared against."
+            "Pages generated at documentation build time from the committed {term}`SPICE` "
+            "reference dataset ({repo}`results/spice`). There is no {term}`TCAD` result yet: these "
+            "plots and tables are the {term}`golden reference` that TCAD will later be compared "
+            "against ({doc}`/comparison/agreement`)."
         ),
         "",
         "## TT against the PDK spec",
         "",
         (
-            "The ngspice typical-corner value of each metric the PDK publishes a spec for, against "
-            f"the spec interval. Definitions, sources and caveats are on {{doc}}`{SPEC_DOC}`."
+            "The {{ ngspice }} {term}`TT` (typical corner) value of each metric the {term}`PDK` "
+            "publishes a spec for, against the spec interval ({term}`spec window`). Definitions, "
+            f"sources and caveats are on {{doc}}`{SPEC_DOC}`."
         ),
         "",
         *_spec_status(root, spec),
@@ -327,9 +341,11 @@ def _summary_page(root, spec: dict, out: Path):
         "## ngspice against Xyce",
         "",
         (
-            "Maximum relative difference |Id,ngspice - Id,Xyce| / max(|Id,ngspice|, |Id,Xyce|) over "
-            "the bias points where either engine gives |Id| > 1 pA, at the typical corner and 25 C "
-            "(`gf180tcad.spice.xyce.engine_diff`). The design threshold is 0.5 %. Cases above it "
+            "{term}`engine_diff` between ngspice and {{ Xyce }}: the maximum relative difference "
+            "|Id,ngspice - Id,Xyce| / max(|Id,ngspice|, |Id,Xyce|) over the bias points where "
+            "either engine gives |Id| > 1 pA, at the typical corner and 25 C, for each "
+            "{term}`sweep` ({py:func}`gf180tcad.spice.xyce.engine_diff`). The threshold is 0.5 % "
+            "({ref}`comparison-space`). Cases above it "
             f"that are explained are marked known, see {{doc}}`{ENGINE_DOC}`. Anything else "
             "above the threshold is flagged unexplained in bold."
         ),

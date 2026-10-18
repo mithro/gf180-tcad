@@ -2,49 +2,115 @@
 
 The initial reference list. Items marked **unverified** have not yet been
 checked and must be checked before they are cited as support for any claim.
-Only the items the spec flags `[verify]` are marked unverified, but no citation
-on this page has been checked against its source yet, and the annotations are
-summaries, not claims taken from the papers.
+Only the items the spec flags `[verify]`
+({repo}`design spec, section 11 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#11-literature-initial-verify-items-to-be-checked-before-citing>`)
+are marked unverified, but no citation on this page has been checked against its source yet,
+and the annotations are summaries, not claims taken from the papers. The DOI or URL of each
+entry resolves to a record whose title, authors and year match the entry; that identifies the
+item, it does not check what the annotation says about it.
 
 ## Tolerances
 
-- ITRS 2007, Modeling and Simulation chapter, Table MS3: the tolerance numbers
-  in {doc}`../comparison/agreement`.
+(lit-itrs)=
+
+- [ITRS 2007](https://www.semiconductors.org/resources/2007-international-technology-roadmap-for-semiconductors-itrs/),
+  Modeling and Simulation chapter, Table MS3:
+  the {term}`tolerance` numbers in {ref}`tolerances`.
 
 ## Model benchmark tests
 
-- Tsividis and Suyama, JSSC 1994 (**unverified**).
-- McAndrew, IEEE Trans. Electron Devices 2006, Gummel symmetry test
+(lit-tsividis)=
+
+- Tsividis and Suyama, "MOSFET modeling for analog circuit CAD: problems and prospects", IEEE
+  JSSC 29(3), 1994, {doi}`10.1109/4.278342` (**unverified**).
+
+(lit-mcandrew)=
+
+- McAndrew, "Validation of MOSFET model source-drain symmetry", IEEE Trans. Electron Devices
+  53(9), 2006, {doi}`10.1109/TED.2006.881005`: the {term}`Gummel symmetry test`
   (**unverified**).
 
 ## Compact model
 
-- BSIM4 manual (UC Berkeley): the meaning of TOXE, TOXP, NGATE and LPE0.
+(lit-bsim4)=
+
+- {{ BSIM4_site }} manual (UC Berkeley): the meaning of TOXE, TOXP, NGATE and LPE0.
 
 ## Physics models
 
-- Caughey and Thomas, 1967: velocity saturation.
-- Masetti, 1983: mobility versus doping.
-- Lombardi, 1988: surface mobility.
-- Darwish (CVT), 1997 (**unverified**): surface mobility.
-- Ancona and Iafrate, 1989: density-gradient quantum correction.
+(lit-caughey)=
+
+- Caughey and Thomas, Proc. IEEE 55(12), 1967, {doi}`10.1109/PROC.1967.6123`: velocity
+  saturation.
+
+(lit-masetti)=
+
+- Masetti, Severi and Solmi, IEEE Trans. Electron Devices 30(7), 1983,
+  {doi}`10.1109/T-ED.1983.21207`: mobility versus doping.
+
+(lit-lombardi)=
+
+- Lombardi et al., IEEE Trans. Computer-Aided Design 7(11), 1988, {doi}`10.1109/43.9186`:
+  surface mobility.
+
+(lit-darwish)=
+
+- Darwish et al. (CVT), IEEE Trans. Electron Devices 44(9), 1997, {doi}`10.1109/16.622611`
+  (**unverified**): surface mobility.
+
+(lit-klaassen)=
+
+- Klaassen (Philips unified mobility), Solid-State Electronics 35(7), 1992,
+  {doi}`10.1016/0038-1101(92)90325-7` (**unverified**): mobility, the alternative named in the
+  {ref}`mismatch taxonomy <mismatch-taxonomy>`.
+
+(lit-ancona)=
+
+- Ancona and Iafrate, Phys. Rev. B 39, 9536, 1989, {doi}`10.1103/PhysRevB.39.9536`:
+  {term}`density-gradient` quantum correction.
 
 ## Mismatch
 
-- Pelgrom, 1989 (**unverified**): the mismatch scale.
+(lit-pelgrom)=
+
+- Pelgrom, Duinmaijer and Welbers, "Matching properties of MOS transistors", IEEE JSSC 24(5),
+  1989, {doi}`10.1109/JSSC.1989.572629` (**unverified**): the mismatch scale
+  ({term}`σ_mismatch`).
 
 ## Inverse modelling of doping from I-V and C-V (the calibration method)
 
-- Khalil and Selberherr, 1995 (**unverified**).
-- Lee, McIlrath and Antoniadis, 1999 (**unverified**).
+(lit-khalil)=
+
+- Khalil, Faricelli, Bell and Selberherr, IEEE Electron Device Letters 16(1), 1995,
+  {doi}`10.1109/55.363213` (**unverified**).
+
+(lit-lee)=
+
+- Lee, McIlrath and Antoniadis, IEEE Trans. Electron Devices 46(8), 1999,
+  {doi}`10.1109/16.777152` (**unverified**).
 
 ## Simulators
 
-- Sanchez, DEVSIM, JOSS 2022.
-- Charon User Manual v2.2 (SAND 2022).
-- Hoekstra et al., SAND2007-7157.
-- Bochev et al., 2013 (**unverified**).
+(lit-devsim)=
+
+- Sanchez, {{ DEVSIM }}, JOSS 7(70), 3898, 2022, {doi}`10.21105/joss.03898`.
+
+(lit-charon)=
+
+- {{ Charon }} User Manual v2.2 (SAND 2022), {doi}`10.2172/1871374`.
+
+(lit-hoekstra)=
+
+- Hoekstra et al., SAND2007-7157. No public record for this report number was found yet, so it
+  has no link.
+
+(lit-bochev)=
+
+- Bochev et al., 2013, probably Bochev, Peterson and Gao, Comput. Methods Appl. Mech. Eng.
+  254, 2013, {doi}`10.1016/j.cma.2012.10.009` (**unverified**).
 
 ## Tooling
 
-- SemiMod DMT-core, JOSS 2022.
+(lit-dmt)=
+
+- {{ SemiMod }} {{ DMT_core }}, JOSS 2022, {doi}`10.21105/joss.04298`.

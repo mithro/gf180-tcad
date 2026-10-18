@@ -53,7 +53,7 @@ def test_pages_cover_all_geometries(tmp_path):
     assert len(expected) == 12
     assert pages == expected
     page = (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60.md").read_text(encoding="utf-8")
-    for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Envelope", "Spec window"):
+    for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Envelope", '"Same process" window'):
         assert needle in page
     assert (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60_idvd.svg").is_file()
 

@@ -1,12 +1,13 @@
 # Comparison with the PDK
 
-What "agrees with the PDK" means here, and how mismatches are explained.
+What "agrees with the {term}`PDK`" means here, and how mismatches are explained.
 
-No TCAD matrix yet: TCAD has not run. The summary matrix (device × metric → Agree / Same process
-/ Disagree) will appear here. What exists now is the SPICE reference checked against the PDK
-spec ({doc}`pdk-spec-check`) and ngspice checked against Xyce; both are summarised, with the
-current numbers, on the generated {doc}`SPICE reference results </_generated/results/index>`
-page.
+No {term}`TCAD` matrix yet: TCAD has not run. The summary matrix (device × metric →
+{term}`Agree` / {term}`Same process` / {term}`Disagree`) will appear here. What exists now is
+the {term}`SPICE` reference checked against the PDK spec ({doc}`pdk-spec-check`) and
+{{ ngspice }} checked against {{ Xyce }} ({doc}`../limitations/engine-cross-check`); both are
+summarised, with the current numbers, on the generated
+{doc}`SPICE reference results </_generated/results/index>` page.
 
 ```{toctree}
 :maxdepth: 1

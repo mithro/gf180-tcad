@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: Apache-2.0
+# External link check of the documentation (sphinx-build -b linkcheck) and of the URLs in
+# README.md and CONTRIBUTING.md, which are not part of the Sphinx build.
+# Network-dependent by design, so it is separate from the offline docs build and not a required
+# check: an upstream outage must not block unrelated work. Links into this repository
+# ({repo}/{test} roles) are validated offline at build time by docs/_ext/repo_roles.py and are
+# ignored here (docs/conf.py: linkcheck_ignore).
+name: linkcheck
+
+on:
+  pull_request:
+    # src/** too: the API pages and the generated results pages come from docstrings and from
+    # src/gf180tcad/docgen.py.
+    paths: ["docs/**", "src/**", "README.md", "CONTRIBUTING.md", ".github/workflows/linkcheck.yml"]
+  schedule:
+    - cron: "41 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linkcheck:
+    name: linkcheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.13.1"
+      - name: Sphinx linkcheck
+        run: uv run --locked --group docs sphinx-build -b linkcheck docs docs/_build/linkcheck
+      - name: Show the linkcheck report
+        if: always()
+        run: |
+          if [ -f docs/_build/linkcheck/output.txt ]; then
+            cat docs/_build/linkcheck/output.txt
+            cat docs/_build/linkcheck/output.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: README.md and CONTRIBUTING.md links
+        if: always()
+        run: |
+          uv run --no-project python - <<'EOF'
+          import re, sys, time, urllib.request
+          # Links into the published docs are checked offline against docs/ by
+          # tests/test_doc_links.py (the pages of a PR are not published yet).
+          own = "https://gf180-tcad.readthedocs.io/en/latest/"
+          urls = sorted({u for f in ("README.md", "CONTRIBUTING.md")
+                         for u in re.findall(r"\((https://[^)\s]+)\)", open(f).read())
+                         if not u.startswith(own) or u == own})
+          # The same documented flaky hosts as docs/conf.py:linkcheck_ignore.
+          flaky = ("https://doi.org/10.2172/", "https://doi.org/10.1103/",
+                   "https://www.semiconductors.org/", "https://semimod.de/")
+          bad = []
+          for url in urls:
+              if url.startswith(flaky):
+                  print("IGNORED (flaky host)", url)
+                  continue
+              req = urllib.request.Request(url, headers={"User-Agent": "gf180-tcad-linkcheck"})
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          print(r.status, url)
+                      break
+                  except Exception as e:  # noqa: BLE001
+                      if attempt == 2:
+                          print("BROKEN", url, e)
+                          bad.append(url)
+                      else:
+                          time.sleep(10)
+          sys.exit(1 if bad else 0)
+          EOF
