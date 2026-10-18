@@ -23,7 +23,8 @@ byte for byte, into ``--out``:
 - One progress line per finished job: done/total, jobs per minute and the ETA.
 
 Layout: ``<out>/<engine>/<corner>/<device>/<geometry_id>/<sweep>.csv`` and ``metrics.json``,
-plus ``<out>/provenance.json`` (:func:`provenance`). Xyce has no cv analysis, so Xyce job
+plus ``<out>/envelope.json`` (:func:`gf180tcad.specwindow.envelope_tree`, the per-metric
+min/max over the corners) and ``<out>/provenance.json`` (:func:`provenance`). Xyce has no cv analysis, so Xyce job
 directories have no ``cv.csv`` and their ``metrics.json`` has no ``cgg_*`` keys.
 
 Every result file is deterministic: CSV meta lines hold only engine, corner, device,
@@ -54,7 +55,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
-from gf180tcad import io, metrics, sandbox
+from gf180tcad import io, metrics, sandbox, specwindow
 from gf180tcad.devices import CORNERS, DEVICES, SWEEPS, TEMPS_C, Geometry, Sweep, geometry_id
 from gf180tcad.pdk import PdkInfo, check_against, locate
 from gf180tcad.spice import ngspice, xyce
@@ -82,6 +83,7 @@ GENERATOR_MODULES = (
     "gf180tcad.pdk",
     "gf180tcad.reference",
     "gf180tcad.sandbox",
+    "gf180tcad.specwindow",
     "gf180tcad.spice",
     "gf180tcad.spice.common",
     "gf180tcad.spice.netlist",
@@ -445,6 +447,9 @@ def generate(
                 for line in f.error.splitlines():
                     log(f"    {line}")
             return failures
+        # Corner envelope (pure min/max of the staged, published floats): written here so the
+        # atomic swap never drops it and `make reproduce` regenerates it.
+        specwindow.write_envelope(staging)
         io.write_json(staging / PROVENANCE_NAME, provenance(repo_root))
         _swap(staging, out)
         shutil.rmtree(run_dir)
