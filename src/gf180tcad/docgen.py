@@ -201,7 +201,7 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
     rows = [
         (
             "| Metric | Unit | TT ngspice | TT Xyce | Envelope [lo, hi] (5 corners, ngspice) "
-            "| Spec window (set by) |"
+            '| {term}`"Same process" window` (set by) |'
         ),
         "|---|---|---|---|---|---|",
     ]
