@@ -9,7 +9,9 @@ the URL. ``{test}`tests/x.py::test_name``` links the line of that test function 
 
 Every target is checked against the checkout when the page is read: a path that is not tracked
 by git (missing, misspelt or git-ignored such as ``docs/_generated/``; without git, the
-top-level .gitignore decides), a ``#L<n>`` line past the end of the file, a ``#heading`` that a
+top-level .gitignore decides), a git submodule (gitlink) or a path inside one (GitHub has no
+page for it here; the warning says to link the submodule's repository at the pinned commit), a
+``#L<n>`` line past the end of the file, a ``#heading`` that a
 Markdown file does not have, or a test function that does not exist exactly once is a Sphinx
 warning, which ``sphinx-build -W`` (CI, Read the Docs, and
 ``tests/test_docgen.py::test_docs_build_offline``) turns into a build failure. No network is
@@ -24,6 +26,7 @@ commit are identical.
 from __future__ import annotations
 
 import ast
+import configparser
 import fnmatch
 import functools
 import os
@@ -99,9 +102,63 @@ def ignored(path: str) -> bool:
     return False
 
 
-def classify(path: str) -> str | None:
-    """``"blob"`` for a tracked file, ``"tree"`` for a tracked directory, else None."""
+@functools.cache
+def submodules() -> tuple[tuple[str, str | None, str | None], ...]:
+    """``(path, url, commit)`` of every git submodule (gitlink).
+
+    With git: the mode-160000 entries of ``git ls-files -s`` (the pinned commit), with the URL
+    from ``.gitmodules``. Without git: the ``path``/``url`` entries of ``.gitmodules``; the
+    commit is then unknown (None).
+    """
+    urls: dict[str, str | None] = {}
+    gm = ROOT / ".gitmodules"
+    if gm.is_file():
+        cfg = configparser.ConfigParser(interpolation=None)
+        cfg.read_string(gm.read_text(encoding="utf-8"))
+        for section in cfg.sections():
+            if "path" in cfg[section]:
+                urls[cfg[section]["path"].strip().rstrip("/")] = cfg[section].get("url")
+    out = _git("ls-files", "-s", "-z")
+    if out is None:
+        return tuple((path, url, None) for path, url in sorted(urls.items()))
+    links = []
+    for entry in out.split("\0"):
+        meta, _, path = entry.partition("\t")
+        fields = meta.split()
+        if len(fields) == 3 and fields[0] == "160000":
+            links.append((path, urls.get(path), fields[1]))
+    return tuple(sorted(links))
+
+
+def submodule(path: str) -> tuple[str, str | None, str | None] | None:
+    """The submodule ``path`` is, or lies inside, as in :func:`submodules`; else None."""
     path = path.rstrip("/")
+    for sub in submodules():
+        if path == sub[0] or path.startswith(sub[0] + "/"):
+            return sub
+    return None
+
+
+def submodule_hint(sub: tuple[str, str | None, str | None]) -> str:
+    """What to link instead of a submodule path: the fork at the pinned commit."""
+    path, url, commit = sub
+    base = (url or "<submodule url>").removesuffix(".git")
+    return (
+        f"link the submodule's own repository at the pinned commit instead, e.g. "
+        f"[...]({base}/tree/{commit or '<pinned commit>'}/<path inside it>) "
+        f"(the commit is `git ls-tree HEAD {path}`)"
+    )
+
+
+def classify(path: str) -> str | None:
+    """``"blob"`` for a tracked file, ``"tree"`` for a tracked directory, else None.
+
+    A git submodule (gitlink) and anything inside it is None: GitHub serves no blob/tree page of
+    this repository for it.
+    """
+    path = path.rstrip("/")
+    if submodule(path) is not None:
+        return None
     files, dirs = tracked()
     if not files:  # no git (e.g. an sdist): the file system, minus what .gitignore excludes
         p = ROOT / path
@@ -188,7 +245,16 @@ class RepoRole(SphinxRole):
                 "{repo} target %r: %s", target, problem, location=self.get_location(),
                 type="repo", subtype="fragment",
             )  # fmt: skip
-        if url is None:
+        sub = submodule(path) if url is None else None
+        if sub is not None:
+            logger.warning(
+                "{repo} target %r is the git submodule %s (a gitlink: GitHub has no page for it "
+                "in this repository); %s",
+                path, sub[0], submodule_hint(sub), location=self.get_location(),
+                type="repo", subtype="submodule",
+            )  # fmt: skip
+            url = f"{GITHUB}/tree/{git_ref()}/{path}"
+        elif url is None:
             logger.warning(
                 "{repo} target %r is not a file or directory tracked by git (missing, misspelt "
                 "or git-ignored)",

@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # The Python package set of the TCAD image (ghcr.io/mithro/gf180-tcad-tcad), as a non-package uv
 # project. Python 3.13 is required because meshwell >= 2.4 needs it, so this set cannot live in the
-# root uv.lock (requires-python >= 3.12). Exported, hashed, to requirements.lock:
-#   uv export --project docker/tcad --locked --no-emit-project --format requirements-txt --hashes
+# root uv.lock (requires-python >= 3.12). Exported, hashed, to requirements.lock with (the command
+# tests/test_tcad_lock.py runs; --frozen --offline reads only uv.lock, so no Python 3.13 or network
+# is needed):
+#   uv export --project docker/tcad --frozen --offline --no-emit-project --format requirements-txt --hashes
 # Relock (offline-reproducible thanks to exclude-newer):  uv lock --project docker/tcad
 [project]
 name = "gf180tcad-tcad-image"

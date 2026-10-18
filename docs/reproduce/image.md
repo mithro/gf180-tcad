@@ -99,7 +99,10 @@ first on `PATH`. The venv holds {{ DEVSIM }}, {{ meshwell }}, {{ gmsh }}, {{ gds
 - **Locks.** The package set is a non-package uv project, {repo}`docker/tcad/pyproject.toml`,
   with its own {repo}`docker/tcad/uv.lock` (which records `exclude-newer`).
   {repo}`docker/tcad/requirements.lock` is its hashed export,
-  `uv export --project docker/tcad --locked --no-emit-project --format requirements-txt --hashes`.
+  `uv export --project docker/tcad --frozen --offline --no-emit-project --format requirements-txt --hashes`
+  (`--frozen --offline` reads only the lock, so it needs neither Python 3.13 nor the network;
+  {repo}`tests/test_tcad_lock.py` runs exactly this command, and it ignores the command line that
+  uv echoes into the file's header).
   The gf180mcu package pins `gdsfactory~=9.40`, so it is installed `--no-deps` from its own
   lock, {repo}`docker/tcad/gf180mcu.lock`. uv, and setuptools (the hash-checked build constraint
   for the sdist-only `rectpack`), come from {repo}`docker/tcad/build-requirements.lock`. Both are

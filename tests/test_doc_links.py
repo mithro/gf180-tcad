@@ -460,6 +460,9 @@ def test_positive_control_outside_sphinx():
         ("{test}`tests/test_doc_links.py::test_no_such_test`", "no function"),
         ("{repo}`tools/sandbox-run#L999999`", "is outside the"),
         ("{repo}`README.md#no-such-heading`", "is not a heading of"),
+        # A submodule (gitlink) has no blob/tree page on GitHub (404), nor do files inside it.
+        ("{repo}`third_party/gplugins`", "is the git submodule third_party/gplugins"),
+        ("{repo}`third_party/gplugins/README.md`", "is the git submodule third_party/gplugins"),
     ],
 )
 def test_repo_role_rejects_bad_targets(tmp_path, source, message):
@@ -500,6 +503,78 @@ def test_repo_role_links_the_commit(tmp_path):
         and "def test_docs_build_offline"
         in ((ROOT / "tests/test_docgen.py").read_text(encoding="utf-8").splitlines()[line - 1])
     )
+
+
+def _gitlink_sha(path: str) -> str:
+    out = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-tree", "HEAD", path],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    mode, kind, rest = out.split(" ", 2)
+    assert (mode, kind) == ("160000", "commit"), out
+    return rest.split("\t")[0]
+
+
+def _repo_roles_module():
+    sys.path.insert(0, str(DOCS / "_ext"))
+    try:
+        import repo_roles
+    finally:
+        sys.path.remove(str(DOCS / "_ext"))
+    return repo_roles
+
+
+def test_repo_role_detects_gitlinks():
+    repo_roles = _repo_roles_module()
+    sha = _gitlink_sha("third_party/gplugins")
+    sub = repo_roles.submodule("third_party/gplugins")
+    assert sub == ("third_party/gplugins", "https://github.com/mithro/gplugins.git", sha)
+    assert repo_roles.submodule("third_party/gplugins/gplugins/__init__.py") == sub
+    assert repo_roles.submodule("third_party/gplugins/") == sub
+    # not a submodule: an ordinary file, the submodule's parent, a lookalike prefix
+    assert repo_roles.submodule("tools/sandbox-run") is None
+    assert repo_roles.submodule("third_party") is None
+    assert repo_roles.submodule("third_party/gplugins2") is None
+    # never linked as a blob/tree of this repository; the parent directory still is
+    assert repo_roles.classify("third_party/gplugins") is None
+    assert repo_roles.repo_url("third_party/gplugins") is None
+    assert repo_roles.classify("third_party") == "tree"
+    hint = repo_roles.submodule_hint(sub)
+    assert f"https://github.com/mithro/gplugins/tree/{sha}" in hint
+
+
+def _clear_repo_roles_caches(repo_roles):
+    for f in (repo_roles.tracked, repo_roles.submodules, repo_roles._gitignore):
+        f.cache_clear()
+
+
+def test_repo_role_gitlinks_without_git(tmp_path, monkeypatch):
+    """Without git (e.g. an sdist), .gitmodules names the submodules; the commit is unknown."""
+    repo_roles = _repo_roles_module()
+    (tmp_path / ".gitmodules").write_text(
+        '[submodule "third_party/x"]\n\tpath = third_party/x\n'
+        "\turl = https://github.com/mithro/x.git\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "third_party" / "x").mkdir(parents=True)
+    monkeypatch.setattr(repo_roles, "ROOT", tmp_path)
+    monkeypatch.setattr(repo_roles, "_git", lambda *args: None)
+    _clear_repo_roles_caches(repo_roles)
+    try:
+        assert repo_roles.submodule("third_party/x/y.py") == (
+            "third_party/x",
+            "https://github.com/mithro/x.git",
+            None,
+        )
+        assert repo_roles.classify("third_party/x") is None
+        assert repo_roles.classify("third_party") == "tree"
+        assert "https://github.com/mithro/x/tree/<pinned commit>" in repo_roles.submodule_hint(
+            repo_roles.submodule("third_party/x")
+        )
+    finally:
+        _clear_repo_roles_caches(repo_roles)  # ROOT is restored after this test; recompute then
 
 
 # --- the built HTML: autodoc content, generated pages and everything the sources expand to ----

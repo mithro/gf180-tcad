@@ -27,7 +27,11 @@ jobs:
         run: |
           sudo locale-gen de_DE.UTF-8
           locale -a
+      # GH_TOKEN: tests/test_submodule.py asks the GitHub API (gh) whether the third_party/gplugins
+      # pin is on mithro/gplugins main. The checkout stays without submodules.
       - run: uv run pytest -m "not sandbox" -rs -v
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   docs:
     name: docs
