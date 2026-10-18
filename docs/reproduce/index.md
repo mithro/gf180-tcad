@@ -22,8 +22,8 @@ runs `python -m gf180tcad.manifest verify results/`. It exits non-zero if any
 job fails or if any file differs from, is missing from, or is not listed in
 `results/MANIFEST.sha256`. On a clean checkout a successful run leaves
 `git status` clean. It needs Docker, the sandbox (see {doc}`sandbox`) and the
-pinned image (see {doc}`image`); 120 jobs take a few minutes with the default
-8 concurrent jobs (`make reproduce JOBS=16` runs more at once).
+pinned image (see {doc}`image`). The 120 jobs take about a minute with 8 jobs,
+the default (`make reproduce JOBS=16` runs more at once).
 
 After an intended change to the results, regenerate them and rewrite the
 manifest with:
@@ -37,7 +37,7 @@ make manifest
 `make reproduce` is a wrapper around:
 
 ```sh
-uv run python -m gf180tcad spice-reference \
+uv run --locked python -m gf180tcad spice-reference \
     [--engine ngspice|xyce|both] [--corner C ...] [--device D ...] \
     [--jobs N] --out results/spice
 ```
@@ -47,7 +47,7 @@ uv run python -m gf180tcad spice-reference \
 defaults to `both`. For example, a single device at one corner:
 
 ```sh
-uv run python -m gf180tcad spice-reference --engine ngspice \
+uv run --locked python -m gf180tcad spice-reference --engine ngspice \
     --corner typical --device nfet_05v0 --out /tmp/nfet-typical
 ```
 
@@ -70,9 +70,11 @@ How it works:
   `$TMPDIR`). It is deleted when the job succeeds, and kept and named in the
   report when the job fails.
 - **No partial results.** The results are assembled in a staging directory
-  and swapped into place only when every job succeeded. If any job fails,
-  `--out` is left as it was, the failures are listed and the command exits
-  non-zero.
+  and swapped into place only when every job succeeded. The swap is an atomic
+  exchange, so `--out` is never missing, even if the process is killed. If
+  any job fails or the run is interrupted (Ctrl-C), `--out` is left as it
+  was, queued jobs are cancelled, the failures are listed and the command
+  exits non-zero.
 - **Memory admission.** `--jobs N` (default 8) is accepted only if
   N × 4 GiB, the per-job sandbox memory limit, fits the 128 GiB budget of
   `gf180-tcad.slice`, so at most 32.
