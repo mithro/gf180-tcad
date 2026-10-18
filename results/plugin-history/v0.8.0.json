@@ -28,11 +28,20 @@
       "location": "gplugins/devsim/get_solver.py:359",
       "message": "name 'c' is not defined",
       "status": "fail"
+    },
+    "refined_solve": {
+      "reason": "needs refine (it needs get_refined_mesh's meshing field), which did not pass",
+      "status": "not_run"
     }
   },
   "ddcomponent": {
     "bias": [
       {
+        "anode_minus_cathode_v": 0.8586540658880735,
+        "contact_potential_v": {
+          "anode": 0.47932703294403667,
+          "cathode": -0.37932703294403675
+        },
         "currents": {
           "anode": {
             "electron": 6.46308056669825e-33,
@@ -45,9 +54,15 @@
             "total": 1.0013697539559227e-29
           }
         },
+        "potential_span_v": 1.3613165229686466,
         "v": 0.1
       },
       {
+        "anode_minus_cathode_v": 0.7586540658880733,
+        "contact_potential_v": {
+          "anode": 0.47932703294403667,
+          "cathode": -0.2793270329440366
+        },
         "currents": {
           "anode": {
             "electron": 6.46308056669825e-33,
@@ -60,6 +75,7 @@
             "total": 1.0201939791155363e-29
           }
         },
+        "potential_span_v": 1.3613165229686466,
         "v": 0.2
       }
     ],
@@ -74,6 +90,20 @@
       "core",
       "slab90"
     ],
+    "equilibrium": {
+      "anode_minus_cathode_v": 0.9586540658880733,
+      "builtin_potential_v": 1.3613165229686448,
+      "contact_potential_v": {
+        "anode": 0.47932703294403667,
+        "cathode": -0.47932703294403667
+      },
+      "depleted_nodes": 2,
+      "depletion_cut_y_um": 0.0,
+      "depletion_width_um": 0.0386279954111326,
+      "net_doping_max_cm3": 1.1e+18,
+      "net_doping_min_cm3": -1.1e+18,
+      "potential_span_v": 1.3613165229686448
+    },
     "interfaces": [
       "slab90___anode",
       "slab90___cathode"

@@ -25,6 +25,10 @@
     "refine": {
       "reason": "checks_v142.py runs only the import check (the import is what fails)",
       "status": "not_run"
+    },
+    "refined_solve": {
+      "reason": "checks_v142.py runs only the import check (the import is what fails)",
+      "status": "not_run"
     }
   },
   "gplugins_commit": "f47ed3de80b99bafc960955b3d6925e947d4fc0f",
