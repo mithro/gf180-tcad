@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """The secondary-PDK comparison: open_pdks ``d658698`` (wafer.space runs 1 and 2) vs the image.
 
-``python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698`` reruns the SPICE reference
-at the TT corner (``typical``) with ngspice for every geometry of ``nfet_05v0`` and
-``pfet_05v0``, with the GF180MCU models of open_pdks commit ``d658698bd8bc`` instead of those of
+``python -m gf180tcad.pdkdiff run --out <tree>`` (the committed tree is :data:`OUT_TREE`)
+reruns the SPICE reference at the TT corner (``typical``) with ngspice for every geometry of
+``nfet_05v0`` and ``pfet_05v0``, with the GF180MCU models of open_pdks commit ``d658698bd8bc`` instead of those of
 the pinned image, and compares the result with the committed ``results/spice``. It runs on the
 host and uses the base image (``docker/IMAGE``) through :func:`gf180tcad.sandbox.run`:
 
@@ -69,9 +69,13 @@ PINS = sandbox.REPO_ROOT / "data" / "pdk-d658698.sha256"
 OUT_TREE = Path("results") / "spice-pdk-d658698"
 #: The committed reference tree it is compared with: results/spice at TT, ngspice.
 REFERENCE_DIR = sandbox.REPO_ROOT / "results" / "spice" / "ngspice" / "typical"
+#: The engine and corner rerun.
 ENGINE = "ngspice"
+#: The TT corner, as the reference names it.
 CORNER = "typical"
+#: Tree root: the card comparison (:func:`cards`).
 CARDS_NAME = "cards.json"
+#: Tree root: the metric comparison with the reference (:func:`compare`).
 COMPARISON_NAME = "comparison.json"
 #: The card models whose parameters :data:`CARD_KEYS` lists, each with its ``.lib`` section.
 CARD_MODELS = {
@@ -535,7 +539,8 @@ def run(
 
         jobs = plan()
 
-        def one(job: Job) -> tuple[Job, str | None]:
+        def one(job: Job) -> tuple[Job, float, str | None]:
+            t_job = time.monotonic()
             try:
                 wd = workdir(job.relpath)
                 _sandboxed(
@@ -551,19 +556,23 @@ def run(
                 for n in names:
                     shutil.copyfile(wd / "out" / n, dest / n)
                 shutil.rmtree(wd)
-                return job, None
+                return job, time.monotonic() - t_job, None
             except Exception as e:  # noqa: BLE001 - every failure is reported, none is dropped
-                return job, f"{type(e).__name__}: {e}"
+                return job, time.monotonic() - t_job, f"{type(e).__name__}: {e}"
 
         failures = []
         with ThreadPoolExecutor(jobs_n) as pool:
             futures = [pool.submit(one, j) for j in jobs]
             for done, fut in enumerate(as_completed(futures), 1):
-                job, err = fut.result()
+                job, secs, err = fut.result()
                 if err:
                     failures.append((job, err))
                 el = time.monotonic() - t0
-                log(reference.progress_line(done, len(jobs), el, job, "FAILED" if err else "ok", 0))
+                log(
+                    reference.progress_line(
+                        done, len(jobs), el, job, "FAILED" if err else "ok", secs
+                    )
+                )
         if failures:
             for job, err in sorted(failures):
                 log(f"  {job.relpath.as_posix()}: {err}")
