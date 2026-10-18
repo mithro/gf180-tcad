@@ -109,13 +109,13 @@ def test_provenance_must_match(setup):
 
 
 def test_listed_job_absent_from_manifest_is_reported(setup):
-    tree, m, subset = setup
+    subset = setup[2]
     subset.write_text(f"{A}\n{B}\nxyce/typical/nfet_05v0/w9p0_l0p60\n")
     assert _check(setup) == [("spice/xyce/typical/nfet_05v0/w9p0_l0p60/", "unknown job")]
 
 
 def test_prefix_scopes_the_manifest(setup):
-    tree, m, subset = setup
+    tree, m, _ = setup
     # "tcad/x.csv" exists in the manifest but outside the prefix, so a tree file with
     # that name is not matched against it
     (tree / "tcad").mkdir()
