@@ -39,6 +39,32 @@ def test_other_warnings_are_kept():
     assert scan_log(log) == ["Warning: m=xx on .subckt line will override multiplier m hierarchy!"]
 
 
+# ngspice 47 notices that it recovered by a stepping method (literal strings from the binary):
+# not failures, so they are neither fatal nor dropped.
+RECOVERY_NOTICES = [
+    "Note: Starting dynamic gmin stepping",
+    "Note: Dynamic gmin stepping completed",
+    "Note: Starting true gmin stepping",
+    "Note: True gmin stepping completed",
+    "Note: Starting spice3 gmin stepping",
+    "Note: spice3 gmin stepping completed",
+    "Note: Go directly to gmin stepping",
+    "Note: Starting source stepping",
+    "Note: Source stepping completed",
+    "Convergence reached. Final circuit time is 1e-06 seconds (iteration n = 3)",
+]
+
+
+@pytest.mark.parametrize("line", RECOVERY_NOTICES)
+def test_recovery_notices_are_kept_not_fatal(line):
+    assert scan_log(CLEAN_LOG + line + "\n") == [line]
+
+
+def test_recovery_notices_keep_log_order():
+    log = CLEAN_LOG + "\n".join([RECOVERY_NOTICES[0], "Warning: odd", RECOVERY_NOTICES[1]]) + "\n"
+    assert scan_log(log) == [RECOVERY_NOTICES[0], "Warning: odd", RECOVERY_NOTICES[1]]
+
+
 @pytest.mark.parametrize(
     "line",
     [
@@ -46,7 +72,13 @@ def test_other_warnings_are_kept():
         "ERROR: could not find '=' on parameter line 'x'!",
         "Warning: singular matrix:  check node y",
         "Warning: Dynamic gmin stepping failed",
+        "Warning: True gmin stepping failed",
+        "Warning: spice3 gmin stepping failed",
         "Warning: source stepping failed",
+        "Too many iterations without convergence",
+        "Warning: non-convergence, node d is nan",
+        "WARNING: Convergence problems at d (voltage).  ",
+        "Convergence not reached. However the most near convergence iteration has predicted",
         "doAnalyses: TRAN:  Timestep too small; time = 1e-9, timestep = 1e-21",
         "Warning: no convergence in DC sweep",
         "doAnalyses: iteration limit reached",

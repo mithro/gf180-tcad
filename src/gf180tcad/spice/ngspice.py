@@ -7,10 +7,11 @@ written by the netlist's ``.control`` block) and parses the raw file.
 
 Failure policy (a non-converged or skipped point must fail the run, never shorten the data):
 :class:`SpiceError` is raised for a non-zero exit, any log line containing "error", any
-convergence trouble (:data:`FATAL_PATTERNS`, matched case-insensitively, even when ngspice
-recovered from it), a missing or malformed raw file, a point count different from the plan, or
+convergence trouble (:data:`FATAL_PATTERNS`, matched case-insensitively; a singular-matrix or
+stepping-failure warning is fatal even when a later method succeeded), a missing or malformed raw file, a point count different from the plan, or
 bias values that differ from the plan's grid by more than :data:`GRID_TOL` volts. Every other
-log line containing "warning" is kept in :attr:`SpiceResult.warnings`.
+log line containing "warning", and every recovery notice ("...stepping..." without "fail",
+"Convergence reached"), is kept in :attr:`SpiceResult.warnings`.
 
 The result is a :class:`SpiceResult`: a ``dict[str, np.ndarray]`` of columns that also carries
 the kept warnings as ``.warnings``.
@@ -39,11 +40,16 @@ FATAL_PATTERNS = (
     "singular matrix",
     "gmin stepping failed",
     "source stepping failed",
-    "no convergence",
+    "convergence",  # "Too many iterations without convergence", "non-convergence", ...
     "iteration limit",
     "simulation(s) aborted",
     "simulation aborted",
 )
+# A "...stepping..." line without "fail" is ngspice reporting that it recovered (e.g. "Note:
+# Starting dynamic gmin stepping", "Note: Source stepping completed"); "Convergence reached" ends
+# a successful PSS. These notices are kept in SpiceResult.warnings, never fatal and never dropped.
+BENIGN_PREFIXES = ("convergence reached",)
+
 # Sandbox limits for one ngspice job: single-threaded, a few MB of RSS in practice.
 MEM, CPUS, PIDS = "4g", 1, 256
 
@@ -74,13 +80,22 @@ def scan_log(log: str) -> list[str]:
     """Raise :class:`SpiceError` on a fatal line; return the other warning lines, in order."""
     warnings = []
     for line in log.splitlines():
-        low = line.lower()
+        low = line.strip().lower()
+        if _is_recovery_notice(low):
+            warnings.append(line.strip())
+            continue
         hit = next((p for p in FATAL_PATTERNS if p in low), None)
         if hit is not None:
             raise SpiceError(f"ngspice reported {hit!r}: {line.strip()}", log)
         if "warning" in low:
             warnings.append(line.strip())
     return warnings
+
+
+def _is_recovery_notice(low: str) -> bool:
+    if "fail" in low or "error" in low:
+        return False
+    return "stepping" in low or low.startswith(BENIGN_PREFIXES)
 
 
 def assemble(plan: BiasPlan, raw: Mapping[str, np.ndarray], log: str = "") -> dict[str, np.ndarray]:
