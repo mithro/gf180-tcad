@@ -127,3 +127,20 @@ def test_hashable_and_frozen():
 def test_invalid_raises(make):
     with pytest.raises(ValueError):
         make()
+
+
+G = Geometry(10, 1, "validation")
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        lambda: Device("d", 1, "m", [G]),
+        lambda: Sweep("s", "idvg", [0.0], (0.0,), (0.0,)),
+        lambda: Sweep("s", "idvg", (0.0,), [0.0], (0.0,)),
+        lambda: Sweep("s", "idvg", (0.0,), (0.0,), [0.0]),
+    ],
+)
+def test_non_tuple_raises_type_error(make):
+    with pytest.raises(TypeError):
+        make()
