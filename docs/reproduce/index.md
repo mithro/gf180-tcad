@@ -11,6 +11,38 @@ timestamps, hostnames or absolute host paths), and the documentation will
 be generated from those files, so the pages will never show numbers that cannot
 be reproduced.
 
+(getting-the-source)=
+
+## Getting the source, with its submodule
+
+The {term}`TCAD` code uses the {{ DEVSIM }} plugin of {{ gplugins }} from {{ gplugins_fork }}. The fork
+is a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules),
+{repo}`third_party/gplugins`, pinned to one commit on the fork's `main` (see
+{repo}`.gitmodules`). Clone with
+[`git clone --recurse-submodules`](https://git-scm.com/docs/git-clone) so that it is checked out:
+
+```sh
+git clone --recurse-submodules https://github.com/mithro/gf180-tcad.git
+```
+
+In a clone made without it, and in **every** new
+[worktree](https://git-scm.com/docs/git-worktree) (each worktree has its own submodule
+checkout, which `git worktree add` leaves empty), run
+[`git submodule update --init`](https://git-scm.com/docs/git-submodule) once, and again
+whenever a pull of `main` moves the submodule pin:
+
+```sh
+git submodule update --init
+```
+
+The {term}`SPICE` reference ({ref}`one-command`) does not need the submodule. The TCAD image
+({doc}`image`) does not install gplugins: it imports it from the submodule, which
+{repo}`tools/sandbox-run` mounts read-only with the rest of the repository at `/work/src`.
+Without the checkout, `import gplugins` fails there;
+{test}`tests/test_submodule.py::test_plugin_imports_from_submodule` checks that it comes from the
+submodule, and {test}`tests/test_submodule.py::test_submodule_pinned_on_fork_main` that the pin
+is a commit on the fork's `main`.
+
 (one-command)=
 
 ## One command: `make reproduce`

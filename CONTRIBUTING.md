@@ -7,7 +7,13 @@ Everything written here is licensed [Apache-2.0](LICENSE). New source files carr
 ## Git rules
 
 - One branch and one [worktree](https://git-scm.com/docs/git-worktree) per task, under
-  `../gf180-tcad-worktrees/<branch>`.
+  `../gf180-tcad-worktrees/<branch>`. After
+  [`git worktree add`](https://git-scm.com/docs/git-worktree), run
+  [`git submodule update --init`](https://git-scm.com/docs/git-submodule) in the new worktree
+  (and clone with [`git clone --recurse-submodules`](https://git-scm.com/docs/git-clone)), so that
+  the [`third_party/gplugins`](https://github.com/mithro/gf180-tcad/blob/main/third_party/gplugins)
+  submodule is checked out. See
+  [Getting the source](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#getting-the-source).
 - Small logical commits.
 - Never commit on `main`.
 - Open the PR inside [`mithro/gf180-tcad`](https://github.com/mithro/gf180-tcad) (always pass
