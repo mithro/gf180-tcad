@@ -71,6 +71,7 @@ _TOOLS = {
     "BuildKit": ("BuildKit", "https://docs.docker.com/build/buildkit/"),
     "systemd": ("systemd", "https://systemd.io/"),
     "uv": ("uv", "https://docs.astral.sh/uv/"),
+    "Python": ("Python", "https://www.python.org/"),
     "numpy": ("numpy", "https://numpy.org/"),
     "matplotlib": ("matplotlib", "https://matplotlib.org/"),
     "pytest": ("pytest", "https://docs.pytest.org/"),

@@ -7,8 +7,8 @@ technical one precise enough to be checked.
 
 The {term}`TCAD` setup is **credible** for a device type when **one physically
 plausible {term}`process description`** (the same doping, oxide, mobility and contact
-parameters for every gate length and width) reproduces the {term}`PDK`'s {term}`typical-corner <TT>`
-(TT, 25 °C) {term}`SPICE` behaviour across all checked geometries and biases, within
+parameters for every gate length and width) reproduces the {term}`PDK`'s typical-corner
+({term}`TT`, 25 °C) {term}`SPICE` behaviour across all checked geometries and biases, within
 the {ref}`tolerances below <tolerances>`, **including on characteristics that were not used to tune
 it**. Every remaining mismatch is listed with a probable physical or modelling
 cause.
@@ -86,7 +86,7 @@ To stop the TCAD from being tuned to the answer, the targets are split.
 Allowed sources, in order of preference: (1) the PDK's public documentation
 ({{ gf180mcu_pdk_docs }}); (2) values in the public SPICE card (TOXE, TOXP, NDEP, NSD, NGATE,
 XJ, LPE0, RDSW; see the {ref}`BSIM4 manual <lit-bsim4>`), used as starting points and bounds and never as fixed truths, because
-BSIM parameters are fitted rather than physical; (3) generic published
+{term}`BSIM` parameters are fitted rather than physical; (3) generic published
 0.18 µm-class 5 V values with a citation.
 
 Every value carries a {term}`provenance tag`: `pdk-doc`, `spice-card`, `literature` or
@@ -119,8 +119,8 @@ geometry and bias, so the reference dataset includes all five corners. It is pub
 
 ### Tolerances
 
-Tolerances come from the ITRS 2007 Modeling and Simulation chapter, Table MS3
-({ref}`ITRS 2007 <lit-itrs>`), unless marked *proposal*, which means no published standard exists.
+Tolerances come from the {ref}`ITRS 2007 <lit-itrs>` Modeling and Simulation chapter, Table MS3,
+unless marked *proposal*, which means no published standard exists.
 
 | Metric | Extraction | Tolerance |
 |---|---|---|
@@ -139,7 +139,11 @@ Tolerances come from the ITRS 2007 Modeling and Simulation chapter, Table MS3
 
 Metrics are also reported as an error divided by {term}`σ_mismatch`, where
 σ_Vt = A_Vt / √(WL) ({ref}`Pelgrom 1989 <lit-pelgrom>`) and the PDK's A_Vt is about 11.6 mV·µm, to give a physical
-sense of scale.
+sense of scale. The value is the `par_vth = 0.01155` (V·µm) of the
+[`nfet_05v0` subcircuit](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L46950-L46963) in the
+PDK's ngspice model card (provenance tag `spice-card`). The card draws each device's Vt shift
+with σ = 0.7071 · par_vth / √(W_eff · L_eff), with W_eff = W + 0.5 µm and L_eff = L − 0.4 µm in
+µm, so par_vth is A_Vt in the Pelgrom convention for the Vt difference of a pair.
 
 (numerical-acceptance)=
 

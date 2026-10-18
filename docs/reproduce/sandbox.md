@@ -1,6 +1,6 @@
 # Resource sandbox
 
-Every simulator run goes through the {term}`sandbox` {repo}`tools/sandbox-run` (or the Python
+Every simulator run goes through the {term}`sandbox` {repo}`tools/sandbox-run` (or the {{ Python }}
 wrapper {py:func}`gf180tcad.sandbox.run`). Nothing is run directly on the host.
 
 (sandbox-host-setup)=

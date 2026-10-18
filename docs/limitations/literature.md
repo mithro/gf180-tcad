@@ -13,8 +13,8 @@ item, it does not check what the annotation says about it.
 
 (lit-itrs)=
 
-- ITRS 2007, Modeling and Simulation chapter, Table MS3
-  ([ITRS 2007 archive](https://www.semiconductors.org/resources/2007-international-technology-roadmap-for-semiconductors-itrs/)):
+- [ITRS 2007](https://www.semiconductors.org/resources/2007-international-technology-roadmap-for-semiconductors-itrs/),
+  Modeling and Simulation chapter, Table MS3:
   the {term}`tolerance` numbers in {ref}`tolerances`.
 
 ## Model benchmark tests

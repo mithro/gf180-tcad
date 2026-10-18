@@ -1,6 +1,6 @@
 # Base image
 
-The simulators, the {term}`PDK` and the pinned Python dependencies live in one
+The simulators, the {term}`PDK` and the pinned {{ Python }} dependencies live in one
 container image,
 [`ghcr.io/mithro/gf180-tcad-base`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base)
 on the {{ ghcr }}, built from {repo}`docker/base/`. It is based on the public

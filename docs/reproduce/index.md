@@ -50,7 +50,8 @@ uv run --locked python -m gf180tcad spice-reference \
     [--geometry G ...] [--jobs N] --out results/spice
 ```
 
-`--corner` ({term}`corner`: `typical`, `ff`, `ss`, `fs`, `sf`), `--device`
+`--corner` ({term}`corner`: `typical`, `ff`, `ss`, `fs`, `sf`, that is {term}`TT`, {term}`FF`,
+{term}`SS <SS corner>`, {term}`FS` and {term}`SF`), `--device`
 ({term}`nfet_05v0`, {term}`pfet_05v0`) and `--geometry` (a {term}`geometry id` such as
 `w10p0_l0p60`) can be
 repeated; the default is all of them, and `--engine` defaults to `both`.
@@ -78,7 +79,7 @@ How it works:
   (`python -m gf180tcad spice-job ...`). The job checks the image's {term}`PDK`
   against {repo}`docker/base/versions.json`, runs every {term}`sweep` the engine supports,
   extracts the metrics and writes the CSV and JSON files. Every published
-  number is computed and formatted by the image's Python and {{ numpy }}, never by
+  number is computed and formatted by the image's {{ Python }} and {{ numpy }}, never by
   the host's.
 - **The host** only schedules the jobs and copies their finished files byte
   for byte. Each job has its own scratch directory outside the repo (under
@@ -99,7 +100,7 @@ How it works:
 
 (results-layout)=
 
-## Layout of `results/spice`
+## Layout of {repo}`results/spice`
 
 ```text
 results/spice/provenance.json
@@ -107,7 +108,7 @@ results/spice/<engine>/<corner>/<device>/<geometry_id>/<sweep>.csv
 results/spice/<engine>/<corner>/<device>/<geometry_id>/metrics.json
 ```
 
-Browse it on GitHub: {repo}`results/spice`.
+Browse it: {repo}`results/spice`.
 
 - `<sweep>.csv` holds the simulated columns (`vd vg vb id ig ib`, or `vg cgg`
   for `cv`). Its `# key: value` header holds only engine, corner, device,

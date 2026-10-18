@@ -15,7 +15,7 @@ there.
 - **The SPICE models are a reference, not the truth.** {term}`BSIM4` is empirical,
   {term}`binned` in L (the {term}`bin` boundary is at 0.7 µm) and fitted to silicon, so it can
   be non-physical between bins (the `spice-fit` cause in the
-  {ref}`mismatch taxonomy <mismatch-taxonomy>`). The BSIM parameters used as starting points are
+  {ref}`mismatch taxonomy <mismatch-taxonomy>`). The {term}`BSIM` parameters used as starting points are
   fitted values, not physical ones.
 - **{{ ngspice }} and {{ Xyce }} disagree by 0.6 % on the nfet in subthreshold.** The
   nfet {term}`card <model card>` declares BSIM4 `version=4.5`; ngspice runs it with BSIM4 4.5.0,
@@ -25,7 +25,7 @@ there.
   in {ref}`cross-host-determinism` (an Intel Xeon Gold 6152 and the
   {{ GitHub_hosted_runner }}s with AMD EPYC 9V45 and 7763 CPUs).
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
-  open {term}`PDK` was found, and no gf180mcu TCAD paper was found. See {doc}`literature`.
+  open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
 
 ```{toctree}
 :maxdepth: 1
