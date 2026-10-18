@@ -131,5 +131,57 @@ def depletion_width(x, y, n, p, net_doping, *, y_target: float):
     return width, y_cut, len(depleted)
 
 
+def msh2_physical_names(path: Path) -> list[str]:
+    """The sorted names of the ``$PhysicalNames`` section of a gmsh MSH 2.2 file."""
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    start = lines.index("$PhysicalNames")
+    count = int(lines[start + 1])
+    names = [line.split(maxsplit=2)[2].strip('"') for line in lines[start + 2 : start + 2 + count]]
+    if lines[start + 2 + count] != "$EndPhysicalNames":
+        raise ValueError(f"{path}: malformed $PhysicalNames section")
+    return sorted(names)
+
+
+def junction_probe(rows, *, rib: str, slab: str, offset_um: float) -> dict:
+    """The Potential across the junction on the bottom mesh row (the node y nearest 0).
+
+    ``rows`` maps a silicon region to its nodes ``(x, y, Potential, NetDoping)``, x and y in cm
+    (DEVSIM). The definitions are those of the junction probe ``_junction`` of the
+    ``mithro/gplugins`` fork's ``gplugins/devsim/tests/test_mesh.py``:
+
+    - ``x_um``: the metallurgical junction, midway between the last NetDoping > 0 and the first
+      NetDoping < 0 node of the row;
+    - ``junction_v``, ``n_v``, ``p_v``: the Potential at the row node nearest ``x_um``,
+      ``x_um - offset_um`` (neutral n side) and ``x_um + offset_um`` (neutral p side); a tie
+      goes to the smaller x, then to the region name;
+    - ``drop_v = n_v - p_v``: the junction's potential drop;
+    - ``boundary_jump_v``: the larger Potential difference between the ``rib`` and ``slab``
+      nodes nearest the rib's two bottom corners (its first and last bottom-row node), 0 if the
+      two regions are coupled.
+    """
+    y_cut = min(sorted({yi for nodes in rows.values() for _, yi, _, _ in nodes}), key=abs)
+    bottom = {
+        r: sorted((xi * 1e4, r, pi, di) for xi, yi, pi, di in nodes if yi == y_cut)
+        for r, nodes in rows.items()
+    }
+    row = sorted(t for nodes in bottom.values() for t in nodes)
+    xj = 0.5 * (max(x for x, _, _, d in row if d > 0) + min(x for x, _, _, d in row if d < 0))
+
+    def at(x0, nodes=row):
+        return min(nodes, key=lambda t: (abs(t[0] - x0), t[1]))[2]
+
+    corners = (bottom[rib][0][0], bottom[rib][-1][0])
+    jump = max(abs(at(x0, bottom[rib]) - at(x0, bottom[slab])) for x0 in corners)
+    n_v, p_v = at(xj - offset_um), at(xj + offset_um)
+    return {
+        "x_um": xj,
+        "junction_v": at(xj),
+        "n_v": n_v,
+        "p_v": p_v,
+        "drop_v": n_v - p_v,
+        "boundary_jump_v": jump,
+    }
+
+
 def write(path: Path, data: dict) -> None:
     Path(path).write_text(json.dumps(data, sort_keys=True, indent=2) + "\n", encoding="utf-8")
