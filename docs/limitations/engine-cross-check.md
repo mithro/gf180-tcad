@@ -7,7 +7,11 @@ reference itself. The check is `test_engines_agree` in `tests/spice/test_xyce.py
 It covers every geometry of `nfet_05v0` and `pfet_05v0`, for `idvg_sat` and
 `idvd`, at the typical corner and 25 °C. The metric is the maximum of
 |Id,ngspice − Id,Xyce| / max(|Id,ngspice|, |Id,Xyce|), taken over the bias
-points where either engine gives |Id| > 1 pA.
+points where either engine gives |Id| > 1 pA. That threshold is the order of the
+gmin leakage floor: every junction carries a conductance gmin = 1e-12 S, so at
+Vds = 5 V about 5 pA flows even with the device off. Points below 1 pA, such
+as Vds = 0 where Id is about 1e-20 A, carry no meaningful device current and
+are excluded.
 
 The threshold is not loosened. **Six of the 24 cases fail:** `idvg_sat` for
 all six `nfet_05v0` geometries, by 0.56 to 0.61 %. They are marked as strict
@@ -62,7 +66,8 @@ identically to scratch copies of both libraries.
   | `idvg_sat` | 6.05e-3 | 3.64e-3 |
   | `idvd` | 3.27e-3 | 1.03e-7 |
 
-  At Vds = 5 V the remaining 3.6e-3 is at the ~6 pA off-state leakage floor,
+  At Vds = 5 V the remaining 3.6e-3 is at the ~6 pA off-state floor, set by gmin
+leakage (≈ 1e-12 S × 5 V) plus junction leakage,
   Vgs = 0.01 V. The subthreshold gate-voltage shift becomes 0.000 mV.
 
 With ngspice forced to 4.6, every nfet geometry agrees: `idvg_sat` 2.7e-4 to
@@ -98,19 +103,34 @@ subdirectory of the working directory. It asserts three things:
 
 ## Consequence for the reference
 
-The reference stays ngspice with the PDK as published, including the
-declared `version=4.5`. That is the model the foundry card specifies, and
-ngspice is the only engine in the image that can run it. Xyce cannot reproduce
-it, because it has no BSIM4 4.5.
+The reference stays ngspice with the PDK as published, including the declared
+`version=4.5`. That is the model the foundry card specifies, and ngspice is the
+only engine in the image that can run it. Xyce has no BSIM4 4.5, so it cannot
+reproduce it.
 
-The nfet version effect is small next to the TCAD-vs-SPICE comparison, but it
-is a real ambiguity. The same card gives a ~0.23 mV threshold-voltage
-difference and a 0.6 % subthreshold current difference depending on which
-BSIM4 release evaluates it. The other cross-check cases all pass:
+**For the nfet, the gate sweep is not independently cross-checked to 0.5 %.**
+This covers subthreshold through moderate inversion. The second engine
+disagrees there by 0.56 to 0.61 % for every geometry, and the cause is the
+BSIM4 release, not a netlist or library error. The diagnostic test above
+proves the cause, but it does not give an independent check of the published
+4.5 evaluation.
 
-- `idvd`, nfet: below 0.37 %.
-- `idvd`, pfet: below 1e-6.
-- `idvg_sat`, pfet: below 0.23 %, at pA leakage levels.
+The Xyce cross-check claims exactly the following, at the typical corner and
+25 °C, within 0.5 %:
+
+| Device | Sweep | Max engine_diff |
+|---|---|---|
+| nfet | `idvd` | 0.37 % |
+| pfet | `idvd` | 1e-6 |
+| pfet | `idvg_sat` | 0.23 % |
+
+The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA.
+
+For scale, the effect of the nfet version is small next to the
+TCAD-vs-SPICE comparison: about 0.23 mV of threshold voltage. It is still a
+real ambiguity in the reference, because the same card gives a 0.6 %
+difference in subthreshold current depending on which BSIM4 release evaluates
+it.
 
 ## Other differences between the two libraries (checked, harmless here)
 
