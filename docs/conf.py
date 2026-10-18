@@ -156,6 +156,10 @@ linkcheck_ignore = [
     # Flaky host: link.aps.org (doi:10.1103/...) answers 403 to Python's HTTP client although it
     # serves curl (checked when the DOI was added).
     r"https://doi\.org/10\.1103/",
+    # Flaky hosts: these answer 403 to GitHub-hosted runners (bot protection on datacenter IPs)
+    # but 200 elsewhere; both were fetched when they were added.
+    r"https://www\.semiconductors\.org/",
+    r"https://semimod\.de/",
 ]
 # ngspice.sourceforge.io answers 403 to Sphinx's default browser-like user agent, 200 to this.
 user_agent = "gf180-tcad-linkcheck (Sphinx; https://github.com/mithro/gf180-tcad)"
