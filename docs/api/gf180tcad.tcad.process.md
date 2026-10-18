@@ -18,6 +18,8 @@ Source: {repo}`src/gf180tcad/tcad/process.py`. The data it reads:
 
 .. autodata:: gf180tcad.tcad.process.TUNABLES
 
+.. autodata:: gf180tcad.tcad.process.KINDS
+
 .. autodata:: gf180tcad.tcad.process.CARD_FILE
 
 .. autodata:: gf180tcad.tcad.process.BSIM4_450_URL

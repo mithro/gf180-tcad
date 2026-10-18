@@ -120,7 +120,7 @@ class Constants:
       (https://doi.org/10.1002/0470068329), equal to the BSIM4 EPSRSUB default.
     - ``t_k``: the card's TNOM of 25 °C.
     - ``n_i300_cm3``: n_i at 300 K, Altermatt et al., J. Appl. Phys. 93, 1598 (2003)
-      (https://doi.org/10.1063/1.1529297). :attr:`n_i_cm3` scales it to ``t_k`` with the
+      (https://doi.org/10.1063/1.1529297). The ``n_i_cm3`` property scales it to ``t_k`` with the
       Misiakos & Tsamakis T-dependence, J. Appl. Phys. 74, 3293 (1993)
       (https://doi.org/10.1063/1.354551): (T/300)^2.54·exp(−6726 K·(1/T − 1/300 K)), which
       gives 8.266e9 cm⁻³ at 298.15 K.
