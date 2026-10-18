@@ -29,10 +29,12 @@ value = 15.2
 unit = "nm"
 provenance = "calibrated"
 start_source = "TOXE (sm141064.ngspice:37309; .param sm141064.ngspice:114)"
+start_kind = "card"
 fixed = false
 role = "tunable"
 bounds = [15.2, 16.95]
 bounds_source = "lower: TOXE (sm141064.ngspice:37309). upper: TOXP 16.0 nm (sm141064.ngspice:37311) + delta 0.95 nm, the charge-centroid allowance of the [centroid_allowance] table: the BSIM4 4.5.0 CTM charge thickness X_DC (manual section 7.3, eqs. 7.3.2-7.3.4, https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip) times EPSROX/eps_si, maximised over the accumulation and strong-inversion plateaus polarity*Vg <= -2 V and >= +2 V of the cv sweep. Poly depletion is not in delta."
+bounds_kind = ["card", "derived"]
 note = "Effective oxide thickness of the TCAD gate stack. Starts at TOXE."
 
 [param.n_ch_cm3]
@@ -40,10 +42,12 @@ value = 1.7e17
 unit = "cm^-3"
 provenance = "calibrated"
 start_source = "NDEP (sm141064.ngspice:37202)"
+start_kind = "card"
 fixed = false
 role = "tunable"
 bounds = [6.2967947909822296e16, 3.4e17]
 bounds_source = "lower: 0.5 x the doping K1 implies, (K1*Cox(TOXE))^2/(2*q*eps_si*eps0), from K1 (sm141064.ngspice:37147) and TOXE (sm141064.ngspice:37309) with the BSIM4 K1 definition (https://bsim.berkeley.edu/models/bsim4/). upper: 2 x NDEP; the factor of 2 is a project choice, as no public channel profile exists."
+bounds_kind = ["project-choice", "project-choice"]
 note = "Uniform p-body doping of the MOS capacitor. Starts at NDEP."
 
 [param.dv_fb_v]
@@ -51,10 +55,12 @@ value = 0.0
 unit = "V"
 provenance = "calibrated"
 start_source = "project choice: 0, no offset, so the flat band comes from the poly-gate NGATE and the body doping alone."
+start_kind = "project-choice"
 fixed = false
 role = "tunable"
 bounds = [-0.2, 0.2]
 bounds_source = "project choice: +-0.2 V for a lumped flat-band offset."
+bounds_kind = ["project-choice", "project-choice"]
 note = "Lumped flat-band offset, applied as a rigid gate-bias shift vg_device = vg - dv_fb_v. It absorbs Boltzmann statistics in the degenerate gate (about 40 mV), SPICE's empirical flat band and interface/fixed charge; it is not a fixed-oxide-charge parameter."
 
 # --- card values that tunable starts and bounds come from ------------------------------------
@@ -280,4 +286,5 @@ source = "sm141064.ngspice:37309; sm141064.ngspice:37126; https://www.bsim.berke
 fixed = true
 role = "reference-bookkeeping"
 bsim_name = "cf"
+derived_from = ["toxe_nm", "epsrox"]
 note = "CF: outer fringing capacitance per width. The card sets no CF, so BSIM4 uses its default 2*EPSROX*eps0/pi*ln(1+4e-7/TOXE) (manual eq. 7.5.1), from TOXE and EPSROX. 1D only."

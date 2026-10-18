@@ -61,6 +61,10 @@ ROLES = ("tunable", "bound-basis", "process", "reference-bookkeeping")
 # The free parameters of every process file.
 TUNABLES = ("t_ox_eff_nm", "n_ch_cm3", "dv_fb_v")
 
+# What a tunable's start (``start_kind``) and each of its bounds (``bounds_kind``) rest on: a
+# card value, a value derived from card values by a cited formula, or a project choice.
+KINDS = ("card", "derived", "project-choice")
+
 # File name of the PDK's ngspice model card, as cited in sources.
 CARD_FILE = "sm141064.ngspice"
 
@@ -89,6 +93,9 @@ _KEYS = {
     "bounds",
     "bounds_source",
     "start_source",
+    "start_kind",
+    "bounds_kind",
+    "derived_from",
     "card_key",
     "card_line",
     "card_params",
@@ -227,9 +234,13 @@ class Parameter:
     ``card_line``/``card_key`` name the card line ``+ card_key=expr`` the value comes from and
     ``card_params`` the ``.param`` lines its expression uses; ``value`` is the expression times
     ``card_scale``. ``bsim_name`` is the BSIM4 parameter it sets (default ``card_key``), used
-    by :meth:`ProcessDescription.card_values`. A tunable has ``start_source`` and
-    ``bounds_source`` (text that cites a card line or link, or says "project choice"); its
-    ``source`` holds the references cited in ``start_source``.
+    by :meth:`ProcessDescription.card_values`. A ``spice-card`` value has a ``card_line``, or
+    else ``derived_from``, the fixed parameters it is computed from.
+
+    A tunable has ``start_source`` and ``bounds_source`` with ``start_kind`` and
+    ``bounds_kind`` (:data:`KINDS`, one per bound). A text whose kind is ``card`` or
+    ``derived`` cites a card line or link; one whose kind is ``project-choice`` says
+    "project choice". The tunable's ``source`` holds the references cited in ``start_source``.
     """
 
     name: str
@@ -243,6 +254,9 @@ class Parameter:
     bounds: tuple[float, float] | None = None
     bounds_source: str | None = None
     start_source: str | None = None
+    start_kind: str | None = None
+    bounds_kind: tuple[str, str] | None = None
+    derived_from: tuple[str, ...] = ()
     card_key: str | None = None
     card_line: int | None = None
     card_params: tuple[int, ...] = ()
@@ -295,9 +309,9 @@ class ProcessDescription:
             p = params[name]
             if p.fixed:
                 raise ValueError(f"{self.device}: {name} is fixed and cannot be changed")
-            v = float(value)
+            v = _number(value, f"{self.device}: {name}")  # no bool, str or NaN
             lo, hi = p.bounds
-            if not (math.isfinite(v) and lo <= v <= hi):
+            if not lo <= v <= hi:
                 raise ValueError(f"{self.device}: {name}={v!r} is outside its bounds [{lo}, {hi}]")
             params[name] = replace(p, value=v, provenance="calibrated")
         return replace(self, params=MappingProxyType(params))
@@ -333,11 +347,15 @@ def _int(x: object, what: str) -> int:
     return x
 
 
-def _justified(x: object, what: str) -> str:
-    """Text that cites a card line or an https:// link, or says it is a project choice."""
+def _kinded(x: object, kinds: tuple[str, ...], what: str) -> str:
+    """Source text that matches its kinds: cites a card line or link, or says project choice."""
     text = _text(x, what)
-    if not (_REF_IN_TEXT.search(text) or _PROJECT_CHOICE in text):
-        raise ValueError(f"{what} cites no {CARD_FILE}:<line> or link and is no project choice")
+    if any(k not in KINDS for k in kinds):
+        raise ValueError(f"{what}: kinds {kinds} are not all in {KINDS}")
+    if any(k != "project-choice" for k in kinds) and not _REF_IN_TEXT.search(text):
+        raise ValueError(f"{what} cites no {CARD_FILE}:<line> or link")
+    if "project-choice" in kinds and _PROJECT_CHOICE not in text:
+        raise ValueError(f"{what} does not say {_PROJECT_CHOICE!r}")
     return text
 
 
@@ -362,7 +380,7 @@ def _parameter(name: str, raw: Mapping) -> Parameter:
     if fixed:
         if provenance == "calibrated":
             raise ValueError("a fixed parameter is never tagged calibrated")
-        for key in ("bounds", "bounds_source", "start_source"):
+        for key in ("bounds", "bounds_source", "start_source", "start_kind", "bounds_kind"):
             if key in raw:
                 raise ValueError(f"a fixed parameter has no {key}")
         if "source" not in raw:
@@ -371,12 +389,22 @@ def _parameter(name: str, raw: Mapping) -> Parameter:
     else:
         if provenance != "calibrated":
             raise ValueError(f"a tunable is tagged calibrated, not {provenance!r}")
-        for key in ("bounds", "bounds_source", "start_source"):
+        for key in ("bounds", "bounds_source", "start_source", "start_kind", "bounds_kind"):
             if key not in raw:
                 raise ValueError(f"a tunable needs {key}")
-        if "source" in raw:
-            raise ValueError("a tunable has start_source and bounds_source, not source")
-        start_source = _justified(raw["start_source"], "start_source")
+        for key in ("source", "derived_from", "card_line"):
+            if key in raw:
+                raise ValueError(f"a tunable has start_source and bounds_source, not {key}")
+        start_kind = raw["start_kind"]
+        if start_kind not in KINDS:
+            raise ValueError(f"start_kind {start_kind!r} is not one of {KINDS}")
+        bounds_kind = raw["bounds_kind"]
+        if not isinstance(bounds_kind, list) or len(bounds_kind) != 2:
+            raise ValueError(f"bounds_kind must be [lo_kind, hi_kind], got {bounds_kind!r}")
+        bounds_kind = tuple(bounds_kind)
+        if any(k not in KINDS for k in bounds_kind):
+            raise ValueError(f"bounds_kind {bounds_kind} is not all in {KINDS}")
+        start_source = _kinded(raw["start_source"], (start_kind,), "start_source")
         source = tuple(_REF_IN_TEXT.findall(start_source))
     p = Parameter(
         name=name,
@@ -398,8 +426,10 @@ def _parameter(name: str, raw: Mapping) -> Parameter:
         p = replace(
             p,
             bounds=(lo, hi),
-            bounds_source=_justified(raw["bounds_source"], "bounds_source"),
+            bounds_source=_kinded(raw["bounds_source"], bounds_kind, "bounds_source"),
             start_source=start_source,
+            start_kind=start_kind,
+            bounds_kind=bounds_kind,
         )
     if ("card_key" in raw) != ("card_line" in raw):
         raise ValueError("card_key and card_line go together")
@@ -421,6 +451,15 @@ def _parameter(name: str, raw: Mapping) -> Parameter:
         )
     elif "card_params" in raw or "card_scale" in raw:
         raise ValueError("card_params and card_scale need card_line")
+    if "derived_from" in raw:
+        d = raw["derived_from"]
+        if "card_line" in raw:
+            raise ValueError("a card value (card_line) is not derived_from other parameters")
+        if not isinstance(d, list) or not d or not all(isinstance(n, str) and n for n in d):
+            raise ValueError(f"derived_from must be a non-empty list of names, got {d!r}")
+        p = replace(p, derived_from=tuple(d))
+    if fixed and provenance == "spice-card" and p.card_line is None and not p.derived_from:
+        raise ValueError("a spice-card value needs its card_line, or derived_from")
     if "bsim_name" in raw:
         p = replace(p, bsim_name=_text(raw["bsim_name"], "bsim_name"))
     return p
@@ -445,18 +484,22 @@ def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
     if raw["polarity"] != device[0]:
         raise ValueError(f"{path}: polarity {raw['polarity']!r} does not match {device}")
     card = raw["card"]
-    if set(card) != _CARD_KEYS:
+    if not isinstance(card, dict) or set(card) != _CARD_KEYS:
         raise ValueError(f"{path}: [card] keys are {sorted(card)}")
-    if not re.fullmatch(r"[0-9a-f]{64}", card["sha256"]):
-        raise ValueError(f"{path}: [card] sha256 is not a hex digest")
-    card_ref = CardRef(
-        file=card["file"],
-        pdk_variant=card["pdk_variant"],
-        sha256=card["sha256"],
-        model=card["model"],
-        model_line=_int(card["model_line"], "model_line"),
-        tt_lib_line=_int(card["tt_lib_line"], "tt_lib_line"),
-    )
+    try:
+        sha = card["sha256"]
+        if not (isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{64}", sha)):
+            raise ValueError(f"sha256 is not a hex digest: {sha!r}")
+        card_ref = CardRef(
+            file=_text(card["file"], "file"),
+            pdk_variant=_text(card["pdk_variant"], "pdk_variant"),
+            sha256=sha,
+            model=_text(card["model"], "model"),
+            model_line=_int(card["model_line"], "model_line"),
+            tt_lib_line=_int(card["tt_lib_line"], "tt_lib_line"),
+        )
+    except ValueError as e:
+        raise ValueError(f"{path}: [card]: {e}") from None
     ca = raw["centroid_allowance"]
     if set(ca) != {"plateau_v", "delta_nm", "note"}:
         raise ValueError(f"{path}: [centroid_allowance] keys are {sorted(ca)}")
@@ -471,6 +514,8 @@ def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
         raise ValueError(f"{path}: [centroid_allowance]: {e}") from None
     params = {}
     for name, p in raw["param"].items():
+        if not isinstance(p, dict):  # a malformed file, reported like every other one
+            raise ValueError(f"{path}: parameter {name} is not a table: {p!r}")  # noqa: TRY004
         try:
             params[name] = _parameter(name, p)
         except ValueError as e:
@@ -478,6 +523,19 @@ def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
     free = {n for n, p in params.items() if not p.fixed}
     if free != set(TUNABLES):
         raise ValueError(f"{path}: free parameters are {sorted(free)}, expected {TUNABLES}")
+    for p in params.values():
+        for d in p.derived_from:
+            if d == p.name or d not in params or not params[d].fixed:
+                raise ValueError(
+                    f"{path}: parameter {p.name}: derived_from {d!r} is no fixed parameter"
+                )
+    hi = params["t_ox_eff_nm"].bounds[1]
+    toxp = params["toxp_nm"].value
+    if not math.isclose(hi, toxp + centroid_allowance.delta_nm, rel_tol=1e-12):
+        raise ValueError(
+            f"{path}: t_ox_eff_nm upper bound {hi!r} is not TOXP {toxp!r} + delta "
+            f"{centroid_allowance.delta_nm!r} of [centroid_allowance]"
+        )
     return ProcessDescription(
         device, raw["polarity"], card_ref, centroid_allowance, MappingProxyType(params)
     )
