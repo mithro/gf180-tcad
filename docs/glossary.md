@@ -332,6 +332,16 @@ Phases 0 and 1
   Later phases add the {term}`TCAD`. See the
   {repo}`design spec, section 13 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#13-phases>`.
 
+Phase 2
+Phase 3
+Phase 3 entry gate
+  The next phases: a MOS capacitor in {{ DEVSIM }} (Phase 2), then the 2D MOSFET (Phase 3). The
+  Phase 3 entry gate is the list of what must exist before any MOSFET {term}`TCAD` result,
+  including the deviations from the design spec still open at the end of
+  {term}`Phases 0 and 1`. See
+  {ref}`limitations-spec-deviations` and the
+  {repo}`design spec, section 13 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#13-phases>`.
+
 Gummel symmetry test
   A model benchmark: the model must be smooth through Vds = 0 ({ref}`McAndrew 2006 <lit-mcandrew>`). See {ref}`numerical-acceptance`.
 

@@ -58,20 +58,19 @@ from pathlib import Path
 
 from gf180tcad import io, metrics, sandbox, specwindow
 from gf180tcad.devices import CORNERS, DEVICES, SWEEPS, TEMPS_C, Geometry, Sweep, geometry_id
+from gf180tcad.layout import ENGINES, METRICS_NAME, PROVENANCE_NAME
 from gf180tcad.pdk import PdkInfo, check_against, locate
 from gf180tcad.spice import ngspice, xyce
 from gf180tcad.spice.ngspice import simulate
 from gf180tcad.spice.xyce import simulate_xyce
 
-ENGINES = ("ngspice", "xyce")
 BUDGET_BYTES = 128 << 30  # gf180-tcad.slice MemoryMax
 DEFAULT_JOBS = 8
 JOB_CPUS = 1  # both runners are single-threaded
 JOB_PIDS = max(ngspice.PIDS, xyce.PIDS)
-METRICS_NAME = "metrics.json"
-PROVENANCE_NAME = "provenance.json"
 VERSIONS = Path("docker") / "base" / "versions.json"
 IMAGE = Path("docker") / "IMAGE"
+COMMITTED_TREE = Path("results") / "spice"  # the published reference, relative to the repo
 # Every gf180tcad module the generator imports (tests check this against the import graph of
 # gf180tcad.reference and gf180tcad.__main__). Only these feed generator_sha256, so later code
 # elsewhere under src/ (e.g. TCAD) does not change the SPICE provenance.
@@ -80,6 +79,7 @@ GENERATOR_MODULES = (
     "gf180tcad.__main__",
     "gf180tcad.devices",
     "gf180tcad.io",
+    "gf180tcad.layout",
     "gf180tcad.metrics",
     "gf180tcad.pdk",
     "gf180tcad.reference",
@@ -534,6 +534,27 @@ def _swap(staging: Path, out: Path) -> None:
     shutil.rmtree(old)
 
 
+def check_committed_out(jobs: Sequence[Job], out: Path, repo_root: Path | None = None) -> None:
+    """Raise ValueError if ``out`` is the committed ``results/spice`` and ``jobs`` is partial.
+
+    ``spice-reference`` replaces ``--out`` as a whole, so a subset written to the committed tree
+    would silently drop every job it does not list. Only the full plan (every engine, corner,
+    device and geometry) may go there; a subset goes to any other directory. ``out`` is
+    compared after resolving symlinks and relative parts.
+    """
+    root = Path(repo_root) if repo_root is not None else sandbox.REPO_ROOT
+    committed = (root / COMMITTED_TREE).resolve()
+    if Path(out).resolve() != committed:
+        return
+    full = plan_jobs(ENGINES, CORNERS, tuple(DEVICES))
+    if set(jobs) != set(full):
+        raise ValueError(
+            f"--out {out} is the committed {COMMITTED_TREE.as_posix()}, which must hold every "
+            f"job of the reference ({len(full)}), but the filters select {len(jobs)}; write a "
+            "subset to another directory"
+        )
+
+
 # --- CLI ---------------------------------------------------------------------------------------
 
 
@@ -608,6 +629,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"spice-reference: {e}", file=sys.stderr)
         return 2
     jobs = plan_jobs(a.engines, a.corners, a.devices, a.geometries)
+    try:
+        check_committed_out(jobs, a.out)
+    except ValueError as e:
+        print(f"spice-reference: {e}", file=sys.stderr)
+        return 2
     print(f"{len(jobs)} jobs, {a.jobs} concurrent, {mem} per job, into {a.out}", flush=True)
     failures = generate(jobs, a.out, jobs_n=a.jobs, mem=mem, log=lambda s: print(s, flush=True))
     return 1 if failures else 0

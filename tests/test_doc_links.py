@@ -37,6 +37,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
+from optional import importorskip
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
@@ -328,7 +329,7 @@ def _singular(word: str, index: dict[str, int]) -> str:
 
 @pytest.fixture(scope="module")
 def generated(tmp_path_factory) -> Path:
-    pytest.importorskip("matplotlib", reason="needs the docs dependency group")
+    importorskip("matplotlib", reason="needs the docs dependency group")
     from gf180tcad import docgen
 
     out = tmp_path_factory.mktemp("generated")
@@ -462,7 +463,7 @@ def test_positive_control_outside_sphinx():
     ],
 )
 def test_repo_role_rejects_bad_targets(tmp_path, source, message):
-    pytest.importorskip("sphinx")
+    importorskip("sphinx")
     src = tmp_path / "src"
     src.mkdir()
     (src / "conf.py").write_text(
@@ -479,7 +480,7 @@ def test_repo_role_rejects_bad_targets(tmp_path, source, message):
 
 
 def test_repo_role_links_the_commit(tmp_path):
-    pytest.importorskip("sphinx")
+    importorskip("sphinx")
     sys.path.insert(0, str(DOCS / "_ext"))
     try:
         import repo_roles
@@ -738,8 +739,8 @@ def check_html(name: str, html_text: str) -> list[Problem]:
 
 def _offline_build(out: Path) -> Path:
     """sphinx-build -W of docs/ with every socket call blocked; returns the HTML directory."""
-    pytest.importorskip("sphinx")
-    pytest.importorskip("matplotlib", reason="needs the docs dependency group")
+    importorskip("sphinx")
+    importorskip("matplotlib", reason="needs the docs dependency group")
     (out / "sitecustomize.py").write_text(
         "import socket\n"
         "def _blocked(*a, **k):\n"

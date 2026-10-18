@@ -7,6 +7,8 @@ import sys
 from collections.abc import Iterable
 from pathlib import Path
 
+from gf180tcad.layout import ENVELOPE_NAME, PROVENANCE_NAME
+
 
 def _digest(p: Path) -> str:
     h = hashlib.sha256()
@@ -27,6 +29,12 @@ def _scan(root: Path, manifest: Path) -> dict[str, str]:
         rel = p.relative_to(root).as_posix()
         if p.is_symlink():
             raise ValueError(f"{rel}: symlinks are not allowed in a results tree")
+        if p.is_dir() and p.name.startswith("."):
+            # e.g. a .spice.staging-* or .spice.old-* left by an interrupted spice-reference
+            raise ValueError(
+                f"{rel}: dot-directory in a results tree (a leftover spice-reference staging "
+                "or .old- directory?); remove it before updating or verifying the manifest"
+            )
         if p.is_file() and p != skip:
             out[rel] = _digest(p)
     return out
@@ -73,10 +81,6 @@ def verify(root: Path, manifest: Path) -> list[str]:
 # (engine, device, geometry); a partial subset run lacks some corners, so it writes an envelope
 # with those entries left out, which can never equal the committed one, and it is excluded on
 # both sides. It is pure min/max selection of the metrics.json floats, which are compared.
-
-PROVENANCE = "provenance.json"
-ENVELOPE = "envelope.json"
-
 
 ALL = "all"
 
@@ -148,10 +152,10 @@ def verify_subset(
     if not prefix.endswith("/"):
         raise ValueError(f"prefix must end with '/', got {prefix!r}")
     complete = set(jobs) == set(all_jobs() if full is None else full)
-    roots = {PROVENANCE, ENVELOPE} if complete else {PROVENANCE}
+    roots = {PROVENANCE_NAME, ENVELOPE_NAME} if complete else {PROVENANCE_NAME}
     have = _scan(tree, Path(against))
-    if ENVELOPE not in roots:
-        have.pop(ENVELOPE, None)
+    if ENVELOPE_NAME not in roots:
+        have.pop(ENVELOPE_NAME, None)
     want = {r[len(prefix) :]: d for r, d in _load(against).items() if r.startswith(prefix)}
 
     def listed(rel: str) -> bool:
@@ -193,11 +197,11 @@ def main(argv: list[str] | None = None) -> int:
         complete = set(jobs) == set(all_jobs())
         n = len(_scan(args.root, args.against))
         if not complete:
-            n -= (args.root / ENVELOPE).is_file()
+            n -= (args.root / ENVELOPE_NAME).is_file()
         envelope = "compared (complete subset)" if complete else "excluded (partial subset)"
         print(
             f"identical: {n} files of {len(jobs)} jobs in {args.root} match {args.against} "
-            f"under {args.prefix} (sha256; {ENVELOPE} {envelope})"
+            f"under {args.prefix} (sha256; {ENVELOPE_NAME} {envelope})"
         )
         return 0
     m = args.manifest or args.root / "MANIFEST.sha256"

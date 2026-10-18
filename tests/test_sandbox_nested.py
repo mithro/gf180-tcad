@@ -8,10 +8,13 @@ commands, never a simulator.
 """
 
 import os
+import shutil
+import tempfile
 from pathlib import Path
 
 import pytest
 from confined_root import make_confined_root
+from git_worktree import git, make_worktree
 
 from gf180tcad import sandbox
 
@@ -51,6 +54,59 @@ def test_image_cannot_be_chosen_inside(inside, tmp_path):
 def test_out_dir_inside_repo_refused(inside):
     with pytest.raises(ValueError, match="repo"):
         sandbox.run(["true"], out_dir=sandbox.REPO_ROOT / "tests")
+
+
+@pytest.mark.parametrize("which", ["root", "parent", "grandparent"])
+def test_out_dir_that_is_an_ancestor_of_the_repo_refused(inside, which):
+    where = {
+        "root": Path("/"),
+        "parent": sandbox.REPO_ROOT.parent,
+        "grandparent": sandbox.REPO_ROOT.parents[1],
+    }[which]
+    with pytest.raises(ValueError, match="ancestor|root"):
+        sandbox.run(["true"], out_dir=where)
+
+
+def test_out_dir_that_is_home_refused(inside, monkeypatch, tmp_path):
+    home = tmp_path / "home"  # not an ancestor of the repo: the $HOME rule on its own
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    with pytest.raises(ValueError, match="HOME"):
+        sandbox.run(["sh", "-c", "echo ran > ran.txt"], out_dir=home)
+    assert not (home / "ran.txt").exists()
+
+
+def test_out_dir_next_to_the_repo_allowed(inside):
+    sib = Path(tempfile.mkdtemp(prefix=sandbox.REPO_ROOT.name + "-", dir=sandbox.REPO_ROOT.parent))
+    try:
+        res = sandbox.run(["sh", "-c", "pwd"], out_dir=sib)
+        assert res.stdout.strip() == str(sib.resolve())
+    finally:
+        shutil.rmtree(sib)
+
+
+@pytest.mark.parametrize(
+    "where, ok",
+    [
+        ("/", False),
+        ("/home", False),
+        ("/home/u", False),  # $HOME
+        ("/home/u/src", False),  # ancestor of the repo
+        ("/home/u/src/repo", False),
+        ("/home/u/src/repo/tests", False),
+        ("/home/u/src/repo-worktrees/x", True),
+        ("/home/u/src/other", True),
+        ("/home/u/tmp/scratch", True),
+        ("/tmp/x", True),
+    ],
+)
+def test_check_workdir_rules(where, ok):
+    kw = {"repo_root": Path("/home/u/src/repo"), "home": Path("/home/u")}
+    if ok:
+        sandbox.check_workdir(Path(where), **kw)
+    else:
+        with pytest.raises(ValueError):
+            sandbox.check_workdir(Path(where), **kw)
 
 
 def test_marker_must_be_exactly_one(monkeypatch, tmp_path):
@@ -182,3 +238,67 @@ def test_real_container_with_network_is_not_confined(tmp_path):
     with pytest.raises(sandbox.SandboxError) as exc:
         sandbox.run(["python3", "-c", code], out_dir=tmp_path, network=True)
     assert "not confined" in exc.value.result.stderr
+
+
+# --- git worktrees: the common dir lies outside the repo -----------------------------------
+
+
+@pytest.fixture
+def worktree(tmp_path):
+    return make_worktree(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "rel", ["main", "main/.git", "main/.git/hooks", "main/.git/worktrees/wt", "main/sub", "."]
+)
+def test_check_workdir_refuses_the_git_dirs_of_a_worktree(worktree, tmp_path, rel):
+    main, wt = worktree
+    target = (main.parent / rel).resolve()
+    target.mkdir(parents=True, exist_ok=True)
+    with pytest.raises(ValueError, match="git|checkout|ancestor"):
+        sandbox.check_workdir(target, repo_root=wt, home=tmp_path / "nohome")
+
+
+def test_check_workdir_allows_a_sibling_scratch_dir_of_a_worktree(worktree, tmp_path):
+    main, wt = worktree
+    scratch = main.parent / "scratch"
+    scratch.mkdir()
+    sandbox.check_workdir(scratch, repo_root=wt, home=tmp_path / "nohome")
+
+
+def test_git_dirs_match_git_rev_parse(worktree):
+    main, wt = worktree
+    out = git("rev-parse", "--path-format=absolute", "--git-common-dir", "--git-dir", cwd=wt)
+    common, own = (Path(p).resolve() for p in out.split())
+    assert sandbox.git_dirs(wt) == (common, own, main)
+    assert sandbox.git_dirs(main) == (main / ".git", main / ".git", main)
+
+
+def test_git_dirs_of_a_plain_directory_is_empty(tmp_path):
+    assert sandbox.git_dirs(tmp_path) == ()
+
+
+@pytest.mark.parametrize("content", ["gitdir: /nonexistent/gf180tcad\n", "garbage\n", ""])
+def test_broken_git_file_fails_closed(worktree, tmp_path, content):
+    _, wt = worktree
+    (wt / ".git").write_text(content, encoding="utf-8")
+    with pytest.raises(ValueError, match="git"):
+        sandbox.check_workdir(tmp_path / "scratch", repo_root=wt, home=tmp_path / "nohome")
+
+
+def test_direct_mode_refuses_this_repos_git_hooks(inside):
+    common = sandbox.git_dirs(sandbox.REPO_ROOT)[0]
+    with pytest.raises(ValueError):
+        sandbox.run(["true"], out_dir=common / "hooks")
+
+
+def test_git_dirs_of_an_unmounted_standard_worktree_are_lexical(tmp_path):
+    # Inside the container /work/src/.git names a host path that is not mounted: the dirs are
+    # derived from the standard <common>/worktrees/<name> layout, not read from disk.
+    repo = tmp_path / "src"
+    repo.mkdir()
+    (repo / ".git").write_text("gitdir: /host/proj/main/.git/worktrees/wt\n", encoding="utf-8")
+    common, own, main = (Path("/host/proj/main/.git"), Path("/host/proj/main/.git/worktrees/wt"),
+                         Path("/host/proj/main"))  # fmt: skip
+    assert sandbox.git_dirs(repo) == (common, own, main)
+    sandbox.check_workdir(tmp_path / "out", repo_root=repo, home=tmp_path / "nohome")

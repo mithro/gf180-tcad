@@ -21,11 +21,33 @@ there.
   nfet {term}`card <model card>` declares BSIM4 `version=4.5`; ngspice runs it with BSIM4 4.5.0,
   Xyce's oldest BSIM4 is 4.6.1. See {doc}`engine-cross-check`.
 - **Cross-host identity has limits.** Byte-identical results are guaranteed
-  only on {term}`x86-64-v2` or newer hosts, and verified only on the hardware listed
-  in {ref}`cross-host-determinism` (an Intel Xeon Gold 6152 and the
-  {{ GitHub_hosted_runner }}s with AMD EPYC 9V45 and 7763 CPUs).
+  only on {term}`x86-64-v2` or newer hosts, and the full reference is verified on an Intel Xeon
+  Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
+  ({ref}`cross-host-determinism`). The only pass on an AMD EPYC 9V45 runner was an earlier
+  8-job subset, before the {{ numpy }} fix described there.
+- **Not everything the design spec asks for is built yet.** See
+  {ref}`limitations-spec-deviations` below.
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
   open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
+
+(limitations-spec-deviations)=
+
+## Deviations from the design spec
+
+Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
+{term}`Phase 3 entry gate`: it must be closed before any MOSFET {term}`TCAD` result.
+
+- **No layout-extracted secondary SPICE reference.** The
+  {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
+  asks for a second reference with instance parameters extracted from the {{ gdsfactory }}
+  cell layout. Only the primary, schematic-default reference exists
+  ({ref}`planned secondary reference <secondary-reference>`).
+- **The metric set is narrower than the {term}`tolerance` table.** Not yet extracted:
+  {term}`gm` and {term}`gds` at Vgs = {term}`Vt` + 150 mV, gm/Id, Cgd at Vds = 5 V,
+  {term}`Cgg` in depletion, effective {term}`Rsd`, Isub, {term}`Vt roll-off` and the RMS error
+  of log10(Id). Defined differently: the {term}`body effect` uses the
+  {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
+  in {ref}`not yet extracted, or defined differently <metrics-not-yet-extracted>`.
 
 ```{toctree}
 :maxdepth: 1

@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from gf180tcad import io, reference, sandbox
+from gf180tcad import io, manifest, reference, sandbox
 from gf180tcad.devices import CORNERS, DEVICES, SWEEPS, geometry_id
 from gf180tcad.reference import AdmissionError, Job
 
@@ -533,6 +533,71 @@ def test_cli_rejects_jobs_over_budget(capsys):
     assert reference.main(["spice-reference", "--out", "o", "--jobs", "33"]) == 2
     err = capsys.readouterr().err
     assert "33" in err and "128 GiB" in err
+
+
+COMMITTED = sandbox.REPO_ROOT / "results" / "spice"
+
+
+def _no_generate(monkeypatch):
+    calls = []
+
+    def fake(jobs, out, **kw):
+        calls.append((list(jobs), Path(out)))
+        return []
+
+    monkeypatch.setattr(reference, "generate", fake)
+    return calls
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ["--engine", "ngspice"],
+        ["--corner", "typical"],
+        ["--device", "pfet_05v0"],
+        ["--geometry", "w10p0_l0p60"],
+    ],
+)
+def test_cli_refuses_a_partial_plan_into_the_committed_tree(monkeypatch, capsys, extra):
+    calls = _no_generate(monkeypatch)
+    assert reference.main(["spice-reference", *extra, "--out", str(COMMITTED)]) == 2
+    err = capsys.readouterr().err
+    assert "results/spice" in err and "every job" in err
+    assert calls == []
+
+
+def test_cli_refuses_a_partial_plan_into_the_committed_tree_by_relative_path(monkeypatch, capsys):
+    calls = _no_generate(monkeypatch)
+    monkeypatch.chdir(sandbox.REPO_ROOT / "results")
+    argv = ["spice-reference", "--engine", "xyce", "--out", "../results/./spice"]
+    assert reference.main(argv) == 2
+    assert calls == []
+
+
+def test_cli_refuses_a_partial_plan_into_the_committed_tree_through_a_symlink(
+    monkeypatch, tmp_path
+):
+    calls = _no_generate(monkeypatch)
+    link = tmp_path / "spice"
+    link.symlink_to(COMMITTED)
+    assert reference.main(["spice-reference", "--corner", "ff", "--out", str(link)]) == 2
+    assert calls == []
+
+
+def test_cli_full_plan_into_the_committed_tree_runs(monkeypatch):
+    calls = _no_generate(monkeypatch)
+    assert reference.main(["spice-reference", "--out", str(COMMITTED)]) == 0
+    assert len(calls) == 1
+    jobs, out = calls[0]
+    assert {j.relpath.as_posix() for j in jobs} == set(manifest.all_jobs())
+    assert out == COMMITTED
+
+
+def test_cli_partial_plan_elsewhere_runs(monkeypatch, tmp_path):
+    calls = _no_generate(monkeypatch)
+    argv = ["spice-reference", "--engine", "ngspice", "--out", str(tmp_path / "spice")]
+    assert reference.main(argv) == 0
+    assert len(calls) == 1
 
 
 def test_plan_geometry_filter():

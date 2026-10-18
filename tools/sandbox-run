@@ -30,9 +30,73 @@ case "$NETWORK" in none|bridge) ;; *) die "--network must be none or bridge" ;; 
 [ -d "$WORKDIR" ] || die "workdir does not exist: $WORKDIR"
 WORKDIR="$(cd "$WORKDIR" && pwd -P)"
 REPO="$(cd "$REPO" && pwd -P)"
-case "$WORKDIR/" in
-    "$REPO"/*) die "workdir must not be the repo root or inside it: $WORKDIR" ;;
+# The workdir is mounted read-write. Refuse the filesystem root, $HOME (and its ancestors), and
+# every directory whose contents run on the host: the repo, the git dir and git common dir of
+# its checkout (hooks, config; for a worktree they are outside the repo) and the main working
+# tree that owns that common dir. For each, the directory itself, anything inside it and any
+# ancestor of it are refused. Unrelated directories ($TMPDIR scratch dirs, sibling checkouts
+# next to the repo) are fine. gf180tcad.sandbox.check_workdir applies the same rules.
+[ "$WORKDIR" != / ] || die "workdir must not be the filesystem root"
+
+# refuse WHAT DIR: refuse the workdir if it is DIR, inside DIR or an ancestor of DIR.
+refuse() {
+    case "$WORKDIR/" in
+        "$2"/*) die "workdir must not be $1 ($2) or inside it: $WORKDIR" ;;
+    esac
+    case "$2/" in
+        "$WORKDIR"/*) die "workdir must not be an ancestor of $1 ($2): $WORKDIR" ;;
+    esac
+}
+refuse "the repo root" "$REPO"
+
+# $HOME: from the environment, else the passwd entry; unknown means refuse to run.
+home_dir() {
+    local h="${HOME:-}" entry
+    if [ -z "$h" ] || [ ! -d "$h" ]; then
+        entry="$(getent passwd "$(id -u)")" || return 1
+        IFS=: read -r _ _ _ _ _ h _ <<< "$entry"
+        [ -n "$h" ] && [ -d "$h" ] || return 1
+    fi
+    (cd "$h" && pwd -P)
+}
+HOME_DIR="$(home_dir)" || die "cannot determine the home directory (\$HOME or passwd entry)"
+case "$HOME_DIR/" in
+    "$WORKDIR"/*) die "workdir must not be \$HOME ($HOME_DIR) or an ancestor of it: $WORKDIR" ;;
 esac
+
+# git: a checkout (.git dir or worktree .git file) must resolve, or nothing runs. The GIT_*
+# variables are dropped so they cannot point git at a decoy.
+if [ -e "$REPO/.git" ]; then
+    GIT="$(type -P git)" || die "git is not installed, cannot locate the git dirs of $REPO"
+    git_path() {
+        local out
+        out="$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR -u GIT_INDEX_FILE \
+            "$GIT" -C "$REPO" rev-parse --path-format=absolute "$1")" && [ -d "$out" ] &&
+            (cd "$out" && pwd -P)
+    }
+    GIT_COMMON="$(git_path --git-common-dir)" || die "cannot locate the git common dir of $REPO"
+    GIT_OWN="$(git_path --git-dir)" || die "cannot locate the git dir of $REPO"
+    refuse "the git common dir" "$GIT_COMMON"
+    refuse "the git dir" "$GIT_OWN"
+    if [ "$(basename "$GIT_COMMON")" = .git ]; then
+        refuse "the main git checkout" "$(dirname "$GIT_COMMON")"
+    fi
+fi
+
+# The aggregate cap is only real if tools/sandbox-setup installed the slice: otherwise docker
+# creates gf180-tcad.slice on the fly with no limits at all. Refuse to run unless systemd reports
+# exactly the limits sandbox-setup writes (MemoryMax=128G, MemorySwapMax=0, TasksMax=32768).
+SLICE_LIMITS="MemoryMax=137438953472 MemorySwapMax=0 TasksMax=32768"
+check_slice() {
+    local out want got
+    out="$(systemctl show gf180-tcad.slice -p MemoryMax,MemorySwapMax,TasksMax)" ||
+        die "cannot read gf180-tcad.slice from systemd; run tools/sandbox-setup first"
+    want="$(printf '%s\n' $SLICE_LIMITS | LC_ALL=C sort)"
+    got="$(printf '%s\n' "$out" | LC_ALL=C sort)"
+    [ "$got" = "$want" ] || die "gf180-tcad.slice does not have the limits of tools/sandbox-setup" \
+        "(want: $SLICE_LIMITS; systemd reports: $(echo $out)); run tools/sandbox-setup first"
+}
+check_slice
 
 # numpy picks SIMD kernels at run time by CPU, and they are not bit-identical (log10 differs
 # by 1 ulp between AVX-512 and AVX2), so results would depend on the host CPU. Disable every
@@ -48,6 +112,7 @@ trap 'cleanup; exit 143' TERM
 docker run --rm --name "$NAME" \
     --entrypoint "" \
     --cgroup-parent=gf180-tcad.slice \
+    --cap-drop ALL --security-opt no-new-privileges \
     --memory "$MEM" --memory-swap "$MEM" --cpus "$CPUS" --pids-limit "$PIDS" \
     --network "$NETWORK" \
     --read-only --tmpfs /tmp:rw,size=1g,exec \

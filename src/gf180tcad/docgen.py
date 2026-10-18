@@ -22,17 +22,17 @@ from pathlib import Path
 
 import numpy as np
 
-from gf180tcad import io, plots, specwindow
+from gf180tcad import io, metrics, plots, specwindow
 from gf180tcad.devices import CORNERS, DEVICES, Device, Geometry, geometry_id
 from gf180tcad.known import KNOWN_ENGINE_DIFFS
+from gf180tcad.layout import METRICS_NAME
+from gf180tcad.reference import engine_sweeps
 from gf180tcad.sandbox import REPO_ROOT
-from gf180tcad.spice.xyce import engine_diff
+from gf180tcad.spice.xyce import ENGINE_DIFF_THRESHOLD, engine_diff
 
 RESULTS = REPO_ROOT / "results" / "spice"
-ENGINES = ("ngspice", "xyce")
 TT = "typical"
 DIFF_SWEEPS = ("idvg_lin", "idvg_sat", "idvd", "ioff")
-DIFF_FLAG = 0.005  # design spec: more than 0.5 % between the engines flags the reference
 # Cases explained on the engine cross-check page (nfet BSIM4 version 4.5 vs Xyce 4.6.1).
 KNOWN_DIFFS = KNOWN_ENGINE_DIFFS
 ENGINE_DOC = "/limitations/engine-cross-check"
@@ -67,15 +67,24 @@ def _unit(metric: str) -> str:
     return ""
 
 
-def _cols(root: Path, engine: str, corner: str, device: str, gid: str, sweep: str):
+def _has_sweep(engine: str, sweep: str) -> bool:
+    """Does ``engine`` run ``sweep`` at all (Xyce has no cv)? Absent by design, not missing."""
+    return sweep in engine_sweeps(engine)
+
+
+def _cols(root: Path, engine: str, corner: str, device: str, gid: str, sweep: str) -> dict:
+    """Columns of one committed CSV; FileNotFoundError if it is missing (never a silent gap)."""
     path = Path(root) / engine / corner / device / gid / f"{sweep}.csv"
-    return io.read_csv(path)[0] if path.is_file() else None
-
-
-def _metrics(root: Path, engine: str, corner: str, device: str, gid: str) -> dict | None:
-    path = Path(root) / engine / corner / device / gid / specwindow.METRICS_NAME
     if not path.is_file():
-        return None
+        raise FileNotFoundError(f"missing result file {path}")
+    return io.read_csv(path)[0]
+
+
+def _metrics(root: Path, engine: str, corner: str, device: str, gid: str) -> dict:
+    """The metrics of one committed ``metrics.json``; FileNotFoundError if it is missing."""
+    path = Path(root) / engine / corner / device / gid / METRICS_NAME
+    if not path.is_file():
+        raise FileNotFoundError(f"missing result file {path}")
     return json.loads(path.read_text(encoding="utf-8"))["metrics"]
 
 
@@ -106,12 +115,11 @@ def _curves(root: Path, device: Device, gid: str, sweep: str, scale: float, floo
     per_corner = []
     for corner in CORNERS:
         cols = _cols(root, "ngspice", corner, device.name, gid, sweep)
-        if cols is None:
-            raise FileNotFoundError(f"ngspice {corner} {device.name} {gid} {sweep}")
         per_corner.append(_series(cols, sweep, pol))
     tt = per_corner[CORNERS.index(TT)]
-    xcols = _cols(root, "xyce", TT, device.name, gid, sweep)
-    xs = _series(xcols, sweep, pol) if xcols is not None else None
+    xs = None
+    if _has_sweep("xyce", sweep):
+        xs = _series(_cols(root, "xyce", TT, device.name, gid, sweep), sweep, pol)
 
     def y(a):
         a = a * scale
@@ -212,8 +220,13 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
             source = "{term}`hull`" if w.source == "hull" else w.source
             sw = f"{_interval(w.lo, w.hi)} ({source})"
         else:
-            sw = "-"
-        x = fmt(xy[name]) if xy is not None and name in xy else "-"
+            sw = f"{_interval(lo, hi)} (envelope)"
+        if name in xy:
+            x = fmt(xy[name])
+        elif name in metrics.CV_METRICS and not _has_sweep("xyce", "cv"):
+            x = "n/a"
+        else:
+            raise KeyError(f"xyce {TT} {device.name} {gid} metrics.json has no {name}")
         rows.append(
             f"| {{term}}`{name}` | {_unit(name)} | {fmt(tt[name])} | {x} | {_interval(lo, hi)} "
             f"| {sw} |"
@@ -258,8 +271,9 @@ def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict
             "The last two columns are in the units of the metric. The last column is the "
             '{term}`"Same process" window`: the {term}`hull` of the {term}`PDK` '
             "{term}`spec window` and the corner envelope, and the word in brackets says which "
-            "sets it (see {ref}`pdk-same-process-window`). A dash means the PDK publishes no spec "
-            "for this metric at this geometry."
+            "sets it (see {ref}`pdk-same-process-window`). Where the PDK publishes no spec for "
+            "this metric at this geometry, the window is the corner envelope alone. Xyce has no "
+            "C-V sweep, so its Cgg cells are n/a."
         ),
         "",
     ]
@@ -298,12 +312,9 @@ def _engine_table(root) -> list[str]:
             for sweep in DIFF_SWEEPS:
                 a = _cols(root, "ngspice", TT, device.name, gid, sweep)
                 b = _cols(root, "xyce", TT, device.name, gid, sweep)
-                if a is None or b is None:
-                    cells.append("-")
-                    continue
                 d = engine_diff(a, b)
                 cell = f"{fmt(100 * d, 3)} %"
-                if d > DIFF_FLAG:
+                if d > ENGINE_DIFF_THRESHOLD:
                     if (device.name, sweep) in KNOWN_DIFFS:
                         cell += f" {{doc}}`(known) <{ENGINE_DOC}>`"
                     else:

@@ -188,12 +188,78 @@ def _check(res: subprocess.CompletedProcess) -> subprocess.CompletedProcess:
     return res
 
 
+def git_dirs(repo: Path) -> tuple[Path, ...]:
+    """``(common dir, git dir, main working tree)`` of the git checkout at ``repo``, or ``()``.
+
+    The same directories as ``git rev-parse --path-format=absolute --git-common-dir`` /
+    ``--git-dir`` (tests check this), read from ``repo/.git`` without running git, which the
+    image does not need: a ``.git`` directory is both dirs; a worktree's ``.git`` file names
+    its git dir, whose ``commondir`` file names the common dir. When that git dir is not on
+    disk (inside the container ``/work/src/.git`` names a host path that is not mounted), the
+    standard ``<common>/worktrees/<name>`` layout gives the common dir. The main working tree
+    is the parent of a common dir named ``.git`` (else the common dir itself). ``()`` if
+    ``repo/.git`` does not exist; ValueError (fail closed) if it cannot be understood.
+    """
+    dotgit = Path(repo) / ".git"
+    if dotgit.is_dir():
+        common = own = dotgit.resolve()
+    elif dotgit.is_file():
+        text = dotgit.read_text(encoding="utf-8").strip()
+        if not text.startswith("gitdir:") or not text[7:].strip():
+            raise ValueError(f"cannot locate the git dir of {repo}: {dotgit} is {text!r}")
+        own = (Path(repo) / text[7:].strip()).resolve()
+        commondir = own / "commondir"
+        if commondir.is_file():
+            common = (own / commondir.read_text(encoding="utf-8").strip()).resolve()
+        elif not own.exists() and own.parent.name == "worktrees":
+            common = own.parent.parent
+        else:
+            raise ValueError(f"cannot locate the git common dir of {repo} (git dir {own})")
+    elif dotgit.exists() or dotgit.is_symlink():
+        raise ValueError(f"cannot locate the git dirs of {repo}: {dotgit} is not a dir or file")
+    else:
+        return ()
+    return common, own, common.parent if common.name == ".git" else common
+
+
+def check_workdir(where: Path, *, repo_root: Path | None = None, home: Path | None = None) -> None:
+    """Raise ValueError unless ``where`` (a resolved path) may be the read-write workdir.
+
+    The same rules as ``tools/sandbox-run``: not the filesystem root, not ``$HOME`` (default
+    ``Path.home()``, resolved) or an ancestor of it, and, for each of the repo (default
+    :data:`REPO_ROOT`) and its :func:`git_dirs` (common dir, git dir, main working tree),
+    neither the directory, anything inside it nor an ancestor of it. Writing any of those
+    would let the command change what runs on the host (the hooks and config in the git
+    common dir are shared by every worktree). Unrelated directories, such as scratch
+    directories under ``$TMPDIR`` or sibling checkouts next to the repo, are allowed.
+    """
+    repo = Path(repo_root) if repo_root is not None else REPO_ROOT
+    home = Path(home) if home is not None else Path.home().resolve()
+    where = Path(where)
+    if where == Path(where.anchor):
+        raise ValueError(f"workdir must not be the filesystem root: {where}")
+    common, own, main = git_dirs(repo) or (None, None, None)
+    protected = [("the repo root", repo)]
+    if common is not None:
+        protected += [
+            ("the git common dir", common),
+            ("the git dir", own),
+            ("the main git checkout", main),
+        ]
+    for what, d in protected:
+        if where == d or d in where.parents:
+            raise ValueError(f"workdir must not be {what} ({d}) or inside it: {where}")
+        if where in d.parents:
+            raise ValueError(f"workdir must not be an ancestor of {what} ({d}): {where}")
+    if where == home or where in home.parents:
+        raise ValueError(f"workdir must not be $HOME ({home}) or an ancestor of it: {where}")
+
+
 def _run_nested(cmd: list[str], out_dir: Path, image: str | None) -> subprocess.CompletedProcess:
     if image is not None:
         raise ValueError("inside the sandbox the image is fixed; image must be None")
     where = out_dir.resolve()
-    if where == REPO_ROOT or REPO_ROOT in where.parents:
-        raise ValueError(f"workdir must not be the repo root or inside it: {where}")
+    check_workdir(where)
     res = subprocess.run(cmd, cwd=where, capture_output=True, text=True, check=False)
     if res.returncode == -signal.SIGKILL:  # the kernel OOM killer, as docker reports it
         res.returncode = OOM_EXIT

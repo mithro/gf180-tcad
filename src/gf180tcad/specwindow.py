@@ -26,11 +26,10 @@ from pathlib import Path
 
 from gf180tcad import io
 from gf180tcad.devices import CORNERS
+from gf180tcad.layout import ENVELOPE_NAME, METRICS_NAME
 from gf180tcad.sandbox import REPO_ROOT
 
 SPEC_PATH = REPO_ROOT / "data" / "pdk_elec_spec.json"
-ENVELOPE_NAME = "envelope.json"
-METRICS_NAME = "metrics.json"
 
 
 def envelope(

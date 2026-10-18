@@ -53,11 +53,18 @@ Each device and each metric gets one of three verdicts:
 The primary {term}`golden reference` uses the PDK device as a designer would
 instantiate it from a schematic: the PDK's default instance parameters (AS, AD,
 PS and PD computed by the PDK's standard formulas, default SA, SB, SCA and SCB,
-nf = 1, m = 1). A secondary reference uses parameters extracted from the actual
-{{ gdsfactory }} cell layout; the difference between the two is reported and
-attributed to `stress`, `rsd` (see the {ref}`mismatch taxonomy <mismatch-taxonomy>`) or
-well-proximity effects. Both are fixed before
-any TCAD result is generated.
+nf = 1, m = 1). It is the only reference built so far.
+
+(secondary-reference)=
+
+**Planned: a layout-extracted secondary reference.** The
+{repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
+also asks for a secondary reference with instance parameters extracted from the actual
+{{ gdsfactory }} cell layout, the difference between the two reported and attributed to
+`stress`, `rsd` (see the {ref}`mismatch taxonomy <mismatch-taxonomy>`) or well-proximity
+effects. It is not built yet, a recorded deviation from the spec
+({ref}`limitations-spec-deviations`). It is a {term}`Phase 3 entry gate`: it must exist, fixed,
+before any MOSFET TCAD result is generated.
 
 (calibration-validation)=
 
@@ -136,6 +143,21 @@ unless marked *proposal*, which means no published standard exists.
 | Effective {term}`Rsd` | 1/Id versus L extrapolation | ≤ 10 % |
 | Isub (impact ionisation) | peak versus Vgs at Vds = 5 V | factor-of-2 band (*proposal*) |
 | Gate leakage | - | not compared (the SPICE {term}`card <model card>` has IGCMOD = 0) |
+
+(metrics-not-yet-extracted)=
+
+**Not yet extracted, or defined differently.** The SPICE reference
+({py:mod}`gf180tcad.metrics`, keys of `metrics.json`) does not yet cover the whole table, a
+recorded deviation from the design spec ({ref}`limitations-spec-deviations`). Extracting these
+is a {term}`Phase 3 entry gate`:
+
+- *Not yet extracted:* gm and gds at Vgs = Vt + 150 mV; gm/Id; Cgd at Vds = 5 V; Cgg in
+  depletion (only inversion, {term}`cgg_inv_ff`, and accumulation, {term}`cgg_acc_ff`, are
+  extracted); effective Rsd; Isub; Vt roll-off, Vt(Lmin) - Vt(10 µm) (each geometry's Vt is
+  published, the difference is not); the RMS error of log10(Id).
+- *Definition differs:* the body effect ({term}`body_effect_v`) uses the
+  {term}`constant-current Vt` only, not also the {term}`max-gm Vt`; {term}`gm_peak_s` is the peak gm on {term}`idvg_lin`, not the
+  gm at Vgs = Vt + 150 mV or at Vgs = 5 V of the table.
 
 Metrics are also reported as an error divided by {term}`σ_mismatch`, where
 σ_ΔVt = A_Vt / √(W·L) for the Vt difference of a pair, with the effective W and L

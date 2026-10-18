@@ -18,4 +18,6 @@ Source: {repo}`src/gf180tcad/metrics.py`.
 .. autodata:: gf180tcad.metrics.VDS_SAT_V
 
 .. autodata:: gf180tcad.metrics.VDS_OFF_V
+
+.. autodata:: gf180tcad.metrics.CV_METRICS
 ```

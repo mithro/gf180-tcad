@@ -39,7 +39,7 @@ versus what was *predicted*.
 
 **Anti-goals (would be failure even if it "works")**
 - A1. "Matches SPICE" achieved by unconstrained curve-fitting: per-geometry tuned parameters, or tuning on the same metrics used to claim agreement.
-- A2. Any NDA-derived process data (GF portal, sales kits, `experiments/notes/inventory/x1c-work.md`) entering the repo, docs, commit history or images. Every process number must cite a public source.
+- A2. Any NDA-derived process data (GF portal, sales kits, the maintainers' private inventory notes) entering the repo, docs, commit history or images. Every process number must cite a public source.
 - A3. Results that cannot be regenerated bit-identically from a clean checkout.
 - A4. Any interaction with upstream repositories (no PRs, issues, comments). Changes to third-party code live only in forks under `github.com/mithro/`.
 - A5. A simulation able to push the host into OOM.
@@ -162,7 +162,7 @@ There is no measured data yet and no single-device `05v0` structure on runs 1/2.
 | 4 | CAB1 / CLON / DCO0 / 2975 | ring oscillators from 5 V 7-track cells (05v0 inv 0.82/0.60 n, 1.22/0.50 p) | Frequency vs SPICE/SDF — a circuit-level check. |
 | 5 | ISHI (runs 1/2) | probe-padded inverters (05v0/06v0) | Verify Dualgate over each device: some "5 V" devices were built thin-oxide. |
 
-Source pointers: `/home/tim/github/wafer-space/runs/ws-run{1,2}/<CODE>/summary.md`, `ws-run-reports/tmp/tcad/device_mix.csv`. Layout access only through the memory-limited wrappers (`runs/tools/kl`).
+Source pointers: the per-design summaries of the wafer.space run 1 and run 2 design archives, and the device-mix table derived from them; these are maintainer working files, not part of this repo. Layout access only through memory-limited wrappers around the layout viewer.
 
 ## 8. Execution sandbox
 

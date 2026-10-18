@@ -65,7 +65,9 @@ uv run --locked python -m gf180tcad spice-reference --engine ngspice \
 ```
 
 `--out` is *replaced* by the jobs that were run, so write a partial run to a
-directory of its own, not to {repo}`results/spice`. It must not exist, be empty, or
+directory of its own, not to {repo}`results/spice`: a filtered run whose `--out` resolves to
+the committed {repo}`results/spice` is refused before any job starts
+({py:func}`gf180tcad.reference.check_committed_out`). `--out` must not exist, be empty, or
 be an earlier reference tree (one with a {repo}`provenance.json <results/spice/provenance.json>`, see {ref}`results-layout`); any
 other
 directory is refused.
@@ -147,8 +149,8 @@ host, the `crosscheck` {{ GitHub_Actions }} workflow
 (`ubuntu-latest`) and requires every file to be byte-identical, by sha256, to the
 {term}`manifest` {repo}`results/MANIFEST.sha256`. The
 runner has a different CPU, kernel and Docker installation, and its CPU model
-varies from run to run; so far the runs have landed on AMD EPYC 9V45 and AMD
-EPYC 7763. There is no {term}`tolerance`: a difference in the last digit of one float
+varies from run to run. The full reference has passed on an AMD EPYC 7763; the only
+pass on an AMD EPYC 9V45 was an earlier 8-job subset, before the numpy fix below. There is no {term}`tolerance`: a difference in the last digit of one float
 fails it.
 
 **Everything is cross-checked on GitHub-hosted runners.** The

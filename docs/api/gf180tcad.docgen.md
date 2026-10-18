@@ -8,13 +8,9 @@ Source: {repo}`src/gf180tcad/docgen.py`.
 .. autodata:: gf180tcad.docgen.RESULTS
    :no-value:
 
-.. autodata:: gf180tcad.docgen.ENGINES
-
 .. autodata:: gf180tcad.docgen.TT
 
 .. autodata:: gf180tcad.docgen.DIFF_SWEEPS
-
-.. autodata:: gf180tcad.docgen.DIFF_FLAG
 
 .. autodata:: gf180tcad.docgen.KNOWN_DIFFS
 

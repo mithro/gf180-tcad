@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Generated results pages (Task 13): deterministic SVGs, page coverage, offline docs build."""
 
+import json
 import os
 import subprocess
 import sys
@@ -8,8 +9,9 @@ import textwrap
 from pathlib import Path
 
 import pytest
+from optional import importorskip
 
-pytest.importorskip("matplotlib", reason="needs the docs dependency group")
+importorskip("matplotlib", reason="needs the docs dependency group")
 
 from gf180tcad import docgen
 from gf180tcad.devices import DEVICES, geometry_id
@@ -119,7 +121,7 @@ def test_offline_block_positive_control(tmp_path):
 
 
 def test_docs_build_offline(tmp_path):
-    pytest.importorskip("sphinx")
+    importorskip("sphinx")
     (tmp_path / "sitecustomize.py").write_text(_NO_NETWORK, encoding="utf-8")
     env = {**os.environ, "PYTHONPATH": str(tmp_path)}
     out = tmp_path / "html"
@@ -152,3 +154,84 @@ def test_idvd_series_selects_vb_zero():
     cols["vb"] = np.ones(8)
     with pytest.raises(ValueError, match="vb"):
         docgen._series(cols, "idvd", 1)
+
+
+# --- missing inputs fail loudly; no silent "-" -------------------------------------------------
+
+
+def _link_tree(dst: Path) -> Path:
+    """A copy of the committed results/spice made of symlinks to its files (cheap)."""
+    src = docgen.RESULTS
+    for p in src.rglob("*"):
+        if p.is_file():
+            q = dst / p.relative_to(src)
+            q.parent.mkdir(parents=True, exist_ok=True)
+            q.symlink_to(p)
+    return dst
+
+
+NFET = DEVICES["nfet_05v0"]
+GID = geometry_id(NFET.geometries[0])
+
+
+@pytest.mark.parametrize("engine", ["ngspice", "xyce"])
+def test_missing_csv_raises_in_the_engine_table(tmp_path, engine):
+    root = _link_tree(tmp_path / "spice")
+    (root / engine / "typical" / NFET.name / GID / "idvg_sat.csv").unlink()
+    with pytest.raises(FileNotFoundError, match="idvg_sat.csv"):
+        docgen._engine_table(root)
+
+
+def test_missing_xyce_csv_raises_in_the_plots(tmp_path):
+    root = _link_tree(tmp_path / "spice")
+    (root / "xyce" / "typical" / NFET.name / GID / "idvd.csv").unlink()
+    with pytest.raises(FileNotFoundError, match="idvd.csv"):
+        docgen._curves(root, NFET, GID, "idvd", 1e3, None)
+
+
+def test_xyce_has_no_cv_and_that_is_not_an_error(tmp_path):
+    curves, _ = docgen._curves(docgen.RESULTS, NFET, GID, "cv", 1.0, None)
+    assert not any(c.dashed for c in curves)  # no Xyce overlay
+
+
+@pytest.mark.parametrize("engine", ["ngspice", "xyce"])
+def test_missing_metrics_json_raises(tmp_path, engine):
+    root = _link_tree(tmp_path / "spice")
+    (root / engine / "typical" / NFET.name / GID / "metrics.json").unlink()
+    spec = docgen.specwindow.load_spec()
+    env = json.loads((root / "envelope.json").read_text(encoding="utf-8"))
+    with pytest.raises(FileNotFoundError, match="metrics.json"):
+        docgen._metrics_table(root, NFET, GID, spec, env)
+    if engine == "ngspice":
+        with pytest.raises(FileNotFoundError, match="metrics.json"):
+            docgen._spec_status(root, spec)
+
+
+def test_xyce_metric_missing_raises(tmp_path):
+    root = _link_tree(tmp_path / "spice")
+    path = root / "xyce" / "typical" / NFET.name / GID / "metrics.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    del data["metrics"]["idsat_ua_per_um"]
+    path.unlink()
+    path.write_text(json.dumps(data), encoding="utf-8")
+    spec = docgen.specwindow.load_spec()
+    env = json.loads((root / "envelope.json").read_text(encoding="utf-8"))
+    with pytest.raises(KeyError, match="idsat_ua_per_um"):
+        docgen._metrics_table(root, NFET, GID, spec, env)
+
+
+def test_window_column_shows_the_envelope_where_there_is_no_spec():
+    spec = docgen.specwindow.load_spec()
+    env = json.loads((docgen.RESULTS / "envelope.json").read_text(encoding="utf-8"))
+    rows = docgen._metrics_table(docgen.RESULTS, NFET, GID, spec, env)[2:]
+    with_spec = set(docgen._spec_entries(spec, NFET.name, GID))
+    assert with_spec and len(rows) > len(with_spec)
+    for row in rows:
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        name = cells[0].split("`")[1]
+        lo, hi = env["ngspice"][NFET.name][GID][name]
+        assert cells[-1] != "-"
+        if name not in with_spec:
+            assert cells[-1] == f"[{docgen.fmt(lo)}, {docgen.fmt(hi)}] (envelope)"
+        # Xyce has no cv sweep, so only its Cgg cells are "n/a"
+        assert (cells[3] == "n/a") == name.startswith("cgg_")

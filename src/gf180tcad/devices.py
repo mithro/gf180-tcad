@@ -111,5 +111,9 @@ SWEEPS: tuple[Sweep, ...] = (
     Sweep("ioff", "idvg", vds=(5.5,), vgs=(0.0,), vbs=(0.0,)),
 )
 
+# Matching a simulated or published bias value to a grid point: ngspice's .dc accumulates the
+# step (~1e-13 V off after 500 steps), so values are compared within this many volts.
+GRID_TOL = 1e-9
+
 CORNERS = ("typical", "ff", "ss", "fs", "sf")
 TEMPS_C = (25.0,)

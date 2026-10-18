@@ -134,10 +134,10 @@ The Xyce cross-check claims exactly the following, at the typical corner and
 
 | Device | Sweep | Max {term}`engine_diff` |
 |---|---|---|
-| nfet | `idvd` | 0.37 % |
-| pfet | `idvd` | 1e-6 |
+| nfet | `idvd` | 0.365 % |
+| pfet | `idvd` | 7e-7 |
 | pfet | `idvg_lin` | 0.02 % |
-| pfet | `idvg_sat` | 0.23 % |
+| pfet | `idvg_sat` | 0.221 % |
 
 The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA.
 
