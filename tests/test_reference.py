@@ -5,6 +5,7 @@ Unit tests use a fake job runner and fake simulators, so they need no Docker; th
 test runs a real ngspice job twice and compares every byte.
 """
 
+import ast
 import json
 import os
 import subprocess
@@ -128,18 +129,35 @@ def test_csv_meta_is_only_deterministic_fields():
 # --- provenance ------------------------------------------------------------------------------
 
 
+def _module_file(name: str) -> Path:
+    """Repo-relative file of a module listed in GENERATOR_MODULES, from the real source tree."""
+    return reference.module_relpath(name, sandbox.REPO_ROOT)
+
+
 def _fake_repo(root: Path) -> Path:
+    for name in reference.GENERATOR_MODULES:
+        f = root / _module_file(name)
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(f"# {name}\n")
     pkg = root / "src" / "gf180tcad"
-    (pkg / "spice").mkdir(parents=True)
-    (pkg / "a.py").write_text("A = 1\n")
-    (pkg / "spice" / "b.py").write_text("B = 2\n")
     (pkg / "notes.txt").write_text("not code\n")
     (pkg / "__pycache__").mkdir()
-    (pkg / "__pycache__" / "a.cpython-312.pyc").write_bytes(b"\0junk")
+    (pkg / "__pycache__" / "devices.cpython-312.pyc").write_bytes(b"\0junk")
+    (pkg / "tcad").mkdir()
+    (pkg / "tcad" / "__init__.py").write_text("")
+    (pkg / "tcad" / "mesh.py").write_text("MESH = 1\n")  # later code the reference does not use
+    (pkg / "manifest.py").write_text("# not used by the generator\n")
     (root / "docker" / "base").mkdir(parents=True)
     (root / "docker" / "base" / "versions.json").write_text('{"ngspice": "47", "python": "3"}\n')
     (root / "docker" / "IMAGE").write_text("ghcr.io/x/y@sha256:" + "a" * 64 + "\n")
     return root
+
+
+def test_generator_modules_are_explicit():
+    mods = reference.GENERATOR_MODULES
+    assert isinstance(mods, tuple) and len(set(mods)) == len(mods) and list(mods) == sorted(mods)
+    assert "gf180tcad.manifest" not in mods  # the generator does not use it
+    assert {"gf180tcad.reference", "gf180tcad.__main__", "gf180tcad.spice.ngspice"} <= set(mods)
 
 
 def test_generator_sha256_stable_and_sensitive(tmp_path):
@@ -148,20 +166,91 @@ def test_generator_sha256_stable_and_sensitive(tmp_path):
     assert len(h) == 64 and h == reference.generator_sha256(repo)
     pkg = repo / "src" / "gf180tcad"
     (pkg / "notes.txt").write_text("changed, but not a .py file\n")
-    (pkg / "__pycache__" / "a.cpython-312.pyc").write_bytes(b"other")
+    (pkg / "__pycache__" / "devices.cpython-312.pyc").write_bytes(b"other")
+    (pkg / "tcad" / "mesh.py").write_text("MESH = 2  # TCAD work must not churn SPICE provenance\n")
+    (pkg / "tcad" / "new.py").write_text("NEW = 1\n")
+    (pkg / "manifest.py").write_text("# changed\n")
     assert reference.generator_sha256(repo) == h
-    (pkg / "spice" / "b.py").write_text("B = 3\n")
-    h2 = reference.generator_sha256(repo)
-    assert h2 != h
-    (pkg / "spice" / "b.py").rename(pkg / "c.py")  # same bytes, other path
-    assert reference.generator_sha256(repo) not in (h, h2)
+    for name in ("gf180tcad.spice.xyce", "gf180tcad.__main__", "gf180tcad"):
+        (repo / _module_file(name)).write_text("# edited\n")
+        h2 = reference.generator_sha256(repo)
+        assert h2 != h, name
+        h = h2
+
+
+def test_generator_sha256_needs_every_listed_module(tmp_path):
+    repo = _fake_repo(tmp_path / "r")
+    (repo / _module_file("gf180tcad.metrics")).unlink()
+    with pytest.raises(FileNotFoundError, match="metrics"):
+        reference.generator_sha256(repo)
 
 
 def test_generator_sha256_independent_of_location_and_mtime(tmp_path):
     a = _fake_repo(tmp_path / "a")
     b = _fake_repo(tmp_path / "elsewhere" / "b")
-    os.utime(b / "src" / "gf180tcad" / "a.py", (0, 0))
+    os.utime(b / _module_file("gf180tcad.devices"), (0, 0))
     assert reference.generator_sha256(a) == reference.generator_sha256(b)
+
+
+def _ast_import_closure(roots: tuple[str, ...]) -> set[str]:
+    """gf180tcad modules imported (transitively, parents included) by ``roots``, from the AST."""
+    src = sandbox.REPO_ROOT / "src"
+
+    def file_of(name: str) -> Path | None:
+        base = src.joinpath(*name.split("."))
+        for f in (base / "__init__.py", base.with_suffix(".py")):
+            if f.is_file():
+                return f
+        return None
+
+    def with_parents(name: str) -> set[str]:
+        parts = name.split(".")
+        return {".".join(parts[:i]) for i in range(1, len(parts) + 1)}
+
+    seen: set[str] = set()
+    todo = list(roots)
+    while todo:
+        name = todo.pop()
+        for m in with_parents(name) - seen:
+            seen.add(m)
+            tree = ast.parse(file_of(m).read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                found = []
+                if isinstance(node, ast.Import):
+                    found = [a.name for a in node.names]
+                elif isinstance(node, ast.ImportFrom):
+                    assert node.level == 0, f"{m}: relative import"
+                    found = [node.module]
+                    found += [f"{node.module}.{a.name}" for a in node.names]
+                todo += [
+                    f for f in found if f.split(".")[0] == "gf180tcad" and file_of(f) is not None
+                ]
+    return seen
+
+
+ROOTS = ("gf180tcad.reference", "gf180tcad.__main__")
+
+
+def test_generator_modules_match_the_import_graph():
+    graph = _ast_import_closure(ROOTS)
+    listed = set(reference.GENERATOR_MODULES)
+    assert not graph - listed, f"imported by the generator but not hashed: {sorted(graph - listed)}"
+    assert not listed - graph, f"hashed but not imported by the generator: {sorted(listed - graph)}"
+
+
+def test_generator_modules_match_what_python_loads():
+    code = (
+        "import sys, gf180tcad.reference, gf180tcad.__main__; "
+        "print(' '.join(sorted(m for m in sys.modules if m.split('.')[0] == 'gf180tcad')))"
+    )
+    res = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=sandbox.REPO_ROOT,
+    )
+    assert set(res.stdout.split()) == set(reference.GENERATOR_MODULES)
 
 
 def test_generator_sha256_of_this_repo_covers_the_package():
