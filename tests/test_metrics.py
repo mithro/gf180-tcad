@@ -336,3 +336,34 @@ def test_independent_expected_values_from_the_model():
     gm_dense = np.gradient(model_id(vd, vt_lin_model), vd)
     assert m["gm_peak_s"] == pytest.approx(gm_dense.max(), rel=2e-3)
     assert m["id_lin_a"] == pytest.approx(model_id(m["vt_lin_maxgm"] + 0.5, vt_lin_model), rel=2e-3)
+
+
+# --- cv is optional (Xyce has no cv sweep) -----------------------------------------------
+
+CV_KEYS = {"cgg_inv_ff", "cgg_acc_ff"}
+
+
+def test_extract_all_without_cv_omits_cgg_keys():
+    full = metrics.extract_all(NFET, G, nfet_data())
+    nd = nfet_data()
+    del nd["cv"]
+    m = metrics.extract_all(NFET, G, nd)
+    assert set(m) == KEYS - CV_KEYS
+    for k in m:  # the other metrics do not depend on cv
+        assert m[k] == full[k], k
+
+
+def test_extract_all_without_cv_pfet():
+    pd_ = pfet_data(nfet_data())
+    del pd_["cv"]
+    m = metrics.extract_all(FAKE_P, FAKE_P.geometries[0], pd_)
+    assert set(m) == KEYS - CV_KEYS
+    assert all(m[k] < 0 for k in VT_KEYS)
+
+
+@pytest.mark.parametrize("sweep", ["idvg_lin", "idvg_sat", "idvd", "ioff"])
+def test_extract_all_other_sweeps_stay_required(sweep):
+    nd = nfet_data()
+    del nd[sweep]
+    with pytest.raises(KeyError):
+        metrics.extract_all(NFET, G, nd)
