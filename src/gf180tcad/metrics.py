@@ -81,6 +81,7 @@ VDS_LIN_V = 0.1
 VDS_SAT_V = 5.0
 VDS_OFF_V = 5.5
 _TOL = 1e-9  # V, grid-point matching
+CV_METRICS = ("cgg_inv_ff", "cgg_acc_ff")  # only extracted when the data holds a cv sweep
 
 
 class MetricError(ValueError):
@@ -293,6 +294,7 @@ def extract_all(
         cgg = np.asarray(data["cv"]["cgg"], dtype=float)
         if not np.all(np.isfinite(cgg)):
             raise MetricError("cv: non-finite cgg")
-        out["cgg_inv_ff"] = _at(cv["vg"], cgg, 5.0, "cv") * 1e15
-        out["cgg_acc_ff"] = _at(cv["vg"], cgg, -5.0, "cv") * 1e15
+        inv, acc = CV_METRICS
+        out[inv] = _at(cv["vg"], cgg, 5.0, "cv") * 1e15
+        out[acc] = _at(cv["vg"], cgg, -5.0, "cv") * 1e15
     return out
