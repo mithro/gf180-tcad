@@ -8,6 +8,7 @@ tests/sandbox/test_limits.py.
 
 import itertools
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -141,3 +142,68 @@ def test_container_drops_capabilities_and_privilege_escalation(fakes, tmp_path):
     assert ("--security-opt", "no-new-privileges") in pairs
     assert ("--network", "none") in pairs
     assert "--cgroup-parent=gf180-tcad.slice" in args
+
+
+# --- the slice ------------------------------------------------------------------------------
+
+
+def test_slice_with_the_setup_limits_runs(fakes, tmp_path):
+    res, args = fakes(tmp_path)
+    assert res.returncode == 0, res.stderr
+    assert args is not None
+    asked = (tmp_path / "systemctl.args").read_text(encoding="utf-8")
+    assert "show gf180-tcad.slice" in asked
+
+
+def test_slice_property_order_does_not_matter(fakes, tmp_path):
+    out = "TasksMax=32768\nMemorySwapMax=0\nMemoryMax=137438953472\n"
+    res, args = fakes(tmp_path, slice_out=out)
+    assert res.returncode == 0, res.stderr
+    assert args is not None
+
+
+@pytest.mark.parametrize(
+    "out",
+    [
+        UNSET_SLICE,  # sandbox-setup never ran: docker would create an unlimited slice
+        GOOD_SLICE.replace("137438953472", "68719476736"),
+        GOOD_SLICE.replace("MemorySwapMax=0", "MemorySwapMax=infinity"),
+        GOOD_SLICE.replace("32768", "4096"),
+        "MemoryMax=137438953472\nTasksMax=32768\n",  # a property missing
+        GOOD_SLICE + "MemoryMax=infinity\n",  # a property twice
+        "",
+        "garbage\n",
+    ],
+    ids=["unset", "memory", "swap", "tasks", "missing", "duplicate", "empty", "garbage"],
+)
+def test_slice_without_the_setup_limits_is_refused(fakes, tmp_path, out):
+    res, args = fakes(tmp_path, slice_out=out)
+    _refused(res, args)
+    assert "gf180-tcad.slice" in res.stderr and "tools/sandbox-setup" in res.stderr
+
+
+def test_systemctl_failure_is_refused(fakes, tmp_path):
+    res, args = fakes(tmp_path, rc=1)
+    _refused(res, args)
+    assert "gf180-tcad.slice" in res.stderr
+
+
+def _setup_limits() -> dict[str, str]:
+    text = SANDBOX_SETUP.read_text(encoding="utf-8")
+    body = text.split("[Slice]\n", 1)[1].split("'", 1)[0]
+    return dict(line.split("=", 1) for line in body.splitlines() if line)
+
+
+def _run_limits() -> dict[str, str]:
+    text = SANDBOX_RUN.read_text(encoding="utf-8")
+    m = re.search(r'^SLICE_LIMITS="([^"]*)"', text, re.MULTILINE)
+    assert m, "tools/sandbox-run has no SLICE_LIMITS line"
+    return dict(item.split("=", 1) for item in m.group(1).split())
+
+
+def test_checked_limits_are_the_ones_sandbox_setup_writes():
+    units = {"G": 1 << 30}
+    want = {}
+    for k, v in _setup_limits().items():
+        want[k] = str(int(v[:-1]) * units[v[-1]]) if v[-1] in units else v
+    assert want == _run_limits() == dict(line.split("=") for line in GOOD_SLICE.split())
