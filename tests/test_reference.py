@@ -547,3 +547,22 @@ def test_replaces_an_empty_directory(tmp_path):
     out.mkdir()
     assert _gen(tmp_path, JOBS[:1], _fake_runner(), out) == []
     assert "provenance.json" in _tree(out)
+
+
+# --- an unconfined marker is reported as such, not masked --------------------------------------
+
+
+def test_unconfined_marker_error_comes_through(monkeypatch, tmp_path):
+    from confined_root import make_confined_root
+
+    root = make_confined_root(tmp_path / "root")
+    (root / ".dockerenv").unlink()
+    monkeypatch.setenv(sandbox.IN_SANDBOX_ENV, "1")
+    monkeypatch.setattr(sandbox, "CONFINEMENT_ROOT", root)
+    scratch = tmp_path / "s"
+    scratch.mkdir()
+    with pytest.raises(sandbox.SandboxNotConfined, match="not confined"):
+        reference.run_job_sandboxed(NFET_LMIN, scratch, "4g")
+    failures = _gen(tmp_path, [NFET_LMIN], reference.run_job_sandboxed, tmp_path / "o")
+    assert len(failures) == 1
+    assert "SandboxNotConfined" in failures[0].error and "/.dockerenv" in failures[0].error
