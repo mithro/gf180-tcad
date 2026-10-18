@@ -94,7 +94,7 @@ repository stays read-only. It differs from the PDK library in two ways:
 
 - The nfet card's `version=4.5` becomes `4.6`.
 - The library's nested `.lib 'sm141064.spice'` lines
-  ([`sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/main/models/ngspice/sm141064.spice), the ngspice model library
+  ([`sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice), the ngspice model library
   in the {{ gf180mcu_models }}) point at the copy itself.
 
 The test passes the copy to the runner as an explicit input in a
@@ -175,10 +175,10 @@ it.
 ## Working-directory guard
 
 The PDK libraries pull in their sections through relative
-`.lib 'sm141064.spice' <section>` lines ([ngspice](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/main/models/ngspice/sm141064.spice)
-and [Xyce](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/main/models/xyce/sm141064.spice) versions). While the scratch libraries above
+`.lib 'sm141064.spice' <section>` lines ([ngspice](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice)
+and [Xyce](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/xyce/sm141064.spice) versions). While the scratch libraries above
 were being patched, ngspice resolved those lines to a copy other than the one
-next to the top-level library. A stray [`sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/main/models/ngspice/sm141064.spice) in a simulator's
+next to the top-level library. A stray [`sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice) in a simulator's
 working directory could therefore replace the PDK models without any warning.
 
 Both runners therefore refuse to start in a working directory that holds
