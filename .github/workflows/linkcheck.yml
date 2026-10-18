@@ -9,7 +9,9 @@ name: linkcheck
 
 on:
   pull_request:
-    paths: ["docs/**", "README.md", "CONTRIBUTING.md", ".github/workflows/linkcheck.yml"]
+    # src/** too: the API pages and the generated results pages come from docstrings and from
+    # src/gf180tcad/docgen.py.
+    paths: ["docs/**", "src/**", "README.md", "CONTRIBUTING.md", ".github/workflows/linkcheck.yml"]
   schedule:
     - cron: "41 5 * * 1"
   workflow_dispatch:
@@ -28,7 +30,7 @@ jobs:
         with:
           version: "0.13.1"
       - name: Sphinx linkcheck
-        run: uv run --group docs sphinx-build -b linkcheck docs docs/_build/linkcheck
+        run: uv run --locked --group docs sphinx-build -b linkcheck docs docs/_build/linkcheck
       - name: Show the linkcheck report
         if: always()
         run: |
@@ -40,21 +42,32 @@ jobs:
         if: always()
         run: |
           uv run --no-project python - <<'EOF'
-          import re, sys, urllib.request
+          import re, sys, time, urllib.request
           # Links into the published docs are checked offline against docs/ by
           # tests/test_doc_links.py (the pages of a PR are not published yet).
           own = "https://gf180-tcad.readthedocs.io/en/latest/"
           urls = sorted({u for f in ("README.md", "CONTRIBUTING.md")
                          for u in re.findall(r"\((https://[^)\s]+)\)", open(f).read())
                          if not u.startswith(own) or u == own})
+          # The same documented flaky hosts as docs/conf.py:linkcheck_ignore.
+          flaky = ("https://doi.org/10.2172/", "https://doi.org/10.1103/",
+                   "https://www.semiconductors.org/", "https://semimod.de/")
           bad = []
           for url in urls:
+              if url.startswith(flaky):
+                  print("IGNORED (flaky host)", url)
+                  continue
               req = urllib.request.Request(url, headers={"User-Agent": "gf180-tcad-linkcheck"})
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      print(r.status, url)
-              except Exception as e:  # noqa: BLE001
-                  print("BROKEN", url, e)
-                  bad.append(url)
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          print(r.status, url)
+                      break
+                  except Exception as e:  # noqa: BLE001
+                      if attempt == 2:
+                          print("BROKEN", url, e)
+                          bad.append(url)
+                      else:
+                          time.sleep(10)
           sys.exit(1 if bad else 0)
           EOF
