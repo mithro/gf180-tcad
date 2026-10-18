@@ -147,8 +147,8 @@ The PN slab's mesh is unstructured and has no row at mid-height. Its bottom edge
 mesh row through the junction, which lies under the rib, so both silicon regions are used there.
 The PN-slab depletion width is limited by the mesh. At full mesh it rests on 2 depleted nodes,
 and at mesh × 0.5 on 8. The × 0.5 value is above an ideal abrupt-junction estimate of about
-0.048 µm. The re-verification compares it at mesh × 0.5 or finer, or allows a difference of
-about one element.
+0.048 µm. So the re-verification compared it at mesh × 0.5, within about one element
+({ref}`plugin-history-latest-pn`).
 
 The rows from `msh_physical_groups` on are the record's **junction probe**
 ({repo}`pn_junction <experiments/plugin-history/checks_v080.py#L202>`, with
@@ -196,15 +196,16 @@ interface only for line segments that two polygons share exactly, and the trapez
 The record keeps these values as v0.8.0 computed them. They are evidence that the solver ran,
 not that its answer is right.
 
-**What the re-verification compares.** The port to the latest stack
-({ref}`plugin-history-latest`) compares these quantities:
+**What the re-verification compared.** The port to the latest stack was checked against
+these quantities in {ref}`plugin-history-latest`:
 - the depletion widths;
 - the built-in potential (the equilibrium anode − cathode contact potential) and the NetDoping range;
 - the region, contact and interface names;
 - the node counts;
 - whether the applied bias reaches the device.
 
-It must explain the currents; it does not have to match them.
+It had to explain the currents, not match them, and it did
+({ref}`plugin-history-latest-junction`).
 
 (plugin-history-reproducibility)=
 
