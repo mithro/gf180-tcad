@@ -354,6 +354,7 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 - [ ] **Step 1:** Write the tests first:
   - `test_parallel_plate_charge` and `test_parallel_plate_ac`: an oxide-only 1D stack gives C = ε_ox·ε0/t. It is measured through `get_contact_charge` (dQ/dV), and through small-signal AC (`circuit_element` + `solve(type="ac")`, the `testing/ssac_cap.py` pattern). Each agrees within 1e-6 relative (the field is uniform, so this is exact up to solver tolerance).
   - `test_workfunction_offset_shifts_vfb`: on a 1D metal-gate/oxide/p-Si stack, the flat band moves by exactly the offset, within 1 mV. Vfb is the Vg where the gate charge is 0.
+  - `test_stack1d_regions_and_spacing`: `create_1d_stack` gives the stated regions, interfaces and contacts, and node spacings within the `Mesh1D` limits, with the grading ratio respected.
   - `test_constants_not_simple_physics_defaults`: the region parameters read back as ε_si = 11.7·ε0 and T = 298.15.
   - `test_poly_gate_flatband`: a p-Si 1.7e17 / 15.2 nm oxide / n⁺ 1e20 poly stack gives Vfb = −V_t·ln(NGATE·N_A/n_i²) within 1 mV. This value is ≈ −1.0 V at 298.15 K. The pfet case is the mirror.
 
