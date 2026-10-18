@@ -17,7 +17,7 @@ be reproduced.
 
 The {term}`TCAD` code uses the {{ DEVSIM }} plugin of {{ gplugins }} from {{ gplugins_fork }}. The fork
 is a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules),
-{repo}`third_party/gplugins`, pinned to one commit on the fork's `main` (see
+{repo}`third_party/gplugins <third_party>`, pinned to one commit on the fork's `main` (see
 {repo}`.gitmodules`). Clone with
 [`git clone --recurse-submodules`](https://git-scm.com/docs/git-clone) so that it is checked out:
 
