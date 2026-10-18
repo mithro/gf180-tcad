@@ -146,6 +146,24 @@ def test_job_patches_only_the_pdk_lookup(inside, tmp_path, monkeypatch):
     assert reference._image_pdk is original
 
 
+def test_job_restores_the_pdk_lookup_when_run_job_fails(inside, tmp_path, monkeypatch):
+    pdk_root = _fake_pdk(tmp_path / "pdk")
+    pins = tmp_path / "pins.sha256"
+    pins.write_text(_pins_text(pdk_root), encoding="utf-8")
+    versions = tmp_path / "versions.json"
+    versions.write_text(json.dumps(_versions_of(pdkdiff.locate(pdk_root=pdk_root))), "utf-8")
+    original = reference._image_pdk
+
+    def failing_run_job(job, out):
+        assert reference._image_pdk is not original  # swapped while the job runs
+        raise RuntimeError("simulator failed")
+
+    monkeypatch.setattr(reference, "run_job", failing_run_job)
+    with pytest.raises(RuntimeError, match="simulator failed"):
+        pdkdiff.run_pdk_job(pdkdiff.plan()[0], tmp_path / "o", pdk_root, versions, pins)
+    assert reference._image_pdk is original
+
+
 def test_job_refuses_unpinned_pdk(inside, tmp_path, monkeypatch):
     pdk_root = _fake_pdk(tmp_path / "pdk")
     pins = tmp_path / "pins.sha256"
@@ -456,3 +474,14 @@ def test_committed_tree_is_in_the_manifest_but_not_under_spice():
     assert ours == files
     # the SPICE cross-check and verify-subset select the reference by the "spice/" prefix
     assert not any(r.startswith("spice/") for r in ours)
+
+
+PAGE = REPO / "docs" / "comparison" / "pdk-versions.md"
+
+
+def test_page_records_the_run2_checkout_without_private_paths():
+    text = PAGE.read_text(encoding="utf-8")
+    assert "40cee970" in text and "1.0.537" in text and "6edba54d" in text
+    assert "open-pdks/commit/40cee970d8a9b7eaea35a34fe7d6068f05721f0a" in text
+    for private in ("ws-run2", "T26B", "/home/", "runs/"):
+        assert private not in text, private

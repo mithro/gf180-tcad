@@ -2,35 +2,40 @@
 
 # PDK versions: runs 1 and 2 vs the latest
 
-{{ wafer_space }} runs 1 and 2 (and the wafer.space precheck image) used the {term}`GF180MCU`
-{term}`PDK` built by {{ open_pdks }} at commit
-[`d658698bd8bc`](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c)
-(open_pdks 1.0.604). The {term}`SPICE` {term}`golden reference` ({repo}`results/spice`) uses
-the latest PDK, the one in the pinned base image ({repo}`docker/IMAGE`, open_pdks
-`1689ac3f2dc7`, recorded in {repo}`docker/base/versions.json`). This page answers whether the
-{term}`model card` of {term}`nfet_05v0` and {term}`pfet_05v0` differs between the two, as the
-design spec asks ({repo}`docs/superpowers/specs/2026-10-18-gf180-tcad-design.md`, §4).
+The design spec ({repo}`docs/superpowers/specs/2026-10-18-gf180-tcad-design.md`, §4) names
+{{ open_pdks }} commit [`d658698bd8bc`](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c) ([1.0.604](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c)) as the {term}`GF180MCU`
+{term}`PDK` of {{ wafer_space }} runs 1 and 2, and asks for it to be compared with the latest.
+The {term}`SPICE` {term}`golden reference` ({repo}`results/spice`) uses the latest PDK, the one
+in the pinned base image ({repo}`docker/IMAGE`, open_pdks [`1689ac3f2dc7`](https://github.com/fossi-foundation/open-pdks/commit/1689ac3f2dc763876eaf967227c7dfe831b031ae), recorded
+in {repo}`docker/base/versions.json`). This page answers whether the {term}`model card` of
+{term}`nfet_05v0` and {term}`pfet_05v0` differs between the two. It does not settle which PDK
+every run-2 project used ({ref}`pdk-versions-run2`).
 
-**Answer: no.** For these two devices the models are the same. Rerun with the d658698 models,
+**Answer: no, between d658698 and the latest.** For these two devices the models are the
+same. Rerun with the d658698 models,
 every {{ ngspice }} result file at the {term}`TT` {term}`corner` is byte-identical to the
 committed reference: 72 files (12 geometries × 5 {term}`sweep` CSVs and `metrics.json`), so every
 metric delta is exactly 0. The two PDKs' model libraries differ in one `.lib` section only,
-`res`, which the transistors never load.
+[`res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571), which the transistors never load.
 
 ## How it was checked
 
 {py:mod}`gf180tcad.pdkdiff` does it in one command:
 
-```
+```{code-block} shell
 uv run --locked python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698
 ```
 
-1. **Fetch.** {{ Ciel }} (2.6.1, shipped in the base image) fetches the `gf180mcu` family at that
-   commit, with only the `gf180mcu_fd_pr` library, from its default public data source
+({{ uv }} runs it in the project's locked environment.)
+
+1. **Fetch.** {{ Ciel }} ([2.6.1](https://pypi.org/project/ciel/2.6.1/), shipped in the base
+   image) fetches the GF180MCU PDK family at that commit, with only the
+   {{ gf180mcu_models }} as a library, from its default public data source
    ([ciel-releases](https://github.com/fossi-foundation/ciel-releases)). This runs in the
    {term}`sandbox` and is the only step with network access.
-2. **Pin.** Every model file (the 16 files of `libs.tech/ngspice` and `libs.tech/xyce`) and
-   `nodeinfo.json` must match its sha256 in {repo}`data/pdk-d658698.sha256`. Two independent
+2. **Pin.** Every model file (the 16 {{ ngspice }} and {{ Xyce }} model files) and the PDK's
+   build record must match its sha256 in {repo}`data/pdk-d658698.sha256`, which lists them by
+   path. Two independent
    fetches gave the same files. {repo}`data/pdk-d658698.versions.json` records the variant,
    the commit and the three hashes that {py:func}`gf180tcad.pdk.check_against` reads.
 3. **Run.** One sandbox {term}`job` per geometry, with no network, runs
@@ -41,29 +46,33 @@ uv run --locked python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698
 4. **Cards and compare.** {py:func}`gf180tcad.pdkdiff.cards` compares the two PDKs' files,
    `.lib` sections and card values, and {py:func}`gf180tcad.pdkdiff.compare` the metrics.
 
-The results are in {repo}`results/spice-pdk-d658698`: the job tree (the same layout as
-{repo}`results/spice`), `cards.json`, `comparison.json`, the two unified diffs and
-`provenance.json`. Two runs gave byte-identical trees. The tree is in
-{repo}`results/MANIFEST.sha256`. The SPICE cross-check and `verify-subset` select only entries
-under `spice/`, so they do not include it.
+The results are in {repo}`results/spice-pdk-d658698`: the job tree
+({repo}`results/spice-pdk-d658698/ngspice/typical`, the same layout as {repo}`results/spice`),
+{repo}`results/spice-pdk-d658698/cards.json`, {repo}`results/spice-pdk-d658698/comparison.json`,
+the two unified diffs and {repo}`results/spice-pdk-d658698/provenance.json`. Two runs gave
+byte-identical trees. The tree is in {repo}`results/MANIFEST.sha256`. The SPICE cross-check
+({ref}`cross-host-determinism`) and {py:func}`gf180tcad.manifest.verify_subset` select only
+entries under `spice/`, so they do not include it.
 
 ## Which model files differ
 
 | File | d658698 vs latest |
 |---|---|
-| `sm141064.ngspice` = `sm141064.spice` | differ: `.lib res` only ({repo}`results/spice-pdk-d658698/sm141064.ngspice.diff`) |
-| `sm141064.xyce` = `sm141064.spice` ({{ Xyce }}) | differ: `.lib res` only ({repo}`results/spice-pdk-d658698/sm141064.xyce.diff`) |
-| `design.ngspice`, `design.xyce` | identical |
-| `sm141064_mim.*`, `smbb000149.*` | identical |
-| `nodeinfo.json` | differs (build metadata: versions and commits) |
+| The ngspice main library ([latest](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice), and its `.spice` copy) | differ: [`.lib res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571) only ({repo}`diff <results/spice-pdk-d658698/sm141064.ngspice.diff>`) |
+| The Xyce main library (and its `.spice` copy) | differ: `.lib res` only ({repo}`diff <results/spice-pdk-d658698/sm141064.xyce.diff>`) |
+| The design files (ngspice, Xyce) | identical |
+| The MIM-capacitor and BJT libraries (ngspice, Xyce) | identical |
+| The build record (listed in {repo}`data/pdk-d658698.sha256`) | differs (versions and commits) |
 
-Each library has 50 `.lib` sections. 49 are identical, among them `typical` (the TT
-`.param` values), `nfet_06v0_t` and `pfet_06v0_t` (the {term}`BSIM4` cards), and the
-`nfet_05v0`/`pfet_05v0` wrapper subcircuits are identical too. The one change is in the
-resistor section `res`: the parasitic capacitor model `fox_sub` of nine poly resistors
-(`npolyf_u` … `ppolyf_u_3k`). d658698 writes it as `.model fox_sub c` with `+ cox=8.85e-05`
-(ngspice) or `+ level=1` (Xyce), and the latest writes `.model fox_sub c cj=8.85e-05`. This
-affects resistor simulations only. The TT `.lib typical` section never loads `res`.
+Each library has 50 `.lib` sections. 49 are identical, among them [`typical`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L105) (the
+TT `.param` values), [`nfet_06v0_t`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37038) and [`pfet_06v0_t`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38074) (the
+{term}`BSIM4` cards), and the wrapper subcircuits of the two devices are identical too. The one
+change is in the resistor section [`res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571): the parasitic capacitor model
+[`fox_sub`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38715) of nine poly resistors. d658698 writes it as a [`.model`](https://ngspice.sourceforge.io/docs.html)
+line `.model fox_sub c` with a continuation line [`+ cox=8.85e-05`](https://github.com/mithro/gf180-tcad/blob/main/results/spice-pdk-d658698/sm141064.ngspice.diff#L8) (ngspice) or
+[`+ level=1`](https://github.com/mithro/gf180-tcad/blob/main/results/spice-pdk-d658698/sm141064.xyce.diff#L8) (Xyce), and the latest writes
+[`.model fox_sub c cj=8.85e-05`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38715). This affects resistor simulations only. The TT
+section never loads `res`.
 
 ## Metric deltas at TT
 
@@ -113,7 +122,7 @@ same line with the same expression. The links go to the latest card's source in 
 Expressions in {term}`corner` parameters (such as `nfet_06v0_tox`) are 0 or 1 at TT, so the
 TT value is the leading number.
 
-| Parameter | `nfet_06v0.0` (L 0.7–50 µm) | `nfet_06v0.1` (L 0.6–0.7 µm) | `pfet_06v0.0` | Spec §4, n / p | Same in both cards |
+| Parameter | `nfet_06v0.0` (L 0.7–50 µm) | `nfet_06v0.1` (L 0.6–0.7 µm) | `pfet_06v0.0` | {repo}`Spec §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>`, n / p | Same in both cards |
 |---|---|---|---|---|---|
 | ACDE | `0.3` ([37059](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37059)) | `0.3` ([37397](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37397)) | `0.7` ([38095](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38095)) | — / — | yes |
 | ALPHA0 | `-1.88e-007` ([37067](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37067)) | `-1.88e-007` ([37405](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37405)) | `9.6e-7` ([38099](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38099)) | set / — | yes |
@@ -150,9 +159,21 @@ Every spec §4 value is confirmed on both cards. Two of them are rounded in the 
 0.7–50 µm; the pfet {term}`Lmin` is 0.5 µm. IGCMOD = IGBMOD = 0 (no gate leakage), and ALPHA0
 and BETA0 are set (impact-ionisation substrate current on). The pfet card sets no TOXP.
 
+(pdk-versions-run2)=
+
+## The PDK of a run-2 project checkout
+
+A run-2 project's checkout of the PDK (its `gf180mcuD` directory) reports a different build in
+its build record: open_pdks [`40cee970`](https://github.com/fossi-foundation/open-pdks/commit/40cee970d8a9b7eaea35a34fe7d6068f05721f0a) ([1.0.537](https://github.com/fossi-foundation/open-pdks/commit/40cee970d8a9b7eaea35a34fe7d6068f05721f0a)), with an ngspice main
+library of sha256 `6edba54d23b38a2c60f8ffdbaa3eb75a7568c615e4820808969bd1121b77b1aa`. That is
+neither d658698 (`f6f4a96e…`) nor the latest (`69a7ab87…`), so not every run-2 project used
+d658698. This page compares only d658698, the PDK the design spec names. A separate comparison
+against 40cee970 is needed before any run-2 silicon is used for validation.
+
 ## What this means
 
-The TT reference, and every {term}`TCAD` comparison made against it, also holds for the PDK of
-runs 1 and 2, for these two devices. Only TT was rerun. The other corners load the same
+The TT reference, and every {term}`TCAD` comparison made against it, also holds for the d658698
+PDK, for these two devices. Whether it holds for the 40cee970 build of the run-2 checkout above
+is not known yet. Only TT was rerun. The other corners load the same
 `nfet_06v0_t`/`pfet_06v0_t` sections, with their own corner `.param` values, which were not
 compared here.
