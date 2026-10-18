@@ -29,7 +29,7 @@ uv run --locked python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698
 ({{ uv }} runs it in the project's locked environment.)
 
 1. **Fetch.** {{ Ciel }} ([2.6.1](https://pypi.org/project/ciel/2.6.1/), shipped in the base
-   image) fetches the GF180MCU PDK family at that commit, with only the
+   image) fetches the {{ gf180mcu_pdk }} family at that commit, with only the
    {{ gf180mcu_models }} as a library, from its default public data source
    ([ciel-releases](https://github.com/fossi-foundation/ciel-releases)). This runs in the
    {term}`sandbox` and is the only step with network access.
@@ -69,8 +69,8 @@ TT `.param` values), [`nfet_06v0_t`](https://github.com/fossi-foundation/globalf
 {term}`BSIM4` cards), and the wrapper subcircuits of the two devices are identical too. The one
 change is in the resistor section [`res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571): the parasitic capacitor model
 [`fox_sub`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38715) of nine poly resistors. d658698 writes it as a [`.model`](https://ngspice.sourceforge.io/docs.html)
-line `.model fox_sub c` with a continuation line [`+ cox=8.85e-05`](https://github.com/mithro/gf180-tcad/blob/main/results/spice-pdk-d658698/sm141064.ngspice.diff#L8) (ngspice) or
-[`+ level=1`](https://github.com/mithro/gf180-tcad/blob/main/results/spice-pdk-d658698/sm141064.xyce.diff#L8) (Xyce), and the latest writes
+line `.model fox_sub c` with a continuation line {repo}`+ cox=8.85e-05 <results/spice-pdk-d658698/sm141064.ngspice.diff#L8>` (ngspice) or
+{repo}`+ level=1 <results/spice-pdk-d658698/sm141064.xyce.diff#L8>` (Xyce), and the latest writes
 [`.model fox_sub c cj=8.85e-05`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38715). This affects resistor simulations only. The TT
 section never loads `res`.
 
