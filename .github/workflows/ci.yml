@@ -21,4 +21,8 @@ jobs:
       - run: uv sync --locked
       - run: uv run ruff check
       - run: uv run ruff format --check
-      - run: uv run pytest -m "not sandbox"
+      - name: Generate de_DE.UTF-8 locale (so test_csv_bytes_stable_under_locale runs, not skips)
+        run: |
+          sudo locale-gen de_DE.UTF-8
+          locale -a
+      - run: uv run pytest -m "not sandbox" -rs -v
