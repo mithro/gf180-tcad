@@ -345,6 +345,11 @@ Phase 3 entry gate
 Gummel symmetry test
   A model benchmark: the model must be smooth through Vds = 0 ({ref}`McAndrew 2006 <lit-mcandrew>`). See {ref}`numerical-acceptance`.
 
+depletion width
+  The width of the region around a p-n junction that is emptied of free carriers. The
+  {ref}`plugin-history record <plugin-history-results>` measures it on one mesh row, as the span
+  of the nodes where both carrier densities are below 1e-2 |NetDoping|.
+
 drift-diffusion
 density-gradient
   The classical carrier-transport model, and its quantum correction ({ref}`Ancona and Iafrate 1989 <lit-ancona>`). See {ref}`mismatch-taxonomy`.

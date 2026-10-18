@@ -58,6 +58,7 @@ _TOOLS = {
     "gmsh": ("gmsh", "https://gmsh.info/"),
     "gplugins": ("gplugins", "https://github.com/gdsfactory/gplugins"),
     "gplugins_fork": ("the gplugins fork", "https://github.com/mithro/gplugins"),
+    "tidy3d": ("tidy3d", "https://docs.flexcompute.com/projects/tidy3d/"),
     "gf180mcu_gdsfactory": ("gf180mcu gdsfactory PDK", "https://pypi.org/project/gf180mcu/"),
     "scipy": ("scipy", "https://scipy.org/"),
     "IIC_OSIC_TOOLS": ("IIC-OSIC-TOOLS", "https://github.com/iic-jku/IIC-OSIC-TOOLS"),

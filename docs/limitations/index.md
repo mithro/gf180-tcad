@@ -10,6 +10,9 @@ there.
   the SPICE reference dataset.
 - **{term}`TCAD` not started.** No TCAD simulation has been run, so there is nothing
   to compare yet.
+- **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
+  its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
+  the port to the latest stack is in progress in {{ gplugins_fork }}. See {doc}`plugin-history`.
 - **Unverified citations.** Several literature items have not been checked yet
   and are marked "unverified". See {doc}`literature`.
 - **The SPICE models are a reference, not the truth.** {term}`BSIM4` is empirical,
@@ -55,4 +58,5 @@ Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
 silicon-validation
 literature
 engine-cross-check
+plugin-history
 ```
