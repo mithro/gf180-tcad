@@ -14,6 +14,7 @@ VT, SS_MV = 0.7, 85.0
 NVTH = SS_MV / 1000 / np.log(10)  # n*kT/q for the exponential tail
 K, THETA = 2e-4, 0.02  # A/V gain and mobility-degradation factor of the synthetic model
 VDS_LIN, VDS_SAT = 0.1, 5.0
+SAT_SCALE = 1.7  # the saturation curve carries 1.7x the current of the linear one
 
 
 def model_id(vgs, vt, scale=1.0):
@@ -42,7 +43,8 @@ def nfet_data():
         vbs_mag = np.array(SW[name].vbs)
         vg = np.tile(V05, vbs_mag.size)
         vb = np.repeat(-vbs_mag, V05.size)
-        idd = np.concatenate([model_id(V05, vt_shift(m, vds)) for m in vbs_mag])
+        scale = SAT_SCALE if name == "idvg_sat" else 1.0  # distinct magnitudes per sweep
+        idd = np.concatenate([model_id(V05, vt_shift(m, vds), scale) for m in vbs_mag])
         d[name] = {
             "vd": np.full(vg.size, vds),
             "vg": vg,
@@ -217,10 +219,15 @@ def test_extract_all_nfet_values():
     assert all(isinstance(v, float) and np.isfinite(v) for v in m.values())
     assert m["vt_lin_maxgm"] == pytest.approx(VT, abs=3e-3)
     assert m["ss_mv_per_dec"] == pytest.approx(SS_MV, abs=0.5)
-    assert m["dibl_mv_per_v"] == pytest.approx(8.163265, abs=0.5)
+    tgt = 100e-9 * 10 / 0.6
+    dibl_model = (
+        _dense_cc_crossing(vt_shift(0, VDS_LIN), tgt)
+        - _dense_cc_crossing(vt_shift(0, VDS_SAT), tgt, SAT_SCALE)
+    ) / 4.9 * 1000  # fmt: skip
+    assert m["dibl_mv_per_v"] == pytest.approx(dibl_model, abs=0.3)
     assert m["body_effect_v"] == pytest.approx(0.2, abs=5e-3)
     assert m["idsat_ua_per_um"] == pytest.approx(
-        model_id(5.0, vt_shift(0, VDS_SAT)) * 1e6 / 10, rel=1e-9
+        model_id(5.0, vt_shift(0, VDS_SAT), SAT_SCALE) * 1e6 / 10, rel=1e-9
     )
     assert m["ioff_pa_per_um"] == pytest.approx(0.3)
     d = 1e-4 * (5 - 0.7) ** 2
@@ -297,3 +304,30 @@ def test_ioff_bias_point_is_checked(vd, vg):
     nd["ioff"]["vd"], nd["ioff"]["vg"] = np.array([vd]), np.array([vg])
     with pytest.raises(MetricError, match="ioff"):
         metrics.extract_all(NFET, G, nd)
+
+
+def _dense_cc_crossing(vt, target, scale=1.0):
+    """First Vgs where the model reaches ``target`` A, from a 0.1 mV dense evaluation."""
+    v = np.linspace(0, 5, 50001)
+    i = model_id(v, vt, scale)
+    k = int(np.argmax(i >= target))
+    return float(np.interp(np.log10(target), np.log10(i[k - 1 : k + 1]), v[k - 1 : k + 1]))
+
+
+def test_independent_expected_values_from_the_model():
+    m = metrics.extract_all(NFET, G, nfet_data())
+    target = 100e-9 * 10 / 0.6
+    vt_lin_model = vt_shift(0, VDS_LIN)
+    assert m["vt_lin_cc"] == pytest.approx(_dense_cc_crossing(vt_lin_model, target), abs=1e-3)
+    assert m["vt_sat_cc"] == pytest.approx(
+        _dense_cc_crossing(vt_shift(0, VDS_SAT), target, SAT_SCALE), abs=1e-3
+    )
+    # body effect: the |Vbs| = 2 curve is 0.2 V to the right
+    assert m["body_effect_v"] == pytest.approx(
+        _dense_cc_crossing(vt_shift(2, VDS_LIN), target) - _dense_cc_crossing(vt_lin_model, target),
+        abs=1e-3,
+    )
+    vd = np.linspace(0, 5, 500001)
+    gm_dense = np.gradient(model_id(vd, vt_lin_model), vd)
+    assert m["gm_peak_s"] == pytest.approx(gm_dense.max(), rel=2e-3)
+    assert m["id_lin_a"] == pytest.approx(model_id(m["vt_lin_maxgm"] + 0.5, vt_lin_model), rel=2e-3)
