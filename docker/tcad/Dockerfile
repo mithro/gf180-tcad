@@ -19,7 +19,8 @@ USER root
 # 3. The venv: requirements.lock (wheels only, except rectpack, which is sdist-only on PyPI and is
 #    built with the hash-pinned setuptools from build-requirements.lock as build constraint), then
 #    gf180mcu --no-deps (it pins gdsfactory~=9.40; the image has 9.51).
-# Hashes only, no deps resolved, no bytecode (.pyc files embed source mtimes).
+# Hashes only, no deps resolved, no bytecode (.pyc files embed source mtimes; the few .pyc files
+# shipped in the CPython archive are stale after extraction, so they are deleted).
 RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirements.lock \
     --mount=type=bind,source=gf180mcu.lock,target=/run/gf180tcad/gf180mcu.lock \
     --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
@@ -44,16 +45,20 @@ RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirement
  && site="$(/opt/gf180tcad-tcad/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
  && printf '%s\n' /work/src/third_party/gplugins > "$site/gf180tcad-gplugins.pth" \
  && test "$(/opt/gf180tcad-tcad/bin/python -c 'import platform; print(platform.python_version())')" = "$TCAD_PYTHON" \
- && test -z "$(find /opt/gf180tcad-tcad -name '*.pyc' -print -quit)"
+ && find /opt/uv-python -name '*.pyc' -delete \
+ && find /opt/uv-python -name __pycache__ -type d -empty -delete \
+ && chmod -R go-w /opt/uv-python \
+ && test -z "$(find /opt/gf180tcad-tcad /opt/uv-python -name '*.pyc' -print -quit)"
 USER 1000:1000
 
-# PATH deliberately replaces the base PATH: the TCAD venv first, then exactly the base PATH.
+# PATH: the TCAD venv first, then exactly the base image's PATH (expanded from it, so there is one
+# definition, in docker/base/Dockerfile; test_tcad_environment pins the result).
 # The rest of the base ENV (thread variables, DEVSIM_MATH_LIBS, OPENBLAS_CORETYPE,
 # PYTHONDONTWRITEBYTECODE, PDK_ROOT, ...) is inherited.
 # PDK: gdsfactory imports $PDK as a module and activates it (the base value gf180mcuD is the
 # open_pdks variant, not a Python module). PYTHON_CPU_COUNT: Python 3.13 os.cpu_count() returns
 # it, so meshwell's import-time n_threads=cpu_count() defaults (and so gmsh) are single-threaded.
-ENV PATH=/opt/gf180tcad-tcad/bin:/opt/gf180tcad/bin:/foss/tools/ngspice/bin:/foss/tools/xyce/bin:/foss/tools/klayout:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+ENV PATH=/opt/gf180tcad-tcad/bin:${PATH} \
     VIRTUAL_ENV=/opt/gf180tcad-tcad \
     PDK=gf180mcu \
     PYTHON_CPU_COUNT=1 \
