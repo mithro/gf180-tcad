@@ -189,7 +189,10 @@ A second independent review checked the revised plan against the code on main, t
 **Files:**
 - Create:
   - `docker/tcad/Dockerfile`;
-  - `docker/tcad/requirements.in`, `docker/tcad/requirements.lock`, `docker/tcad/gf180mcu.lock` (the single `--no-deps` package, hashed) and `docker/tcad/build-requirements.lock` (holding uv, hashed);
+  - `docker/tcad/pyproject.toml` and `docker/tcad/uv.lock`: a non-package uv project (`requires-python = "==3.13.*"`, `[tool.uv] package = false`) whose dependencies are the image's package set;
+  - `docker/tcad/requirements.lock` (`uv export --project docker/tcad --locked --no-emit-project --format requirements-txt --hashes`);
+  - `docker/tcad/gf180mcu.in` and `docker/tcad/gf180mcu.lock` (the single `--no-deps` package, hashed);
+  - `docker/tcad/build-requirements.in` and `docker/tcad/build-requirements.lock` (holding uv, hashed; Task 3 reuses it);
   - `docker/tcad/build`, `docker/tcad/IMAGE_ID`, `docker/tcad/versions.json`, `docker/tcad/probe_versions.py`, `docker/TCAD_IMAGE`;
   - `tests/test_tcad_image.py`, `tests/test_tcad_lock.py`.
 - Modify: `.github/workflows/image.yml` (build, verify and push both images), `docs/reproduce/image.md`.
@@ -200,13 +203,15 @@ A second independent review checked the revised plan against the code on main, t
   - Python is `/opt/gf180tcad-tcad/bin/python` (3.13), first on PATH, so `python3` is 3.13 in this image. The uv-managed CPython is installed under `/opt/uv-python`, with `UV_PYTHON_INSTALL_DIR` set at build time.
   - Installed with hashes:
     - devsim 2.11.1, meshwell 2.5.2, gmsh 4.15.2, gdsfactory 9.51.0;
-    - scipy (for Task 12), numpy at the **same version as the base lock**;
+    - scipy (for Task 12), numpy at the **same version as the base lock** (`numpy==2.5.4` today, `docker/base/requirements.lock:881`);
+    - pytest, because the fork's tests run inside this image (Fork-task conventions);
     - the gplugins runtime dependencies (gdsfactory, pint, tqdm, xarray<2026.10, …), but **not** gplugins itself;
     - gf180mcu 1.0.0 in a second install step, `--no-deps --require-hashes` from `gf180mcu.lock`.
   - A `.pth` file in the venv site-packages, `gf180tcad-gplugins.pth`, holds `/work/src/third_party/gplugins`. This puts the submodule on `sys.path` in the TCAD image only, with no wrapper change (see Task 2).
   - `ENV PDK=gf180mcu`, so gdsfactory imports gf180mcu and activates its PDK. `PDK_ROOT=/foss/pdks` is kept.
+  - `ENV PYTHON_CPU_COUNT=1`, so `os.cpu_count()` is 1 and meshwell's import-time `n_threads` defaults are 1 (Global Constraints, Determinism). The base `PATH` is replaced explicitly, with `/opt/gf180tcad-tcad/bin` first and otherwise the base `PATH`. The base ENV (thread variables, `DEVSIM_MATH_LIBS`, `OPENBLAS_CORETYPE`, `PYTHONDONTWRITEBYTECODE`) is inherited.
   - `docker/tcad/probe_versions.py` prints sorted-key JSON. It holds every base key (with `python` = the 3.13 patch), plus `tcad_python`, `meshwell`, `gmsh`, `gf180mcu`, `scipy`, `numpy`, `base_image_ref` (the contents of `docker/IMAGE`), and `devsim` = 2.11.1. It reads open_pdks facts from `$PDK_ROOT/gf180mcuD` directly, never from `$PDK`.
-  - `docker/tcad/build` copies `docker/base/build`. `NAME` is `ghcr.io/mithro/gf180-tcad-tcad`. `INPUTS` are the Dockerfile, the three lock files and `docker/IMAGE`; the base digest is the `FROM` (via `ARG BASE_IMAGE`), so it must date the build.
+  - `docker/tcad/build` copies `docker/base/build`. `NAME` is `ghcr.io/mithro/gf180-tcad-tcad`. `INPUTS` are the Dockerfile, the three `.lock` files and `docker/IMAGE`; the base digest is the `FROM` (via `ARG BASE_IMAGE`), so it must date the build.
 - Produces: `sandbox.run(cmd, out_dir=..., image=TCAD)` and `tools/sandbox-run --image "$(cat docker/TCAD_IMAGE)"` work unchanged (`sandbox.py:148-180`, `sandbox-run:20`).
 
 - [ ] **Step 1:** Write the tests first.
@@ -215,10 +220,14 @@ A second independent review checked the revised plan against the code on main, t
     - `test_tcad_imports`: `devsim`, `meshwell.orchestrator`, `gmsh`, `gdsfactory` and `gf180mcu` all import. `gf.get_active_pdk()` does not raise, and its name is gf180mcu.
     - `test_tcad_numpy_baseline`: the numpy dispatch list is empty, as in `tests/sandbox/test_numpy_dispatch.py`.
     - `test_devsim_single_thread`: as in the Global Constraints.
-    - `test_gmsh_single_thread`: a tiny `generate_mesh(..., n_threads=1)`, then `General.NumThreads == 1`.
+    - `test_python_cpu_count_one`: `os.cpu_count() == 1` in the image.
+    - `test_gmsh_single_thread`: a tiny mesh through meshwell's default `generate_mesh` (no `n_threads` argument), then `General.NumThreads == 1` and `Geometry.OCCParallel == 0`. This proves that `PYTHON_CPU_COUNT=1` reaches meshwell's defaults.
+    - `test_pytest_in_image`: `python -m pytest --version` succeeds.
   - These are not sandbox-marked:
     - `test_tcad_image_pinned_by_digest`: the regex above.
-    - `test_tcad_lock_fresh`: re-running the recorded command reproduces `requirements.lock` (except for the header echo). The command is `uv pip compile docker/tcad/requirements.in --python-version 3.13.<patch> --python-platform x86_64-manylinux_2_28 --generate-hashes`.
+    - `test_tcad_lock_in_sync` (offline): `uv export --project docker/tcad --locked ...` reproduces `requirements.lock` except for the header echo, as `tests/test_requirements_lock.py` does for the base.
+    - `test_tcad_single_locks_fresh` (needs network): re-running each recorded command reproduces `gf180mcu.lock` and `build-requirements.lock` except for the header echo. The command is `uv pip compile docker/tcad/<name>.in --no-deps --generate-hashes --python-version 3.13.<patch> --python-platform x86_64-manylinux_2_28 --exclude-newer <timestamp>`. The `--exclude-newer` timestamp is the one recorded in the lock header, so later PyPI releases never break the test.
+    - `test_tcad_numpy_matches_base`: the numpy pin in `docker/tcad/requirements.lock` equals the one in `docker/base/requirements.lock`.
 
   Run them: they FAIL because there is no image.
 - [ ] **Step 2:** Build `FROM` the base image by digest.
@@ -229,6 +238,7 @@ A second independent review checked the revised plan against the code on main, t
 - [ ] **Step 3:** Two local `--no-cache` builds must give the same config digest. Commit `IMAGE_ID`, then push via CI and commit `docker/TCAD_IMAGE`.
   - Generalise `image.yml` into a matrix over `{base, tcad}`. Each image has its own build, IMAGE_ID, pinned-manifest and versions-probe checks, and its own reproducible rebuild job.
   - The tcad entry pulls the pinned base by digest; the package is public, so no login is needed on schedule runs.
+  - New ghcr packages are private by default. After the first push, set `ghcr.io/mithro/gf180-tcad-tcad` to public (`gh api --method PATCH` on the package's visibility, or the package settings page), and record the step in `docs/reproduce/image.md`. The fork CI and the GitHub cross-check pull it without credentials. A test-free check in the PR: an anonymous `docker pull` of the digest succeeds.
   - If a future PR changes the base, `docker/IMAGE` is updated first, and the TCAD image and its results are rebuilt in a follow-up PR. Document this in `docs/reproduce/image.md`.
 - [ ] **Step 4:** Run the tests: they PASS. Then commit, open the PR, review and merge.
 
