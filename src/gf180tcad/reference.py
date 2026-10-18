@@ -24,8 +24,9 @@ byte for byte, into ``--out``:
 
 Layout: ``<out>/<engine>/<corner>/<device>/<geometry_id>/<sweep>.csv`` and ``metrics.json``,
 plus ``<out>/envelope.json`` (:func:`gf180tcad.specwindow.envelope_tree`, the per-metric
-min/max over the corners) and ``<out>/provenance.json`` (:func:`provenance`). Xyce has no cv analysis, so Xyce job
-directories have no ``cv.csv`` and their ``metrics.json`` has no ``cgg_*`` keys.
+min/max over the corners) and ``<out>/provenance.json`` (:func:`provenance`). Xyce has no cv
+analysis, so Xyce job directories have no ``cv.csv`` and their ``metrics.json`` has no ``cgg_*``
+keys.
 
 Every result file is deterministic: CSV meta lines hold only engine, corner, device,
 geometry_id, w_um, l_um, sweep, temp_c and units; ``provenance.json`` holds the contents of
