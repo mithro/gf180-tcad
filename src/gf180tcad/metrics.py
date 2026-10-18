@@ -216,7 +216,7 @@ def _select(mask: np.ndarray, what: str) -> np.ndarray:
 def _idvg(d: Mapping[str, np.ndarray], polarity: int, vbs_mag: float, what: str):
     """(vgs, id, vds) magnitudes of the nested idvg sweep at the given |Vbs|."""
     s = _strip(d, polarity, ("vd", "vg", "vb"), ("id",))
-    m = _select(np.isclose(np.abs(s["vb"]), vbs_mag, rtol=0, atol=_TOL), f"{what} |Vbs|={vbs_mag}")
+    m = _select(np.isclose(-s["vb"], vbs_mag, rtol=0, atol=_TOL), f"{what} |Vbs|={vbs_mag}")
     return s["vg"][m], s["id"][m], float(np.mean(s["vd"][m]))
 
 

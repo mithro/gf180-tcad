@@ -255,3 +255,22 @@ def test_extract_all_missing_body_bias_group():
     nd["idvg_lin"] = {k: v[keep] for k, v in nd["idvg_lin"].items()}
     with pytest.raises(MetricError, match="no points"):
         metrics.extract_all(NFET, G, nd)
+
+
+# --- fix round 1 --------------------------------------------------------------------------
+
+
+def test_forward_body_bias_is_rejected_nfet():
+    nd = nfet_data()
+    for name in ("idvg_lin", "idvg_sat"):
+        nd[name]["vb"] = -nd[name]["vb"]  # forward bias: must not pass for reverse bias
+    with pytest.raises(MetricError, match="no points"):
+        metrics.extract_all(NFET, G, nd)
+
+
+def test_forward_body_bias_is_rejected_pfet():
+    pd_ = pfet_data(nfet_data())
+    for name in ("idvg_lin", "idvg_sat"):
+        pd_[name]["vb"] = -pd_[name]["vb"]
+    with pytest.raises(MetricError, match="no points"):
+        metrics.extract_all(FAKE_P, FAKE_P.geometries[0], pd_)
