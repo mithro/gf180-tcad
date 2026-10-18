@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Sphinx configuration for the gf180-tcad documentation."""
 
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -17,7 +18,9 @@ sys.path.insert(0, str(Path(__file__).parent / "_ext"))
 
 extensions = [
     "myst_parser",
+    "sphinx.ext.autodoc",
     "sphinx.ext.extlinks",
+    "sphinx.ext.viewcode",
     "repo_roles",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
@@ -94,6 +97,53 @@ _TOOLS = {
 }
 myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.items()}
 
+# --- API reference ---------------------------------------------------------------------------
+# autodoc imports gf180tcad from ../src (the sys.path entry below); the docs dependency group is
+# enough. Every py: reference must resolve (nitpicky), so a renamed function fails the build.
+# Sphinx 9 autodoc documents module-level data only when it has a doc comment, so each page in
+# docs/api lists the public constants with an explicit autodata; path-valued ones get :no-value:
+# (their repr would be an absolute host path).
+nitpicky = True
+autodoc_member_order = "bysource"
+# Show default values as written in the source, not their repr: REPO_ROOT-style defaults would
+# otherwise put an absolute host path into the HTML.
+autodoc_preserve_defaults = True
+autodoc_default_options = {"members": True, "undoc-members": True}
+# Intersphinx is off (offline build), so standard-library and numpy types in signatures cannot
+# resolve. They are ignored explicitly here; gf180tcad's own names are not, so a reference to a
+# renamed or removed gf180tcad object still fails the build.
+nitpick_ignore_regex = [
+    (r"py:class", r"(pathlib|collections\.abc|subprocess|argparse|numpy)\..*"),
+    # Sphinx splits the string annotation of a NamedTuple field (tuple[float, ...]) at the comma.
+    (r"py:class", r"'tuple\[float"),
+]
+# Short names in docstrings of the generator modules (reference.GENERATOR_MODULES) that resolve
+# only from another module. Editing those docstrings would change generator_sha256 and force a
+# regeneration of the SPICE reference for a documentation-only change, so they are ignored here;
+# their targets are on the API pages (gf180tcad.spice.common.GRID_TOL and .SpiceResult).
+nitpick_ignore = [
+    ("py:data", "GRID_TOL"),
+    ("py:attr", "SpiceResult.warnings"),
+]
+_MAGNITUDE = re.compile(r"\|(\w+)\|")
+
+
+def _fix_docstring(app, what, name, obj, options, lines):
+    """Adapt plain-text docstrings to reST without editing them (see nitpick_ignore above).
+
+    Module constants without a doc comment would show their type's docstring (dict, tuple), and
+    the docstrings write magnitudes as |Vgs|, which reST would read as a substitution.
+    """
+    if (
+        what == "data"
+        and lines
+        and type(obj).__doc__
+        and "\n".join(lines).strip() == (type(obj).__doc__.strip())
+    ):
+        lines.clear()
+    lines[:] = [_MAGNITUDE.sub(r"\\|\1\\|", line) for line in lines]
+
+
 # docs/_generated/ is git-ignored and rebuilt from the committed SPICE reference at the start of
 # every build (builder-inited). Read the Docs installs only the docs dependency group, which does
 # not install gf180tcad itself, so put the source tree on sys.path: it is the least fragile
@@ -114,3 +164,4 @@ def _generate_results(app):
 
 def setup(app):
     app.connect("builder-inited", _generate_results)
+    app.connect("autodoc-process-docstring", _fix_docstring)

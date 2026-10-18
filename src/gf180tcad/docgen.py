@@ -5,8 +5,8 @@
 only committed files (``results/spice/**``, ``data/pdk_elec_spec.json``) and writes only the
 output directory it is given (``docs/_generated``). Nothing here is a published result: the
 tables and plots are presentation of the committed dataset. The one derived quantity, the
-ngspice-vs-Xyce maximum relative difference, is computed with :func:`engine_diff` on the host
-from the committed CSVs.
+ngspice-vs-Xyce maximum relative difference, is computed with
+:func:`~gf180tcad.spice.xyce.engine_diff` on the host from the committed CSVs.
 
 Plots are drawn against polarity-stripped axes (|Vgs|, |Vds|, |Id|) so the nfet and the pfet
 look alike. Numbers in tables use :func:`fmt` (fixed significant figures, locale independent),
