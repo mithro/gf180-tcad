@@ -35,6 +35,8 @@ class Device:
     def __post_init__(self) -> None:
         if self.polarity not in (1, -1):
             raise ValueError(f"polarity must be 1 or -1, got {self.polarity!r}")
+        if not isinstance(self.geometries, tuple):
+            raise TypeError("geometries must be a tuple")
         if not self.geometries:
             raise ValueError("geometries must be non-empty")
 
@@ -52,6 +54,8 @@ class Sweep:
         if self.kind not in _KINDS:
             raise ValueError(f"kind must be one of {_KINDS}, got {self.kind!r}")
         for field in ("vds", "vgs", "vbs"):
+            if not isinstance(getattr(self, field), tuple):
+                raise TypeError(f"{field} must be a tuple")
             if not getattr(self, field):
                 raise ValueError(f"{field} must be non-empty")
 
