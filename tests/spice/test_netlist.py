@@ -9,7 +9,13 @@ import pytest
 
 from gf180tcad.devices import DEVICES, SWEEPS, Device, Geometry, Sweep
 from gf180tcad.pdk import PdkInfo
-from gf180tcad.spice.netlist import RAW_NAME, bias_plan, instance_params, ngspice_netlist
+from gf180tcad.spice.netlist import (
+    NGSPICE_VECTORS,
+    RAW_NAME,
+    bias_plan,
+    instance_params,
+    ngspice_netlist,
+)
 
 NGSPICE_DIR = Path("/foss/pdks/gf180mcuD/libs.tech/ngspice")
 PDK = PdkInfo(
@@ -153,16 +159,23 @@ def test_nfet_idvg_lin_netlist_exact():
         "set num_threads=1\n"
         "set filetype=binary\n"
         "run\n"
-        "let id = -i(vd)\n"
-        "let ig = -i(vg)\n"
-        "let ib = -i(vb)\n"
-        "let vd = v(d)\n"
-        "let vg = v(g)\n"
-        "let vb = v(b)\n"
-        f"write {RAW_NAME} vd vg vb id ig ib\n"
+        f"write {RAW_NAME} v(d) v(g) v(b) i(vd) i(vg) i(vb)\n"
         ".endc\n"
         ".end\n"
     )
+
+
+def test_ngspice_vectors_sign_convention():
+    # currents INTO the device terminal = minus the source branch current
+    assert NGSPICE_VECTORS["dc"] == {
+        "vd": ("v(d)", 1.0),
+        "vg": ("v(g)", 1.0),
+        "vb": ("v(b)", 1.0),
+        "id": ("i(vd)", -1.0),
+        "ig": ("i(vg)", -1.0),
+        "ib": ("i(vb)", -1.0),
+    }
+    assert NGSPICE_VECTORS["cv"] == {"vg": ("vg", 1.0), "cgg": ("cgg", 1.0)}
 
 
 def test_pfet_polarity():
@@ -223,7 +236,7 @@ def test_cv_netlist():
     assert "vd d 0 dc 0.0" in lines and "vb b 0 dc 0.0" in lines
     assert not any(x.startswith((".dc", ".ac")) for x in lines)
     (loop,) = [x for x in lines if x.startswith("foreach ")]
-    assert loop.split()[2:] == [repr(v) for v in VCV]
+    assert loop.split()[2:] == [repr(v) for v in VCV.tolist()]
     assert "alter vg dc = $v" in lines
     assert "ac lin 1 1000000.0 1000000.0" in lines
     # Current into the gate is -i(vg) = j*2*pi*f*Cgg*vac (vac = 1), so Cgg = -imag(i(vg))/(2*pi*f)
@@ -236,7 +249,7 @@ def test_cv_pfet_applies_polarity():
     lines = _lines(ngspice_netlist(PFET, PFET.geometries[0], SW["cv"], "typical", 25.0, PDK))
     assert "vg g 0 dc 5.0 ac 1" in lines
     (loop,) = [x for x in lines if x.startswith("foreach ")]
-    assert loop.split()[2:] == [repr(v) for v in -VCV + 0.0]
+    assert loop.split()[2:] == [repr(-v + 0.0) for v in VCV.tolist()]
 
 
 def test_netlist_rejects_bad_inputs():
