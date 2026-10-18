@@ -566,3 +566,107 @@ def test_unconfined_marker_error_comes_through(monkeypatch, tmp_path):
     failures = _gen(tmp_path, [NFET_LMIN], reference.run_job_sandboxed, tmp_path / "o")
     assert len(failures) == 1
     assert "SandboxNotConfined" in failures[0].error and "/.dockerenv" in failures[0].error
+
+
+# --- swapping the new tree into place ----------------------------------------------------------
+
+
+def _old_tree(out: Path) -> dict[str, bytes]:
+    out.mkdir(parents=True)
+    (out / "provenance.json").write_text("{}\n")
+    (out / "old.csv").write_text("previous good result\n")
+    return _tree(out)
+
+
+def test_swap_exchanges_atomically_when_supported(tmp_path, monkeypatch):
+    out = tmp_path / "spice"
+    _old_tree(out)
+    renames = []
+    real = os.rename
+    monkeypatch.setattr(reference.os, "rename", lambda a, b: renames.append((a, b)) or real(a, b))
+    assert _gen(tmp_path, JOBS[:1], _fake_runner(), out) == []
+    assert "old.csv" not in _tree(out) and "provenance.json" in _tree(out)
+    assert renames == []  # renameat2(RENAME_EXCHANGE): out is never missing
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["scratch", "spice"]
+
+
+def test_exchange_failure_leaves_out_untouched(tmp_path, monkeypatch):
+    out = tmp_path / "spice"
+    before = _old_tree(out)
+
+    def broken(a, b):
+        raise OSError(5, "simulated I/O error")
+
+    monkeypatch.setattr(reference, "_exchange", broken)
+    with pytest.raises(OSError, match="simulated"):
+        _gen(tmp_path, JOBS[:1], _fake_runner(), out)
+    assert _tree(out) == before
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["scratch", "spice"]
+
+
+def test_fallback_swap_rolls_back_when_the_second_rename_fails(tmp_path, monkeypatch):
+    out = tmp_path / "spice"
+    before = _old_tree(out)
+    monkeypatch.setattr(reference, "_exchange", lambda a, b: False)  # e.g. EINVAL on this fs
+    real = os.rename
+    calls = []
+
+    def rename(a, b):
+        calls.append((Path(a), Path(b)))
+        if Path(b) == out and Path(a).name.startswith(".spice.staging-"):
+            raise OSError(28, "simulated: no space left")
+        return real(a, b)
+
+    monkeypatch.setattr(reference.os, "rename", rename)
+    with pytest.raises(OSError, match="simulated"):
+        _gen(tmp_path, JOBS[:1], _fake_runner(), out)
+    assert _tree(out) == before  # rolled back
+    assert len(calls) == 3 and calls[-1][1] == out  # aside, failed staging->out, back
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["scratch", "spice"]
+
+
+def test_fallback_swap_succeeds(tmp_path, monkeypatch):
+    out = tmp_path / "spice"
+    _old_tree(out)
+    monkeypatch.setattr(reference, "_exchange", lambda a, b: False)
+    assert _gen(tmp_path, JOBS[:1], _fake_runner(), out) == []
+    assert "old.csv" not in _tree(out)
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["scratch", "spice"]
+
+
+def test_exchange_really_swaps_two_directories(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    (a / "in_a").write_text("")
+    (b / "in_b").write_text("")
+    assert reference._exchange(a, b) is True
+    assert [p.name for p in a.iterdir()] == ["in_b"] and [p.name for p in b.iterdir()] == ["in_a"]
+
+
+# --- interruption ------------------------------------------------------------------------------
+
+
+def test_interrupt_cancels_queued_jobs_and_cleans_staging(tmp_path):
+    started = []
+    inner = _fake_runner()
+
+    def runner(job, scratch, mem):
+        started.append(job)
+        time.sleep(0.05)
+        inner(job, scratch, mem)
+
+    def log(line):
+        if line.startswith("["):
+            raise KeyboardInterrupt
+
+    out = tmp_path / "results" / "spice"
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    jobs = reference.plan_jobs(("ngspice", "xyce"), CORNERS, tuple(DEVICES))
+    with pytest.raises(KeyboardInterrupt):
+        reference.generate(
+            jobs, out, jobs_n=2, mem="4g", runner=runner, scratch_root=scratch, log=log
+        )
+    assert len(started) <= 4 < len(jobs)  # queued jobs were cancelled, not run
+    assert not out.exists() and list(out.parent.iterdir()) == []
