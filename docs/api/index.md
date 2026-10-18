@@ -29,4 +29,6 @@ gf180tcad.spice.netlist
 gf180tcad.spice.ngspice
 gf180tcad.spice.rawfile
 gf180tcad.spice.xyce
+gf180tcad.tcad
+gf180tcad.tcad.process
 ```

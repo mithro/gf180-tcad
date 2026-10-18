@@ -132,7 +132,7 @@ def test_tunable_starts(device):
 )
 def test_brief_values(device, toxe_nm, toxp_nm, k1, ngate, dlc_nm, cgso, cgsl, acde):
     v = process.load(device).values()
-    close = lambda a, b: math.isclose(a, b, rel_tol=1e-12)  # noqa: E731
+    close = lambda a, b: math.isclose(a, b, rel_tol=1e-12)
     assert close(v["toxe_nm"], toxe_nm) and close(v["toxp_nm"], toxp_nm)
     assert v["ndep_cm3"] == 1.7e17 and v["k1_sqrt_v"] == k1 and v["ngate_cm3"] == ngate
     assert v["xj_um"] == 0.15 and close(v["dlc_nm"], dlc_nm)
@@ -276,7 +276,9 @@ def test_fixed_cannot_change():
 
 def test_no_calibrated_values_in_data(tmp_path):
     for f in sorted(DATA.glob("*.toml")):
-        assert "calibrated" not in {p["provenance"] for p in tomllib.loads(f.read_text())["param"].values()}
+        assert "calibrated" not in {
+            p["provenance"] for p in tomllib.loads(f.read_text())["param"].values()
+        }
     assert sorted(f.stem for f in DATA.glob("*.toml")) == sorted(DEVICES)
     raw = _raw("nfet_05v0")
     raw["param"]["n_ch_cm3"]["provenance"] = "calibrated"
@@ -375,9 +377,15 @@ def test_card_values_and_lines(card_lines, device):
         start = p.value
         assert math.isclose(start, value, rel_tol=1e-12, abs_tol=0.0), (p.name, start, value)
         checked += 1
-    assert checked >= 20
+    # every fixed value but the derived CF is a card value (the tunable starts equal them)
+    assert checked == sum(p.fixed for p in desc.params.values()) - 1
+    assert desc.params["cf_f_per_m"].card_line is None
     # what the files say is absent from the card is absent from this model
-    keys = {process.parse_card_assignment(card_lines[n - 1])[0] for n in model if card_lines[n - 1].startswith("+")}
+    keys = {
+        process.parse_card_assignment(card_lines[n - 1])[0]
+        for n in model
+        if card_lines[n - 1].startswith("+")
+    }
     assert "cf" not in keys
     assert ("toxp" in keys) == (desc.polarity == "n")
     assert ("vfb" in keys) == (desc.polarity == "p")

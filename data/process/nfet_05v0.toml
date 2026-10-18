@@ -1,0 +1,277 @@
+# SPDX-License-Identifier: Apache-2.0
+# Process description of nfet_05v0 for the TCAD MOS capacitors (read by gf180tcad.tcad.process).
+# Card values come from .model nfet_06v0.0 of the PDK's public ngspice card, evaluated with the
+# .param values of its `.lib typical` section. Calibrated values never go here: they are
+# written to results/tcad/calibration/.
+
+schema = 1
+device = "nfet_05v0"
+polarity = "n"
+
+[card]
+file = "libs.tech/ngspice/sm141064.ngspice"
+pdk_variant = "gf180mcuD"
+sha256 = "69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8"
+model = "nfet_06v0.0"
+model_line = 37055
+tt_lib_line = 105
+
+# --- calibration tunables (3 of the 8-parameter budget) -------------------------------------
+
+[param.t_ox_eff_nm]
+value = 15.2
+unit = "nm"
+provenance = "spice-card"
+source = "sm141064.ngspice:37309; sm141064.ngspice:114"
+fixed = false
+role = "tunable"
+bounds = [15.2, 17.1]
+bounds_source = "lower: TOXE (sm141064.ngspice:37309). upper: TOXP 16.0 nm (sm141064.ngspice:37311) + delta 1.10 nm, the charge-centroid allowance: max over the cv sweep (|Vg| <= 5 V) of the BSIM4 4.5.0 CTM charge thickness X_DC times EPSROX/eps_si, manual section 7.3, eqs. 7.3.2-7.3.4 (https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), computed by gf180tcad.tcad.process.centroid_allowance_nm. Poly depletion is not in delta."
+note = "Effective oxide thickness of the TCAD gate stack. Starts at TOXE."
+
+[param.n_ch_cm3]
+value = 1.7e17
+unit = "cm^-3"
+provenance = "spice-card"
+source = "sm141064.ngspice:37202"
+fixed = false
+role = "tunable"
+bounds = [6.2967947909822296e16, 3.4e17]
+bounds_source = "lower: 0.5 x the doping K1 implies, (K1*Cox(TOXE))^2/(2*q*eps_si*eps0), from K1 (sm141064.ngspice:37147) and TOXE (sm141064.ngspice:37309) with the BSIM4 K1 definition (https://bsim.berkeley.edu/models/bsim4/). upper: 2 x NDEP; the factor of 2 is a project choice, as no public channel profile exists."
+note = "Uniform p-body doping of the MOS capacitor. Starts at NDEP."
+
+[param.dv_fb_v]
+value = 0.0
+unit = "V"
+provenance = "spice-card"
+source = "sm141064.ngspice:37204; sm141064.ngspice:37202"
+fixed = false
+role = "tunable"
+bounds = [-0.2, 0.2]
+bounds_source = "project choice: a lumped flat-band offset of +-0.2 V."
+note = "Lumped flat-band offset, applied as a rigid gate-bias shift vg_device = vg - dv_fb_v. The start 0 leaves the flat band to the card's NGATE and NDEP alone. It absorbs Boltzmann statistics in the degenerate gate (about 40 mV), SPICE's empirical flat band and interface/fixed charge; it is not a fixed-oxide-charge parameter."
+
+# --- card values that tunable starts and bounds come from ------------------------------------
+
+[param.toxe_nm]
+value = 15.2
+unit = "nm"
+provenance = "spice-card"
+source = "sm141064.ngspice:37309; sm141064.ngspice:114"
+fixed = true
+role = "bound-basis"
+card_key = "toxe"
+card_line = 37309
+card_params = [114]
+card_scale = 1e9
+note = "TOXE, electrical oxide thickness: start and lower bound of t_ox_eff_nm."
+
+[param.toxp_nm]
+value = 16.0
+unit = "nm"
+provenance = "spice-card"
+source = "sm141064.ngspice:37311; sm141064.ngspice:114"
+fixed = true
+role = "bound-basis"
+card_key = "toxp"
+card_line = 37311
+card_params = [114]
+card_scale = 1e9
+note = "TOXP, physical oxide thickness: basis of the t_ox_eff_nm upper bound."
+
+[param.ndep_cm3]
+value = 1.7e17
+unit = "cm^-3"
+provenance = "spice-card"
+source = "sm141064.ngspice:37202"
+fixed = true
+role = "bound-basis"
+card_key = "ndep"
+card_line = 37202
+note = "NDEP, channel doping at depletion edge: start of n_ch_cm3, and 2 x NDEP is its upper bound."
+
+[param.k1_sqrt_v]
+value = 0.9
+unit = "V^0.5"
+provenance = "spice-card"
+source = "sm141064.ngspice:37147"
+fixed = true
+role = "bound-basis"
+card_key = "k1"
+card_line = 37147
+note = "K1, first-order body-effect coefficient: gives the n_ch_cm3 lower bound."
+
+[param.vth0_v]
+value = 0.67314
+unit = "V"
+provenance = "spice-card"
+source = "sm141064.ngspice:37337; sm141064.ngspice:111"
+fixed = true
+role = "bound-basis"
+card_key = "vth0"
+card_line = 37337
+card_params = [111]
+note = "VTH0, long-channel zero-bias threshold: enters Vfbzb and the inversion X_DC of the centroid allowance. The card sets no VFB, so BSIM4 derives it from VTH0."
+
+[param.phin_v]
+value = 0.0
+unit = "V"
+provenance = "spice-card"
+source = "sm141064.ngspice:37234"
+fixed = true
+role = "bound-basis"
+card_key = "phin"
+card_line = 37234
+note = "PHIN, the non-uniform vertical doping term of the BSIM4 surface potential (centroid allowance only)."
+
+[param.acde_m_per_v]
+value = 0.3
+unit = "m/V"
+provenance = "spice-card"
+source = "sm141064.ngspice:37059"
+fixed = true
+role = "bound-basis"
+card_key = "acde"
+card_line = 37059
+note = "ACDE, exponential coefficient of the accumulation/depletion charge thickness (CTM, centroid allowance)."
+
+[param.moin]
+value = 15.0
+unit = "1"
+provenance = "spice-card"
+source = "sm141064.ngspice:37201"
+fixed = true
+role = "bound-basis"
+card_key = "moin"
+card_line = 37201
+note = "MOIN, gate-bias dependent surface-potential coefficient of the CTM. It enters only phi_delta (eq. 7.3.5), not X_DC, so it does not change the centroid allowance."
+
+[param.capmod]
+value = 2.0
+unit = "1"
+provenance = "spice-card"
+source = "sm141064.ngspice:37080"
+fixed = true
+role = "bound-basis"
+card_key = "capmod"
+card_line = 37080
+note = "capMod=2: the SPICE Cgg uses the BSIM4 charge-thickness model (the card is BSIM4 version 4.5, sm141064.ngspice:37330), which the centroid allowance follows."
+
+# --- fixed inputs of the TCAD structure -------------------------------------------------------
+
+[param.ngate_cm3]
+value = 1e20
+unit = "cm^-3"
+provenance = "spice-card"
+source = "sm141064.ngspice:37204"
+fixed = true
+role = "process"
+card_key = "ngate"
+card_line = 37204
+note = "NGATE: n+ poly-gate doping of the poly-gate region; fixed, never calibrated."
+
+[param.xj_um]
+value = 0.15
+unit = "um"
+provenance = "spice-card"
+source = "sm141064.ngspice:37377"
+fixed = true
+role = "process"
+card_key = "xj"
+card_line = 37377
+card_scale = 1e6
+note = "XJ: source/drain junction depth of the 2D structure."
+
+[param.epsrox]
+value = 3.9
+unit = "1"
+provenance = "spice-card"
+source = "sm141064.ngspice:37126"
+fixed = true
+role = "process"
+card_key = "epsrox"
+card_line = 37126
+note = "EPSROX: relative permittivity of the gate oxide."
+
+[param.tnom_c]
+value = 25.0
+unit = "degC"
+provenance = "spice-card"
+source = "sm141064.ngspice:37308"
+fixed = true
+role = "process"
+card_key = "tnom"
+card_line = 37308
+note = "TNOM: the simulation temperature, T = 298.15 K."
+
+# --- reference-model bookkeeping (1D comparison only; outside the parameter budget) ----------
+
+[param.dlc_nm]
+value = 54.0
+unit = "nm"
+provenance = "spice-card"
+source = "sm141064.ngspice:37104"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "dlc"
+card_line = 37104
+card_scale = 1e9
+note = "DLC: the length offset BSIM4 uses for the capacitance area. Used only for the 1D area bookkeeping; in 2D the source/drain geometry sets it."
+
+[param.cgso_f_per_m]
+value = 1e-10
+unit = "F/m"
+provenance = "spice-card"
+source = "sm141064.ngspice:37089; sm141064.ngspice:115"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "cgso"
+card_line = 37089
+card_params = [115]
+note = "CGSO: gate-source overlap capacitance per width, added to the 1D Cgg only."
+
+[param.cgdo_f_per_m]
+value = 1e-10
+unit = "F/m"
+provenance = "spice-card"
+source = "sm141064.ngspice:37086; sm141064.ngspice:116"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "cgdo"
+card_line = 37086
+card_params = [116]
+note = "CGDO: gate-drain overlap capacitance per width, added to the 1D Cgg only."
+
+[param.cgsl_f_per_m]
+value = 1.5e-10
+unit = "F/m"
+provenance = "spice-card"
+source = "sm141064.ngspice:37088; sm141064.ngspice:115"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "cgsl"
+card_line = 37088
+card_params = [115]
+note = "CGSL: bias-dependent gate-source overlap (LDD) capacitance per width, 1D only."
+
+[param.cgdl_f_per_m]
+value = 1.5e-10
+unit = "F/m"
+provenance = "spice-card"
+source = "sm141064.ngspice:37085; sm141064.ngspice:116"
+fixed = true
+role = "reference-bookkeeping"
+card_key = "cgdl"
+card_line = 37085
+card_params = [116]
+note = "CGDL: bias-dependent gate-drain overlap (LDD) capacitance per width, 1D only."
+
+[param.cf_f_per_m]
+value = 7.270908919531098e-11
+unit = "F/m"
+provenance = "spice-card"
+source = "sm141064.ngspice:37309; sm141064.ngspice:37126; https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip"
+fixed = true
+role = "reference-bookkeeping"
+bsim_name = "cf"
+note = "CF: outer fringing capacitance per width. The card sets no CF, so BSIM4 uses its default 2*EPSROX*eps0/pi*ln(1+4e-7/TOXE) (manual eq. 7.5.1), from TOXE and EPSROX. 1D only."
