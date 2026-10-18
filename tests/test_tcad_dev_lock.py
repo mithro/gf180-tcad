@@ -47,7 +47,16 @@ PROJECTS = {
     "gmsh": "https://gitlab.onelab.info/gmsh/gmsh",
 }
 SUBMODULES = ("symdiff", "umfpack_lgpl", "boost_config", "boost_math", "boost_multiprecision")
-DEBS = ("gfortran-13-x86-64-linux-gnu", "libgfortran-13-dev")
+# GCC 14, only in the build stage (upstream builds its x86_64 wheels with GCC 14).
+DEBS = (
+    "cpp-14-x86-64-linux-gnu",
+    "gcc-14-x86-64-linux-gnu",
+    "g++-14-x86-64-linux-gnu",
+    "gfortran-14-x86-64-linux-gnu",
+    "libgcc-14-dev",
+    "libstdc++-14-dev",
+    "libgfortran-14-dev",
+)
 
 
 def _upstream() -> dict:

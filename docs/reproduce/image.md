@@ -210,10 +210,15 @@ uv records the sha256 of the URL sources too, so every sdist and wheel is hash-c
   extended precision with the quad-precision `getrf`, [symdiff](https://github.com/devsim/symdiff)
   and [umfpack_lgpl](https://github.com/devsim/umfpack_lgpl) at the commits of DEVSIM's
   submodules, and BLAS/LAPACK loaded at run time from the base image's `DEVSIM_MATH_LIBS`
-  (the system OpenBLAS), as in the stable image. The quad-precision `getrf` is Fortran, and the
-  base image has no Fortran compiler, so the Ubuntu gfortran 13 packages of the base image's own
-  GCC 13.3 build are unpacked into a throwaway build stage only (from
-  [snapshot.ubuntu.com](https://snapshot.ubuntu.com/), hash-pinned). The image itself is the
+  (the system OpenBLAS), as in the stable image. Upstream compiles its x86_64 wheels with
+  GCC 14 (the gcc-toolset-14 of [manylinux_2_28](https://github.com/pypa/manylinux)); the base
+  image has only GCC 13 and no Fortran compiler, which the quad-precision `getrf` needs. So
+  Ubuntu 24.04's GCC 14.2 packages (C, C++ and Fortran; the build whose run-time libraries the
+  base image already has) are unpacked into a throwaway build stage only (from
+  [snapshot.ubuntu.com](https://snapshot.ubuntu.com/), hash-pinned). With the base image's
+  GCC 13.3 instead, the build works but the DEVSIM it makes raises "Uncaught FPE" errors in
+  19 tests of {{ gplugins_fork }} that pass with the PyPI wheel and with this GCC 14 build.
+  The image itself is the
   base plus a copy of the venv and the uv-managed CPython: no compiler, source tree or download
   is left in it ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_no_bytecode_and_no_compiler`).
 - **meshwell** and **gdsfactory** are built from their commit tarballs. meshwell takes its version

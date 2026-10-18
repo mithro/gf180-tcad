@@ -32,6 +32,14 @@
     "submodule_of": "devsim:external/boostorg/multiprecision",
     "url": "https://codeload.github.com/boostorg/multiprecision/tar.gz/de345f639720b0dde731d0e7b2f62db2c535b6e5"
   },
+  "cpp-14-x86-64-linux-gnu": {
+    "kind": "deb",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "role": "build stage only: GCC 14 for DEVSIM, as upstream's manylinux_2_28 toolchain (cc1)",
+    "sha256": "57a15d7740b39a6719e04a633e3471c6811adf1597f0797bef5e0501fc7ad7c2",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/universe/g/gcc-14/cpp-14-x86-64-linux-gnu_14.2.0-4ubuntu2%7E24.04.1_amd64.deb",
+    "version": "14.2.0-4ubuntu2~24.04.1"
+  },
   "devsim": {
     "branch": "main",
     "commit": "ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0",
@@ -42,6 +50,22 @@
     "role": "built from source in the image (scripts/build_manylinux_2_28.sh recipe)",
     "sha256": "400bcb6c33bc8eb60d6ed2a23dca95020d565818a38384ca9cb9fdb0863301a5",
     "url": "https://codeload.github.com/devsim/devsim/tar.gz/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0"
+  },
+  "g++-14-x86-64-linux-gnu": {
+    "kind": "deb",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "role": "build stage only: GCC 14 for DEVSIM, as upstream's manylinux_2_28 toolchain (cc1plus and the C++ driver)",
+    "sha256": "437bfbb2285ef9023d80a6cbcf5054f902814239317438801fcb873c4b4de8ac",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/universe/g/gcc-14/g++-14-x86-64-linux-gnu_14.2.0-4ubuntu2%7E24.04.1_amd64.deb",
+    "version": "14.2.0-4ubuntu2~24.04.1"
+  },
+  "gcc-14-x86-64-linux-gnu": {
+    "kind": "deb",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "role": "build stage only: GCC 14 for DEVSIM, as upstream's manylinux_2_28 toolchain (the C driver)",
+    "sha256": "863df95a0d9f21d2bdb24696d04cf5032c9cb0f87d20e78a57b04add2cb21f16",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/universe/g/gcc-14/gcc-14-x86-64-linux-gnu_14.2.0-4ubuntu2%7E24.04.1_amd64.deb",
+    "version": "14.2.0-4ubuntu2~24.04.1"
   },
   "gdsfactory": {
     "branch": "main",
@@ -65,13 +89,13 @@
     "sha256": "2e661626866162257ed52da445a7f7eb533f8f13671c839d2fa2d6b928eb9624",
     "url": "https://github.com/gdsfactory/gf180mcu/archive/96b7324d85df05704f68c1370c175627d0a88034.tar.gz"
   },
-  "gfortran-13-x86-64-linux-gnu": {
+  "gfortran-14-x86-64-linux-gnu": {
     "kind": "deb",
     "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
-    "role": "build stage only: the Fortran compiler for DEVSIM's quad-precision getrf",
-    "sha256": "82382cb8506616ef7df5b9927694bfaacf97bdfb317b1f995453cc17c96aa071",
-    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/main/g/gcc-13/gfortran-13-x86-64-linux-gnu_13.3.0-6ubuntu2%7E24.04.1_amd64.deb",
-    "version": "13.3.0-6ubuntu2~24.04.1"
+    "role": "build stage only: GCC 14 for DEVSIM, as upstream's manylinux_2_28 toolchain (f951 and the Fortran driver (DEVSIM's quad-precision getrf))",
+    "sha256": "2bd6aef7cb7d26373c47aa05445dded0ebce9c5b14ebc50825cec2d4808a0136",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/universe/g/gcc-14/gfortran-14-x86-64-linux-gnu_14.2.0-4ubuntu2%7E24.04.1_amd64.deb",
+    "version": "14.2.0-4ubuntu2~24.04.1"
   },
   "gmsh": {
     "branch": "master",
@@ -84,13 +108,29 @@
     "sha256": "0ebc3eb6565490352031014cce36db4617d6eb8cd9ec642fb4a6b536f0cfc395",
     "url": "https://gmsh.info/python-packages-dev/gmsh/gmsh-5.0.0.dev20261018-py2.py3-none-manylinux_2_24_x86_64.whl"
   },
-  "libgfortran-13-dev": {
+  "libgcc-14-dev": {
     "kind": "deb",
     "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
-    "role": "build stage only: libgfortran.spec for gfortran",
-    "sha256": "ce0fdf0d9e7eadb33947ca7cdd0fc3477b570603cb721b108c96ebdfbb7cd80a",
-    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/main/g/gcc-13/libgfortran-13-dev_13.3.0-6ubuntu2%7E24.04.1_amd64.deb",
-    "version": "13.3.0-6ubuntu2~24.04.1"
+    "role": "build stage only: GCC 14 for DEVSIM, as upstream's manylinux_2_28 toolchain (libgcc and the crt files)",
+    "sha256": "055dfa5fa7448fe20ad2f3832df2edd2b0ffca7f8a6c5fbbc5576dc61b2eb8b7",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/main/g/gcc-14/libgcc-14-dev_14.2.0-4ubuntu2%7E24.04.1_amd64.deb",
+    "version": "14.2.0-4ubuntu2~24.04.1"
+  },
+  "libgfortran-14-dev": {
+    "kind": "deb",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "role": "build stage only: GCC 14 for DEVSIM, as upstream's manylinux_2_28 toolchain (libgfortran.spec)",
+    "sha256": "5e7a9dfe2a89ad5a4bd0d7fe539b0ff55337c171a4fe77d4d3f562814628dbd9",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/universe/g/gcc-14/libgfortran-14-dev_14.2.0-4ubuntu2%7E24.04.1_amd64.deb",
+    "version": "14.2.0-4ubuntu2~24.04.1"
+  },
+  "libstdc++-14-dev": {
+    "kind": "deb",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "role": "build stage only: GCC 14 for DEVSIM, as upstream's manylinux_2_28 toolchain (the libstdc++ headers)",
+    "sha256": "6d223262b8cbe6d5150435056d58dffa8159d8582fc0df47fb45ea550cd37424",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261015T000000Z/pool/universe/g/gcc-14/libstdc++-14-dev_14.2.0-4ubuntu2%7E24.04.1_amd64.deb",
+    "version": "14.2.0-4ubuntu2~24.04.1"
   },
   "meshwell": {
     "branch": "main",

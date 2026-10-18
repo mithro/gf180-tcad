@@ -37,13 +37,18 @@ untar boost_config external/boostorg/config
 untar boost_math external/boostorg/math
 untar boost_multiprecision external/boostorg/multiprecision
 
-# gfortran 13 (the base image has gcc/g++ 13.3.0 of the same Ubuntu build, but no Fortran):
-# unpacked into this throwaway build stage only.
-dpkg-deb -x "$SRC/gfortran-13-x86-64-linux-gnu" /
-dpkg-deb -x "$SRC/libgfortran-13-dev" /
+# GCC 14 (C, C++ and Fortran), unpacked into this throwaway build stage only. Upstream's x86_64
+# wheels are built with GCC 14 (manylinux_2_28's gcc-toolset-14); the base image has only GCC 13
+# and no Fortran. These are Ubuntu 24.04's GCC 14.2 packages, the build whose runtime
+# (gcc-14-base, libstdc++6, libgfortran5, libquadmath0) the base image already has.
+for deb in cpp-14-x86-64-linux-gnu gcc-14-x86-64-linux-gnu g++-14-x86-64-linux-gnu \
+        gfortran-14-x86-64-linux-gnu libgcc-14-dev libstdc++-14-dev libgfortran-14-dev; do
+    dpkg-deb -x "$SRC/$deb" /
+done
 
-export DEVSIM_CONFIG=centos_6 CMAKE=cmake CMAKE_CXX_FLAGS="" CC=gcc CXX=g++ \
-    F77=/usr/bin/x86_64-linux-gnu-gfortran-13
+export DEVSIM_CONFIG=centos_6 CMAKE=cmake CMAKE_CXX_FLAGS="" \
+    CC=/usr/bin/x86_64-linux-gnu-gcc-14 CXX=/usr/bin/x86_64-linux-gnu-g++-14 \
+    F77=/usr/bin/x86_64-linux-gnu-gfortran-14
 PYTHON3_INCLUDE="$("$PY" -c 'import sysconfig; print(sysconfig.get_paths()["include"])')"
 export PYTHON3_INCLUDE PYTHON3_ARCHIVE=""
 # not nproc: it honours the base image's OMP_NUM_THREADS=1

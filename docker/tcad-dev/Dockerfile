@@ -7,7 +7,7 @@
 # Build with docker/tcad-dev/build, which passes BASE_IMAGE = docker/IMAGE (reproducible:
 # SOURCE_DATE_EPOCH + rewrite-timestamp).
 #
-# Two stages: `build` fetches and checks every source, compiles DEVSIM (with a gfortran that
+# Two stages: `build` fetches and checks every source, compiles DEVSIM (with a GCC 14 that
 # exists only in this stage) and fills the venv; the image is the base plus a copy of the venv
 # and of the uv-managed CPython, so no compiler, source tree or download is left in it.
 ARG BASE_IMAGE
@@ -24,7 +24,7 @@ ENV HOME=/tmp/home PYTHONDONTWRITEBYTECODE=1 UV_NO_CONFIG=1 UV_CACHE_DIR=/opt/bu
     UV_PYTHON_INSTALL_DIR=/opt/uv-python UV_LINK_MODE=copy
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# 1. Every non-PyPI source (DEVSIM and the submodules it builds with, the gfortran packages),
+# 1. Every non-PyPI source (DEVSIM and the submodules it builds with, the GCC 14 packages),
 #    by URL, checked against upstream.json's sha256.
 RUN --mount=type=bind,source=upstream.json,target=/run/gf180tcad/upstream.json \
     --mount=type=bind,source=fetch_sources.py,target=/run/gf180tcad/fetch_sources.py \
@@ -32,7 +32,8 @@ RUN --mount=type=bind,source=upstream.json,target=/run/gf180tcad/upstream.json \
  && mkdir -p "$HOME" \
  && /usr/bin/python3 -I /run/gf180tcad/fetch_sources.py /run/gf180tcad/upstream.json \
         /opt/build/src devsim symdiff umfpack_lgpl boost_config boost_math boost_multiprecision \
-        gfortran-13-x86-64-linux-gnu libgfortran-13-dev \
+        cpp-14-x86-64-linux-gnu gcc-14-x86-64-linux-gnu g++-14-x86-64-linux-gnu \
+        gfortran-14-x86-64-linux-gnu libgcc-14-dev libstdc++-14-dev libgfortran-14-dev \
  && cp /run/gf180tcad/upstream.json /opt/build/src/upstream.json
 
 # 2. uv (hash-pinned, into a build venv), CPython $TCAD_PYTHON (uv checks it against the sha256 it
@@ -58,7 +59,9 @@ RUN --mount=type=bind,source=build-devsim.sh,target=/run/gf180tcad/build-devsim.
 # 4. The venv: requirements.lock (wheels, except the sdists built here: meshwell and gdsfactory
 #    at their pinned commits, and rectpack, sdist-only on PyPI; their build backends are the
 #    hash-checked build constraints), gf180mcu --no-deps, then the DEVSIM wheel of step 3
-#    --no-deps (it has no Python dependencies). Hashes only, no deps resolved, no bytecode.
+#    --no-deps (it has no Python dependencies; uv records the wheel file's mtime in the
+#    dist-info's uv_cache.json, so it is set to SOURCE_DATE_EPOCH first). Hashes only, no deps
+#    resolved, no bytecode.
 RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirements.lock \
     --mount=type=bind,source=gf180mcu.lock,target=/run/gf180tcad/gf180mcu.lock \
     --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
@@ -72,6 +75,7 @@ RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirement
  && uvpip --require-hashes --only-binary=:all: --no-binary=gf180mcu \
         --build-constraints /run/gf180tcad/build-requirements.lock \
         -r /run/gf180tcad/gf180mcu.lock \
+ && touch -d "@$SOURCE_DATE_EPOCH" /opt/build/wheels/devsim-*.whl \
  && uvpip /opt/build/wheels/devsim-*.whl \
  && site="$(/opt/gf180tcad-tcad/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
  && printf '%s\n' /work/src/third_party/gplugins > "$site/gf180tcad-gplugins.pth" \

@@ -176,9 +176,9 @@ def test_tcad_dev_gmsh_single_thread(tmp_path):
 def test_tcad_dev_no_bytecode_and_no_compiler(tmp_path):
     res = _run(["find", VENV, "/opt/uv-python", "-name", "*.pyc"], tmp_path)
     assert res.stdout == ""
-    # gfortran and the DEVSIM build tree exist only in the build stage
+    # GCC 14 and the DEVSIM build tree exist only in the build stage
     res = _run(
-        ["sh", "-c", "ls /usr/bin/x86_64-linux-gnu-gfortran-13 /opt/build || echo absent"],
+        ["sh", "-c", "ls /usr/bin/x86_64-linux-gnu-gcc-14 /opt/build || echo absent"],
         tmp_path,
     )
     assert res.stdout.splitlines()[-1] == "absent"
