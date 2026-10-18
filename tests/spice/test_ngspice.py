@@ -290,7 +290,13 @@ def _max_threads(tmp_path, netlist: str) -> int:
         'while kill -0 $p; do n=$(ls /proc/$p/task | wc -l); [ "$n" -gt "$m" ] && m=$n; '
         "sleep 0.02; done; wait $p; echo $m"
     )
-    res = sandbox.run(["sh", "-c", script], out_dir=tmp_path, mem="4g", cpus=2)
+    res = sandbox.run(
+        ["sh", "-c", script],
+        out_dir=tmp_path,
+        mem=ngspice.MEM,
+        cpus=ngspice.CPUS,
+        pids=ngspice.PIDS,
+    )
     return int(res.stdout.split()[-1])
 
 
