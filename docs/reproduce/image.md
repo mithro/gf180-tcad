@@ -60,7 +60,8 @@ on pull requests and on pushes to `main` (only when `docker/**` or
    result to equal the first build and the committed digests.
 
 Pull requests push the tag `pr-<number>`, `main` pushes `latest` and
-`sha-<commit>` ([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions));
+`sha-<commit>`, each only after the checks above passed (the build itself pushes only the
+staging tag `unverified`, which can point at an unverified image) ([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions));
 the weekly and manual runs only rebuild and verify. Cross-host byte-identity of the results
 is described in {ref}`cross-host-determinism`.
 
@@ -82,7 +83,8 @@ first on `PATH`. The venv holds {{ DEVSIM }}, {{ meshwell }}, {{ gmsh }}, {{ gds
 {{ gplugins }}. Python 3.13 is needed because meshwell ≥ 2.4 requires it; the base venv is 3.12.
 
 - **gplugins is not installed.** A `gf180tcad-gplugins.pth` file in the venv puts
-  `/work/src/third_party/gplugins` (the submodule, mounted read-only with the repository) on
+  `/work/src/third_party/gplugins` (the submodule of {{ gplugins_fork }}, mounted read-only with the
+  repository) on
   `sys.path`. A pure-code plugin change therefore needs no image rebuild; a plugin change that
   adds a dependency does.
 - **Environment.** `PDK=gf180mcu`: gdsfactory imports `$PDK` as a module and activates it, so
@@ -90,7 +92,10 @@ first on `PATH`. The venv holds {{ DEVSIM }}, {{ meshwell }}, {{ gmsh }}, {{ gds
   are still read from `$PDK_ROOT/gf180mcuD`. `PYTHON_CPU_COUNT=1` makes `os.cpu_count()` return 1,
   so meshwell's `n_threads=cpu_count()` defaults keep gmsh single-threaded. The rest of the
   environment (thread variables, `DEVSIM_MATH_LIBS`, `OPENBLAS_CORETYPE`, …) is inherited from
-  the base image.
+  the base image. {repo}`tools/sandbox-run` also sets the thread variables
+  (`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`) on every run, and it is the
+  only source of `NPY_DISABLE_CPU_FEATURES` ({{ numpy }}'s baseline kernels): neither image sets it, so
+  a plain `docker run` of the image does not get it.
 - **Locks.** The package set is a non-package uv project, {repo}`docker/tcad/pyproject.toml`,
   with its own {repo}`docker/tcad/uv.lock` (which records `exclude-newer`).
   {repo}`docker/tcad/requirements.lock` is its hashed export,
@@ -101,7 +106,7 @@ first on `PATH`. The venv holds {{ DEVSIM }}, {{ meshwell }}, {{ gmsh }}, {{ gds
   [`uv pip compile`](https://docs.astral.sh/uv/reference/cli/#uv-pip-compile) `--no-deps`
   `--generate-hashes` outputs whose header records the whole command, including
   `--exclude-newer`, so re-running it reproduces them. {repo}`tests/test_tcad_lock.py` checks all
-  three, and that {{ numpy }} equals the base lock's numpy.
+  three, and that numpy equals the base lock's numpy.
 - **Pins and provenance.** {repo}`docker/TCAD_IMAGE` holds the reference with the {term}`manifest digest`,
   {repo}`docker/tcad/IMAGE_ID` the config digest and {repo}`docker/tcad/versions.json` the output
   of {repo}`docker/tcad/probe_versions.py` run in the image. {repo}`tests/test_tcad_image.py`
@@ -141,8 +146,20 @@ DOCKER_CONFIG="$(mktemp -d)" docker pull "$(cat docker/TCAD_IMAGE)"
 
 ### Changing the base image
 
-The TCAD image, its digests and every TCAD result depend on {repo}`docker/IMAGE`. A pull request
-that changes the base image updates {repo}`docker/IMAGE` first; the TCAD entry of the `image`
-workflow then fails its digest checks, which is expected. A follow-up pull request rebuilds the
-TCAD image, commits the new {repo}`docker/tcad/IMAGE_ID`, {repo}`docker/TCAD_IMAGE` and
-{repo}`docker/tcad/versions.json`, and regenerates the TCAD results.
+The TCAD image, its digests and every TCAD result depend on {repo}`docker/IMAGE`, so a change of
+the base image updates both images in **one** pull request:
+
+1. Change the base, rebuild it locally twice, and commit the new {repo}`docker/base/IMAGE_ID`,
+   {repo}`docker/base/versions.json` and the predicted {repo}`docker/IMAGE`; CI pushes the base.
+   Until step 3, the TCAD checks fail (its `versions.json` names the old base, and its digests
+   change), and so does `lint-test`.
+2. Rebuild the TCAD image locally (twice, `--no-cache`) FROM the pushed base, and commit the new
+   {repo}`docker/tcad/IMAGE_ID` and {repo}`docker/tcad/versions.json`.
+3. CI pushes the TCAD image; commit {repo}`docker/TCAD_IMAGE` (its manifest digest).
+4. Regenerate any TCAD results in the new image and commit them.
+5. Merge only when every check is green.
+
+On the first push of step 1, the TCAD entry can also fail to pull a base that the base entry has
+not pushed yet (the two entries run in parallel). That failure is expected; it goes away on
+the next push, or with a re-run of the failed job once the base is pushed. The from-scratch
+rebuild of each entry runs even when the other entry failed.
