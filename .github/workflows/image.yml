@@ -3,12 +3,14 @@
 #   base: ghcr.io/mithro/gf180-tcad-base  (docker/base/, pinned by docker/IMAGE)
 #   tcad: ghcr.io/mithro/gf180-tcad-tcad  (docker/tcad/, pinned by docker/TCAD_IMAGE; built FROM
 #         docker/IMAGE, which is public, so no login is needed to pull it)
-#   PRs:  push tag pr-<number>;  main: push latest and sha-<commit>;
+#   PRs:  push tag pr-<number>;  main: push latest and sha-<commit>; both only after the
+#         IMAGE_ID, pin and versions checks passed (the build pushes only the staging tag
+#         `unverified`, which may point at an unverified image);
 #   weekly schedule / manual dispatch: rebuild and verify only, never push or retag.
 # "Reproducible" = identical image config digest (image ID, covers layer diff_ids); the
 # manifest digest is reproducible too. Every build must equal docker/<image>/IMAGE_ID (config)
 # and its pin file (manifest, the image tools/sandbox-run --image uses); the rebuild job builds
-# again from scratch on a fresh runner and must match the first build as well. The provenance
+# again from scratch on a fresh runner and must match the committed digests as well. The provenance
 # probe is run in the pinned image and must reproduce docker/<image>/versions.json exactly.
 name: image
 
@@ -73,16 +75,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build (and push on PRs / main)
+      - name: Build (and push the staging tag on PRs / main)
         id: build
         run: |
+          # Only the staging tag is pushed here; the published tags follow the checks below.
           args=()
           if [ "$PUSH" = true ]; then
-            if [ "${{ github.event_name }}" = pull_request ]; then
-              args=(--push --tag "$IMAGE_NAME:pr-${{ github.event.pull_request.number }}")
-            else
-              args=(--push --tag "$IMAGE_NAME:latest" --tag "$IMAGE_NAME:sha-${{ github.sha }}")
-            fi
+            args=(--push --tag "$IMAGE_NAME:unverified")
           fi
           config="$("$DIR/build" "${args[@]}" --metadata meta.json)"
           manifest="$(jq -r '."containerimage.digest"' meta.json)"
@@ -115,10 +114,32 @@ jobs:
             "$image" python3 "/work/src/$DIR/probe_versions.py" > probe.json
           diff -u "$DIR/versions.json" probe.json \
             || { echo "::error::$DIR/versions.json is stale (diff above)"; exit 1; }
+      - name: Tag the verified image
+        if: env.PUSH == 'true'
+        run: |
+          # Retag by manifest digest (no new manifest: --prefer-index=false), then check that
+          # every published tag resolves to exactly that digest.
+          manifest="${{ steps.build.outputs.manifest }}"
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            tags=("$IMAGE_NAME:pr-${{ github.event.pull_request.number }}")
+          else
+            tags=("$IMAGE_NAME:latest" "$IMAGE_NAME:sha-${{ github.sha }}")
+          fi
+          args=()
+          for t in "${tags[@]}"; do args+=(--tag "$t"); done
+          docker buildx imagetools create --prefer-index=false "${args[@]}" "$IMAGE_NAME@$manifest"
+          for t in "${tags[@]}"; do
+            got="sha256:$(docker buildx imagetools inspect --raw "$t" | sha256sum | cut -d' ' -f1)"
+            [ "$got" = "$manifest" ] || { echo "::error::$t is $got, not $manifest"; exit 1; }
+            echo "- tagged \`$t\` = \`$manifest\`" >> "$GITHUB_STEP_SUMMARY"
+          done
 
   rebuild:
     name: reproducible (${{ matrix.image }})
     needs: build
+    # Every entry verifies against its own committed files even when another entry's build
+    # failed (a base-only change fails the tcad entry until its pins are refreshed).
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
