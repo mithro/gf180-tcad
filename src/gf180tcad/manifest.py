@@ -190,10 +190,14 @@ def main(argv: list[str] | None = None) -> int:
         if bad:
             print(f"{len(bad)} difference(s) from {args.against}", file=sys.stderr)
             return 1
-        n = len(_scan(args.root, args.against)) - (args.root / ENVELOPE).is_file()
+        complete = set(jobs) == set(all_jobs())
+        n = len(_scan(args.root, args.against))
+        if not complete:
+            n -= (args.root / ENVELOPE).is_file()
+        envelope = "compared (complete subset)" if complete else "excluded (partial subset)"
         print(
             f"identical: {n} files of {len(jobs)} jobs in {args.root} match {args.against} "
-            f"under {args.prefix} (sha256; {ENVELOPE} excluded)"
+            f"under {args.prefix} (sha256; {ENVELOPE} {envelope})"
         )
         return 0
     m = args.manifest or args.root / "MANIFEST.sha256"
