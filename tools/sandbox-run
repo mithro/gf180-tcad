@@ -30,9 +30,24 @@ case "$NETWORK" in none|bridge) ;; *) die "--network must be none or bridge" ;; 
 [ -d "$WORKDIR" ] || die "workdir does not exist: $WORKDIR"
 WORKDIR="$(cd "$WORKDIR" && pwd -P)"
 REPO="$(cd "$REPO" && pwd -P)"
+# The workdir is mounted read-write. Refuse the filesystem root, $HOME (and its ancestors), the
+# repo, anything inside it and any ancestor of it: a container that can write the repo's .git
+# (hooks, config) escapes the sandbox. Unrelated directories ($TMPDIR scratch dirs, sibling
+# checkouts next to the repo) are fine. gf180tcad.sandbox.check_workdir applies the same rules.
+HOME_DIR=""
+if [ -n "${HOME:-}" ] && [ -d "$HOME" ]; then HOME_DIR="$(cd "$HOME" && pwd -P)"; fi
+[ "$WORKDIR" != / ] || die "workdir must not be the filesystem root"
 case "$WORKDIR/" in
     "$REPO"/*) die "workdir must not be the repo root or inside it: $WORKDIR" ;;
 esac
+case "$REPO/" in
+    "$WORKDIR"/*) die "workdir must not be an ancestor of the repo ($REPO): $WORKDIR" ;;
+esac
+if [ -n "$HOME_DIR" ]; then
+    case "$HOME_DIR/" in
+        "$WORKDIR"/*) die "workdir must not be \$HOME ($HOME_DIR) or an ancestor of it: $WORKDIR" ;;
+    esac
+fi
 
 # numpy picks SIMD kernels at run time by CPU, and they are not bit-identical (log10 differs
 # by 1 ulp between AVX-512 and AVX2), so results would depend on the host CPU. Disable every
@@ -48,6 +63,7 @@ trap 'cleanup; exit 143' TERM
 docker run --rm --name "$NAME" \
     --entrypoint "" \
     --cgroup-parent=gf180-tcad.slice \
+    --cap-drop ALL --security-opt no-new-privileges \
     --memory "$MEM" --memory-swap "$MEM" --cpus "$CPUS" --pids-limit "$PIDS" \
     --network "$NETWORK" \
     --read-only --tmpfs /tmp:rw,size=1g,exec \

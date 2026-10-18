@@ -122,3 +122,11 @@ def test_stdout_is_clean(tmp_path):
 def test_network_opt_in_flag_accepted(tmp_path):
     res = sandbox.run(["cat", "/proc/net/dev"], out_dir=tmp_path, network=True)
     assert "eth0" in res.stdout
+
+
+def test_no_capabilities_and_no_new_privileges(tmp_path):
+    res = sandbox.run(["cat", "/proc/self/status"], out_dir=tmp_path)
+    status = dict(line.split(":\t", 1) for line in res.stdout.splitlines() if ":\t" in line)
+    for cap in ("CapInh", "CapPrm", "CapEff", "CapBnd", "CapAmb"):
+        assert status[cap].strip() == "0" * 16, (cap, status[cap])
+    assert status["NoNewPrivs"].strip() == "1"

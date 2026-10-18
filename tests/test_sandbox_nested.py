@@ -8,6 +8,8 @@ commands, never a simulator.
 """
 
 import os
+import shutil
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -51,6 +53,59 @@ def test_image_cannot_be_chosen_inside(inside, tmp_path):
 def test_out_dir_inside_repo_refused(inside):
     with pytest.raises(ValueError, match="repo"):
         sandbox.run(["true"], out_dir=sandbox.REPO_ROOT / "tests")
+
+
+@pytest.mark.parametrize("which", ["root", "parent", "grandparent"])
+def test_out_dir_that_is_an_ancestor_of_the_repo_refused(inside, which):
+    where = {
+        "root": Path("/"),
+        "parent": sandbox.REPO_ROOT.parent,
+        "grandparent": sandbox.REPO_ROOT.parents[1],
+    }[which]
+    with pytest.raises(ValueError, match="ancestor|root"):
+        sandbox.run(["true"], out_dir=where)
+
+
+def test_out_dir_that_is_home_refused(inside, monkeypatch, tmp_path):
+    home = tmp_path / "home"  # not an ancestor of the repo: the $HOME rule on its own
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    with pytest.raises(ValueError, match="HOME"):
+        sandbox.run(["sh", "-c", "echo ran > ran.txt"], out_dir=home)
+    assert not (home / "ran.txt").exists()
+
+
+def test_out_dir_next_to_the_repo_allowed(inside):
+    sib = Path(tempfile.mkdtemp(prefix=sandbox.REPO_ROOT.name + "-", dir=sandbox.REPO_ROOT.parent))
+    try:
+        res = sandbox.run(["sh", "-c", "pwd"], out_dir=sib)
+        assert res.stdout.strip() == str(sib.resolve())
+    finally:
+        shutil.rmtree(sib)
+
+
+@pytest.mark.parametrize(
+    "where, ok",
+    [
+        ("/", False),
+        ("/home", False),
+        ("/home/u", False),  # $HOME
+        ("/home/u/src", False),  # ancestor of the repo
+        ("/home/u/src/repo", False),
+        ("/home/u/src/repo/tests", False),
+        ("/home/u/src/repo-worktrees/x", True),
+        ("/home/u/src/other", True),
+        ("/home/u/tmp/scratch", True),
+        ("/tmp/x", True),
+    ],
+)
+def test_check_workdir_rules(where, ok):
+    kw = {"repo_root": Path("/home/u/src/repo"), "home": Path("/home/u")}
+    if ok:
+        sandbox.check_workdir(Path(where), **kw)
+    else:
+        with pytest.raises(ValueError):
+            sandbox.check_workdir(Path(where), **kw)
 
 
 def test_marker_must_be_exactly_one(monkeypatch, tmp_path):

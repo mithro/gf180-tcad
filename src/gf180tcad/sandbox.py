@@ -188,12 +188,34 @@ def _check(res: subprocess.CompletedProcess) -> subprocess.CompletedProcess:
     return res
 
 
+def check_workdir(where: Path, *, repo_root: Path | None = None, home: Path | None = None) -> None:
+    """Raise ValueError unless ``where`` (a resolved path) may be the read-write workdir.
+
+    The same rules as ``tools/sandbox-run``: not the filesystem root, not ``$HOME`` (default
+    ``Path.home()``, resolved) or an ancestor of it, and neither the repo (default
+    :data:`REPO_ROOT`), a directory inside it, nor an ancestor of it. Mounting an ancestor
+    read-write would let the command write the repo's ``.git`` (hooks, config). Unrelated
+    directories, such as scratch directories under ``$TMPDIR`` or sibling checkouts next to the
+    repo, are allowed.
+    """
+    repo = Path(repo_root) if repo_root is not None else REPO_ROOT
+    home = Path(home) if home is not None else Path.home().resolve()
+    where = Path(where)
+    if where == Path(where.anchor):
+        raise ValueError(f"workdir must not be the filesystem root: {where}")
+    if where == repo or repo in where.parents:
+        raise ValueError(f"workdir must not be the repo root or inside it: {where}")
+    if where in repo.parents:
+        raise ValueError(f"workdir must not be an ancestor of the repo ({repo}): {where}")
+    if where == home or where in home.parents:
+        raise ValueError(f"workdir must not be $HOME ({home}) or an ancestor of it: {where}")
+
+
 def _run_nested(cmd: list[str], out_dir: Path, image: str | None) -> subprocess.CompletedProcess:
     if image is not None:
         raise ValueError("inside the sandbox the image is fixed; image must be None")
     where = out_dir.resolve()
-    if where == REPO_ROOT or REPO_ROOT in where.parents:
-        raise ValueError(f"workdir must not be the repo root or inside it: {where}")
+    check_workdir(where)
     res = subprocess.run(cmd, cwd=where, capture_output=True, text=True, check=False)
     if res.returncode == -signal.SIGKILL:  # the kernel OOM killer, as docker reports it
         res.returncode = OOM_EXIT
