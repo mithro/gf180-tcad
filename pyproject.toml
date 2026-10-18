@@ -17,6 +17,13 @@ dependencies = [
 
 [dependency-groups]
 dev = ["pytest", "ruff"]
+docs = [
+    "furo>=2025.12.19",
+    "matplotlib>=3.11.2",
+    "myst-parser>=5.1.0",
+    "numpy>=2.5.4",
+    "sphinx>=9.1.0",
+]
 image = [
     "devsim>=2.11.0",
     "gdsfactory>=9.51.0",
