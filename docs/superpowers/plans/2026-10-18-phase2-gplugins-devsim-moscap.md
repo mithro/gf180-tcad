@@ -384,25 +384,30 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 ### Task 5 (fork): port `create_2Duz_simulation` meshing to meshwell 2.5
 
 **Context.**
-- meshwell 2.5.2 provides `generate_mesh(entities, dim, output_mesh, **kw)` with `global_scaling`, `gmsh_version` and `n_threads`.
+- meshwell 2.5.2 provides `meshwell.orchestrator.generate_mesh(entities, dim, output_mesh, **kw)`. It is a thin pipeline: `cad(...)` → `ModelManager(point_tolerance=...)` → `ensure_initialized` → `load_occ_entities` → `meshwell.mesh.mesh(model=mm, ...)` (`orchestrator.py:185-266`).
+  - Its `ModelManager` gets no `n_threads` (`:246`), so gmsh would mesh with `cpu_count()` threads (Global Constraints, Determinism).
+  - So the fork **replicates that pipeline**, as `gplugins/devsim/meshing.py::mesh_xsection(...)`, with `ModelManager(n_threads=1, point_tolerance=...)`, `cad(..., n_threads=1)` and `mesh(..., model=mm, n_threads=1, global_scaling=1e-4, gmsh_version=2.2, pre_2d_hook=_pin_gmsh)`.
+  - `_pin_gmsh` sets `Mesh.RandomSeed` to a fixed value, `Geometry.OCCParallel=0` and `General.NumThreads=1`. It runs after meshwell's gmsh re-initialisation, so nothing resets it.
 - It also provides `resolution_specs` (`ConstantInField`, `ThresholdField`, …).
 - DEVSIM 2.11 reads MSH 2.2. Physical names come out as `a___b` and `a___None`.
 - The fork's `gplugins/meshwell/get_meshwell_cross_section.py` and `gplugins/femwell/mode_solver.py` `__main__` blocks import the removed `meshwell.cad`.
 - gdsfactory 9 cells are locked: use `.copy()` before `trim`, and `gf.boolean` (not `gf.geometry`).
 
-**Files (fork):** `gplugins/devsim/get_simulation.py`, `gplugins/meshwell/get_meshwell_cross_section.py`, `gplugins/femwell/mode_solver.py`, `gplugins/devsim/tests/test_mesh.py`
+**Files (fork):** `gplugins/devsim/meshing.py` (new), `gplugins/devsim/get_simulation.py`, `gplugins/meshwell/get_meshwell_cross_section.py`, `gplugins/femwell/mode_solver.py`, `gplugins/devsim/tests/test_mesh.py`
 
 **Interfaces:**
 - Produces: `create_2Duz_simulation(component, xsection_bounds, layer_stack, resolutions: dict[str, list[ResolutionSpec]], ...) -> DDComponent`.
-  - It calls `generate_mesh(..., global_scaling=1e-4, gmsh_version=2.2, n_threads=1)`.
+  - It meshes through `meshing.mesh_xsection` (above), never through `generate_mesh`.
   - For the PN-slab example, it returns the same regions, contacts and interfaces as the v0.8.0 record.
 - The interface naming scheme `a___b`/`a___None` is kept and documented.
 
 - [ ] **Step 1:** Write `test_mesh.py` first.
   - `test_pn_slab_names_match_v080`: the PN-slab device has the v0.8.0 region, contact and interface names.
-  - `test_pn_slab_currents_match_v080`: the anode/cathode currents after the ramp to 0.1 and 0.2 V match `ddcomponent` in `v0.8.0.json`. The tolerance comes from refining both meshers: rerun v0.8.0 and latest at 2× resolution and set the tolerance to the larger of the two self-differences. Record the measured values and the tolerance in a comment. Node count is reported but not asserted; the OCC pipeline differs from meshwell 1.0.1.
+  - `test_pn_slab_currents_match_v080`: the anode/cathode currents after the ramp to 0.1 and 0.2 V match `ddcomponent` in `v0.8.0.json`. The tolerance comes from refining both meshers, taking the larger of the two self-differences:
+    - v0.8.0: `v0.8.0.json` against `v0.8.0-mesh0p5.json` (Task 3, `--mesh-scale 0.5`);
+    - latest: this port at scale 1 against scale 0.5 of the same `resolutions`. Record the measured values and the tolerance in a comment. Node count is reported but not asserted; the OCC pipeline differs from meshwell 1.0.1.
   - `test_mesh_deterministic`: two builds give byte-identical `.msh` files.
-  - `test_gmsh_threads_one`: `General.NumThreads == 1` after meshing.
+  - `test_gmsh_threads_one`: after `mesh_xsection`, `General.NumThreads == 1`, `Mesh.MaxNumThreads2D == 1`, `Geometry.OCCParallel == 0`, and `Mesh.RandomSeed` equals the pinned value. Run it once with `PYTHON_CPU_COUNT` unset (`env -u PYTHON_CPU_COUNT`), to prove the fork does not rely on the image ENV alone.
 
   Run them: they FAIL (`NotImplementedError`).
 - [ ] **Step 2:** Implement with meshwell 2.5.2. Run the tests: they PASS. Fix the two `meshwell.cad` `__main__` blocks.
@@ -419,8 +424,11 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 
 **Interfaces:**
 - Produces: `@dataclass(frozen=True) LayerRef(layer: tuple[int, int])` and `InterfaceRef(a: str, b: str | None)`. `b=None` means the outer boundary (`a___None`).
+  - `LayerRef` is for 2D (a GDS contact layer).
+  - In 1D there are no GDS layers. A 1D contact is always `InterfaceRef(<layer name>, None)`, meaning the free end of that `Layer1D`. For example, the gate contact is `InterfaceRef("gate_poly", None)` and the body contact is `InterfaceRef("body", None)`.
+  - `create_1d_stack` raises on a `LayerRef`, and on an `InterfaceRef` naming an interior end.
 - Produces: `@dataclass(frozen=True) Contact(name: str, location: LayerRef | InterfaceRef, kind: Literal["ohmic", "gate"], workfunction_offset_v: float = 0.0, circuit: bool = False)`.
-- Produces: `materials.Constants` (frozen dataclass), with defaults from the Global Constraints table. Also produces `set_silicon(...)` and `set_oxide(...)`.
+- Produces: `materials.Constants` (frozen dataclass), with defaults from the Global Constraints table. The fields are `eps0_F_cm`, `q_C`, `kB_J_K`, `eps_si`, `eps_ox`, `T_K`, `n_i_cm3` (computed from `n_i_300_cm3` = 9.65e9 with the table's T-scaling), `mu_n`, `mu_p`, `tau_n_s` and `tau_p_s`. Each field's docstring carries its citation link. Also produces `set_silicon(...)` and `set_oxide(...)`.
 - Produces: `@dataclass(frozen=True) Layer1D(name: str, material: Literal["silicon", "oxide"], thickness_um: float, doping: DopingProfile | None)`. DopingProfile comes from Task 7; until then, constants only.
 - Produces: `create_1d_stack(name, layers: Sequence[Layer1D], contacts: Sequence[Contact], mesh: Mesh1D, constants: Constants) -> DDComponent`. It builds the device with `devsim.create_1d_mesh`.
   - `Mesh1D(spacing_um: Mapping[str, tuple[float, float]])` gives the start and end spacing per layer, with geometric grading in between.
@@ -432,8 +440,9 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - `test_parallel_plate_charge` and `test_parallel_plate_ac`: an oxide-only 1D stack gives C = ε_ox·ε0/t. It is measured through `get_contact_charge` (dQ/dV), and through small-signal AC (`circuit_element` + `solve(type="ac")`, the `testing/ssac_cap.py` pattern). Each agrees within 1e-6 relative (the field is uniform, so this is exact up to solver tolerance).
   - `test_workfunction_offset_shifts_vfb`: on a 1D metal-gate/oxide/p-Si stack, the flat band moves by exactly the offset, within 1 mV. Vfb is the Vg where the gate charge is 0.
   - `test_stack1d_regions_and_spacing`: `create_1d_stack` gives the stated regions, interfaces and contacts, and node spacings within the `Mesh1D` limits, with the grading ratio respected.
-  - `test_constants_not_simple_physics_defaults`: the region parameters read back as ε_si = 11.7·ε0 and T = 298.15.
-  - `test_poly_gate_flatband`: a p-Si 1.7e17 / 15.2 nm oxide / n⁺ 1e20 poly stack gives Vfb = −V_t·ln(NGATE·N_A/n_i²) within 1 mV. This value is ≈ −1.0 V at 298.15 K. The pfet case is the mirror.
+  - `test_constants_not_simple_physics_defaults`: the region parameters read back as ε_si = 11.7·ε0, T = 298.15, n_i = 8.266e9 (relative 1e-3), µ_n = 1417, µ_p = 470.5 and τ_n = τ_p = 1e-5.
+  - `test_ni_scaling`: `Constants().n_i_cm3` equals the table formula at 298.15 K, and equals 9.65e9 at 300 K, both within 1e-12 relative.
+  - `test_poly_gate_flatband`: a p-Si 1.7e17 / 15.2 nm oxide / n⁺ 1e20 poly stack gives the Boltzmann flat band Vfb = −V_t·ln(NGATE·N_A/n_i²) within 1 mV. This is −1.029 V with the Global Constraints constants. The pfet mirror (n-Si 1.7e17 / 15.6 nm / p⁺ 3.6e19) gives +1.003 V.
 
   Run them: they FAIL.
 - [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, review and merge.
