@@ -49,30 +49,32 @@ def _de_locale_works() -> bool:
     return r.returncode == 0
 
 
-def test_csv_bytes_stable_under_locale(tmp_path):
-    if not _de_locale_works():
-        pytest.skip("de_DE.UTF-8 locale not installed on this host")
-    script = textwrap.dedent(
-        """
-        import locale, sys
-        from pathlib import Path
-        from gf180tcad.io import write_csv, write_json
+_LOCALE_SCRIPT = textwrap.dedent(
+    """
+    import locale, sys
+    from pathlib import Path
+    from gf180tcad.io import write_csv, write_json
+    if sys.argv[3] == "de":
         locale.setlocale(locale.LC_ALL, "de_DE.UTF-8")
         assert locale.localeconv()["decimal_point"] == ","
-        write_csv(Path(sys.argv[1]), {"x": [1.5, 1e-300, -0.0]}, {"k": "v"})
-        write_json(Path(sys.argv[2]), {"x": [1.5, 1e-300]})
-        """
-    )
+    write_csv(Path(sys.argv[1]), {"x": [1.5, 1e-300, -0.0]}, {"k": "v"})
+    write_json(Path(sys.argv[2]), {"x": [1.5, 1e-300]})
+    """
+)
+
+
+def test_csv_bytes_stable_under_locale(tmp_path):
+    if not _de_locale_works():
+        reason = "de_DE.UTF-8 locale not installed on this host"
+        if os.environ.get("CI"):
+            pytest.fail(reason + " (required when CI is set; add a locale-gen step)")
+        pytest.skip(reason)
     outs = {}
     for name, loc in (("de", "de_DE.UTF-8"), ("c", "C")):
         c, j = tmp_path / f"{name}.csv", tmp_path / f"{name}.json"
         env = {**os.environ, "LC_ALL": loc}
-        if name == "c":
-            script_c = script.replace('locale.setlocale(locale.LC_ALL, "de_DE.UTF-8")', "")
-            script_c = script_c.replace('assert locale.localeconv()["decimal_point"] == ","', "")
-            subprocess.run([sys.executable, "-c", script_c, str(c), str(j)], env=env, check=True)
-        else:
-            subprocess.run([sys.executable, "-c", script, str(c), str(j)], env=env, check=True)
+        cmd = [sys.executable, "-c", _LOCALE_SCRIPT, str(c), str(j), name]
+        subprocess.run(cmd, env=env, check=True)
         outs[name] = (c.read_bytes(), j.read_bytes())
     assert outs["de"] == outs["c"]
     assert b"1.5" in outs["de"][0]
