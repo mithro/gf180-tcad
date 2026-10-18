@@ -222,9 +222,11 @@ CLEAN_LOG = (
 
 def test_clean_log_keeps_joined_warning():
     assert scan_xyce_log(CLEAN_LOG) == [
-        "Netlist warning in file /foss/pdks/gf180mcuD/libs.tech/xyce/sm141064.spice at"
-        " or near line 105"
-        " MODEL_BINNING:  duplicate PARSER parameter.  Using the first value found = true"
+        (
+            "Netlist warning in file /foss/pdks/gf180mcuD/libs.tech/xyce/sm141064.spice at"
+            " or near line 105"
+            " MODEL_BINNING:  duplicate PARSER parameter.  Using the first value found = true"
+        )
     ]
 
 
@@ -245,11 +247,15 @@ def test_processor_count():
         "Time step too small near step number: 3  Exiting transient loop.\n",
         "DC Operating Point Failed.  Exiting transient loop\n",
         "\tFailed DC sweep steps:\t\t\n",
-        "Netlist warning: Numerically singular matrix found by Amesos, returning zero\n"
-        " solution to nonlinear solver!\n",
+        (
+            "Netlist warning: Numerically singular matrix found by Amesos, returning zero\n"
+            " solution to nonlinear solver!\n"
+        ),
         "Netlist warning: Voltage Node (Y) does not have a DC path to ground\n",
-        "Netlist warning in file xyce.cir at or near line 4\n"
-        " Unrecognized dot line will be ignored\n",
+        (
+            "Netlist warning in file xyce.cir at or near line 4\n"
+            " Unrecognized dot line will be ignored\n"
+        ),
         "Nonlinear solver failed to converge\n",
     ],
 )
@@ -411,7 +417,10 @@ def test_xyce_runs_single_process(image_pdk, tmp_path):
     for k in ("vd", "vg", "vb"):
         assert res[k].tobytes() == grid[k].tobytes()
     assert np.all(res["id"].reshape(3, 501)[:, -1] > 1e-3)
-    assert all("MODEL_BINNING" in w for w in res.warnings)
+    # kept, non-fatal: the lib's repeated ".options parser model_binning", Xyce's BSIM4 version
+    # mapping (4.5 -> 4.6.1) and BSIM4's own pbswgd clamp
+    known = ("MODEL_BINNING", "older than the oldest version supported", "Pbswgd is set to 0.1")
+    assert res.warnings and all(any(k in w for k in known) for w in res.warnings), res.warnings
 
 
 @pytest.mark.sandbox
