@@ -59,9 +59,9 @@ RUN --mount=type=bind,source=build-devsim.sh,target=/run/gf180tcad/build-devsim.
 # 4. The venv: requirements.lock (wheels, except the sdists built here: meshwell and gdsfactory
 #    at their pinned commits, and rectpack, sdist-only on PyPI; their build backends are the
 #    hash-checked build constraints), gf180mcu --no-deps, then the DEVSIM wheel of step 3
-#    --no-deps (it has no Python dependencies; uv records the wheel file's mtime in the
-#    dist-info's uv_cache.json, so it is set to SOURCE_DATE_EPOCH first). Hashes only, no deps
-#    resolved, no bytecode.
+#    --no-deps (it has no Python dependencies), with pip: uv would record the wheel file's
+#    ctime in the dist-info (uv_cache.json, and so RECORD), which no build can fix. Hashes only,
+#    no deps resolved, no bytecode.
 RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirements.lock \
     --mount=type=bind,source=gf180mcu.lock,target=/run/gf180tcad/gf180mcu.lock \
     --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
@@ -75,8 +75,9 @@ RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirement
  && uvpip --require-hashes --only-binary=:all: --no-binary=gf180mcu \
         --build-constraints /run/gf180tcad/build-requirements.lock \
         -r /run/gf180tcad/gf180mcu.lock \
- && touch -d "@$SOURCE_DATE_EPOCH" /opt/build/wheels/devsim-*.whl \
- && uvpip /opt/build/wheels/devsim-*.whl \
+ && /usr/bin/python3 -m pip --isolated --python /opt/gf180tcad-tcad/bin/python install \
+        --no-cache-dir --disable-pip-version-check --no-input --no-compile --no-deps \
+        /opt/build/wheels/devsim-*.whl \
  && site="$(/opt/gf180tcad-tcad/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
  && printf '%s\n' /work/src/third_party/gplugins > "$site/gf180tcad-gplugins.pth" \
  && test "$(/opt/gf180tcad-tcad/bin/python -c 'import platform; print(platform.python_version())')" = "$TCAD_PYTHON" \
