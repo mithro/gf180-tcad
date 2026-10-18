@@ -9,8 +9,9 @@ import textwrap
 from pathlib import Path
 
 import pytest
+from optional import importorskip
 
-pytest.importorskip("matplotlib", reason="needs the docs dependency group")
+importorskip("matplotlib", reason="needs the docs dependency group")
 
 from gf180tcad import docgen
 from gf180tcad.devices import DEVICES, geometry_id
@@ -120,7 +121,7 @@ def test_offline_block_positive_control(tmp_path):
 
 
 def test_docs_build_offline(tmp_path):
-    pytest.importorskip("sphinx")
+    importorskip("sphinx")
     (tmp_path / "sitecustomize.py").write_text(_NO_NETWORK, encoding="utf-8")
     env = {**os.environ, "PYTHONPATH": str(tmp_path)}
     out = tmp_path / "html"
