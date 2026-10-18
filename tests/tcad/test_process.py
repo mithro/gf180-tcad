@@ -601,3 +601,23 @@ def test_card_values_and_lines(card_lines, device):
     assert ("toxp" in keys) == (desc.polarity == "n")
     assert ("vfb" in keys) == (desc.polarity == "p")
     assert "dtox" not in keys
+
+
+# The upstream ngspice card (primitives library at the commit the docs link) and the image's card
+# are byte-identical; the docs rely on this to link card lines upstream.
+UPSTREAM_CARD = (
+    "https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/"
+    "4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice"
+)
+UPSTREAM_CARD_SHA256 = "69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8"
+
+
+def test_upstream_card_is_the_image_card():
+    versions = json.loads((REPO_ROOT / "docker/base/versions.json").read_text(encoding="utf-8"))
+    assert versions["sm141064_ngspice_sha256"] == UPSTREAM_CARD_SHA256
+    page = (REPO_ROOT / "docs/comparison/process-data.md").read_text(encoding="utf-8")
+    assert UPSTREAM_CARD in page and "byte-identical" in page
+    assert f"sha256 `{UPSTREAM_CARD_SHA256}`" in page
+    # every card-line link points at that file
+    links = re.findall(r"\]\((https://github\.com/fossi-foundation/[^)#]+)(?:#L\d+)?\)", page)
+    assert links and set(links) == {UPSTREAM_CARD}

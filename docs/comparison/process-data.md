@@ -15,10 +15,9 @@ image {repo}`docker/TCAD_IMAGE` is built on). Its sha256 is recorded in
 {repo}`docker/base/versions.json` and in each file's `[card]` table. {{ open_pdks }} installs
 it from
 [`models/ngspice/sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice)
-of the {{ gf180mcu_models }} at the pinned commit. The two files have the same size
-(755,400 bytes) and the same text at the lines checked (the `.model nfet_06v0.0` line and
-line 46950), so the line numbers below link
-into that file.
+of the {{ gf180mcu_models }} at the pinned commit. The two files are byte-identical: both have
+sha256 `69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8`. So the line numbers
+below link into that file.
 
 ## Card values
 
