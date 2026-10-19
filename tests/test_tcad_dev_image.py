@@ -15,7 +15,14 @@ import tomllib
 from pathlib import Path
 
 import pytest
-from test_tcad_image import _DEVSIM_SOLVE, _GMSH_MESH, TCAD_KEYS, _base_path
+from test_tcad_image import (
+    _DEVSIM_SOLVE,
+    _GMSH_MESH,
+    _MESH_READBACK,
+    MESH_READBACK_EXPECTED,
+    TCAD_KEYS,
+    _base_path,
+)
 
 from gf180tcad import sandbox
 
@@ -26,7 +33,7 @@ PIN = DOCKER / "TCAD_DEV_IMAGE"
 VERSIONS = DEV / "versions.json"
 VENV = "/opt/gf180tcad-tcad"
 SITE = f"{VENV}/lib/python3.13/site-packages/"
-DEV_KEYS = TCAD_KEYS | {"upstream"}
+DEV_KEYS = TCAD_KEYS | {"upstream", "devsim_build"}
 
 
 def _image() -> str:
@@ -66,7 +73,9 @@ def test_tcad_dev_versions_json_shape():
     data = json.loads(text)
     assert set(data) == DEV_KEYS
     assert text == json.dumps(data, indent=2, sort_keys=True) + "\n"
-    assert all(isinstance(v, str) and v for k, v in data.items() if k != "upstream")
+    assert all(
+        isinstance(v, str) and v for k, v in data.items() if k not in ("upstream", "devsim_build")
+    )
     # the manifest baked into the image is the committed one
     assert data["upstream"] == _json(DEV / "upstream.json")
     # the dev stack: the locked dev versions, not the stable releases
@@ -81,6 +90,16 @@ def test_tcad_dev_versions_json_shape():
     # and may or may not coincide with the release; devsim and gf180mcu do, at 2.11.1 and 1.0.0)
     for key in TCAD_KEYS - {"devsim", "meshwell", "gmsh", "gdsfactory", "gf180mcu"}:
         assert data[key] == stable[key], key
+
+
+def test_tcad_dev_versions_json_devsim_build():
+    """DEVSIM's build record: the manifest's commit, built by the build stage's GCC 14.2."""
+    build = _json(VERSIONS)["devsim_build"]
+    assert set(build) == {"commit", "compilers", "devsim_py3.so sha256"}
+    assert build["commit"] == _json(DEV / "upstream.json")["devsim"]["commit"]
+    assert re.fullmatch(r"[0-9a-f]{64}", build["devsim_py3.so sha256"])
+    gcc = _json(DEV / "upstream.json")["gcc-14-x86-64-linux-gnu"]["version"]
+    assert f"GCC: (Ubuntu {gcc}) 14.2.0" in build["compilers"], build["compilers"]
 
 
 # --- inside the dev image --------------------------------------------------------------------
@@ -129,51 +148,19 @@ def test_tcad_dev_imports(tmp_path):
     assert versions["gmsh"].startswith(gmsh_version + ".dev")
 
 
-# Dev-HEAD drift, kept visible (strict: an upstream fix makes these XPASS and fail, so the marker
-# is removed then). Each test raises _KnownDrift only when the failure carries the diagnosed
-# signature; any other failure is re-raised and fails the test. Causes: docs/reproduce/image.md.
-class _KnownDrift(Exception):
-    """A sandboxed command failed with the signature of a diagnosed dev-HEAD drift."""
-
-
-def _run_expecting(cmd: list[str], tmp_path: Path, *signature: str, **kw):
-    """_run, but a failure whose output contains every ``signature`` string is _KnownDrift."""
-    try:
-        return _run(cmd, tmp_path, **kw)
-    except sandbox.SandboxError as e:
-        if e.result is not None:
-            out = (e.result.stdout or "") + (e.result.stderr or "")
-            if all(s in out for s in signature):
-                raise _KnownDrift(signature) from e
-        raise
-
-
-_GF180MCU_DRIFT = (
-    "gf180mcu HEAD (pins gdsfactory<=9.51) does not import with gdsfactory HEAD 10.0.0rc0: "
-    "building its cross-sections at import activates $PDK=gf180mcu, a circular import "
-    "(it imports with gdsfactory 9.51.0)"
-)
-_PN_SLAB_DRIFT = (
-    "the fork's test_pn_slab_currents_explained: on the gmsh 5.0.0.dev20261018 mesh the floating "
-    "rib's corner Potential jump is 0.035 V, not > 0.05 V (0.118 V with gmsh 4.15.2, where the "
-    "test passes in this image); the rib's offset is set only by the mesh and the initial guess"
-)
-_MESHIO_DRIFT = (
-    "meshio 5.3.5 cannot read the MSH 4.1 file gmsh 5.0.0.dev20261018 writes for meshwell's "
-    "2D mesh (KeyError on a physical tag; the same meshwell works with gmsh 4.15.2)"
-)
+# The three dev-HEAD drifts found when the image was first pinned are fixed in the mithro forks
+# (docs/reproduce/image.md, "Forks, and why"); their tests were strict expected failures until
+# then, and are now ordinary tests: gf180mcu imports with gdsfactory 10, meshwell's mesh reads back
+# through meshio under gmsh 5, and the fork's PN-slab test passes on the gmsh-5 mesh.
 
 
 @pytest.mark.sandbox
-@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_GF180MCU_DRIFT)
 def test_tcad_dev_gf180mcu_pdk(tmp_path):
     code = (
         "import json, gdsfactory as gf, gf180mcu; "
         "print(json.dumps([gf.get_active_pdk().name, gf180mcu.__file__]))"
     )
-    res = _run_expecting(
-        ["python3", "-c", code], tmp_path, "partially initialized module 'gf180mcu'"
-    )
+    res = _run(["python3", "-c", code], tmp_path)
     name, f = json.loads(res.stdout.splitlines()[-1])
     assert name == "gf180mcu"
     assert f.startswith(SITE)
@@ -243,16 +230,19 @@ def test_tcad_dev_meshwell_thread_defaults(tmp_path):
 
 
 @pytest.mark.sandbox
-@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_MESHIO_DRIFT)
 def test_tcad_dev_meshwell_mesh_reads_back(tmp_path):
-    """meshwell's 2D mesh, read back through meshio (the drift: meshio cannot read it)."""
-    res = _run_expecting(["python3", "-c", _GMSH_MESH], tmp_path, "KeyError", "_gmsh41")
-    assert json.loads(res.stdout.splitlines()[-1]) == {"NumThreads": 1, "OCCParallel": 0}
+    """meshwell's 2D mesh, read back through meshio (gmsh 5 + the meshwell fork's MSH 4.1),
+    is the stable image's (gmsh 4.15.2): the same points, cells and physical groups."""
+    res = _run(["python3", "-c", _MESH_READBACK], tmp_path)
+    assert json.loads(res.stdout.splitlines()[-1]) == MESH_READBACK_EXPECTED
+    # and with gmsh single-threaded, after a real read-back
+    got = json.loads(_run(["python3", "-c", _GMSH_MESH], tmp_path).stdout.splitlines()[-1])
+    assert got == {"NumThreads": 1, "OCCParallel": 0}
 
 
 # The same meshwell mesh as _GMSH_MESH, with only the meshio read-back of the finished mesh
-# stubbed out (the drift above), so the gmsh thread options are still checked after a real
-# meshwell CAD + mesh run.
+# stubbed out (it was the meshio drift before the meshwell fork's fix), so the gmsh thread
+# options are checked after a real meshwell CAD + mesh run independently of the read-back.
 _GMSH_MESH_NO_READBACK = """
 import json, gmsh, meshio
 reads = []
@@ -287,6 +277,75 @@ def test_tcad_dev_gmsh_control_without_python_cpu_count(tmp_path):
     assert got["NumThreads"] > 1 and got["OCCParallel"] == 1
 
 
+# TEMPORARY, until results/ moves to the dev image: the fork commit whose tests run in the dev
+# image. It is mithro/gplugins main 408d0af (#10, the floating-rib invariant). The submodule pin
+# (third_party/gplugins) stays at the commit the committed results/tcad trees were made with,
+# and catches up with this one in the pull request that regenerates them in the dev image.
+GPLUGINS_FORK_TEST_COMMIT = "408d0af89c6691e78e03b4d7e75b6dcccc74ee99"
+# The submodule pin while this is so (the commit of the committed results/tcad trees).
+GPLUGINS_PIN_BEHIND = "dddaa071321c5177c8471312c565ad86d4b245d7"
+GPLUGINS_FORK = "https://github.com/mithro/gplugins.git"
+
+
+def _fork_archive(commit: str) -> bytes:
+    """``git archive`` of ``commit`` of the fork, fetched (anonymously) into the submodule's
+    object store first if it is not there yet."""
+    sub = REPO_ROOT / "third_party" / "gplugins"
+    if not (sub / "gplugins").is_dir():
+        pytest.skip("third_party/gplugins is not checked out")
+    have = subprocess.run(
+        ["git", "-C", str(sub), "cat-file", "-e", f"{commit}^{{commit}}"],
+        capture_output=True,
+        check=False,
+    )
+    if have.returncode != 0:
+        subprocess.run(
+            ["git", "-C", str(sub), "fetch", "--no-tags", GPLUGINS_FORK, commit],
+            capture_output=True,
+            check=True,
+        )
+    return subprocess.run(
+        ["git", "-C", str(sub), "archive", commit], capture_output=True, check=True
+    ).stdout
+
+
+@pytest.mark.sandbox
+def test_tcad_dev_fork_pn_slab_currents_explained(tmp_path):
+    """The fork's PN-slab test, from a git archive of GPLUGINS_FORK_TEST_COMMIT, in the dev image."""
+    archive = _fork_archive(GPLUGINS_FORK_TEST_COMMIT)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        tar.extractall(tmp_path, filter="data")
+    test = "gplugins/devsim/tests/test_mesh.py::test_pn_slab_currents_explained"
+    cmd = ["python3", "-m", "pytest", "-p", "no:cacheprovider", "-q", test]
+    res = _run(cmd, tmp_path)
+    assert "1 passed" in res.stdout
+
+
+_RECORDS_CHECK = """
+import csv, json, sysconfig
+from pathlib import Path
+site = Path(sysconfig.get_paths()["purelib"])
+caches = sorted(str(p) for p in site.glob("*.dist-info/uv_cache.json"))
+missing, n = [], 0
+for record in sorted(site.glob("*.dist-info/RECORD")):
+    for row in csv.reader(record.read_text(encoding="utf-8").splitlines()):
+        n += 1
+        if not (site / row[0]).resolve().exists():
+            missing.append(row[0])
+print(json.dumps({"uv_cache": caches, "missing": missing, "entries": n}))
+"""
+
+
+@pytest.mark.sandbox
+def test_tcad_dev_records_complete_and_no_uv_cache(tmp_path):
+    """The build stripped uv's timestamped uv_cache.json everywhere and left every RECORD whole
+    (docker/tcad-dev/local_inputs.py strip-uv-cache)."""
+    got = json.loads(_run(["python3", "-c", _RECORDS_CHECK], tmp_path).stdout.splitlines()[-1])
+    assert got["uv_cache"] == []
+    assert got["missing"] == []
+    assert got["entries"] > 1000
+
+
 def _gplugins_pin() -> str:
     out = subprocess.run(
         ["git", "-C", str(REPO_ROOT), "ls-tree", "HEAD", "third_party/gplugins"],
@@ -298,23 +357,15 @@ def _gplugins_pin() -> str:
     return out[2]
 
 
-@pytest.mark.sandbox
-@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_PN_SLAB_DRIFT)
-def test_tcad_dev_fork_pn_slab_currents_explained(tmp_path):
-    """The fork's PN-slab test, from a git archive of the pinned submodule, in the dev image."""
-    sub = REPO_ROOT / "third_party" / "gplugins"
-    if not (sub / "gplugins").is_dir():
-        pytest.skip("third_party/gplugins is not checked out")
-    archive = subprocess.run(
-        ["git", "-C", str(sub), "archive", _gplugins_pin()], capture_output=True, check=True
-    ).stdout
-    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
-        tar.extractall(tmp_path, filter="data")
-    test = "gplugins/devsim/tests/test_mesh.py::test_pn_slab_currents_explained"
-    cmd = ["python3", "-m", "pytest", "-p", "no:cacheprovider", "-q", test]
-    res = _run_expecting(cmd, tmp_path, 'j["boundary_jump_v"] > 0.05', "1 failed")
-    # reached only once the drift is fixed (strict xfail: then XPASS fails, remove the marker)
-    assert "1 passed" in res.stdout
+def test_tcad_dev_fork_test_commit_is_still_needed():
+    """GPLUGINS_FORK_TEST_COMMIT is temporary. It was set while the submodule pin was
+    GPLUGINS_PIN_BEHIND; once the pin moves (to GPLUGINS_FORK_TEST_COMMIT or later, in the PR
+    that regenerates results/ in the dev image), this fails: then remove the constant and run
+    the fork tests from the pin again. Reads only the gf180-tcad tree, so it runs everywhere."""
+    assert _gplugins_pin() == GPLUGINS_PIN_BEHIND, (
+        "third_party/gplugins moved: remove GPLUGINS_FORK_TEST_COMMIT and run the fork tests "
+        "from the pin (and drop this test)"
+    )
 
 
 @pytest.mark.sandbox

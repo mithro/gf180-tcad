@@ -15,7 +15,9 @@
 set -euo pipefail
 
 BUILDKIT_IMAGE="moby/buildkit:v0.34.0@sha256:b059f8d7226d0b326bc871af489a5dddf65e36af4d20d14251b072974d9ee87c"
-BUILDER="buildkit_v0.34.0_gf180tcad"
+# GF180TCAD_BUILDER: use another (for example a CPU- and memory-limited) docker-container builder
+# of the same BuildKit image on a shared host; the image does not depend on the builder's limits.
+BUILDER="${GF180TCAD_BUILDER:-buildkit_v0.34.0_gf180tcad}"
 NAME="ghcr.io/mithro/gf180-tcad-tcad-dev"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
@@ -40,9 +42,10 @@ if [ "${#TAGS[@]}" -eq 0 ]; then
     TAGS=("$NAME:local")
 fi
 
-INPUTS=(docker/tcad-dev/Dockerfile docker/tcad-dev/requirements.lock docker/tcad-dev/gf180mcu.lock
+INPUTS=(docker/tcad-dev/Dockerfile docker/tcad-dev/requirements.lock
         docker/tcad-dev/build-requirements.lock docker/tcad-dev/upstream.json
-        docker/tcad-dev/fetch_sources.py docker/tcad-dev/build-devsim.sh docker/IMAGE)
+        docker/tcad-dev/wheelhouse.json docker/tcad-dev/fetch_sources.py
+        docker/tcad-dev/local_inputs.py docker/tcad-dev/build-devsim.sh docker/IMAGE)
 if [ -n "$(git -C "$REPO" status --porcelain -- "${INPUTS[@]}")" ]; then
     echo "build: uncommitted changes in ${INPUTS[*]}; commit them first" >&2
     exit 2

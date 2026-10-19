@@ -601,11 +601,37 @@ wheels = [
 ]
 
 [[package]]
+name = "gf180mcu"
+version = "1.0.0"
+source = { url = "https://github.com/mithro/gf180mcu/archive/9342e3e1804e419ba4d3a252746fe688657a9b74.tar.gz" }
+dependencies = [
+    { name = "gdsfactory" },
+]
+sdist = { hash = "sha256:b06eba6cfbd3026ebbbfd5c3595bb6eb7bcf5a6fbb38d5334e792fdc0d14829a" }
+
+[package.metadata]
+requires-dist = [
+    { name = "gdsfactory", specifier = ">=9.45,<11" },
+    { name = "jupyter", marker = "extra == 'docs'" },
+    { name = "kwasm", marker = "extra == 'docs'" },
+    { name = "mkdocs-material", marker = "extra == 'docs'" },
+    { name = "mkdocs-with-pdf", marker = "extra == 'docs'" },
+    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.27.0" },
+    { name = "nbconvert", marker = "extra == 'docs'" },
+    { name = "pytest", marker = "extra == 'tests'" },
+    { name = "pytest-cov", marker = "extra == 'tests'" },
+    { name = "rich", marker = "extra == 'docs'" },
+    { name = "zensical", marker = "extra == 'docs'", specifier = ">=0.0.40,<0.1.0" },
+]
+provides-extras = ["docs", "tests"]
+
+[[package]]
 name = "gf180tcad-tcad-dev-image"
 version = "0"
 source = { virtual = "." }
 dependencies = [
     { name = "gdsfactory" },
+    { name = "gf180mcu" },
     { name = "gmsh" },
     { name = "meshwell" },
     { name = "numpy" },
@@ -619,8 +645,9 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "gdsfactory", url = "https://github.com/gdsfactory/gdsfactory/archive/8b6fe0ae8db7eac245a9b67d1fece75fc8d3aa6a.tar.gz" },
+    { name = "gf180mcu", url = "https://github.com/mithro/gf180mcu/archive/9342e3e1804e419ba4d3a252746fe688657a9b74.tar.gz" },
     { name = "gmsh", url = "https://gmsh.info/python-packages-dev/gmsh/gmsh-5.0.0.dev20261018-py2.py3-none-manylinux_2_24_x86_64.whl" },
-    { name = "meshwell", url = "https://github.com/simbilod/meshwell/archive/b6d5ccd5293312e99c91686cd6f010ca7bda5e15.tar.gz" },
+    { name = "meshwell", url = "https://github.com/mithro/meshwell/archive/4184d3138e80c3b0b365aee615a07adf7f9f8ac5.tar.gz" },
     { name = "numpy", specifier = "==2.5.4" },
     { name = "pint", specifier = ">=0.26.1" },
     { name = "pytest", specifier = ">=9.1.1" },
@@ -1086,8 +1113,8 @@ wheels = [
 
 [[package]]
 name = "meshwell"
-version = "2.5.3.dev2+gb6d5ccd52"
-source = { url = "https://github.com/simbilod/meshwell/archive/b6d5ccd5293312e99c91686cd6f010ca7bda5e15.tar.gz" }
+version = "2.5.3.dev7+g4184d3138"
+source = { url = "https://github.com/mithro/meshwell/archive/4184d3138e80c3b0b365aee615a07adf7f9f8ac5.tar.gz" }
 dependencies = [
     { name = "cadquery" },
     { name = "gdstk" },
@@ -1098,7 +1125,7 @@ dependencies = [
     { name = "shapely" },
     { name = "tqdm" },
 ]
-sdist = { hash = "sha256:76aef6ee05cb088e10246ed6476183bd0582c1b85268f946cb7b98fc7fe03a40" }
+sdist = { hash = "sha256:8d75a0f5391b8a2e16a07c70451312c08a3a1d9646e570e51e10027087d6220b" }
 
 [package.metadata]
 requires-dist = [
