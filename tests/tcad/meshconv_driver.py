@@ -19,6 +19,7 @@ VG = tuple(round(-5 + 0.5 * i, 10) for i in range(21))
 
 def main() -> None:
     proc = process.load("nfet_05v0")
+    assert proc.values()["dv_fb_v"] == 0  # the exact reference has no flat-band shift
     stack = moscap1d.stack_of(proc)
     rep = meshconv.converge(
         lambda spec: moscap1d.simulate(proc, vg=VG, mesh=spec), MeshSpec.DEFAULT_1D
