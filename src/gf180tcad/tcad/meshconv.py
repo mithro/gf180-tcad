@@ -20,9 +20,13 @@ selected level is the coarsest whose change against the next finer one is below
 :data:`CRITERION` at every bias.
 
 The simulation is anything that satisfies :class:`CVCurve`: the 1D
-:class:`~gf180tcad.tcad.moscap1d.MoscapCV` now, and the 2D ``MoscapCV2D`` of
-:repo:`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`,
-which :func:`simulator` does not have yet (it raises :class:`NeedsTask11` for ``dim=2``).
+:class:`~gf180tcad.tcad.moscap1d.MoscapCV` and the 2D
+:class:`~gf180tcad.tcad.moscap2d.MoscapCV2D`
+(:repo:`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
+:func:`simulator` gives each: the 1D stack from :attr:`MeshSpec.DEFAULT_1D
+<gf180tcad.tcad.mesh.MeshSpec.DEFAULT_1D>`, and the 2D PDK cell at :data:`GEOMETRY_2D` with its
+source and drain, from :attr:`MeshSpec.DEFAULT_2D <gf180tcad.tcad.mesh.MeshSpec.DEFAULT_2D>`
+(:data:`START`).
 
 **Result files** (:func:`write`), in ``<root>/moscap{1d,2d}/<device>/`` of the tree root
 ``results/tcad/meshconv``: :data:`REPORT_NAME`, the report (no runtimes), and
@@ -72,6 +76,15 @@ SELECTED_NAME = "selected.json"
 # The committed tree root.
 TREE_ROOT = Path("results") / "tcad" / "meshconv"
 
+# The start spec of each dimension's study.
+START = {1: MeshSpec.DEFAULT_1D, 2: MeshSpec.DEFAULT_2D}
+
+# The geometry of the 2D study (W um, L um) per device: the calibration geometry at Lmin, the
+# one whose C-V the 2D structure (gate edges, overlap, fringe) shapes most. The selected spec
+# applies to every 2D geometry; the interface spacing it fixes is local and does not depend
+# on L.
+GEOMETRY_2D = {"nfet_05v0": (10.0, 0.6), "pfet_05v0": (10.0, 0.5)}
+
 # The memory budget of gf180-tcad.slice (as gf180tcad.reference.BUDGET_BYTES, which a test ties
 # it to; the SPICE module is not imported, so it stays out of the TCAD generator modules).
 BUDGET_BYTES = 128 << 30
@@ -89,10 +102,6 @@ class CVCurve(Protocol):
 
 class NotConverged(RuntimeError):
     """No level changes by less than :data:`CRITERION` against the next finer one."""
-
-
-class NeedsTask11(NotImplementedError):
-    """``dim=2`` needs the 2D MOS capacitor of Task 11, which does not exist yet."""
 
 
 class AdmissionError(ValueError):
@@ -342,22 +351,26 @@ def selected_spec(device: str, dim: int, root: Path | None = None) -> MeshSpec:
 
 
 def check_dim(dim: int) -> None:
-    """Raise :class:`NeedsTask11` for ``dim=2`` and ValueError unless ``dim`` is 1."""
-    if dim == 2:
-        raise NeedsTask11(
-            "meshconv --dim 2 requires Task 11's MoscapCV2D (gf180tcad.tcad.moscap2d), which "
-            "does not exist yet"
-        )
-    if dim != 1:
+    """Raise ValueError unless ``dim`` is 1 or 2."""
+    if dim not in (1, 2):
         raise ValueError(f"dim must be 1 or 2, got {dim!r}")
 
 
-def simulator(device: str, dim: int):
+def geometry_2d(device: str):
+    """The :class:`gf180tcad.devices.Geometry` of the 2D study (:data:`GEOMETRY_2D`)."""
+    from gf180tcad.devices import DEVICES
+
+    w, l_um = GEOMETRY_2D[device]
+    (g,) = [g for g in DEVICES[device].geometries if (g.w_um, g.l_um) == (w, l_um)]
+    return g
+
+
+def simulator(device: str, dim: int, log=None):
     """``(simulate, settings)`` of ``device``'s start values in ``dim`` dimensions.
 
-    ``simulate(spec)`` is the QS C-V on the SPICE ``cv`` biases; ``settings`` are the solver
-    settings it fixes across levels. Runs in the TCAD image. ``dim=2`` raises
-    :class:`NeedsTask11`.
+    ``simulate(spec)`` is the QS C-V on the SPICE ``cv`` biases (2D: the PDK cell at
+    :func:`geometry_2d`, with source and drain); ``settings`` are the solver settings it fixes
+    across levels. ``log`` receives the 2D progress lines. Runs in the TCAD image.
     """
     check_dim(dim)
     from gf180tcad.tcad import moscap1d, process
@@ -366,8 +379,20 @@ def simulator(device: str, dim: int):
     pol = 1.0 if proc.polarity == "n" else -1.0
     vg = tuple(pol * v + 0.0 for v in process.CV_VG)  # as gf180tcad.tcad.__main__.job_vg
 
-    def simulate(spec: MeshSpec) -> moscap1d.MoscapCV:
-        return moscap1d.simulate(proc, vg=vg, method="qs", mesh=spec)
+    if dim == 1:
+
+        def simulate(spec: MeshSpec) -> moscap1d.MoscapCV:
+            return moscap1d.simulate(proc, vg=vg, method="qs", mesh=spec)
+
+    else:
+        from gf180tcad.tcad import moscap2d
+
+        geometry = geometry_2d(device)
+
+        def simulate(spec: MeshSpec) -> moscap2d.MoscapCV2D:
+            return moscap2d.simulate(
+                proc, geometry, vg=vg, with_sd=True, method="qs", mesh=spec, log=log
+            )
 
     settings = {
         "abs_tol_v": moscap1d.ABS_TOL,
@@ -377,6 +402,16 @@ def simulator(device: str, dim: int):
         "method": "qs",
         "rel_tol": moscap1d.REL_TOL,
     }
+    if dim == 2:
+        from gf180tcad.devices import geometry_id
+        from gf180tcad.tcad import stack
+
+        settings |= {
+            "geometry": geometry_id(geometry_2d(device)),
+            "point_tolerance_um": stack.POINT_TOLERANCE_UM,
+            "qs_extended_precision": False,
+            "with_sd": True,
+        }
     return simulate, settings
 
 

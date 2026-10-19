@@ -52,6 +52,14 @@ class MeshSpec:
     grading: float
 
     DEFAULT_1D: ClassVar[MeshSpec]
+    DEFAULT_2D: ClassVar[MeshSpec]
+
+    # meshwell samples a threshold field's distance at mass / (sizemin / 2) points per curve,
+    # capped by ``max_sampling`` (meshwell's default 100). gmsh's Distance field measures the
+    # distance to those samples, so with the cap a 1 um interface is sampled every 10 nm and the
+    # size there reaches sizemin + (grading - 1) * 5 nm (about 1.5 nm instead of 0.5 nm). The cap
+    # is lifted to this value, far above any curve here (10 um / 0.1 nm = 1e5).
+    MAX_SAMPLING: ClassVar[int] = 10**7
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -113,12 +121,17 @@ class MeshSpec:
         """
         return (self.h_si_bulk_nm - sizemin_nm) / (self.grading - 1) * NM_TO_UM
 
-    def to_resolution_specs(self, poly: str, oxide: str, body: str) -> Mapping[str, list]:
+    def to_resolution_specs(
+        self, poly: str, oxide: str, body: str, *, background: str | None = None
+    ) -> Mapping[str, list]:
         """`meshwell <https://github.com/simbilod/meshwell>`_ resolution specs (um) by region, for 2D.
 
         ``ConstantInField(h_ox)`` on the oxide surface, and threshold fields on the curves
-        that the body and the poly share with the oxide: ``h_si_surface`` and ``h_poly`` at
-        the interface, growing to ``h_si_bulk`` over :meth:`threshold_distmax_um`.
+        that the body and the poly share with the oxide (and the body with ``background``, the
+        dielectric over the silicon outside the gate, if given): ``h_si_surface`` and
+        ``h_poly`` at the interface, growing to ``h_si_bulk`` over
+        :meth:`threshold_distmax_um`. The threshold fields sample their curves densely
+        (:attr:`MAX_SAMPLING`).
         """
         from meshwell.resolution import ConstantInField, ThresholdField
 
@@ -128,10 +141,11 @@ class MeshSpec:
             body: [
                 ThresholdField(
                     apply_to="curves",
-                    sharing=[oxide],
+                    sharing=[oxide] if background is None else [oxide, background],
                     sizemin=self.h_si_surface_nm * u,
                     sizemax=self.h_si_bulk_nm * u,
                     distmax=self.threshold_distmax_um(self.h_si_surface_nm),
+                    max_sampling=self.MAX_SAMPLING,
                 )
             ],
             poly: [
@@ -141,6 +155,7 @@ class MeshSpec:
                     sizemin=self.h_poly_nm * u,
                     sizemax=self.h_si_bulk_nm * u,
                     distmax=self.threshold_distmax_um(self.h_poly_nm),
+                    max_sampling=self.MAX_SAMPLING,
                 )
             ],
         }
@@ -150,4 +165,11 @@ class MeshSpec:
 # it by the selected level (results/tcad/meshconv/moscap1d/<device>/selected.json).
 MeshSpec.DEFAULT_1D = MeshSpec(
     h_poly_nm=0.05, h_ox_nm=0.5, h_si_surface_nm=0.05, h_si_bulk_nm=20.0, grading=1.1
+)
+
+# The fixed starting spec of the 2D MOS capacitor (Task 11), refined by meshconv --dim 2 into
+# results/tcad/meshconv/moscap2d/<device>/selected.json. Triangles are isotropic, so 0.05 nm at a
+# 10 um interface is out of reach: the interfaces start at 0.5 nm.
+MeshSpec.DEFAULT_2D = MeshSpec(
+    h_poly_nm=0.5, h_ox_nm=2.0, h_si_surface_nm=0.5, h_si_bulk_nm=100.0, grading=1.2
 )

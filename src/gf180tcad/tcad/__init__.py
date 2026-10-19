@@ -4,8 +4,9 @@
 Nothing here is a SPICE generator module (:data:`gf180tcad.reference.GENERATOR_MODULES`), so
 changes to this package never touch ``results/spice/provenance.json``.
 
-**Provenance.** Each TCAD tree root (:repo:`results/tcad/moscap1d`, :repo:`results/tcad/meshconv`, and later ``moscap2d``,
-``calibration`` and ``validation`` under :repo:`results/tcad`) holds one
+**Provenance.** Each TCAD tree root (:repo:`results/tcad/moscap1d`, :repo:`results/tcad/moscap2d`,
+:repo:`results/tcad/meshconv`, and later ``calibration`` and ``validation`` under
+:repo:`results/tcad`) holds one
 ``provenance.json``, written from :func:`tree_provenance`. It holds the TCAD image reference
 (:repo:`docker/TCAD_IMAGE`), the contents of :repo:`docker/tcad/versions.json`, the plugin
 commit ``gplugins_commit`` and ``generator_sha256`` (:func:`generator_sha256`), and, for a tree
@@ -59,7 +60,9 @@ TCAD_GENERATOR_MODULES = (
     "gf180tcad.tcad.mesh",
     "gf180tcad.tcad.meshconv",
     "gf180tcad.tcad.moscap1d",
+    "gf180tcad.tcad.moscap2d",
     "gf180tcad.tcad.process",
+    "gf180tcad.tcad.stack",
 )
 
 # Non-module files hashed with them: the sandbox (thread environment, limits, mounts).
