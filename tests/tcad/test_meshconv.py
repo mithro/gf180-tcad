@@ -225,8 +225,7 @@ def test_report_deterministic(tmp_path):
         assert (outs[0] / n).read_bytes() == (outs[1] / n).read_bytes()
     data = json.loads((outs[0] / meshconv.REPORT_NAME).read_bytes())
     assert "runtime" not in json.dumps(data) and "time" not in json.dumps(sorted(data))
-    sel = json.loads((outs[0] / meshconv.SELECTED_NAME).read_bytes())
-    assert MeshSpec(**sel) == rep.selected_spec
+    assert meshconv.read_selected(outs[0] / meshconv.SELECTED_NAME) == rep.selected_spec
 
 
 def test_report_contents(tmp_path):
@@ -237,12 +236,12 @@ def test_report_contents(tmp_path):
     assert data["device"] == "nfet_05v0" and data["dim"] == 1 and data["params"] == "start"
     assert data["criterion"] == 0.01 and data["settings"] == {"rel_tol": 1e-10}
     assert data["start"] == START.as_dict() and data["vg"] == list(VG)
-    assert data["selected"] == {"level": 1, "scale": 2**-0.5}
+    assert data["selected"]["level"] == 1 and data["selected"]["scale"] == 2**-0.5
     assert [lv["node_count"] for lv in data["levels"]] == [lv.node_count for lv in rep.levels]
     lv0 = data["levels"][0]
     assert set(lv0) == {
-        "c_per_area_ff_um2", "extended_fallback", "max_rel_change", "node_count",
-        "rel_change", "roundoff_accepted", "scale", "spec",
+        "agreement_1d", "c_per_area_ff_um2", "extended_fallback", "max_rel_change",
+        "node_count", "rel_change", "roundoff_accepted", "scale", "spec",
     }  # fmt: skip
     assert lv0["extended_fallback"] == []
     assert data["levels"][-1]["rel_change"] is None
@@ -326,7 +325,7 @@ def test_committed_report(device):
     sel = data["selected"]["level"]
     assert data["levels"][sel]["max_rel_change"] < meshconv.CRITERION
     assert all(lv["max_rel_change"] >= meshconv.CRITERION for lv in data["levels"][:sel])
-    spec = MeshSpec(**json.loads((job / meshconv.SELECTED_NAME).read_bytes()))
+    spec = meshconv.read_selected(job / meshconv.SELECTED_NAME)
     assert spec == MeshSpec.DEFAULT_1D.scaled(meshconv.LEVELS[sel])
     assert spec == meshconv.selected_spec(device, 1)
 
@@ -412,6 +411,7 @@ def test_meshconv_resume_keeps_finished_levels(tmp_path, monkeypatch):
     for i in (0, 2, 3):
         (scratch / f"level{i}").mkdir(parents=True)
         (scratch / f"level{i}" / cli.LEVEL_NAME).write_text("{}", encoding="utf-8")
+        (scratch / f"level{i}" / cli.AGREEMENT_NAME).write_text("{}", encoding="utf-8")
     (scratch / "level1").mkdir()
     (scratch / "level1" / "job.log").write_text("failed", encoding="utf-8")
     ran = []
@@ -426,3 +426,57 @@ def test_meshconv_resume_keeps_finished_levels(tmp_path, monkeypatch):
         cli.run_meshconv("nfet_05v0", 2, tmp_path / "root", resume=scratch)
     assert ran == ["1"]
     assert not (scratch / "level1" / "job.log").exists()  # the failed level starts afresh
+
+
+def test_meshconv_resume_runs_a_missing_agreement(tmp_path, monkeypatch):
+    """A kept 2D level without its agreement.json gets only the agreement job."""
+    scratch = tmp_path / "scratch"
+    for i in range(4):
+        (scratch / f"level{i}").mkdir(parents=True)
+        (scratch / f"level{i}" / cli.LEVEL_NAME).write_text("{}", encoding="utf-8")
+        if i != 2:
+            (scratch / f"level{i}" / cli.AGREEMENT_NAME).write_text("{}", encoding="utf-8")
+    ran = []
+
+    def fake_job(cmd, out_dir, mem):
+        ran.append(
+            ("agreement" if "--agreement" in cmd else "level", cmd[cmd.index("--level") + 1])
+        )
+        raise RuntimeError("stop")
+
+    monkeypatch.setattr(cli, "_sandbox_job", fake_job)
+    monkeypatch.setattr(cli, "gplugins_commit", lambda: "x")
+    with pytest.raises(RuntimeError, match="stop"):
+        cli.run_meshconv("nfet_05v0", 2, tmp_path / "root", resume=scratch, jobs=1)
+    assert ran == [("agreement", "2")]
+
+
+def test_second_criterion_agreement_with_1d():
+    """2D: the selected level must also match 1D within AGREEMENT_1D on the uniform stack."""
+    assert meshconv.AGREEMENT_1D == 0.005
+    simulate, _ = synthetic(EXACT, [0.001] * 6, 2.0)  # level 0 already converged (< 1 %)
+    rep = meshconv.converge(simulate, START, agreement=(0.0055, 0.0045, 0.003, 0.002))
+    assert rep.convergence_level == 0 and rep.agreement_level == 1
+    assert rep.selected == 1
+    rep2 = meshconv.converge(simulate, START, agreement=(0.006, 0.006, 0.006, 0.001))
+    assert rep2.agreement_level == 3 and rep2.selected is None  # the finest has no change
+    rep3 = meshconv.converge(simulate, START)
+    assert rep3.selected == 0 and rep3.agreement_level is None
+    with pytest.raises(ValueError, match="agreement"):
+        meshconv.converge(simulate, START, agreement=(0.1, 0.1))
+
+
+def test_selected_json_records_the_criteria(tmp_path):
+    simulate, _ = synthetic(EXACT, [0.001] * 6, 2.0)
+    rep = meshconv.converge(simulate, START, agreement=(0.0055, 0.0045, 0.003, 0.002))
+    meshconv.write(rep, tmp_path, device="nfet_05v0", dim=2, settings={})
+    sel = json.loads((tmp_path / meshconv.SELECTED_NAME).read_bytes())
+    assert sel["criteria"] == {
+        "agreement_1d": {"level": 1, "max": 0.005},
+        "convergence": {"level": 0, "max": meshconv.CRITERION},
+        "selected": 1,
+    }
+    assert meshconv.read_selected(tmp_path / meshconv.SELECTED_NAME) == START.scaled(2**-0.5)
+    data = json.loads((tmp_path / meshconv.REPORT_NAME).read_bytes())
+    assert data["selected"]["criteria"] == sel["criteria"]
+    assert [lv["agreement_1d"] for lv in data["levels"]] == [0.0055, 0.0045, 0.003, 0.002]

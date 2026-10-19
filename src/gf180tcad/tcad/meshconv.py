@@ -39,6 +39,7 @@ This module is TCAD code. It is not one of the SPICE generator modules
 
 from __future__ import annotations
 
+import dataclasses
 import itertools
 import json
 import math
@@ -56,6 +57,11 @@ LEVELS = (1, 2**-0.5, 0.5, 2**-1.5)
 
 # The largest relative change against the next finer level a selected level may have.
 CRITERION = 0.01
+
+# The second criterion of a 2D study: the selected level must also reproduce 1D within this
+# (largest relative difference of the extruded uniform stack's C per area against 1D, 21 biases;
+# the 2D-equals-1D check of Task 11). The selected level is the coarsest meeting both.
+AGREEMENT_1D = 0.005
 
 # The noise floor of a level difference, as a multiple of the solver's relative tolerance: a
 # difference |C_i - C_j| <= NOISE_K * rel_tol * |C| is solver noise, so the observed order there
@@ -127,6 +133,7 @@ class Level:
     max_rel_change: float | None
     extended_fallback: tuple[int, ...] = ()
     roundoff_accepted: tuple[dict, ...] = ()
+    agreement_1d: float | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +166,19 @@ class ConvergenceReport:
     richardson: tuple[float, ...] | None
     selected: int | None
     rel_tol: float = DEFAULT_REL_TOL
+    convergence_level: int | None = None
+    agreement_level: int | None = None
+
+    @property
+    def criteria(self) -> dict:
+        """The selection criteria, the level each one chooses, and the selected level."""
+        out = {
+            "convergence": {"level": self.convergence_level, "max": CRITERION},
+            "selected": self.selected,
+        }
+        if any(lv.agreement_1d is not None for lv in self.levels):
+            out["agreement_1d"] = {"level": self.agreement_level, "max": AGREEMENT_1D}
+        return out
 
     @property
     def noise_floor_rel(self) -> float:
@@ -210,16 +230,24 @@ def converge(
     levels: Sequence[float] = LEVELS,
     *,
     rel_tol: float = DEFAULT_REL_TOL,
+    agreement: Sequence[float] | None = None,
 ) -> ConvergenceReport:
     """Run ``simulate`` at ``spec.scaled(r)`` for each level ``r`` (coarse to fine) and report.
 
     Every level must give the same biases. The selected level is the coarsest whose
     ``max_rel_change`` is below :data:`CRITERION`. ``rel_tol`` is the solver's relative
     tolerance, which sets the noise floor of the observed order (:data:`NOISE_K`).
+    ``agreement`` (2D) gives each level's largest relative difference from 1D on the uniform
+    stack; then the selected level is the coarsest that also has ``agreement`` <=
+    :data:`AGREEMENT_1D`.
     """
     if not (rel_tol > 0 and math.isfinite(rel_tol)):
         raise ValueError(f"rel_tol must be > 0, got {rel_tol!r}")
     levels = _check_levels(levels)
+    if agreement is not None:
+        agreement = tuple(float(a) for a in agreement)
+        if len(agreement) != len(levels):
+            raise ValueError(f"agreement needs one value per level, got {agreement}")
     ratio = levels[0] / levels[1]
     specs = [spec.scaled(r) for r in levels]
     curves = [simulate(s) for s in specs]
@@ -238,7 +266,12 @@ def converge(
             rel, worst = None, None
         fallback = tuple(int(k) for k in getattr(c, "extended_fallback", ()))
         roundoff = tuple(dict(x) for x in getattr(c, "roundoff_accepted", ()))
-        out_levels.append(Level(r, s, int(c.node_count), cs[i], rel, worst, fallback, roundoff))
+        out_levels.append(
+            Level(
+                r, s, int(c.node_count), cs[i], rel, worst, fallback, roundoff,
+                None if agreement is None else agreement[i],
+            )
+        )  # fmt: skip
 
     orders = []
     for i in range(len(levels) - 2):
@@ -264,12 +297,22 @@ def converge(
     else:
         richardson = None
 
+    conv = next((i for i, lv in enumerate(out_levels[:-1]) if lv.max_rel_change < CRITERION), None)
+    agree = None
+    if agreement is not None:
+        agree = next((i for i, a in enumerate(agreement) if a <= AGREEMENT_1D), None)
     selected = next(
-        (i for i, lv in enumerate(out_levels[:-1]) if lv.max_rel_change < CRITERION), None
+        (
+            i
+            for i, lv in enumerate(out_levels[:-1])
+            if lv.max_rel_change < CRITERION and (agreement is None or agreement[i] <= AGREEMENT_1D)
+        ),
+        None,
     )
     return ConvergenceReport(
-        spec, vg, tuple(out_levels), tuple(orders), p, richardson, selected, rel_tol
-    )
+        spec, vg, tuple(out_levels), tuple(orders), p, richardson, selected, rel_tol,
+        conv, agree,
+    )  # fmt: skip
 
 
 def report_dict(
@@ -284,6 +327,7 @@ def report_dict(
         "levels": [
             {
                 "c_per_area_ff_um2": list(lv.c_per_area_ff_um2),
+                "agreement_1d": lv.agreement_1d,
                 "extended_fallback": list(lv.extended_fallback),
                 "roundoff_accepted": [dict(x) for x in lv.roundoff_accepted],
                 "max_rel_change": lv.max_rel_change,
@@ -312,7 +356,11 @@ def report_dict(
         },
         "selected": None
         if rep.selected is None
-        else {"level": rep.selected, "scale": rep.levels[rep.selected].scale},
+        else {
+            "criteria": rep.criteria,
+            "level": rep.selected,
+            "scale": rep.levels[rep.selected].scale,
+        },
         "settings": dict(settings),
         "start": rep.start.as_dict(),
         "unit": "fF/um^2",
@@ -336,12 +384,19 @@ def write(
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     io.write_json(out / REPORT_NAME, report_dict(rep, device=device, dim=dim, settings=settings))
-    io.write_json(out / SELECTED_NAME, selected.as_dict())
+    io.write_json(out / SELECTED_NAME, {**selected.as_dict(), "criteria": rep.criteria})
 
 
 def job_dir(root: Path, device: str, dim: int) -> Path:
     """``<root>/moscap{dim}d/<device>``."""
     return Path(root) / f"moscap{dim}d" / device
+
+
+def read_selected(path: Path) -> MeshSpec:
+    """The :class:`~gf180tcad.tcad.mesh.MeshSpec` of a :data:`SELECTED_NAME` file (its spec
+    fields; the ``criteria`` record is not part of the spec)."""
+    data = json.loads(Path(path).read_bytes())
+    return MeshSpec(**{f.name: data[f.name] for f in dataclasses.fields(MeshSpec)})
 
 
 def selected_spec(device: str, dim: int, root: Path | None = None) -> MeshSpec:
@@ -356,7 +411,7 @@ def selected_spec(device: str, dim: int, root: Path | None = None) -> MeshSpec:
             f"{path} does not exist: run `python -m gf180tcad.tcad meshconv --device {device} "
             f"--dim {dim} --out results/tcad/meshconv` first"
         )
-    return MeshSpec(**json.loads(path.read_bytes()))
+    return read_selected(path)
 
 
 def check_dim(dim: int) -> None:
@@ -422,6 +477,40 @@ def simulator(device: str, dim: int, log=None):
             "with_sd": True,
         }
     return simulate, settings
+
+
+# The uniform-stack check of the second criterion: its biases (every 10th of the cv grid, in
+# the SPICE order) and its length (um; the result does not depend on it, the sides are Neumann).
+AGREEMENT_STRIDE = 10
+AGREEMENT_L_UM = 1.0
+
+
+def agreement_1d(device: str, spec: MeshSpec) -> dict:
+    """The 2D-equals-1D check at ``spec``: the extruded uniform stack (gate over the whole
+    domain, no S/D, Neumann sides) against the selected 1D C-V, QS on every
+    :data:`AGREEMENT_STRIDE`-th bias of the cv grid. ``max`` is the largest |2D/1D - 1|. Runs in
+    the TCAD image."""
+    from gf180tcad.tcad import moscap1d, moscap2d, process, stack
+
+    proc = process.load(device)
+    pol = 1.0 if proc.polarity == "n" else -1.0
+    vg = tuple(pol * v + 0.0 for v in process.CV_VG[::AGREEMENT_STRIDE])
+    cv2 = moscap2d.simulate(
+        proc, None, vg=vg, with_sd=False, method="qs", mesh=spec,
+        structure=stack.uniform(proc, AGREEMENT_L_UM), mesh_file="uniform.msh",
+    )  # fmt: skip
+    cv1 = moscap1d.simulate(proc, vg=vg, mesh=selected_spec(device, 1))
+    rel = [a / b - 1 for a, b in zip(cv2.c_per_area_ff_um2, cv1.c_per_area_ff_um2, strict=True)]
+    return {
+        "c1d": list(cv1.c_per_area_ff_um2),
+        "c2d": list(cv2.c_per_area_ff_um2),
+        "max": max(abs(r) for r in rel),
+        "node_count": cv2.node_count,
+        "rel": rel,
+        "roundoff_accepted": [dict(r) for r in cv2.roundoff_accepted],
+        "spec": spec.as_dict(),
+        "vg": list(vg),
+    }
 
 
 def parse_mem(text: str) -> int:

@@ -86,8 +86,10 @@ JOB_CPUS = 1
 JOB_MEM_2D = "16g"
 MESHCONV_JOB_MEM = {1: JOB_MEM, 2: JOB_MEM_2D}
 
-# The file each meshconv-job --level writes into its /work/out, and the progress log of a job.
+# The file each meshconv-job --level writes into its /work/out, the file of its 2D agreement job
+# (meshconv-job --agreement --level), and the progress log of a job.
 LEVEL_NAME = "level.json"
+AGREEMENT_NAME = "agreement.json"
 PROGRESS_NAME = "progress.log"
 
 
@@ -286,6 +288,16 @@ def run_meshconv_level(device: str, dim: int, level: int, out: Path) -> None:
     print(f"{device}/level{level}: {cv.node_count} nodes, {len(cv.vg)} points", flush=True)
 
 
+def run_meshconv_agreement(device: str, level: int, out: Path) -> None:
+    """``meshconv-job --agreement --level``: the 2D-equals-1D check of a 2D level."""
+    if not sandbox.in_sandbox():
+        raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
+    spec = meshconv.START[2].scaled(meshconv.LEVELS[level])
+    data = meshconv.agreement_1d(device, spec)
+    io.write_json(Path(out) / AGREEMENT_NAME, data)
+    print(f"{device}/level{level}: agreement with 1D {data['max']!r}", flush=True)
+
+
 class _Curve:
     """A :class:`gf180tcad.tcad.meshconv.CVCurve` read back from a :data:`LEVEL_NAME`."""
 
@@ -315,7 +327,17 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
         if data["scale"] != scale or MeshSpec(**data["spec"]) != spec:
             raise RuntimeError(f"level{i}/{LEVEL_NAME} is not level {i} of the start spec")
         curves[spec] = _Curve(data)
-    rep = meshconv.converge(curves.__getitem__, meshconv.START[dim], rel_tol=settings["rel_tol"])
+    agreement = None
+    if dim == 2:
+        agreement = []
+        for i, scale in enumerate(meshconv.LEVELS):
+            data = json.loads((out / f"level{i}" / AGREEMENT_NAME).read_bytes())
+            if MeshSpec(**data["spec"]) != meshconv.START[dim].scaled(scale):
+                raise RuntimeError(f"level{i}/{AGREEMENT_NAME} is not level {i} of the start spec")
+            agreement.append(data["max"])
+    rep = meshconv.converge(
+        curves.__getitem__, meshconv.START[dim], rel_tol=settings["rel_tol"], agreement=agreement
+    )
     meshconv.write(rep, out, device=device, dim=dim, settings=settings)
     print(f"{device}: selected level {rep.selected}", flush=True)
 
@@ -359,20 +381,30 @@ def run_meshconv(
 
     def level(i: int) -> float:
         d = scratch / f"level{i}"
+        t = time.monotonic()
+        if dim == 2 and (d / LEVEL_NAME).is_file() and not (d / AGREEMENT_NAME).is_file():
+            a = scratch / f"agreement{i}"
+            a.mkdir(exist_ok=True)
+            _sandbox_job([*base, "--agreement", "--level", str(i)], a, mem)
+            shutil.copyfile(a / AGREEMENT_NAME, d / AGREEMENT_NAME)
         if (d / LEVEL_NAME).is_file():
             print(f"{device}/level{i}: kept from {d}", flush=True)
-            return 0.0
+            return time.monotonic() - t
         if d.exists():
             shutil.rmtree(d)
         d.mkdir()
         if dim == 2:
             print(f"{device}/level{i}: progress in {d / PROGRESS_NAME}", flush=True)
-        t = time.monotonic()
         try:
             _sandbox_job([*base, "--level", str(i)], d, mem)
         finally:
             if progress_dir is not None:
                 _copy_progress(d, Path(progress_dir) / f"{device}_level{i}.log")
+        if dim == 2:
+            a = scratch / f"agreement{i}"
+            a.mkdir(exist_ok=True)
+            _sandbox_job([*base, "--agreement", "--level", str(i)], a, mem)
+            shutil.copyfile(a / AGREEMENT_NAME, d / AGREEMENT_NAME)
         return time.monotonic() - t
 
     with ThreadPoolExecutor(max_workers=jobs) as pool:
@@ -425,6 +457,7 @@ def _parser() -> argparse.ArgumentParser:
     which = p.add_mutually_exclusive_group(required=True)
     which.add_argument("--level", type=int, choices=range(len(meshconv.LEVELS)))
     which.add_argument("--assemble", action="store_true")
+    p.add_argument("--agreement", action="store_true", help="2D: with --level, the 1D check")
     return ap
 
 
@@ -437,6 +470,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             run_host(a.device, a.params, a.out, a.dim, a.geometry, a.progress_log)
         elif a.command == "meshconv-job" and a.assemble:
             run_meshconv_assemble(a.device, a.dim, a.out)
+        elif a.command == "meshconv-job" and a.agreement:
+            run_meshconv_agreement(a.device, a.level, a.out)
         elif a.command == "meshconv-job":
             run_meshconv_level(a.device, a.dim, a.level, a.out)
         else:
