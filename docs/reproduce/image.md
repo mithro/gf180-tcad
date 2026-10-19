@@ -452,13 +452,14 @@ anonymous pull of {repo}`docker/TCAD_DEV_IMAGE` works; if it does not, make the 
    ([`gh release create --prerelease`](https://cli.github.com/manual/gh_release_create), then
    [`gh release upload`](https://cli.github.com/manual/gh_release_upload), each with
    `--repo mithro/gf180-tcad`). Then check each asset's digest against the two input lists. Keep
-   old mirror releases, because older commits build from them. The tag appears in five places,
+   old mirror releases, because older commits build from them. The tag appears in six places,
    and {test}`tests/test_tcad_dev_lock.py::test_one_mirror_tag_everywhere` checks that they agree:
    - `MIRROR_TAG` in {repo}`docker/tcad-dev/wheelhouse.py`, which sets the tag (the test reads it
      from there);
    - every `mirror_url` in {repo}`docker/tcad-dev/upstream.json`;
    - every `mirror_url` in {repo}`docker/tcad-dev/wheelhouse.json` (regenerated);
    - `input_mirror` in {repo}`docs/conf.py`;
+   - the docstring of {repo}`docker/tcad-dev/fetch_sources.py`;
    - the tag named in this page.
 4. Rebuild twice (`--no-cache`), commit {repo}`docker/tcad-dev/IMAGE_ID` and
    {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.

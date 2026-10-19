@@ -9,6 +9,7 @@
 
 import csv
 import hashlib
+import http.client
 import importlib.util
 import io
 import json
@@ -86,10 +87,25 @@ def test_fetch_mirror_wrong_hash_then_url(monkeypatch, tmp_path):
     fake, dest, run = _fetch(
         monkeypatch,
         tmp_path,
-        {ENTRY["mirror_url"]: [bad] * fetch_sources.ATTEMPTS, ENTRY["url"]: [GOOD]},
+        {ENTRY["mirror_url"]: [bad], ENTRY["url"]: [GOOD]},
     )
     assert run() == "url"
-    assert fake.calls[-1] == ENTRY["url"]
+    # a wrong hash is not retried: the same URL would serve the same wrong bytes
+    assert fake.calls == [ENTRY["mirror_url"], ENTRY["url"]]
+    assert dest.read_bytes() == GOOD
+
+
+def test_fetch_http_exception_then_url(monkeypatch, tmp_path):
+    """http.client errors (a truncated or malformed response) are not OSErrors; they are retried
+    and then fall through to the next URL like any other download error."""
+    err = http.client.IncompleteRead(b"part")
+    fake, dest, run = _fetch(
+        monkeypatch,
+        tmp_path,
+        {ENTRY["mirror_url"]: [err] * fetch_sources.ATTEMPTS, ENTRY["url"]: [GOOD]},
+    )
+    assert run() == "url"
+    assert fake.calls == [ENTRY["mirror_url"]] * fetch_sources.ATTEMPTS + [ENTRY["url"]]
     assert dest.read_bytes() == GOOD
 
 
@@ -99,7 +115,7 @@ def test_fetch_both_fail_exits_and_removes_the_file(monkeypatch, tmp_path):
         tmp_path,
         {
             ENTRY["mirror_url"]: [OSError("down")] * fetch_sources.ATTEMPTS,
-            ENTRY["url"]: [b"wrong"] * fetch_sources.ATTEMPTS,
+            ENTRY["url"]: [b"wrong"],
         },
     )
     with pytest.raises(SystemExit) as exc:

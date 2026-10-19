@@ -93,13 +93,17 @@ MIRROR = _wheelhouse_module().MIRROR
 
 
 def test_one_mirror_tag_everywhere():
-    """The mirror tag is set in wheelhouse.py; the docs and both input lists use it."""
+    """The mirror tag is set in wheelhouse.py; the docs, fetch_sources.py and both input lists
+    use it."""
     assert re.fullmatch(r"gf180-tcad/inputs/tcad-dev-\d{8}", MIRROR_TAG)
     assert MIRROR == f"https://github.com/mithro/gf180-tcad/releases/download/{MIRROR_TAG}/"
     conf = (REPO_ROOT / "docs" / "conf.py").read_text(encoding="utf-8")
     assert f'"https://github.com/mithro/gf180-tcad/releases/tag/{MIRROR_TAG}"' in conf
     image_md = (REPO_ROOT / "docs" / "reproduce" / "image.md").read_text(encoding="utf-8")
     assert f"`{MIRROR_TAG}`" in image_md
+    fetch = (DEV / "fetch_sources.py").read_text(encoding="utf-8")
+    assert f"https://github.com/mithro/gf180-tcad/releases/tag/{MIRROR_TAG}" in fetch
+    assert len(re.findall(r"tcad-dev-\d{8}", fetch)) == 1
     for name, e in {**_upstream(), **_wheelhouse()}.items():
         assert e["mirror_url"].startswith(MIRROR), name
 

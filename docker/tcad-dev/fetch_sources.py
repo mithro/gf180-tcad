@@ -6,11 +6,15 @@ Runs in the build stage of docker/tcad-dev/Dockerfile with the base image's /usr
     fetch_sources.py --wheelhouse WHEELHOUSE_JSON OUT_DIR  (every file of wheelhouse.json)
 Each entry is saved as OUT_DIR/<its ``file``> (upstream.json) or OUT_DIR/<its key> (wheelhouse.json,
 the PyPI file name). It is fetched from its ``mirror_url`` (gf180-tcad's input mirror, a GitHub
-release of mithro/gf180-tcad) first, then from its original ``url``; either way the bytes must
-hash to its ``sha256``, or the build fails. Nothing is unpacked here.
+release of mithro/gf180-tcad,
+https://github.com/mithro/gf180-tcad/releases/tag/gf180-tcad/inputs/tcad-dev-20261019) first,
+then from its original ``url``; either way the bytes must hash to its ``sha256``, or the build
+fails. A download error is retried (ATTEMPTS per URL); a wrong sha256 goes straight to the next
+URL. Nothing is unpacked here.
 """
 
 import hashlib
+import http.client
 import json
 import sys
 import urllib.request
@@ -36,12 +40,16 @@ def fetch(entry: dict, dest: Path) -> str:
         for _ in range(ATTEMPTS):
             try:
                 got = _download(entry[which], dest)
-            except OSError as e:  # URLError, HTTPError, timeouts, resets
-                errors.append(f"{entry[which]}: {e}")
+            except (OSError, http.client.HTTPException) as e:
+                # OSError: URLError, HTTPError, timeouts, resets; HTTPException: a truncated or
+                # malformed response (IncompleteRead, RemoteDisconnected is both). Retried.
+                errors.append(f"{entry[which]}: {e!r}")
                 continue
             if got == entry["sha256"]:
                 return which
+            # A wrong hash is not retried: the same URL serves the same bytes. Next URL.
             errors.append(f"{entry[which]}: sha256 {got} != {entry['sha256']}")
+            break
     dest.unlink(missing_ok=True)
     sys.exit(f"fetch_sources: {dest.name}: every URL failed:\n  " + "\n  ".join(errors))
 
