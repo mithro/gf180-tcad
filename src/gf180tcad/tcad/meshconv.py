@@ -113,7 +113,9 @@ class Level:
     """One refinement level: ``spec`` = start scaled by ``scale``, and its curve.
 
     ``rel_change`` is abs(C/C_finer - 1) at each bias against the next finer level and
-    ``max_rel_change`` its maximum (both None on the finest level).
+    ``max_rel_change`` its maximum (both None on the finest level). ``extended_fallback`` lists
+    the bias indices that the 2D QS sweep solved in extended precision after a stalled
+    double-precision solve (the curve's ``extended_fallback``; empty in 1D).
     """
 
     scale: float
@@ -122,6 +124,7 @@ class Level:
     c_per_area_ff_um2: tuple[float, ...]
     rel_change: tuple[float, ...] | None
     max_rel_change: float | None
+    extended_fallback: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -231,7 +234,8 @@ def converge(
             worst = max(rel)
         else:
             rel, worst = None, None
-        out_levels.append(Level(r, s, int(c.node_count), cs[i], rel, worst))
+        fallback = tuple(int(k) for k in getattr(c, "extended_fallback", ()))
+        out_levels.append(Level(r, s, int(c.node_count), cs[i], rel, worst, fallback))
 
     orders = []
     for i in range(len(levels) - 2):
@@ -277,6 +281,7 @@ def report_dict(
         "levels": [
             {
                 "c_per_area_ff_um2": list(lv.c_per_area_ff_um2),
+                "extended_fallback": list(lv.extended_fallback),
                 "max_rel_change": lv.max_rel_change,
                 "node_count": lv.node_count,
                 "rel_change": None if lv.rel_change is None else list(lv.rel_change),

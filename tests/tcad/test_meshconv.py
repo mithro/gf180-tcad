@@ -241,8 +241,10 @@ def test_report_contents(tmp_path):
     assert [lv["node_count"] for lv in data["levels"]] == [lv.node_count for lv in rep.levels]
     lv0 = data["levels"][0]
     assert set(lv0) == {
-        "c_per_area_ff_um2", "max_rel_change", "node_count", "rel_change", "scale", "spec"
+        "c_per_area_ff_um2", "extended_fallback", "max_rel_change", "node_count",
+        "rel_change", "scale", "spec",
     }  # fmt: skip
+    assert lv0["extended_fallback"] == []
     assert data["levels"][-1]["rel_change"] is None
     assert data["observed_order"][-1]["levels"] == [1, 2, 3]
     assert math.isclose(data["observed_order"][-1]["median"], 2.0, rel_tol=1e-9)

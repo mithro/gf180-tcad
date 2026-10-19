@@ -292,6 +292,8 @@ class _Curve:
         self.vg = tuple(data["vg"])
         self.c_per_area_ff_um2 = tuple(data["c_per_area_ff_um2"])
         self.node_count = int(data["node_count"])
+        # a level written before the fallback existed converged everywhere in double precision
+        self.extended_fallback = tuple(data.get("extended_fallback", ()))
 
 
 def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
