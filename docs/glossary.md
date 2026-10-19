@@ -228,6 +228,98 @@ cgg_acc_ff
   `cgg_acc_ff` at -5 V (accumulation), in {term}`fF <FF>`. Only ngspice runs the `cv` sweep. See
   {py:mod}`gf180tcad.metrics`.
 
+C–V
+quasi-static
+QS
+  Capacitance–voltage: the gate capacitance {term}`Cgg` against the gate bias. The quasi-static
+  (QS, low-frequency) curve is the equilibrium one and recovers to about the {term}`oxide capacitance <Cox>` in
+  inversion; {term}`BSIM4` [`capMod=2`](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip) gives it. A {term}`MOSCAP` solved by small-signal AC with only
+  a body contact gives the high-frequency curve instead. See {ref}`plugin-history-latest`.
+
+HF C–V
+high-frequency C–V
+  The {term}`C–V` measured with a small signal too fast for the inversion layer to follow: in inversion
+  the capacitance stays near its depletion minimum instead of recovering to {term}`Cox`.
+  Technically, minority carriers are generated thermally in about 2τ·N/n_i, so above that rate
+  only the depletion edge responds; a 1D {term}`MOSCAP` with only a body contact gives this
+  curve at any practical frequency ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`plugin-history-latest`.
+
+Cox
+oxide capacitance
+  The capacitance per area of the gate oxide alone, the ceiling of the {term}`C–V` curve.
+  Technically Cox = ε_ox·ε0/t_ox; for the nfet's 15.2 nm and {term}`EPSROX` 3.9 it is
+  2.2718 fF/µm² ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`process-data`.
+
+effective oxide thickness
+t_ox_eff
+  The oxide thickness that gives the measured (or {term}`SPICE`) accumulation and inversion
+  capacitance, so it lumps the charge centroids in the silicon with the physical oxide.
+  Technically t_ox_eff = ε_ox·ε0/C_plateau; {term}`BSIM4` separates TOXE (electrical) from TOXP
+  (physical) for this reason ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), section 7.3). Here it is the tunable
+  `t_ox_eff_nm`. See {ref}`process-data-tunables`.
+
+poly depletion
+  The depletion of the poly-silicon gate next to the oxide, which adds a capacitance in series
+  with {term}`Cox` and lowers the inversion capacitance. Technically the gate is a second
+  semiconductor at {term}`NGATE`, whose space charge follows the same charge function as the
+  body ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329); [BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), the poly-depletion model). See
+  {ref}`process-data`.
+
+DLC
+DWC
+  The length (DLC) and width (DWC) offsets of {term}`BSIM4`'s capacitance geometry:
+  LeffCV = L + {term}`XL` − 2·DLC and WeffCV = W + XW − 2·DWC. When the {term}`card <model card>` sets none, DLC defaults
+  to LINT and DWC to WINT ([ngspice `b4set.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4set.c), [`b4temp.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c);
+  [BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
+
+XL
+XW
+  The {term}`BSIM4` mask/etch offsets of the drawn length and width, added before the
+  {term}`DLC`/{term}`DWC` offsets ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). Both are 0 on the
+  5 V {term}`cards <model card>`. See {ref}`process-data`.
+
+CKAPPAS
+CKAPPAD
+  The coefficients (V) of {term}`BSIM4`'s bias-dependent gate-source and gate-drain overlap
+  ({term}`LDD`) capacitance with CGSL and CGDL, in the `capMod` 1 and 2 overlap equations
+  ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), section 7.5; [ngspice `b4ld.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4ld.c)). See {ref}`process-data`.
+
+CGBO
+  {term}`BSIM4`'s gate-bulk overlap capacitance per channel length, multiplied by LeffCV
+  ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), section 7.5). See {ref}`process-data`.
+
+VFBCV
+  {term}`BSIM4`'s flat-band voltage for `capMod=0` only; it does not enter the `capMod=2`
+  equations ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
+
+VFBSDOFF
+  {term}`BSIM4`'s flat-band offset of the source/drain overlap region; 0 on the nfet {term}`card <model card>` and
+  unset (default 0) on the pfet card ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
+
+EPSROX
+  The relative permittivity of the gate oxide in the {term}`BSIM4` {term}`card <model card>`, 3.9 for both 5 V
+  devices; the {term}`TCAD` oxide uses it ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
+
+NGATE
+  The poly-silicon gate doping of the {term}`BSIM4` {term}`card <model card>` (1e20 cm⁻³ n⁺ for the nfet, 3.6e19 p⁺
+  for the pfet), the doping of the {term}`TCAD` poly-gate region ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A).
+  See {ref}`process-data`.
+
+LLC
+LWC
+LWLC
+WLC
+WWC
+WWLC
+  The length- and width-dependent terms of {term}`BSIM4`'s capacitance offsets (dLc, dWc);
+  zero or unset on the 5 V {term}`cards <model card>`, so LeffCV and WeffCV reduce to the {term}`DLC`/{term}`DWC`
+  forms ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
+
+MOSCAP
+MOS capacitor
+  A poly-gate, oxide and body stack without source and drain, simulated by the {term}`TCAD` to
+  compare its {term}`C–V` with the {term}`SPICE` {term}`Cgg`. See {ref}`plugin-history-latest`.
+
 Rsd
   Source/drain series resistance (contact, silicide and {term}`LDD`). The {term}`SPICE` {term}`card <model card>` has RDSW
   2175 Ω·µm. See {ref}`mismatch-taxonomy`.
@@ -335,7 +427,7 @@ Phases 0 and 1
 Phase 2
 Phase 3
 Phase 3 entry gate
-  The next phases: a MOS capacitor in {{ DEVSIM }} (Phase 2), then the 2D MOSFET (Phase 3). The
+  The next phases: a {term}`MOS capacitor <MOSCAP>` in {{ DEVSIM }} (Phase 2), then the 2D MOSFET (Phase 3). The
   Phase 3 entry gate is the list of what must exist before any MOSFET {term}`TCAD` result,
   including the deviations from the design spec still open at the end of
   {term}`Phases 0 and 1`. See

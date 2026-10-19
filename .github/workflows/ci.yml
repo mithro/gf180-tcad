@@ -15,7 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # The submodule (third_party/gplugins) is checked out: tests/tcad/test_tcad_provenance.py
+      # hashes its gplugins/devsim files and reads its commit for the TCAD provenance.json.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.1"
@@ -28,7 +32,7 @@ jobs:
           sudo locale-gen de_DE.UTF-8
           locale -a
       # GH_TOKEN: tests/test_submodule.py asks the GitHub API (gh) whether the third_party/gplugins
-      # pin is on mithro/gplugins main. The checkout stays without submodules.
+      # pin is on mithro/gplugins main.
       - run: uv run pytest -m "not sandbox" -rs -v
         env:
           GH_TOKEN: ${{ github.token }}
