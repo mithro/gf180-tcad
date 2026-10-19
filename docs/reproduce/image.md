@@ -327,8 +327,22 @@ workflows.
   - **Test.** {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained`.
     The dev-image fork tests run at fork commit
     [`408d0af`](https://github.com/mithro/gplugins/commit/408d0af89c6691e78e03b4d7e75b6dcccc74ee99),
-    while the {repo}`third_party/gplugins` pin stays at the commit of the committed results until the
+    while the submodule pin stays at
+    [`dddaa07`](https://github.com/mithro/gplugins/tree/dddaa071321c5177c8471312c565ad86d4b245d7),
+    the commit of the committed results, until the
     results move to this image.
+
+**The full flow runs in the dev image** (2026-10-19, image config `245963e5…`):
+
+- every sandbox test of {repo}`tests/test_tcad_dev_image.py` passes;
+- the fork's `gplugins/devsim` and `gplugins/process` tests at `408d0af` give 131 passed in the
+  dev image and 131 passed in the stable image;
+- the 1D {term}`MOS capacitor <MOSCAP>` and mesh-convergence trees regenerated in the dev image
+  ({repo}`tests/tcad`) are byte-identical to the committed {repo}`results/tcad/moscap1d` and
+  {repo}`results/tcad/meshconv` trees, except their `provenance.json`, which names the image.
+
+So no numeric drift was found against the stable image. DEVSIM's `devsim_py3.so` is also
+byte-identical to the first GCC 14 pin's.
 
 (tcad-dev-mirror)=
 
