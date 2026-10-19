@@ -60,7 +60,9 @@ FORKS = {
 }
 URL_INSTALLED = ("meshwell", "gdsfactory", "gf180mcu", "gmsh")
 # gf180-tcad's input mirror: release assets of mithro/gf180-tcad.
-MIRROR = "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/"
+MIRROR = (
+    "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/"
+)
 SUBMODULES = ("symdiff", "umfpack_lgpl", "boost_config", "boost_math", "boost_multiprecision")
 # GCC 14, only in the build stage (upstream builds its x86_64 wheels with GCC 14).
 DEBS = (
@@ -118,9 +120,9 @@ def test_forks_record_their_upstream_base():
     up = _upstream()
     for name, upstream_repo in FORKS.items():
         e = up[name]
-        assert e["repository"] == upstream_repo.replace(
-            upstream_repo.split("/")[3], "mithro", 1
-        ), name
+        assert e["repository"] == upstream_repo.replace(upstream_repo.split("/")[3], "mithro", 1), (
+            name
+        )
         assert e["upstream_repository"] == upstream_repo
         assert re.fullmatch(r"[0-9a-f]{40}", e["upstream_commit"]), name
         assert e["upstream_commit"] != e["commit"], name
