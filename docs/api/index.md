@@ -33,6 +33,7 @@ gf180tcad.spice.xyce
 gf180tcad.tcad
 gf180tcad.tcad.__main__
 gf180tcad.tcad.analytic
+gf180tcad.tcad.calibration
 gf180tcad.tcad.mesh
 gf180tcad.tcad.moscap1d
 gf180tcad.tcad.process

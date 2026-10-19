@@ -1,25 +1,27 @@
 # SPDX-License-Identifier: Apache-2.0
-"""``python -m gf180tcad.tcad``: the TCAD MOS capacitor jobs.
+"""``python -m gf180tcad.tcad``: the :term:`TCAD` :term:`MOS capacitor <MOSCAP>` jobs.
 
 ``moscap --device D --dim 1 --params start|calibrated --out ROOT`` runs on the host. It writes
 ``ROOT/<device>/<params>/per_area.csv`` and ``per_area.meta.json``
 (:mod:`gf180tcad.tcad.moscap1d`) and the tree root's ``ROOT/provenance.json``
-(:func:`gf180tcad.tcad.tree_provenance`). The simulation itself is ``moscap-job``, which
-runs inside the TCAD image (``docker/TCAD_IMAGE``) through :func:`gf180tcad.sandbox.run` with
-a scratch directory as ``/work/out``; the host then copies the two files into place.
+(:func:`gf180tcad.tcad.tree_provenance`); the committed tree is :repo:`results/tcad/moscap1d`.
+The simulation itself is ``moscap-job``, which runs inside the TCAD image
+(:repo:`docker/TCAD_IMAGE`) through :func:`gf180tcad.sandbox.run` with a scratch directory as
+``/work/out``; the host then copies the two files into place.
 
-``--params start`` uses the tunables' starts in ``data/process/<device>.toml`` (the card
-values); ``--params calibrated`` uses ``results/tcad/calibration/<device>.json`` (Task 12, its
-``values`` mapping of tunable name to value) and refuses to run if that file is absent. So start
-results are never mistaken for calibrated ones. The gate biases are those of the SPICE ``cv``
-sweep, in its order (:func:`job_vg`), and the mesh is
-:data:`gf180tcad.tcad.mesh.MeshSpec.DEFAULT_1D`.
+``--params start`` uses the tunables' starts in the device's process file ``<device>.toml``
+in :repo:`data/process` (the card values); ``--params calibrated``
+uses ``results/tcad/calibration/<device>.json``, written by
+:repo:`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>` and read with
+:func:`gf180tcad.tcad.calibration.read`, and refuses to run if that file is absent or does not
+hold exactly the tunables. So start results are never mistaken for calibrated ones. The gate
+biases are those of the :term:`SPICE` :term:`cv` sweep, in its order (:func:`job_vg`), and the
+mesh is :attr:`gf180tcad.tcad.mesh.MeshSpec.DEFAULT_1D`.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import sys
 import tempfile
@@ -30,6 +32,7 @@ from gf180tcad import io, sandbox
 from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.tcad import (
     TCAD_IMAGE,
+    calibration,
     calibration_file,
     gplugins_commit,
     moscap1d,
@@ -48,19 +51,23 @@ class MissingCalibration(FileNotFoundError):
     """``--params calibrated`` without ``results/tcad/calibration/<device>.json``."""
 
 
-def load_params(device: str, params: str) -> process.ProcessDescription:
-    """The process description of ``device`` with its ``params`` tunable values."""
+def load_params(device: str, params: str) -> tuple[process.ProcessDescription, str | None]:
+    """``device``'s process description with its ``params`` tunable values.
+
+    Returns it with the calibration file's sha256 (None for ``start``). The calibration file
+    is read with :func:`gf180tcad.tcad.calibration.read`, which refuses a partial or unknown
+    set of tunables.
+    """
     proc = process.load(device)
     if params == "start":
-        return proc
+        return proc, None
     path = calibration_file(device)
     if not path.is_file():
         raise MissingCalibration(
             f"--params calibrated needs {path.relative_to(sandbox.REPO_ROOT)} (Task 12), which "
             "does not exist"
         )
-    data = json.loads(path.read_bytes())
-    return proc.with_values(data["values"])
+    return proc.with_values(calibration.read(path, device)), calibration.sha256_file(path)
 
 
 def job_vg(proc: process.ProcessDescription) -> tuple[float, ...]:
@@ -77,9 +84,9 @@ def run_job(device: str, params: str, out: Path) -> None:
     """``moscap-job``: simulate the 1D MOS capacitor and write its files into ``out``."""
     if not sandbox.in_sandbox():
         raise RuntimeError("moscap-job must run inside the sandbox (see tools/sandbox-run)")
-    proc = load_params(device, params)
+    proc, calibration_sha256 = load_params(device, params)
     cv = moscap1d.simulate(proc, vg=job_vg(proc), method="qs", mesh=MeshSpec.DEFAULT_1D)
-    moscap1d.write(cv, Path(out), proc=proc, params=params)
+    moscap1d.write(cv, Path(out), proc=proc, params=params, calibration_sha256=calibration_sha256)
     print(f"{device}/{params}: {len(cv.vg)} points", flush=True)
 
 

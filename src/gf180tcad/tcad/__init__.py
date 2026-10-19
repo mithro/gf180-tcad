@@ -4,12 +4,15 @@
 Nothing here is a SPICE generator module (:data:`gf180tcad.reference.GENERATOR_MODULES`), so
 changes to this package never touch ``results/spice/provenance.json``.
 
-**Provenance.** Each TCAD tree root (``results/tcad/moscap1d``, ``moscap2d``, ``meshconv``,
-``calibration``, ``validation``) holds one ``provenance.json``, written from
-:func:`tree_provenance`. It holds the TCAD image reference (``docker/TCAD_IMAGE``), the
-contents of ``docker/tcad/versions.json``, the plugin commit ``gplugins_commit`` and
-``generator_sha256`` (:func:`generator_sha256`), and, for a tree with calibrated results, the
-sha256 of each ``results/tcad/calibration/<device>.json`` used. It holds no date.
+**Provenance.** Each TCAD tree root (:repo:`results/tcad/moscap1d`, and later ``moscap2d``,
+``meshconv``, ``calibration`` and ``validation`` under :repo:`results/tcad`) holds one
+``provenance.json``, written from :func:`tree_provenance`. It holds the TCAD image reference
+(:repo:`docker/TCAD_IMAGE`), the contents of :repo:`docker/tcad/versions.json`, the plugin
+commit ``gplugins_commit`` and ``generator_sha256`` (:func:`generator_sha256`), and, for a tree
+with calibrated results, per device the sha256 of its calibration file
+``results/tcad/calibration/<device>.json`` (:mod:`gf180tcad.tcad.calibration`, written by
+:repo:`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`) and the ``param_sha256`` of the
+values applied (:func:`gf180tcad.tcad.calibration.param_sha256`). It holds no date.
 
 The plugin is the submodule `third_party/gplugins
 <https://github.com/mithro/gplugins/tree/dddaa071321c5177c8471312c565ad86d4b245d7>`_, a checkout
@@ -19,6 +22,11 @@ of the gplugins fork. Its commit is read on the host with
 submodule's working tree is clean (``git status --porcelain`` is empty) and its commit equals
 the gitlink recorded in ``HEAD`` (``git ls-tree HEAD third_party/gplugins``), so the hashed
 plugin files are exactly the pinned commit's.
+
+Only the plugin's ``gplugins/devsim/`` files are hashed into ``generator_sha256``. The rest of
+the plugin that the TCAD imports (``gplugins/__init__.py``, ``gplugins.common``,
+``gplugins.meshwell``) is covered by ``gplugins_commit`` together with the clean-tree check, not
+by the file hashes.
 """
 
 import hashlib
@@ -47,6 +55,7 @@ TCAD_GENERATOR_MODULES = (
     "gf180tcad.tcad",
     "gf180tcad.tcad.__main__",
     "gf180tcad.tcad.analytic",
+    "gf180tcad.tcad.calibration",
     "gf180tcad.tcad.mesh",
     "gf180tcad.tcad.moscap1d",
     "gf180tcad.tcad.process",
@@ -172,8 +181,16 @@ def provenance(calibrated: tuple[str, ...] = (), repo_root: Path | None = None) 
         "versions": json.loads((root / TCAD_VERSIONS).read_text(encoding="utf-8")),
     }
     if calibrated:
-        out["calibration_sha256"] = {
-            d: _sha256(calibration_file(d, root)) for d in sorted(set(calibrated))
+        from gf180tcad.tcad import calibration
+
+        out["calibration"] = {
+            d: {
+                "file_sha256": calibration.sha256_file(calibration_file(d, root)),
+                "param_sha256": calibration.param_sha256(
+                    calibration.read(calibration_file(d, root), d)
+                ),
+            }
+            for d in sorted(set(calibrated))
         }
     return out
 

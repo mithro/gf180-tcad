@@ -18,6 +18,7 @@ import pytest
 
 from gf180tcad import manifest, reference, sandbox, tcad
 from gf180tcad.layout import PROVENANCE_NAME
+from gf180tcad.tcad import calibration
 
 REPO = Path(__file__).resolve().parents[2]
 RESULTS = REPO / "results"
@@ -120,12 +121,16 @@ def test_provenance_contents():
 
 
 def test_provenance_records_calibration(tmp_path, monkeypatch):
+    values = {"t_ox_eff_nm": 15.9, "n_ch_cm3": 2.0e17, "dv_fb_v": 0.05}
     calib = tmp_path / "nfet_05v0.json"
-    calib.write_text('{"values": {}}\n', encoding="utf-8")
+    calibration.write(calib, "nfet_05v0", values)
     monkeypatch.setattr(tcad, "calibration_file", lambda d, root=None: tmp_path / f"{d}.json")
     prov = tcad.provenance(("nfet_05v0",))
-    assert prov["calibration_sha256"] == {
-        "nfet_05v0": hashlib.sha256(calib.read_bytes()).hexdigest()
+    assert prov["calibration"] == {
+        "nfet_05v0": {
+            "file_sha256": hashlib.sha256(calib.read_bytes()).hexdigest(),
+            "param_sha256": calibration.param_sha256(values),
+        }
     }
     tree = tmp_path / "tree"
     (tree / "nfet_05v0" / "calibrated").mkdir(parents=True)
