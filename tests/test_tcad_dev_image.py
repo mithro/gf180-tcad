@@ -26,7 +26,7 @@ PIN = DOCKER / "TCAD_DEV_IMAGE"
 VERSIONS = DEV / "versions.json"
 VENV = "/opt/gf180tcad-tcad"
 SITE = f"{VENV}/lib/python3.13/site-packages/"
-DEV_KEYS = TCAD_KEYS | {"upstream"}
+DEV_KEYS = TCAD_KEYS | {"upstream", "devsim_build"}
 
 
 def _image() -> str:
@@ -66,7 +66,9 @@ def test_tcad_dev_versions_json_shape():
     data = json.loads(text)
     assert set(data) == DEV_KEYS
     assert text == json.dumps(data, indent=2, sort_keys=True) + "\n"
-    assert all(isinstance(v, str) and v for k, v in data.items() if k != "upstream")
+    assert all(
+        isinstance(v, str) and v for k, v in data.items() if k not in ("upstream", "devsim_build")
+    )
     # the manifest baked into the image is the committed one
     assert data["upstream"] == _json(DEV / "upstream.json")
     # the dev stack: the locked dev versions, not the stable releases
@@ -81,6 +83,16 @@ def test_tcad_dev_versions_json_shape():
     # and may or may not coincide with the release; devsim and gf180mcu do, at 2.11.1 and 1.0.0)
     for key in TCAD_KEYS - {"devsim", "meshwell", "gmsh", "gdsfactory", "gf180mcu"}:
         assert data[key] == stable[key], key
+
+
+def test_tcad_dev_versions_json_devsim_build():
+    """DEVSIM's build record: the manifest's commit, built by the build stage's GCC 14.2."""
+    build = _json(VERSIONS)["devsim_build"]
+    assert set(build) == {"commit", "compilers", "devsim_py3.so sha256"}
+    assert build["commit"] == _json(DEV / "upstream.json")["devsim"]["commit"]
+    assert re.fullmatch(r"[0-9a-f]{64}", build["devsim_py3.so sha256"])
+    gcc = _json(DEV / "upstream.json")["gcc-14-x86-64-linux-gnu"]["version"]
+    assert f"GCC: (Ubuntu {gcc}) 14.2.0" in build["compilers"], build["compilers"]
 
 
 # --- inside the dev image --------------------------------------------------------------------
@@ -287,27 +299,41 @@ def test_tcad_dev_gmsh_control_without_python_cpu_count(tmp_path):
     assert got["NumThreads"] > 1 and got["OCCParallel"] == 1
 
 
-def _gplugins_pin() -> str:
-    out = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "ls-tree", "HEAD", "third_party/gplugins"],
+# TEMPORARY, until results/ moves to the dev image: the fork commit whose tests run in the dev
+# image. It is mithro/gplugins main 408d0af (#10, the floating-rib invariant). The submodule pin
+# (third_party/gplugins) stays at the commit the committed results/tcad trees were made with,
+# and catches up with this one in the pull request that regenerates them in the dev image.
+GPLUGINS_FORK_TEST_COMMIT = "408d0af89c6691e78e03b4d7e75b6dcccc74ee99"
+GPLUGINS_FORK = "https://github.com/mithro/gplugins.git"
+
+
+def _fork_archive(commit: str) -> bytes:
+    """``git archive`` of ``commit`` of the fork, fetched (anonymously) into the submodule's
+    object store first if it is not there yet."""
+    sub = REPO_ROOT / "third_party" / "gplugins"
+    if not (sub / "gplugins").is_dir():
+        pytest.skip("third_party/gplugins is not checked out")
+    have = subprocess.run(
+        ["git", "-C", str(sub), "cat-file", "-e", f"{commit}^{{commit}}"],
         capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
-    assert out[1] == "commit", out
-    return out[2]
+        check=False,
+    )
+    if have.returncode != 0:
+        subprocess.run(
+            ["git", "-C", str(sub), "fetch", "--no-tags", GPLUGINS_FORK, commit],
+            capture_output=True,
+            check=True,
+        )
+    return subprocess.run(
+        ["git", "-C", str(sub), "archive", commit], capture_output=True, check=True
+    ).stdout
 
 
 @pytest.mark.sandbox
 @pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_PN_SLAB_DRIFT)
 def test_tcad_dev_fork_pn_slab_currents_explained(tmp_path):
-    """The fork's PN-slab test, from a git archive of the pinned submodule, in the dev image."""
-    sub = REPO_ROOT / "third_party" / "gplugins"
-    if not (sub / "gplugins").is_dir():
-        pytest.skip("third_party/gplugins is not checked out")
-    archive = subprocess.run(
-        ["git", "-C", str(sub), "archive", _gplugins_pin()], capture_output=True, check=True
-    ).stdout
+    """The fork's PN-slab test, from a git archive of GPLUGINS_FORK_TEST_COMMIT, in the dev image."""
+    archive = _fork_archive(GPLUGINS_FORK_TEST_COMMIT)
     with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
         tar.extractall(tmp_path, filter="data")
     test = "gplugins/devsim/tests/test_mesh.py::test_pn_slab_currents_explained"
