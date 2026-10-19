@@ -272,16 +272,15 @@ def test_admission_budget_is_the_spice_one():
         meshconv.check_admission(0, "2g")
 
 
-def test_dim2_requires_task11(tmp_path, capsys):
-    for cmd in ("meshconv", "meshconv-job"):
-        argv = [cmd, "--device", "nfet_05v0", "--dim", "2", "--out", str(tmp_path / "root")]
-        if cmd == "meshconv-job":
-            argv += ["--level", "0"]
-        assert cli.main(argv) == 2
-        assert "requires Task 11" in capsys.readouterr().err
-    assert not (tmp_path / "root").exists()
-    with pytest.raises(meshconv.NeedsTask11):
-        meshconv.simulator("nfet_05v0", 2)
+def test_dim2_simulator_settings():
+    """The 2D study: the PDK cell at Lmin with its S/D, from DEFAULT_2D, settings recorded."""
+    _, settings = meshconv.simulator("nfet_05v0", 2)
+    assert settings["geometry"] == "w10p0_l0p60" and settings["with_sd"] is True
+    assert settings["rel_tol"] == moscap1d.REL_TOL and settings["method"] == "qs"
+    assert meshconv.START == {1: MeshSpec.DEFAULT_1D, 2: MeshSpec.DEFAULT_2D}
+    assert meshconv.geometry_2d("pfet_05v0").l_um == 0.5
+    with pytest.raises(ValueError):
+        meshconv.check_dim(3)
 
 
 def test_meshconv_cli_refuses_too_many_jobs(tmp_path, capsys):
