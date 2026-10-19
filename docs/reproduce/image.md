@@ -372,7 +372,8 @@ byte-identical to the first GCC 14 pin's.
 Every file the build fetches is mirrored to mithro-owned storage, {{ input_mirror }}. That is a
 [GitHub release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
 of this repository, tag `gf180-tcad/inputs/tcad-dev-20261019`, used only for build inputs and
-never marked "latest". It holds 164 files:
+published as a pre-release, so it is never the repository's "Latest" release (GitHub makes the
+newest full release "Latest" whatever `--latest=false` says). It holds 164 files:
 
 - every source tarball (DEVSIM and its submodules, gdsfactory, the two forks);
 - the gmsh development wheel, whose dated snapshots on [gmsh.info](https://gmsh.info/) are not
@@ -448,7 +449,7 @@ anonymous pull of {repo}`docker/TCAD_DEV_IMAGE` works; if it does not, make the 
    {repo}`docker/tcad-dev/build-requirements.lock`, and regenerate
    {repo}`docker/tcad-dev/wheelhouse.json` with {repo}`docker/tcad-dev/wheelhouse.py`.
 3. Upload every file to a new mirror release, tag `gf180-tcad/inputs/tcad-dev-<YYYYMMDD>`
-   ([`gh release create --latest=false`](https://cli.github.com/manual/gh_release_create), then
+   ([`gh release create --prerelease`](https://cli.github.com/manual/gh_release_create), then
    [`gh release upload`](https://cli.github.com/manual/gh_release_upload), each with
    `--repo mithro/gf180-tcad`). Then check each asset's digest against the two input lists. Keep
    old mirror releases, because older commits build from them. The tag appears in five places,
