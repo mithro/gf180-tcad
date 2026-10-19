@@ -6,8 +6,11 @@ run inside the pinned dev image through ``sandbox.run(image=...)`` (run with
 ``pytest -m sandbox``); the others only read committed files.
 """
 
+import io
 import json
 import re
+import subprocess
+import tarfile
 import tomllib
 from pathlib import Path
 
@@ -74,7 +77,9 @@ def test_tcad_dev_versions_json_shape():
     assert data["gmsh"].startswith("5.0.0.dev")
     # same base image, same CPython, same tools and open_pdks facts as the stable image
     assert data["base_image_ref"] == (DOCKER / "IMAGE").read_text(encoding="utf-8").strip()
-    for key in TCAD_KEYS - {"devsim", "meshwell", "gmsh", "gdsfactory", "gf180mcu", "scipy"}:
+    # (the five dev-HEAD packages are excluded: their version strings come from upstream HEAD
+    # and may or may not coincide with the release; devsim and gf180mcu do, at 2.11.1 and 1.0.0)
+    for key in TCAD_KEYS - {"devsim", "meshwell", "gmsh", "gdsfactory", "gf180mcu"}:
         assert data[key] == stable[key], key
 
 
@@ -125,11 +130,33 @@ def test_tcad_dev_imports(tmp_path):
 
 
 # Dev-HEAD drift, kept visible (strict: an upstream fix makes these XPASS and fail, so the marker
-# is removed then). Causes: .superpowers task-9c report and docs/reproduce/image.md.
+# is removed then). Each test raises _KnownDrift only when the failure carries the diagnosed
+# signature; any other failure is re-raised and fails the test. Causes: docs/reproduce/image.md.
+class _KnownDrift(Exception):
+    """A sandboxed command failed with the signature of a diagnosed dev-HEAD drift."""
+
+
+def _run_expecting(cmd: list[str], tmp_path: Path, *signature: str, **kw):
+    """_run, but a failure whose output contains every ``signature`` string is _KnownDrift."""
+    try:
+        return _run(cmd, tmp_path, **kw)
+    except sandbox.SandboxError as e:
+        if e.result is not None:
+            out = (e.result.stdout or "") + (e.result.stderr or "")
+            if all(s in out for s in signature):
+                raise _KnownDrift(signature) from e
+        raise
+
+
 _GF180MCU_DRIFT = (
     "gf180mcu HEAD (pins gdsfactory<=9.51) does not import with gdsfactory HEAD 10.0.0rc0: "
     "building its cross-sections at import activates $PDK=gf180mcu, a circular import "
     "(it imports with gdsfactory 9.51.0)"
+)
+_PN_SLAB_DRIFT = (
+    "the fork's test_pn_slab_currents_explained: on the gmsh 5.0.0.dev20261018 mesh the floating "
+    "rib's corner Potential jump is 0.035 V, not > 0.05 V (0.118 V with gmsh 4.15.2, where the "
+    "test passes in this image); the rib's offset is set only by the mesh and the initial guess"
 )
 _MESHIO_DRIFT = (
     "meshio 5.3.5 cannot read the MSH 4.1 file gmsh 5.0.0.dev20261018 writes for meshwell's "
@@ -138,13 +165,16 @@ _MESHIO_DRIFT = (
 
 
 @pytest.mark.sandbox
-@pytest.mark.xfail(raises=sandbox.SandboxError, strict=True, reason=_GF180MCU_DRIFT)
+@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_GF180MCU_DRIFT)
 def test_tcad_dev_gf180mcu_pdk(tmp_path):
     code = (
         "import json, gdsfactory as gf, gf180mcu; "
         "print(json.dumps([gf.get_active_pdk().name, gf180mcu.__file__]))"
     )
-    name, f = json.loads(_run(["python3", "-c", code], tmp_path).stdout.splitlines()[-1])
+    res = _run_expecting(
+        ["python3", "-c", code], tmp_path, "partially initialized module 'gf180mcu'"
+    )
+    name, f = json.loads(res.stdout.splitlines()[-1])
     assert name == "gf180mcu"
     assert f.startswith(SITE)
 
@@ -213,10 +243,78 @@ def test_tcad_dev_meshwell_thread_defaults(tmp_path):
 
 
 @pytest.mark.sandbox
-@pytest.mark.xfail(raises=sandbox.SandboxError, strict=True, reason=_MESHIO_DRIFT)
+@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_MESHIO_DRIFT)
+def test_tcad_dev_meshwell_mesh_reads_back(tmp_path):
+    """meshwell's 2D mesh, read back through meshio (the drift: meshio cannot read it)."""
+    res = _run_expecting(["python3", "-c", _GMSH_MESH], tmp_path, "KeyError", "_gmsh41")
+    assert json.loads(res.stdout.splitlines()[-1]) == {"NumThreads": 1, "OCCParallel": 0}
+
+
+# The same meshwell mesh as _GMSH_MESH, with only the meshio read-back of the finished mesh
+# stubbed out (the drift above), so the gmsh thread options are still checked after a real
+# meshwell CAD + mesh run.
+_GMSH_MESH_NO_READBACK = """
+import json, gmsh, meshio
+reads = []
+meshio.read = lambda path, *a, **k: reads.append(path)
+from shapely.geometry import box
+from meshwell.orchestrator import generate_mesh
+from meshwell.polysurface import PolySurface
+generate_mesh([PolySurface(polygons=box(0, 0, 1, 1), physical_name='sq', mesh_order=1)],
+              dim=2, default_characteristic_length=0.5, verbosity=0)
+print(json.dumps({'NumThreads': gmsh.option.getNumber('General.NumThreads'),
+                  'OCCParallel': gmsh.option.getNumber('Geometry.OCCParallel'),
+                  'reads': len(reads)}))
+"""
+
+
+@pytest.mark.sandbox
 def test_tcad_dev_gmsh_single_thread(tmp_path):
-    got = json.loads(_run(["python3", "-c", _GMSH_MESH], tmp_path).stdout.splitlines()[-1])
-    assert got == {"NumThreads": 1, "OCCParallel": 0}
+    res = _run(["python3", "-c", _GMSH_MESH_NO_READBACK], tmp_path)
+    got = json.loads(res.stdout.splitlines()[-1])
+    assert got == {"NumThreads": 1, "OCCParallel": 0, "reads": 1}
+
+
+@pytest.mark.sandbox
+def test_tcad_dev_gmsh_control_without_python_cpu_count(tmp_path):
+    # Control: without the variable, meshwell's default asks gmsh for every host CPU.
+    cmd = ["env", "-u", "PYTHON_CPU_COUNT", "python3", "-c", _GMSH_MESH_NO_READBACK]
+    got = json.loads(_run(cmd, tmp_path).stdout.splitlines()[-1])
+    cpus = int(_run(["python3", "-c", "import os; print(os.cpu_count())"], tmp_path).stdout)
+    assert cpus == 1  # with the variable
+    if got["NumThreads"] == 1:
+        pytest.skip("this host has one CPU, so the control cannot show a difference")
+    assert got["NumThreads"] > 1 and got["OCCParallel"] == 1
+
+
+def _gplugins_pin() -> str:
+    out = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "ls-tree", "HEAD", "third_party/gplugins"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert out[1] == "commit", out
+    return out[2]
+
+
+@pytest.mark.sandbox
+@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_PN_SLAB_DRIFT)
+def test_tcad_dev_fork_pn_slab_currents_explained(tmp_path):
+    """The fork's PN-slab test, from a git archive of the pinned submodule, in the dev image."""
+    sub = REPO_ROOT / "third_party" / "gplugins"
+    if not (sub / "gplugins").is_dir():
+        pytest.skip("third_party/gplugins is not checked out")
+    archive = subprocess.run(
+        ["git", "-C", str(sub), "archive", _gplugins_pin()], capture_output=True, check=True
+    ).stdout
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        tar.extractall(tmp_path, filter="data")
+    test = "gplugins/devsim/tests/test_mesh.py::test_pn_slab_currents_explained"
+    cmd = ["python3", "-m", "pytest", "-p", "no:cacheprovider", "-q", test]
+    res = _run_expecting(cmd, tmp_path, 'j["boundary_jump_v"] > 0.05', "1 failed")
+    # reached only once the drift is fixed (strict xfail: then XPASS fails, remove the marker)
+    assert "1 passed" in res.stdout
 
 
 @pytest.mark.sandbox
@@ -224,8 +322,10 @@ def test_tcad_dev_no_bytecode_and_no_compiler(tmp_path):
     res = _run(["find", VENV, "/opt/uv-python", "-name", "*.pyc"], tmp_path)
     assert res.stdout == ""
     # GCC 14 and the DEVSIM build tree exist only in the build stage
-    res = _run(
-        ["sh", "-c", "ls /usr/bin/x86_64-linux-gnu-gcc-14 /opt/build || echo absent"],
-        tmp_path,
+    paths = " ".join(
+        f"/usr/bin/x86_64-linux-gnu-{tool}-14" for tool in ("cpp", "gcc", "g++", "gfortran")
     )
-    assert res.stdout.splitlines()[-1] == "absent"
+    script = (
+        f'for p in {paths} /opt/build; do [ -e "$p" ] && echo "present: $p"; done; echo checked'
+    )
+    assert _run(["sh", "-c", script], tmp_path).stdout == "checked\n"
