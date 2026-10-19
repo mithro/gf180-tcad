@@ -15,7 +15,14 @@ import tomllib
 from pathlib import Path
 
 import pytest
-from test_tcad_image import _DEVSIM_SOLVE, _GMSH_MESH, TCAD_KEYS, _base_path
+from test_tcad_image import (
+    _DEVSIM_SOLVE,
+    _GMSH_MESH,
+    _MESH_READBACK,
+    MESH_READBACK_EXPECTED,
+    TCAD_KEYS,
+    _base_path,
+)
 
 from gf180tcad import sandbox
 
@@ -224,9 +231,13 @@ def test_tcad_dev_meshwell_thread_defaults(tmp_path):
 
 @pytest.mark.sandbox
 def test_tcad_dev_meshwell_mesh_reads_back(tmp_path):
-    """meshwell's 2D mesh, read back through meshio (gmsh 5 + the meshwell fork's MSH 4.1)."""
-    res = _run(["python3", "-c", _GMSH_MESH], tmp_path)
-    assert json.loads(res.stdout.splitlines()[-1]) == {"NumThreads": 1, "OCCParallel": 0}
+    """meshwell's 2D mesh, read back through meshio (gmsh 5 + the meshwell fork's MSH 4.1),
+    is the stable image's (gmsh 4.15.2): the same points, cells and physical groups."""
+    res = _run(["python3", "-c", _MESH_READBACK], tmp_path)
+    assert json.loads(res.stdout.splitlines()[-1]) == MESH_READBACK_EXPECTED
+    # and with gmsh single-threaded, after a real read-back
+    got = json.loads(_run(["python3", "-c", _GMSH_MESH], tmp_path).stdout.splitlines()[-1])
+    assert got == {"NumThreads": 1, "OCCParallel": 0}
 
 
 # The same meshwell mesh as _GMSH_MESH, with only the meshio read-back of the finished mesh
@@ -271,6 +282,8 @@ def test_tcad_dev_gmsh_control_without_python_cpu_count(tmp_path):
 # (third_party/gplugins) stays at the commit the committed results/tcad trees were made with,
 # and catches up with this one in the pull request that regenerates them in the dev image.
 GPLUGINS_FORK_TEST_COMMIT = "408d0af89c6691e78e03b4d7e75b6dcccc74ee99"
+# The submodule pin while this is so (the commit of the committed results/tcad trees).
+GPLUGINS_PIN_BEHIND = "dddaa071321c5177c8471312c565ad86d4b245d7"
 GPLUGINS_FORK = "https://github.com/mithro/gplugins.git"
 
 
@@ -306,6 +319,53 @@ def test_tcad_dev_fork_pn_slab_currents_explained(tmp_path):
     cmd = ["python3", "-m", "pytest", "-p", "no:cacheprovider", "-q", test]
     res = _run(cmd, tmp_path)
     assert "1 passed" in res.stdout
+
+
+_RECORDS_CHECK = """
+import csv, json, sysconfig
+from pathlib import Path
+site = Path(sysconfig.get_paths()["purelib"])
+caches = sorted(str(p) for p in site.glob("*.dist-info/uv_cache.json"))
+missing, n = [], 0
+for record in sorted(site.glob("*.dist-info/RECORD")):
+    for row in csv.reader(record.read_text(encoding="utf-8").splitlines()):
+        n += 1
+        if not (site / row[0]).resolve().exists():
+            missing.append(row[0])
+print(json.dumps({"uv_cache": caches, "missing": missing, "entries": n}))
+"""
+
+
+@pytest.mark.sandbox
+def test_tcad_dev_records_complete_and_no_uv_cache(tmp_path):
+    """The build stripped uv's timestamped uv_cache.json everywhere and left every RECORD whole
+    (docker/tcad-dev/local_inputs.py strip-uv-cache)."""
+    got = json.loads(_run(["python3", "-c", _RECORDS_CHECK], tmp_path).stdout.splitlines()[-1])
+    assert got["uv_cache"] == []
+    assert got["missing"] == []
+    assert got["entries"] > 1000
+
+
+def _gplugins_pin() -> str:
+    out = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "ls-tree", "HEAD", "third_party/gplugins"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert out[1] == "commit", out
+    return out[2]
+
+
+def test_tcad_dev_fork_test_commit_is_still_needed():
+    """GPLUGINS_FORK_TEST_COMMIT is temporary. It was set while the submodule pin was
+    GPLUGINS_PIN_BEHIND; once the pin moves (to GPLUGINS_FORK_TEST_COMMIT or later, in the PR
+    that regenerates results/ in the dev image), this fails: then remove the constant and run
+    the fork tests from the pin again. Reads only the gf180-tcad tree, so it runs everywhere."""
+    assert _gplugins_pin() == GPLUGINS_PIN_BEHIND, (
+        "third_party/gplugins moved: remove GPLUGINS_FORK_TEST_COMMIT and run the fork tests "
+        "from the pin (and drop this test)"
+    )
 
 
 @pytest.mark.sandbox
