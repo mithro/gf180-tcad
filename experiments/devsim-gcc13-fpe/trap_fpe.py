@@ -15,9 +15,7 @@ import sys
 
 sys.path.insert(0, "/work/out")
 
-import devsim  # noqa: E402
-
-import gplugins.devsim.tests.test_stack1d as test_stack1d  # noqa: E402
+import devsim
 
 FE_INVALID = 1
 libm = ctypes.CDLL("libm.so.6")
@@ -31,6 +29,10 @@ def _trapping_set_parameter(*args, **kwargs):
     return _set_parameter(*args, **kwargs)
 
 
+# Patched before gplugins is imported: its modules bind devsim's functions at import.
 devsim.set_parameter = _trapping_set_parameter
+
+from gplugins.devsim.tests import test_stack1d
+
 test_stack1d.test_parallel_plate_charge()
 print("no trap")
