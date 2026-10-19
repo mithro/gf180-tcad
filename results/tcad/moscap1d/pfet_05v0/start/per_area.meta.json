@@ -38,7 +38,9 @@
       5e-05
     ]
   },
+  "mesh_source": "results/tcad/meshconv/moscap1d/pfet_05v0/selected.json",
   "method": "qs",
+  "node_count": 676,
   "param_sha256": "818c7a0f4ed584d9454f9918bab9741d60f3466688d48aad0e339f965d174ed5",
   "params": "start",
   "points": 201,

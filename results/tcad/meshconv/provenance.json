@@ -1,0 +1,29 @@
+{
+  "generator_sha256": "60773030dd5bc72a352acf1725738a022ea6837fcc70977d4f7217895a781011",
+  "gplugins_commit": "dddaa071321c5177c8471312c565ad86d4b245d7",
+  "image": "ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8",
+  "versions": {
+    "base_image": "hpretl/iic-osic-tools@sha256:306585de35d198e70ea58950f77147c86f56c698726a19afea9f1c83009557be",
+    "base_image_ref": "ghcr.io/mithro/gf180-tcad-base@sha256:aedc07956fa71f33094decf80828a13e75ace36cb2426f720b0817aa9aca99b6",
+    "design_ngspice_sha256": "7e222f050318388f37543a64fbd0be55cc15e4b93f57501a09f7c159c4c9e561",
+    "devsim": "2.11.1",
+    "gdsfactory": "9.51.0",
+    "gf180mcu": "1.0.0",
+    "gf180mcu_variant": "gf180mcuD",
+    "gmsh": "4.15.2",
+    "klayout": "0.30.12",
+    "klayout_python": "0.30.12",
+    "meshwell": "2.5.2",
+    "ngspice": "47",
+    "numpy": "2.5.4",
+    "open_pdks_commit": "1689ac3f2dc763876eaf967227c7dfe831b031ae",
+    "pdk_root": "/foss/pdks",
+    "python": "3.13.16",
+    "scipy": "1.18.1",
+    "sm141064_ngspice_sha256": "69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8",
+    "sm141064_xyce_sha256": "d3fba5094b1d5e841938b7eeb15645990caa166a47014dbac765639ad45821bb",
+    "tcad_python": "/opt/uv-python/cpython-3.13.16-linux-x86_64-gnu/bin/python3.13",
+    "xyce": "7.10-opensource",
+    "xyce_parallel": "mpi-capable, run single-process"
+  }
+}
