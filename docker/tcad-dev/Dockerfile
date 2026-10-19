@@ -61,9 +61,13 @@ RUN --mount=type=bind,source=build-devsim.sh,target=/run/gf180tcad/build-devsim.
 #    hash-checked build constraints), gf180mcu --no-deps, then the DEVSIM wheel of step 3
 #    --no-deps (it has no Python dependencies), with pip: uv would record the wheel file's
 #    ctime in the dist-info (uv_cache.json, and so RECORD), which no build can fix. Hashes only,
-#    no deps resolved, no bytecode.
+#    no deps resolved, no bytecode. Then upstream.json, the provenance of the upstream sources
+#    (docker/tcad-dev/probe_versions.py checks it against what the packages report), with a fixed
+#    mode: a COPY from the build context would keep the checkout's mode, which follows the umask
+#    of whoever checked it out (0664 here, 0644 on a GitHub runner).
 RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirements.lock \
     --mount=type=bind,source=gf180mcu.lock,target=/run/gf180tcad/gf180mcu.lock \
+    --mount=type=bind,source=upstream.json,target=/run/gf180tcad/upstream.json \
     --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
     set -eu \
  && uv=/opt/build/buildvenv/bin/uv \
@@ -78,6 +82,7 @@ RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirement
  && /usr/bin/python3 -m pip --isolated --python /opt/gf180tcad-tcad/bin/python install \
         --no-cache-dir --disable-pip-version-check --no-input --no-compile --no-deps \
         /opt/build/wheels/devsim-*.whl \
+ && install -D -m 0644 /run/gf180tcad/upstream.json /opt/gf180tcad-tcad/share/gf180tcad/upstream.json \
  && site="$(/opt/gf180tcad-tcad/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
  && printf '%s\n' /work/src/third_party/gplugins > "$site/gf180tcad-gplugins.pth" \
  && test "$(/opt/gf180tcad-tcad/bin/python -c 'import platform; print(platform.python_version())')" = "$TCAD_PYTHON" \
@@ -91,10 +96,6 @@ FROM ${BASE_IMAGE}
 ARG BASE_IMAGE
 COPY --from=build /opt/uv-python /opt/uv-python
 COPY --from=build /opt/gf180tcad-tcad /opt/gf180tcad-tcad
-# The provenance of the upstream sources (docker/tcad-dev/probe_versions.py checks it against
-# what the installed packages report). --chmod: COPY keeps the checkout's file mode, which
-# depends on the umask of whoever checked it out (0664 here, 0644 on a GitHub runner).
-COPY --chmod=0644 upstream.json /opt/gf180tcad-tcad/share/gf180tcad/upstream.json
 USER 1000:1000
 
 # As docker/tcad/Dockerfile: the TCAD venv first, then exactly the base image's PATH; the rest of
