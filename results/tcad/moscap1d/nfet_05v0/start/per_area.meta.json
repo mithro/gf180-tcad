@@ -23,7 +23,23 @@
     "h_si_bulk_nm": 20.0,
     "h_si_surface_nm": 0.05
   },
+  "mesh_1d_note": "oxide spacing is min(h_ox, neighbour) at each face (exact: the oxide potential is linear)",
+  "mesh_1d_spacing_um": {
+    "body": [
+      5e-05,
+      0.02
+    ],
+    "gate_poly": [
+      0.02,
+      5e-05
+    ],
+    "oxide": [
+      5e-05,
+      5e-05
+    ]
+  },
   "method": "qs",
+  "param_sha256": "c9f0627464d89a66e1f309ced357bb65a7a0d52216cf1722c04cd94d2b8b9827",
   "params": "start",
   "points": 201,
   "stack": {
@@ -42,14 +58,24 @@
     "rel_tol": 1e-10
   },
   "tunables": {
-    "dv_fb_v": 0.0,
-    "n_ch_cm3": 1.7e+17,
-    "t_ox_eff_nm": 15.2
-  },
-  "tunables_provenance": {
-    "dv_fb_v": "calibrated",
-    "n_ch_cm3": "calibrated",
-    "t_ox_eff_nm": "calibrated"
+    "dv_fb_v": {
+      "origin": "start",
+      "start_kind": "project-choice",
+      "start_source": "project choice: 0, no offset, so the flat band comes from the poly-gate NGATE and the body doping alone.",
+      "value": 0.0
+    },
+    "n_ch_cm3": {
+      "origin": "start",
+      "start_kind": "card",
+      "start_source": "NDEP (sm141064.ngspice:37202)",
+      "value": 1.7e+17
+    },
+    "t_ox_eff_nm": {
+      "origin": "start",
+      "start_kind": "card",
+      "start_source": "TOXE (sm141064.ngspice:37309; .param sm141064.ngspice:114)",
+      "value": 15.2
+    }
   },
   "unit": "fF/um^2"
 }
