@@ -327,16 +327,21 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
         if data["scale"] != scale or MeshSpec(**data["spec"]) != spec:
             raise RuntimeError(f"level{i}/{LEVEL_NAME} is not level {i} of the start spec")
         curves[spec] = _Curve(data)
-    agreement = None
+    agreement = curves_1d = None
     if dim == 2:
-        agreement = []
+        agreement, curves_1d = [], []
         for i, scale in enumerate(meshconv.LEVELS):
             data = json.loads((out / f"level{i}" / AGREEMENT_NAME).read_bytes())
             if MeshSpec(**data["spec"]) != meshconv.START[dim].scaled(scale):
                 raise RuntimeError(f"level{i}/{AGREEMENT_NAME} is not level {i} of the start spec")
             agreement.append(data["max"])
+            curves_1d.append(data)
     rep = meshconv.converge(
-        curves.__getitem__, meshconv.START[dim], rel_tol=settings["rel_tol"], agreement=agreement
+        curves.__getitem__,
+        meshconv.START[dim],
+        rel_tol=settings["rel_tol"],
+        agreement=agreement,
+        agreement_curves=curves_1d,
     )
     meshconv.write(rep, out, device=device, dim=dim, settings=settings)
     print(f"{device}: selected level {rep.selected}", flush=True)

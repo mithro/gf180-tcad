@@ -240,7 +240,8 @@ def test_report_contents(tmp_path):
     assert [lv["node_count"] for lv in data["levels"]] == [lv.node_count for lv in rep.levels]
     lv0 = data["levels"][0]
     assert set(lv0) == {
-        "agreement_1d", "c_per_area_ff_um2", "extended_fallback", "max_rel_change",
+        "agreement_1d", "agreement_1d_curve", "c_per_area_ff_um2", "extended_fallback",
+        "max_rel_change",
         "node_count", "rel_change", "roundoff_accepted", "scale", "spec",
     }  # fmt: skip
     assert lv0["extended_fallback"] == []
@@ -480,3 +481,17 @@ def test_selected_json_records_the_criteria(tmp_path):
     data = json.loads((tmp_path / meshconv.REPORT_NAME).read_bytes())
     assert data["selected"]["criteria"] == sel["criteria"]
     assert [lv["agreement_1d"] for lv in data["levels"]] == [0.0055, 0.0045, 0.003, 0.002]
+
+
+def test_report_keeps_the_agreement_curves(tmp_path):
+    """The per-bias 2D/1D curves of the second criterion are kept in report.json (the scratch
+    directory is deleted on success)."""
+    simulate, _ = synthetic(EXACT, [0.001] * 6, 2.0)
+    curves = [{"vg": [-5.0, 5.0], "rel": [a, -a], "c2d": [1.0, 2.0], "c1d": [1.0, 2.0]}
+              for a in (0.0055, 0.0045, 0.003, 0.002)]  # fmt: skip
+    rep = meshconv.converge(
+        simulate, START, agreement=(0.0055, 0.0045, 0.003, 0.002), agreement_curves=curves
+    )
+    meshconv.write(rep, tmp_path, device="nfet_05v0", dim=2, settings={})
+    data = json.loads((tmp_path / meshconv.REPORT_NAME).read_bytes())
+    assert [lv["agreement_1d_curve"] for lv in data["levels"]] == curves

@@ -134,6 +134,7 @@ class Level:
     extended_fallback: tuple[int, ...] = ()
     roundoff_accepted: tuple[dict, ...] = ()
     agreement_1d: float | None = None
+    agreement_1d_curve: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -231,6 +232,7 @@ def converge(
     *,
     rel_tol: float = DEFAULT_REL_TOL,
     agreement: Sequence[float] | None = None,
+    agreement_curves: Sequence[dict] | None = None,
 ) -> ConvergenceReport:
     """Run ``simulate`` at ``spec.scaled(r)`` for each level ``r`` (coarse to fine) and report.
 
@@ -239,7 +241,8 @@ def converge(
     tolerance, which sets the noise floor of the observed order (:data:`NOISE_K`).
     ``agreement`` (2D) gives each level's largest relative difference from 1D on the uniform
     stack; then the selected level is the coarsest that also has ``agreement`` <=
-    :data:`AGREEMENT_1D`.
+    :data:`AGREEMENT_1D`. ``agreement_curves`` (per level, e.g. the output of
+    :func:`agreement_1d`) are kept in the report.
     """
     if not (rel_tol > 0 and math.isfinite(rel_tol)):
         raise ValueError(f"rel_tol must be > 0, got {rel_tol!r}")
@@ -270,6 +273,7 @@ def converge(
             Level(
                 r, s, int(c.node_count), cs[i], rel, worst, fallback, roundoff,
                 None if agreement is None else agreement[i],
+                None if agreement_curves is None else dict(agreement_curves[i]),
             )
         )  # fmt: skip
 
@@ -328,6 +332,7 @@ def report_dict(
             {
                 "c_per_area_ff_um2": list(lv.c_per_area_ff_um2),
                 "agreement_1d": lv.agreement_1d,
+                "agreement_1d_curve": lv.agreement_1d_curve,
                 "extended_fallback": list(lv.extended_fallback),
                 "roundoff_accepted": [dict(x) for x in lv.roundoff_accepted],
                 "max_rel_change": lv.max_rel_change,

@@ -107,10 +107,83 @@ coarser than at its interfaces:
 
 So the 2D start mesh ({py:attr}`MeshSpec.DEFAULT_2D <gf180tcad.tcad.mesh.MeshSpec.DEFAULT_2D>`) has a
 1 nm oxide spacing. Both parts fall under {term}`uniform refinement`, so the 2D mesh-convergence
-study sees them ({ref}`mesh-convergence-2d`). At the selected 2D mesh the extruded stack equals
-1D within 0.5 % and C/Cox ≤ 1 at ±5 V
-({test}`tests/tcad/test_moscap2d.py::test_2d_equals_1d_without_sd`,
-{test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1`).
+study sees them ({ref}`mesh-convergence-2d`).
+
+(moscap2d-agreement)=
+
+**The 2D-equals-1D criterion selects the mesh.** The extruded stack at `DEFAULT_2D` itself, the
+coarsest level, is within 0.38 % of 1D on both plateaus but +0.55 % at the minimum of the
+{term}`C–V` (nfet +0.5 V, pfet −0.5 V), where the depletion region sets C. A bisection on the
+uniform nfet stack (worst 2D/1D − 1 over −5, 0, +0.5, +1, +5 V) shows that the grading of the
+body mesh through the depletion region sets it, not the oxide or the bulk spacing:
+
+| Variant of `DEFAULT_2D` | Nodes | Worst 2D/1D − 1 |
+|---|---|---|
+| as it is (0.5 nm interfaces, 1 nm oxide, 100 nm bulk, grading 1.2) | 101k | +0.55 % |
+| bulk spacing 50 nm | 101k | +0.48 % |
+| oxide spacing 0.5 nm | 147k | +0.57 % |
+| every spacing × 0.707 (the next refinement level) | 154k | +0.45 % |
+| grading 1.1 | 171k | +0.32 % |
+
+The design spec requires both mesh convergence (less than 1 % on refinement) and, here, 2D = 1D
+within 0.5 % ({test}`tests/tcad/test_moscap2d.py::test_2d_equals_1d_without_sd`), so the 2D
+mesh-convergence study selects the coarsest level that meets both
+({py:data}`gf180tcad.tcad.meshconv.AGREEMENT_1D`, {py:func}`gf180tcad.tcad.meshconv.agreement_1d`).
+Its `selected.json` and report record both criteria and the level each chooses
+({ref}`mesh-convergence-2d`). C/Cox ≤ 1 at ±5 V holds at the selected level
+({test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1`).
+
+(moscap2d-solver)=
+
+## Two solver findings of the 2D sweep
+
+- **Double precision and its fallback.** The QS sweep runs in double precision (about twice as
+  fast). In extended precision the result is the same within the QS noise; the plugin retries a
+  solve that fails in double precision in extended precision at the same tolerances
+  (`precision_fallback`), and the 2D results record every such point (`extended_fallback`).
+- **A relative criterion that is unreachable at a potential near 0 V.** {{ DEVSIM }}'s relative error is
+  |update| / (|ψ| + 1e-10 V) per node, summed over the equations and regions of the device
+  (`src/Equation/Equation.cc`, `src/Geometry/Region.cc` and `Device.cc` of DEVSIM 2.11.1). Where the
+  potential passes through 0 V in the charge-free dielectric next to the gate, the 1e-10 criterion
+  asks for an update below about 1e-20 V, beyond the round-off of the linear solve (1.6–1.7e-16 V,
+  in double and extended precision alike). At the nfet's −0.6 V point, on three of the four
+  refinement levels, Newton stalls there for 45 iterations. The plugin's `roundoff_accept` accepts
+  such a solve only under narrow conditions (every potential update ≤ the 1e-12 V `abs_tol` and
+  ≤ 32·eps·max|ψ| over the last 10 iterations, a plateau of the relative error, and a node
+  with |ψ| small enough to explain it), after solving it again to that round-off state, because
+  DEVSIM restores the previous solution of a solve it calls non-converged. Every accepted point is
+  recorded. At the nfet level-1 point the accepted update is 1.6e-16 V (the bound 4.2e-15 V), the
+  dielectric's smallest |ψ| is 2.7e-8 V, Cgg there is smooth against its neighbours (second
+  difference 1.20e-3 C against 1.19e-3 on the level that needed no acceptance) and a ±0.1 mV
+  nudge reproduces it within 5e-9.
+
+(moscap2d-sd)=
+
+## The source/drain peak matters at Lmin
+
+The pfet source/drain peak, `sd_peak_cm3` = 1e20 cm⁻³, is a `literature` value, not a card value.
+With the junction depth {term}`XJ` fixed, the peak also sets the straggle (44.5, 42.0 and 39.9 nm
+for 5e19, 1e20 and 2e20 cm⁻³), and so how far the p⁺ edge reaches under the gate: fixing XJ is a
+modelling choice that couples the two. At the pfet {term}`Lmin` (0.5 µm) a factor of two in the
+peak moves Cgg by −1.52 % / +1.25 % at worst (depletion), −0.56 % / +0.50 % in accumulation and
+−0.03 % / +0.03 % in inversion; the effect is at the gate edges, so it falls as about 1/L. So the
+2D Lmin depletion Cgg carries about ±1.5 % from this value, which belongs in the uncertainty list of the
+calibration and comparison
+({repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
+{repo}`Task 13a <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-13a-tcad-results-and-docs-pages>`).
+{test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` keeps the 0.1 % bound: it is a
+strict expected failure at Lmin (on the sensitivity assertion only) and asserted at L = 2 µm.
+
+(moscap2d-l10)=
+
+## Not run: the 2D cell at L = 10 µm
+
+The L = 10 µm cell is not simulated in 2D. At `DEFAULT_2D` it has about 2.0 million drift-diffusion
+unknowns, and the equilibrium drift-diffusion solve that sets up every 2D device fails inside
+{{ DEVSIM }}'s direct solver (UMFPACK 5.1: "umfpack numeric failed"; the Poisson stage, 0.86 million
+unknowns, still solves). A QS sweep of its 201 biases alone would take an estimated 7–8 hours from
+the measured rates. Its long-channel C per area is covered by the 2D-equals-1D check and by the 1D
+MOS capacitor. Later options are an iterative solver or a symmetric half domain.
 
 ## C/Cox > 1 that is physics: the fringe
 
@@ -133,3 +206,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
 - **The remaining discretisation bias** of the triangle mesh (a few 0.1 %) is below the 1 %
   mesh-convergence criterion and the 0.5 % 2D-equals-1D check, and far below the 5 %
   agreement criterion ({ref}`mesh-convergence-2d`).
+- **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`).
+- **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).
