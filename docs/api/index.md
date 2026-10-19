@@ -37,5 +37,7 @@ gf180tcad.tcad.calibration
 gf180tcad.tcad.mesh
 gf180tcad.tcad.meshconv
 gf180tcad.tcad.moscap1d
+gf180tcad.tcad.moscap2d
 gf180tcad.tcad.process
+gf180tcad.tcad.stack
 ```

@@ -169,7 +169,10 @@ MeshSpec.DEFAULT_1D = MeshSpec(
 
 # The fixed starting spec of the 2D MOS capacitor (Task 11), refined by meshconv --dim 2 into
 # results/tcad/meshconv/moscap2d/<device>/selected.json. Triangles are isotropic, so 0.05 nm at a
-# 10 um interface is out of reach: the interfaces start at 0.5 nm.
+# 10 um interface is out of reach: the interfaces start at 0.5 nm. Unlike in 1D the oxide spacing
+# matters in 2D: triangles of 2 nm in the 15 nm oxide over-estimate its discrete capacitance by
+# about 0.3 % (0.6 % at 2 nm, 0.4 % at 1 nm, 0.3 % at 0.5 nm on the uniform stack, Task 11 report),
+# so the oxide starts at 1 nm.
 MeshSpec.DEFAULT_2D = MeshSpec(
-    h_poly_nm=0.5, h_ox_nm=2.0, h_si_surface_nm=0.5, h_si_bulk_nm=100.0, grading=1.2
+    h_poly_nm=0.5, h_ox_nm=1.0, h_si_surface_nm=0.5, h_si_bulk_nm=100.0, grading=1.2
 )

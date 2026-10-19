@@ -16,4 +16,12 @@ Source: {repo}`src/gf180tcad/tcad/meshconv.py`.
 .. autodata:: gf180tcad.tcad.meshconv.TREE_ROOT
 
 .. autodata:: gf180tcad.tcad.meshconv.BUDGET_BYTES
+
+.. autodata:: gf180tcad.tcad.meshconv.NOISE_K
+
+.. autodata:: gf180tcad.tcad.meshconv.DEFAULT_REL_TOL
+
+.. autodata:: gf180tcad.tcad.meshconv.START
+
+.. autodata:: gf180tcad.tcad.meshconv.GEOMETRY_2D
 ```

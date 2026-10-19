@@ -4,7 +4,7 @@
 :func:`simulate` builds the cross-section of the `gf180mcu
 <https://github.com/gdsfactory/gf180mcu>`_ cell across its gate (:mod:`gf180tcad.tcad.stack`),
 meshes it with `gplugins.devsim.create_2Duz_simulation
-<https://github.com/mithro/gplugins/blob/e3ea06c6b8bd0f4c8f1f3da4c40c1e3d7f9a6f5b/gplugins/devsim/get_simulation.py>`_
+<https://github.com/mithro/gplugins/blob/cbc5eafc13fe5ee660dcac8ebb060e278d8d9e4e/gplugins/devsim/get_simulation.py>`_
 (the plugin's single-threaded meshwell path, :meth:`MeshSpec.to_resolution_specs
 <gf180tcad.tcad.mesh.MeshSpec.to_resolution_specs>`), assigns the analytic doping
 (``gplugins.devsim.doping``), solves the equilibrium with the typed contacts and sweeps the gate
@@ -29,7 +29,7 @@ in 2D: the cross-section has its own overlap and fringe.
 span exactly ``t_ox_eff_nm`` (within the vertex grid
 :data:`gf180tcad.tcad.stack.POINT_TOLERANCE_UM`) and the gate exactly L. meshwell's default
 vertex grid would round a 15.2 nm oxide to 15 nm, a 1.3 % too large Cox; that was the C/Cox > 1
-artefact of the Phase 2 research spike (:doc:`/limitations/moscap2d`).
+artefact of the Phase 2 research spike (:repo:`docs/limitations/moscap2d.md`).
 
 This module imports the plugin lazily (it needs the TCAD image), so it imports on the host. It
 is TCAD code, not one of the SPICE generator modules
@@ -67,6 +67,11 @@ from gf180tcad.tcad.process import CONSTANTS, Constants, ProcessDescription
 
 # The AC frequency of the SPICE cv sweep (devices.SWEEPS "cv": 1 MHz), used for cgx.
 AC_FREQ_HZ = 1e6
+
+# The AC sweep (cgx.csv) takes every AC_STRIDE-th bias of the QS grid (every 0.5 V of the
+# 50 mV cv grid, 21 points): an AC point is a drift-diffusion solve in extended precision, several
+# times a QS point's cost, and charge conservation needs no finer grid.
+AC_STRIDE = 10
 
 # Result file names in each job directory (<root>/<device>/<params>/<gid>/).
 CV_CSV = "cv.csv"
@@ -369,8 +374,10 @@ def write(
     """Write :data:`CV_CSV` (the QS sweep ``qs``), :data:`CGX_CSV` (the AC sweep ``ac``) and
     :data:`META_JSON` into ``out``. The mesh file is written by :func:`simulate` itself."""
     out = Path(out)
-    if qs.method != "qs" or ac.method != "ac" or qs.vg != ac.vg or qs.device != proc.device:
-        raise ValueError("write() takes a QS and an AC sweep of the same device and biases")
+    if qs.method != "qs" or ac.method != "ac" or qs.device != proc.device:
+        raise ValueError("write() takes a QS and an AC sweep of the same device")
+    if not set(ac.vg) <= set(qs.vg):
+        raise ValueError("the AC biases must be biases of the QS sweep")
     w = qs.w_um
     _write_csv(
         out / CV_CSV,
@@ -412,6 +419,7 @@ def write(
         out / META_JSON,
         {
             "ac_freq_hz": ac.freq_hz,
+            "ac_points": len(ac.vg),
             "constants": constants_dict(qs.constants),
             "contacts": ["gate", *contacts],
             "device": qs.device,

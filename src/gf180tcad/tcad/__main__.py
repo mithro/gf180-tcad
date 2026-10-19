@@ -168,7 +168,7 @@ def run_job_2d(device: str, params: str, gid: str, out: Path) -> None:
         mesh_file=out / moscap2d.MESH_FILE, log=_Progress(out, f"{device}/{params}/{gid}/qs"),
     )  # fmt: skip
     ac = moscap2d.simulate(
-        proc, geometry, vg=vg, with_sd=True, method="ac", mesh=mesh,
+        proc, geometry, vg=vg[:: moscap2d.AC_STRIDE], with_sd=True, method="ac", mesh=mesh,
         freq_hz=moscap2d.AC_FREQ_HZ, mesh_file=out / "mesh_ac.msh",
         log=_Progress(out, f"{device}/{params}/{gid}/ac"),
     )  # fmt: skip
