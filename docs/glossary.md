@@ -323,6 +323,14 @@ mesh convergence
   when the next finer one changes its {term}`C–V` by less than 1 % at every bias
   ([Roache 1994](https://doi.org/10.1115/1.2910291)). See {ref}`mesh-convergence`.
 
+Poisson–Boltzmann
+  The electrostatics of a semiconductor in equilibrium: Poisson's equation with the carrier
+  densities given by {term}`Boltzmann statistics`, so the charge follows from the potential alone.
+  For a uniformly doped {term}`MOS capacitor <MOSCAP>` it has an exact closed-form charge
+  function Q_s(ψ_s), the reference the 1D {term}`TCAD` MOS capacitor is tested against
+  ({py:mod}`gf180tcad.tcad.analytic`; [Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)).
+  See {ref}`mesh-convergence`.
+
 observed order of convergence
   The rate at which the discretisation error falls as the mesh is refined, measured from the
   results instead of assumed. Technically, for three levels a constant ratio r apart,

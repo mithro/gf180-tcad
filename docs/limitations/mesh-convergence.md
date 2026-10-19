@@ -4,8 +4,8 @@
 
 The {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
 requires that {term}`uniform refinement` of the mesh changes every metric by less than 1 %. In the
-spike, the depletion capacitance moved by 2 % between two meshes, so this is checked, not
-assumed.
+spike, the depletion capacitance moved by 2 % between two meshes
+({repo}`Task 10 of the Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-10-mesh-convergence-tooling>`), so this is checked, not assumed.
 
 ## Method
 
@@ -13,14 +13,16 @@ assumed.
 levels, the start {py:class}`~gf180tcad.tcad.mesh.MeshSpec` scaled by 1, 2^-0.5, 0.5 and 2^-1.5
 ({py:data}`gf180tcad.tcad.meshconv.LEVELS`). Each level multiplies every spacing by its factor
 and keeps the grading fixed ({py:meth}`~gf180tcad.tcad.mesh.MeshSpec.scaled`). The solver's
-relative-error limit, the {term}`QS <C–V>` step `dv_qs` and the physical constants are the same at every
+relative-error limit, the {term}`QS <C–V>` step
+({py:data}`~gf180tcad.tcad.moscap1d.DV_QS`) and the physical constants are the same at every
 level. The report holds, per level, the curve, the node count and the largest relative change
 against the next finer level at every bias. Per triple of neighbouring levels it holds the
 {term}`observed order of convergence` at every bias and its median. It also holds the
 {term}`Richardson extrapolation` of the three finest levels. The **selected level** is the
 coarsest whose change against the next finer one is below 1 %
 ({py:data}`gf180tcad.tcad.meshconv.CRITERION`) at every bias. From then on, every 1D result uses
-it: the `moscap` command reads its mesh from the device's `selected.json` in
+it: the `moscap` command ({py:mod}`gf180tcad.tcad.__main__`) reads its mesh from the device's
+`selected.json` ({py:data}`~gf180tcad.tcad.meshconv.SELECTED_NAME`) in
 {repo}`results/tcad/meshconv/moscap1d`
 ({py:func}`gf180tcad.tcad.meshconv.selected_spec`).
 
@@ -54,13 +56,17 @@ level over all biases.
 - **The selected level is level 0, `DEFAULT_1D` itself, for both devices.** Its largest change
   is about 4e-5, 250 times below the 1 % criterion.
 - **The three finest levels are second order.** Their observed order is 2.01 to 2.13 at every
-  bias. The coarsest triple gives a median of about 1.25. The poly and the body are graded to
-  fill their thickness exactly, so the coarsest levels are not quite uniform refinements of each
-  other; this is the pre-asymptotic range.
-- **Against the exact reference.** The finest level is within 2.1e-5 of the exact
-  Poisson–Boltzmann curve ({py:func}`gf180tcad.tcad.analytic.lf_cv_uniform`). The Richardson
-  extrapolation is within 8e-6 of it. The test is
-  {test}`tests/tcad/test_meshconv.py::test_converges_to_exact`, and the criterion is checked by
+  bias. The coarsest triple gives a median of about 1.25, because level 0 is not quite a uniform
+  refinement of the others. Each layer is graded geometrically and then rescaled to fill its
+  thickness exactly. At level 0, the 0.2 µm poly hits the grading cap of 1.1: the fewest
+  intervals that grade from 20 nm to 0.05 nm overfill it, so its spacings are rescaled to about
+  0.91 of nominal (0.0455 nm at the oxide instead of 0.05 nm). From level 1 on, every layer is
+  limited by its length instead, and its spacings are within 1 % of nominal.
+- **Against the exact reference.** {test}`tests/tcad/test_meshconv.py::test_converges_to_exact`
+  runs the same four levels for the nfet stack on 21 gate biases and requires the finest level
+  to be within 0.05 % of the exact {term}`Poisson–Boltzmann` curve
+  ({py:func}`gf180tcad.tcad.analytic.lf_cv_uniform`) at every bias, with a median observed
+  order between 1.5 and 2.5. The criterion is checked by
   {test}`tests/tcad/test_meshconv.py::test_selected_level_criterion`.
 - **The oxide spacing `h_ox_nm` has no effect in 1D.** The 1D oxide spacing is the smaller of
   `h_ox_nm` and the spacing of its neighbour at each face. With `DEFAULT_1D` both neighbours are
@@ -78,13 +84,15 @@ Classical accumulation and inversion layers add a capacitance in series with the
 | {term}`nfet_05v0` (15.2 nm) | 2.2718 | 0.98099 (accumulation) | 0.97302 (inversion) |
 | {term}`pfet_05v0` (15.6 nm) | 2.2135 | 0.95135 (inversion) | 0.97915 (accumulation) |
 
-So the spike's C/Cox = 1.0039 at −5 V is not physics of the stack. It comes from the 2D
+So the spike's C/Cox = 1.0039 at −5 V (recorded in
+{repo}`Task 11 of the Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`) is not physics of the stack. It comes from the 2D
 structure, where
 {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
 diagnoses it.
 
 ## Limitations
 
-- **1D only so far.** The 2D mesh convergence comes with Task 11.
+- **1D only so far.** The 2D mesh convergence comes with
+  {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`.
 - **Numbers from one image.** The results are from the TCAD image pinned in
   {repo}`docker/TCAD_IMAGE` and are regenerated when that image changes.
