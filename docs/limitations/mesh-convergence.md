@@ -30,9 +30,16 @@ The command is `python -m gf180tcad.tcad meshconv --device D --dim 1 --out resul
 ({py:mod}`gf180tcad.tcad.__main__`). It runs each level as a separate {term}`sandbox` container in the
 {{ DEVSIM }} image ({repo}`docker/TCAD_IMAGE`), under the same memory admission check as the
 {term}`SPICE` reference (concurrent containers × memory ≤ 128 GiB). The report is computed in the same image.
-`--dim 2` is refused until the 2D MOS capacitor of
-{repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
-exists.
+`--dim 2` runs the 2D MOS capacitor ({ref}`mesh-convergence-2d`).
+
+**Oscillation and noise.** Per triple and bias the report also flags oscillatory convergence (the
+change reverses sign between the levels, d12 · d23 < 0), where neither the order nor the
+Richardson extrapolation applies, and treats a level difference at or below a noise floor as
+noise: the order is then undefined, not an arbitrary number. The floor is
+{py:data}`~gf180tcad.tcad.meshconv.NOISE_K` = 1e4 times the solver's relative error limit times |C|
+(1e-6 relative at 1e-10). A QS C is a 2 mV central difference of charges of up to C × 6 V, so its
+noise is up to 6e3 × that limit; 1e4 rounds that up. The median order uses only defined,
+monotone biases. In 1D no bias oscillates or falls below the floor.
 
 ## 1D result
 
@@ -90,9 +97,23 @@ structure, where
 {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
 diagnoses it.
 
+(mesh-convergence-2d)=
+
+## 2D result
+
+The 2D study ({py:mod}`gf180tcad.tcad.moscap2d`, {doc}`moscap2d`) runs the same four levels from
+{py:attr}`~gf180tcad.tcad.mesh.MeshSpec.DEFAULT_2D` on the {{ gdsfactory }} {term}`PDK` cell at
+{term}`Lmin` with its source and drain ({py:data}`gf180tcad.tcad.meshconv.GEOMETRY_2D`), on the
+201 biases of the SPICE {term}`cv` sweep. Lmin is the calibration geometry whose
+{term}`C–V` the 2D structure (gate edges, overlap, fringe) shapes most; the selected spec is a
+local spacing and applies to every 2D geometry. The 2D mesh is unstructured triangles from
+{{ gmsh }}, which are isotropic, so the interfaces start at 0.5 nm, ten times the 1D spacing:
+0.05 nm along a 10 µm interface would need tens of millions of nodes. The oxide spacing
+matters in 2D, unlike in 1D, and starts at 1 nm ({ref}`moscap2d-artefact`).
+
+TABLE-2D
+
 ## Limitations
 
-- **1D only so far.** The 2D mesh convergence comes with
-  {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`.
 - **Numbers from one image.** The results are from the TCAD image pinned in
   {repo}`docker/TCAD_IMAGE` and are regenerated when that image changes.

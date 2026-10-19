@@ -47,7 +47,8 @@ that the value is right. The `crosscheck` workflow runs it ({repo}`.github/workf
 | MOIN | 15 ([37201](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37201)) | 15 ([38197](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38197)) | not used by Δ (see below) |
 | capMod | 2 ([37080](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37080)) | 2 ([38109](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38109)) | selects the CTM |
 | {term}`NGATE` | 1e20 cm⁻³ ([37204](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37204)) | 3.6e19 cm⁻³ ([38200](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38200)) | poly-gate doping, fixed |
-| XJ | 0.15 µm ([37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377)) | 0.15 µm ([38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291)) | source/drain depth, 2D |
+| {term}`XJ` | 0.15 µm ([37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377)) | 0.15 µm ([38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291)) | source/drain depth, 2D |
+| `sd_peak_cm3` | {term}`NSD` 1e20 cm⁻³ ([37217](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37217)) | 1e20 cm⁻³, `literature` (Plummer, Deal and Griffin, ch. 2, [ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)) | source/drain peak, 2D |
 | {term}`EPSROX` | 3.9 ([37126](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37126)) | 3.9 ([38144](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38144)) | ε_ox |
 | TNOM | 25 °C ([37308](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37308)) | 25 °C ([38254](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38254)) | T = 298.15 K |
 | {term}`DLC` | 54 nm ([37104](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37104)) | 7.4 nm ([38129](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38129)) | 1D bookkeeping, fixed |
@@ -65,8 +66,31 @@ CF is not on either card, so {term}`BSIM4` uses its default, 2·EPSROX·ε0/π·
 The nfet ACDE is on line [37059](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37059). Line [37397](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37397) has the same value, but it
 belongs to the next bin, `.model nfet_06v0.1`.
 
-The pfet card's NSD of 6e16 (line [38207](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38207)) has no clear physical meaning and is not
-used.
+The pfet card's {term}`NSD` of 6e16 (line [38207](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38207)) has no clear physical meaning and is not
+used. The pfet source/drain peak of the 2D {term}`MOSCAP` is therefore a `literature` value, 1e20 cm⁻³, the
+p⁺ source/drain implant of the CMOS process flow in Plummer, Deal and Griffin, *Silicon VLSI
+Technology* (Prentice Hall, 2000), chapter 2; it is not load-bearing for the {term}`C–V`
+({test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive`, {ref}`moscap2d`).
+
+(process-data-bins)=
+
+**Which card bin each geometry uses.** The files cite the first L bin of each 6 V model. The nfet
+model has two, `nfet_06v0.0` (L 0.7–50 µm) and `nfet_06v0.1` (L 0.6–0.7 µm); the pfet one,
+`pfet_06v0.0` (L 0.5–50 µm) ({py:data}`gf180tcad.tcad.process.CARD_BINS`). {{ ngspice }} accepts
+a length inside a bin or within 1e-9 m of either bound (`in_range` in
+[`inpgmod.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/parser/inpgmod.c)), so L = 0.7 µm lies in both nfet bins and ngspice takes the
+first in its model table ({py:func}`gf180tcad.tcad.process.card_bins`):
+
+| {term}`SPICE` geometry (W/L µm) | nfet bin | pfet bin |
+|---|---|---|
+| 10/{term}`Lmin` (0.6 nfet, 0.5 pfet) | `nfet_06v0.1` | `pfet_06v0.0` |
+| 10/0.7 and 1.6/0.7 | `nfet_06v0.0` and `nfet_06v0.1` (boundary) | `pfet_06v0.0` |
+| 10/1, 10/2, 10/10 | `nfet_06v0.0` | `pfet_06v0.0` |
+
+Every card key the nfet file uses has the same {term}`TT` value in both nfet bins, so the
+process data does not depend on the bin
+({test}`tests/tcad/test_process.py::test_card_bins_agree_on_the_used_keys`, which also checks the
+bin bounds against the card).
 
 **Reference-model bookkeeping.** DLC, DWC, XL, XW, CGSO, CGDO, CGSL, CGDL, CKAPPAS, CKAPPAD,
 CGBO and CF describe how BSIM4 splits the {term}`SPICE` {term}`Cgg` into an intrinsic part and
