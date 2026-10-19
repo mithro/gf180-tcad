@@ -30,7 +30,7 @@ build and one [PyPI](https://pypi.org/) download. The download runs inside the s
    [`b23db01`](https://github.com/mithro/gf180-tcad/commit/b23db01), switched to GCC 14.
 2. Take the fork at the pinned submodule commit, as a `git archive`.
 3. Run the test in that image. It fails with "Uncaught FPE".
-4. **Wheel swap.** Put the [PyPI wheel](https://pypi.org/project/devsim/2.11.1/#files) of
+4. **Wheel swap.** Put the [PyPI wheel](https://pypi.org/project/devsim/2.11.1/) of
    `devsim` 2.11.1 on `PYTHONPATH` in the same image. The wheel
    is hash-checked against the
    [stable lock](../../docker/tcad/requirements.lock). The test passes. DEVSIM HEAD's `src/` is
@@ -44,7 +44,7 @@ build and one [PyPI](https://pypi.org/) download. The download runs inside the s
    fires.
 
 **The root cause is not established.**
-[`FE_INVALID`](https://en.cppreference.com/w/c/numeric/fenv/FE_exceptions) is raised in
+[`FE_INVALID`](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/fenv.h.html) is raised in
 CPython's `_Py_dg_dtoa`, which DEVSIM's GCC 13.3 build calls through `PyObject_Str` while it
 processes the arguments of `set_parameter`. DEVSIM's per-command FPE check
 ([`FPECheck`](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/src/utility/FPECheck.hh),

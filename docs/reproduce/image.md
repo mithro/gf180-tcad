@@ -227,9 +227,9 @@ packages' own requirements, as for the stable image ({repo}`docker/tcad-dev/pypr
   build stage only (from [snapshot.ubuntu.com](https://snapshot.ubuntu.com/), hash-pinned).
   With the base image's GCC 13.3 instead, the build works but the DEVSIM it makes raises
   "Uncaught FPE" errors in 13 tests of {{ gplugins_fork }} that pass with the
-  [PyPI wheel](https://pypi.org/project/devsim/2.11.1/#files) and with this GCC 14 build. The
+  [PyPI wheel](https://pypi.org/project/devsim/2.11.1/) and with this GCC 14 build. The
   root cause is not established:
-  [`FE_INVALID`](https://en.cppreference.com/w/c/numeric/fenv/FE_exceptions) is raised in
+  [`FE_INVALID`](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/fenv.h.html) is raised in
   [CPython](https://github.com/python/cpython)'s `_Py_dg_dtoa` (float to string, reached from
   DEVSIM's argument handling) and surfaced by DEVSIM's per-command FPE check
   ([`FPECheck`](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/src/utility/FPECheck.hh));
