@@ -8,12 +8,12 @@ their exact extraction is in {py:mod}`gf180tcad.metrics`.
 :sorted:
 
 dev-HEAD TCAD image
-  The TCAD image built from each upstream project's development HEAD ({{ DEVSIM }} from source,
+  The {term}`TCAD` image built from each upstream project's development HEAD ({{ DEVSIM }} from source,
   {{ meshwell }}, {{ gdsfactory }}, the {{ gf180mcu_gdsfactory }} and {{ gmsh }}), pinned by
   commit: the stack of the final results. See {ref}`tcad-dev-image`.
 
 stable TCAD image
-  The TCAD image built from the latest PyPI releases of the TCAD stack: the baseline for how
+  The {term}`TCAD` image built from the latest PyPI releases of the TCAD stack: the baseline for how
   things used to work and for debugging. See {ref}`tcad-image`.
 
 TCAD

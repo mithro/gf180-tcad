@@ -243,6 +243,28 @@ Run a command in it with
 tools/sandbox-run --image "$(cat docker/TCAD_DEV_IMAGE)" --workdir DIR -- python3 ...
 ```
 
+### Drift from the stable image
+
+Found when the image was pinned (2026-10-19). Nothing was loosened; the tests that show the
+upstream problems are {term}`strict expected failures <strict expected failure>`, so they fail as soon as upstream fixes them:
+
+- **gf180mcu does not import.** Its HEAD pins `gdsfactory>=9.45,<=9.51` and fails with
+  gdsfactory's HEAD (10.0.0rc0): building its cross-sections at import activates the PDK named
+  by `PDK=gf180mcu`, which is the half-imported module itself. It imports with gdsfactory 9.51.0
+  ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_gf180mcu_pdk`).
+- **meshwell's 2D mesh cannot be read back.** [meshio](https://github.com/nschloe/meshio) 5.3.5
+  fails (`KeyError` on a physical tag) on the mesh file gmsh 5.0.0.dev20261018 writes; the same
+  meshwell works with gmsh 4.15.2
+  ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_gmsh_single_thread`; meshwell's thread
+  defaults are still checked, by
+  {test}`tests/test_tcad_dev_image.py::test_tcad_dev_meshwell_thread_defaults`).
+- **One test of {{ gplugins_fork }} fails**:
+  [`test_pn_slab_currents_explained`](https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/tests/test_mesh.py) (its
+  `gplugins/devsim` and `gplugins/process` tests otherwise pass, 119 of 120). The Potential jump at the floating rib's
+  bottom vertices in its v0.8.0 topology is 0.035 V (> 0.05 V required; 0.118 V in the stable image). That rib has no
+  contact, so its offset is set by the mesh and the initial guess; the mesh of gmsh 5.0 differs,
+  and with gmsh 4.15.2 the test passes in this image.
+
 ### Rebuild and verify the dev-HEAD image
 
 ```
