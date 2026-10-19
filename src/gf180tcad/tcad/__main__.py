@@ -81,9 +81,9 @@ DIMS = (1, 2)
 MESHCONV_DIMS = (1, 2)
 JOB_MEM = "2g"  # a 1D sweep needs well under 1 GiB
 JOB_CPUS = 1
-# A 2D job: the finest meshconv level of the Lmin cell and the L = 10 um cell at the selected
-# level stay below about 6 GiB (Task 11 report); 12 GiB leaves room. 10 of them fit 128 GiB.
-JOB_MEM_2D = "12g"
+# A 2D job's memory cap: meshing the L = 10 um cell alone takes 5.2 GiB and its AC sweep runs in
+# extended precision; 16 GiB (the sandbox default) leaves room. 8 of them fit 128 GiB.
+JOB_MEM_2D = "16g"
 MESHCONV_JOB_MEM = {1: JOB_MEM, 2: JOB_MEM_2D}
 
 # The file each meshconv-job --level writes into its /work/out, and the progress log of a job.

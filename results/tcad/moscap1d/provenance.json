@@ -1,6 +1,6 @@
 {
-  "generator_sha256": "60773030dd5bc72a352acf1725738a022ea6837fcc70977d4f7217895a781011",
-  "gplugins_commit": "dddaa071321c5177c8471312c565ad86d4b245d7",
+  "generator_sha256": "2a432c0431a8d7aa66a824b70ae81ef2aa54f7aaf9f9a1f06b3e05006cc3ce4a",
+  "gplugins_commit": "cbc5eafc13fe5ee660dcac8ebb060e278d8d9e4e",
   "image": "ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8",
   "versions": {
     "base_image": "hpretl/iic-osic-tools@sha256:306585de35d198e70ea58950f77147c86f56c698726a19afea9f1c83009557be",
