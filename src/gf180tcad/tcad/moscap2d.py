@@ -13,7 +13,10 @@ with ``gplugins.devsim.sweep_cv``:
 - ``method="qs"``: equilibrium Poisson-Boltzmann with every non-gate contact at 0 V, the
   counterpart of the :term:`SPICE` :term:`Cgg` of :term:`BSIM4` ``capMod=2`` (as in 1D). Solved
   in double precision (``extended_precision=False``), which the plugin checks agrees within the
-  QS solver noise and which is about twice as fast on a 2D mesh;
+  QS solver noise and which is about twice as fast on a 2D mesh. Where the relative criterion
+  stalls in double precision (a potential near 0 V in the charge-free dielectric), the solve is
+  retried in extended precision at the same tolerances (``precision_fallback``); those points
+  are recorded (``extended_fallback``);
 - ``method="ac"``: small-signal AC at ``freq_hz`` on the drift-diffusion point, every contact
   with its own source (in extended precision, which AC needs). With ``with_sd`` the source and
   drain supply the inversion charge, so 1 MHz recovers to inversion as SPICE does, and
@@ -120,6 +123,7 @@ class MoscapCV2D:
     rel_tol: float
     sd_peak_cm3: float | None
     constants: Constants
+    extended_fallback: tuple[int, ...] = ()
 
     @property
     def non_gate_contacts(self) -> tuple[str, ...]:
@@ -311,6 +315,7 @@ def simulate(
             max_iterations=MAX_ITERATIONS,
             extended_precision=method == "ac",
             progress=progress,
+            precision_fallback=method == "qs",
         )
     finally:
         dd.delete_device()
@@ -344,6 +349,7 @@ def simulate(
         rel_tol=rel_tol,
         sd_peak_cm3=structure.sd_peak_cm3,
         constants=constants,
+        extended_fallback=tuple(res.extended_fallback),
     )
 
 
@@ -443,6 +449,7 @@ def write(
                 "abs_tol_v": ABS_TOL,
                 "dv_qs_v": DV_QS,
                 "max_iterations": MAX_ITERATIONS,
+                "qs_extended_fallback_points": list(qs.extended_fallback),
                 "qs_extended_precision": False,
                 "rel_tol": qs.rel_tol,
             },

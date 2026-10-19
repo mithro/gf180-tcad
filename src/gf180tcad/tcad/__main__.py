@@ -275,6 +275,7 @@ def run_meshconv_level(device: str, dim: int, level: int, out: Path) -> None:
         Path(out) / LEVEL_NAME,
         {
             "c_per_area_ff_um2": list(cv.c_per_area_ff_um2),
+            "extended_fallback": list(getattr(cv, "extended_fallback", ())),
             "node_count": cv.node_count,
             "scale": scale,
             "spec": spec.as_dict(),
@@ -326,11 +327,19 @@ def _sandbox_job(cmd: list[str], out_dir: Path, mem: str) -> str:
 
 
 def run_meshconv(
-    device: str, dim: int, root: Path, jobs: int | None = None, progress_dir: Path | None = None
+    device: str,
+    dim: int,
+    root: Path,
+    jobs: int | None = None,
+    progress_dir: Path | None = None,
+    resume: Path | None = None,
 ) -> None:
     """``meshconv``: the level jobs and the report job in the TCAD image, then the tree files.
 
     ``progress_dir`` receives each level's progress log (``<device>_level<i>.log``) when it ends.
+    ``resume`` is the scratch directory of an earlier, failed run: the levels that finished there
+    (their ``level<i>/level.json``) are kept and only the others run again. A level job is
+    deterministic, so a kept level is the one a rerun would give.
     """
     meshconv.check_dim(dim)
     mem = MESHCONV_JOB_MEM[dim]
@@ -338,12 +347,19 @@ def run_meshconv(
     meshconv.check_admission(jobs, mem)
     gplugins_commit()  # refuses a dirty or unpinned plugin before anything runs
     root = Path(root)
-    scratch = Path(tempfile.mkdtemp(prefix="gf180tcad-meshconv-"))
+    scratch = (
+        Path(resume) if resume is not None else Path(tempfile.mkdtemp(prefix="gf180tcad-meshconv-"))
+    )
     base = ["python3", "-m", "gf180tcad.tcad", "meshconv-job", "--device", device,
             "--dim", str(dim), "--out", "/work/out"]  # fmt: skip
 
     def level(i: int) -> float:
         d = scratch / f"level{i}"
+        if (d / LEVEL_NAME).is_file():
+            print(f"{device}/level{i}: kept from {d}", flush=True)
+            return 0.0
+        if d.exists():
+            shutil.rmtree(d)
         d.mkdir()
         if dim == 2:
             print(f"{device}/level{i}: progress in {d / PROGRESS_NAME}", flush=True)
@@ -397,6 +413,7 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--out", type=Path, required=True, help="tree root: results/tcad/meshconv")
     p.add_argument("--jobs", type=int, default=None, help="concurrent level jobs (default: all)")
     p.add_argument("--progress-dir", type=Path, default=None, help="copy level progress logs")
+    p.add_argument("--resume", type=Path, default=None, help="scratch dir of a failed run")
     p = sub.add_parser("meshconv-job", help="internal: one mesh-convergence job, in the sandbox")
     p.add_argument("--device", choices=process.DEVICES, required=True)
     p.add_argument("--dim", type=int, choices=MESHCONV_DIMS, required=True)
@@ -419,7 +436,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif a.command == "meshconv-job":
             run_meshconv_level(a.device, a.dim, a.level, a.out)
         else:
-            run_meshconv(a.device, a.dim, a.out, a.jobs, a.progress_dir)
+            run_meshconv(a.device, a.dim, a.out, a.jobs, a.progress_dir, a.resume)
     except (MissingCalibration, BadGeometry, meshconv.AdmissionError) as e:
         print(f"{a.command}: {e}", file=sys.stderr)
         return 2

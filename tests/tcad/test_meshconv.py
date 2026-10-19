@@ -402,3 +402,25 @@ def test_meshconv_byte_identical(tmp_path):
     )
     for rel in files:
         assert (root / rel).read_bytes() == (TREE / rel).read_bytes(), rel
+
+
+def test_meshconv_resume_keeps_finished_levels(tmp_path, monkeypatch):
+    """``--resume`` reruns only the levels without a level.json in the old scratch directory."""
+    scratch = tmp_path / "scratch"
+    for i in (0, 2, 3):
+        (scratch / f"level{i}").mkdir(parents=True)
+        (scratch / f"level{i}" / cli.LEVEL_NAME).write_text("{}", encoding="utf-8")
+    (scratch / "level1").mkdir()
+    (scratch / "level1" / "job.log").write_text("failed", encoding="utf-8")
+    ran = []
+
+    def fake_job(cmd, out_dir, mem):
+        ran.append(cmd[cmd.index("--level") + 1] if "--level" in cmd else "assemble")
+        raise RuntimeError("stop after the level jobs")
+
+    monkeypatch.setattr(cli, "_sandbox_job", fake_job)
+    monkeypatch.setattr(cli, "gplugins_commit", lambda: "x")
+    with pytest.raises(RuntimeError, match="stop after"):
+        cli.run_meshconv("nfet_05v0", 2, tmp_path / "root", resume=scratch)
+    assert ran == ["1"]
+    assert not (scratch / "level1" / "job.log").exists()  # the failed level starts afresh
