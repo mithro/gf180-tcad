@@ -16,6 +16,11 @@ there.
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
   it is now fixed in {{ gplugins_fork }} and re-verified on the latest stack. See
   {doc}`plugin-history`.
+- **Two TCAD stacks.** The final results are to come from the {term}`dev-HEAD TCAD image`
+  (each upstream project at its development HEAD, pinned by commit); the
+  {term}`stable TCAD image` (PyPI releases) is the baseline for how things used to work and for
+  debugging. A dev HEAD can break what the release did; such drift is reported, never hidden
+  by a looser {term}`tolerance`. See {ref}`tcad-dev-image`.
 - **Unverified citations.** Several literature items have not been checked yet
   and are marked "unverified". See {doc}`literature`.
 - **The SPICE models are a reference, not the truth.** {term}`BSIM4` is empirical,

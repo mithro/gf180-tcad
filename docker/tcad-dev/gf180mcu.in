@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+# The gdsfactory PDK at its upstream development HEAD (upstream.json), installed --no-deps: it pins
+# gdsfactory>=9.45,<=9.51, and this image has gdsfactory's development HEAD (10.0.0rc0).
+gf180mcu @ https://github.com/gdsfactory/gf180mcu/archive/96b7324d85df05704f68c1370c175627d0a88034.tar.gz

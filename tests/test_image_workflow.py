@@ -82,3 +82,25 @@ def test_image_docs_name_the_sandbox_environment():
     step1 = re.search(r"^1\. (.*?)^2\. ", base_change, re.MULTILINE | re.DOTALL)
     assert step1 and "{repo}`docker/IMAGE`" in step1.group(1)
     assert re.search(r"^5\. .*green", base_change, re.MULTILINE)
+
+
+def test_every_image_is_built_and_rebuilt():
+    """base, tcad (stable, PyPI releases) and tcad-dev (upstream dev HEAD), in both jobs."""
+    want = [
+        {"image": "base", "name": "ghcr.io/mithro/gf180-tcad-base", "pin": "docker/IMAGE"},
+        {"image": "tcad", "name": "ghcr.io/mithro/gf180-tcad-tcad", "pin": "docker/TCAD_IMAGE"},
+        {
+            "image": "tcad-dev",
+            "name": "ghcr.io/mithro/gf180-tcad-tcad-dev",
+            "pin": "docker/TCAD_DEV_IMAGE",
+        },
+    ]
+    jobs = _jobs()
+    for job in ("build", "rebuild"):
+        assert jobs[job]["strategy"]["matrix"]["include"] == want, job
+        assert jobs[job]["runs-on"] == "ubuntu-latest", job
+    for entry in want:
+        assert (REPO_ROOT / entry["pin"]).is_file(), entry["pin"]
+        image_dir = REPO_ROOT / "docker" / entry["image"]
+        for f in ("build", "Dockerfile", "IMAGE_ID", "probe_versions.py", "versions.json"):
+            assert (image_dir / f).is_file(), image_dir / f

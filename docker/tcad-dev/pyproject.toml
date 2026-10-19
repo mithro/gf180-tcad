@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: Apache-2.0
+# The Python package set of the dev-HEAD TCAD image (ghcr.io/mithro/gf180-tcad-tcad-dev), as a
+# non-package uv project. meshwell, gdsfactory and gmsh come from their upstream development
+# HEADs (the commits and hashes in upstream.json); everything else is resolved against those
+# packages' own requirements. DEVSIM is built from source in the Dockerfile and gf180mcu is
+# installed --no-deps from gf180mcu.lock, so neither is here.
+# Exported, hashed, to requirements.lock with (the command tests/test_tcad_dev_lock.py runs):
+#   uv export --project docker/tcad-dev --frozen --offline --no-emit-project --format requirements-txt --hashes
+# Relock (meshwell takes its version from git, which a source tarball does not have, so the
+# version hatch-vcs gives at that commit is passed in, as the Dockerfile does):
+#   SETUPTOOLS_SCM_PRETEND_VERSION=2.5.3.dev2+gb6d5ccd52 uv lock --project docker/tcad-dev
+[project]
+name = "gf180tcad-tcad-dev-image"
+version = "0"
+requires-python = "==3.13.*"
+dependencies = [
+    "meshwell",
+    "gdsfactory",
+    "gmsh",
+    # Must equal the numpy pin of docker/base/requirements.lock (tests/test_tcad_dev_lock.py).
+    "numpy==2.5.4",
+    # The calibration optimiser (scipy.optimize.least_squares).
+    "scipy>=1.18.1",
+    # The fork's tests run inside this image.
+    "pytest>=9.1.1",
+    # gplugins 2.1.5 runtime dependencies (its pyproject.toml); gplugins itself is NOT installed:
+    # it comes from the third_party/gplugins submodule via gf180tcad-gplugins.pth.
+    "pint>=0.26.1",
+    "tqdm>=4.70.1",
+    "xarray>=2023.8,<2026.10",
+]
+
+[tool.uv]
+package = false
+exclude-newer = "2026-10-19T00:00:00Z"
+
+# The upstream development HEADs (upstream.json records the same URLs, commits and sha256).
+# github.com/<owner>/<repo>/archive/<sha>.tar.gz redirects to the codeload tarball of that commit
+# (uv needs the .tar.gz suffix to treat the URL as an sdist).
+[tool.uv.sources]
+meshwell = { url = "https://github.com/simbilod/meshwell/archive/b6d5ccd5293312e99c91686cd6f010ca7bda5e15.tar.gz" }
+gdsfactory = { url = "https://github.com/gdsfactory/gdsfactory/archive/8b6fe0ae8db7eac245a9b67d1fece75fc8d3aa6a.tar.gz" }
+gmsh = { url = "https://gmsh.info/python-packages-dev/gmsh/gmsh-5.0.0.dev20261018-py2.py3-none-manylinux_2_24_x86_64.whl" }
