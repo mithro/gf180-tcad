@@ -132,6 +132,70 @@ def test_order_undefined_where_the_levels_agree_exactly():
     assert rep.richardson[1] == EXACT[1]
 
 
+def oscillating(exact, a, p):
+    """exact * (1 + a * (-1)^i * h^p) on level i: the sign alternates level to level."""
+
+    def simulate(spec: MeshSpec) -> Curve:
+        h = spec.h_si_surface_nm
+        i = round(math.log(h) / math.log(2**-0.5))
+        c = [e * (1 + ai * (-1) ** i * h**p) for e, ai in zip(exact, a, strict=True)]
+        return Curve(VG, c, round(100 / h))
+
+    return simulate
+
+
+def test_oscillation_flagged_per_bias():
+    """d12 * d23 < 0 (the change reverses sign between the triples' levels) is flagged."""
+    a = [0.01] * 6
+    rep = meshconv.converge(oscillating(EXACT, a, 2.0), START)
+    for o in rep.orders:
+        assert o.oscillating == (True,) * 6
+        assert o.median is None  # Richardson needs monotone convergence
+    assert rep.richardson is None and rep.richardson_order is None
+    mono, _ = synthetic(EXACT, a, 2.0)
+    for o in meshconv.converge(mono, START).orders:
+        assert o.oscillating == (False,) * 6
+
+
+def test_oscillating_biases_left_out_of_the_median():
+    a = [0.01] * 6
+    sim_mono, _ = synthetic(EXACT, a, 2.0)
+    sim_osc = oscillating(EXACT, [0.01] * 6, 1.0)
+
+    def simulate(spec):
+        m, o = sim_mono(spec), sim_osc(spec)
+        c = list(m.c_per_area_ff_um2)
+        c[2] = o.c_per_area_ff_um2[2]  # bias 2 oscillates with another order
+        return Curve(VG, c, m.node_count)
+
+    rep = meshconv.converge(simulate, START)
+    for o in rep.orders:
+        assert o.oscillating[2] is True and o.per_bias[2] is not None
+        assert math.isclose(o.median, 2.0, rel_tol=1e-9)
+
+
+def test_order_undefined_below_the_noise_floor():
+    """A difference within NOISE_K * rel_tol * |C| is solver noise: the order is undefined."""
+    assert meshconv.NOISE_K == 1e4
+    a = [0.01] * 6
+    a[1] = 1e-9  # changes of ~1e-9 relative, below 1e4 * 1e-10 = 1e-6
+    simulate, _ = synthetic(EXACT, a, 2.0)
+    rep = meshconv.converge(simulate, START, rel_tol=1e-10)
+    for o in rep.orders:
+        assert o.per_bias[1] is None and o.oscillating[1] is None
+        assert math.isclose(o.median, 2.0, rel_tol=1e-9)
+    assert rep.noise_floor_rel == 1e-6
+    # with a tighter solver tolerance the same changes are above the floor
+    rep = meshconv.converge(simulate, START, rel_tol=1e-16)
+    assert all(math.isclose(o.per_bias[1], 2.0, rel_tol=1e-5) for o in rep.orders)
+
+
+def test_observed_order_noise_floor():
+    assert meshconv.observed_order(1.0, 1.0 + 1e-7, 1.0 + 2e-7, 2**0.5, floor=1e-6) is None
+    assert meshconv.observed_order(1.0, 1.1, 1.15, 2**0.5, floor=1e-6) is not None
+    assert meshconv.observed_order(1.0, 1.0, 1.1, 2**0.5) is None  # exactly zero: undefined
+
+
 def test_converge_refuses_bad_input():
     simulate, _ = synthetic(EXACT, [0.01] * 6, 2.0)
     for levels in ((1, 0.5), (1, 0.5, 0.5), (0.5, 1, 2**-0.5), (1, 0.7, 0.5)):
@@ -183,6 +247,9 @@ def test_report_contents(tmp_path):
     assert data["observed_order"][-1]["levels"] == [1, 2, 3]
     assert math.isclose(data["observed_order"][-1]["median"], 2.0, rel_tol=1e-9)
     assert set(data["richardson"]) == {"c_per_area_ff_um2", "levels", "order"}
+    assert set(data["observed_order"][-1]) == {"levels", "median", "oscillating", "per_bias"}
+    assert data["observed_order"][-1]["oscillating"] == [False] * len(VG)
+    assert data["noise_floor"] == {"k": meshconv.NOISE_K, "rel_tol": 1e-10, "rel": 1e-6}
 
 
 def test_write_refuses_an_unconverged_report(tmp_path):

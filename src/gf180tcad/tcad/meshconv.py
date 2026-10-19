@@ -10,7 +10,9 @@ neighbouring levels differ by a factor sqrt(2) in every spacing. Its
 :class:`ConvergenceReport` holds, per level, the curve, the node count and the relative change
 against the next finer level at every bias; per triple of neighbouring levels the
 :term:`observed order of convergence`
-p = log(abs(C1 - C2) / abs(C2 - C3)) / log(sqrt(2)) at every bias and its median; and the
+p = log(abs(C1 - C2) / abs(C2 - C3)) / log(sqrt(2)) at every bias and its median, with an
+oscillation flag per bias (the change reverses sign, d12 * d23 < 0) and a noise floor
+(:data:`NOISE_K` times the solver tolerance) below which the order is undefined; and the
 :term:`Richardson extrapolation` of the three finest levels with the median order of that
 triple (Roache, `J. Fluids Eng. 116, 405 (1994) <https://doi.org/10.1115/1.2910291>`_;
 Celik et al., `J. Fluids Eng. 130, 078001 (2008) <https://doi.org/10.1115/1.2960953>`_). The
@@ -50,6 +52,18 @@ LEVELS = (1, 2**-0.5, 0.5, 2**-1.5)
 
 # The largest relative change against the next finer level a selected level may have.
 CRITERION = 0.01
+
+# The noise floor of a level difference, as a multiple of the solver's relative tolerance: a
+# difference |C_i - C_j| <= NOISE_K * rel_tol * |C| is solver noise, so the observed order there
+# is undefined (None), not an arbitrary number. Why 1e4: a QS C is the central difference
+# (Q(vg + dv) - Q(vg - dv)) / (2 dv) with dv = 1 mV (moscap1d.DV_QS), and each charge carries a
+# relative error up to about rel_tol, so the noise in C is about rel_tol * |Q| / dv. With
+# |Q| <= C * |vg - vfb| and |vg - vfb| <= 6.1 V over the +-5 V sweep, rel_tol * |Q| / dv is at
+# most 6.1e3 * rel_tol * |C|; 1e4 rounds that up.
+NOISE_K = 1e4
+
+# The solver relative tolerance the noise floor assumes by default (moscap1d.REL_TOL).
+DEFAULT_REL_TOL = 1e-10
 
 # Result file names in each job directory (<root>/moscap{1d,2d}/<device>/).
 REPORT_NAME = "report.json"
@@ -105,13 +119,18 @@ class Level:
 class Order:
     """The observed order of the neighbouring levels ``levels`` (coarse to fine).
 
-    ``per_bias`` is None where a difference between the levels is exactly zero; ``median`` is
-    the median of the defined ones (None if there are none).
+    ``per_bias`` is None where a difference between the levels is at or below the noise floor
+    (:data:`NOISE_K`; exactly zero included). ``oscillating`` flags, per bias, a change that
+    reverses sign between the levels (d12 * d23 < 0, with d12 = C1 - C2 and d23 = C2 - C3:
+    oscillatory convergence, where the order and the Richardson extrapolation do not apply);
+    it is None where the order is undefined. ``median`` is the median of the defined orders of
+    the monotone (not oscillating) biases, None if there are none.
     """
 
     levels: tuple[int, int, int]
     per_bias: tuple[float | None, ...]
     median: float | None
+    oscillating: tuple[bool | None, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -125,6 +144,12 @@ class ConvergenceReport:
     richardson_order: float | None
     richardson: tuple[float, ...] | None
     selected: int | None
+    rel_tol: float = DEFAULT_REL_TOL
+
+    @property
+    def noise_floor_rel(self) -> float:
+        """The relative noise floor of a level difference, :data:`NOISE_K` * ``rel_tol``."""
+        return NOISE_K * self.rel_tol
 
     @property
     def selected_spec(self) -> MeshSpec:
@@ -138,13 +163,15 @@ class ConvergenceReport:
         return self.levels[self.selected].spec
 
 
-def observed_order(c1: float, c2: float, c3: float, ratio: float) -> float | None:
+def observed_order(
+    c1: float, c2: float, c3: float, ratio: float, *, floor: float = 0.0
+) -> float | None:
     """p = log(abs(c1 - c2) / abs(c2 - c3)) / log(ratio) of three levels ``ratio`` apart.
 
-    None if either difference is exactly zero.
+    None if either difference is at most ``floor`` (absolute; 0: exactly zero), i.e. noise.
     """
     d12, d23 = abs(c1 - c2), abs(c2 - c3)
-    if d12 == 0 or d23 == 0:
+    if d12 <= floor or d23 <= floor:
         return None
     return math.log(d12 / d23) / math.log(ratio)
 
@@ -167,12 +194,17 @@ def converge(
     simulate: Callable[[MeshSpec], CVCurve],
     spec: MeshSpec,
     levels: Sequence[float] = LEVELS,
+    *,
+    rel_tol: float = DEFAULT_REL_TOL,
 ) -> ConvergenceReport:
     """Run ``simulate`` at ``spec.scaled(r)`` for each level ``r`` (coarse to fine) and report.
 
     Every level must give the same biases. The selected level is the coarsest whose
-    ``max_rel_change`` is below :data:`CRITERION`.
+    ``max_rel_change`` is below :data:`CRITERION`. ``rel_tol`` is the solver's relative
+    tolerance, which sets the noise floor of the observed order (:data:`NOISE_K`).
     """
+    if not (rel_tol > 0 and math.isfinite(rel_tol)):
+        raise ValueError(f"rel_tol must be > 0, got {rel_tol!r}")
     levels = _check_levels(levels)
     ratio = levels[0] / levels[1]
     specs = [spec.scaled(r) for r in levels]
@@ -194,13 +226,19 @@ def converge(
 
     orders = []
     for i in range(len(levels) - 2):
-        per = tuple(
-            observed_order(a, b, c, ratio)
-            for a, b, c in zip(cs[i], cs[i + 1], cs[i + 2], strict=True)
-        )
-        defined = [p for p in per if p is not None]
+        per, osc = [], []
+        for a, b, c in zip(cs[i], cs[i + 1], cs[i + 2], strict=True):
+            q = observed_order(a, b, c, ratio, floor=NOISE_K * rel_tol * abs(b))
+            per.append(q)
+            osc.append(None if q is None else (a - b) * (b - c) < 0)
+        defined = [q for q, o in zip(per, osc, strict=True) if q is not None and not o]
         orders.append(
-            Order((i, i + 1, i + 2), per, statistics.median(defined) if defined else None)
+            Order(
+                (i, i + 1, i + 2),
+                tuple(per),
+                statistics.median(defined) if defined else None,
+                tuple(osc),
+            )
         )
 
     p = orders[-1].median
@@ -213,7 +251,9 @@ def converge(
     selected = next(
         (i for i, lv in enumerate(out_levels[:-1]) if lv.max_rel_change < CRITERION), None
     )
-    return ConvergenceReport(spec, vg, tuple(out_levels), tuple(orders), p, richardson, selected)
+    return ConvergenceReport(
+        spec, vg, tuple(out_levels), tuple(orders), p, richardson, selected, rel_tol
+    )
 
 
 def report_dict(
@@ -236,8 +276,14 @@ def report_dict(
             }
             for lv in rep.levels
         ],
+        "noise_floor": {"k": NOISE_K, "rel": rep.noise_floor_rel, "rel_tol": rep.rel_tol},
         "observed_order": [
-            {"levels": list(o.levels), "median": o.median, "per_bias": list(o.per_bias)}
+            {
+                "levels": list(o.levels),
+                "median": o.median,
+                "oscillating": list(o.oscillating),
+                "per_bias": list(o.per_bias),
+            }
             for o in rep.orders
         ],
         "params": "start",
