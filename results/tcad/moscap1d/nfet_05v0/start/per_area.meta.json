@@ -38,7 +38,9 @@
       5e-05
     ]
   },
+  "mesh_source": "results/tcad/meshconv/moscap1d/nfet_05v0/selected.json",
   "method": "qs",
+  "node_count": 668,
   "param_sha256": "c9f0627464d89a66e1f309ced357bb65a7a0d52216cf1722c04cd94d2b8b9827",
   "params": "start",
   "points": 201,

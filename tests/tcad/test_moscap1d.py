@@ -15,7 +15,7 @@ import pytest
 
 from gf180tcad import io, sandbox
 from gf180tcad.devices import Geometry
-from gf180tcad.tcad import TCAD_IMAGE, analytic, calibration, moscap1d, process
+from gf180tcad.tcad import TCAD_IMAGE, analytic, calibration, meshconv, moscap1d, process
 from gf180tcad.tcad import __main__ as cli
 from gf180tcad.tcad.mesh import MeshSpec
 from gf180tcad.tcad.process import CONSTANTS
@@ -35,7 +35,7 @@ def _cv(device: str, c: float, vg=(0.0,)) -> moscap1d.MoscapCV:
     stack = moscap1d.stack_of(process.load(device))
     return moscap1d.MoscapCV(
         device, tuple(vg), (c,) * len(vg), pts, "qs", CONSTANTS, MeshSpec.DEFAULT_1D,
-        stack, moscap1d.REL_TOL,
+        stack, moscap1d.REL_TOL, 1,
     )  # fmt: skip
 
 
@@ -195,7 +195,7 @@ def test_committed_start_results(device):
     rows = [ln.split(",") for ln in text if ln and not ln.startswith("#")][1:]
     assert all(r[-1].isdigit() for r in rows)
     cv = moscap1d.read(job)
-    assert cv.mesh == MeshSpec.DEFAULT_1D and cv.constants == CONSTANTS
+    assert cv.mesh == meshconv.selected_spec(device, 1) and cv.constants == CONSTANTS
     stack = moscap1d.stack_of(process.load(device))
     cox = analytic.f_per_cm2_to_ff_per_um2(analytic.cox_f_per_cm2(stack.t_ox_nm, stack.eps_ox))
     assert all(0 < c < cox for c in cv.c_per_area_ff_um2)
@@ -216,7 +216,7 @@ def test_committed_start_results(device):
     starts = {n: proc.params[n].value for n in process.TUNABLES}
     assert info["param_sha256"] == calibration.param_sha256(starts)
     # 1D oxide spacing is min(h_ox, neighbours): the effective spacing is recorded
-    spacing = MeshSpec.DEFAULT_1D.spacing_um(moscap1d.POLY, moscap1d.OXIDE, moscap1d.BODY)
+    spacing = cv.mesh.spacing_um(moscap1d.POLY, moscap1d.OXIDE, moscap1d.BODY)
     assert info["mesh_1d_spacing_um"] == {k: list(v) for k, v in spacing.items()}
 
 

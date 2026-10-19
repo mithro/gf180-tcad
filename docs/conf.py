@@ -159,6 +159,13 @@ linkcheck_ignore = [
     # (2003), and Misiakos & Tsamakis, J. Appl. Phys. 74, 3293 (1993).
     r"https://doi\.org/10\.1063/1\.1529297",
     r"https://doi\.org/10\.1063/1\.354551",
+    # asmedigitalcollection.asme.org (doi:10.1115/...) and royalsocietypublishing.org
+    # (doi:10.1098/...) answer 403 to automated clients. The DOIs were checked against their
+    # Crossref records when added: Roache, J. Fluids Eng. 116, 405 (1994); Celik et al.,
+    # J. Fluids Eng. 130, 078001 (2008); Richardson, Phil. Trans. R. Soc. A 210, 307 (1911).
+    r"https://doi\.org/10\.1115/1\.2910291",
+    r"https://doi\.org/10\.1115/1\.2960953",
+    r"https://doi\.org/10\.1098/rsta\.1911\.0009",
     # Flaky host: man7.org (the Linux man pages, docs/reproduce/sandbox.md) intermittently hits
     # linkcheck's read timeout from GitHub-hosted runners, even with retries; the pages were
     # fetched (HTTP 200) when they were added.

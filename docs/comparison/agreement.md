@@ -174,7 +174,7 @@ with σ = 0.7071 · par_vth / √(W_eff · L_eff), with W_eff = W + 0.5 µm and 
 
 These are prerequisites: no comparison counts unless they pass.
 
-- **Mesh convergence**: a uniformly refined mesh changes every metric by less
+- **{term}`Mesh convergence <mesh convergence>`**: a uniformly refined mesh changes every metric by less
   than 1 % (Vt by less than 1 mV).
 - **Solver convergence**: relative update below 1e-10 on potential, documented
   per bias point. No bias point is silently skipped.

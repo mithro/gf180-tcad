@@ -171,6 +171,34 @@ def sweep_stack(
     One live device per call: the device (and its mesh) is deleted afterwards, also when
     ``sweep_cv`` raises.
     """
+    return _sweep_stack(
+        stack, vg_device, mesh=mesh, constants=constants, method=method, freq_hz=freq_hz,
+        rel_tol=rel_tol, name=name,
+    )[0]  # fmt: skip
+
+
+def _node_count(device: str) -> int:
+    """The number of distinct mesh nodes of the live 1D ``device`` (interface nodes once)."""
+    import devsim
+
+    xs = set()
+    for region in devsim.get_region_list(device=device):
+        xs.update(devsim.get_node_model_values(device=device, region=region, name="x"))
+    return len(xs)
+
+
+def _sweep_stack(
+    stack: Stack,
+    vg_device: Sequence[float],
+    *,
+    mesh: MeshSpec,
+    constants: Constants,
+    method: Literal["qs", "ac"],
+    freq_hz: float | None,
+    rel_tol: float,
+    name: str,
+):
+    """:func:`sweep_stack` and the node count of the mesh: ``(CVResult, node_count)``."""
     from gplugins.devsim import Contact, InterfaceRef, Layer1D, create_1d_stack, doping, sweep_cv
 
     layers = [
@@ -193,7 +221,8 @@ def sweep_stack(
         relative_error=rel_tol,
     )
     try:
-        return sweep_cv(
+        nodes = _node_count(name)
+        res = sweep_cv(
             dd,
             GATE_CONTACT,
             vg_device,
@@ -206,6 +235,7 @@ def sweep_stack(
         )
     finally:
         dd.delete_device()
+    return res, nodes
 
 
 # --- the SPICE bookkeeping -------------------------------------------------------------------
@@ -260,6 +290,7 @@ class MoscapCV:
     mesh: MeshSpec
     stack: Stack
     rel_tol: float
+    node_count: int
 
     def area_scaled(
         self, geometry: Geometry, proc: ProcessDescription | None = None
@@ -299,7 +330,7 @@ def simulate(
     vg = tuple(float(v) for v in vg)
     dv_fb = proc.values()["dv_fb_v"]
     stack = stack_of(proc)
-    res = sweep_stack(
+    res, nodes = _sweep_stack(
         stack,
         [v - dv_fb for v in vg],
         mesh=mesh,
@@ -324,6 +355,7 @@ def simulate(
         mesh=mesh,
         stack=stack,
         rel_tol=rel_tol,
+        node_count=nodes,
     )
 
 
@@ -386,18 +418,25 @@ def tunable_origins(
     return out
 
 
+def constants_dict(c: Constants = CONSTANTS) -> dict[str, float]:
+    """The constants as recorded in result metadata, with the derived ``n_i_cm3`` and ``vt_v``."""
+    return {**asdict(c), "n_i_cm3": c.n_i_cm3, "vt_v": c.vt_v}
+
+
 def write(
     cv: MoscapCV,
     out: Path,
     *,
     proc: ProcessDescription,
     params: str,
+    mesh_source: str,
     calibration_sha256: str | None = None,
 ) -> None:
     """Write :data:`PER_AREA_CSV` and :data:`PER_AREA_META` of ``cv`` into ``out``.
 
     ``proc`` is the process description ``cv`` was simulated with (its device and stack must
-    match); ``calibration_sha256`` is the calibration file's sha256 for ``params="calibrated"``.
+    match); ``mesh_source`` the repo-relative file its mesh spec was read from;
+    ``calibration_sha256`` is the calibration file's sha256 for ``params="calibrated"``.
     """
     out = Path(out)
     if proc.device != cv.device or stack_of(proc) != cv.stack:
@@ -423,15 +462,17 @@ def write(
     io.write_json(
         out / PER_AREA_META,
         {
-            "constants": {**asdict(c), "n_i_cm3": c.n_i_cm3, "vt_v": c.vt_v},
+            "constants": constants_dict(c),
             "device": cv.device,
             "dim": 1,
             "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
             "mesh": cv.mesh.as_dict(),
+            "mesh_source": mesh_source,
             "mesh_1d_spacing_um": {k: list(v) for k, v in spacing.items()},
             "mesh_1d_note": "oxide spacing is min(h_ox, neighbour) at each face (exact: the "
             "oxide potential is linear)",
             "method": cv.method,
+            "node_count": cv.node_count,
             "param_sha256": param_sha256({n: o["value"] for n, o in origins.items()}),
             "params": params,
             "points": len(cv.vg),
@@ -468,4 +509,5 @@ def read(job_dir: Path) -> MoscapCV:
         mesh=MeshSpec(**info["mesh"]),
         stack=Stack(**info["stack"]),
         rel_tol=info["sweep"]["rel_tol"],
+        node_count=info["node_count"],
     )
