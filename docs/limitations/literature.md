@@ -34,7 +34,7 @@ item, it does not check what the annotation says about it.
 
 (lit-bsim4)=
 
-- {{ BSIM4_site }} manual (UC Berkeley): the meaning of TOXE, TOXP, NGATE and LPE0.
+- {{ BSIM4_site }} manual (UC Berkeley): the meaning of TOXE, TOXP, {term}`NGATE` and LPE0.
 
 ## Physics models
 

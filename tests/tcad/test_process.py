@@ -600,6 +600,8 @@ def test_card_values_and_lines(card_lines, device):
     assert "cf" not in keys
     assert ("toxp" in keys) == (desc.polarity == "n")
     assert ("vfb" in keys) == (desc.polarity == "p")
+    assert ("dwc" in keys) == (desc.polarity == "n")  # pfet: DWC = WINT, the BSIM4 default
+    assert "ckappas" in keys and "ckappad" in keys and "cgbo" in keys
     assert "dtox" not in keys
 
 
