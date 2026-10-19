@@ -58,6 +58,12 @@ _TOOLS = {
     "gmsh": ("gmsh", "https://gmsh.info/"),
     "gplugins": ("gplugins", "https://github.com/gdsfactory/gplugins"),
     "gplugins_fork": ("the gplugins fork", "https://github.com/mithro/gplugins"),
+    "meshwell_fork": ("the meshwell fork", "https://github.com/mithro/meshwell"),
+    "gf180mcu_fork": ("the gf180mcu fork", "https://github.com/mithro/gf180mcu"),
+    "input_mirror": (
+        "the input mirror",
+        "https://github.com/mithro/gf180-tcad/releases/tag/gf180-tcad/inputs/tcad-dev-20261019",
+    ),
     "tidy3d": ("tidy3d", "https://docs.flexcompute.com/projects/tidy3d/"),
     "pyvista": ("pyvista", "https://docs.pyvista.org/"),
     "pydantic": ("pydantic", "https://docs.pydantic.dev/"),

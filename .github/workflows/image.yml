@@ -4,8 +4,10 @@
 #   tcad: ghcr.io/mithro/gf180-tcad-tcad  (docker/tcad/, pinned by docker/TCAD_IMAGE; built FROM
 #         docker/IMAGE, which is public, so no login is needed to pull it)
 #   tcad-dev: ghcr.io/mithro/gf180-tcad-tcad-dev  (docker/tcad-dev/, pinned by
-#         docker/TCAD_DEV_IMAGE; the TCAD stack at upstream development HEAD, pinned by commit in
-#         docker/tcad-dev/upstream.json, DEVSIM compiled from source; also FROM docker/IMAGE)
+#         docker/TCAD_DEV_IMAGE; the TCAD stack at development HEAD (meshwell and gf180mcu from
+#         the mithro forks), pinned by commit in docker/tcad-dev/upstream.json, every input
+#         fetched from the gf180-tcad input mirror first, DEVSIM compiled from source; also FROM
+#         docker/IMAGE)
 #   PRs:  push tag pr-<number>;  main: push latest and sha-<commit>; both only after the
 #         IMAGE_ID, pin and versions checks passed (the build pushes only the staging tag
 #         `unverified`, which may point at an unverified image);
