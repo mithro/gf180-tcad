@@ -6,16 +6,22 @@ changes to this package never touch ``results/spice/provenance.json``.
 
 **Provenance.** Each TCAD tree root (:repo:`results/tcad/moscap1d`, :repo:`results/tcad/meshconv`, and later ``moscap2d``,
 ``calibration`` and ``validation`` under :repo:`results/tcad`) holds one
-``provenance.json``, written from :func:`tree_provenance`. It holds the TCAD image reference
-(:repo:`docker/TCAD_IMAGE`), the contents of :repo:`docker/tcad/versions.json`, the plugin
+``provenance.json``, written from :func:`tree_provenance`. It holds, under ``images``, for each
+result kind in the tree (``moscap1d``, ``moscap2d``) the TCAD image that made it: its name
+(:data:`IMAGES`), reference and ``versions.json`` contents. It also holds the plugin
 commit ``gplugins_commit`` and ``generator_sha256`` (:func:`generator_sha256`), and, for a tree
 with calibrated results, per device the sha256 of its calibration file
 ``results/tcad/calibration/<device>.json`` (:mod:`gf180tcad.tcad.calibration`, written by
 :repo:`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`) and the ``param_sha256`` of the
 values applied (:func:`gf180tcad.tcad.calibration.param_sha256`). It holds no date.
 
+**Images.** :data:`RESULTS_IMAGE` names the image each result kind is generated with: the 1D
+results on the dev-HEAD image (:repo:`docker/TCAD_DEV_IMAGE`), the 2D results on the stable
+image (:repo:`docker/TCAD_IMAGE`) for now. ``python -m gf180tcad.tcad`` takes ``--image`` to
+pick the other one, for testing and debugging.
+
 The plugin is the submodule `third_party/gplugins
-<https://github.com/mithro/gplugins/tree/dddaa071321c5177c8471312c565ad86d4b245d7>`_, a checkout
+<https://github.com/mithro/gplugins/tree/1c071d0565ef4917b48ff907b9426e879ccca7fc>`_, a checkout
 of the gplugins fork. Its commit is read on the host with
 ``git -C third_party/gplugins rev-parse HEAD``
 (inside the sandbox the repo is a read-only mount without git). It raises unless the
@@ -33,15 +39,37 @@ import hashlib
 import json
 import re
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
 
+from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.sandbox import REPO_ROOT
 
 # The file pinning the TCAD image by digest (``docker/TCAD_IMAGE``).
 TCAD_IMAGE_FILE = REPO_ROOT / "docker" / "TCAD_IMAGE"
 
-# The TCAD image reference that TCAD jobs run in, read from :data:`TCAD_IMAGE_FILE`.
+# The stable TCAD image reference (PyPI releases), read from :data:`TCAD_IMAGE_FILE`.
 TCAD_IMAGE: str = TCAD_IMAGE_FILE.read_text(encoding="utf-8").strip()
+
+# The file pinning the dev-HEAD TCAD image by digest (``docker/TCAD_DEV_IMAGE``).
+TCAD_DEV_IMAGE_FILE = REPO_ROOT / "docker" / "TCAD_DEV_IMAGE"
+
+# The dev-HEAD TCAD image reference, read from :data:`TCAD_DEV_IMAGE_FILE`.
+TCAD_DEV_IMAGE: str = TCAD_DEV_IMAGE_FILE.read_text(encoding="utf-8").strip()
+
+# The TCAD images by name: the repo-relative pin file and versions.json of each.
+IMAGES = {
+    "dev": (Path("docker") / "TCAD_DEV_IMAGE", Path("docker") / "tcad-dev" / "versions.json"),
+    "stable": (Path("docker") / "TCAD_IMAGE", Path("docker") / "tcad" / "versions.json"),
+}
+
+# The image each result kind is generated with by default. The final results come from upstream
+# dev HEAD; the stable image is for testing how things used to work, and for debugging. 1D: the
+# dev image (its 1D results are byte-identical to the stable image's: tests/tcad/test_moscap1d.py
+# test_stable_and_dev_images_agree). 2D stays on the stable image, explicitly, for now: gmsh 5
+# meshes the 2D cells differently, so 2D needs its own mesh convergence on the dev image first,
+# planned before the Phase 2 exit (docs/reproduce/image.md, "Which image makes which results").
+RESULTS_IMAGE = {"moscap1d": "dev", "moscap2d": "stable"}
 
 # Every gf180tcad module the TCAD entry points import (gf180tcad.tcad.__main__ and, from Task
 # 12, gf180tcad.calibrate.__main__), shared modules included. tests/tcad/test_tcad_provenance.py
@@ -71,9 +99,6 @@ GPLUGINS_HASHED_DIR = "gplugins/devsim"
 
 # The process files.
 PROCESS_GLOB = "data/process/*.toml"
-
-# The TCAD image's tool versions.
-TCAD_VERSIONS = Path("docker") / "tcad" / "versions.json"
 
 # Where the calibrated values live (Task 12): results/tcad/calibration/<device>.json.
 CALIBRATION_DIR = Path("results") / "tcad" / "calibration"
@@ -168,18 +193,42 @@ def calibration_file(device: str, repo_root: Path | None = None) -> Path:
     return root / CALIBRATION_DIR / f"{device}.json"
 
 
-def provenance(calibrated: tuple[str, ...] = (), repo_root: Path | None = None) -> dict:
+def image_ref(name: str, repo_root: Path | None = None) -> str:
+    """The pinned reference of the TCAD image ``name`` (:data:`IMAGES`); KeyError if unknown."""
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    return (root / IMAGES[name][0]).read_text(encoding="utf-8").strip()
+
+
+def image_versions(name: str, repo_root: Path | None = None) -> dict:
+    """The ``versions.json`` of the TCAD image ``name`` (:data:`IMAGES`)."""
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    return json.loads((root / IMAGES[name][1]).read_text(encoding="utf-8"))
+
+
+def provenance(
+    calibrated: tuple[str, ...] = (),
+    repo_root: Path | None = None,
+    *,
+    images: Mapping[str, str],
+) -> dict:
     """The ``provenance.json`` of a tree root in which the ``calibrated`` devices used calibration.
 
-    Raises :class:`ProvenanceError` if the plugin submodule is not clean and pinned, and
-    FileNotFoundError if a calibrated device has no calibration file.
+    ``images`` maps each result kind of the tree (``moscap1d``, ``moscap2d``) to the name of the
+    image that made it. Raises :class:`ProvenanceError` if the plugin submodule is not clean and
+    pinned, and FileNotFoundError if a calibrated device has no calibration file.
     """
     root = Path(repo_root) if repo_root is not None else REPO_ROOT
     out = {
         "generator_sha256": generator_sha256(root),
         "gplugins_commit": gplugins_commit(root),
-        "image": (root / "docker" / "TCAD_IMAGE").read_text(encoding="utf-8").strip(),
-        "versions": json.loads((root / TCAD_VERSIONS).read_text(encoding="utf-8")),
+        "images": {
+            kind: {
+                "name": name,
+                "ref": image_ref(name, root),
+                "versions": image_versions(name, root),
+            }
+            for kind, name in sorted(images.items())
+        },
     }
     if calibrated:
         from gf180tcad.tcad import calibration
@@ -202,6 +251,20 @@ def calibrated_devices(tree_root: Path) -> tuple[str, ...]:
     return tuple(sorted(p.parent.name for p in tree_root.glob("*/calibrated") if p.is_dir()))
 
 
-def tree_provenance(tree_root: Path, repo_root: Path | None = None) -> dict:
-    """:func:`provenance` of the tree root ``tree_root``, from its calibrated job directories."""
-    return provenance(calibrated_devices(tree_root), repo_root)
+def tree_provenance(
+    tree_root: Path, images: Mapping[str, str], repo_root: Path | None = None
+) -> dict:
+    """:func:`provenance` of the tree root ``tree_root``, from its calibrated job directories,
+    with ``images`` (result kind to image name)."""
+    return provenance(calibrated_devices(tree_root), repo_root, images=images)
+
+
+def recorded_images(tree_root: Path) -> dict[str, str]:
+    """The image names ``tree_root/provenance.json`` records for the result kinds that are
+    subtrees of ``tree_root`` (``moscap1d/``, ``moscap2d/``: the mesh-convergence tree); empty
+    if there is no such file or entry."""
+    path = Path(tree_root) / PROVENANCE_NAME
+    if not path.is_file():
+        return {}
+    recorded = json.loads(path.read_bytes()).get("images", {})
+    return {k: v["name"] for k, v in recorded.items() if (Path(tree_root) / k).is_dir()}
