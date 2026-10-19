@@ -393,3 +393,15 @@ def test_build_inputs_date_the_build():
     }
     assert {f"docker/tcad-dev/{f}" for f in used} <= inputs
     assert {"docker/tcad-dev/Dockerfile", "docker/IMAGE"} <= inputs
+
+
+def test_only_the_fetch_step_has_a_network():
+    """Step 1 fetches every input (fetch_sources.py); every later RUN is --network=none, so the
+    install can only use the fetched, sha256-checked files."""
+    docker = (DEV / "Dockerfile").read_text(encoding="utf-8")
+    runs = re.split(r"^RUN ", docker, flags=re.MULTILINE)[1:]
+    assert len(runs) == 4
+    assert "fetch_sources.py" in runs[0] and not runs[0].startswith("--network")
+    for step in runs[1:]:
+        assert step.startswith("--network=none "), step[:80]
+        assert "fetch_sources.py" not in step
