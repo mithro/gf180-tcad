@@ -78,7 +78,9 @@ RUN --mount=type=bind,source=build-devsim.sh,target=/run/gf180tcad/build-devsim.
 #    (the same bytes: the lock's hash is upstream.json's sha256, tests/test_tcad_dev_lock.py).
 #    Then the DEVSIM wheel of step 3 --no-deps (it has no Python dependencies), with pip: uv would
 #    record the wheel file's ctime in the dist-info (uv_cache.json, and so RECORD), which no build
-#    can fix. Hashes only, no deps resolved, no bytecode. Then upstream.json, the provenance of
+#    can fix. uv does the same for every file it installs from a local path, as here: the build
+#    removes those uv_cache.json files (local_inputs.py strip-uv-cache). Hashes only, no deps
+#    resolved, no bytecode. Then upstream.json, the provenance of
 #    the upstream sources, and devsim-build.json, DEVSIM's build record
 #    (docker/tcad-dev/probe_versions.py checks both against what is installed), with a fixed mode:
 #    a COPY from the build context would keep the checkout's mode, which follows the umask of
@@ -105,6 +107,7 @@ RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirement
  && install -D -m 0644 /opt/build/wheels/devsim-build.json \
         /opt/gf180tcad-tcad/share/gf180tcad/devsim-build.json \
  && site="$(/opt/gf180tcad-tcad/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
+ && /usr/bin/python3 -I /run/gf180tcad/local_inputs.py strip-uv-cache "$site" \
  && printf '%s\n' /work/src/third_party/gplugins > "$site/gf180tcad-gplugins.pth" \
  && test "$(/opt/gf180tcad-tcad/bin/python -c 'import platform; print(platform.python_version())')" = "$TCAD_PYTHON" \
  && test "$(/opt/gf180tcad-tcad/bin/python -c 'from importlib.metadata import version; print(version("meshwell"))')" = "$MESHWELL_VERSION" \
