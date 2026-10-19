@@ -141,51 +141,19 @@ def test_tcad_dev_imports(tmp_path):
     assert versions["gmsh"].startswith(gmsh_version + ".dev")
 
 
-# Dev-HEAD drift, kept visible (strict: an upstream fix makes these XPASS and fail, so the marker
-# is removed then). Each test raises _KnownDrift only when the failure carries the diagnosed
-# signature; any other failure is re-raised and fails the test. Causes: docs/reproduce/image.md.
-class _KnownDrift(Exception):
-    """A sandboxed command failed with the signature of a diagnosed dev-HEAD drift."""
-
-
-def _run_expecting(cmd: list[str], tmp_path: Path, *signature: str, **kw):
-    """_run, but a failure whose output contains every ``signature`` string is _KnownDrift."""
-    try:
-        return _run(cmd, tmp_path, **kw)
-    except sandbox.SandboxError as e:
-        if e.result is not None:
-            out = (e.result.stdout or "") + (e.result.stderr or "")
-            if all(s in out for s in signature):
-                raise _KnownDrift(signature) from e
-        raise
-
-
-_GF180MCU_DRIFT = (
-    "gf180mcu HEAD (pins gdsfactory<=9.51) does not import with gdsfactory HEAD 10.0.0rc0: "
-    "building its cross-sections at import activates $PDK=gf180mcu, a circular import "
-    "(it imports with gdsfactory 9.51.0)"
-)
-_PN_SLAB_DRIFT = (
-    "the fork's test_pn_slab_currents_explained: on the gmsh 5.0.0.dev20261018 mesh the floating "
-    "rib's corner Potential jump is 0.035 V, not > 0.05 V (0.118 V with gmsh 4.15.2, where the "
-    "test passes in this image); the rib's offset is set only by the mesh and the initial guess"
-)
-_MESHIO_DRIFT = (
-    "meshio 5.3.5 cannot read the MSH 4.1 file gmsh 5.0.0.dev20261018 writes for meshwell's "
-    "2D mesh (KeyError on a physical tag; the same meshwell works with gmsh 4.15.2)"
-)
+# The three dev-HEAD drifts found when the image was first pinned are fixed in the mithro forks
+# (docs/reproduce/image.md, "Forks, and why"); their tests were strict expected failures until
+# then, and are now ordinary tests: gf180mcu imports with gdsfactory 10, meshwell's mesh reads back
+# through meshio under gmsh 5, and the fork's PN-slab test passes on the gmsh-5 mesh.
 
 
 @pytest.mark.sandbox
-@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_GF180MCU_DRIFT)
 def test_tcad_dev_gf180mcu_pdk(tmp_path):
     code = (
         "import json, gdsfactory as gf, gf180mcu; "
         "print(json.dumps([gf.get_active_pdk().name, gf180mcu.__file__]))"
     )
-    res = _run_expecting(
-        ["python3", "-c", code], tmp_path, "partially initialized module 'gf180mcu'"
-    )
+    res = _run(["python3", "-c", code], tmp_path)
     name, f = json.loads(res.stdout.splitlines()[-1])
     assert name == "gf180mcu"
     assert f.startswith(SITE)
@@ -255,16 +223,15 @@ def test_tcad_dev_meshwell_thread_defaults(tmp_path):
 
 
 @pytest.mark.sandbox
-@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_MESHIO_DRIFT)
 def test_tcad_dev_meshwell_mesh_reads_back(tmp_path):
-    """meshwell's 2D mesh, read back through meshio (the drift: meshio cannot read it)."""
-    res = _run_expecting(["python3", "-c", _GMSH_MESH], tmp_path, "KeyError", "_gmsh41")
+    """meshwell's 2D mesh, read back through meshio (gmsh 5 + the meshwell fork's MSH 4.1)."""
+    res = _run(["python3", "-c", _GMSH_MESH], tmp_path)
     assert json.loads(res.stdout.splitlines()[-1]) == {"NumThreads": 1, "OCCParallel": 0}
 
 
 # The same meshwell mesh as _GMSH_MESH, with only the meshio read-back of the finished mesh
-# stubbed out (the drift above), so the gmsh thread options are still checked after a real
-# meshwell CAD + mesh run.
+# stubbed out (it was the meshio drift before the meshwell fork's fix), so the gmsh thread
+# options are checked after a real meshwell CAD + mesh run independently of the read-back.
 _GMSH_MESH_NO_READBACK = """
 import json, gmsh, meshio
 reads = []
@@ -330,7 +297,6 @@ def _fork_archive(commit: str) -> bytes:
 
 
 @pytest.mark.sandbox
-@pytest.mark.xfail(raises=_KnownDrift, strict=True, reason=_PN_SLAB_DRIFT)
 def test_tcad_dev_fork_pn_slab_currents_explained(tmp_path):
     """The fork's PN-slab test, from a git archive of GPLUGINS_FORK_TEST_COMMIT, in the dev image."""
     archive = _fork_archive(GPLUGINS_FORK_TEST_COMMIT)
@@ -338,8 +304,7 @@ def test_tcad_dev_fork_pn_slab_currents_explained(tmp_path):
         tar.extractall(tmp_path, filter="data")
     test = "gplugins/devsim/tests/test_mesh.py::test_pn_slab_currents_explained"
     cmd = ["python3", "-m", "pytest", "-p", "no:cacheprovider", "-q", test]
-    res = _run_expecting(cmd, tmp_path, 'j["boundary_jump_v"] > 0.05', "1 failed")
-    # reached only once the drift is fixed (strict xfail: then XPASS fails, remove the marker)
+    res = _run(cmd, tmp_path)
     assert "1 passed" in res.stdout
 
 
