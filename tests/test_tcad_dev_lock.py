@@ -252,8 +252,11 @@ def test_build_inputs_date_the_build():
     inputs = set(m.group(1).split())
     docker = (DEV / "Dockerfile").read_text(encoding="utf-8")
     used = set(re.findall(r"source=([\w.-]+),", docker)) | set(
-        re.findall(r"^COPY ([\w.-]+) ", docker, re.MULTILINE)
+        re.findall(r"^COPY (?:--chmod=\d+ )?([\w.-]+) ", docker, re.MULTILINE)
     )
+    # a COPY from the build context keeps the checkout's mode (umask-dependent) unless pinned
+    for line in re.findall(r"^COPY (?!--from=).*$", docker, re.MULTILINE):
+        assert line.startswith("COPY --chmod="), line
     assert used >= {"upstream.json", "fetch_sources.py", "build-devsim.sh", "requirements.lock"}
     assert {f"docker/tcad-dev/{f}" for f in used} <= inputs
     assert {"docker/tcad-dev/Dockerfile", "docker/IMAGE"} <= inputs

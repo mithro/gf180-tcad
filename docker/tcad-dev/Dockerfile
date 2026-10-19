@@ -92,8 +92,9 @@ ARG BASE_IMAGE
 COPY --from=build /opt/uv-python /opt/uv-python
 COPY --from=build /opt/gf180tcad-tcad /opt/gf180tcad-tcad
 # The provenance of the upstream sources (docker/tcad-dev/probe_versions.py checks it against
-# what the installed packages report).
-COPY upstream.json /opt/gf180tcad-tcad/share/gf180tcad/upstream.json
+# what the installed packages report). --chmod: COPY keeps the checkout's file mode, which
+# depends on the umask of whoever checked it out (0664 here, 0644 on a GitHub runner).
+COPY --chmod=0644 upstream.json /opt/gf180tcad-tcad/share/gf180tcad/upstream.json
 USER 1000:1000
 
 # As docker/tcad/Dockerfile: the TCAD venv first, then exactly the base image's PATH; the rest of
