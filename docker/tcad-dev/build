@@ -17,6 +17,8 @@ set -euo pipefail
 BUILDKIT_IMAGE="moby/buildkit:v0.34.0@sha256:b059f8d7226d0b326bc871af489a5dddf65e36af4d20d14251b072974d9ee87c"
 # GF180TCAD_BUILDER: use another (for example a CPU- and memory-limited) docker-container builder
 # of the same BuildKit image on a shared host; the image does not depend on the builder's limits.
+# Either builder, if it exists, must use the docker-container driver and $BUILDKIT_IMAGE (checked
+# below), or the build refuses.
 BUILDER="${GF180TCAD_BUILDER:-buildkit_v0.34.0_gf180tcad}"
 NAME="ghcr.io/mithro/gf180-tcad-tcad-dev"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -42,6 +44,27 @@ if [ "${#TAGS[@]}" -eq 0 ]; then
     TAGS=("$NAME:local")
 fi
 
+if ! INSPECT="$(docker buildx inspect "$BUILDER")"; then
+    docker buildx create --name "$BUILDER" --driver docker-container \
+        --driver-opt "image=$BUILDKIT_IMAGE" >&2
+    INSPECT="$(docker buildx inspect "$BUILDER")"
+fi
+echo "$INSPECT" >&2
+# An existing builder of that name (the default or GF180TCAD_BUILDER) is used as it is, so check
+# that it is what the build is reproducible with: the docker-container driver running exactly
+# $BUILDKIT_IMAGE on every node.
+DRIVER="$(awk '/^Driver:/ {print $2; exit}' <<<"$INSPECT")"
+if [ "$DRIVER" != docker-container ]; then
+    echo "build: builder $BUILDER: driver is '$DRIVER', not docker-container" >&2
+    exit 2
+fi
+OPTS="$(grep '^Driver Options:' <<<"$INSPECT" || true)"
+if [ -z "$OPTS" ] || grep -vqF "image=\"$BUILDKIT_IMAGE\"" <<<"$OPTS"; then
+    echo "build: builder $BUILDER: BuildKit image is not $BUILDKIT_IMAGE:" >&2
+    echo "${OPTS:-  (no Driver Options)}" >&2
+    exit 2
+fi
+
 INPUTS=(docker/tcad-dev/Dockerfile docker/tcad-dev/requirements.lock
         docker/tcad-dev/build-requirements.lock docker/tcad-dev/upstream.json
         docker/tcad-dev/wheelhouse.json docker/tcad-dev/fetch_sources.py
@@ -61,11 +84,6 @@ case "$BASE_IMAGE" in
     *) echo "build: docker/IMAGE is not a pinned base image: $BASE_IMAGE" >&2; exit 2 ;;
 esac
 echo "build: BASE_IMAGE=$BASE_IMAGE" >&2
-
-if ! docker buildx inspect "$BUILDER" >&2; then
-    docker buildx create --name "$BUILDER" --driver docker-container \
-        --driver-opt "image=$BUILDKIT_IMAGE" >&2
-fi
 
 NAMES="$(IFS=,; echo "${TAGS[*]}")"
 docker buildx build --builder "$BUILDER" --progress plain \
