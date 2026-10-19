@@ -91,7 +91,7 @@ To stop the TCAD from being tuned to the answer, the targets are split.
 ### Parameter sources and budget
 
 Allowed sources, in order of preference: (1) the PDK's public documentation
-({{ gf180mcu_pdk_docs }}); (2) values in the public SPICE card (TOXE, TOXP, NDEP, NSD, NGATE,
+({{ gf180mcu_pdk_docs }}); (2) values in the public SPICE card (TOXE, TOXP, NDEP, NSD, {term}`NGATE`,
 XJ, LPE0, RDSW; see the {ref}`BSIM4 manual <lit-bsim4>`), used as starting points and bounds and never as fixed truths, because
 {term}`BSIM` parameters are fitted rather than physical; (3) generic published
 0.18 µm-class 5 V values with a citation.
@@ -197,7 +197,7 @@ literature references.
 | Tag | Cause | Expected signature |
 |---|---|---|
 | `doping` | Unknown channel, {term}`LDD`, {term}`S/D` and well profiles; analytic stand-ins | Vt, roll-off, body effect, Rsd |
-| `oxide-qm` | TOXE ≠ TOXP: poly depletion and quantum dark space; classical {term}`drift-diffusion` without {term}`density-gradient` ({ref}`Ancona and Iafrate <lit-ancona>`) or a poly gate | ΔVt of about 10-30 mV, Cgg in inversion low or high |
+| `oxide-qm` | TOXE ≠ TOXP: {term}`poly depletion` and quantum dark space; classical {term}`drift-diffusion` without {term}`density-gradient` ({ref}`Ancona and Iafrate <lit-ancona>`) or a poly gate | ΔVt of about 10-30 mV, Cgg in inversion low or high |
 | `mobility` | Model choice ({ref}`Lombardi <lit-lombardi>`/{ref}`CVT <lit-darwish>` versus {ref}`Philips/Klaassen <lit-klaassen>`), surface-roughness parameters | linear Id, gm peak |
 | `velsat` | High-field saturation model ({ref}`Caughey-Thomas <lit-caughey>`) | Idsat, gds |
 | `rsd` | Contact, silicide and LDD resistance (the card has RDSW 2175 Ω·µm) | high-Vgs Id, gm roll-off |
