@@ -3,7 +3,8 @@
 
     uv run --no-project --with packaging python docker/tcad-dev/wheelhouse.py
 
-(run from the repository root; needs network, reads PyPI's public JSON API.) For every pinned
+(run from the repository root; needs network, reads PyPI's public JSON API,
+https://docs.pypi.org/api/json/.) For every pinned
 ``name==version`` of requirements.lock and build-requirements.lock, PyPI lists the release's files;
 the file chosen is the one with a hash the lock allows that the build's interpreter would install
 first (packaging's tag order):
@@ -33,7 +34,10 @@ from packaging.utils import canonicalize_name, parse_sdist_filename, parse_wheel
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "wheelhouse.json"
-# The mirror: release assets of mithro/gf180-tcad (docs/reproduce/image.md, "Input mirror").
+# The mirror: release assets of mithro/gf180-tcad (docs/reproduce/image.md, "The input mirror";
+# https://github.com/mithro/gf180-tcad/releases/tag/gf180-tcad/inputs/tcad-dev-20261019). The one
+# place the tag is set: tests/test_tcad_dev_lock.py checks docs/conf.py, image.md, upstream.json
+# and wheelhouse.json against it.
 MIRROR_TAG = "gf180-tcad/inputs/tcad-dev-20261019"
 MIRROR = f"https://github.com/mithro/gf180-tcad/releases/download/{MIRROR_TAG}/"
 # glibc of the base image (Ubuntu 24.04): manylinux_2_39 down to manylinux_2_5, then linux.

@@ -59,10 +59,6 @@ FORKS = {
     "gf180mcu": "https://github.com/gdsfactory/gf180mcu",
 }
 URL_INSTALLED = ("meshwell", "gdsfactory", "gf180mcu", "gmsh")
-# gf180-tcad's input mirror: release assets of mithro/gf180-tcad.
-MIRROR = (
-    "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/"
-)
 SUBMODULES = ("symdiff", "umfpack_lgpl", "boost_config", "boost_math", "boost_multiprecision")
 # GCC 14, only in the build stage (upstream builds its x86_64 wheels with GCC 14).
 DEBS = (
@@ -89,6 +85,23 @@ def _wheelhouse_module():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+# gf180-tcad's input mirror (release assets of mithro/gf180-tcad): its one tag, from wheelhouse.py.
+MIRROR_TAG = _wheelhouse_module().MIRROR_TAG
+MIRROR = _wheelhouse_module().MIRROR
+
+
+def test_one_mirror_tag_everywhere():
+    """The mirror tag is set in wheelhouse.py; the docs and both input lists use it."""
+    assert re.fullmatch(r"gf180-tcad/inputs/tcad-dev-\d{8}", MIRROR_TAG)
+    assert MIRROR == f"https://github.com/mithro/gf180-tcad/releases/download/{MIRROR_TAG}/"
+    conf = (REPO_ROOT / "docs" / "conf.py").read_text(encoding="utf-8")
+    assert f'"https://github.com/mithro/gf180-tcad/releases/tag/{MIRROR_TAG}"' in conf
+    image_md = (REPO_ROOT / "docs" / "reproduce" / "image.md").read_text(encoding="utf-8")
+    assert f"`{MIRROR_TAG}`" in image_md
+    for name, e in {**_upstream(), **_wheelhouse()}.items():
+        assert e["mirror_url"].startswith(MIRROR), name
 
 
 # --- upstream.json ---------------------------------------------------------------------------
