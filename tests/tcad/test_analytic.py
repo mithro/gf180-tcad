@@ -125,3 +125,11 @@ def test_lf_cv_uniform_returns_ff_per_um2():
     cap = _cap(NFET)
     (c,) = analytic.lf_cv_uniform(-1.7e17, 15.2, 1e20, [1.0], eps_ox=EPS_OX)
     assert c == analytic.f_per_cm2_to_ff_per_um2(cap.solve(1.0).c_f_per_cm2)
+
+
+def test_potential_of_charge_checks_its_residual(monkeypatch):
+    """A root that does not satisfy the tolerance raises instead of being returned."""
+    g = analytic.Semiconductor(1e20)
+    monkeypatch.setattr(analytic, "_root", lambda f, df, ftol: 0.123)
+    with pytest.raises(ArithmeticError, match="residual"):
+        g.potential_of_charge(g.charge(0.01))

@@ -23,8 +23,9 @@ eps_si/L_D, L_D = sqrt(eps_si V_t / (q (n0 + p0))).
 Poly depletion is included by applying the same Q to the gate: the poly-silicon gate is a
 second semiconductor, of net doping ``gate_doping``, with its own surface potential psi_g.
 For the degenerate gates (1e20, 3.6e19 cm^-3) Boltzmann statistics is approximate, but it is
-also what the TCAD uses (`gplugins.devsim.materials <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/materials.py>`_), so the two are consistent; the
-difference to Fermi-Dirac statistics is a documented limitation absorbed by ``dv_fb_v``.
+also what the :term:`TCAD` (`DEVSIM <https://devsim.org/>`_) uses (`gplugins.devsim.materials <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/materials.py>`_), so the two are consistent; the
+difference to Fermi-Dirac statistics is a documented limitation absorbed by the tunable
+:ref:`dv_fb_v <process-data-tunables>`.
 
 With the intrinsic level as the potential reference, the body's bulk is at
 V_t ln(n0/n_i) (body contact at 0 V) and the gate's at Vg + V_t ln(n0g/n_i). Gauss's law across
@@ -148,7 +149,11 @@ class Semiconductor:
         """The inverse of :meth:`charge`: the psi (V) at which this semiconductor holds ``q``."""
         if q == 0.0:
             return 0.0
-        return _root(lambda psi: self.charge(psi) - q, self.capacitance, 1e-15 * abs(q))
+        psi = _root(lambda p: self.charge(p) - q, self.capacitance, 1e-15 * abs(q))
+        # the root may also stop on a 1e-15 V step: check the charge it gives
+        if abs(self.charge(psi) - q) > 1e-12 * abs(q):
+            raise ArithmeticError(f"analytic MOS capacitor: charge residual at psi = {psi!r}")
+        return psi
 
 
 def _eps_si(c: Constants) -> float:
@@ -275,7 +280,7 @@ def lf_cv_uniform(
     """The exact low-frequency (quasi-static) C per area (fF/um^2) at each gate bias ``vg``.
 
     Signed net dopings as in :func:`moscap`; ``eps_ox`` is the oxide's relative permittivity
-    (the card's EPSROX).
+    (the card's :term:`EPSROX`).
     """
     cap = moscap(n_cm3, t_ox_nm, gate_doping, constants, eps_ox=eps_ox)
     return tuple(f_per_cm2_to_ff_per_um2(cap.solve(float(v)).c_f_per_cm2) for v in vg)
