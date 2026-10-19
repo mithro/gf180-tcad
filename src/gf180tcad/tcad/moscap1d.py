@@ -1,44 +1,51 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The 1D MOS capacitor of ``nfet_05v0`` and ``pfet_05v0``: its C-V per area, and the SPICE
-bookkeeping that turns it into a gate capacitance of one geometry.
+"""The 1D :term:`MOS capacitor <MOSCAP>` of ``nfet_05v0`` and ``pfet_05v0``: its :term:`C–V`
+per area, and the :term:`SPICE` bookkeeping that turns it into a gate capacitance of one geometry.
 
-**The structure** (:class:`Stack`, built by `gplugins.devsim.create_1d_stack <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/stack1d.py>`_): a
-poly-silicon gate region doped at NGATE (n+ for the nfet, p+ for the pfet), the gate oxide of
-thickness ``t_ox_eff_nm`` (relative permittivity EPSROX), and a uniformly doped silicon body at
-``n_ch_cm3`` (p-type for the nfet, n-type, the n-well, for the pfet). The contacts are ohmic,
-``gate`` on the free end of the poly (``InterfaceRef("gate_poly", None)``) and ``body`` on the
-free end of the body (``InterfaceRef("body", None)``). The poly (:data:`POLY_UM`) and the body
-(:data:`BODY_UM`) thicknesses are project choices, many times the widest depletion region of
-each, so both reach their neutral bulk; the C-V does not depend on them (the exact reference,
+**The structure** (:class:`Stack`, built by `gplugins.devsim.create_1d_stack
+<https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/stack1d.py>`_): a poly-silicon gate region doped at :term:`NGATE` (n+ for the nfet, p+ for
+the pfet), the gate oxide of thickness ``t_ox_eff_nm`` (relative permittivity :term:`EPSROX`),
+and a uniformly doped silicon body at ``n_ch_cm3`` (p-type for the nfet, n-type, the n-well, for
+the pfet). The contacts are ohmic, ``gate`` on the free end of the poly
+(``InterfaceRef("gate_poly", None)``) and ``body`` on the free end of the body
+(``InterfaceRef("body", None)``). The poly (:data:`POLY_UM`) and the body (:data:`BODY_UM`)
+thicknesses are project choices, many times the widest depletion region of each, so both reach
+their neutral bulk; the C-V does not depend on them (the exact reference,
 :mod:`gf180tcad.tcad.analytic`, assumes semi-infinite poly and body, and the tests compare).
 
-**The C-V** (:func:`simulate`): `gplugins.devsim.sweep_cv <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_, quasi-static by default:
-equilibrium Poisson-Boltzmann with the body at 0 V, the counterpart of the SPICE Cgg of BSIM4
-``capMod=2``. The lumped flat-band offset ``dv_fb_v`` is a rigid gate-bias shift: the device is
-solved at ``vg - dv_fb_v`` and the result is reported at ``vg``, which is exact for a 1D MOS
-capacitor (Task 11 applies the same shift in 2D). DEVSIM's F/cm^2 are converted to fF/um^2
-(:func:`gf180tcad.tcad.analytic.f_per_cm2_to_ff_per_um2`). A point that does not converge at
-the tolerances raises (`gplugins.devsim.CVConvergenceError <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_); none is dropped.
+**The C-V** (:func:`simulate`): `gplugins.devsim.sweep_cv <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_, quasi-static by
+default: equilibrium Poisson-Boltzmann with the body at 0 V, the counterpart of the
+:term:`SPICE` :term:`Cgg` of :term:`BSIM4` ``capMod=2``. The lumped flat-band offset
+``dv_fb_v`` is a rigid gate-bias shift: the device is solved at ``vg - dv_fb_v`` and the result
+is reported at ``vg``, which is exact for a 1D MOS capacitor
+(:repo:`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
+applies the same shift in 2D). `DEVSIM <https://devsim.org/>`_'s F/cm^2 are converted to
+fF/um^2 (:func:`gf180tcad.tcad.analytic.f_per_cm2_to_ff_per_um2`). A point that does not
+converge at the tolerances raises (`gplugins.devsim.CVConvergenceError <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_); none is
+dropped.
 
-**The SPICE bookkeeping** (:meth:`MoscapCV.area_scaled`), 1D only: the intrinsic Cgg is the C per
-area times the BSIM4 capacitance area LeffCV * WeffCV, with LeffCV = L + XL - 2*DLC and
-WeffCV = W + XW - 2*DWC (the card's length/width-dependent offsets LLC, LWC, LWLC, WLC, WWC,
-WWLC are zero or unset); for the nfet this is (L - 2*DLC)*W. The extrinsic (parasitic) part is
-reported separately, never folded in silently: :func:`parasitic_ff`, the exact BSIM4 4.5
-``capMod=2`` overlap equations of the BSIM4 manual, section 7.5 ("Fringing and overlap
-capacitances", https://bsim.berkeley.edu/models/bsim4/, the 4.5.0 release
-https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip) and its reference code ``b4ld.c``/``b4temp.c``:
+**The SPICE bookkeeping** (:meth:`MoscapCV.area_scaled`), 1D only: the intrinsic :term:`Cgg` of
+the :term:`TCAD` is the C per area times the BSIM4 capacitance area LeffCV * WeffCV, with
+LeffCV = L + :term:`XL` - 2 * :term:`DLC` and WeffCV = W + :term:`XW` - 2 * :term:`DWC` (the card's
+length/width-dependent offsets :term:`LLC`, :term:`LWC`, :term:`LWLC`, :term:`WLC`,
+:term:`WWC`, :term:`WWLC` are zero or unset); for the nfet this is (L - 2*DLC)*W. The
+extrinsic (parasitic) part is reported separately, never folded in silently:
+:func:`parasitic_ff`, the exact BSIM4 4.5 ``capMod=2`` overlap equations of the BSIM4 manual,
+section 7.5 ("Fringing and overlap capacitances", https://bsim.berkeley.edu/models/bsim4/, the
+4.5.0 release https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip) and of ngspice's BSIM4 code,
+`b4ld.c <https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4ld.c>`_ and `b4temp.c <https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c>`_:
 
-- per side (source with CGSO, CGSL, CKAPPAS; drain with CGDO, CGDL, CKAPPAD), with V the gate
-  bias in the NMOS sign convention (type * vg; source, drain and body at 0 V),
+- per side (source with CGSO, CGSL, :term:`CKAPPAS`; drain with CGDO, CGDL, :term:`CKAPPAD`),
+  with V the gate bias in the NMOS sign convention (type * vg; source, drain and body at 0 V),
   Q_ov/WeffCV = (CGO + CF)*V + CGL*(V - V_ov - CKAPPA/2*(-1 + sqrt(1 - 4*V_ov/CKAPPA))),
   V_ov = (V + d1 - sqrt((V + d1)^2 + 4*d1))/2 with d1 = 0.02 V, so that
   C_ov = dQ_ov/dV = WeffCV*(CGO + CF + CGL*(1 - (1 - 1/sqrt(1 - 4*V_ov/CKAPPA))*dV_ov/dV));
-- CF, the outer fringe, is added to CGSO and CGDO (``b4temp.c``: cgso = (CGSO + CF)*WeffCV);
-- the gate-bulk overlap CGBO*LeffCV.
+- CF, the outer fringe, is added to CGSO and CGDO (`b4temp.c <https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c>`_:
+  cgso = (CGSO + CF)*WeffCV);
+- the gate-bulk overlap :term:`CGBO` * LeffCV.
 
-VFBCV (-1 V on the nfet card) is the flat band of ``capMod=0`` only and does not enter these
-equations; VFBSDOFF is 0 on the nfet card and unset (0) on the pfet card.
+:term:`VFBCV` (-1 V on the nfet card) is the flat band of ``capMod=0`` only and does not enter
+these equations; :term:`VFBSDOFF` is 0 on the nfet card and unset (0) on the pfet card.
 
 This module imports the plugin lazily (it needs the TCAD image), so it imports on the host.
 It is TCAD code, not one of the SPICE generator modules
@@ -57,8 +64,9 @@ from typing import Literal
 from gf180tcad import io
 from gf180tcad.devices import Geometry
 from gf180tcad.tcad.analytic import f_per_cm2_to_ff_per_um2
+from gf180tcad.tcad.calibration import param_sha256
 from gf180tcad.tcad.mesh import MeshSpec
-from gf180tcad.tcad.process import CONSTANTS, Constants, ProcessDescription
+from gf180tcad.tcad.process import CONSTANTS, TUNABLES, Constants, ProcessDescription
 from gf180tcad.tcad.process import load as load_process
 
 # Region and contact names of the 1D stack.
@@ -250,6 +258,8 @@ class MoscapCV:
     method: str
     constants: Constants
     mesh: MeshSpec
+    stack: Stack
+    rel_tol: float
 
     def area_scaled(
         self, geometry: Geometry, proc: ProcessDescription | None = None
@@ -288,8 +298,9 @@ def simulate(
     """
     vg = tuple(float(v) for v in vg)
     dv_fb = proc.values()["dv_fb_v"]
+    stack = stack_of(proc)
     res = sweep_stack(
-        stack_of(proc),
+        stack,
         [v - dv_fb for v in vg],
         mesh=mesh,
         constants=constants,
@@ -311,6 +322,8 @@ def simulate(
         method=method,
         constants=constants,
         mesh=mesh,
+        stack=stack,
+        rel_tol=rel_tol,
     )
 
 
@@ -320,17 +333,81 @@ CSV_COLUMNS = ("vg", "c_per_area", "rel_error", "abs_error", "iterations")
 CSV_UNITS = "vg=V c_per_area=fF/um^2 rel_error=1 abs_error=V iterations=1"
 
 
+def _write_csv(path: Path, columns: dict, meta: dict[str, str]) -> None:
+    """:func:`gf180tcad.io.write_csv`'s format, with ``int`` cells written as integers.
+
+    io.write_csv (a SPICE generator module, which this task may not edit) writes every cell as
+    a float; the iteration counts are integers. Floats are written with ``repr`` as there, and
+    :func:`gf180tcad.io.read_csv` reads the file back.
+    """
+    names = list(columns)
+    lines = [f"# {k}: {meta[k]}" for k in sorted(meta)]
+    lines.append(",".join(names))
+    for row in zip(*(columns[n] for n in names), strict=True):
+        cells = []
+        for x in row:
+            if isinstance(x, bool) or not isinstance(x, int | float):
+                raise TypeError(f"CSV cell {x!r} is not a number")
+            cells.append(str(x) if isinstance(x, int) else repr(float(x)))
+        lines.append(",".join(cells))
+    Path(path).write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+
+
+def tunable_origins(
+    proc: ProcessDescription, params: str, calibration_sha256: str | None = None
+) -> dict[str, dict]:
+    """Where each applied tunable value comes from, for the result metadata.
+
+    ``start``: the process file's ``start_kind`` and ``start_source``. ``calibrated``: the
+    sha256 of the calibration file the value was read from.
+    """
+    out = {}
+    for n in TUNABLES:
+        p = proc.params[n]
+        if params == "start":
+            if calibration_sha256 is not None:
+                raise ValueError("start values come from the process file, not a calibration")
+            out[n] = {
+                "origin": "start",
+                "start_kind": p.start_kind,
+                "start_source": p.start_source,
+                "value": p.value,
+            }
+        elif params == "calibrated":
+            if calibration_sha256 is None:
+                raise ValueError("calibrated values need the calibration file's sha256")
+            out[n] = {
+                "calibration_sha256": calibration_sha256,
+                "origin": "calibrated",
+                "value": p.value,
+            }
+        else:
+            raise ValueError(f"params must be 'start' or 'calibrated', got {params!r}")
+    return out
+
+
 def write(
-    cv: MoscapCV, out: Path, *, proc: ProcessDescription, params: str, rel_tol: float = REL_TOL
+    cv: MoscapCV,
+    out: Path,
+    *,
+    proc: ProcessDescription,
+    params: str,
+    calibration_sha256: str | None = None,
 ) -> None:
-    """Write :data:`PER_AREA_CSV` and :data:`PER_AREA_META` of ``cv`` into ``out``."""
+    """Write :data:`PER_AREA_CSV` and :data:`PER_AREA_META` of ``cv`` into ``out``.
+
+    ``proc`` is the process description ``cv`` was simulated with (its device and stack must
+    match); ``calibration_sha256`` is the calibration file's sha256 for ``params="calibrated"``.
+    """
     out = Path(out)
+    if proc.device != cv.device or stack_of(proc) != cv.stack:
+        raise ValueError(f"{proc.device}: not the process description of this C-V")
     columns = {
         "vg": cv.vg,
         "c_per_area": cv.c_per_area_ff_um2,
         "rel_error": [p.rel_error for p in cv.points],
         "abs_error": [p.abs_error for p in cv.points],
-        "iterations": [float(p.iterations) for p in cv.points],
+        "iterations": [int(p.iterations) for p in cv.points],
     }
     meta = {
         "device": cv.device,
@@ -339,9 +416,10 @@ def write(
         "params": params,
         "units": CSV_UNITS,
     }
-    io.write_csv(out / PER_AREA_CSV, columns, meta)
-    stack = stack_of(proc)
+    _write_csv(out / PER_AREA_CSV, columns, meta)
     c = cv.constants
+    origins = tunable_origins(proc, params, calibration_sha256)
+    spacing = cv.mesh.spacing_um(POLY, OXIDE, BODY)
     io.write_json(
         out / PER_AREA_META,
         {
@@ -350,20 +428,21 @@ def write(
             "dim": 1,
             "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
             "mesh": cv.mesh.as_dict(),
+            "mesh_1d_spacing_um": {k: list(v) for k, v in spacing.items()},
+            "mesh_1d_note": "oxide spacing is min(h_ox, neighbour) at each face (exact: the "
+            "oxide potential is linear)",
             "method": cv.method,
+            "param_sha256": param_sha256({n: o["value"] for n, o in origins.items()}),
             "params": params,
             "points": len(cv.vg),
-            "stack": asdict(stack),
+            "stack": asdict(cv.stack),
             "sweep": {
                 "abs_tol_v": ABS_TOL,
                 "dv_qs_v": DV_QS,
                 "max_iterations": MAX_ITERATIONS,
-                "rel_tol": rel_tol,
+                "rel_tol": cv.rel_tol,
             },
-            "tunables": {n: proc.params[n].value for n in ("t_ox_eff_nm", "n_ch_cm3", "dv_fb_v")},
-            "tunables_provenance": {
-                n: proc.params[n].provenance for n in ("t_ox_eff_nm", "n_ch_cm3", "dv_fb_v")
-            },
+            "tunables": origins,
             "unit": "fF/um^2",
         },
     )
@@ -387,4 +466,6 @@ def read(job_dir: Path) -> MoscapCV:
         method=meta["method"],
         constants=Constants(**consts),
         mesh=MeshSpec(**info["mesh"]),
+        stack=Stack(**info["stack"]),
+        rel_tol=info["sweep"]["rel_tol"],
     )

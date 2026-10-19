@@ -15,7 +15,7 @@ import pytest
 
 from gf180tcad import io, sandbox
 from gf180tcad.devices import Geometry
-from gf180tcad.tcad import TCAD_IMAGE, analytic, moscap1d, process
+from gf180tcad.tcad import TCAD_IMAGE, analytic, calibration, moscap1d, process
 from gf180tcad.tcad import __main__ as cli
 from gf180tcad.tcad.mesh import MeshSpec
 from gf180tcad.tcad.process import CONSTANTS
@@ -26,14 +26,17 @@ TREE = REPO / "results" / "tcad" / "moscap1d"
 DEVICES = process.DEVICES
 W10L10 = Geometry(10.0, 10.0, "calibration")
 W10L2 = Geometry(10.0, 2.0, "calibration")
+SHIFT_VG = (-3.0, -1.0, -0.2, 0.3, 0.8, 2.0)  # as tests/tcad/moscap1d_driver.py
 
 
 def _cv(device: str, c: float, vg=(0.0,)) -> moscap1d.MoscapCV:
     """A constant-C MoscapCV (no simulation)."""
     pts = tuple(moscap1d.Point(True, 1, 0.0, 0.0) for _ in vg)
+    stack = moscap1d.stack_of(process.load(device))
     return moscap1d.MoscapCV(
-        device, tuple(vg), (c,) * len(vg), pts, "qs", CONSTANTS, MeshSpec.DEFAULT_1D
-    )
+        device, tuple(vg), (c,) * len(vg), pts, "qs", CONSTANTS, MeshSpec.DEFAULT_1D,
+        stack, moscap1d.REL_TOL,
+    )  # fmt: skip
 
 
 def _spice(device: str, gid: str) -> dict:
@@ -187,14 +190,34 @@ def test_committed_start_results(device):
     assert tuple(cols["vg"]) == tuple(spice["vg"]) == cli.job_vg(process.load(device))
     assert all(0 <= r <= moscap1d.REL_TOL for r in cols["rel_error"])
     assert all(a <= moscap1d.ABS_TOL for a in cols["abs_error"])
+    # iterations are written as integers
+    text = (job / moscap1d.PER_AREA_CSV).read_text(encoding="utf-8").splitlines()
+    rows = [ln.split(",") for ln in text if ln and not ln.startswith("#")][1:]
+    assert all(r[-1].isdigit() for r in rows)
     cv = moscap1d.read(job)
     assert cv.mesh == MeshSpec.DEFAULT_1D and cv.constants == CONSTANTS
     stack = moscap1d.stack_of(process.load(device))
     cox = analytic.f_per_cm2_to_ff_per_um2(analytic.cox_f_per_cm2(stack.t_ox_nm, stack.eps_ox))
     assert all(0 < c < cox for c in cv.c_per_area_ff_um2)
+    assert cv.stack == stack and cv.rel_tol == moscap1d.REL_TOL
     info = json.loads((job / moscap1d.PER_AREA_META).read_bytes())
-    assert info["tunables_provenance"] == dict.fromkeys(process.TUNABLES, "calibrated")
-    assert info["tunables"] == {n: process.load(device).params[n].value for n in process.TUNABLES}
+    proc = process.load(device)
+    # start results say where each start value comes from, never "calibrated"
+    assert "tunables_provenance" not in info and "calibrated" not in json.dumps(info["tunables"])
+    assert info["tunables"] == {
+        n: {
+            "origin": "start",
+            "start_kind": proc.params[n].start_kind,
+            "start_source": proc.params[n].start_source,
+            "value": proc.params[n].value,
+        }
+        for n in process.TUNABLES
+    }
+    starts = {n: proc.params[n].value for n in process.TUNABLES}
+    assert info["param_sha256"] == calibration.param_sha256(starts)
+    # 1D oxide spacing is min(h_ox, neighbours): the effective spacing is recorded
+    spacing = MeshSpec.DEFAULT_1D.spacing_um(moscap1d.POLY, moscap1d.OXIDE, moscap1d.BODY)
+    assert info["mesh_1d_spacing_um"] == {k: list(v) for k, v in spacing.items()}
 
 
 # --- in the TCAD image -----------------------------------------------------------------------
@@ -244,6 +267,9 @@ def test_mirror(driver):
 @pytest.mark.parametrize("device", DEVICES)
 def test_dv_fb_rigid_shift(driver, device):
     d = driver[device]
+    assert process.load(device).values()["dv_fb_v"] == 0.0  # the start has no shift
+    assert d["shifted_vg"] == list(SHIFT_VG)  # reported at the requested vg
+    assert d["unshifted_vg"] == [v - 0.1 for v in SHIFT_VG]
     for a, b in zip(d["shifted"], d["unshifted"], strict=True):
         assert math.isclose(a, b, rel_tol=1e-12), (a, b)
 

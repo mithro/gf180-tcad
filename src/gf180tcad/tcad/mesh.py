@@ -5,14 +5,19 @@ A :class:`MeshSpec` gives the node spacing at the three places where the C-V phy
 the poly/oxide interface (poly depletion), the oxide, and the silicon/oxide interface (the
 accumulation and inversion layers), plus the bulk spacing and the grading (the largest ratio
 of neighbouring spacings). :meth:`MeshSpec.scaled` refines all of them uniformly, which is the
-"uniform refinement" of the mesh-convergence study (spec section 5.2, Task 10).
+"uniform refinement" of the mesh-convergence study
+(:repo:`spec section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`,
+:repo:`Task 10 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-10-mesh-convergence-tooling>`).
 
 The same spec drives both meshers: :meth:`MeshSpec.to_mesh1d` gives the
 `gplugins.devsim.Mesh1D <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/stack1d.py>`_ of the 1D stack and :meth:`MeshSpec.to_resolution_specs` the
-meshwell resolution specs of the 2D cross-section (Task 11). Both import the plugin lazily
+`meshwell <https://github.com/simbilod/meshwell>`_ resolution specs of the 2D cross-section
+(:repo:`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
+Both import the plugin lazily
 (it needs the TCAD image), so this module imports on the host.
 
-Lengths are nm in the spec and um in the plugin and meshwell.
+Lengths are nm in the spec and um in the plugin and in
+`meshwell <https://github.com/simbilod/meshwell>`_.
 """
 
 from __future__ import annotations
@@ -31,7 +36,10 @@ class MeshSpec:
 
     - ``h_poly_nm``: the spacing at the poly/oxide interface, graded into the poly bulk. Poly
       depletion adds to the capacitance in inversion, so the poly is refined like the rest.
-    - ``h_ox_nm``: the largest spacing in the oxide.
+    - ``h_ox_nm``: the largest spacing in the oxide. In 1D (:meth:`spacing_um`) the oxide
+      spacing is ``min(h_ox, neighbour)`` at each face, so with spacings at the interfaces
+      below ``h_ox`` (as in :attr:`MeshSpec.DEFAULT_1D`) ``h_ox`` has no effect; that is exact, since the
+      charge-free oxide has a linear potential. The 1D results record the effective spacings.
     - ``h_si_surface_nm``: the spacing at the silicon/oxide interface.
     - ``h_si_bulk_nm``: the spacing the poly and the body grade to, away from the oxide.
     - ``grading``: the largest ratio of neighbouring spacings (> 1).
@@ -106,7 +114,7 @@ class MeshSpec:
         return (self.h_si_bulk_nm - sizemin_nm) / (self.grading - 1) * NM_TO_UM
 
     def to_resolution_specs(self, poly: str, oxide: str, body: str) -> Mapping[str, list]:
-        """meshwell resolution specs (um) by region name, for the 2D cross-section (Task 11).
+        """`meshwell <https://github.com/simbilod/meshwell>`_ resolution specs (um) by region, for 2D.
 
         ``ConstantInField(h_ox)`` on the oxide surface, and threshold fields on the curves
         that the body and the poly share with the oxide: ``h_si_surface`` and ``h_poly`` at

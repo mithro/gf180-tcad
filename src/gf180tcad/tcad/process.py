@@ -665,7 +665,7 @@ def centroid(
     type·vg ≥ +``plateau_v``: there eq. (7.3.4) applies, bounded by its Vgsteff → 0
     supremum. Depletion, where the accumulation formula saturates near Ldebye/3 and the
     centroid says nothing about the oxide-capacitance plateaus, is left out.
-    Δ = max X_DC·EPSROX/εsi. Raises ``ValueError`` if either window holds no bias.
+    Δ = max X_DC · :term:`EPSROX` / εsi. Raises ``ValueError`` if either window holds no bias.
     """
     vg = tuple(vg)
     acc = [(ctm_x_dc_acc_m(v, cv, c), v) for v in vg if cv["type"] * v <= -plateau_v]
@@ -689,7 +689,7 @@ def centroid_allowance_nm(
 
 
 def k1_doping_cm3(cv: Mapping[str, float], c: Constants = CONSTANTS) -> float:
-    """The doping K1 implies: N = (K1·Cox(TOXE))²/(2·q·εsi·ε0), cm⁻³ (BSIM4 K1 definition)."""
+    """The doping K1 implies: N = (K1 · :term:`Cox` (TOXE))²/(2·q·εsi·ε0), cm⁻³ (BSIM4 K1 definition)."""
     cox = cv["epsrox"] * c.eps0_f_per_cm / (cv["toxe"] * 100)
     return (cv["k1"] * cox) ** 2 / (2 * c.q_c * c.eps_si * c.eps0_f_per_cm)
 

@@ -58,6 +58,8 @@ def main() -> None:
             "c_fb_tcad": c_fb,
             "c_fb_series": series_fb,
             "shifted": list(shifted.c_per_area_ff_um2),
+            "shifted_vg": list(shifted.vg),
+            "unshifted_vg": list(unshifted.vg),
             "unshifted": list(unshifted.c_per_area_ff_um2),
         }
     # mirror: A = p-body N with an n+ gate, B = n-body N with a p+ gate (same |N|, NGATE, t_ox)
