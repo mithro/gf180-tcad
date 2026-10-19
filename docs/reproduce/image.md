@@ -226,10 +226,15 @@ packages' own requirements, as for the stable image ({repo}`docker/tcad-dev/pypr
   the build whose run-time libraries the base image already has) are unpacked into a throwaway
   build stage only (from [snapshot.ubuntu.com](https://snapshot.ubuntu.com/), hash-pinned).
   With the base image's GCC 13.3 instead, the build works but the DEVSIM it makes raises
-  "Uncaught FPE" errors in 13 tests of {{ gplugins_fork }} that pass with the PyPI wheel and
-  with this GCC 14 build. The root cause is not established: `FE_INVALID` is raised in
-  CPython's `_Py_dg_dtoa` (float to string, reached from DEVSIM's argument handling) and
-  surfaced by DEVSIM's per-command FPE check; the GCC 14 and PyPI builds do not take that path.
+  "Uncaught FPE" errors in 13 tests of {{ gplugins_fork }} that pass with the
+  [PyPI wheel](https://pypi.org/project/devsim/2.11.1/#files) and with this GCC 14 build. The
+  root cause is not established:
+  [`FE_INVALID`](https://en.cppreference.com/w/c/numeric/fenv/FE_exceptions) is raised in
+  [CPython](https://github.com/python/cpython)'s `_Py_dg_dtoa` (float to string, reached from
+  DEVSIM's argument handling) and surfaced by DEVSIM's per-command FPE check
+  ([`FPECheck`](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/src/utility/FPECheck.hh));
+  the GCC 14 and PyPI builds do not take that path. The new build record shows the same
+  `devsim_py3.so` (sha256 `32cd805c…b874`) as the first GCC 14 pin, built from the same commit.
   The re-runnable evidence (build, wheel swap, gdb trap, compiler swap) is
   {repo}`experiments/devsim-gcc13-fpe/`.
   The image itself is the
