@@ -217,6 +217,15 @@ card_line = 38291
 card_scale = 1e6
 note = "XJ: source/drain junction depth of the 2D structure. The card's NSD = 6e16 (sm141064.ngspice:38207) is not used."
 
+[param.sd_peak_cm3]
+value = 1e20
+unit = "cm^-3"
+provenance = "literature"
+source = "https://openlibrary.org/isbn/0130850373"
+fixed = true
+role = "process"
+note = "Peak (surface) doping of the p+ source/drain of the 2D structure, the same Gaussian and lateral-straggle model as the nfet. Literature: Plummer, Deal & Griffin, Silicon VLSI Technology (Prentice Hall, 2000, ISBN 0-13-085037-3), ch. 2, the CMOS process flow's p+ source/drain implant. The card's NSD = 6e16 (sm141064.ngspice:38207) is no S/D doping and is not used. The value is not load-bearing for C-V: tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive."
+
 [param.epsrox]
 value = 3.9
 unit = "1"

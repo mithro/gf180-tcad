@@ -263,6 +263,50 @@ def test_brief_values(device, toxe_nm, toxp_nm, k1, ngate, dlc_nm, cgso, cgsl, a
     assert v["acde_m_per_v"] == acde and v["moin"] == 15.0 and v["capmod"] == 2.0
 
 
+def test_source_drain_peak():
+    """The S/D peak of the 2D structure: the nfet card's NSD, the pfet a literature value.
+
+    The pfet card's NSD (6e16, sm141064.ngspice:38207) is no S/D doping, so the pfet peak is
+    tagged ``literature`` (Plummer, Deal & Griffin, *Silicon VLSI Technology*, ch. 2).
+    """
+    n = process.load("nfet_05v0").params["sd_peak_cm3"]
+    assert n.value == 1e20 and n.provenance == "spice-card" and n.role == "process"
+    assert n.card_key == "nsd" and n.card_line == 37217 and n.fixed
+    p = process.load("pfet_05v0").params["sd_peak_cm3"]
+    assert p.value == 1e20 and p.provenance == "literature" and p.role == "process"
+    assert p.card_line is None and p.fixed
+    assert p.source == ("https://openlibrary.org/isbn/0130850373",)
+    assert "Plummer" in p.note and "ch. 2" in p.note
+
+
+# The L bins of the cards (ngspice in_range: both bounds inclusive, within 1e-9).
+@pytest.mark.parametrize(
+    ("device", "l_um", "models"),
+    [
+        ("nfet_05v0", 0.6, ("nfet_06v0.1",)),
+        ("nfet_05v0", 0.7, ("nfet_06v0.0", "nfet_06v0.1")),
+        ("nfet_05v0", 1.0, ("nfet_06v0.0",)),
+        ("nfet_05v0", 2.0, ("nfet_06v0.0",)),
+        ("nfet_05v0", 10.0, ("nfet_06v0.0",)),
+        ("pfet_05v0", 0.5, ("pfet_06v0.0",)),
+        ("pfet_05v0", 0.7, ("pfet_06v0.0",)),
+        ("pfet_05v0", 10.0, ("pfet_06v0.0",)),
+    ],
+)
+def test_card_bins(device, l_um, models):
+    assert process.card_bins(device, l_um) == models
+
+
+def test_card_bins_cover_every_spice_geometry():
+    from gf180tcad.devices import DEVICES as SPICE_DEVICES
+
+    for device in DEVICES:
+        for g in SPICE_DEVICES[device].geometries:
+            assert process.card_bins(device, g.l_um), (device, g)
+    with pytest.raises(ValueError, match="no card bin"):
+        process.card_bins("nfet_05v0", 0.5)
+
+
 def test_constants_n_i():
     """n_i: Altermatt 2003 at 300 K, Misiakos & Tsamakis T-dependence (the plan's table)."""
     c = process.CONSTANTS
@@ -589,7 +633,9 @@ def test_card_values_and_lines(card_lines, device):
         assert math.isclose(start, value, rel_tol=1e-12, abs_tol=0.0), (p.name, start, value)
         checked += 1
     # every fixed value but the derived CF is a card value (the tunable starts equal them)
-    assert checked == sum(p.fixed for p in desc.params.values()) - 1
+    assert (
+        checked == sum(p.fixed and p.provenance == "spice-card" for p in desc.params.values()) - 1
+    )
     assert desc.params["cf_f_per_m"].card_line is None
     # what the files say is absent from the card is absent from this model
     keys = {
@@ -623,3 +669,49 @@ def test_upstream_card_is_the_image_card():
     # every card-line link points at that file
     links = re.findall(r"\]\((https://github\.com/fossi-foundation/[^)#]+)(?:#L\d+)?\)", page)
     assert links and set(links) == {UPSTREAM_CARD}
+
+
+def _model_values(card_lines, model_line):
+    """``{key: (line, expression, TT params)}`` of the ``+ key=expr`` lines of the model at ``model_line``."""
+    tt_line = next(n for n, ln in enumerate(card_lines, 1) if ln.strip() == ".lib typical")
+    tt = {}
+    for n in _section(card_lines, tt_line, r"\.endl"):
+        if card_lines[n - 1].startswith(".param "):
+            k, e = process.parse_card_assignment(card_lines[n - 1])
+            tt[k] = process.eval_card_expr(e, {})
+    out = {}
+    for n in _section(card_lines, model_line, r"\.model |\.endl"):
+        if card_lines[n - 1].startswith("+"):
+            k, e = process.parse_card_assignment(card_lines[n - 1])
+            out[k] = (n, e)
+    return {k: (n, e, tt) for k, (n, e) in out.items()}
+
+
+def _value(entry):
+    """The TT value of a :func:`_model_values` entry."""
+    _, e, tt = entry
+    return process.eval_card_expr(e, {m: tt[m] for m in process.card_expr_names(e)})
+
+
+@pytest.mark.sandbox
+def test_card_bins_agree_on_the_used_keys(card_lines):
+    """Every card key the nfet process file uses has the same TT value in both L bins.
+
+    The files cite ``nfet_06v0.0`` (L 0.7-50 um), but the nfet Lmin of 0.6 um lies in
+    ``nfet_06v0.1`` (L 0.6-0.7 um), so the values must not depend on the bin. The bin bounds of
+    :data:`gf180tcad.tcad.process.CARD_BINS` are the cards' own LMIN/LMAX.
+    """
+    desc = process.load("nfet_05v0")
+    starts = {ln.split()[1]: n for n, ln in enumerate(card_lines, 1) if ln.startswith(".model ")}
+    v0 = _model_values(card_lines, starts["nfet_06v0.0"])
+    v1 = _model_values(card_lines, starts["nfet_06v0.1"])
+    used = sorted({p.card_key for p in desc.params.values() if p.card_key is not None})
+    assert "nsd" in used and "toxe" in used
+    for key in used:
+        assert key in v0 and key in v1, key
+        assert _value(v0[key]) == _value(v1[key]), (key, v0[key][:2], v1[key][:2])
+    for bins in process.CARD_BINS.values():
+        for model, lmin_um, lmax_um in bins:
+            vals = _model_values(card_lines, starts[model])
+            assert math.isclose(_value(vals["lmin"]) * 1e6, lmin_um, rel_tol=1e-9), model
+            assert math.isclose(_value(vals["lmax"]) * 1e6, lmax_um, rel_tol=1e-9), model

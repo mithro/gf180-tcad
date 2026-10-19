@@ -205,6 +205,17 @@ card_line = 37377
 card_scale = 1e6
 note = "XJ: source/drain junction depth of the 2D structure."
 
+[param.sd_peak_cm3]
+value = 1e20
+unit = "cm^-3"
+provenance = "spice-card"
+source = "sm141064.ngspice:37217"
+fixed = true
+role = "process"
+card_key = "nsd"
+card_line = 37217
+note = "NSD: peak (surface) doping of the n+ source/drain of the 2D structure, a Gaussian that falls to the body doping at XJ, with Gaussian lateral straggle under the poly edge (gf180tcad.tcad.stack)."
+
 [param.epsrox]
 value = 3.9
 unit = "1"
