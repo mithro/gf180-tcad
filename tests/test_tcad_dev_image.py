@@ -110,20 +110,43 @@ def test_tcad_dev_environment(tmp_path):
 @pytest.mark.sandbox
 def test_tcad_dev_imports(tmp_path):
     code = (
-        "import json, devsim, meshwell, meshwell.orchestrator, gmsh, gdsfactory as gf, gf180mcu; "
-        "pdk = gf.get_active_pdk(); "
-        "print(json.dumps([pdk.name] + [m.__file__ for m in (devsim, meshwell, gmsh, gf, gf180mcu)]"
+        "import json, devsim, meshwell, meshwell.orchestrator, gmsh, gdsfactory as gf; "
+        "print(json.dumps([m.__file__ for m in (devsim, meshwell, gmsh, gf)]"
         " + [gf.__version__, gmsh.__version__]))"
     )
     res = _run(["python3", "-c", code], tmp_path)
     # DEVSIM prints a banner on import; the JSON is the last line.
-    name, *files, gf_version, gmsh_version = json.loads(res.stdout.splitlines()[-1])
-    assert name == "gf180mcu"
+    *files, gf_version, gmsh_version = json.loads(res.stdout.splitlines()[-1])
     for f in files:
         assert f.startswith(SITE), f
     versions = _json(VERSIONS)
     assert gf_version == versions["gdsfactory"]
     assert versions["gmsh"].startswith(gmsh_version + ".dev")
+
+
+# Dev-HEAD drift, kept visible (strict: an upstream fix makes these XPASS and fail, so the marker
+# is removed then). Causes: .superpowers task-9c report and docs/reproduce/image.md.
+_GF180MCU_DRIFT = (
+    "gf180mcu HEAD (pins gdsfactory<=9.51) does not import with gdsfactory HEAD 10.0.0rc0: "
+    "building its cross-sections at import activates $PDK=gf180mcu, a circular import "
+    "(it imports with gdsfactory 9.51.0)"
+)
+_MESHIO_DRIFT = (
+    "meshio 5.3.5 cannot read the MSH 4.1 file gmsh 5.0.0.dev20261018 writes for meshwell's "
+    "2D mesh (KeyError on a physical tag; the same meshwell works with gmsh 4.15.2)"
+)
+
+
+@pytest.mark.sandbox
+@pytest.mark.xfail(raises=sandbox.SandboxError, strict=True, reason=_GF180MCU_DRIFT)
+def test_tcad_dev_gf180mcu_pdk(tmp_path):
+    code = (
+        "import json, gdsfactory as gf, gf180mcu; "
+        "print(json.dumps([gf.get_active_pdk().name, gf180mcu.__file__]))"
+    )
+    name, f = json.loads(_run(["python3", "-c", code], tmp_path).stdout.splitlines()[-1])
+    assert name == "gf180mcu"
+    assert f.startswith(SITE)
 
 
 @pytest.mark.sandbox
@@ -167,6 +190,30 @@ def test_tcad_dev_python_cpu_count_one(tmp_path):
 
 
 @pytest.mark.sandbox
+def test_tcad_dev_meshwell_thread_defaults(tmp_path):
+    """meshwell's import-time n_threads=cpu_count() defaults are 1 (PYTHON_CPU_COUNT=1)."""
+    code = (
+        "import inspect, json, meshwell.cad_gmsh, meshwell.cad_occ, meshwell.mesh\n"
+        "out = {}\n"
+        "for mod in (meshwell.cad_gmsh, meshwell.cad_occ, meshwell.mesh):\n"
+        "    for name, obj in vars(mod).items():\n"
+        "        if callable(obj) and getattr(obj, '__module__', None) == mod.__name__:\n"
+        "            for f in (obj, getattr(obj, '__init__', None)):\n"
+        "                try:\n"
+        "                    p = inspect.signature(f).parameters.get('n_threads')\n"
+        "                except (TypeError, ValueError):\n"
+        "                    continue\n"
+        "                if p is not None:\n"
+        "                    out[f'{mod.__name__}.{name}'] = p.default\n"
+        "print(json.dumps(out, sort_keys=True))\n"
+    )
+    got = json.loads(_run(["python3", "-c", code], tmp_path).stdout.splitlines()[-1])
+    assert got, "no n_threads defaults found in meshwell"
+    assert set(got.values()) == {1}, got
+
+
+@pytest.mark.sandbox
+@pytest.mark.xfail(raises=sandbox.SandboxError, strict=True, reason=_MESHIO_DRIFT)
 def test_tcad_dev_gmsh_single_thread(tmp_path):
     got = json.loads(_run(["python3", "-c", _GMSH_MESH], tmp_path).stdout.splitlines()[-1])
     assert got == {"NumThreads": 1, "OCCParallel": 0}
