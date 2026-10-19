@@ -30,7 +30,8 @@ CASES = (
     *(f"uniform_{d}" for d in DEVICES),
     *(f"nosd_{d}" for d in DEVICES),
     *(f"ac_{d}" for d in DEVICES),
-    "sd_pfet_05v0",
+    "sd_pfet_05v0_lmin",
+    "sd_pfet_05v0_l2",
     "dualgate",
 )
 CAL = {d: [g for g in SPICE_DEVICES[d].geometries if g.role == "calibration"] for d in DEVICES}
@@ -200,14 +201,40 @@ def test_charge_conservation(driver, device):
         assert abs(total / cgg - 1) < 1e-3, (ac["vg"][i], total, cgg)
 
 
+class SdSensitivity(AssertionError):
+    """pfet Cgg moves by >= 0.1 % for a factor of 2 in sd_peak_cm3 (the xfail signature)."""
+
+
+# At Lmin the S/D peak is load-bearing (Task 11 report): with XJ fixed the peak sets the
+# straggle (44.5 / 42.0 / 39.9 nm for 5e19 / 1e20 / 2e20) and so how far the p+ edge reaches
+# under the 0.5 um gate, an edge effect of about 1/L. Measured worst change against 1e20, in
+# depletion: -1.52 % (5e19) and +1.25 % (2e20); accumulation -0.56 % / +0.50 %; inversion
+# -0.030 % / +0.032 %. Strict: an unexpected pass fails, and only SdSensitivity xfails.
+_SD_LMIN_REASON = (
+    "sd_peak_cm3 is load-bearing at Lmin (0.5 um): Cgg moves -1.52 % / +1.25 % (worst, "
+    "depletion) for 5e19 / 2e20 against 1e20; fixed XJ couples peak and straggle"
+)
+
+
 @pytest.mark.sandbox
-def test_pfet_sd_doping_insensitive(driver):
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param(
+            "sd_pfet_05v0_lmin",
+            marks=pytest.mark.xfail(strict=True, raises=SdSensitivity, reason=_SD_LMIN_REASON),
+        ),
+        "sd_pfet_05v0_l2",
+    ],
+)
+def test_pfet_sd_doping_insensitive(driver, case):
     """pfet Cgg changes by < 0.1 % at every bias for sd_peak_cm3 in {5e19, 1e20, 2e20}."""
-    d = driver["sd_pfet_05v0"]
+    d = driver[case]
     ref = d[repr(1e20)]["c_per_area"]
     for peak in (5e19, 2e20):
         worst = max(abs(a / b - 1) for a, b in zip(d[repr(peak)]["c_per_area"], ref, strict=True))
-        assert worst < 1e-3, (peak, worst)
+        if not worst < 1e-3:
+            raise SdSensitivity(f"{case}: sd_peak_cm3 {peak!r}: worst |dC/C| {worst!r} >= 1e-3")
 
 
 @pytest.mark.sandbox

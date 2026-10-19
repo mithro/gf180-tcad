@@ -100,10 +100,12 @@ def case_ac(device: str) -> dict:
     }
 
 
-def case_sd() -> dict:
-    """pfet Cgg at the meshconv geometry for three source/drain peaks."""
+def case_sd(l_um: float) -> dict:
+    """pfet Cgg for three source/drain peaks at W = 10 um and gate length ``l_um``."""
+    from gf180tcad.devices import Geometry
+
     proc = process.load("pfet_05v0")
-    g = meshconv.geometry_2d("pfet_05v0")
+    g = Geometry(10.0, l_um, "calibration")
     mesh = meshconv.selected_spec("pfet_05v0", 2)
     vg = tuple(-v + 0.0 for v in VG21)
     out = {}
@@ -159,7 +161,8 @@ CASES = {
     **{f"uniform_{d}": (lambda d=d: case_uniform(d)) for d in process.DEVICES},
     **{f"nosd_{d}": (lambda d=d: case_nosd(d)) for d in process.DEVICES},
     **{f"ac_{d}": (lambda d=d: case_ac(d)) for d in process.DEVICES},
-    "sd_pfet_05v0": case_sd,
+    "sd_pfet_05v0_lmin": lambda: case_sd(0.5),
+    "sd_pfet_05v0_l2": lambda: case_sd(2.0),
     "dualgate": case_dualgate,
 }
 
