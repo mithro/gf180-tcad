@@ -320,6 +320,10 @@ workflows.
     1e-3 V at mesh ×1 and ×0.5 (measured to about 2e-15 V on both gmsh versions). This is a
     stronger check: it fails for a coupled rib.
   - **Test.** {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained`.
+    The dev-image fork tests run at fork commit
+    [`408d0af`](https://github.com/mithro/gplugins/commit/408d0af89c6691e78e03b4d7e75b6dcccc74ee99),
+    while the {repo}`third_party/gplugins` pin stays at the commit of the committed results until the
+    results move to this image.
 
 (tcad-dev-mirror)=
 
