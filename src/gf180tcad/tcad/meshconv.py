@@ -12,7 +12,7 @@ against the next finer level at every bias; per triple of neighbouring levels th
 :term:`observed order of convergence`
 p = log(abs(C1 - C2) / abs(C2 - C3)) / log(sqrt(2)) at every bias and its median; and the
 :term:`Richardson extrapolation` of the three finest levels with the median order of that
-triple (Roache, *Verification and Validation in Computational Science and Engineering*, 1998;
+triple (Roache, `J. Fluids Eng. 116, 405 (1994) <https://doi.org/10.1115/1.2910291>`_;
 Celik et al., `J. Fluids Eng. 130, 078001 (2008) <https://doi.org/10.1115/1.2960953>`_). The
 selected level is the coarsest whose change against the next finer one is below
 :data:`CRITERION` at every bias.

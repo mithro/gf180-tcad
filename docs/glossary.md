@@ -315,6 +315,26 @@ WWLC
   zero or unset on the 5 V {term}`cards <model card>`, so LeffCV and WeffCV reduce to the {term}`DLC`/{term}`DWC`
   forms ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
 
+uniform refinement
+mesh convergence
+  Refining every spacing of a mesh by the same factor, with the grading fixed, to show that the
+  results no longer depend on the mesh. Here each {term}`TCAD` {term}`MOSCAP` is solved at four
+  levels a factor √2 apart ({py:data}`gf180tcad.tcad.meshconv.LEVELS`), and a level is converged
+  when the next finer one changes its {term}`C–V` by less than 1 % at every bias
+  ([Roache 1994](https://doi.org/10.1115/1.2910291)). See {ref}`mesh-convergence`.
+
+observed order of convergence
+  The rate at which the discretisation error falls as the mesh is refined, measured from the
+  results instead of assumed. Technically, for three levels a constant ratio r apart,
+  p = log(|C₁ − C₂| / |C₂ − C₃|) / log r; a second-order scheme in its asymptotic range gives
+  p ≈ 2 ([Celik et al. 2008](https://doi.org/10.1115/1.2960953)). See {ref}`mesh-convergence`.
+
+Richardson extrapolation
+  An estimate of the mesh-independent value from two fine levels and the
+  {term}`observed order <observed order of convergence>` p: C_exact ≈ C₃ + (C₃ − C₂)/(r^p − 1)
+  ([Richardson 1911](https://doi.org/10.1098/rsta.1911.0009);
+  [Celik et al. 2008](https://doi.org/10.1115/1.2960953)). See {ref}`mesh-convergence`.
+
 MOSCAP
 MOS capacitor
   A poly-gate, oxide and body stack without source and drain, simulated by the {term}`TCAD` to

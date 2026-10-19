@@ -29,6 +29,9 @@ there.
   Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
   ({ref}`cross-host-determinism`). The only pass on an AMD EPYC 9V45 runner was an earlier
   8-job subset, before the {{ numpy }} fix described there.
+- **{term}`Mesh convergence <mesh convergence>` is shown in 1D only.** The 1D {term}`MOSCAP` mesh
+  changes by less than 1e-4 under {term}`uniform refinement`; the 2D study comes with the 2D
+  MOS capacitor. See {doc}`mesh-convergence`.
 - **Not everything the design spec asks for is built yet.** See
   {ref}`limitations-spec-deviations` below.
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
@@ -60,4 +63,5 @@ silicon-validation
 literature
 engine-cross-check
 plugin-history
+mesh-convergence
 ```
