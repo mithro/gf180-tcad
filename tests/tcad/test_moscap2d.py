@@ -110,7 +110,13 @@ def test_committed_start_results(device):
         assert info["l_um"] == g.l_um and info["w_um"] == g.w_um and info["with_sd"] is True
         assert abs(info["meshed_t_ox_nm"] - info["t_ox_nm"]) <= stack.POINT_TOLERANCE_UM * 1e3
         assert "calibrated" not in json.dumps(info["tunables"])
-        assert all(r <= 1e-10 for r in cols["rel_error"])
+        # every point meets rel_tol, except the recorded round-off acceptances (index, and
+        # their potential update at round-off, far below abs_tol)
+        accepted = {r["index"] for r in info["sweep"]["qs_roundoff_accepted"]}
+        for i, r in enumerate(cols["rel_error"]):
+            assert r <= 1e-10 or i in accepted, (i, r)
+        for r in info["sweep"]["qs_roundoff_accepted"]:
+            assert r["abs_error"] <= r["roundoff_bound"] < 1e-12
         # the per-area and per-device columns are the same numbers
         for a, b, t in zip(cols["c_per_area"], cols["cgg_per_um"], cols["cgg_total"], strict=True):
             assert math.isclose(b, a * g.l_um, rel_tol=1e-12)

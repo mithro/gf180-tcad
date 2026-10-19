@@ -115,7 +115,8 @@ class Level:
     ``rel_change`` is abs(C/C_finer - 1) at each bias against the next finer level and
     ``max_rel_change`` its maximum (both None on the finest level). ``extended_fallback`` lists
     the bias indices that the 2D QS sweep solved in extended precision after a stalled
-    double-precision solve (the curve's ``extended_fallback``; empty in 1D).
+    double-precision solve (the curve's ``extended_fallback``; empty in 1D), and
+    ``roundoff_accepted`` the solves accepted at round-off near psi = 0 (``roundoff_accepted``).
     """
 
     scale: float
@@ -125,6 +126,7 @@ class Level:
     rel_change: tuple[float, ...] | None
     max_rel_change: float | None
     extended_fallback: tuple[int, ...] = ()
+    roundoff_accepted: tuple[dict, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -235,7 +237,8 @@ def converge(
         else:
             rel, worst = None, None
         fallback = tuple(int(k) for k in getattr(c, "extended_fallback", ()))
-        out_levels.append(Level(r, s, int(c.node_count), cs[i], rel, worst, fallback))
+        roundoff = tuple(dict(x) for x in getattr(c, "roundoff_accepted", ()))
+        out_levels.append(Level(r, s, int(c.node_count), cs[i], rel, worst, fallback, roundoff))
 
     orders = []
     for i in range(len(levels) - 2):
@@ -282,6 +285,7 @@ def report_dict(
             {
                 "c_per_area_ff_um2": list(lv.c_per_area_ff_um2),
                 "extended_fallback": list(lv.extended_fallback),
+                "roundoff_accepted": [dict(x) for x in lv.roundoff_accepted],
                 "max_rel_change": lv.max_rel_change,
                 "node_count": lv.node_count,
                 "rel_change": None if lv.rel_change is None else list(lv.rel_change),

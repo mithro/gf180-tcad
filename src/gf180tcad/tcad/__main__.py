@@ -276,6 +276,7 @@ def run_meshconv_level(device: str, dim: int, level: int, out: Path) -> None:
         {
             "c_per_area_ff_um2": list(cv.c_per_area_ff_um2),
             "extended_fallback": list(getattr(cv, "extended_fallback", ())),
+            "roundoff_accepted": [dict(r) for r in getattr(cv, "roundoff_accepted", ())],
             "node_count": cv.node_count,
             "scale": scale,
             "spec": spec.as_dict(),
@@ -294,6 +295,7 @@ class _Curve:
         self.node_count = int(data["node_count"])
         # a level written before the fallback existed converged everywhere in double precision
         self.extended_fallback = tuple(data.get("extended_fallback", ()))
+        self.roundoff_accepted = tuple(data.get("roundoff_accepted", ()))
 
 
 def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:

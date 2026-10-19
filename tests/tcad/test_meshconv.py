@@ -242,7 +242,7 @@ def test_report_contents(tmp_path):
     lv0 = data["levels"][0]
     assert set(lv0) == {
         "c_per_area_ff_um2", "extended_fallback", "max_rel_change", "node_count",
-        "rel_change", "scale", "spec",
+        "rel_change", "roundoff_accepted", "scale", "spec",
     }  # fmt: skip
     assert lv0["extended_fallback"] == []
     assert data["levels"][-1]["rel_change"] is None

@@ -16,7 +16,11 @@ with ``gplugins.devsim.sweep_cv``:
   QS solver noise and which is about twice as fast on a 2D mesh. Where the relative criterion
   stalls in double precision (a potential near 0 V in the charge-free dielectric), the solve is
   retried in extended precision at the same tolerances (``precision_fallback``); those points
-  are recorded (``extended_fallback``);
+  are recorded (``extended_fallback``). Where DEVSIM's relative criterion is unreachable at a
+  node with psi near 0 V (|update|/(|psi| + 1e-10 V) with the update at round-off), the solve is
+  accepted under the plugin's narrow ``roundoff_accept`` conditions and recorded
+  (``roundoff_accepted``: index, relative and absolute error, max|psi|, the round-off bound,
+  the region and its smallest |psi|);
 - ``method="ac"``: small-signal AC at ``freq_hz`` on the drift-diffusion point, every contact
   with its own source (in extended precision, which AC needs). With ``with_sd`` the source and
   drain supply the inversion charge, so 1 MHz recovers to inversion as SPICE does, and
@@ -124,6 +128,7 @@ class MoscapCV2D:
     sd_peak_cm3: float | None
     constants: Constants
     extended_fallback: tuple[int, ...] = ()
+    roundoff_accepted: tuple[dict, ...] = ()
 
     @property
     def non_gate_contacts(self) -> tuple[str, ...]:
@@ -316,6 +321,7 @@ def simulate(
             extended_precision=method == "ac",
             progress=progress,
             precision_fallback=method == "qs",
+            roundoff_accept=method == "qs",
         )
     finally:
         dd.delete_device()
@@ -350,6 +356,7 @@ def simulate(
         sd_peak_cm3=structure.sd_peak_cm3,
         constants=constants,
         extended_fallback=tuple(res.extended_fallback),
+        roundoff_accepted=tuple({**asdict(r), "vg": r.vg + dv_fb} for r in res.roundoff_accepted),
     )
 
 
@@ -450,6 +457,7 @@ def write(
                 "dv_qs_v": DV_QS,
                 "max_iterations": MAX_ITERATIONS,
                 "qs_extended_fallback_points": list(qs.extended_fallback),
+                "qs_roundoff_accepted": [dict(r) for r in qs.roundoff_accepted],
                 "qs_extended_precision": False,
                 "rel_tol": qs.rel_tol,
             },
