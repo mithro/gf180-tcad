@@ -7,8 +7,8 @@ from the installed packages), plus
 
 - ``upstream``: the source manifest baked into the image (docker/tcad-dev/upstream.json), after
   checking it against what the installed packages record: the file each URL package was installed
-  from (its PEP 610 direct_url.json: the build's sha256-checked copy of the manifest's URL), and
-  the git revision gmsh reports;
+  from (its PEP 610 direct_url.json, https://peps.python.org/pep-0610/: the build's
+  sha256-checked copy of the manifest's URL), and the git revision gmsh reports;
 - ``devsim_build``: DEVSIM's build record (docker/tcad-dev/build-devsim.sh), after checking that it
   is of the manifest's DEVSIM commit and that the installed extension module is the one it
   describes: the same sha256, and the compilers in its ELF ``.comment`` section.

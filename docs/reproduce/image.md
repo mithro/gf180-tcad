@@ -241,15 +241,18 @@ packages' own requirements, as for the stable image ({repo}`docker/tcad-dev/pypr
   base plus a copy of the venv and the uv-managed CPython: no compiler, source tree or download
   is left in it ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_no_bytecode_and_no_compiler`).
   The build also writes DEVSIM's build record (the commit, the sha256 of `devsim_py3.so` and the
-  compilers in its ELF `.comment` section); the probe checks the installed module against it and
+  compilers in its [ELF](https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.sheader.html)
+  `.comment` section); the probe checks the installed module against it and
   reports it as `devsim_build` in {repo}`docker/tcad-dev/versions.json`
   ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_versions_json_devsim_build`). The wheel's
-  own `VERSION` file names the commit too, but DEVSIM's wheel recipe does not package it.
+  own `VERSION` file names the commit too, but
+  [DEVSIM's wheel recipe](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/dist/bdist_wheel/setup.py)
+  does not package it.
 - **meshwell**, **gdsfactory** and **gf180mcu** are built from their commit tarballs (meshwell
   and gf180mcu: of {{ meshwell_fork }} and {{ gf180mcu_fork }}). meshwell takes its version
   from git through [hatch-vcs](https://github.com/ofek/hatch-vcs), which a tarball cannot
   give, so the build passes the version hatch-vcs reports at that commit (counted from
-  upstream's `v2.5.2` tag).
+  upstream's [`v2.5.2`](https://github.com/simbilod/meshwell/releases/tag/v2.5.2) tag).
 - **gmsh** is the dated development snapshot wheel that gmsh publishes at a fixed URL
   ([gmsh.info/python-packages-dev](https://gmsh.info/python-packages-dev/gmsh/)); the wheel
   reports the git revision of [gmsh `master`](https://gitlab.onelab.info/gmsh/gmsh) it was built
@@ -285,18 +288,24 @@ workflows.
   [`9342e3e`](https://github.com/mithro/gf180mcu/commit/9342e3e1804e419ba4d3a252746fe688657a9b74)
   = upstream [`96b7324`](https://github.com/gdsfactory/gf180mcu/commit/96b7324d85df05704f68c1370c175627d0a88034)
   plus [mithro/gf180mcu#4](https://github.com/mithro/gf180mcu/pull/4).
-  - **Problem.** gf180mcu did not import with gdsfactory's HEAD (10.0.0rc0). Its `tech.py`
+  - **Problem.** gf180mcu did not import with gdsfactory's HEAD (10.0.0rc0). Its
+    [`tech.py`](https://github.com/gdsfactory/gf180mcu/blob/96b7324d85df05704f68c1370c175627d0a88034/gf180mcu/tech.py)
     built every cross-section at import, to learn its default name. From gdsfactory 10, the
     layer lookup that this needs activates the PDK named by `PDK=gf180mcu`, which is the
     half-imported module itself.
   - **Fix.** The cross-sections are now built on first use.
   - **Pin.** Relaxed to `gdsfactory>=9.45,<11`. gf180mcu is therefore an ordinary part of
     {repo}`docker/tcad-dev/uv.lock` and is no longer installed `--no-deps`.
-  - **Checks.** The fork's tests import gf180mcu under gdsfactory 9.51.0 and 10.0.0rc0, with and
-    without `PDK`. They also compare `nfet`/`pfet(volt="5.0V")` with {term}`GDS` written by upstream
-    `96b7324` under gdsfactory 9.51.0: identical bytes under 9.51.0, an empty XOR under 10
-    ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_gf180mcu_pdk`).
-- **{{ meshwell_fork }}** (GPL-3.0-or-later, as its `CITATION.cff` states), main
+  - **Checks in the fork.** The fork's own tests,
+    [`tests/test_gf180tcad_gdsfactory10.py`](https://github.com/mithro/gf180mcu/blob/9342e3e1804e419ba4d3a252746fe688657a9b74/tests/test_gf180tcad_gdsfactory10.py) at `9342e3e`, run in its CI under
+    gdsfactory 9.51.0 and 10.0.0rc0. They import gf180mcu in a fresh interpreter, with and
+    without `PDK`, and compare `nfet`/`pfet(volt="5.0V")` with {term}`GDS` written by upstream
+    `96b7324` under gdsfactory 9.51.0: identical bytes under 9.51.0, an empty XOR under 10.
+  - **Check here.** {test}`tests/test_tcad_dev_image.py::test_tcad_dev_gf180mcu_pdk` imports
+    gf180mcu in the dev image and checks that `PDK=gf180mcu` activates it.
+- **{{ meshwell_fork }}** (GPL-3.0-or-later, as its
+  [`CITATION.cff`](https://github.com/simbilod/meshwell/blob/b6d5ccd5293312e99c91686cd6f010ca7bda5e15/CITATION.cff)
+  states), main
   [`4184d31`](https://github.com/mithro/meshwell/commit/4184d3138e80c3b0b365aee615a07adf7f9f8ac5)
   = upstream [`b6d5ccd`](https://github.com/simbilod/meshwell/commit/b6d5ccd5293312e99c91686cd6f010ca7bda5e15)
   plus [mithro/meshwell#1](https://github.com/mithro/meshwell/pull/1).
@@ -305,17 +314,26 @@ workflows.
     [`f3306764`](https://gitlab.onelab.info/gmsh/gmsh/-/commit/f3306764674df314a01200f02486230460cfd5d6)).
     MSH 4.2 adds a list of embedded entities to every `$Entities` record (gmsh
     [`51eba072`](https://gitlab.onelab.info/gmsh/gmsh/-/commit/51eba072c)). meshio's MSH 4.1
-    reader does not expect that field, misreads the records that follow it, and fails with a
+    reader ([`_gmsh41.py`](https://github.com/nschloe/meshio/blob/v5.3.5/src/meshio/gmsh/_gmsh41.py)
+    at v5.3.5) does not expect that field, misreads the records that follow it, and fails with a
     `KeyError` on a curve tag. No entity is actually missing.
   - **Fix.** meshwell writes MSH 4.1, gmsh 4's default, unless the caller asks for another
     version. Its own meshio read-backs always use 4.1.
-  - **Checks.** meshwell's 2D test meshes now read back under gmsh 5 exactly as under gmsh 4.15.2:
-    node count, every cell block, and the physical groups
-    ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_meshwell_mesh_reads_back`). Upstream's
-    own suite fails the same 27 tests (all missing generated references) under gmsh 4.15.2 and
-    under gmsh 5, against 155 before the fix.
+  - **Checks in the fork.** The fork's
+    [`tests/test_gf180tcad_msh_readback.py`](https://github.com/mithro/meshwell/blob/4184d3138e80c3b0b365aee615a07adf7f9f8ac5/tests/test_gf180tcad_msh_readback.py) at `4184d31` runs in its CI under gmsh
+    4.15.2 and the gmsh 5 snapshot. It checks that two 2D scenes (a square, and two layers with
+    an interface) read back under gmsh 5 exactly as under gmsh 4.15.2: node count, every cell
+    block, and the physical groups. Upstream's own suite, run locally, fails the same 27 tests
+    (all missing generated references) under gmsh 4.15.2 and under gmsh 5, against 155 before
+    the fix.
+  - **Check here.** {test}`tests/test_tcad_dev_image.py::test_tcad_dev_meshwell_mesh_reads_back`
+    reads meshwell's square back in the dev image and asserts its point count, cell blocks,
+    `field_data` and `cell_sets`. These are the same values that
+    {test}`tests/test_tcad_image.py::test_meshwell_mesh_reads_back` asserts in the stable image
+    (gmsh 4.15.2), so the two images are compared.
 - **{{ gplugins_fork }}** (MIT), [mithro/gplugins#10](https://github.com/mithro/gplugins/pull/10).
-  - **Problem.** The fork's PN-slab test checked that the v0.8.0-topology rib floats
+  - **Problem.** The fork's PN-slab test
+    ([`test_mesh.py`](https://github.com/mithro/gplugins/blob/408d0af89c6691e78e03b4d7e75b6dcccc74ee99/gplugins/devsim/tests/test_mesh.py) at `408d0af`) checked that the v0.8.0-topology rib floats
     by requiring `boundary_jump_v > 0.05` V. That is the size of the rib's arbitrary offset,
     which only the mesh and the initial guess set: 0.118 V with gmsh 4.15.2 and 0.035 V with
     gmsh 5 at mesh ×1.
@@ -324,13 +342,16 @@ workflows.
     step of the contact potential difference (−0.1 V) and at the left one by 0. Both hold to
     1e-3 V at mesh ×1 and ×0.5 (measured to about 2e-15 V on both gmsh versions). This is a
     stronger check: it fails for a coupled rib.
-  - **Test.** {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained`.
-    The dev-image fork tests run at fork commit
+  - **Check here.**
+    {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained` runs
+    that fork test in the dev image and requires it to pass. The fork test is the one that holds
+    the invariant. The dev-image fork tests run at fork commit
     [`408d0af`](https://github.com/mithro/gplugins/commit/408d0af89c6691e78e03b4d7e75b6dcccc74ee99),
     while the submodule pin stays at
     [`dddaa07`](https://github.com/mithro/gplugins/tree/dddaa071321c5177c8471312c565ad86d4b245d7),
     the commit of the committed results, until the
-    results move to this image.
+    results move to this image. The byte-identity check against results then moves into that
+    pull request.
 
 **The full flow runs in the dev image** (2026-10-19, image config `245963e5…`):
 
@@ -349,14 +370,16 @@ byte-identical to the first GCC 14 pin's.
 ### The input mirror
 
 Every file the build fetches is mirrored to mithro-owned storage, {{ input_mirror }}. That is a
-GitHub release of this repository, tag `gf180-tcad/inputs/tcad-dev-20261019`, used only for
-build inputs. It holds 164 files:
+[GitHub release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+of this repository, tag `gf180-tcad/inputs/tcad-dev-20261019`, used only for build inputs and
+never marked "latest". It holds 164 files:
 
 - every source tarball (DEVSIM and its submodules, gdsfactory, the two forks);
-- the gmsh development wheel, whose dated snapshots on gmsh.info are not promised to stay;
+- the gmsh development wheel, whose dated snapshots on [gmsh.info](https://gmsh.info/) are not
+  promised to stay;
 - the seven GCC 14 `.deb`s;
 - the [python-build-standalone](https://github.com/astral-sh/python-build-standalone) CPython;
-- every PyPI file the build installs.
+- every [PyPI](https://pypi.org/) file the build installs.
 
 {repo}`docker/tcad-dev/upstream.json` and {repo}`docker/tcad-dev/wheelhouse.json` (the PyPI files,
 written by {repo}`docker/tcad-dev/wheelhouse.py`) record, for each file, both URLs and its
@@ -364,8 +387,10 @@ sha256. {repo}`docker/tcad-dev/fetch_sources.py` fetches the mirror first and fa
 original URL. The sha256 is checked either way, so a missing or altered mirror file can only
 slow the build, never change it.
 
-The build then installs from the fetched files alone. pip and {{ uv }} run with `--no-index
---find-links`; CPython comes through `uv python install --mirror file://`; and the URL
+The build then installs from the fetched files alone. [pip](https://pip.pypa.io/en/stable/) and
+{{ uv }} run with `--no-index --find-links`; CPython comes through
+[`uv python install --mirror file://`](https://docs.astral.sh/uv/reference/cli/#uv-python-install);
+and the URL
 requirements are rewritten to the fetched copies by {repo}`docker/tcad-dev/local_inputs.py`,
 keeping their lock hashes. So nothing reaches PyPI, gmsh.info or GitHub during the install
 steps.
@@ -374,6 +399,11 @@ steps.
 every input has a mirror URL and a sha256.
 {test}`tests/test_tcad_dev_lock.py::test_wheelhouse_is_exactly_the_locked_pypi_files` checks
 that the wheelhouse is exactly one allowed file per locked pin.
+{repo}`tests/test_tcad_dev_inputs.py` unit-tests the mirror-then-URL fallback and the
+local-install rewrites.
+
+**Policy.** Never replace or delete assets of an existing inputs release. New or changed files go
+to a new dated tag, because older commits keep building from the old one.
 
 ### Rebuild and verify the dev-HEAD image
 
@@ -393,9 +423,10 @@ inputs are:
   {repo}`docker/tcad-dev/local_inputs.py` and {repo}`docker/tcad-dev/build-devsim.sh`;
 - {repo}`docker/IMAGE`.
 
-On a shared host, `GF180TCAD_BUILDER` selects another builder of the same {{ BuildKit }} image,
-for example one created with CPU and memory limits (`docker buildx create --driver-opt
-cpuset-cpus=...,memory=...`). The image does not depend on the builder's limits. `--load` also loads the result into the local Docker image store (same
+On a shared host, `GF180TCAD_BUILDER` (read by {repo}`docker/tcad-dev/build`) selects another
+builder of the same {{ BuildKit }} image, for example one created with CPU and memory limits
+([`docker buildx create`](https://docs.docker.com/reference/cli/docker/buildx/create/)
+`--driver-opt cpuset-cpus=...,memory=...`). The image does not depend on the builder's limits. `--load` also loads the result into the local Docker image store (same
 image ID), so it can be run before it is pushed. The `image` workflow builds, checks and
 publishes it as its third matrix entry, `tcad-dev`, on {{ GitHub_hosted_runner }}s, exactly as
 the other two. After the first push of a new package on the {{ ghcr }}, check that an
@@ -416,10 +447,17 @@ anonymous pull of {repo}`docker/TCAD_DEV_IMAGE` works; if it does not, make the 
    [`uv pip compile`](https://docs.astral.sh/uv/reference/cli/#uv-pip-compile) command of
    {repo}`docker/tcad-dev/build-requirements.lock`, and regenerate
    {repo}`docker/tcad-dev/wheelhouse.json` with {repo}`docker/tcad-dev/wheelhouse.py`.
-3. Upload every new file to a new mirror release, tag `gf180-tcad/inputs/tcad-dev-<YYYYMMDD>`
-   (`gh release create`/`gh release upload --repo mithro/gf180-tcad`). Point the mirror URLs at
-   it (`MIRROR` in {repo}`docker/tcad-dev/wheelhouse.py` and
-   {repo}`tests/test_tcad_dev_lock.py`), and check each asset's digest against the two input lists.
-   Keep old mirror releases, because older commits build from them.
+3. Upload every file to a new mirror release, tag `gf180-tcad/inputs/tcad-dev-<YYYYMMDD>`
+   ([`gh release create --latest=false`](https://cli.github.com/manual/gh_release_create), then
+   [`gh release upload`](https://cli.github.com/manual/gh_release_upload), each with
+   `--repo mithro/gf180-tcad`). Then check each asset's digest against the two input lists. Keep
+   old mirror releases, because older commits build from them. The tag appears in five places,
+   and {test}`tests/test_tcad_dev_lock.py::test_one_mirror_tag_everywhere` checks that they agree:
+   - `MIRROR_TAG` in {repo}`docker/tcad-dev/wheelhouse.py`, which sets the tag (the test reads it
+     from there);
+   - every `mirror_url` in {repo}`docker/tcad-dev/upstream.json`;
+   - every `mirror_url` in {repo}`docker/tcad-dev/wheelhouse.json` (regenerated);
+   - `input_mirror` in {repo}`docs/conf.py`;
+   - the tag named in this page.
 4. Rebuild twice (`--no-cache`), commit {repo}`docker/tcad-dev/IMAGE_ID` and
    {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.

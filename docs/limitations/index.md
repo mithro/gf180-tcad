@@ -24,7 +24,8 @@ there.
 - **Two dev-HEAD packages are forks.** The dev-HEAD image runs the full flow. To get there,
   {{ meshwell }} and the {{ gf180mcu_gdsfactory }} come from mithro forks of their upstream
   HEADs ({{ meshwell_fork }}, {{ gf180mcu_fork }}), and one test of {{ gplugins_fork }} was
-  replaced by a mesh-independent check. Each fork adds a small fix for {{ gmsh }} 5 or {{ gdsfactory }} 10
+  replaced by a mesh-independent check
+  ([mithro/gplugins#10](https://github.com/mithro/gplugins/pull/10)). Each fork adds a small fix for {{ gmsh }} 5 or {{ gdsfactory }} 10
   that upstream does not have yet. These fixes are not upstream, and nothing is sent upstream.
   The forks, and what each fixes, are listed in {ref}`tcad-dev-forks`.
 - **Build inputs are mirrored.** Every file the dev-HEAD image build fetches is also on

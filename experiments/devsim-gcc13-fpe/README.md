@@ -20,8 +20,9 @@ experiments/devsim-gcc13-fpe/run.sh "$(mktemp -d)"
 
 It needs [Docker](https://docs.docker.com/), the sandbox ([`tools/sandbox-run`](../../tools/sandbox-run),
 set up by [`tools/sandbox-setup`](../../tools/sandbox-setup)), and network access for the image
-build and one [PyPI](https://pypi.org/) download. The download runs inside the sandbox (base image,
-`--network bridge`) and is hash-checked by pip's `--require-hashes`. The steps are:
+build and one [PyPI](https://pypi.org/) download. The download runs inside the sandbox (the base image,
+[`docker/IMAGE`](../../docker/IMAGE), with `--network bridge`) and is hash-checked by pip's
+[`--require-hashes`](https://pip.pypa.io/en/stable/topics/secure-installs/). The steps are:
 
 1. Build the GCC 13.3 image: [`docker/tcad-dev/build`](../../docker/tcad-dev/build) `--load`,
    run in a worktree at commit
