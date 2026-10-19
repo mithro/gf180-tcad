@@ -284,7 +284,9 @@ frozenlist==1.8.0 \
     #   aiosignal
 gdsfactory @ https://github.com/gdsfactory/gdsfactory/archive/8b6fe0ae8db7eac245a9b67d1fece75fc8d3aa6a.tar.gz \
     --hash=sha256:c61d7ec1b5d4658a6023735cca870633a0162e1a907e46047aded399cd741ad2
-    # via gf180tcad-tcad-dev-image
+    # via
+    #   gf180mcu
+    #   gf180tcad-tcad-dev-image
 gdstk==1.0.1 \
     --hash=sha256:0b5f47287d071e652e61e3fdde920030e6f1288635409c9254bbf50159c3e81f \
     --hash=sha256:401ec2b958a00bf79dfaf3c5e98b2b40b1f8018905720446bf2dbba7dbddbc72 \
@@ -293,6 +295,9 @@ gdstk==1.0.1 \
     --hash=sha256:8c760089605ce5adac6b9aec761bae40f626d44805ccdc4da1d9a9f53f330fb9 \
     --hash=sha256:90653e965cc8c5250333e381fe1ccc3f00e14660ca0a2383eb06900683d2b14b
     # via meshwell
+gf180mcu @ https://github.com/mithro/gf180mcu/archive/9342e3e1804e419ba4d3a252746fe688657a9b74.tar.gz \
+    --hash=sha256:b06eba6cfbd3026ebbbfd5c3595bb6eb7bcf5a6fbb38d5334e792fdc0d14829a
+    # via gf180tcad-tcad-dev-image
 gmsh @ https://gmsh.info/python-packages-dev/gmsh/gmsh-5.0.0.dev20261018-py2.py3-none-manylinux_2_24_x86_64.whl \
     --hash=sha256:0ebc3eb6565490352031014cce36db4617d6eb8cd9ec642fb4a6b536f0cfc395
     # via
@@ -493,8 +498,8 @@ meshio==5.3.5 \
     --hash=sha256:0736c6e34ecc768f62f2cde5d8233a3529512a9399b25c68ea2ca0d5900cdc10 \
     --hash=sha256:f21f01abd9f29ba06ea119304b3d39e610421cfe93b9dd23362834919f87586d
     # via meshwell
-meshwell @ https://github.com/simbilod/meshwell/archive/b6d5ccd5293312e99c91686cd6f010ca7bda5e15.tar.gz \
-    --hash=sha256:76aef6ee05cb088e10246ed6476183bd0582c1b85268f946cb7b98fc7fe03a40
+meshwell @ https://github.com/mithro/meshwell/archive/4184d3138e80c3b0b365aee615a07adf7f9f8ac5.tar.gz \
+    --hash=sha256:8d75a0f5391b8a2e16a07c70451312c08a3a1d9646e570e51e10027087d6220b
     # via gf180tcad-tcad-dev-image
 more-itertools==11.2.1 \
     --hash=sha256:35a7377edd1dd6608dcb2cdf534ded55ea32d49448875ad042cd3f879fb1ded0 \

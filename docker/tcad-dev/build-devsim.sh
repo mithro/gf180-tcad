@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Build the DEVSIM wheel from source, in the build stage of docker/tcad-dev/Dockerfile:
-#   build-devsim.sh SRC_DIR WORK_DIR WHEEL_DIR PYTHON BUILD_CONSTRAINTS
-# SRC_DIR holds the hash-checked downloads of fetch_sources.py (names from upstream.json).
+#   build-devsim.sh SRC_DIR WORK_DIR WHEEL_DIR PYTHON BUILD_CONSTRAINTS WHEELHOUSE
+# SRC_DIR holds the hash-checked downloads of fetch_sources.py (each upstream.json entry's
+# ``file``), WHEELHOUSE those of wheelhouse.json (the build backend comes from there).
 #
 # This follows DEVSIM's own x86_64 Linux release recipe, scripts/build_manylinux_2_28.sh at the
 # pinned commit: DEVSIM_CONFIG=centos_6 (extended precision with the quad-precision getrf,
@@ -20,14 +21,16 @@
 set -euo pipefail
 
 UV="${UV:?set UV to the uv binary}"
-SRC="${1:?}" WORK="${2:?}" WHEELS="${3:?}" PY="${4:?}" CONSTRAINTS="${5:?}"
+SRC="${1:?}" WORK="${2:?}" WHEELS="${3:?}" PY="${4:?}" CONSTRAINTS="${5:?}" WHEELHOUSE="${6:?}"
 UPSTREAM="$SRC/upstream.json"
-commit() { "$PY" -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]]["commit"])' \
-    "$UPSTREAM" "$1"; }
+field() { "$PY" -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]][sys.argv[3]])' \
+    "$UPSTREAM" "$1" "$2"; }
+commit() { field "$1" commit; }
+src_file() { echo "$SRC/$(field "$1" file)"; }  # where fetch_sources.py saved upstream.json's NAME
 
 untar() {  # untar NAME DIR: a codeload tarball has one top-level directory
     mkdir -p "$2"
-    tar -xzf "$SRC/$1" -C "$2" --strip-components=1 --no-same-owner
+    tar -xzf "$(src_file "$1")" -C "$2" --strip-components=1 --no-same-owner
 }
 untar devsim "$WORK"
 cd "$WORK"
@@ -43,7 +46,7 @@ untar boost_multiprecision external/boostorg/multiprecision
 # (gcc-14-base, libstdc++6, libgfortran5, libquadmath0) the base image already has.
 for deb in cpp-14-x86-64-linux-gnu gcc-14-x86-64-linux-gnu g++-14-x86-64-linux-gnu \
         gfortran-14-x86-64-linux-gnu libgcc-14-dev libstdc++-14-dev libgfortran-14-dev; do
-    dpkg-deb -x "$SRC/$deb" /
+    dpkg-deb -x "$(src_file "$deb")" /
 done
 
 export DEVSIM_CONFIG=centos_6 CMAKE=cmake CMAKE_CXX_FLAGS="" \
@@ -79,6 +82,24 @@ printf 'Source available from:\nhttps://github.com/devsim/devsim\ncommit %s\n' \
     "$(commit devsim)" > "$DIST/VERSION"
 cp dist/bdist_wheel/setup.* "$DIST/"
 
-# the wheel (setup.py, py-limited-api cp39), its setuptools from the hash-checked constraints
-"$UV" build --wheel --python "$PY" --out-dir "$WHEELS" \
+# the wheel (setup.py, py-limited-api cp39), its setuptools from the hash-checked constraints,
+# found in the fetched wheelhouse (no index)
+"$UV" build --wheel --python "$PY" --out-dir "$WHEELS" --no-index --find-links "$WHEELHOUSE" \
     --build-constraints "$CONSTRAINTS" --require-hashes "$DIST"
+
+# The build record (the wheel's VERSION file is not packaged: its data_files are the *.* files):
+# the commit built, the sha256 of the extension module and the compilers that built it (the
+# .comment section, one string per compiler). docker/tcad-dev/probe_versions.py checks the
+# installed module against it and reports it in versions.json.
+"$PY" - "$(commit devsim)" "$DIST/lib/devsim/devsim_py3.so" "$WHEELS/devsim-build.json" <<'PYEOF'
+import hashlib, json, subprocess, sys
+commit, so, out = sys.argv[1:]
+comment = subprocess.run(["readelf", "-p", ".comment", so], capture_output=True, text=True,
+                         check=True).stdout
+strings = sorted({line.split("]", 1)[1].strip() for line in comment.splitlines() if "]" in line})
+with open(so, "rb") as f:
+    sha = hashlib.sha256(f.read()).hexdigest()
+record = {"commit": commit, "compilers": strings, "devsim_py3.so sha256": sha}
+with open(out, "w", encoding="utf-8") as f:
+    f.write(json.dumps(record, indent=2, sort_keys=True) + "\n")
+PYEOF
