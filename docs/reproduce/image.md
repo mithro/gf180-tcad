@@ -217,7 +217,7 @@ uv records the sha256 of the URL sources too, so every sdist and wheel is hash-c
   base image already has) are unpacked into a throwaway build stage only (from
   [snapshot.ubuntu.com](https://snapshot.ubuntu.com/), hash-pinned). With the base image's
   GCC 13.3 instead, the build works but the DEVSIM it makes raises "Uncaught FPE" errors in
-  19 tests of {{ gplugins_fork }} that pass with the PyPI wheel and with this GCC 14 build.
+  13 tests of {{ gplugins_fork }} that pass with the PyPI wheel and with this GCC 14 build.
   The image itself is the
   base plus a copy of the venv and the uv-managed CPython: no compiler, source tree or download
   is left in it ({test}`tests/test_tcad_dev_image.py::test_tcad_dev_no_bytecode_and_no_compiler`).
