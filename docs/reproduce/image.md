@@ -401,7 +401,7 @@ in it: the image's name, its reference and its `versions.json`. The mesh-converg
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
   are therefore made on the stable image, explicitly.
 - **Planned.** Before the {term}`Phase 2` exit, the 2D mesh convergence is rerun on the dev image and
-  the 2D results are regenerated there; `RESULTS_IMAGE` then names dev for 2D as well.
+  the 2D results are regenerated there; {py:data}`~gf180tcad.tcad.RESULTS_IMAGE` then names dev for 2D as well.
 - **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, still has the laxer
   builder check: unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
   driver and BuildKit image before using it. Tightening it would change that image's build

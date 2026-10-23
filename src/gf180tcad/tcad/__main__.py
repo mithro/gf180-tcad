@@ -59,6 +59,7 @@ from gf180tcad.tcad import (
     RESULTS_IMAGE,
     calibration,
     calibration_file,
+    check_same_image,
     gplugins_commit,
     image_ref,
     meshconv,
@@ -145,6 +146,11 @@ def run_host(device: str, params: str, root: Path, image: str | None = None) -> 
 
     ``image`` names the TCAD image (default: :func:`job_image`)."""
     image = job_image(1, image)
+    root = Path(root)
+    check_same_image(
+        root, "moscap1d", image,
+        (root / d / p for d in process.DEVICES for p in PARAMS if (d, p) != (device, params)),
+    )  # fmt: skip
     load_params(device, params)  # refuses a missing calibration before anything runs
     meshconv.selected_spec(device, 1)  # refuses a missing mesh-convergence result
     gplugins_commit()  # refuses a dirty or unpinned plugin before anything runs
@@ -247,6 +253,11 @@ def run_meshconv(
     keeps the image recorded for the other dimension's subtree."""
     meshconv.check_dim(dim)  # refuses dim 2 (Task 11)
     image = job_image(dim, image)
+    root = Path(root)
+    check_same_image(
+        root, f"moscap{dim}d", image,
+        (meshconv.job_dir(root, d, dim) for d in process.DEVICES if d != device),
+    )  # fmt: skip
     mem = MESHCONV_JOB_MEM[dim]
     jobs = len(meshconv.LEVELS) if jobs is None else jobs
     meshconv.check_admission(jobs, mem)

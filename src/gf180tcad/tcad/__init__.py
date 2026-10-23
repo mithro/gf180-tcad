@@ -39,7 +39,7 @@ import hashlib
 import json
 import re
 import subprocess
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from gf180tcad.layout import PROVENANCE_NAME
@@ -268,3 +268,29 @@ def recorded_images(tree_root: Path) -> dict[str, str]:
         return {}
     recorded = json.loads(path.read_bytes()).get("images", {})
     return {k: v["name"] for k, v in recorded.items() if (Path(tree_root) / k).is_dir()}
+
+
+def check_same_image(tree_root: Path, kind: str, image: str, others: Iterable[Path]) -> None:
+    """Refuse a run on ``image`` that would leave one result kind made by two images.
+
+    ``tree_root/provenance.json`` records one image for each result kind ``kind``. If it records
+    another image than ``image`` and any of the ``others`` (the kind's other job directories,
+    which the run leaves as they are) exists, the tree's provenance would claim one image for
+    files from two. Delete the other job directories first (the whole kind is then regenerated, one
+    job directory at a time, with ``--image``), or use the recorded image.
+
+    Raises:
+        ValueError: naming the recorded image, the requested image and the directories kept.
+    """
+    path = Path(tree_root) / PROVENANCE_NAME
+    if not path.is_file():
+        return
+    recorded = json.loads(path.read_bytes()).get("images", {}).get(kind, {}).get("name")
+    kept = sorted(p.as_posix() for p in others if Path(p).exists())
+    if recorded is not None and recorded != image and kept:
+        raise ValueError(
+            f"{path} records {kind} results made on the {recorded!r} image, but this run uses "
+            f"{image!r}, and would keep {', '.join(kept)} from the {recorded!r} image. Delete those "
+            f"directories to regenerate the whole {kind} kind with --image {image}, or use "
+            f"--image {recorded}."
+        )

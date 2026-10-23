@@ -69,7 +69,9 @@ KINDS = ("card", "derived", "project-choice")
 CARD_FILE = "sm141064.ngspice"
 
 # The BSIM4 4.5.0 release from UC Berkeley: its user's manual and reference C code.
-BSIM4_450_URL = "https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip"
+BSIM4_450_URL = (
+    "https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip"
+)
 
 # The project-choice Δ, used only if the CTM equations could not be evaluated (they can).
 FALLBACK_DELTA_NM = 0.5

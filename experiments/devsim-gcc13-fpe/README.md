@@ -12,7 +12,7 @@ uses, and the image now uses it too. This directory makes that evidence re-runna
 | File | What it is |
 |---|---|
 | [`run.sh`](run.sh) | The whole recipe: build, wheel swap, gdb trap and compiler swap. Each step checks its expected outcome. |
-| [`trap_fpe.py`](trap_fpe.py) | Runs the fork's [`test_parallel_plate_charge`](https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/tests/test_stack1d.py) body with `FE_INVALID` trapping on for DEVSIM's `set_parameter`, for gdb. |
+| [`trap_fpe.py`](trap_fpe.py) | Runs the fork's [`test_parallel_plate_charge`](https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/tests/test_stack1d.py) body with `FE_INVALID` trapping on for DEVSIM's `set_parameter`, for gdb. |
 
 ```sh
 experiments/devsim-gcc13-fpe/run.sh "$(mktemp -d)"

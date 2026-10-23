@@ -3,7 +3,7 @@
 per area, and the :term:`SPICE` bookkeeping that turns it into a gate capacitance of one geometry.
 
 **The structure** (:class:`Stack`, built by `gplugins.devsim.create_1d_stack
-<https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/stack1d.py>`_): a poly-silicon gate region doped at :term:`NGATE` (n+ for the nfet, p+ for
+<https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/stack1d.py>`_): a poly-silicon gate region doped at :term:`NGATE` (n+ for the nfet, p+ for
 the pfet), the gate oxide of thickness ``t_ox_eff_nm`` (relative permittivity :term:`EPSROX`),
 and a uniformly doped silicon body at ``n_ch_cm3`` (p-type for the nfet, n-type, the n-well, for
 the pfet). The contacts are ohmic, ``gate`` on the free end of the poly
@@ -13,7 +13,7 @@ thicknesses are project choices, many times the widest depletion region of each,
 their neutral bulk; the C-V does not depend on them (the exact reference,
 :mod:`gf180tcad.tcad.analytic`, assumes semi-infinite poly and body, and the tests compare).
 
-**The C-V** (:func:`simulate`): `gplugins.devsim.sweep_cv <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_, quasi-static by
+**The C-V** (:func:`simulate`): `gplugins.devsim.sweep_cv <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/cv.py>`_, quasi-static by
 default: equilibrium Poisson-Boltzmann with the body at 0 V, the counterpart of the
 :term:`SPICE` :term:`Cgg` of :term:`BSIM4` ``capMod=2``. The lumped flat-band offset
 ``dv_fb_v`` is a rigid gate-bias shift: the device is solved at ``vg - dv_fb_v`` and the result
@@ -21,7 +21,7 @@ is reported at ``vg``, which is exact for a 1D MOS capacitor
 (:repo:`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
 applies the same shift in 2D). `DEVSIM <https://devsim.org/>`_'s F/cm^2 are converted to
 fF/um^2 (:func:`gf180tcad.tcad.analytic.f_per_cm2_to_ff_per_um2`). A point that does not
-converge at the tolerances raises (`gplugins.devsim.CVConvergenceError <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_); none is
+converge at the tolerances raises (`gplugins.devsim.CVConvergenceError <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/cv.py>`_); none is
 dropped.
 
 **The SPICE bookkeeping** (:meth:`MoscapCV.area_scaled`), 1D only: the intrinsic :term:`Cgg` of
@@ -95,7 +95,7 @@ PER_AREA_META = "per_area.meta.json"
 
 @dataclass(frozen=True)
 class Point:
-    """Convergence of one bias point, from `gplugins.devsim.PointInfo <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_."""
+    """Convergence of one bias point, from `gplugins.devsim.PointInfo <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/cv.py>`_."""
 
     converged: bool
     iterations: int
@@ -149,7 +149,7 @@ def stack_of(proc: ProcessDescription) -> Stack:
 
 
 def plugin_constants(constants: Constants, eps_ox: float):
-    """The plugin's `gplugins.devsim.Constants <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/constants.py>`_: ``constants`` plus ``eps_ox``."""
+    """The plugin's `gplugins.devsim.Constants <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/constants.py>`_: ``constants`` plus ``eps_ox``."""
     from gplugins.devsim import Constants as PluginConstants
 
     return PluginConstants(**asdict(constants), eps_ox=eps_ox)
@@ -166,7 +166,7 @@ def sweep_stack(
     rel_tol: float = REL_TOL,
     name: str = "moscap1d",
 ):
-    """Build ``stack`` and step its gate over ``vg_device`` (V): a `gplugins.devsim.CVResult <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_.
+    """Build ``stack`` and step its gate over ``vg_device`` (V): a `gplugins.devsim.CVResult <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/cv.py>`_.
 
     One live device per call: the device (and its mesh) is deleted afterwards, also when
     ``sweep_cv`` raises.
@@ -325,7 +325,7 @@ def simulate(
     """The 1D C-V of ``proc`` at the gate biases ``vg`` (V), with ``dv_fb_v`` as a rigid shift.
 
     The device is solved at ``vg - dv_fb_v`` and the result reported at ``vg``. Runs in the TCAD
-    image. Raises `gplugins.devsim.CVConvergenceError <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/cv.py>`_ if any point does not converge.
+    image. Raises `gplugins.devsim.CVConvergenceError <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/cv.py>`_ if any point does not converge.
     """
     vg = tuple(float(v) for v in vg)
     dv_fb = proc.values()["dv_fb_v"]

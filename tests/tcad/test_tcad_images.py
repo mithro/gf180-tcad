@@ -132,3 +132,43 @@ def test_image_choice_is_checked(capsys):
     with pytest.raises(SystemExit):
         _moscap(Path("unused"), "--image", "latest")
     assert "invalid choice" in capsys.readouterr().err
+
+
+def test_moscap_refuses_to_mix_images_in_one_tree(fake, tmp_path):
+    """A tree's provenance records one image per kind, so a run on another image is refused
+    while the kind's other job directories would stay from the first one."""
+    root = tmp_path / "root"
+    assert _moscap(root) == 0  # nfet_05v0/start on dev
+    other = ["moscap", "--device", "pfet_05v0", "--dim", "1", "--params", "start"]
+    # the only job directory is the one a stable rerun replaces: allowed (the whole kind)
+    assert _moscap(root, "--image", "stable") == 0
+    assert _images(root) == {"moscap1d": _entry("stable")}
+    # now the kind holds nfet_05v0/start from stable; pfet on dev would mix them
+    with pytest.raises(ValueError, match=r"records moscap1d results made on the 'stable' image"):
+        cli.main([*other, "--out", str(root)])
+    assert fake.images == [DEV_REF, STABLE_REF]  # nothing was run for the refused call
+    assert not (root / "pfet_05v0").exists()
+    # the same image is fine
+    assert cli.main([*other, "--out", str(root), "--image", "stable"]) == 0
+    assert _images(root) == {"moscap1d": _entry("stable")}
+
+
+def test_meshconv_refuses_to_mix_images_in_one_tree(fake, tmp_path):
+    root = tmp_path / "root"
+    assert _meshconv(root) == 0  # nfet_05v0 on dev
+    argv = ["meshconv", "--device", "pfet_05v0", "--dim", "1", "--out", str(root), "--jobs", "1"]
+    n = len(fake.images)
+    with pytest.raises(ValueError, match="would keep .*nfet_05v0 from the 'dev' image"):
+        cli.main([*argv, "--image", "stable"])
+    assert len(fake.images) == n
+    assert cli.main(argv) == 0
+    assert _images(root) == {"moscap1d": _entry("dev")}
+
+
+def test_check_same_image_without_provenance_or_others(tmp_path):
+    tcad.check_same_image(tmp_path / "none", "moscap1d", "dev", [tmp_path / "x"])
+    root = tmp_path / "root"
+    root.mkdir()
+    prov = tcad.tree_provenance(root, {"moscap1d": "stable"})
+    (root / PROVENANCE_NAME).write_text(json.dumps(prov), encoding="utf-8")
+    tcad.check_same_image(root, "moscap1d", "dev", [root / "absent"])  # nothing would be kept
