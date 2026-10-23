@@ -495,3 +495,19 @@ def test_report_keeps_the_agreement_curves(tmp_path):
     meshconv.write(rep, tmp_path, device="nfet_05v0", dim=2, settings={})
     data = json.loads((tmp_path / meshconv.REPORT_NAME).read_bytes())
     assert [lv["agreement_1d_curve"] for lv in data["levels"]] == curves
+
+
+def test_2d_levels_refine_the_grading():
+    """2D levels scale the size field at every point (MeshSpec.scaled(refine_grading=True))."""
+    assert meshconv.REFINE_GRADING == {1: False, 2: True}
+    simulate, calls = synthetic(EXACT, [0.001] * 6, 2.0)
+    rep = meshconv.converge(simulate, START, refine_grading=True)
+    assert calls == [START.scaled(r, refine_grading=True) for r in meshconv.LEVELS]
+    assert rep.refine_grading is True
+    data = meshconv.report_dict(rep, device="nfet_05v0", dim=2, settings={})
+    assert data["refine_grading"] is True
+    assert [lv["spec"]["grading"] for lv in data["levels"]] == [
+        1 + (START.grading - 1) * r for r in meshconv.LEVELS
+    ]
+    rep1 = meshconv.converge(simulate, START)
+    assert rep1.refine_grading is False

@@ -271,7 +271,7 @@ def run_meshconv_level(device: str, dim: int, level: int, out: Path) -> None:
     if not sandbox.in_sandbox():
         raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
     scale = meshconv.LEVELS[level]
-    spec = meshconv.START[dim].scaled(scale)
+    spec = meshconv.START[dim].scaled(scale, refine_grading=meshconv.REFINE_GRADING[dim])
     cv = simulate(spec)
     io.write_json(
         Path(out) / LEVEL_NAME,
@@ -292,7 +292,7 @@ def run_meshconv_agreement(device: str, level: int, out: Path) -> None:
     """``meshconv-job --agreement --level``: the 2D-equals-1D check of a 2D level."""
     if not sandbox.in_sandbox():
         raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
-    spec = meshconv.START[2].scaled(meshconv.LEVELS[level])
+    spec = meshconv.START[2].scaled(meshconv.LEVELS[level], refine_grading=True)
     data = meshconv.agreement_1d(device, spec)
     io.write_json(Path(out) / AGREEMENT_NAME, data)
     print(f"{device}/level{level}: agreement with 1D {data['max']!r}", flush=True)
@@ -323,7 +323,7 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
     curves = {}
     for i, scale in enumerate(meshconv.LEVELS):
         data = json.loads((out / f"level{i}" / LEVEL_NAME).read_bytes())
-        spec = meshconv.START[dim].scaled(scale)
+        spec = meshconv.START[dim].scaled(scale, refine_grading=meshconv.REFINE_GRADING[dim])
         if data["scale"] != scale or MeshSpec(**data["spec"]) != spec:
             raise RuntimeError(f"level{i}/{LEVEL_NAME} is not level {i} of the start spec")
         curves[spec] = _Curve(data)
@@ -332,7 +332,9 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
         agreement, curves_1d = [], []
         for i, scale in enumerate(meshconv.LEVELS):
             data = json.loads((out / f"level{i}" / AGREEMENT_NAME).read_bytes())
-            if MeshSpec(**data["spec"]) != meshconv.START[dim].scaled(scale):
+            if MeshSpec(**data["spec"]) != meshconv.START[dim].scaled(
+                scale, refine_grading=meshconv.REFINE_GRADING[dim]
+            ):
                 raise RuntimeError(f"level{i}/{AGREEMENT_NAME} is not level {i} of the start spec")
             agreement.append(data["max"])
             curves_1d.append(data)
@@ -342,6 +344,7 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
         rel_tol=settings["rel_tol"],
         agreement=agreement,
         agreement_curves=curves_1d,
+        refine_grading=meshconv.REFINE_GRADING[dim],
     )
     meshconv.write(rep, out, device=device, dim=dim, settings=settings)
     print(f"{device}: selected level {rep.selected}", flush=True)

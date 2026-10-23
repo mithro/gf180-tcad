@@ -85,6 +85,11 @@ TREE_ROOT = Path("results") / "tcad" / "meshconv"
 # The start spec of each dimension's study.
 START = {1: MeshSpec.DEFAULT_1D, 2: MeshSpec.DEFAULT_2D}
 
+# Whether a level scales the grading too (MeshSpec.scaled(refine_grading=...)): in 2D the meshwell
+# size field grows at the slope (grading - 1), which a uniform refinement must scale as well,
+# else the depletion region is never refined (Task 11); in 1D the grading is only a cap.
+REFINE_GRADING = {1: False, 2: True}
+
 # The geometry of the 2D study (W um, L um) per device: the calibration geometry at Lmin, the
 # one whose C-V the 2D structure (gate edges, overlap, fringe) shapes most. The selected spec
 # applies to every 2D geometry; the interface spacing it fixes is local and does not depend
@@ -169,6 +174,7 @@ class ConvergenceReport:
     rel_tol: float = DEFAULT_REL_TOL
     convergence_level: int | None = None
     agreement_level: int | None = None
+    refine_grading: bool = False
 
     @property
     def criteria(self) -> dict:
@@ -233,6 +239,7 @@ def converge(
     rel_tol: float = DEFAULT_REL_TOL,
     agreement: Sequence[float] | None = None,
     agreement_curves: Sequence[dict] | None = None,
+    refine_grading: bool = False,
 ) -> ConvergenceReport:
     """Run ``simulate`` at ``spec.scaled(r)`` for each level ``r`` (coarse to fine) and report.
 
@@ -252,7 +259,7 @@ def converge(
         if len(agreement) != len(levels):
             raise ValueError(f"agreement needs one value per level, got {agreement}")
     ratio = levels[0] / levels[1]
-    specs = [spec.scaled(r) for r in levels]
+    specs = [spec.scaled(r, refine_grading=refine_grading) for r in levels]
     curves = [simulate(s) for s in specs]
     vg = tuple(curves[0].vg)
     for r, c in zip(levels, curves, strict=True):
@@ -315,7 +322,7 @@ def converge(
     )
     return ConvergenceReport(
         spec, vg, tuple(out_levels), tuple(orders), p, richardson, selected, rel_tol,
-        conv, agree,
+        conv, agree, refine_grading,
     )  # fmt: skip
 
 
@@ -354,6 +361,7 @@ def report_dict(
             for o in rep.orders
         ],
         "params": "start",
+        "refine_grading": rep.refine_grading,
         "richardson": {
             "c_per_area_ff_um2": None if rep.richardson is None else list(rep.richardson),
             "levels": [n - 3, n - 2, n - 1],

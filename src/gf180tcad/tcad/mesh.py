@@ -72,8 +72,19 @@ class MeshSpec:
         if self.grading <= 1:
             raise ValueError(f"MeshSpec.grading must be > 1, got {self.grading!r}")
 
-    def scaled(self, r: float) -> MeshSpec:
-        """Every spacing times ``r`` (> 0), the grading unchanged (uniform refinement)."""
+    def scaled(self, r: float, *, refine_grading: bool = False) -> MeshSpec:
+        """Every spacing times ``r`` (> 0): the uniform refinement of the mesh-convergence study.
+
+        - 1D (default): the grading is unchanged, as the Task 9b plan specifies. That holds only
+          in 1D, where ``grading`` caps the neighbour ratio and the graded layers are
+          length-limited, so every spacing scales by ``r``.
+        - 2D (``refine_grading=True``): the meshwell size field is h_min + (grading - 1) * d up
+          to h_bulk, so with the grading fixed the size beyond a few nm (the depletion region)
+          would be the same at every level and only the interface would be refined; the 2D C-V
+          minimum then did not converge (Task 11). A uniform refinement scales the size at every
+          point, size_r(d) = r * size(d), so the growth slope scales too:
+          grading' = 1 + (grading - 1) * r (:meth:`threshold_distmax_um` is then unchanged).
+        """
         if not (r > 0 and math.isfinite(r)):
             raise ValueError(f"the scale must be > 0, got {r!r}")
         return MeshSpec(
@@ -81,7 +92,7 @@ class MeshSpec:
             h_ox_nm=self.h_ox_nm * r,
             h_si_surface_nm=self.h_si_surface_nm * r,
             h_si_bulk_nm=self.h_si_bulk_nm * r,
-            grading=self.grading,
+            grading=1 + (self.grading - 1) * r if refine_grading else self.grading,
         )
 
     def as_dict(self) -> dict[str, float]:
