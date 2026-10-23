@@ -231,7 +231,7 @@ one host only.
 
 The plugin is fixed in {{ gplugins_fork }} and runs on the latest stack:
 {{ DEVSIM }} 2.11.1, {{ meshwell }} 2.5.2, {{ gmsh }} 4.15.2, {{ gdsfactory }} 9.51.0 and
-{{ Python }} 3.13, in the {term}`TCAD` image ({repo}`docker/TCAD_IMAGE`). The re-verification
+{{ Python }} 3.13, in the stable {term}`TCAD` image ({repo}`docker/TCAD_IMAGE`). The re-verification
 was made with gf180-tcad pinning the fork at [`400f842`](https://github.com/mithro/gplugins/commit/400f8423d7b0d1aac48eea1c0145342d0c1f766a) through the
 {repo}`third_party/gplugins <.gitmodules>` submodule, and all file links below are at that commit.
 The pin is now [`1c071d0`](https://github.com/mithro/gplugins/commit/1c071d0565ef4917b48ff907b9426e879ccca7fc), which

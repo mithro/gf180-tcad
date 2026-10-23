@@ -345,19 +345,26 @@ workflows.
   - **Check here.**
     {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained` runs
     that fork test in the dev image and requires it to pass. The fork test is the one that holds
-    the invariant. It runs from a `git archive` of the submodule pin,
+    the invariant. It runs from a [`git archive`](https://git-scm.com/docs/git-archive) of the submodule pin,
     {repo}`third_party/gplugins <.gitmodules>` at
     [`1c071d0`](https://github.com/mithro/gplugins/commit/1c071d0565ef4917b48ff907b9426e879ccca7fc),
     the commit the committed results are made with.
 
-**The full flow runs in the dev image** (2026-10-19, image config `245963e5…`):
+**The full flow runs in the current dev image** (2026-10-24, image config `b4bae2b3…`, manifest
+`fe347528…`, with the submodule pinned at gplugins `1c071d0`):
 
-- every sandbox test of {repo}`tests/test_tcad_dev_image.py` passes;
-- the fork's `gplugins/devsim` and `gplugins/process` tests at `408d0af` give 131 passed in the
-  dev image and 131 passed in the stable image;
+- the 42 sandbox tests of {repo}`tests/tcad`, {repo}`tests/test_tcad_dev_image.py` and
+  {repo}`tests/test_tcad_image.py` pass;
 - the 1D {term}`MOS capacitor <MOSCAP>` and mesh-convergence trees regenerated in the dev image
-  ({repo}`tests/tcad`) are byte-identical to the committed {repo}`results/tcad/moscap1d` and
-  {repo}`results/tcad/meshconv` trees, except their `provenance.json`, which names the image.
+  are byte-identical to the committed {repo}`results/tcad/moscap1d` and
+  {repo}`results/tcad/meshconv` trees, except their `provenance.json`, which names the image;
+- the drift guard, {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`, passes:
+  the stable and dev images give the same bytes.
+
+The fork's own suite was last counted on the **previous** dev image (config `245963e5…`, on
+2026-10-19), at gplugins `408d0af`: its `gplugins/devsim` and `gplugins/process` tests gave
+131 passed in the dev image and 131 passed in the stable image. It was not recounted on the
+current image at `1c071d0`; the PN-slab test of it runs in the sandbox tests above.
 
 So no numeric drift was found against the stable image. DEVSIM's `devsim_py3.so` is also
 byte-identical to the first GCC 14 pin's.
@@ -395,6 +402,10 @@ in it: the image's name, its reference and its `versions.json`. The mesh-converg
   are therefore made on the stable image, explicitly.
 - **Planned.** Before the {term}`Phase 2` exit, the 2D mesh convergence is rerun on the dev image and
   the 2D results are regenerated there; `RESULTS_IMAGE` then names dev for 2D as well.
+- **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, still has the laxer
+  builder check: unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
+  driver and BuildKit image before using it. Tightening it would change that image's build
+  inputs, so it waits for the next re-pin of the stable image.
 
 (tcad-dev-mirror)=
 
