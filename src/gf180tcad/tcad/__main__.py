@@ -370,16 +370,18 @@ def run_meshconv(
     jobs: int | None = None,
     progress_dir: Path | None = None,
     resume: Path | None = None,
+    mem: str | None = None,
 ) -> None:
     """``meshconv``: the level jobs and the report job in the TCAD image, then the tree files.
 
     ``progress_dir`` receives each level's progress log (``<device>_level<i>.log``) when it ends.
     ``resume`` is the scratch directory of an earlier, failed run: the levels that finished there
     (their ``level<i>/level.json``) are kept and only the others run again. A level job is
-    deterministic, so a kept level is the one a rerun would give.
+    deterministic, so a kept level is the one a rerun would give. ``mem`` overrides the memory
+    of every sandbox job (default :data:`MESHCONV_JOB_MEM`).
     """
     meshconv.check_dim(dim)
-    mem = MESHCONV_JOB_MEM[dim]
+    mem = MESHCONV_JOB_MEM[dim] if mem is None else mem
     jobs = len(meshconv.levels(dim)) if jobs is None else jobs
     meshconv.check_admission(jobs, mem)
     gplugins_commit()  # refuses a dirty or unpinned plugin before anything runs
@@ -461,6 +463,7 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--jobs", type=int, default=None, help="concurrent level jobs (default: all)")
     p.add_argument("--progress-dir", type=Path, default=None, help="copy level progress logs")
     p.add_argument("--resume", type=Path, default=None, help="scratch dir of a failed run")
+    p.add_argument("--mem", default=None, help="memory of each sandbox job (e.g. 6g)")
     p = sub.add_parser("meshconv-job", help="internal: one mesh-convergence job, in the sandbox")
     p.add_argument("--device", choices=process.DEVICES, required=True)
     p.add_argument("--dim", type=int, choices=MESHCONV_DIMS, required=True)
@@ -486,7 +489,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif a.command == "meshconv-job":
             run_meshconv_level(a.device, a.dim, a.level, a.out)
         else:
-            run_meshconv(a.device, a.dim, a.out, a.jobs, a.progress_dir, a.resume)
+            run_meshconv(a.device, a.dim, a.out, a.jobs, a.progress_dir, a.resume, a.mem)
     except (MissingCalibration, BadGeometry, meshconv.AdmissionError) as e:
         print(f"{a.command}: {e}", file=sys.stderr)
         return 2

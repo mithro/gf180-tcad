@@ -429,6 +429,29 @@ def test_meshconv_resume_keeps_finished_levels(tmp_path, monkeypatch):
     assert not (scratch / "level1" / "job.log").exists()  # the failed level starts afresh
 
 
+def test_meshconv_mem_overrides_the_job_memory(tmp_path, monkeypatch, capsys):
+    """``--mem`` sets every sandbox job's memory (e.g. 6g for the 2D wave, 8g to rerun a level
+    that ran out of memory) and is what admission checks."""
+    mems = []
+
+    def fake_job(cmd, out_dir, mem):
+        mems.append(mem)
+        raise RuntimeError("stop")
+
+    monkeypatch.setattr(cli, "_sandbox_job", fake_job)
+    monkeypatch.setattr(cli, "gplugins_commit", lambda: "x")
+    with pytest.raises(RuntimeError, match="stop"):
+        cli.run_meshconv("nfet_05v0", 2, tmp_path / "root", jobs=1, mem="6g")
+    assert mems and set(mems) == {"6g"}
+    with pytest.raises(RuntimeError, match="stop"):
+        cli.main(["meshconv", "--device", "nfet_05v0", "--dim", "2", "--out",
+                  str(tmp_path / "r"), "--jobs", "1", "--mem", "8g"])  # fmt: skip
+    assert mems[-1] == "8g" and set(mems[-1:]) == {"8g"}
+    argv = ["meshconv", "--device", "nfet_05v0", "--dim", "2", "--out", str(tmp_path / "r")]
+    assert cli.main([*argv, "--jobs", "3", "--mem", "64g"]) == 2  # 192 GiB > the 128 GiB budget
+    assert "128 GiB" in capsys.readouterr().err
+
+
 def test_meshconv_resume_runs_a_missing_agreement(tmp_path, monkeypatch):
     """A kept 2D level without its agreement.json gets only the agreement job."""
     scratch = tmp_path / "scratch"
