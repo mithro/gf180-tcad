@@ -322,3 +322,56 @@ def test_build_accepts_the_pinned_builder(tmp_path, builder, existing):
         assert res.stdout == "sha256:fake\n"
         (build,) = [c for c in calls if c.startswith("buildx build")]
         assert build.startswith(f"buildx build --builder {name} ")
+
+
+def _node(image: str | None) -> str:
+    opts = f'Driver Options:        image="{image}"\n' if image is not None else ""
+    return f"Name:                  n\nEndpoint:              unix:///x\n{opts}Status:                running\n"
+
+
+def _multi_inspect(*images: str | None) -> str:
+    return "Name:          b\nDriver:        docker-container\n\nNodes:\n" + "\n".join(
+        map(_node, images)
+    )
+
+
+@pytest.mark.parametrize("builder", [None, "my_limited_builder"])
+@pytest.mark.parametrize(
+    "images", [(BUILDKIT_IMAGE, "moby/buildkit:v0.33.0"), ("moby/buildkit:v0.33.0", BUILDKIT_IMAGE)]
+)
+def test_build_refuses_a_multi_node_builder_with_one_wrong_node(tmp_path, builder, images):
+    """Every node must run the pinned BuildKit image, whichever one is wrong."""
+    res, calls = _run_build(tmp_path, _multi_inspect(*images), builder)
+    assert res.returncode == 2, res.stderr
+    assert "BuildKit image" in res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]
+
+
+def test_build_accepts_a_multi_node_builder_of_the_pinned_image(tmp_path):
+    res, calls = _run_build(tmp_path, _multi_inspect(BUILDKIT_IMAGE, BUILDKIT_IMAGE))
+    assert "build: builder" not in res.stderr
+    if _inputs_clean():
+        assert res.returncode == 0, res.stderr
+        assert [c for c in calls if c.startswith("buildx build")]
+
+
+def test_build_refuses_a_builder_without_driver_options(tmp_path):
+    """A builder whose only node has no ``Driver Options`` line cannot be shown to run the
+    pinned image."""
+    res, calls = _run_build(tmp_path, _multi_inspect(None))
+    assert res.returncode == 2 and "(no Driver Options)" in res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]
+
+
+# Known bug in docker/tcad-dev/build, not fixed here because the script is an input of the image:
+# its check greps the "Driver Options:" lines, so a multi-node builder where only some nodes have
+# one passes if the others carry the pinned image. Fix it at the next re-pin (for example, count
+# the nodes' "Name:" lines against the "Driver Options:" lines), then drop the xfail.
+@pytest.mark.xfail(
+    strict=True, reason="docker/tcad-dev/build accepts a node with no Driver Options"
+)
+@pytest.mark.parametrize("images", [(BUILDKIT_IMAGE, None), (None, BUILDKIT_IMAGE)])
+def test_build_refuses_a_multi_node_builder_with_a_node_without_driver_options(tmp_path, images):
+    res, calls = _run_build(tmp_path, _multi_inspect(*images))
+    assert res.returncode == 2, res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]
