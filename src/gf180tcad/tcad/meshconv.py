@@ -501,7 +501,7 @@ AGREEMENT_L_UM = 1.0
 def agreement_1d(device: str, spec: MeshSpec) -> dict:
     """The 2D-equals-1D check at ``spec``: the extruded uniform stack (gate over the whole
     domain, no S/D, Neumann sides) against the selected 1D C-V, QS on every
-    :data:`AGREEMENT_STRIDE`-th bias of the cv grid. ``max`` is the largest |2D/1D - 1|. Runs in
+    :data:`AGREEMENT_STRIDE`-th bias of the cv grid. ``max`` is the largest ``abs(2D/1D - 1)``. Runs in
     the TCAD image."""
     from gf180tcad.tcad import moscap1d, moscap2d, process, stack
 

@@ -133,13 +133,40 @@ Its `selected.json` and report record both criteria and the level each chooses
 ({ref}`mesh-convergence-2d`). C/Cox ≤ 1 at ±5 V holds at the selected level
 ({test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1`).
 
+(moscap2d-refine-grading)=
+
+**A uniform refinement in 2D must refine the grading too.** The first 2D study scaled every
+spacing by r and kept the grading, as the 1D study does. The meshwell size field of the body
+grows linearly from the interface, size(d) = h_min + (grading − 1)·d up to the bulk spacing
+({py:meth}`MeshSpec.to_resolution_specs <gf180tcad.tcad.mesh.MeshSpec.to_resolution_specs>`),
+so with the grading held fixed, beyond a few nm (the depletion region) every level had the
+same size. Only the interfaces were refined. The 2D/1D agreement then converged on the
+plateaus but not at the C–V minimum, and at the finest level it got worse. Here is the
+uniform nfet stack, 2D/1D − 1 by level (the first study's results were not committed):
+
+| Gate bias | Level 0 (101k nodes) | Level 1 (154k) | Level 2 (239k) | Level 3 (381k) |
+|---|---|---|---|---|
+| −5 V (accumulation) | +0.38 % | +0.25 % | +0.18 % | +0.09 % |
+| 0 V | +0.52 % | +0.45 % | +0.40 % | +0.46 % |
+| +0.5 V (C–V minimum) | +0.55 % | +0.44 % | +0.40 % | +0.48 % |
+| +1 V (onset of inversion) | −0.05 % | −0.22 % | −0.21 % | −0.41 % |
+| +5 V (inversion) | +0.25 % | +0.18 % | +0.15 % | +0.08 % |
+| worst of 21 biases | 0.553 % | 0.463 % | 0.398 % | 0.483 % |
+
+The pfet's worst values were 0.546, 0.518, 0.446 and 0.734 %. A uniform refinement scales the
+size at every point, size_r(d) = r·size(d), so the slope scales as well:
+grading' = 1 + (grading − 1)·r. {py:meth}`MeshSpec.scaled <gf180tcad.tcad.mesh.MeshSpec.scaled>`
+does this with `refine_grading=True`, and the 2D study uses it
+({py:data}`gf180tcad.tcad.meshconv.REFINE_GRADING`). 1D keeps the grading, since there it only
+caps the ratio of neighbouring spacings.
+
 (moscap2d-solver)=
 
 ## Two solver findings of the 2D sweep
 
-- **Double precision and its fallback.** The QS sweep runs in double precision (about twice as
+- **Double precision and its fallback.** The QS {term}`sweep` runs in double precision (about twice as
   fast). In extended precision the result is the same within the QS noise; the plugin retries a
-  solve that fails in double precision in extended precision at the same tolerances
+  solve that fails in double precision in extended precision at the same {term}`tolerances <tolerance>`
   (`precision_fallback`), and the 2D results record every such point (`extended_fallback`).
 - **A relative criterion that is unreachable at a potential near 0 V.** {{ DEVSIM }}'s relative error is
   |update| / (|ψ| + 1e-10 V) per node, summed over the equations and regions of the device
@@ -172,13 +199,13 @@ calibration and comparison
 ({repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
 {repo}`Task 13a <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-13a-tcad-results-and-docs-pages>`).
 {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` keeps the 0.1 % bound: it is a
-strict expected failure at Lmin (on the sensitivity assertion only) and asserted at L = 2 µm.
+{term}`strict expected failure` at Lmin (on the sensitivity assertion only) and asserted at L = 2 µm.
 
 (moscap2d-l10)=
 
 ## Not run: the 2D cell at L = 10 µm
 
-The L = 10 µm cell is not simulated in 2D. At `DEFAULT_2D` it has about 2.0 million drift-diffusion
+The L = 10 µm cell is not simulated in 2D. At `DEFAULT_2D` it has about 2.0 million {term}`drift-diffusion`
 unknowns, and the equilibrium drift-diffusion solve that sets up every 2D device fails inside
 {{ DEVSIM }}'s direct solver (UMFPACK 5.1: "umfpack numeric failed"; the Poisson stage, 0.86 million
 unknowns, still solves). A QS sweep of its 201 biases alone would take an estimated 7–8 hours from

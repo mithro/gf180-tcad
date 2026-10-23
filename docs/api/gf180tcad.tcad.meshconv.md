@@ -24,4 +24,12 @@ Source: {repo}`src/gf180tcad/tcad/meshconv.py`.
 .. autodata:: gf180tcad.tcad.meshconv.START
 
 .. autodata:: gf180tcad.tcad.meshconv.GEOMETRY_2D
+
+.. autodata:: gf180tcad.tcad.meshconv.REFINE_GRADING
+
+.. autodata:: gf180tcad.tcad.meshconv.AGREEMENT_1D
+
+.. autodata:: gf180tcad.tcad.meshconv.AGREEMENT_STRIDE
+
+.. autodata:: gf180tcad.tcad.meshconv.AGREEMENT_L_UM
 ```
