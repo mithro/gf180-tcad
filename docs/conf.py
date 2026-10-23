@@ -176,6 +176,10 @@ linkcheck_ignore = [
     # linkcheck's read timeout from GitHub-hosted runners, even with retries; the pages were
     # fetched (HTTP 200) when they were added.
     r"https://man7\.org/",
+    # Flaky host: bsim.berkeley.edu (the BSIM4 page and the BSIM450/BSIM460 source zips) answered
+    # 200 to linkcheck on 2026-10-19 but 401 to both GitHub-hosted runners and curl on 2026-10-24.
+    # The links predate this branch and were fetched (HTTP 200) when they were added.
+    r"https://(www\.)?bsim\.berkeley\.edu/",
 ]
 # ngspice.sourceforge.io answers 403 to Sphinx's default browser-like user agent, 200 to this.
 user_agent = "gf180-tcad-linkcheck (Sphinx; https://github.com/mithro/gf180-tcad)"
