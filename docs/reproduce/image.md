@@ -350,8 +350,8 @@ workflows.
     [`1c071d0`](https://github.com/mithro/gplugins/commit/1c071d0565ef4917b48ff907b9426e879ccca7fc),
     the commit the committed results are made with.
 
-**The full flow runs in the current dev image** (2026-10-24, image config `b4bae2b3…`, manifest
-`fe347528…`, with the submodule pinned at gplugins `1c071d0`):
+**The full flow runs in the current dev image** (2026-10-24, image {term}`config digest` `b4bae2b3…`,
+{term}`manifest digest` `fe347528…`, with the submodule pinned at gplugins `1c071d0`):
 
 - the 42 sandbox tests of {repo}`tests/tcad`, {repo}`tests/test_tcad_dev_image.py` and
   {repo}`tests/test_tcad_image.py` pass;
