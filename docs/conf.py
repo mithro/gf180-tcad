@@ -82,7 +82,10 @@ _TOOLS = {
         "GF180MCU primitives library",
         "https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr",
     ),
-    "BSIM4_site": ("BSIM4", "https://bsim.berkeley.edu/models/bsim4/"),
+    "BSIM4_site": (
+        "BSIM4",
+        "https://web.archive.org/web/20261004115850/https://bsim.berkeley.edu/models/bsim4/",
+    ),
     "Docker": ("Docker", "https://docs.docker.com/"),
     "docker_run": ("docker run", "https://docs.docker.com/reference/cli/docker/container/run/"),
     "BuildKit": ("BuildKit", "https://docs.docker.com/build/buildkit/"),
@@ -176,11 +179,9 @@ linkcheck_ignore = [
     # linkcheck's read timeout from GitHub-hosted runners, even with retries; the pages were
     # fetched (HTTP 200) when they were added.
     r"https://man7\.org/",
-    # Flaky host: bsim.berkeley.edu (the BSIM4 page and the BSIM450/BSIM460 source zips) answered
-    # 200 to linkcheck on 2026-10-19 but 401 to both GitHub-hosted runners and curl on 2026-10-24.
-    # The links predate this branch and were fetched (HTTP 200) when they were added.
-    r"https://(www\.)?bsim\.berkeley\.edu/",
 ]
+# bsim.berkeley.edu has answered HTTP 401 to every client since 2026-10-24, so BSIM4 links point at
+# web.archive.org snapshots of the same URLs (fetched with HTTP 200 and real content when added).
 # ngspice.sourceforge.io answers 403 to Sphinx's default browser-like user agent, 200 to this.
 user_agent = "gf180-tcad-linkcheck (Sphinx; https://github.com/mithro/gf180-tcad)"
 # GitHub renders line and heading anchors with JavaScript, so linkcheck cannot see them.

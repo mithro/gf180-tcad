@@ -31,8 +31,8 @@ length/width-dependent offsets :term:`LLC`, :term:`LWC`, :term:`LWLC`, :term:`WL
 :term:`WWC`, :term:`WWLC` are zero or unset); for the nfet this is (L - 2*DLC)*W. The
 extrinsic (parasitic) part is reported separately, never folded in silently:
 :func:`parasitic_ff`, the exact BSIM4 4.5 ``capMod=2`` overlap equations of the BSIM4 manual,
-section 7.5 ("Fringing and overlap capacitances", https://bsim.berkeley.edu/models/bsim4/, the
-4.5.0 release https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip) and of ngspice's BSIM4 code,
+section 7.5 ("Fringing and overlap capacitances", https://web.archive.org/web/20261004115850/https://bsim.berkeley.edu/models/bsim4/, the
+4.5.0 release https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) and of ngspice's BSIM4 code,
 `b4ld.c <https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4ld.c>`_ and `b4temp.c <https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c>`_:
 
 - per side (source with CGSO, CGSL, :term:`CKAPPAS`; drain with CGDO, CGDL, :term:`CKAPPAD`),
