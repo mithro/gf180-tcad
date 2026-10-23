@@ -511,3 +511,45 @@ def test_2d_levels_refine_the_grading():
     ]
     rep1 = meshconv.converge(simulate, START)
     assert rep1.refine_grading is False
+
+
+def test_2d_study_runs_levels_0_to_2():
+    """2D level 3 is out of reach (Task 11: about 9.7 h of QS at 862k nodes against the 8 h
+    rule, at the size where UMFPACK 5.1 fails), so the 2D study runs levels 0-2: levels 0 and 1
+    are the candidates, each with a finer neighbour; level 2 is only level 1's neighbour."""
+    assert meshconv.LEVELS_BY_DIM == {1: meshconv.LEVELS, 2: meshconv.LEVELS[:3]}
+    assert meshconv.levels(1) == meshconv.LEVELS
+    assert meshconv.levels(2) == meshconv.LEVELS[:3]
+    with pytest.raises(ValueError, match="dim"):
+        meshconv.levels(3)
+    simulate, calls = synthetic(EXACT, [0.001] * 6, 2.0)
+    rep = meshconv.converge(simulate, START, meshconv.levels(2), refine_grading=True)
+    assert len(calls) == 3 and len(rep.levels) == 3 and len(rep.orders) == 1
+    assert rep.selected == 0 and rep.levels[-1].max_rel_change is None
+    # the agreement can rule out level 0 and 1; level 2 is never selected (no finer neighbour)
+    rep = meshconv.converge(
+        simulate, START, meshconv.levels(2), refine_grading=True, agreement=(0.0055, 0.006, 0.001)
+    )
+    assert rep.selected is None and rep.agreement_level == 2
+    rep = meshconv.converge(
+        simulate, START, meshconv.levels(2), refine_grading=True, agreement=(0.0055, 0.003, 0.002)
+    )
+    assert rep.selected == 1
+
+
+def test_2d_report_records_the_excluded_level():
+    simulate, _ = synthetic(EXACT, [0.001] * 6, 2.0)
+    rep = meshconv.converge(simulate, START, meshconv.levels(2), refine_grading=True)
+    data = meshconv.report_dict(rep, device="nfet_05v0", dim=2, settings={})
+    (ex,) = data["excluded_levels"]
+    assert ex["level"] == 3 and ex["scale"] == meshconv.LEVELS[3]
+    assert "8 h" in ex["reason"] and "UMFPACK" in ex["reason"]
+    rep1 = meshconv.converge(simulate, START)
+    assert "excluded_levels" not in meshconv.report_dict(
+        rep1, device="nfet_05v0", dim=1, settings={}
+    )
+
+
+def test_meshconv_job_refuses_a_level_outside_the_study(tmp_path):
+    with pytest.raises(ValueError, match="level 3"):
+        cli.run_meshconv_level("nfet_05v0", 2, 3, tmp_path)

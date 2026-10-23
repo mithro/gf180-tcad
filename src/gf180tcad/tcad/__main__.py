@@ -22,7 +22,7 @@ mesh is the device's selected mesh-convergence level,
 
 ``meshconv --device D --dim 1|2 --out ROOT [--jobs N]`` runs on the host; the committed tree
 root is :repo:`results/tcad/meshconv`. It runs one ``meshconv-job --level I`` per refinement
-level (:data:`gf180tcad.tcad.meshconv.LEVELS`) as separate sandbox jobs, ``N`` at a time
+level (:func:`gf180tcad.tcad.meshconv.levels`: 0-3 in 1D, 0-2 in 2D) as separate sandbox jobs, ``N`` at a time
 (default: all), under the admission check jobs x memory <= 128 GiB
 (:func:`gf180tcad.tcad.meshconv.check_admission`). Each simulates the device's start values
 on the start spec :attr:`~gf180tcad.tcad.mesh.MeshSpec.DEFAULT_1D` scaled by its level and
@@ -266,11 +266,12 @@ def run_host(
 
 def run_meshconv_level(device: str, dim: int, level: int, out: Path) -> None:
     """``meshconv-job --level``: simulate refinement level ``level``, write :data:`LEVEL_NAME`."""
+    meshconv.check_level(dim, level)
     log = _Progress(out, f"{device}/level{level}") if dim == 2 else None
     simulate, _ = meshconv.simulator(device, dim, log=log)
     if not sandbox.in_sandbox():
         raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
-    scale = meshconv.LEVELS[level]
+    scale = meshconv.levels(dim)[level]
     spec = meshconv.START[dim].scaled(scale, refine_grading=meshconv.REFINE_GRADING[dim])
     cv = simulate(spec)
     io.write_json(
@@ -290,9 +291,10 @@ def run_meshconv_level(device: str, dim: int, level: int, out: Path) -> None:
 
 def run_meshconv_agreement(device: str, level: int, out: Path) -> None:
     """``meshconv-job --agreement --level``: the 2D-equals-1D check of a 2D level."""
+    meshconv.check_level(2, level)
     if not sandbox.in_sandbox():
         raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
-    spec = meshconv.START[2].scaled(meshconv.LEVELS[level], refine_grading=True)
+    spec = meshconv.START[2].scaled(meshconv.levels(2)[level], refine_grading=True)
     data = meshconv.agreement_1d(device, spec)
     io.write_json(Path(out) / AGREEMENT_NAME, data)
     print(f"{device}/level{level}: agreement with 1D {data['max']!r}", flush=True)
@@ -321,7 +323,7 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
         raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
     out = Path(out)
     curves = {}
-    for i, scale in enumerate(meshconv.LEVELS):
+    for i, scale in enumerate(meshconv.levels(dim)):
         data = json.loads((out / f"level{i}" / LEVEL_NAME).read_bytes())
         spec = meshconv.START[dim].scaled(scale, refine_grading=meshconv.REFINE_GRADING[dim])
         if data["scale"] != scale or MeshSpec(**data["spec"]) != spec:
@@ -330,7 +332,7 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
     agreement = curves_1d = None
     if dim == 2:
         agreement, curves_1d = [], []
-        for i, scale in enumerate(meshconv.LEVELS):
+        for i, scale in enumerate(meshconv.levels(dim)):
             data = json.loads((out / f"level{i}" / AGREEMENT_NAME).read_bytes())
             if MeshSpec(**data["spec"]) != meshconv.START[dim].scaled(
                 scale, refine_grading=meshconv.REFINE_GRADING[dim]
@@ -341,6 +343,7 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
     rep = meshconv.converge(
         curves.__getitem__,
         meshconv.START[dim],
+        meshconv.levels(dim),
         rel_tol=settings["rel_tol"],
         agreement=agreement,
         agreement_curves=curves_1d,
@@ -377,7 +380,7 @@ def run_meshconv(
     """
     meshconv.check_dim(dim)
     mem = MESHCONV_JOB_MEM[dim]
-    jobs = len(meshconv.LEVELS) if jobs is None else jobs
+    jobs = len(meshconv.levels(dim)) if jobs is None else jobs
     meshconv.check_admission(jobs, mem)
     gplugins_commit()  # refuses a dirty or unpinned plugin before anything runs
     root = Path(root)
@@ -416,9 +419,9 @@ def run_meshconv(
         return time.monotonic() - t
 
     with ThreadPoolExecutor(max_workers=jobs) as pool:
-        runtimes = list(pool.map(level, range(len(meshconv.LEVELS))))
+        runtimes = list(pool.map(level, range(len(meshconv.levels(dim)))))
     for i, t in enumerate(runtimes):
-        print(f"{device}/level{i} (scale {meshconv.LEVELS[i]!r}): {t:.1f} s", flush=True)
+        print(f"{device}/level{i} (scale {meshconv.levels(dim)[i]!r}): {t:.1f} s", flush=True)
     stdout = _sandbox_job([*base, "--assemble"], scratch, mem)
     summary = [ln for ln in stdout.splitlines() if ln.startswith(f"{device}: selected")]
     print(summary[-1] if summary else f"{device}: done", flush=True)

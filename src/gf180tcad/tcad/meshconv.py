@@ -55,6 +55,24 @@ from gf180tcad.tcad.mesh import MeshSpec
 # The refinement levels: scale factors of the start spec, a factor sqrt(2) apart.
 LEVELS = (1, 2**-0.5, 0.5, 2**-1.5)
 
+# The levels each dimension's study runs (see levels()). 2D stops at level 2: its level 3 is out
+# of reach (EXCLUDED_2D), so levels 0 and 1 are the candidates, each with a finer neighbour.
+LEVELS_BY_DIM = {1: LEVELS, 2: LEVELS[:3]}
+
+# Why the 2D study leaves out level 3 (recorded in its report; Task 11, measured by meshing every
+# level without solving and timing against the first study's s/bias = 3.25e-6 * nodes^1.278).
+EXCLUDED_2D = (
+    {
+        "level": 3,
+        "scale": LEVELS[3],
+        "reason": (
+            "the Lmin cell has 862k (nfet) and 788k (pfet) nodes: an estimated 9.7 h and 8.7 h "
+            "of QS, over the 8 h job rule, and the size at which the equilibrium drift-diffusion "
+            "solve fails in UMFPACK 5.1 (the L = 10 um cell, 0.86 M Poisson unknowns)"
+        ),
+    },
+)
+
 # The largest relative change against the next finer level a selected level may have.
 CRITERION = 0.01
 
@@ -331,7 +349,8 @@ def report_dict(
 ) -> dict:
     """The JSON of :data:`REPORT_NAME`: ``settings`` are the solver settings fixed across levels."""
     n = len(rep.levels)
-    return {
+    extra = {"excluded_levels": [dict(x) for x in EXCLUDED_2D]} if dim == 2 else {}
+    return extra | {
         "criterion": CRITERION,
         "device": device,
         "dim": dim,
@@ -431,6 +450,19 @@ def check_dim(dim: int) -> None:
     """Raise ValueError unless ``dim`` is 1 or 2."""
     if dim not in (1, 2):
         raise ValueError(f"dim must be 1 or 2, got {dim!r}")
+
+
+def levels(dim: int) -> tuple[float, ...]:
+    """The refinement levels of the ``dim``-dimensional study (:data:`LEVELS_BY_DIM`)."""
+    check_dim(dim)
+    return LEVELS_BY_DIM[dim]
+
+
+def check_level(dim: int, level: int) -> None:
+    """Raise ValueError unless ``level`` is an index of :func:`levels` of ``dim``."""
+    n = len(levels(dim))
+    if not 0 <= level < n:
+        raise ValueError(f"level {level} is not part of the {dim}D study (levels 0-{n - 1})")
 
 
 def geometry_2d(device: str):
