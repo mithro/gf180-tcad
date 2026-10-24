@@ -39,7 +39,7 @@ The command is `python -m gf180tcad.tcad meshconv --device D --dim 1 --out resul
 
 **Oscillation and noise.** Per triple and bias the report also flags oscillatory convergence (the
 change reverses sign between the levels, d12 · d23 < 0), where neither the order nor the
-Richardson extrapolation applies, and treats a level difference at or below a noise floor as
+{term}`Richardson extrapolation` applies, and treats a level difference at or below a noise floor as
 noise: the order is then undefined, not an arbitrary number. The floor is
 {py:data}`~gf180tcad.tcad.meshconv.NOISE_K` = 1e4 times the solver's relative error limit times |C|
 (1e-6 relative at 1e-10). A QS C is a 2 mV central difference of charges of up to C × 6 V, so its

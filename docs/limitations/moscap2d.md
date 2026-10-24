@@ -52,7 +52,7 @@ the 1D reference is the converged 1D stack, C/Cox = 0.98099. Interfaces at 0.5 n
 
 | Step | Oxide 15.2 nm: C/Cox, worst 2D/1D − 1 | Oxide 16 nm: C/Cox, worst 2D/1D − 1 |
 |---|---|---|
-| As first built (meshwell defaults, oxide spacing 2 nm) | **1.00126**, +2.07 % | 0.98765, +0.66 % |
+| As first built ({{ meshwell }} defaults, oxide spacing 2 nm) | **1.00126**, +2.07 % | 0.98765, +0.66 % |
 | Distance-field sampling cap lifted | 0.99989, +1.93 % | 0.98623, +0.55 % |
 | Vertex grid 1e-6 µm (the fix) | 0.98666, +0.58 % | 0.98623, +0.55 % (unchanged: on the grid) |
 
@@ -136,7 +136,7 @@ Its `selected.json` and report record both criteria and the level each chooses
 (moscap2d-refine-grading)=
 
 **A uniform refinement in 2D must refine the grading too.** The first 2D study scaled every
-spacing by r and kept the grading, as the 1D study does. The meshwell size field of the body
+spacing by r and kept the grading, as the 1D study does. The {{ meshwell }} size field of the body
 grows linearly from the interface, size(d) = h_min + (grading − 1)·d up to the bulk spacing
 ({py:meth}`MeshSpec.to_resolution_specs <gf180tcad.tcad.mesh.MeshSpec.to_resolution_specs>`),
 so with the grading held fixed, beyond a few nm (the depletion region) every level had the
@@ -174,15 +174,19 @@ caps the ratio of neighbouring spacings.
   potential passes through 0 V in the charge-free dielectric next to the gate, the 1e-10 criterion
   asks for an update below about 1e-20 V, beyond the round-off of the linear solve (1.6–1.7e-16 V,
   in double and extended precision alike). At the nfet's −0.6 V point, on three of the four
-  refinement levels, Newton stalls there for 45 iterations. The plugin's `roundoff_accept` accepts
+  refinement levels, {term}`Newton's method <Newton iteration>` stalls there for 45 iterations. The plugin's `roundoff_accept` accepts
   such a solve only under narrow conditions (every potential update ≤ the 1e-12 V `abs_tol` and
   ≤ 32·eps·max|ψ| over the last 10 iterations, a plateau of the relative error, and a node
   with |ψ| small enough to explain it), after solving it again to that round-off state, because
   DEVSIM restores the previous solution of a solve it calls non-converged. Every accepted point is
   recorded. At the nfet level-1 point the accepted update is 1.6e-16 V (the bound 4.2e-15 V), the
   dielectric's smallest |ψ| is 2.7e-8 V, Cgg there is smooth against its neighbours (second
-  difference 1.20e-3 C against 1.19e-3 on the level that needed no acceptance) and a ±0.1 mV
-  nudge reproduces it within 5e-9.
+  difference 1.20e-3 C against 1.19e-3 on the level that needed no acceptance). A ±0.1 mV
+  nudge of the gate bias reproduces it within 5e-9, but that check was run on the identical
+  {py:mod}`meshconv <gf180tcad.tcad.meshconv>` level-1 {term}`job`, not on the production tree. The
+  production run's acceptances were checked by the second difference alone. The two
+  {py:mod}`meshconv <gf180tcad.tcad.meshconv>` level-2 acceptances (at −0.601 V and −0.599 V)
+  are unchecked.
 
 (moscap2d-sd)=
 
@@ -207,7 +211,7 @@ calibration and comparison
 
 - **QS only.** The L = 2 µm cell (501k nodes for the nfet) has no AC result (no `cgx.csv`). Its AC
   sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
-  solver (UMFPACK 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
+  solver ({term}`UMFPACK` 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
   {py:data}`~gf180tcad.tcad.moscap2d.AC_INFEASIBLE`, `ac_points` is 0).
 - **Resumed after out-of-memory restarts.** The L = 2 µm QS sweeps ran under a memory cap and were
@@ -224,13 +228,44 @@ calibration and comparison
   dielectric region), or memory-allocator fragmentation at large node counts. This is an open
   follow-up, not a fix: the resume mechanism works around it.
 
+(moscap2d-meshes)=
+
+## The meshes are not committed
+
+Each {term}`job` under {repo}`results/tcad/moscap2d` has a 25–62 MB `mesh.msh` ({{ gmsh }} MSH 2.2). They are
+git-ignored (`results/**/mesh.msh`) and left out of the {py:mod}`manifest <gf180tcad.manifest>`;
+the job's `cv.meta.json` records the sha256 of the mesh as `mesh_sha256`. The mesh is a function of
+the committed cell geometry and the committed
+{repo}`selected.json <results/tcad/meshconv/moscap2d/nfet_05v0/selected.json>` of the
+{ref}`mesh-convergence study <mesh-convergence>` (nfet; the pfet's is beside it), so it regenerates
+byte for byte. Run this in the {term}`TCAD` image (here the nfet at Lmin; for the pfet use the device
+{repo}`pfet_05v0 <data/process/pfet_05v0.toml>` and its geometries `w10p0_l0p50` and `w10p0_l2p00`,
+for the nfet L = 2 µm the geometry `w10p0_l2p00`):
+
+```
+python3 -c "
+from gf180tcad.tcad import __main__ as cli, meshconv, moscap2d, stack
+device, gid = 'nfet_05v0', 'w10p0_l0p60'
+proc, _ = cli.load_params(device, 'start')
+xs = stack.build(proc, stack.cell(device, cli.geometry_of(device, gid)), with_sd=True)
+dd = moscap2d.build_device(xs, meshconv.selected_spec(device, 2), mesh_file='mesh.msh')
+dd.delete_device()
+"
+```
+
+Its `sha256sum mesh.msh` must equal the `mesh_sha256` in `cv.meta.json`
+({repo}`tests/tcad/test_moscap2d.py` checks a regenerated mesh placed beside the job's files). A full
+rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 --params start
+--geometry w10p0_l0p60 --out <tree root>` writes the mesh too, and the
+{py:func}`~gf180tcad.tcad.moscap2d.simulate` it runs takes hours.
+
 (moscap2d-l10)=
 
 ## Not run: the 2D cell at L = 10 µm
 
 The L = 10 µm cell is not simulated in 2D. At `DEFAULT_2D` it has about 2.0 million {term}`drift-diffusion`
 unknowns, and the equilibrium drift-diffusion solve that sets up every 2D device fails inside
-{{ DEVSIM }}'s direct solver (UMFPACK 5.1: "umfpack numeric failed"; the Poisson stage, 0.86 million
+{{ DEVSIM }}'s direct solver ({term}`UMFPACK` 5.1: "umfpack numeric failed"; the {term}`Poisson stage`, 0.86 million
 unknowns, still solves). A QS sweep of its 201 biases alone would take an estimated 7–8 hours from
 the measured rates. Its long-channel C per area is covered by the 2D-equals-1D check and by the 1D
 MOS capacitor. Later options are an iterative solver or a symmetric half domain.

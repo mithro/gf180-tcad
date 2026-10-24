@@ -362,6 +362,22 @@ Richardson extrapolation
   ([Richardson 1911](https://doi.org/10.1098/rsta.1911.0009);
   [Celik et al. 2008](https://doi.org/10.1115/1.2960953)). See {ref}`mesh-convergence`.
 
+UMFPACK
+  The sparse direct linear solver of [SuiteSparse](https://people.engr.tamu.edu/davis/suitesparse.html)
+  that {{ DEVSIM }} uses; version 5.1 fails ("umfpack numeric failed") on the largest 2D cells. See
+  {ref}`moscap2d-l10`.
+
+Newton iteration
+  The solver step of {{ DEVSIM }}: it linearises the discretised equations about the current
+  solution, solves the linear system, updates the solution and repeats until the update falls
+  below the {term}`tolerance` ([Newton's method](https://en.wikipedia.org/wiki/Newton%27s_method)). See
+  {ref}`moscap2d-solver`.
+
+Poisson stage
+  The first solve of a {{ DEVSIM }} device: [Poisson's equation](https://en.wikipedia.org/wiki/Poisson%27s_equation)
+  alone for the potential, before the {term}`drift-diffusion` equations are added. It has fewer
+  unknowns than the full solve (0.86 million against 2.0 million at L = 10 µm). See {ref}`moscap2d-l10`.
+
 MOSCAP
 MOS capacitor
   A poly-gate, oxide and body stack without source and drain, simulated by the {term}`TCAD` to
