@@ -417,7 +417,7 @@ def test_meshconv_resume_keeps_finished_levels(tmp_path, monkeypatch):
     (scratch / "level1" / "job.log").write_text("failed", encoding="utf-8")
     ran = []
 
-    def fake_job(cmd, out_dir, mem):
+    def fake_job(cmd, out_dir, mem, image=None):
         ran.append(cmd[cmd.index("--level") + 1] if "--level" in cmd else "assemble")
         raise RuntimeError("stop after the level jobs")
 
@@ -434,7 +434,7 @@ def test_meshconv_mem_overrides_the_job_memory(tmp_path, monkeypatch, capsys):
     that ran out of memory) and is what admission checks."""
     mems = []
 
-    def fake_job(cmd, out_dir, mem):
+    def fake_job(cmd, out_dir, mem, image=None):
         mems.append(mem)
         raise RuntimeError("stop")
 
@@ -462,7 +462,7 @@ def test_meshconv_resume_runs_a_missing_agreement(tmp_path, monkeypatch):
             (scratch / f"level{i}" / cli.AGREEMENT_NAME).write_text("{}", encoding="utf-8")
     ran = []
 
-    def fake_job(cmd, out_dir, mem):
+    def fake_job(cmd, out_dir, mem, image=None):
         ran.append(
             ("agreement" if "--agreement" in cmd else "level", cmd[cmd.index("--level") + 1])
         )

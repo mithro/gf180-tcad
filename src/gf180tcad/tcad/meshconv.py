@@ -79,7 +79,7 @@ CRITERION = 0.01
 # The second criterion of a 2D study: the selected level must also reproduce 1D within this
 # (largest relative difference of the extruded uniform stack's C per area against 1D, 21 biases;
 # the 2D-equals-1D check of Task 11). The selected level is the coarsest meeting both.
-AGREEMENT_1D = 0.005
+AGREEMENT_1D = 0.5 / 100  # 0.5 %, an independent criterion (not the Xyce engine-diff threshold)
 
 # The noise floor of a level difference, as a multiple of the solver's relative tolerance: a
 # difference |C_i - C_j| <= NOISE_K * rel_tol * |C| is solver noise, so the observed order there

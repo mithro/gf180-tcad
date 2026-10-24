@@ -39,7 +39,7 @@ from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 from types import MappingProxyType
 
-from gf180tcad.devices import SWEEPS
+from gf180tcad.devices import GRID_TOL, SWEEPS
 from gf180tcad.sandbox import REPO_ROOT
 
 # Directory of the process files, ``data/process/<device>.toml``.
@@ -94,7 +94,7 @@ CARD_BINS = {
 
 # ngspice's binning tolerance (m): inpgmod.c in_range() accepts min < value < max or a value
 # within 1e-9 (absolute, is_equal) of either bound, so a length on a boundary lies in both bins.
-_BIN_TOL_M = 1e-9
+_BIN_TOL_M = GRID_TOL
 
 _SCHEMA = 1
 _KEYS = {
