@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from gf180tcad import io, reference, sandbox
-from gf180tcad.tcad import TCAD_IMAGE, analytic, meshconv, moscap1d, process
+from gf180tcad.tcad import RESULTS_IMAGE, analytic, image_ref, meshconv, moscap1d, process
 from gf180tcad.tcad import __main__ as cli
 from gf180tcad.tcad.mesh import MeshSpec
 
@@ -296,7 +296,7 @@ def driver(tmp_path_factory) -> dict:
     out = tmp_path_factory.mktemp("meshconv-driver")
     sandbox.run(
         ["python3", "/work/src/tests/tcad/meshconv_driver.py"],
-        out_dir=out, image=TCAD_IMAGE, mem="2g", cpus=1,
+        out_dir=out, image=image_ref(RESULTS_IMAGE["moscap1d"]), mem="2g", cpus=1,
     )  # fmt: skip
     return json.loads((out / "driver.json").read_bytes())
 

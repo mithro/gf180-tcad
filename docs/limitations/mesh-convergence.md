@@ -28,7 +28,8 @@ it: the `moscap` command ({py:mod}`gf180tcad.tcad.__main__`) reads its mesh from
 
 The command is `python -m gf180tcad.tcad meshconv --device D --dim 1 --out results/tcad/meshconv`
 ({py:mod}`gf180tcad.tcad.__main__`). It runs each level as a separate {term}`sandbox` container in the
-{{ DEVSIM }} image ({repo}`docker/TCAD_IMAGE`), under the same memory admission check as the
+{term}`dev-HEAD TCAD image` ({repo}`docker/TCAD_DEV_IMAGE`; `--image stable` for the
+{term}`stable TCAD image`, see {ref}`tcad-results-image`), under the same memory admission check as the
 {term}`SPICE` reference (concurrent containers × memory ≤ 128 GiB). The report is computed in the same image.
 `--dim 2` is refused until the 2D MOS capacitor of
 {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
@@ -94,5 +95,8 @@ diagnoses it.
 
 - **1D only so far.** The 2D mesh convergence comes with
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`.
-- **Numbers from one image.** The results are from the TCAD image pinned in
-  {repo}`docker/TCAD_IMAGE` and are regenerated when that image changes.
+- **Numbers from one image.** The 1D results are from the dev-HEAD TCAD image pinned in
+  {repo}`docker/TCAD_DEV_IMAGE` and are regenerated when that image changes. They are
+  byte-identical to the stable image's ({repo}`docker/TCAD_IMAGE`), which
+  {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree` checks; see
+  {ref}`tcad-results-image`.

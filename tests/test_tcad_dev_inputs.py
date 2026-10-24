@@ -9,9 +9,13 @@
 
 import csv
 import hashlib
+import http.client
 import importlib.util
 import io
 import json
+import os
+import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -86,10 +90,25 @@ def test_fetch_mirror_wrong_hash_then_url(monkeypatch, tmp_path):
     fake, dest, run = _fetch(
         monkeypatch,
         tmp_path,
-        {ENTRY["mirror_url"]: [bad] * fetch_sources.ATTEMPTS, ENTRY["url"]: [GOOD]},
+        {ENTRY["mirror_url"]: [bad], ENTRY["url"]: [GOOD]},
     )
     assert run() == "url"
-    assert fake.calls[-1] == ENTRY["url"]
+    # a wrong hash is not retried: the same URL would serve the same wrong bytes
+    assert fake.calls == [ENTRY["mirror_url"], ENTRY["url"]]
+    assert dest.read_bytes() == GOOD
+
+
+def test_fetch_http_exception_then_url(monkeypatch, tmp_path):
+    """http.client errors (a truncated or malformed response) are not OSErrors; they are retried
+    and then fall through to the next URL like any other download error."""
+    err = http.client.IncompleteRead(b"part")
+    fake, dest, run = _fetch(
+        monkeypatch,
+        tmp_path,
+        {ENTRY["mirror_url"]: [err] * fetch_sources.ATTEMPTS, ENTRY["url"]: [GOOD]},
+    )
+    assert run() == "url"
+    assert fake.calls == [ENTRY["mirror_url"]] * fetch_sources.ATTEMPTS + [ENTRY["url"]]
     assert dest.read_bytes() == GOOD
 
 
@@ -99,7 +118,7 @@ def test_fetch_both_fail_exits_and_removes_the_file(monkeypatch, tmp_path):
         tmp_path,
         {
             ENTRY["mirror_url"]: [OSError("down")] * fetch_sources.ATTEMPTS,
-            ENTRY["url"]: [b"wrong"] * fetch_sources.ATTEMPTS,
+            ENTRY["url"]: [b"wrong"],
         },
     )
     with pytest.raises(SystemExit) as exc:
@@ -195,3 +214,164 @@ def test_strip_uv_cache_refuses_an_unknown_file(tmp_path):
     with pytest.raises(SystemExit, match="not uv's cache-info file"):
         local_inputs.strip_uv_cache(tmp_path)
     assert (d / "uv_cache.json").exists()
+
+
+# --- docker/tcad-dev/build: the builder it uses -----------------------------------------------
+
+BUILD = DEV / "build"
+_BUILD_TEXT = BUILD.read_text(encoding="utf-8")
+BUILDKIT_IMAGE = re.search(r'^BUILDKIT_IMAGE="([^"]+)"$', _BUILD_TEXT, re.MULTILINE).group(1)
+DEFAULT_BUILDER = re.search(r'BUILDER="\$\{GF180TCAD_BUILDER:-([^}]+)\}"', _BUILD_TEXT).group(1)
+
+# A ``docker`` stand-in: logs every call; ``buildx inspect`` prints $FAKE_STATE/inspect.txt (or
+# fails if there is none), ``buildx create`` writes it from its own options, and ``buildx build``
+# writes the metadata file with a fake config digest.
+_FAKE_DOCKER = r"""#!/usr/bin/env bash
+echo "$*" >> "$FAKE_STATE/calls.log"
+case "$1 $2" in
+    "buildx inspect") [ -f "$FAKE_STATE/inspect.txt" ] || exit 1; cat "$FAKE_STATE/inspect.txt" ;;
+    "buildx create")
+        shift 2; driver="" image=""
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --driver) driver="$2"; shift 2 ;;
+                --driver-opt) image="${2#image=}"; shift 2 ;;
+                *) shift ;;
+            esac
+        done
+        printf 'Name: x\nDriver:        %s\n\nNodes:\nDriver Options:        image="%s"\n' \
+            "$driver" "$image" > "$FAKE_STATE/inspect.txt" ;;
+    "buildx build")
+        while [ $# -gt 0 ]; do
+            [ "$1" = --metadata-file ] && printf '{"containerimage.config.digest": "sha256:fake"}' > "$2"
+            shift
+        done ;;
+    *) exit 3 ;;
+esac
+"""
+
+
+def _inspect(driver: str, image: str) -> str:
+    return (
+        f"Name:          b\nDriver:        {driver}\nLast Activity: x\n\nNodes:\n"
+        f"Name:                  b0\nEndpoint:              unix:///var/run/docker.sock\n"
+        f'Driver Options:        image="{image}"\nStatus:                running\n'
+    )
+
+
+def _run_build(tmp_path, inspect: str | None, builder: str | None = None):
+    bindir, state = tmp_path / "bin", tmp_path / "state"
+    bindir.mkdir()
+    state.mkdir()
+    docker = bindir / "docker"
+    docker.write_text(_FAKE_DOCKER, encoding="utf-8")
+    docker.chmod(0o755)
+    if inspect is not None:
+        (state / "inspect.txt").write_text(inspect, encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k != "GF180TCAD_BUILDER"}
+    env |= {"PATH": f"{bindir}:{env['PATH']}", "FAKE_STATE": str(state)}
+    if builder is not None:
+        env["GF180TCAD_BUILDER"] = builder
+    res = subprocess.run([str(BUILD)], capture_output=True, text=True, env=env, check=False)
+    calls = (state / "calls.log").read_text(encoding="utf-8").splitlines()
+    return res, calls
+
+
+def _inputs_clean() -> bool:
+    inputs = re.search(r"^INPUTS=\((.*?)\)$", _BUILD_TEXT, re.MULTILINE | re.DOTALL).group(1)
+    out = subprocess.run(
+        ["git", "-C", str(DEV.parents[1]), "status", "--porcelain", "--", *inputs.split()],
+        capture_output=True, text=True, check=True,
+    )  # fmt: skip
+    return out.stdout == ""
+
+
+@pytest.mark.parametrize("builder", [None, "my_limited_builder"])
+@pytest.mark.parametrize(
+    ("driver", "image", "why"),
+    [
+        ("docker", BUILDKIT_IMAGE, "driver"),
+        ("docker-container", "moby/buildkit:v0.33.0", "BuildKit image"),
+        ("docker-container", BUILDKIT_IMAGE.split("@")[0], "BuildKit image"),
+    ],
+)
+def test_build_refuses_a_builder_of_the_wrong_kind(tmp_path, builder, driver, image, why):
+    """An existing builder (the default name or GF180TCAD_BUILDER) must be a docker-container
+    builder of the pinned BuildKit image, or the image is not the reproducible one."""
+    res, calls = _run_build(tmp_path, _inspect(driver, image), builder)
+    assert res.returncode == 2, res.stderr
+    assert why in res.stderr and (builder or DEFAULT_BUILDER) in res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]
+
+
+@pytest.mark.parametrize("builder", [None, "my_limited_builder"])
+@pytest.mark.parametrize("existing", [True, False])
+def test_build_accepts_the_pinned_builder(tmp_path, builder, existing):
+    inspect = _inspect("docker-container", BUILDKIT_IMAGE) if existing else None
+    res, calls = _run_build(tmp_path, inspect, builder)
+    name = builder or DEFAULT_BUILDER
+    assert "build: builder" not in res.stderr
+    assert calls[0] == f"buildx inspect {name}"
+    if not existing:
+        assert calls[1] == (
+            f"buildx create --name {name} --driver docker-container "
+            f"--driver-opt image={BUILDKIT_IMAGE}"
+        )
+    if _inputs_clean():  # else the build refuses later, on the uncommitted inputs
+        assert res.returncode == 0, res.stderr
+        assert res.stdout == "sha256:fake\n"
+        (build,) = [c for c in calls if c.startswith("buildx build")]
+        assert build.startswith(f"buildx build --builder {name} ")
+
+
+def _node(image: str | None) -> str:
+    opts = f'Driver Options:        image="{image}"\n' if image is not None else ""
+    return f"Name:                  n\nEndpoint:              unix:///x\n{opts}Status:                running\n"
+
+
+def _multi_inspect(*images: str | None) -> str:
+    return "Name:          b\nDriver:        docker-container\n\nNodes:\n" + "\n".join(
+        map(_node, images)
+    )
+
+
+@pytest.mark.parametrize("builder", [None, "my_limited_builder"])
+@pytest.mark.parametrize(
+    "images", [(BUILDKIT_IMAGE, "moby/buildkit:v0.33.0"), ("moby/buildkit:v0.33.0", BUILDKIT_IMAGE)]
+)
+def test_build_refuses_a_multi_node_builder_with_one_wrong_node(tmp_path, builder, images):
+    """Every node must run the pinned BuildKit image, whichever one is wrong."""
+    res, calls = _run_build(tmp_path, _multi_inspect(*images), builder)
+    assert res.returncode == 2, res.stderr
+    assert "BuildKit image" in res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]
+
+
+def test_build_accepts_a_multi_node_builder_of_the_pinned_image(tmp_path):
+    res, calls = _run_build(tmp_path, _multi_inspect(BUILDKIT_IMAGE, BUILDKIT_IMAGE))
+    assert "build: builder" not in res.stderr
+    if _inputs_clean():
+        assert res.returncode == 0, res.stderr
+        assert [c for c in calls if c.startswith("buildx build")]
+
+
+def test_build_refuses_a_builder_without_driver_options(tmp_path):
+    """A builder whose only node has no ``Driver Options`` line cannot be shown to run the
+    pinned image."""
+    res, calls = _run_build(tmp_path, _multi_inspect(None))
+    assert res.returncode == 2 and "(no Driver Options)" in res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]
+
+
+# Known bug in docker/tcad-dev/build, not fixed here because the script is an input of the image:
+# its check greps the "Driver Options:" lines, so a multi-node builder where only some nodes have
+# one passes if the others carry the pinned image. Fix it at the next re-pin (for example, count
+# the nodes' "Name:" lines against the "Driver Options:" lines), then drop the xfail.
+@pytest.mark.xfail(
+    strict=True, reason="docker/tcad-dev/build accepts a node with no Driver Options"
+)
+@pytest.mark.parametrize("images", [(BUILDKIT_IMAGE, None), (None, BUILDKIT_IMAGE)])
+def test_build_refuses_a_multi_node_builder_with_a_node_without_driver_options(tmp_path, images):
+    res, calls = _run_build(tmp_path, _multi_inspect(*images))
+    assert res.returncode == 2, res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]

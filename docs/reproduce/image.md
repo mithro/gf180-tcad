@@ -189,8 +189,8 @@ the venv path, and differ only in where the TCAD stack comes from:
   [PyPI](https://pypi.org/) releases. It is kept as the baseline for "how it used to work" and for debugging: a
   difference between the two images is a change upstream, not in this project.
 
-The results in {repo}`results/` are not yet switched over; until they are, TCAD consumers keep
-reading {repo}`docker/TCAD_IMAGE`.
+The 1D TCAD results are generated in the dev-HEAD image and the 2D results, for now, in the
+stable image; see {ref}`tcad-results-image`.
 
 **Sources, pinned by commit.** {repo}`docker/tcad-dev/upstream.json` records each project's
 repository, default branch, the HEAD commit when the image was pinned and that commit's date
@@ -345,25 +345,67 @@ workflows.
   - **Check here.**
     {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained` runs
     that fork test in the dev image and requires it to pass. The fork test is the one that holds
-    the invariant. The dev-image fork tests run at fork commit
-    [`408d0af`](https://github.com/mithro/gplugins/commit/408d0af89c6691e78e03b4d7e75b6dcccc74ee99),
-    while the submodule pin stays at
-    [`dddaa07`](https://github.com/mithro/gplugins/tree/dddaa071321c5177c8471312c565ad86d4b245d7),
-    the commit of the committed results, until the
-    results move to this image. The byte-identity check against results then moves into that
-    pull request.
+    the invariant. It runs from a [`git archive`](https://git-scm.com/docs/git-archive) of the submodule pin,
+    {repo}`third_party/gplugins <.gitmodules>` at
+    [`1c071d0`](https://github.com/mithro/gplugins/commit/1c071d0565ef4917b48ff907b9426e879ccca7fc),
+    the commit the committed results are made with.
 
-**The full flow runs in the dev image** (2026-10-19, image config `245963e5…`):
+**The full flow runs in the current dev image** (2026-10-24, image {term}`config digest` `b4bae2b3…`,
+{term}`manifest digest` `fe347528…`, with the submodule pinned at gplugins `1c071d0`):
 
-- every sandbox test of {repo}`tests/test_tcad_dev_image.py` passes;
-- the fork's `gplugins/devsim` and `gplugins/process` tests at `408d0af` give 131 passed in the
-  dev image and 131 passed in the stable image;
+- the 42 sandbox tests of {repo}`tests/tcad`, {repo}`tests/test_tcad_dev_image.py` and
+  {repo}`tests/test_tcad_image.py` pass;
 - the 1D {term}`MOS capacitor <MOSCAP>` and mesh-convergence trees regenerated in the dev image
-  ({repo}`tests/tcad`) are byte-identical to the committed {repo}`results/tcad/moscap1d` and
-  {repo}`results/tcad/meshconv` trees, except their `provenance.json`, which names the image.
+  are byte-identical to the committed {repo}`results/tcad/moscap1d` and
+  {repo}`results/tcad/meshconv` trees, except their `provenance.json`, which names the image;
+- the drift guard, {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`, passes:
+  the stable and dev images give the same bytes.
+
+The fork's own suite was last counted on the **previous** dev image (config `245963e5…`, on
+2026-10-19), at gplugins `408d0af`: its `gplugins/devsim` and `gplugins/process` tests gave
+131 passed in the dev image and 131 passed in the stable image. It was not recounted on the
+current image at `1c071d0`; the PN-slab test of it runs in the sandbox tests above.
 
 So no numeric drift was found against the stable image. DEVSIM's `devsim_py3.so` is also
 byte-identical to the first GCC 14 pin's.
+
+(tcad-results-image)=
+
+### Which image makes which results
+
+The final results come from upstream dev HEAD; the stable image is for testing how things used
+to work, and for debugging. {py:data}`gf180tcad.tcad.RESULTS_IMAGE` names the image each result
+kind is generated with, and it is the default of `python -m gf180tcad.tcad moscap` and
+`meshconv` ({py:mod}`gf180tcad.tcad.__main__`); `--image dev|stable` picks the other one.
+
+| results | image | why |
+|---|---|---|
+| 1D {term}`MOS capacitor <MOSCAP>`, {repo}`results/tcad/moscap1d` | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the stack of the final results |
+| 1D {term}`mesh convergence`, {repo}`results/tcad/meshconv` (`moscap1d/`) | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the same |
+| 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | for now: see below |
+
+Each tree root's `provenance.json` records, under `images`, which image made each result kind
+in it: the image's name, its reference and its `versions.json`. The mesh-convergence tree holds
+1D and 2D results, so it records one entry for each.
+
+- **1D on dev HEAD.** The 1D trees regenerate on the dev image byte-identical to the stable
+  image's, data file for data file; only `provenance.json` differs. Two sandbox tests keep it
+  so: {test}`tests/tcad/test_moscap1d.py::test_byte_identical` and
+  {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical` rerun the committed trees in
+  the dev image, and {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`
+  runs both 1D CLIs on both images and requires the same bytes. That last test is the drift
+  guard between the two stacks.
+- **2D on stable, for now.** {{ gmsh }} 5 (the dev image) meshes the 2D cells differently
+  from gmsh 4.15.2 (the stable image), so a 2D result on dev needs its own mesh convergence on
+  dev; the stable image's selected 2D mesh does not carry over. The 2D results of
+  {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
+  are therefore made on the stable image, explicitly.
+- **Planned.** Before the {term}`Phase 2` exit, the 2D mesh convergence is rerun on the dev image and
+  the 2D results are regenerated there; {py:data}`~gf180tcad.tcad.RESULTS_IMAGE` then names dev for 2D as well.
+- **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, still has the laxer
+  builder check: unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
+  driver and BuildKit image before using it. Tightening it would change that image's build
+  inputs, so it waits for the next re-pin of the stable image.
 
 (tcad-dev-mirror)=
 
@@ -452,13 +494,14 @@ anonymous pull of {repo}`docker/TCAD_DEV_IMAGE` works; if it does not, make the 
    ([`gh release create --prerelease`](https://cli.github.com/manual/gh_release_create), then
    [`gh release upload`](https://cli.github.com/manual/gh_release_upload), each with
    `--repo mithro/gf180-tcad`). Then check each asset's digest against the two input lists. Keep
-   old mirror releases, because older commits build from them. The tag appears in five places,
+   old mirror releases, because older commits build from them. The tag appears in six places,
    and {test}`tests/test_tcad_dev_lock.py::test_one_mirror_tag_everywhere` checks that they agree:
    - `MIRROR_TAG` in {repo}`docker/tcad-dev/wheelhouse.py`, which sets the tag (the test reads it
      from there);
    - every `mirror_url` in {repo}`docker/tcad-dev/upstream.json`;
    - every `mirror_url` in {repo}`docker/tcad-dev/wheelhouse.json` (regenerated);
    - `input_mirror` in {repo}`docs/conf.py`;
+   - the docstring of {repo}`docker/tcad-dev/fetch_sources.py`;
    - the tag named in this page.
 4. Rebuild twice (`--no-cache`), commit {repo}`docker/tcad-dev/IMAGE_ID` and
    {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.

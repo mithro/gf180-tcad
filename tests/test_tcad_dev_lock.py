@@ -93,13 +93,17 @@ MIRROR = _wheelhouse_module().MIRROR
 
 
 def test_one_mirror_tag_everywhere():
-    """The mirror tag is set in wheelhouse.py; the docs and both input lists use it."""
+    """The mirror tag is set in wheelhouse.py; the docs, fetch_sources.py and both input lists
+    use it."""
     assert re.fullmatch(r"gf180-tcad/inputs/tcad-dev-\d{8}", MIRROR_TAG)
     assert MIRROR == f"https://github.com/mithro/gf180-tcad/releases/download/{MIRROR_TAG}/"
     conf = (REPO_ROOT / "docs" / "conf.py").read_text(encoding="utf-8")
     assert f'"https://github.com/mithro/gf180-tcad/releases/tag/{MIRROR_TAG}"' in conf
     image_md = (REPO_ROOT / "docs" / "reproduce" / "image.md").read_text(encoding="utf-8")
     assert f"`{MIRROR_TAG}`" in image_md
+    fetch = (DEV / "fetch_sources.py").read_text(encoding="utf-8")
+    assert f"https://github.com/mithro/gf180-tcad/releases/tag/{MIRROR_TAG}" in fetch
+    assert len(re.findall(r"tcad-dev-\d{8}", fetch)) == 1
     for name, e in {**_upstream(), **_wheelhouse()}.items():
         assert e["mirror_url"].startswith(MIRROR), name
 
@@ -389,3 +393,15 @@ def test_build_inputs_date_the_build():
     }
     assert {f"docker/tcad-dev/{f}" for f in used} <= inputs
     assert {"docker/tcad-dev/Dockerfile", "docker/IMAGE"} <= inputs
+
+
+def test_only_the_fetch_step_has_a_network():
+    """Step 1 fetches every input (fetch_sources.py); every later RUN is --network=none, so the
+    install can only use the fetched, sha256-checked files."""
+    docker = (DEV / "Dockerfile").read_text(encoding="utf-8")
+    runs = re.split(r"^RUN ", docker, flags=re.MULTILINE)[1:]
+    assert len(runs) == 4
+    assert "fetch_sources.py" in runs[0] and not runs[0].startswith("--network")
+    for step in runs[1:]:
+        assert step.startswith("--network=none "), step[:80]
+        assert "fetch_sources.py" not in step

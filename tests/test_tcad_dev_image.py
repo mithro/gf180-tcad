@@ -277,42 +277,23 @@ def test_tcad_dev_gmsh_control_without_python_cpu_count(tmp_path):
     assert got["NumThreads"] > 1 and got["OCCParallel"] == 1
 
 
-# TEMPORARY, until results/ moves to the dev image: the fork commit whose tests run in the dev
-# image. It is mithro/gplugins main 408d0af (#10, the floating-rib invariant). The submodule pin
-# (third_party/gplugins) stays at the commit the committed results/tcad trees were made with,
-# and catches up with this one in the pull request that regenerates them in the dev image.
-GPLUGINS_FORK_TEST_COMMIT = "408d0af89c6691e78e03b4d7e75b6dcccc74ee99"
-# The submodule pin while this is so (the commit of the committed results/tcad trees).
-GPLUGINS_PIN_BEHIND = "dddaa071321c5177c8471312c565ad86d4b245d7"
-GPLUGINS_FORK = "https://github.com/mithro/gplugins.git"
+def _pinned_archive() -> bytes:
+    """``git archive`` of the submodule's pinned commit (``git ls-tree HEAD third_party/gplugins``).
 
-
-def _fork_archive(commit: str) -> bytes:
-    """``git archive`` of ``commit`` of the fork, fetched (anonymously) into the submodule's
-    object store first if it is not there yet."""
+    The archive, not the checkout, so the test sees exactly the pinned files and can write into
+    its own copy."""
     sub = REPO_ROOT / "third_party" / "gplugins"
     if not (sub / "gplugins").is_dir():
         pytest.skip("third_party/gplugins is not checked out")
-    have = subprocess.run(
-        ["git", "-C", str(sub), "cat-file", "-e", f"{commit}^{{commit}}"],
-        capture_output=True,
-        check=False,
-    )
-    if have.returncode != 0:
-        subprocess.run(
-            ["git", "-C", str(sub), "fetch", "--no-tags", GPLUGINS_FORK, commit],
-            capture_output=True,
-            check=True,
-        )
     return subprocess.run(
-        ["git", "-C", str(sub), "archive", commit], capture_output=True, check=True
+        ["git", "-C", str(sub), "archive", _gplugins_pin()], capture_output=True, check=True
     ).stdout
 
 
 @pytest.mark.sandbox
 def test_tcad_dev_fork_pn_slab_currents_explained(tmp_path):
-    """The fork's PN-slab test, from a git archive of GPLUGINS_FORK_TEST_COMMIT, in the dev image."""
-    archive = _fork_archive(GPLUGINS_FORK_TEST_COMMIT)
+    """The fork's PN-slab test, from a git archive of the submodule pin, in the dev image."""
+    archive = _pinned_archive()
     with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
         tar.extractall(tmp_path, filter="data")
     test = "gplugins/devsim/tests/test_mesh.py::test_pn_slab_currents_explained"
@@ -355,17 +336,6 @@ def _gplugins_pin() -> str:
     ).stdout.split()
     assert out[1] == "commit", out
     return out[2]
-
-
-def test_tcad_dev_fork_test_commit_is_still_needed():
-    """GPLUGINS_FORK_TEST_COMMIT is temporary. It was set while the submodule pin was
-    GPLUGINS_PIN_BEHIND; once the pin moves (to GPLUGINS_FORK_TEST_COMMIT or later, in the PR
-    that regenerates results/ in the dev image), this fails: then remove the constant and run
-    the fork tests from the pin again. Reads only the gf180-tcad tree, so it runs everywhere."""
-    assert _gplugins_pin() == GPLUGINS_PIN_BEHIND, (
-        "third_party/gplugins moved: remove GPLUGINS_FORK_TEST_COMMIT and run the fork tests "
-        "from the pin (and drop this test)"
-    )
 
 
 @pytest.mark.sandbox

@@ -4,7 +4,8 @@
 Runs in the build stage of docker/tcad-dev/Dockerfile with the base image's /usr/bin/python3:
     local_inputs.py python-mirror UPSTREAM_JSON SRC_DIR MIRROR_DIR
         moves the fetched CPython (upstream.json ``cpython``) to MIRROR_DIR/<release>/<file>, the
-        layout ``uv python install --mirror file://MIRROR_DIR`` reads;
+        layout ``uv python install --mirror file://MIRROR_DIR`` reads
+        (https://docs.astral.sh/uv/reference/cli/#uv-python-install);
     local_inputs.py lock UPSTREAM_JSON LOCK SRC_DIR OUT
         writes LOCK to OUT with each ``name @ <upstream.json url>`` requirement (meshwell,
         gdsfactory, gf180mcu, gmsh) pointing at the fetched copy SRC_DIR/<file> instead. The

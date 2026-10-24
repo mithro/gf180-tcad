@@ -3,15 +3,18 @@
 # DEVSIM, meshwell, gdsfactory, gf180mcu and gmsh from their development HEADs (meshwell and
 # gf180mcu: the mithro forks of upstream HEAD that carry gf180-tcad's fixes), pinned by commit and
 # sha256 in upstream.json. Every build input (upstream.json, wheelhouse.json) is fetched from
-# gf180-tcad's input mirror first, then from its original URL, and sha256-checked either way. The same pinned base image and the same CPython 3.13
-# patch as the stable image; the venv has the same path, /opt/gf180tcad-tcad.
+# gf180-tcad's input mirror first, then from its original URL, and sha256-checked either way.
+# The same pinned base image and the same CPython 3.13 patch as the stable image; the venv has
+# the same path, /opt/gf180tcad-tcad.
 # Project code is NOT baked in; tools/sandbox-run mounts the repo at /work/src.
 # Build with docker/tcad-dev/build, which passes BASE_IMAGE = docker/IMAGE (reproducible:
 # SOURCE_DATE_EPOCH + rewrite-timestamp).
 #
 # Two stages: `build` fetches and checks every input, compiles DEVSIM (with a GCC 14 that
 # exists only in this stage) and fills the venv; the image is the base plus a copy of the venv
-# and of the uv-managed CPython, so no compiler, source tree or download is left in it.
+# and of the uv-managed CPython, so no compiler, source tree or download is left in it. Only
+# step 1 has a network: steps 2-4 run with --network=none, so the install provably uses the
+# fetched files and nothing else.
 ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE} AS build
@@ -51,7 +54,8 @@ RUN --mount=type=bind,source=upstream.json,target=/run/gf180tcad/upstream.json \
 # 2. uv (hash-pinned, into a build venv, from the wheelhouse), CPython $TCAD_PYTHON from the
 #    fetched copy (--mirror; uv also checks it against the sha256 it embeds for that version) and
 #    the empty venv.
-RUN --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
+RUN --network=none \
+    --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
     set -eu \
  && /usr/bin/python3 -m venv --without-pip /opt/build/buildvenv \
  && /usr/bin/python3 -m pip --isolated --python /opt/build/buildvenv/bin/python install \
@@ -64,7 +68,8 @@ RUN --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build
  && /opt/build/buildvenv/bin/uv venv --managed-python --python "$TCAD_PYTHON" /opt/gf180tcad-tcad
 
 # 3. DEVSIM from source (build-devsim.sh: upstream's x86_64 recipe), as a wheel.
-RUN --mount=type=bind,source=build-devsim.sh,target=/run/gf180tcad/build-devsim.sh \
+RUN --network=none \
+    --mount=type=bind,source=build-devsim.sh,target=/run/gf180tcad/build-devsim.sh \
     --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
     set -eu \
  && UV=/opt/build/buildvenv/bin/uv bash /run/gf180tcad/build-devsim.sh /opt/build/src \
@@ -76,16 +81,17 @@ RUN --mount=type=bind,source=build-devsim.sh,target=/run/gf180tcad/build-devsim.
 #    the hash-checked build constraints), from the fetched files only (no index): the PyPI files
 #    from the wheelhouse, and the URL requirements rewritten to the fetched copies of their URLs
 #    (the same bytes: the lock's hash is upstream.json's sha256, tests/test_tcad_dev_lock.py).
-#    Then the DEVSIM wheel of step 3 --no-deps (it has no Python dependencies), with pip: uv would
-#    record the wheel file's ctime in the dist-info (uv_cache.json, and so RECORD), which no build
-#    can fix. uv does the same for every file it installs from a local path, as here: the build
-#    removes those uv_cache.json files (local_inputs.py strip-uv-cache). Hashes only, no deps
-#    resolved, no bytecode. Then upstream.json, the provenance of
-#    the upstream sources, and devsim-build.json, DEVSIM's build record
+#    Then the DEVSIM wheel of step 3 --no-deps (it has no Python dependencies), with pip. uv
+#    writes a uv_cache.json holding the source file's timestamp into the dist-info of every
+#    package it installs from a local file, as all of them are here; the build removes those
+#    files and their RECORD lines (local_inputs.py strip-uv-cache). Hashes only, no deps
+#    resolved, no bytecode. Then upstream.json, the provenance of the upstream sources, and
+#    devsim-build.json, DEVSIM's build record
 #    (docker/tcad-dev/probe_versions.py checks both against what is installed), with a fixed mode:
 #    a COPY from the build context would keep the checkout's mode, which follows the umask of
 #    whoever checked it out (0664 here, 0644 on a GitHub runner).
-RUN --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirements.lock \
+RUN --network=none \
+    --mount=type=bind,source=requirements.lock,target=/run/gf180tcad/requirements.lock \
     --mount=type=bind,source=upstream.json,target=/run/gf180tcad/upstream.json \
     --mount=type=bind,source=build-requirements.lock,target=/run/gf180tcad/build-requirements.lock \
     --mount=type=bind,source=local_inputs.py,target=/run/gf180tcad/local_inputs.py \
