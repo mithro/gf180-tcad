@@ -22,4 +22,12 @@ Source: {repo}`src/gf180tcad/tcad/moscap2d.py`.
 .. autodata:: gf180tcad.tcad.moscap2d.CV_COLUMNS
 
 .. autodata:: gf180tcad.tcad.moscap2d.CV_UNITS
+
+.. autodata:: gf180tcad.tcad.moscap2d.STATE_HEADER
+
+.. autodata:: gf180tcad.tcad.moscap2d.STATE_POINTS
+
+.. autodata:: gf180tcad.tcad.moscap2d.STATE_HANDOFF
+
+.. autodata:: gf180tcad.tcad.moscap2d.AFTER_POINT
 ```

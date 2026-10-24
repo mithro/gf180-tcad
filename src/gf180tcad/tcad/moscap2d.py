@@ -45,12 +45,15 @@ is TCAD code, not one of the SPICE generator modules
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
+import os
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Literal
 
 from gf180tcad import io
@@ -92,9 +95,87 @@ F_PER_CM_TO_FF_PER_UM = 1e11
 # The DEVSIM names of the 2D device and its mesh.
 _DEVICE, _MESH = "moscap2d", "moscap2d_mesh"
 
+# The per-point state of a sweep (simulate(state_dir=...)): the header (what is swept, on which
+# mesh), one JSON line per finished point, and the hand-off state of the last saved point.
+STATE_HEADER = "header.json"
+STATE_POINTS = "points.jsonl"
+STATE_HANDOFF = "handoff.json"
+
+# A test hook: called with the index of every point once it and its hand-off are saved (the
+# split/resume test raises from it to cut a sweep off). None in production.
+AFTER_POINT: Callable[[int], None] | None = None
+
 
 class GeometryError(RuntimeError):
     """The meshed cross-section does not have the requested oxide thickness or gate length."""
+
+
+class StaleState(RuntimeError):
+    """A sweep state directory was written for another sweep (other biases, mesh or method)."""
+
+
+class SweepState:
+    """The per-point state of a sweep in ``directory``, for :func:`simulate`'s ``state_dir``.
+
+    Each finished point is saved (:meth:`save`): first its result as a line of
+    :data:`STATE_POINTS`, then (atomically) the hand-off state the next point starts from,
+    :data:`STATE_HANDOFF` (``i``, the gate bias and the potential of every region, exact
+    floats). :meth:`resume` keeps the points up to the hand-off's ``i`` (a point saved without
+    its hand-off is computed again: the sweep is deterministic, so it is the same point). The
+    header (:data:`STATE_HEADER`) must match the sweep that resumes, else :class:`StaleState`.
+    """
+
+    def __init__(self, directory: Path | str, header: dict) -> None:
+        self.dir = Path(directory)
+        self.dir.mkdir(parents=True, exist_ok=True)
+        path = self.dir / STATE_HEADER
+        if path.is_file():
+            old = json.loads(path.read_bytes())
+            diff = sorted(k for k in set(old) | set(header) if old.get(k) != header.get(k))
+            if diff:
+                raise StaleState(f"{self.dir} holds the state of another sweep (differs: {diff})")
+        else:
+            _write_atomic(path, json.dumps(header, sort_keys=True))
+
+    def save_point(self, point: dict) -> None:
+        with (self.dir / STATE_POINTS).open("a", encoding="utf-8") as f:
+            f.write(json.dumps(point, sort_keys=True) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+
+    def save(self, point: dict, handoff: dict) -> None:
+        self.save_point(point)
+        _write_atomic(self.dir / STATE_HANDOFF, json.dumps(handoff))
+
+    def resume(self) -> tuple[list[dict], dict | None]:
+        """``(points 0..k, the hand-off of point k)``, or ``([], None)`` for a fresh sweep."""
+        path = self.dir / STATE_HANDOFF
+        if not path.is_file():
+            return [], None
+        handoff = json.loads(path.read_bytes())
+        last = {}
+        for line in (self.dir / STATE_POINTS).read_text(encoding="utf-8").splitlines():
+            try:
+                p = json.loads(line)
+            except json.JSONDecodeError:  # a line cut off mid-write; that point runs again
+                continue
+            last[p["i"]] = p
+        k = handoff["i"]
+        missing = [i for i in range(k + 1) if i not in last]
+        if missing:
+            raise StaleState(
+                f"{self.dir}: the hand-off is point {k} but points {missing} are missing"
+            )
+        return [last[i] for i in range(k + 1)], handoff
+
+
+def _write_atomic(path: Path, text: str) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
 
 
 @dataclass(frozen=True)
@@ -134,6 +215,30 @@ class MoscapCV2D:
     def non_gate_contacts(self) -> tuple[str, ...]:
         """The contacts of the device other than the gate, sorted."""
         return tuple(sorted(self.cgx))
+
+
+def to_dict(cv: MoscapCV2D) -> dict:
+    """``cv`` as JSON-ready data (:func:`from_dict` gives it back exactly)."""
+    return asdict(cv)
+
+
+def from_dict(d: dict) -> MoscapCV2D:
+    """The :class:`MoscapCV2D` of :func:`to_dict`'s data."""
+    return MoscapCV2D(
+        **{
+            **d,
+            "geometry": None if d["geometry"] is None else Geometry(**d["geometry"]),
+            "vg": tuple(d["vg"]),
+            "c_per_area_ff_um2": tuple(d["c_per_area_ff_um2"]),
+            "cgg_ff_per_um": tuple(d["cgg_ff_per_um"]),
+            "cgx": {k: tuple(v) for k, v in d["cgx"].items()},
+            "points": tuple(Point(**p) for p in d["points"]),
+            "mesh": MeshSpec(**d["mesh"]),
+            "constants": Constants(**d["constants"]),
+            "extended_fallback": tuple(d["extended_fallback"]),
+            "roundoff_accepted": tuple(dict(r) for r in d["roundoff_accepted"]),
+        }
+    )
 
 
 def _node_count(device: str) -> int:
@@ -274,6 +379,7 @@ def simulate(
     mesh_file: Path | str = MESH_FILE,
     log: Callable[[str], None] | None = None,
     constants: Constants = CONSTANTS,
+    state_dir: Path | str | None = None,
 ) -> MoscapCV2D:
     """The 2D C-V of ``proc`` at ``geometry`` (the PDK cell), at the gate biases ``vg`` (V).
 
@@ -281,6 +387,15 @@ def simulate(
     ``geometry`` may then be None). ``log`` receives one progress line per bias point (index,
     gate bias and elapsed time). Raises the plugin's ``CVConvergenceError`` if any point does
     not converge, and :class:`GeometryError` if the mesh does not have the drawn geometry.
+
+    With ``state_dir`` the sweep is saved point by point (:class:`SweepState`) and resumes
+    there: each point is one ``sweep_cv`` call that starts from the exact state the previous
+    point left (its potential and gate bias). DEVSIM keeps solver state across solves that this
+    hand-off of node values does not carry, so a QS sweep agrees with one ``sweep_cv`` call
+    within round-off (2e-13 measured), and a resumed sweep keeps its saved points exactly and
+    agrees with an uninterrupted one byte for byte for AC and within round-off for QS (about
+    1e-13). An AC point's drift-diffusion solve starts its circuit unknowns afresh, so the AC
+    agrees with one ``sweep_cv`` call within the solver tolerance.
     """
     from gplugins.devsim import sweep_cv
 
@@ -308,21 +423,32 @@ def simulate(
                 log(f"{stage} bias {i + 1}/{len(vg)} vg {v + dv_fb!r} V "
                     f"elapsed {time.monotonic() - t0:.1f} s")  # fmt: skip
 
-        res = sweep_cv(
-            dd,
-            stack_mod.GATE,
-            [v - dv_fb for v in vg],
-            method=method,
-            freq_hz=freq_hz if method == "ac" else None,
-            dv_qs=DV_QS,
-            rel_tol=rel_tol,
-            abs_tol=ABS_TOL,
-            max_iterations=MAX_ITERATIONS,
-            extended_precision=method == "ac",
-            progress=progress,
-            precision_fallback=method == "qs",
-            roundoff_accept=method == "qs",
-        )
+        kwargs = {
+            "method": method,
+            "freq_hz": freq_hz if method == "ac" else None,
+            "dv_qs": DV_QS,
+            "rel_tol": rel_tol,
+            "abs_tol": ABS_TOL,
+            "max_iterations": MAX_ITERATIONS,
+            "extended_precision": method == "ac",
+            "precision_fallback": method == "qs",
+            "roundoff_accept": method == "qs",
+        }
+        vg_solve = [v - dv_fb for v in vg]
+        if state_dir is None:
+            res = sweep_cv(dd, stack_mod.GATE, vg_solve, progress=progress, **kwargs)
+        else:
+            header = {
+                "freq_hz": kwargs["freq_hz"],
+                "mesh": mesh.as_dict(),
+                "mesh_sha256": hashlib.sha256(Path(mesh_file).read_bytes()).hexdigest(),
+                "method": method,
+                "node_count": nodes,
+                "rel_tol": rel_tol,
+                "vg_solve": vg_solve,
+            }
+            state = SweepState(state_dir, header)
+            res = _sweep_points(dd, vg_solve, state, progress, kwargs, log)
     finally:
         dd.delete_device()
     if res.unit != "F/cm":
@@ -367,6 +493,83 @@ CV_COLUMNS = ("vg", "c_per_area", "cgg_per_um", "cgg_total", "rel_error", "abs_e
 CV_UNITS = (
     "vg=V c_per_area=fF/um^2 cgg_per_um=fF/um cgg_total=fF rel_error=1 abs_error=V iterations=1"
 )
+
+
+def _potentials() -> dict[str, list[float]]:
+    import devsim
+
+    return {
+        r: list(devsim.get_node_model_values(device=_DEVICE, region=r, name="Potential"))
+        for r in devsim.get_region_list(device=_DEVICE)
+        if "Potential" in devsim.get_node_model_list(device=_DEVICE, region=r)
+    }
+
+
+def _sweep_points(dd, vg_solve, state: SweepState, progress, kwargs, log):
+    """The sweep of ``vg_solve`` one point per ``sweep_cv`` call, saved and resumed in ``state``.
+
+    Before each point the device gets the hand-off of the previous one: the potential of every
+    region and the gate bias it ended at (``vg + dv_qs`` for QS, the Poisson-Boltzmann point for
+    AC), which is the state one ``sweep_cv`` call would continue from. Returns what
+    ``sweep_cv`` returns that :func:`simulate` uses (unit, cgg, cgx, points, extended_fallback,
+    roundoff_accepted), with the indices of the whole sweep.
+    """
+    import devsim
+    from gplugins.devsim import PointInfo, sweep_cv
+    from gplugins.devsim.contacts import bias_name
+    from gplugins.devsim.cv import RoundoffPoint
+
+    gate_bias = bias_name(stack_mod.GATE)
+    done, handoff = state.resume()
+    if done and log is not None:
+        log(f"resumed: points 0..{len(done) - 1} kept from {state.dir}")
+    saved = {p["i"]: p for p in done}
+    units = set()
+    for i in range(len(done), len(vg_solve)):
+        if handoff is not None:
+            for r, values in handoff["potential"].items():
+                devsim.set_node_values(device=_DEVICE, region=r, name="Potential", values=values)
+            devsim.set_parameter(device=_DEVICE, name=gate_bias, value=handoff["v_gate"])
+        captured = {}
+
+        def point_progress(stage: str, _j: int, v: float, i=i, captured=captured) -> None:
+            if stage in ("qs", "pb"):  # the Poisson-Boltzmann state the next point starts from
+                captured["handoff"] = {
+                    "i": i,
+                    "v_gate": devsim.get_parameter(device=_DEVICE, name=gate_bias),
+                    "potential": _potentials(),
+                }
+            if stage in ("qs", "ac"):
+                progress(stage, i, v)
+
+        res = sweep_cv(dd, stack_mod.GATE, [vg_solve[i]], progress=point_progress, **kwargs)
+        units.add(res.unit)
+        (pi,) = res.points
+        point = {
+            "cgg": res.cgg[0],
+            "cgx": {c: x[0] for c, x in res.cgx.items()},
+            "fallback": bool(res.extended_fallback),
+            "i": i,
+            "point": [pi.converged, pi.iterations, pi.rel_error, pi.abs_error],
+            "roundoff": [{**asdict(r), "index": i} for r in res.roundoff_accepted],
+        }
+        handoff = captured["handoff"]
+        state.save(point, handoff)
+        saved[i] = point
+        if AFTER_POINT is not None:
+            AFTER_POINT(i)
+    if len(units) > 1:
+        raise RuntimeError(f"the per-point sweeps report different units: {sorted(units)}")
+    ordered = [saved[i] for i in range(len(vg_solve))]
+    contacts = sorted(ordered[0]["cgx"])
+    return SimpleNamespace(
+        unit=units.pop() if units else "F/cm",
+        cgg=tuple(p["cgg"] for p in ordered),
+        cgx={c: tuple(p["cgx"][c] for p in ordered) for c in contacts},
+        points=tuple(PointInfo(*p["point"]) for p in ordered),
+        extended_fallback=tuple(p["i"] for p in ordered if p["fallback"]),
+        roundoff_accepted=tuple(RoundoffPoint(**r) for p in ordered for r in p["roundoff"]),
+    )
 
 
 def job_dir(root: Path, device: str, params: str, geometry: Geometry) -> Path:

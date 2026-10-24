@@ -61,6 +61,106 @@ def test_job_refuses_outside_the_sandbox(tmp_path):
         cli.run_job("nfet_05v0", "start", tmp_path, dim=2, gid="w10p0_l0p60")
 
 
+def _synthetic_cv(method: str) -> moscap2d.MoscapCV2D:
+    ac = method == "ac"
+    return moscap2d.MoscapCV2D(
+        device="nfet_05v0",
+        geometry=cli.geometry_of("nfet_05v0", "w10p0_l0p60"),
+        vg=(-5.0, 0.0, 5.0),
+        c_per_area_ff_um2=(2.2, 0.9, 2.1),
+        cgg_ff_per_um=(1.32, 0.54, 1.26),
+        cgx={"body": (1.3, 0.5, 0.1), "drain": (0.01, 0.02, 0.6)} if ac else {},
+        points=tuple(moscap2d.Point(True, 3 + i, 1e-11 * i, 1e-13) for i in range(3)),
+        method=method,
+        freq_hz=1e6 if ac else None,
+        with_sd=True,
+        mesh=MeshSpec.DEFAULT_2D.scaled(0.5**0.5, refine_grading=True),
+        node_count=224640,
+        l_um=0.6,
+        w_um=10.0,
+        t_ox_nm=15.2,
+        meshed_t_ox_nm=15.200000000000001,
+        meshed_l_um=0.6,
+        rel_tol=1e-10,
+        sd_peak_cm3=None if ac else 1e20,
+        constants=process.CONSTANTS,
+        extended_fallback=() if ac else (1,),
+        roundoff_accepted=() if ac else ({"index": 2, "vg": 4.999, "region": "ild"},),
+    )
+
+
+@pytest.mark.parametrize("method", ["qs", "ac"])
+def test_result_json_round_trip(method):
+    """A QS or AC sweep survives its JSON file exactly (the split jobs hand it to combine)."""
+    cv = _synthetic_cv(method)
+    back = moscap2d.from_dict(json.loads(json.dumps(moscap2d.to_dict(cv))))
+    assert back == cv
+
+
+def _point(i: int) -> dict:
+    return {"i": i, "cgg": 1e-12 * (i + 1), "cgx": {}, "point": [True, 4, 1e-11, 1e-13],
+            "fallback": False, "roundoff": []}  # fmt: skip
+
+
+def test_sweep_state_resumes_after_the_last_handoff(tmp_path):
+    """Each point is saved, then the hand-off state it leaves; a resume keeps the points up to
+    the last hand-off and recomputes the rest (here point 2 was saved but not its hand-off)."""
+    header = {"method": "qs", "vg": [-5.0, 0.0, 5.0], "mesh_sha256": "ab"}
+    st = moscap2d.SweepState(tmp_path / "s", header)
+    assert st.resume() == ([], None)
+    st.save(_point(0), {"i": 0, "v_gate": -4.999, "potential": {"body": [0.1, 0.2]}})
+    st.save(_point(1), {"i": 1, "v_gate": 0.001, "potential": {"body": [0.3, 0.4]}})
+    st.save_point(_point(2))  # interrupted before its hand-off
+    st2 = moscap2d.SweepState(tmp_path / "s", header)
+    points, handoff = st2.resume()
+    assert [p["i"] for p in points] == [0, 1]
+    assert handoff == {"i": 1, "v_gate": 0.001, "potential": {"body": [0.3, 0.4]}}
+    with pytest.raises(moscap2d.StaleState, match="mesh_sha256"):
+        moscap2d.SweepState(tmp_path / "s", {**header, "mesh_sha256": "cd"})
+
+
+def test_moscap_split_methods(tmp_path, monkeypatch):
+    """``moscap --dim 2 --method qs|ac`` runs that sweep in the scratch dir (``--resume``) and
+    keeps it; ``--method combine`` writes the job files from both and removes the scratch."""
+    calls = []
+
+    def fake_run(cmd, *, out_dir, image, mem, cpus):
+        calls.append((cmd, Path(out_dir), mem))
+        method = cmd[cmd.index("--method") + 1]
+        if method in ("combine", "both"):
+            for name in (moscap2d.CV_CSV, moscap2d.CGX_CSV, moscap2d.MESH_FILE, moscap2d.META_JSON):
+                (Path(out_dir) / name).write_text(name, encoding="utf-8")
+
+        class R:
+            stdout = ""
+
+        return R()
+
+    monkeypatch.setattr(cli.sandbox, "run", fake_run)
+    monkeypatch.setattr(cli, "gplugins_commit", lambda: "x")
+    monkeypatch.setattr(cli.meshconv, "selected_spec", lambda d, dim: MeshSpec.DEFAULT_2D)
+    monkeypatch.setattr(cli, "tree_provenance", lambda root: {"p": 1})
+    scratch, root = tmp_path / "scratch", tmp_path / "root"
+    scratch.mkdir()
+    gid = "w10p0_l2p00"
+    for m in ("qs", "ac"):
+        cli.run_host("nfet_05v0", "start", root, dim=2, gid=gid, method=m, resume=scratch,
+                     mem="12g")  # fmt: skip
+    assert [(c[0][c[0].index("--method") + 1], c[1], c[2]) for c in calls] == [
+        ("qs", scratch, "12g"),
+        ("ac", scratch, "12g"),
+    ]
+    assert scratch.is_dir() and not root.exists()
+    cli.run_host("nfet_05v0", "start", root, dim=2, gid=gid, method="combine", resume=scratch)
+    job = moscap2d.job_dir(root, "nfet_05v0", "start", cli.geometry_of("nfet_05v0", gid))
+    assert sorted(p.name for p in job.iterdir()) == sorted(
+        [moscap2d.CV_CSV, moscap2d.CGX_CSV, moscap2d.MESH_FILE, moscap2d.META_JSON]
+    )
+    assert not scratch.exists()
+    with pytest.raises(ValueError, match="--method"):
+        cli.run_host("nfet_05v0", "start", root, dim=1, method="qs")
+
+
 def test_point_tolerance_keeps_the_oxide():
     """The vertex grid is far below every thickness: a calibrated t_ox (any value in its bounds)
     is meshed within 1e-4 relative, unlike meshwell's 1 nm default (Task 11's artefact)."""
@@ -261,3 +361,63 @@ def test_byte_identical(tmp_path):
     ref = moscap2d.job_dir(TREE, device, "start", g)
     for p in sorted(job.iterdir()):
         assert p.read_bytes() == (ref / p.name).read_bytes(), p.name
+
+
+@pytest.mark.sandbox
+def test_split_and_resumed_jobs_are_byte_identical(tmp_path):
+    """The production job split into a QS job and an AC job (run in parallel on one scratch dir)
+    and a combine job gives the job files of the one-job run byte for byte. With both sweeps cut
+    off after their 2nd point and resumed: the AC and the mesh are byte-identical, and the QS
+    agrees within 1e-12. DEVSIM keeps solver state across solves that a hand-off of the node
+    values does not carry, so a resumed QS point moves at round-off (about 1e-13). For the same
+    reason the per-point QS sweep equals one sweep_cv call within 1e-12 (2e-13 measured), and
+    the AC (each point's circuit unknowns start afresh) within the solver tolerance
+    (tests/tcad/moscap2d_split_driver.py, a coarse Lmin cell).
+    """
+    out = tmp_path / "out"
+    out.mkdir()
+
+    def step(name: str, sub: str) -> None:
+        sandbox.run(
+            ["python3", "/work/src/tests/tcad/moscap2d_split_driver.py", name, sub],
+            out_dir=out, image=TCAD_IMAGE, mem="2g", cpus=1,
+        )  # fmt: skip
+
+    def parallel(*steps) -> None:  # at most two 2 GiB jobs at a time
+        with ThreadPoolExecutor(max_workers=len(steps)) as pool:
+            list(pool.map(lambda s: step(*s), steps))
+
+    parallel(("both", "both"), ("mono", "mono"))
+    parallel(("qs", "split"), ("ac", "split"))  # as production: in parallel on one scratch dir
+    parallel(("qs-interrupt", "resumed"), ("ac-interrupt", "resumed"))
+    for m in ("qs", "ac"):
+        done = [json.loads(x) for x in (out / "resumed" / f"state_{m}" / moscap2d.STATE_POINTS)
+                .read_text().splitlines()]  # fmt: skip
+        assert [p["i"] for p in done] == [0, 1], m  # cut off after the 2nd point
+    parallel(("qs", "resumed"), ("ac", "resumed"))
+    parallel(("combine", "split"), ("combine", "resumed"))
+    names = (moscap2d.CV_CSV, moscap2d.CGX_CSV, moscap2d.MESH_FILE, moscap2d.META_JSON)
+    for name in names:
+        assert (out / "split" / name).read_bytes() == (out / "both" / name).read_bytes(), name
+    for name in (moscap2d.CGX_CSV, moscap2d.MESH_FILE):
+        assert (out / "resumed" / name).read_bytes() == (out / "both" / name).read_bytes(), name
+    cols, _ = io.read_csv(out / "both" / moscap2d.CV_CSV)
+    res, _ = io.read_csv(out / "resumed" / moscap2d.CV_CSV)
+    assert list(res["vg"]) == list(cols["vg"])
+    for k in ("c_per_area", "cgg_per_um"):
+        assert list(res[k])[:2] == list(cols[k])[:2]  # the points before the cut-off: exact
+        for a, b in zip(res[k], cols[k], strict=True):
+            assert math.isclose(a, b, rel_tol=1e-12), (k, a, b)
+    meta = {s: json.loads((out / s / moscap2d.META_JSON).read_bytes()) for s in ("both", "resumed")}
+    assert {k: v for k, v in meta["resumed"].items() if k != "sweep"} == {
+        k: v for k, v in meta["both"].items() if k != "sweep"
+    }
+    for s in ("both", "resumed"):  # the same round-off points (their diagnostics may move)
+        meta[s] = [(r["index"], r["vg"]) for r in meta[s]["sweep"]["qs_roundoff_accepted"]]
+    assert meta["resumed"] == meta["both"]
+    gx, _ = io.read_csv(out / "both" / moscap2d.CGX_CSV)
+    mono = json.loads((out / "mono" / "mono.json").read_bytes())
+    for a, b in zip(cols["cgg_per_um"], mono["qs"]["cgg"], strict=True):
+        assert math.isclose(a, b, rel_tol=1e-12), (a, b)
+    for a, b in zip(gx["cgg_per_um"], mono["ac"]["cgg"], strict=True):
+        assert math.isclose(a, b, rel_tol=1e-8), (a, b)

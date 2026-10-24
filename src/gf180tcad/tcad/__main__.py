@@ -41,16 +41,25 @@ the QS sweep (``cv.csv``), the 1 MHz AC sweep with every non-gate contact's Cxg
 (``cgx.csv``), the mesh (``mesh.msh``) and ``cv.meta.json`` go to ``ROOT/<device>/<P>/<GID>/``;
 the committed tree is :repo:`results/tcad/moscap2d`, with its ``ROOT/provenance.json``.
 
+**Split and resumed 2D jobs.** ``--method qs`` and ``--method ac`` (:data:`METHODS`) run one
+sweep alone, so the two can run as parallel sandbox jobs on one scratch directory
+(``--resume DIR``); ``--method combine --resume DIR`` then writes the job files, byte for byte
+those of the default ``--method both``. Every sweep is saved point by point in
+``DIR/state_<qs|ac>`` (:class:`gf180tcad.tcad.moscap2d.SweepState`), so a job that is cut off
+resumes at its last saved point when the same command runs again with ``--resume DIR``.
+``--mem`` sets the sandbox job's memory.
+
 **Progress.** A 2D job appends one line per bias point (stage, index, gate bias, elapsed
-time) to ``progress.log`` in its scratch directory, whose path the host prints when the job
-starts; ``--progress-log FILE`` copies the finished log there. Runtimes stay out of the
-results.
+time) to ``progress_qs.log`` or ``progress_ac.log`` in its scratch directory, whose path the
+host prints when the job starts; ``--progress-log FILE`` copies the finished log(s) there.
+Runtimes stay out of the results.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import multiprocessing
 import shutil
 import sys
 import tempfile
@@ -92,12 +101,18 @@ LEVEL_NAME = "level.json"
 AGREEMENT_NAME = "agreement.json"
 PROGRESS_NAME = "progress.log"
 
+# The steps of a 2D moscap job (run_job_2d): both sweeps and the job files in one job, one sweep
+# alone (two jobs that can run in parallel on one scratch dir), or the job files from both.
+METHODS = ("both", "qs", "ac", "combine")
+# The AC sweep's own mesh file in the scratch dir (it must equal the QS sweep's mesh.msh).
+AC_MESH_NAME = "mesh_ac.msh"
+
 
 class _Progress:
     """Append progress lines to ``<out>/progress.log`` (and stdout)."""
 
-    def __init__(self, out: Path, prefix: str) -> None:
-        self.path = Path(out) / PROGRESS_NAME
+    def __init__(self, out: Path, prefix: str, name: str = PROGRESS_NAME) -> None:
+        self.path = Path(out) / name
         self.prefix = prefix
 
     def __call__(self, line: str) -> None:
@@ -158,40 +173,79 @@ def geometry_of(device: str, gid: str) -> Geometry:
     return found[0]
 
 
-def run_job_2d(device: str, params: str, gid: str, out: Path) -> None:
-    """``moscap-job --dim 2``: QS and 1 MHz AC sweeps of the 2D MOS capacitor into ``out``."""
+def run_job_2d(device: str, params: str, gid: str, out: Path, method: str = "both") -> None:
+    """``moscap-job --dim 2``: QS and 1 MHz AC sweeps of the 2D MOS capacitor into ``out``.
+
+    ``method`` (:data:`METHODS`): ``qs`` or ``ac`` runs that sweep alone, saved point by point
+    in ``out/state_<method>`` (it resumes there) and written to ``out/<method>.json``;
+    ``combine`` writes the job files from both; ``both`` does the three in one job. So two
+    parallel jobs (``qs``, ``ac``) and ``combine`` give the files of ``both`` byte for byte.
+    """
+    if method not in METHODS:
+        raise ValueError(f"method must be one of {METHODS}, got {method!r}")
     proc, calibration_sha256 = load_params(device, params)
     geometry = geometry_of(device, gid)
     mesh = meshconv.selected_spec(device, 2)
     vg = job_vg(proc)
     out = Path(out)
-    qs = moscap2d.simulate(
-        proc, geometry, vg=vg, with_sd=True, method="qs", mesh=mesh,
-        mesh_file=out / moscap2d.MESH_FILE, log=_Progress(out, f"{device}/{params}/{gid}/qs"),
-    )  # fmt: skip
-    ac = moscap2d.simulate(
-        proc, geometry, vg=vg[:: moscap2d.AC_STRIDE], with_sd=True, method="ac", mesh=mesh,
-        freq_hz=moscap2d.AC_FREQ_HZ, mesh_file=out / "mesh_ac.msh",
-        log=_Progress(out, f"{device}/{params}/{gid}/ac"),
-    )  # fmt: skip
-    if (out / "mesh_ac.msh").read_bytes() != (out / moscap2d.MESH_FILE).read_bytes():
+    tag = f"{device}/{params}/{gid}"
+    sweeps = {
+        "qs": {"vg": vg, "mesh_file": out / moscap2d.MESH_FILE},
+        "ac": {"vg": vg[:: moscap2d.AC_STRIDE], "mesh_file": out / AC_MESH_NAME,
+               "freq_hz": moscap2d.AC_FREQ_HZ},
+    }  # fmt: skip
+
+    def sweep(m: str) -> None:
+        cv = moscap2d.simulate(
+            proc, geometry, with_sd=True, method=m, mesh=mesh, state_dir=out / f"state_{m}",
+            log=_Progress(out, f"{tag}/{m}", f"progress_{m}.log"), **sweeps[m],
+        )  # fmt: skip
+        io.write_json(out / f"{m}.json", moscap2d.to_dict(cv))
+        print(f"{tag}/{m}: {len(cv.vg)} points", flush=True)
+
+    if method in ("qs", "ac"):
+        sweep(method)
+        return
+    if method == "both":
+        # Each sweep in a fresh process, as the split jobs run: DEVSIM keeps state across a
+        # process's devices that moves results at round-off (1e-13), so both = split only so.
+        ctx = multiprocessing.get_context("fork")
+        for m in ("qs", "ac"):
+            child = ctx.Process(target=sweep, args=(m,))
+            child.start()
+            child.join()
+            if child.exitcode != 0:
+                raise RuntimeError(f"the {m} sweep failed (exit {child.exitcode})")
+    qs, ac = (
+        moscap2d.from_dict(json.loads((out / f"{m}.json").read_bytes())) for m in ("qs", "ac")
+    )
+    if (out / AC_MESH_NAME).read_bytes() != (out / moscap2d.MESH_FILE).read_bytes():
         raise RuntimeError("the QS and AC sweeps were meshed differently")
-    (out / "mesh_ac.msh").unlink()
     moscap2d.write(
         qs, ac, out, proc=proc, params=params, mesh_source=mesh_source(device, 2),
         calibration_sha256=calibration_sha256,
     )  # fmt: skip
-    print(f"{device}/{params}/{gid}: {len(qs.vg)} points", flush=True)
+    print(f"{tag}: {len(qs.vg)} points", flush=True)
 
 
-def run_job(device: str, params: str, out: Path, dim: int = 1, gid: str | None = None) -> None:
+def _check_method(dim: int, method: str) -> None:
+    if method not in METHODS:
+        raise ValueError(f"--method must be one of {METHODS}, got {method!r}")
+    if dim == 1 and method != "both":
+        raise ValueError(f"--method {method} applies to --dim 2 only")
+
+
+def run_job(
+    device: str, params: str, out: Path, dim: int = 1, gid: str | None = None, method: str = "both"
+) -> None:
     """``moscap-job``: simulate the MOS capacitor and write its files into ``out``."""
+    _check_method(dim, method)
     if not sandbox.in_sandbox():
         raise RuntimeError("moscap-job must run inside the sandbox (see tools/sandbox-run)")
     if dim == 2:
         if gid is None:
             raise BadGeometry("moscap-job --dim 2 needs --geometry")
-        run_job_2d(device, params, gid, out)
+        run_job_2d(device, params, gid, out, method)
         return
     proc, calibration_sha256 = load_params(device, params)
     mesh = meshconv.selected_spec(device, 1)
@@ -203,9 +257,17 @@ def run_job(device: str, params: str, out: Path, dim: int = 1, gid: str | None =
     print(f"{device}/{params}: {len(cv.vg)} points", flush=True)
 
 
-def _copy_progress(scratch: Path, progress_log: Path | None) -> None:
-    if progress_log is not None and (scratch / PROGRESS_NAME).is_file():
-        shutil.copyfile(scratch / PROGRESS_NAME, progress_log)
+def _copy_progress(scratch: Path, progress_log: Path | None, names=(PROGRESS_NAME,)) -> None:
+    found = [scratch / n for n in names if (scratch / n).is_file()]
+    if progress_log is None or not found:
+        return
+    Path(progress_log).write_text("".join(p.read_text(encoding="utf-8") for p in found), "utf-8")
+
+
+def _progress_names(dim: int, method: str) -> tuple[str, ...]:
+    if dim == 1:
+        return (PROGRESS_NAME,)
+    return tuple(f"progress_{m}.log" for m in ("qs", "ac") if method in (m, "both"))
 
 
 def run_host(
@@ -215,8 +277,19 @@ def run_host(
     dim: int = 1,
     gid: str | None = None,
     progress_log: Path | None = None,
+    method: str = "both",
+    resume: Path | None = None,
+    mem: str | None = None,
 ) -> None:
-    """``moscap``: run ``moscap-job`` in the TCAD image, then write the job dir and provenance."""
+    """``moscap``: run ``moscap-job`` in the TCAD image, then write the job dir and provenance.
+
+    2D only, ``method`` (:data:`METHODS`): ``qs`` or ``ac`` runs that sweep alone in the
+    scratch directory and keeps it (no job files yet); ``combine`` then writes the job files
+    from both. ``resume`` is that scratch directory (also of a cut-off job: its sweeps resume
+    at their last saved point); the default is a new one. ``mem`` overrides the sandbox job's
+    memory (:data:`JOB_MEM`, :data:`JOB_MEM_2D`).
+    """
+    _check_method(dim, method)
     if dim == 2:
         if gid is None:
             raise BadGeometry("moscap --dim 2 needs --geometry")
@@ -225,27 +298,40 @@ def run_host(
     meshconv.selected_spec(device, dim)  # refuses a missing mesh-convergence result
     gplugins_commit()  # refuses a dirty or unpinned plugin before anything runs
     root = Path(root)
-    scratch = Path(tempfile.mkdtemp(prefix=f"gf180tcad-moscap{dim}d-"))
+    if resume is not None:
+        scratch = Path(resume)
+        scratch.mkdir(parents=True, exist_ok=True)
+    else:
+        scratch = Path(tempfile.mkdtemp(prefix=f"gf180tcad-moscap{dim}d-"))
     cmd = [
         "python3", "-m", "gf180tcad.tcad", "moscap-job", "--device", device, "--dim", str(dim),
         "--params", params, "--out", "/work/out",
     ]  # fmt: skip
+    progress_names = _progress_names(dim, method)
     if dim == 2:
-        cmd += ["--geometry", gid]
-        print(f"{device}/{params}/{gid}: progress in {scratch / PROGRESS_NAME}", flush=True)
-    mem = JOB_MEM if dim == 1 else JOB_MEM_2D
+        cmd += ["--geometry", gid, "--method", method]
+        for n in progress_names:
+            print(f"{device}/{params}/{gid}: progress in {scratch / n}", flush=True)
+    if mem is None:
+        mem = JOB_MEM if dim == 1 else JOB_MEM_2D
     try:
         res = sandbox.run(cmd, out_dir=scratch, image=TCAD_IMAGE, mem=mem, cpus=JOB_CPUS)
     except sandbox.SandboxError as e:
-        _copy_progress(scratch, progress_log)
-        log = scratch / "job.log"
+        _copy_progress(scratch, progress_log, progress_names)
+        log = scratch / f"job_{method}.log"
         log.write_text(f"{e.result.stdout or ''}\n{e.result.stderr or ''}", encoding="utf-8")
-        raise RuntimeError(f"moscap-job failed (exit {e.result.returncode}); log: {log}") from e
-    _copy_progress(scratch, progress_log)
+        raise RuntimeError(
+            f"moscap-job failed (exit {e.result.returncode}); log: {log}; resume with "
+            f"--resume {scratch}"
+        ) from e
+    _copy_progress(scratch, progress_log, progress_names)
     # DEVSIM logs every Newton iteration; echo only the job's summary line.
     tag = f"{device}/{params}" + (f"/{gid}" if dim == 2 else "")
-    summary = [ln for ln in res.stdout.splitlines() if ln.startswith(f"{tag}:")]
+    summary = [ln for ln in res.stdout.splitlines() if ln.startswith(f"{tag}")]
     print(summary[-1] if summary else f"{tag}: done", flush=True)
+    if method in ("qs", "ac"):
+        print(f"{tag}/{method}: kept in {scratch} (then --method combine --resume {scratch})")
+        return
     if dim == 1:
         dest = root / device / params
         names = (moscap1d.PER_AREA_CSV, moscap1d.PER_AREA_META)
@@ -452,8 +538,14 @@ def _parser() -> argparse.ArgumentParser:
             "--out", type=Path, required=True, help="tree root, e.g. results/tcad/moscap1d"
         )
         p.add_argument("--geometry", default=None, help="2D: the SPICE geometry id")
+        p.add_argument(
+            "--method", choices=METHODS, default="both",
+            help="2D: both sweeps (default), one sweep alone (qs, ac), or the job files (combine)",
+        )  # fmt: skip
         if name == "moscap":
             p.add_argument("--progress-log", type=Path, default=None)
+            p.add_argument("--resume", type=Path, default=None, help="2D: the job's scratch dir")
+            p.add_argument("--mem", default=None, help="memory of the sandbox job (e.g. 12g)")
     p = sub.add_parser(
         "meshconv", help="mesh convergence of a MOS capacitor (host: runs meshconv-job)"
     )
@@ -479,9 +571,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     a = _parser().parse_args(argv)
     try:
         if a.command == "moscap-job":
-            run_job(a.device, a.params, a.out, a.dim, a.geometry)
+            run_job(a.device, a.params, a.out, a.dim, a.geometry, a.method)
         elif a.command == "moscap":
-            run_host(a.device, a.params, a.out, a.dim, a.geometry, a.progress_log)
+            run_host(
+                a.device, a.params, a.out, a.dim, a.geometry, a.progress_log, a.method, a.resume,
+                a.mem,
+            )  # fmt: skip
         elif a.command == "meshconv-job" and a.assemble:
             run_meshconv_assemble(a.device, a.dim, a.out)
         elif a.command == "meshconv-job" and a.agreement:
