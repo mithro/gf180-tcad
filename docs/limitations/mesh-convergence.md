@@ -135,7 +135,20 @@ levels 0 and 1 are the candidates, each with a finer neighbour, and level 2 is o
 neighbour of level 1. The levels 0–2 give one triple, and so one observed order, which the
 report gives with its oscillating and noise-floor biases.
 
-TABLE-2D
+The selection (the report's `levels` and `selected`, in {repo}`results/tcad/meshconv/moscap2d`; the
+2D-equals-1D column is the largest relative difference of the extruded uniform stack's C per area
+against 1D, {py:data}`~gf180tcad.tcad.meshconv.AGREEMENT_1D` = 0.5 %):
+
+| Level | nfet: change to next level | nfet: against 1D | pfet: change to next level | pfet: against 1D |
+|---|---|---|---|---|
+| 0 | 0.256 % | 0.553 % | 0.170 % | 0.546 % |
+| 1 | 0.092 % | 0.289 % | 0.076 % | 0.281 % |
+| 2 | (finest) | 0.152 % | (finest) | 0.152 % |
+
+Level 0 meets the 1 % convergence criterion but not the 0.5 % 2D-equals-1D one, so level 1 (scale
+0.7071) is the coarsest level that meets both, for both devices. The selected level has 224,640
+(nfet) and 205,327 (pfet) nodes. The nfet level-1 and level-2 sweeps each needed round-off
+acceptances at the −0.6 V point ({ref}`moscap2d-solver`); the pfet needed none.
 
 ## Limitations
 

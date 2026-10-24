@@ -201,6 +201,29 @@ calibration and comparison
 {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` keeps the 0.1 % bound: it is a
 {term}`strict expected failure` at Lmin (on the sensitivity assertion only) and asserted at L = 2 µm.
 
+(moscap2d-l2)=
+
+## The L = 2 µm cell: QS only, resumed, with a memory growth that is not fixed
+
+- **QS only.** The L = 2 µm cell (501k nodes for the nfet) has no AC result (no `cgx.csv`). Its AC
+  sweep needs the drift-diffusion small-signal solve, and that fails in {{ DEVSIM }}'s direct
+  solver (UMFPACK 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
+  solve does ({ref}`moscap2d-l10`). The job files record it (`ac` is
+  {py:data}`~gf180tcad.tcad.moscap2d.AC_INFEASIBLE`, `ac_points` is 0).
+- **Resumed after out-of-memory restarts.** The L = 2 µm QS sweeps ran under a memory cap and were
+  restarted by the service manager after being killed; each restart resumed from the last saved
+  point ({py:func}`~gf180tcad.tcad.moscap2d.resume_count`; `resumed` in the job files: 4 restarts for each
+  device, after points 57, 97, 136 and 173 for the nfet and 34, 73, 113 and 162 for the pfet).
+  The hand-off between points is the saved state, so a resumed sweep agrees with an uninterrupted
+  one within 1e-12 (the solver tolerance) but is not byte-identical to it. The restart counts were
+  backfilled from the progress logs, since the runs predate the record.
+- **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep grew by about 180 MB per
+  point. It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
+  sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
+  hypotheses are open: something only the source/drain cell has (four contacts, the inter-layer
+  dielectric region), or memory-allocator fragmentation at large node counts. This is an open
+  follow-up, not a fix: the resume mechanism works around it.
+
 (moscap2d-l10)=
 
 ## Not run: the 2D cell at L = 10 µm
@@ -233,5 +256,6 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
 - **The remaining discretisation bias** of the triangle mesh (a few 0.1 %) is below the 1 %
   mesh-convergence criterion and the 0.5 % 2D-equals-1D check, and far below the 5 %
   agreement criterion ({ref}`mesh-convergence-2d`).
-- **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`).
+- **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
+  ({ref}`moscap2d-l2`).
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).

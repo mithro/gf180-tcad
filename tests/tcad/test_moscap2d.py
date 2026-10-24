@@ -226,9 +226,14 @@ def test_committed_start_results(device):
     """Every calibration geometry has its start job, on the selected 2D mesh."""
     proc = process.load(device)
     for g in CAL[device]:
+        if g.l_um >= 10.0:  # the L = 10 um cell is not simulated in 2D (docs/limitations/moscap2d.md)
+            continue
         job = moscap2d.job_dir(TREE, device, "start", g)
         names = {p.name for p in job.iterdir()}
-        assert names == {moscap2d.CV_CSV, moscap2d.CGX_CSV, moscap2d.MESH_FILE, moscap2d.META_JSON}
+        # L = 2 um is QS-only: its AC solve exceeds the UMFPACK size limit (AC_INFEASIBLE)
+        qs_only = g.l_um >= 2.0
+        base = {moscap2d.CV_CSV, moscap2d.MESH_FILE, moscap2d.META_JSON}
+        assert names == (base if qs_only else base | {moscap2d.CGX_CSV})
         cols, meta = io.read_csv(job / moscap2d.CV_CSV)
         assert meta["dim"] == "2" and meta["method"] == "qs" and meta["params"] == "start"
         assert tuple(cols["vg"]) == cli.job_vg(proc)
@@ -249,9 +254,12 @@ def test_committed_start_results(device):
         for a, b, t in zip(cols["c_per_area"], cols["cgg_per_um"], cols["cgg_total"], strict=True):
             assert math.isclose(b, a * g.l_um, rel_tol=1e-12)
             assert math.isclose(t, b * g.w_um, rel_tol=1e-12)
+        if qs_only:
+            assert info["ac"] == moscap2d.AC_INFEASIBLE and info["ac_points"] == 0
+            continue
         gx, gmeta = io.read_csv(job / moscap2d.CGX_CSV)
         assert gmeta["method"] == "ac" and float(gmeta["freq_hz"]) == 1e6
-        others = sorted(k[1:-7] for k in gx if k.startswith("c") and k.endswith("g_per_um")
+        others = sorted(k[1:-8] for k in gx if k.startswith("c") and k.endswith("g_per_um")
                         and k != "cgg_per_um")  # fmt: skip
         assert others == ["body", "drain", "source"]
         assert max(abs(e) for e in gx["sum_rel_error"]) < 1e-3  # charge conservation
