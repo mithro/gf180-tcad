@@ -226,7 +226,9 @@ def test_committed_start_results(device):
     """Every calibration geometry has its start job, on the selected 2D mesh."""
     proc = process.load(device)
     for g in CAL[device]:
-        if g.l_um >= 10.0:  # the L = 10 um cell is not simulated in 2D (docs/limitations/moscap2d.md)
+        if (
+            g.l_um >= 10.0
+        ):  # the L = 10 um cell is not simulated in 2D (docs/limitations/moscap2d.md)
             continue
         job = moscap2d.job_dir(TREE, device, "start", g)
         names = {p.name for p in job.iterdir()}

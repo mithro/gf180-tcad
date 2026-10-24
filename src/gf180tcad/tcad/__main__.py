@@ -325,7 +325,9 @@ def run_host(
             if (d, p, geometry_id(g)) != (device, params, gid)
         )  # fmt: skip
     else:
-        others = (root / d / p for d in process.DEVICES for p in PARAMS if (d, p) != (device, params))
+        others = (
+            root / d / p for d in process.DEVICES for p in PARAMS if (d, p) != (device, params)
+        )
     check_same_image(root, f"moscap{dim}d", image, others)
     load_params(device, params)  # refuses a missing calibration before anything runs
     meshconv.selected_spec(device, dim)  # refuses a missing mesh-convergence result
