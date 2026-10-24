@@ -219,6 +219,43 @@ print(json.dumps({'NumThreads': gmsh.option.getNumber('General.NumThreads'),
 """
 
 
+# meshwell's 2D mesh of the same square, read back through meshio: a summary of the mesh
+# meshwell returns. The values are those of this (stable) image, gmsh 4.15.2;
+# tests/test_tcad_dev_image.py asserts the same values in the dev-HEAD image (gmsh 5), so the
+# two images are compared.
+_MESH_READBACK = """
+import json
+from shapely.geometry import box
+from meshwell.orchestrator import generate_mesh
+from meshwell.polysurface import PolySurface
+m = generate_mesh([PolySurface(polygons=box(0, 0, 1, 1), physical_name='sq', mesh_order=1)],
+                  dim=2, default_characteristic_length=0.5, verbosity=0)
+print(json.dumps({
+    'points': len(m.points),
+    'cells': sorted([c.type, len(c.data)] for c in m.cells),
+    'field_data': {k: [int(x) for x in v] for k, v in sorted(m.field_data.items())},
+    'cell_sets': {k: sorted(len(a) for a in v) for k, v in sorted(m.cell_sets.items())},
+}))
+"""
+MESH_READBACK_EXPECTED = {
+    "points": 12,
+    "cells": [["line", 2], ["line", 2], ["line", 2], ["line", 2], ["triangle", 14]],
+    # physical group "sq" (dim 2, tag 1) and its boundary "sq___None" (dim 1, tag 1)
+    "field_data": {"sq": [1, 2], "sq___None": [1, 1]},
+    "cell_sets": {
+        "gmsh:bounding_entities": [2, 2, 2, 2, 4],
+        "sq": [0, 0, 0, 0, 14],
+        "sq___None": [0, 2, 2, 2, 2],
+    },
+}
+
+
+@pytest.mark.sandbox
+def test_meshwell_mesh_reads_back(tmp_path):
+    res = _run(["python3", "-c", _MESH_READBACK], tmp_path)
+    assert json.loads(res.stdout.splitlines()[-1]) == MESH_READBACK_EXPECTED
+
+
 @pytest.mark.sandbox
 def test_gmsh_single_thread(tmp_path):
     got = json.loads(_run(["python3", "-c", _GMSH_MESH], tmp_path).stdout.splitlines()[-1])

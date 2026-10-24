@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """The 1D MOS capacitor (gf180tcad.tcad.moscap1d) and its CLI (python -m gf180tcad.tcad).
 
-The sandbox-marked tests run the TCAD in the TCAD image (``pytest -m sandbox``): one container
-runs tests/tcad/moscap1d_driver.py for the physics tests, and the CLI runs twice for the
-byte-identity test. The others run on the host, from committed files.
+The sandbox-marked tests run the TCAD in the image the 1D results are generated with
+(``RESULTS_IMAGE["moscap1d"]``, the dev-HEAD image; ``pytest -m sandbox``): one container runs
+tests/tcad/moscap1d_driver.py for the physics tests, and the CLI runs twice for the
+byte-identity test. test_stable_and_dev_images_agree runs the 1D CLIs on both images. The others
+run on the host, from committed files.
 """
 
 import json
@@ -15,7 +17,15 @@ import pytest
 
 from gf180tcad import io, sandbox
 from gf180tcad.devices import Geometry
-from gf180tcad.tcad import TCAD_IMAGE, analytic, calibration, meshconv, moscap1d, process
+from gf180tcad.tcad import (
+    RESULTS_IMAGE,
+    analytic,
+    calibration,
+    image_ref,
+    meshconv,
+    moscap1d,
+    process,
+)
 from gf180tcad.tcad import __main__ as cli
 from gf180tcad.tcad.mesh import MeshSpec
 from gf180tcad.tcad.process import CONSTANTS
@@ -228,7 +238,7 @@ def driver(tmp_path_factory) -> dict:
     out = tmp_path_factory.mktemp("driver")
     sandbox.run(
         ["python3", "/work/src/tests/tcad/moscap1d_driver.py"],
-        out_dir=out, image=TCAD_IMAGE, mem="2g", cpus=1,
+        out_dir=out, image=image_ref(RESULTS_IMAGE["moscap1d"]), mem="2g", cpus=1,
     )  # fmt: skip
     return json.loads((out / "driver.json").read_bytes())
 
@@ -309,3 +319,30 @@ def test_rerun_replaces_the_job_dir(tmp_path):
     assert not stale.exists()
     assert (root / "nfet_05v0" / "start" / moscap1d.PER_AREA_CSV).is_file()
     shutil.rmtree(root)
+
+
+@pytest.mark.sandbox
+def test_stable_and_dev_images_agree(tmp_path):
+    """The drift guard between the two TCAD stacks: the 1D data files, mesh convergence and
+    moscap1d, are byte-identical whether made on the stable or the dev-HEAD image. Only
+    provenance.json differs, and it names the image that made them."""
+    trees = {}
+    for image in ("stable", "dev"):
+        mc, mo = tmp_path / image / "meshconv", tmp_path / image / "moscap1d"
+        for device in DEVICES:
+            argv = ["meshconv", "--device", device, "--dim", "1", "--out", str(mc)]
+            assert cli.main([*argv, "--image", image]) == 0
+            argv = ["moscap", "--device", device, "--dim", "1", "--params", "start"]
+            assert cli.main([*argv, "--out", str(mo), "--image", image]) == 0
+        for root in (mc, mo):
+            prov = json.loads((root / "provenance.json").read_bytes())
+            assert {k: v["name"] for k, v in prov["images"].items()} == {"moscap1d": image}
+        trees[image] = {
+            p.relative_to(tmp_path / image).as_posix(): p.read_bytes()
+            for p in (tmp_path / image).rglob("*")
+            if p.is_file() and p.name != "provenance.json"
+        }
+    assert sorted(trees["stable"]) == sorted(trees["dev"])
+    assert len(trees["dev"]) == 4 * len(DEVICES)
+    for rel, data in trees["stable"].items():
+        assert data == trees["dev"][rel], rel

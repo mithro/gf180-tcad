@@ -23,7 +23,7 @@ eps_si/L_D, L_D = sqrt(eps_si V_t / (q (n0 + p0))).
 Poly depletion is included by applying the same Q to the gate: the poly-silicon gate is a
 second semiconductor, of net doping ``gate_doping``, with its own surface potential psi_g.
 For the degenerate gates (1e20, 3.6e19 cm^-3) Boltzmann statistics is approximate, but it is
-also what the :term:`TCAD` (`DEVSIM <https://devsim.org/>`_) uses (`gplugins.devsim.materials <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/materials.py>`_), so the two are consistent; the
+also what the :term:`TCAD` (`DEVSIM <https://devsim.org/>`_) uses (`gplugins.devsim.materials <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/materials.py>`_), so the two are consistent; the
 difference to Fermi-Dirac statistics is a documented limitation absorbed by the tunable
 :ref:`dv_fb_v <process-data-tunables>`.
 

@@ -1,8 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
-# Reproducible builds of the two project images, one matrix entry each:
+# Reproducible builds of the three project images, one matrix entry each:
 #   base: ghcr.io/mithro/gf180-tcad-base  (docker/base/, pinned by docker/IMAGE)
 #   tcad: ghcr.io/mithro/gf180-tcad-tcad  (docker/tcad/, pinned by docker/TCAD_IMAGE; built FROM
 #         docker/IMAGE, which is public, so no login is needed to pull it)
+#   tcad-dev: ghcr.io/mithro/gf180-tcad-tcad-dev  (docker/tcad-dev/, pinned by
+#         docker/TCAD_DEV_IMAGE; the TCAD stack at development HEAD (meshwell and gf180mcu from
+#         the mithro forks), pinned by commit in docker/tcad-dev/upstream.json, every input
+#         fetched from the gf180-tcad input mirror first, DEVSIM compiled from source; also FROM
+#         docker/IMAGE)
 #   PRs:  push tag pr-<number>;  main: push latest and sha-<commit>; both only after the
 #         IMAGE_ID, pin and versions checks passed (the build pushes only the staging tag
 #         `unverified`, which may point at an unverified image);
@@ -54,6 +59,9 @@ jobs:
           - image: tcad
             name: ghcr.io/mithro/gf180-tcad-tcad
             pin: docker/TCAD_IMAGE
+          - image: tcad-dev
+            name: ghcr.io/mithro/gf180-tcad-tcad-dev
+            pin: docker/TCAD_DEV_IMAGE
     env:
       IMAGE_NAME: ${{ matrix.name }}
       DIR: docker/${{ matrix.image }}
@@ -154,6 +162,9 @@ jobs:
           - image: tcad
             name: ghcr.io/mithro/gf180-tcad-tcad
             pin: docker/TCAD_IMAGE
+          - image: tcad-dev
+            name: ghcr.io/mithro/gf180-tcad-tcad-dev
+            pin: docker/TCAD_DEV_IMAGE
     env:
       IMAGE_NAME: ${{ matrix.name }}
       DIR: docker/${{ matrix.image }}

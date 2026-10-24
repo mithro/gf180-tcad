@@ -1,0 +1,1464 @@
+{
+  "aenum-3.1.17-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/aenum-3.1.17-py3-none-any.whl",
+    "package": "aenum",
+    "sha256": "8b883a37a04e74cc838ac442bdd28c266eae5bbf13e1342c7ef123ed25230139",
+    "url": "https://files.pythonhosted.org/packages/48/8d/1fe30c6fd8999b9d462547c4a1bb6690bda24af38f2913c4bec7decb81f2/aenum-3.1.17-py3-none-any.whl",
+    "version": "3.1.17"
+  },
+  "aiohappyeyeballs-2.7.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/aiohappyeyeballs-2.7.1-py3-none-any.whl",
+    "package": "aiohappyeyeballs",
+    "sha256": "9243213661e29250eb41368e5daa826fc017156c3b8a11440826b2e3ed376472",
+    "url": "https://files.pythonhosted.org/packages/71/43/1947f06babed6b3f1d7f38b0c767f52df66bfb2bc10b468c4a7de9eceff2/aiohappyeyeballs-2.7.1-py3-none-any.whl",
+    "version": "2.7.1"
+  },
+  "aiohttp-3.14.5-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/aiohttp-3.14.5-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "aiohttp",
+    "sha256": "1ffa3a523a36d8628f98c06492ae16a31a23d14c0b4ec721757b477319f656d6",
+    "url": "https://files.pythonhosted.org/packages/32/51/395d225ef36f5a50d8e548dcd3141bfdbcd31fb6eed859022c573d2c4d66/aiohttp-3.14.5-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "3.14.5"
+  },
+  "aiosignal-1.4.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/aiosignal-1.4.0-py3-none-any.whl",
+    "package": "aiosignal",
+    "sha256": "053243f8b92b990551949e63930a839ff0cf0b0ebbe0597b0f3fb19e1a0fe82e",
+    "url": "https://files.pythonhosted.org/packages/fb/76/641ae371508676492379f16e2fa48f4e2c11741bd63c48be4b12a6b09cba/aiosignal-1.4.0-py3-none-any.whl",
+    "version": "1.4.0"
+  },
+  "annotated_doc-0.0.5-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/annotated_doc-0.0.5-py3-none-any.whl",
+    "package": "annotated-doc",
+    "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
+    "url": "https://files.pythonhosted.org/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl",
+    "version": "0.0.5"
+  },
+  "annotated_types-0.8.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/annotated_types-0.8.0-py3-none-any.whl",
+    "package": "annotated-types",
+    "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+    "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl",
+    "version": "0.8.0"
+  },
+  "asttokens-3.0.2-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/asttokens-3.0.2-py3-none-any.whl",
+    "package": "asttokens",
+    "sha256": "9da13157f5b28becde0bd374fc677dcd3c290614264eff096f167c469cd9f933",
+    "url": "https://files.pythonhosted.org/packages/d4/2b/04b8a15f3a1c77bc79ddf5c73875327f34b4fa75982df2b76e45e402d364/asttokens-3.0.2-py3-none-any.whl",
+    "version": "3.0.2"
+  },
+  "attrs-26.1.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/attrs-26.1.0-py3-none-any.whl",
+    "package": "attrs",
+    "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+    "url": "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl",
+    "version": "26.1.0"
+  },
+  "cachetools-7.2.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/cachetools-7.2.3-py3-none-any.whl",
+    "package": "cachetools",
+    "sha256": "85ef9d2703918bedf7f88caa0b06bb3bb7a71360eb0b05c20796b89fede6e30c",
+    "url": "https://files.pythonhosted.org/packages/fb/dd/044062b61d94c59c29ad0da6918e6a21106f5b115096e9c87081cdd96167/cachetools-7.2.3-py3-none-any.whl",
+    "version": "7.2.3"
+  },
+  "cadquery-2.8.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/cadquery-2.8.0-py3-none-any.whl",
+    "package": "cadquery",
+    "sha256": "0acaddf36415551c26c3f8237907980ba86c277e211c32398121c839f719c81f",
+    "url": "https://files.pythonhosted.org/packages/42/3c/57a6c1683576c9a626207399972c2e83420dc6f87c239446190021d649db/cadquery-2.8.0-py3-none-any.whl",
+    "version": "2.8.0"
+  },
+  "cadquery_ocp-7.9.3.1.1-cp313-cp313-manylinux_2_31_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/cadquery_ocp-7.9.3.1.1-cp313-cp313-manylinux_2_31_x86_64.whl",
+    "package": "cadquery-ocp",
+    "sha256": "0e70ab790910b6d81080a6d0df26a0cd0f1fd08984c447585c74be9b6d58c6c8",
+    "url": "https://files.pythonhosted.org/packages/f1/16/0f3a1d0385d9144eb71416bffd421d57d10555c4caf2356e8cd858a5a3bc/cadquery_ocp-7.9.3.1.1-cp313-cp313-manylinux_2_31_x86_64.whl",
+    "version": "7.9.3.1.1"
+  },
+  "cadquery_ocp_proxy-7.9.3.1.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/cadquery_ocp_proxy-7.9.3.1.1-py3-none-any.whl",
+    "package": "cadquery-ocp-proxy",
+    "sha256": "ca4164ec4b54956d9fc3e68c67d555b5486cb963c2f71e18df005ba16b921c91",
+    "url": "https://files.pythonhosted.org/packages/30/c0/04e9363a99fee892de2776820e3dcf04f8825b6edc9580efe3416c9465a7/cadquery_ocp_proxy-7.9.3.1.1-py3-none-any.whl",
+    "version": "7.9.3.1.1"
+  },
+  "casadi-3.8.1-cp311-abi3-manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/casadi-3.8.1-cp311-abi3-manylinux_2_28_x86_64.whl",
+    "package": "casadi",
+    "sha256": "99c32594513bec827ba51e6b24f6d84bb94abbf95f7fe9c2b924f62bec3e02ea",
+    "url": "https://files.pythonhosted.org/packages/63/88/79cdbd539a62e971b881dd5d598c2b65ab5c646e7d58fe5ba22f2cad5e13/casadi-3.8.1-cp311-abi3-manylinux_2_28_x86_64.whl",
+    "version": "3.8.1"
+  },
+  "certifi-2026.10.18-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/certifi-2026.10.18-py3-none-any.whl",
+    "package": "certifi",
+    "sha256": "73191c47aaa79da394e8fee2dbc2ec827432cab56311122c9e47abf79e390f62",
+    "url": "https://files.pythonhosted.org/packages/08/ba/95dd616042484f7c83a06974388b37b837732740ee70bc5dc715b5fcd55a/certifi-2026.10.18-py3-none-any.whl",
+    "version": "2026.10.18"
+  },
+  "cffi-2.1.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/cffi-2.1.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "package": "cffi",
+    "sha256": "a931079504ecc49efed7744c476a5c343a92fabf66dec2db95edb1b2fdc770e2",
+    "url": "https://files.pythonhosted.org/packages/95/95/86342356ff5953b3fb06f7ef7c5bee212d45e770abc7218d451b9148313c/cffi-2.1.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "version": "2.1.1"
+  },
+  "charset_normalizer-3.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/charset_normalizer-3.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "charset-normalizer",
+    "sha256": "7218e8f32b0956cfcd048fd42d9d5779809745ca1d86113ca56f66e7ae1549c4",
+    "url": "https://files.pythonhosted.org/packages/4b/85/41d27f234b82e47c167a5f6c0f62501dc0c640585ff4aba79e08a390336a/charset_normalizer-3.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "3.5.2"
+  },
+  "comm-0.2.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/comm-0.2.3-py3-none-any.whl",
+    "package": "comm",
+    "sha256": "c615d91d75f7f04f095b30d1c1711babd43bdc6419c1be9886a85f2f4e489417",
+    "url": "https://files.pythonhosted.org/packages/60/97/891a0971e1e4a8c5d2b20bbe0e524dc04548d2307fee33cdeba148fd4fc7/comm-0.2.3-py3-none-any.whl",
+    "version": "0.2.3"
+  },
+  "contourpy-1.4.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/contourpy-1.4.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "contourpy",
+    "sha256": "f1219a8898523cba821085f2da8a1b962cc696325763f09d7f93538ba43b2d70",
+    "url": "https://files.pythonhosted.org/packages/68/77/8f93ecbde1a4d11dfd460cd19a0c159f5487352e751fa87f5d78cc9db08e/contourpy-1.4.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "1.4.0"
+  },
+  "cycler-0.12.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/cycler-0.12.1-py3-none-any.whl",
+    "package": "cycler",
+    "sha256": "85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30",
+    "url": "https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl",
+    "version": "0.12.1"
+  },
+  "debugpy-1.8.22-cp313-cp313-manylinux_2_34_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/debugpy-1.8.22-cp313-cp313-manylinux_2_34_x86_64.whl",
+    "package": "debugpy",
+    "sha256": "c1ffb9953708b648ecf6acd2e5ad2c002bf68785ed618197dd4463a2a7226f39",
+    "url": "https://files.pythonhosted.org/packages/bc/4f/8df91270afbf61fc5ab202951f28451194a7eb093704b26da11cb0ecd308/debugpy-1.8.22-cp313-cp313-manylinux_2_34_x86_64.whl",
+    "version": "1.8.22"
+  },
+  "executing-2.3.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/executing-2.3.0-py3-none-any.whl",
+    "package": "executing",
+    "sha256": "736e859c9f8701f11fcf516856f26f562e04776387824b43a35a1dfe21c84122",
+    "url": "https://files.pythonhosted.org/packages/4d/dd/8bc67e7d5ffc1d88aa5af511189dfb76dc4e1e5b808fab186146ef2663e5/executing-2.3.0-py3-none-any.whl",
+    "version": "2.3.0"
+  },
+  "ezdxf-1.4.5-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ezdxf-1.4.5-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "package": "ezdxf",
+    "sha256": "d22fd3bad579b6a190f620540df06c4fe5b6283442662041ddd104d568fa0d0b",
+    "url": "https://files.pythonhosted.org/packages/20/4e/be091a01649ca54722500e20c67ab11dfe9f91371f10e7a8c6d9d724c437/ezdxf-1.4.5-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "version": "1.4.5"
+  },
+  "flexcache-0.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/flexcache-0.3-py3-none-any.whl",
+    "package": "flexcache",
+    "sha256": "d43c9fea82336af6e0115e308d9d33a185390b8346a017564611f1466dcd2e32",
+    "url": "https://files.pythonhosted.org/packages/27/cd/c883e1a7c447479d6e13985565080e3fea88ab5a107c21684c813dba1875/flexcache-0.3-py3-none-any.whl",
+    "version": "0.3"
+  },
+  "flexparser-0.4-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/flexparser-0.4-py3-none-any.whl",
+    "package": "flexparser",
+    "sha256": "3738b456192dcb3e15620f324c447721023c0293f6af9955b481e91d00179846",
+    "url": "https://files.pythonhosted.org/packages/fe/5e/3be305568fe5f34448807976dc82fc151d76c3e0e03958f34770286278c1/flexparser-0.4-py3-none-any.whl",
+    "version": "0.4"
+  },
+  "flit_core-4.1.0-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/flit_core-4.1.0-py3-none-any.whl",
+    "package": "flit-core",
+    "sha256": "17398cdd2c38b24047a5a9c93089ec5c0bf12ec3d1469bbf69c27ed7965299db",
+    "url": "https://files.pythonhosted.org/packages/38/2a/8ea4bd54734f0fcbb507c28cb6b79d72f528e40498178a01cb35fc5d686f/flit_core-4.1.0-py3-none-any.whl",
+    "version": "4.1.0"
+  },
+  "fonttools-4.67.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/fonttools-4.67.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "package": "fonttools",
+    "sha256": "50c41e30aa2e0130b80d1a58ac0f3ea7c02a854a70dbea1ff8d88e0ce524806f",
+    "url": "https://files.pythonhosted.org/packages/a8/26/939ae9874dd44116f2ecf61cb0caf029e3004ec1ed311a86389dee3450be/fonttools-4.67.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "version": "4.67.0"
+  },
+  "freetype_py-2.5.1-py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/freetype_py-2.5.1-py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
+    "package": "freetype-py",
+    "sha256": "289b443547e03a4f85302e3ac91376838e0d11636050166662a4f75e3087ed0b",
+    "url": "https://files.pythonhosted.org/packages/b6/36/853cad240ec63e21a37a512ee19c896b655ce1772d803a3dd80fccfe63fe/freetype_py-2.5.1-py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
+    "version": "2.5.1"
+  },
+  "frozenlist-1.8.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/frozenlist-1.8.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+    "package": "frozenlist",
+    "sha256": "fb30f9626572a76dfe4293c7194a09fb1fe93ba94c7d4f720dfae3b646b45027",
+    "url": "https://files.pythonhosted.org/packages/d5/4e/e4691508f9477ce67da2015d8c00acd751e6287739123113a9fca6f1604e/frozenlist-1.8.0-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+    "version": "1.8.0"
+  },
+  "gdstk-1.0.1-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/gdstk-1.0.1-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "gdstk",
+    "sha256": "90653e965cc8c5250333e381fe1ccc3f00e14660ca0a2383eb06900683d2b14b",
+    "url": "https://files.pythonhosted.org/packages/3f/60/9e89cde8345e860ec3701f500551d5b85537f932234939a9dc57b31bb6b3/gdstk-1.0.1-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "1.0.1"
+  },
+  "graphviz-0.21-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/graphviz-0.21-py3-none-any.whl",
+    "package": "graphviz",
+    "sha256": "54f33de9f4f911d7e84e4191749cac8cc5653f815b06738c54db9a15ab8b1e42",
+    "url": "https://files.pythonhosted.org/packages/91/4c/e0ce1ef95d4000ebc1c11801f9b944fa5910ecc15b5e351865763d8657f8/graphviz-0.21-py3-none-any.whl",
+    "version": "0.21"
+  },
+  "hatch_vcs-0.5.0-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/hatch_vcs-0.5.0-py3-none-any.whl",
+    "package": "hatch-vcs",
+    "sha256": "b49677dbdc597460cc22d01b27ab3696f5e16a21ecf2700fb01bc28e1f2a04a7",
+    "url": "https://files.pythonhosted.org/packages/5f/48/1f85cee4b7b4f40b9b814b1febbc661bda6ced9649e410a0b74f6e415dd0/hatch_vcs-0.5.0-py3-none-any.whl",
+    "version": "0.5.0"
+  },
+  "hatchling-1.32.4-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/hatchling-1.32.4-py3-none-any.whl",
+    "package": "hatchling",
+    "sha256": "08ecf7548fb48205e7f213d70c71e67b8271b7242093dc3f1da578b42c734a2c",
+    "url": "https://files.pythonhosted.org/packages/5f/80/91f51f439c05d4ec4623c22928ce16a938d6d793bf709477830823497859/hatchling-1.32.4-py3-none-any.whl",
+    "version": "1.32.4"
+  },
+  "idna-3.20-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/idna-3.20-py3-none-any.whl",
+    "package": "idna",
+    "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+    "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+    "version": "3.20"
+  },
+  "imageio-2.38.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/imageio-2.38.1-py3-none-any.whl",
+    "package": "imageio",
+    "sha256": "36d23eb7423d2fb63f637098758edb3d2df3687f7125e0a5ce8596572022dcf9",
+    "url": "https://files.pythonhosted.org/packages/7d/8a/3b7f62b9df56460959f1b9bef094248d2a4d7f393c5b0d2da8efcdf0e40e/imageio-2.38.1-py3-none-any.whl",
+    "version": "2.38.1"
+  },
+  "iniconfig-2.3.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/iniconfig-2.3.1-py3-none-any.whl",
+    "package": "iniconfig",
+    "sha256": "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7",
+    "url": "https://files.pythonhosted.org/packages/56/43/4ca9e49d27a1fcf6bece6f6aec0ea46bb9112489b93d4b688fb415457bdb/iniconfig-2.3.1-py3-none-any.whl",
+    "version": "2.3.1"
+  },
+  "ipyevents-2.0.4-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ipyevents-2.0.4-py3-none-any.whl",
+    "package": "ipyevents",
+    "sha256": "e532e05b037f70373850723f483d2830cb8a633e5aa19637ee9e7adaf41421f1",
+    "url": "https://files.pythonhosted.org/packages/ca/d3/642a6dc3db8ea558a9b5fbc83815b197861868dc98f98a789b85c7660670/ipyevents-2.0.4-py3-none-any.whl",
+    "version": "2.0.4"
+  },
+  "ipykernel-7.4.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ipykernel-7.4.0-py3-none-any.whl",
+    "package": "ipykernel",
+    "sha256": "a6757f790ddc5a6006b813d82da1a9dbb65b3a00f2b6607df776418c6566ec1c",
+    "url": "https://files.pythonhosted.org/packages/a5/f8/8b5c10c7f36ab5a3b5c4703669e5b14e44e98782b58e535dd30670e8799a/ipykernel-7.4.0-py3-none-any.whl",
+    "version": "7.4.0"
+  },
+  "ipython-9.17.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ipython-9.17.1-py3-none-any.whl",
+    "package": "ipython",
+    "sha256": "6d1645743cfd1a07eb695d85aa2b5fa66721f8cbae9431d4049f7084bbf06509",
+    "url": "https://files.pythonhosted.org/packages/2d/1e/65b59cf518c106aa755e7f7da3099027738687a862ec785060702a481320/ipython-9.17.1-py3-none-any.whl",
+    "version": "9.17.1"
+  },
+  "ipython_pygments_lexers-1.1.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ipython_pygments_lexers-1.1.1-py3-none-any.whl",
+    "package": "ipython-pygments-lexers",
+    "sha256": "a9462224a505ade19a605f71f8fa63c2048833ce50abc86768a0d81d876dc81c",
+    "url": "https://files.pythonhosted.org/packages/d9/33/1f075bf72b0b747cb3288d011319aaf64083cf2efef8354174e3ed4540e2/ipython_pygments_lexers-1.1.1-py3-none-any.whl",
+    "version": "1.1.1"
+  },
+  "ipytree-0.2.2-py2.py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ipytree-0.2.2-py2.py3-none-any.whl",
+    "package": "ipytree",
+    "sha256": "744dc1a02c3ec26df8a5ecd87d085a67dc8232a1def6048834403ddcf3b64143",
+    "url": "https://files.pythonhosted.org/packages/e4/03/35cf1742598d784e96153175233318a2332f71863e55ad1007c9264c1a7a/ipytree-0.2.2-py2.py3-none-any.whl",
+    "version": "0.2.2"
+  },
+  "ipywidgets-8.1.9-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ipywidgets-8.1.9-py3-none-any.whl",
+    "package": "ipywidgets",
+    "sha256": "f2b8cbcaae10252b809fbe4d7470db75c09b769a32cbf816d20e5ca6d3c5a79d",
+    "url": "https://files.pythonhosted.org/packages/c3/55/298e9b3b864a198234997e87a1471c1b17d7f3546ace6d18fb5cf1ce24b2/ipywidgets-8.1.9-py3-none-any.whl",
+    "version": "8.1.9"
+  },
+  "jedi-0.20.1-py2.py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/jedi-0.20.1-py2.py3-none-any.whl",
+    "package": "jedi",
+    "sha256": "0fb16d86c4a4c73c37ba518c77419975e30fcc620658a8d14fbb5720cdd34142",
+    "url": "https://files.pythonhosted.org/packages/be/c7/71eb0d51cdcbb63b857c931aa4e9218b078b5d9f8ecd383b234f28fe7b0f/jedi-0.20.1-py2.py3-none-any.whl",
+    "version": "0.20.1"
+  },
+  "jinja2-3.1.6-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/jinja2-3.1.6-py3-none-any.whl",
+    "package": "jinja2",
+    "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+    "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
+    "version": "3.1.6"
+  },
+  "jupyter_client-8.10.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/jupyter_client-8.10.0-py3-none-any.whl",
+    "package": "jupyter-client",
+    "sha256": "5f73f24f22fa25192cfff6b23c051932a2473a797b05734aff495b392103e14e",
+    "url": "https://files.pythonhosted.org/packages/0f/88/7c548de1f6c2ade7c931a3282da73f9274fa6a1531091be682f89c85efb9/jupyter_client-8.10.0-py3-none-any.whl",
+    "version": "8.10.0"
+  },
+  "jupyter_core-5.9.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/jupyter_core-5.9.1-py3-none-any.whl",
+    "package": "jupyter-core",
+    "sha256": "ebf87fdc6073d142e114c72c9e29a9d7ca03fad818c5d300ce2adc1fb0743407",
+    "url": "https://files.pythonhosted.org/packages/e7/e7/80988e32bf6f73919a113473a604f5a8f09094de312b9d52b79c2df7612b/jupyter_core-5.9.1-py3-none-any.whl",
+    "version": "5.9.1"
+  },
+  "jupyterlab_widgets-3.0.17-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/jupyterlab_widgets-3.0.17-py3-none-any.whl",
+    "package": "jupyterlab-widgets",
+    "sha256": "40ac1e9955acf116c4d995d9bfa082d86ad9ec6d91c4f134827cf5e0a5eb75e0",
+    "url": "https://files.pythonhosted.org/packages/33/ef/6d27fc118f58cb24886da413545a7efb0853d405fddbfd8b2d9ac09fbed4/jupyterlab_widgets-3.0.17-py3-none-any.whl",
+    "version": "3.0.17"
+  },
+  "kfactory-3.5.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/kfactory-3.5.0-py3-none-any.whl",
+    "package": "kfactory",
+    "sha256": "f11d5d0456fd566ed185ccf5af8f31cac519efaf8a15e29fe5949756a95b5684",
+    "url": "https://files.pythonhosted.org/packages/fc/aa/ce279a7f04ae3174f5afffb28c86566499f3688daab6b8062a40e6072671/kfactory-3.5.0-py3-none-any.whl",
+    "version": "3.5.0"
+  },
+  "kfnetlist-0.3.0-cp312-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/kfnetlist-0.3.0-cp312-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "package": "kfnetlist",
+    "sha256": "f58f2181c27c5772b9505c08102f0116ebf0aa4fafb2c853bfc614fe3b973507",
+    "url": "https://files.pythonhosted.org/packages/26/7e/31b9757d2bd8bc77a23de6db02433598f5aecd84fde686ead66f1ebb2761/kfnetlist-0.3.0-cp312-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "version": "0.3.0"
+  },
+  "kiwisolver-1.5.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/kiwisolver-1.5.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "package": "kiwisolver",
+    "sha256": "74ad5c3dad54a4641b4c28cd15ded70899d04459c6c7aeacafea716be97cce6d",
+    "url": "https://files.pythonhosted.org/packages/ab/43/86aacc027959108b4c66eeae8b73cedb057dfa6eb3a335d05ad65197081c/kiwisolver-1.5.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "version": "1.5.1"
+  },
+  "klayout-0.30.12-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/klayout-0.30.12-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "klayout",
+    "sha256": "a8574b8348823f21785be10dc15b182cc3a855a6ed192bf15df470102404bb7d",
+    "url": "https://files.pythonhosted.org/packages/e2/e2/a25e5e0c4dc71227ce5f4d1e32d62a2c074db087cb9d5788a7b5c539a6c9/klayout-0.30.12-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "0.30.12"
+  },
+  "lazy_loader-0.6-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/lazy_loader-0.6-py3-none-any.whl",
+    "package": "lazy-loader",
+    "sha256": "77253be3391b06124a0e16105bd663b6c54470af1a9ca8e1cf026f38d58ed056",
+    "url": "https://files.pythonhosted.org/packages/23/93/4e45e37f26c820216704b36b8e67cc55c490a7abd287a78a26a2c0e21386/lazy_loader-0.6-py3-none-any.whl",
+    "version": "0.6"
+  },
+  "llvmlite-0.50.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/llvmlite-0.50.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "llvmlite",
+    "sha256": "425845f415a06dc50db08db033c6b568e0d85c4937e932c605a4d49e1514b2da",
+    "url": "https://files.pythonhosted.org/packages/ed/c2/5e9d0773f1589397a3ea3dcfa4bbee36e2855ad938d738dd6ff9f505a59b/llvmlite-0.50.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "0.50.0"
+  },
+  "loguru-0.7.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/loguru-0.7.3-py3-none-any.whl",
+    "package": "loguru",
+    "sha256": "31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c",
+    "url": "https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl",
+    "version": "0.7.3"
+  },
+  "mapbox_earcut-2.1.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/mapbox_earcut-2.1.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "mapbox-earcut",
+    "sha256": "7cee9422275dd8700bb04f82eac3410d03c283630a1cc536b1a09cc721a5c0a1",
+    "url": "https://files.pythonhosted.org/packages/fe/a1/841d702350b644808fc9c4793910045a9fb63a387aabe132de225d0a07cc/mapbox_earcut-2.1.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "2.1.0"
+  },
+  "markdown_it_py-4.2.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/markdown_it_py-4.2.0-py3-none-any.whl",
+    "package": "markdown-it-py",
+    "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
+    "url": "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl",
+    "version": "4.2.0"
+  },
+  "markupsafe-3.0.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/markupsafe-3.0.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "markupsafe",
+    "sha256": "434139499bb20b502ed3baa1f169e618f924a97e7a777fea1a49446d80106cf6",
+    "url": "https://files.pythonhosted.org/packages/63/e0/cec6865dfe88cb48fedd4b20aed6af5158e41092adcbf3e028bcc6ec2108/markupsafe-3.0.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "3.0.4"
+  },
+  "matplotlib-3.11.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/matplotlib-3.11.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "package": "matplotlib",
+    "sha256": "1944895967f87c84c9b4bad29a707b31f5b36df4a3a2339ea1f8ea3ce5105539",
+    "url": "https://files.pythonhosted.org/packages/a9/df/e7c10292f348cf55178a5b3c0092a38ea68891a3945f199ae8b7b8ac9dc1/matplotlib-3.11.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "version": "3.11.2"
+  },
+  "matplotlib_inline-0.2.2-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/matplotlib_inline-0.2.2-py3-none-any.whl",
+    "package": "matplotlib-inline",
+    "sha256": "3c821cf1c209f59fb2d2d64abbf5b23b67bcb2210d663f9918dd851c6da1fcf6",
+    "url": "https://files.pythonhosted.org/packages/41/09/5b161152e2d90f7b87f781c2e1267494aef9c32498df793f73ad0a0a494a/matplotlib_inline-0.2.2-py3-none-any.whl",
+    "version": "0.2.2"
+  },
+  "mdurl-0.1.2-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/mdurl-0.1.2-py3-none-any.whl",
+    "package": "mdurl",
+    "sha256": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
+    "url": "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl",
+    "version": "0.1.2"
+  },
+  "meshio-5.3.5-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/meshio-5.3.5-py3-none-any.whl",
+    "package": "meshio",
+    "sha256": "0736c6e34ecc768f62f2cde5d8233a3529512a9399b25c68ea2ca0d5900cdc10",
+    "url": "https://files.pythonhosted.org/packages/89/5f/39cbadc320cd78f4834b0a9f7a2fa3c980dca942bf193f315837eacb8870/meshio-5.3.5-py3-none-any.whl",
+    "version": "5.3.5"
+  },
+  "more_itertools-11.2.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/more_itertools-11.2.1-py3-none-any.whl",
+    "package": "more-itertools",
+    "sha256": "35a7377edd1dd6608dcb2cdf534ded55ea32d49448875ad042cd3f879fb1ded0",
+    "url": "https://files.pythonhosted.org/packages/5d/57/3c4b1c6f2e0cc29ba023802458ea3d2a996f87085559e4a5f2192d549532/more_itertools-11.2.1-py3-none-any.whl",
+    "version": "11.2.1"
+  },
+  "msgpack-1.2.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/msgpack-1.2.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "msgpack",
+    "sha256": "07c9733089d1b176c3dd2f7fa268452f9d5d784d076473499d754a58e8d1fbbb",
+    "url": "https://files.pythonhosted.org/packages/b0/30/c394d37898db9212d1693456cdf363c7e1a097d0b63e10664007f3df3ec1/msgpack-1.2.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "1.2.3"
+  },
+  "multidict-7.1.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/multidict-7.1.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "multidict",
+    "sha256": "5129cc1f5fec6888e2db0be936dab67242e32c738811c8769aeea93aab4257a8",
+    "url": "https://files.pythonhosted.org/packages/4d/2e/7b708a72001323dc6b2930834d63e355870ea5b1ee8d1450e0fe1a24752b/multidict-7.1.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "7.1.0"
+  },
+  "multimethod-1.12-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/multimethod-1.12-py3-none-any.whl",
+    "package": "multimethod",
+    "sha256": "fd0c473c43558908d97cc06e4d68e8f69202f167db46f7b4e4058893e7dbdf60",
+    "url": "https://files.pythonhosted.org/packages/af/98/cff14d53a2f2f67d7fe8a4e235a383ee71aba6a1da12aeea24b325d0c72a/multimethod-1.12-py3-none-any.whl",
+    "version": "1.12"
+  },
+  "natsort-8.4.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/natsort-8.4.0-py3-none-any.whl",
+    "package": "natsort",
+    "sha256": "4732914fb471f56b5cce04d7bae6f164a592c7712e1c85f9ef585e197299521c",
+    "url": "https://files.pythonhosted.org/packages/ef/82/7a9d0550484a62c6da82858ee9419f3dd1ccc9aa1c26a1e43da3ecd20b0d/natsort-8.4.0-py3-none-any.whl",
+    "version": "8.4.0"
+  },
+  "nest_asyncio2-1.7.4-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/nest_asyncio2-1.7.4-py3-none-any.whl",
+    "package": "nest-asyncio2",
+    "sha256": "86e77b52c3d1496b294af3c944b44213b9b82a12a5ee590c0acc4ca4692ef6c7",
+    "url": "https://files.pythonhosted.org/packages/09/ed/559d2915dce85794bc0c36064043da170da50cd98746dcbddd85d5932017/nest_asyncio2-1.7.4-py3-none-any.whl",
+    "version": "1.7.4"
+  },
+  "networkx-3.7-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/networkx-3.7-py3-none-any.whl",
+    "package": "networkx",
+    "sha256": "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+    "url": "https://files.pythonhosted.org/packages/7e/cd/fe58041e9011f307c490e3e17dd48cc516448f7c698a3f2d9d9d65d7e6a8/networkx-3.7-py3-none-any.whl",
+    "version": "3.7"
+  },
+  "nlopt-2.11.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/nlopt-2.11.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "nlopt",
+    "sha256": "be39d121216995d2ab199d6ff9439cd5090c5f1a4b3613150e08dbaca5716cea",
+    "url": "https://files.pythonhosted.org/packages/cf/fd/2a387ba82fc0ba09e4095df9b18a3029e9a81e7f257f6da26e66d2932feb/nlopt-2.11.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "2.11.0"
+  },
+  "numba-0.68.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/numba-0.68.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "numba",
+    "sha256": "be647fbc60c18c0323b34479f80173879654894eec58ad061f4b1901e294d854",
+    "url": "https://files.pythonhosted.org/packages/aa/b1/0b504ae34d1b79a6482a0ffcbfd1b103dde02329c11525033e02633f7984/numba-0.68.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "0.68.0"
+  },
+  "numpy-2.5.4-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/numpy-2.5.4-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "numpy",
+    "sha256": "6ffa07666f8da0eef81d149934a626d0d95fbd6838432a33e66245423a9062c0",
+    "url": "https://files.pythonhosted.org/packages/da/24/3bd070f3269dc609d8f26b2643f62ef91bb415841c0b294805aaf7fe06da/numpy-2.5.4-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "2.5.4"
+  },
+  "orjson-3.13.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/orjson-3.13.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "package": "orjson",
+    "sha256": "cbed5f4c4b88d94bcc36115f4c3bb3aa25da1563a5c3328aa3acebce2b083040",
+    "url": "https://files.pythonhosted.org/packages/45/46/f8d83189ff5b7b2ff225a58c5908618cc4e86afe09e65d17a30ac68c9da4/orjson-3.13.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "version": "3.13.0"
+  },
+  "packaging-26.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock",
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/packaging-26.3-py3-none-any.whl",
+    "package": "packaging",
+    "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+    "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+    "version": "26.3"
+  },
+  "pandas-3.0.6-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pandas-3.0.6-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "pandas",
+    "sha256": "1e92d9fa834c7d877130027cddc0cad8dcff97c1f6cca26bd6310f847228b658",
+    "url": "https://files.pythonhosted.org/packages/50/fa/96d50e1e6cd0b08b5e2b7c838f65ae644940f75a124063380b5ef73b6866/pandas-3.0.6-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "3.0.6"
+  },
+  "parso-0.8.7-py2.py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/parso-0.8.7-py2.py3-none-any.whl",
+    "package": "parso",
+    "sha256": "a8926eb2a1b915486941fdbd31e86a4baf88fe8c210f25f2f35ecec5b574ca1c",
+    "url": "https://files.pythonhosted.org/packages/99/5d/8268b644392ee874ee82a635cd0df1773de230bde356c38de28e298392cc/parso-0.8.7-py2.py3-none-any.whl",
+    "version": "0.8.7"
+  },
+  "pathspec-1.1.1-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pathspec-1.1.1-py3-none-any.whl",
+    "package": "pathspec",
+    "sha256": "a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189",
+    "url": "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl",
+    "version": "1.1.1"
+  },
+  "pexpect-4.9.0-py2.py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pexpect-4.9.0-py2.py3-none-any.whl",
+    "package": "pexpect",
+    "sha256": "7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523",
+    "url": "https://files.pythonhosted.org/packages/9e/c3/059298687310d527a58bb01f3b1965787ee3b40dce76752eda8b44e9a2c5/pexpect-4.9.0-py2.py3-none-any.whl",
+    "version": "4.9.0"
+  },
+  "pillow-13.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pillow-13.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "pillow",
+    "sha256": "5f56499c1a74d2b862beb0c33b8016f99d095858455df9d21583bbbc1c15b582",
+    "url": "https://files.pythonhosted.org/packages/ef/fe/f5cdaa2d1c4086e757430f368c271a58ee29cfe7378e7ae7b9d964015c25/pillow-13.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "13.0.0"
+  },
+  "pint-0.26.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pint-0.26.1-py3-none-any.whl",
+    "package": "pint",
+    "sha256": "e982b129415c09c63308f314ae44697d83e5c96f253bcc0d5b833fc3329eb6d4",
+    "url": "https://files.pythonhosted.org/packages/6d/5c/9507ea3c732f8a259f45ddf190a741e9bf7d3fe229b5d473917ee6efbf1e/pint-0.26.1-py3-none-any.whl",
+    "version": "0.26.1"
+  },
+  "platformdirs-4.13.4-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/platformdirs-4.13.4-py3-none-any.whl",
+    "package": "platformdirs",
+    "sha256": "502ce08e9d36cf90579ee44e1e764838842fa658e4975ef47344fd053011d2c8",
+    "url": "https://files.pythonhosted.org/packages/58/51/5614d0537dd830ca64d95a2f254bd66bdf3ac61d41cffcccaec62121fcfd/platformdirs-4.13.4-py3-none-any.whl",
+    "version": "4.13.4"
+  },
+  "pluggy-1.7.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock",
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pluggy-1.7.0-py3-none-any.whl",
+    "package": "pluggy",
+    "sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+    "url": "https://files.pythonhosted.org/packages/40/9e/2b38731e0fc536806f16490e1a12d7f0dc2a1235aa8cc07bcc75416a7daa/pluggy-1.7.0-py3-none-any.whl",
+    "version": "1.7.0"
+  },
+  "prompt_toolkit-3.0.53-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/prompt_toolkit-3.0.53-py3-none-any.whl",
+    "package": "prompt-toolkit",
+    "sha256": "01c0891d7f9237d5e339f7d3e42cdae80b7534abb1c7c0e3352efba6231492f2",
+    "url": "https://files.pythonhosted.org/packages/54/6f/84908cad2d6aa5144abcf7b42709fe4fdb459bc640ec7ac5786e7693dabc/prompt_toolkit-3.0.53-py3-none-any.whl",
+    "version": "3.0.53"
+  },
+  "propcache-0.5.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/propcache-0.5.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "propcache",
+    "sha256": "f85915e00dcb1cd9f2f890ead064ed40a27df06f0db65be427b29482ae357572",
+    "url": "https://files.pythonhosted.org/packages/ed/74/08e6c1faf26ee2732023a3828787ba535557122774f4a386b1f715cbd8e0/propcache-0.5.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "0.5.4"
+  },
+  "psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "psutil",
+    "sha256": "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9",
+    "url": "https://files.pythonhosted.org/packages/b5/70/5d8df3b09e25bce090399cf48e452d25c935ab72dad19406c77f4e828045/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "7.2.2"
+  },
+  "ptyprocess-0.7.0-py2.py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ptyprocess-0.7.0-py2.py3-none-any.whl",
+    "package": "ptyprocess",
+    "sha256": "4b41f3967fce3af57cc7e94b888626c18bf37a083e3651ca8feeb66d492fef35",
+    "url": "https://files.pythonhosted.org/packages/22/a6/858897256d0deac81a172289110f31629fc4cee19b6f01283303e18c8db3/ptyprocess-0.7.0-py2.py3-none-any.whl",
+    "version": "0.7.0"
+  },
+  "pure_eval-0.2.4-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pure_eval-0.2.4-py3-none-any.whl",
+    "package": "pure-eval",
+    "sha256": "96cae060a313cfaad51bb761278bfb0e62dc0248d9315a81173752dc546cd37a",
+    "url": "https://files.pythonhosted.org/packages/6d/18/83376915176eb058cb86470eb7396388a13350b09a8f233a79303bbcbc5b/pure_eval-0.2.4-py3-none-any.whl",
+    "version": "0.2.4"
+  },
+  "pycparser-3.11-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pycparser-3.11-py3-none-any.whl",
+    "package": "pycparser",
+    "sha256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80",
+    "url": "https://files.pythonhosted.org/packages/90/11/0e6f11117525ff0eec40ebac3d313376f102df93ca44ad9e893ee85e4f89/pycparser-3.11-py3-none-any.whl",
+    "version": "3.11"
+  },
+  "pydantic-2.14.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pydantic-2.14.1-py3-none-any.whl",
+    "package": "pydantic",
+    "sha256": "9195d967ec791692a04438115466764fb8b9a27b31f14a760437694f40d6b454",
+    "url": "https://files.pythonhosted.org/packages/35/ea/a56b9fe5066f3537b7882f77e9c5dfb26d8c2eefdaed9b5fc73d57b4dc22/pydantic-2.14.1-py3-none-any.whl",
+    "version": "2.14.1"
+  },
+  "pydantic_core-2.50.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pydantic_core-2.50.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "package": "pydantic-core",
+    "sha256": "17e722e156d0444ecaefbe640bdb60928752bf2013e2b7a11cdb099aaae19bec",
+    "url": "https://files.pythonhosted.org/packages/1c/bc/d79d000e5203ebef39af839f2ce77a777fcad6e08ad26af9a2fcd114ffc8/pydantic_core-2.50.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "version": "2.50.1"
+  },
+  "pydantic_extra_types-2.11.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pydantic_extra_types-2.11.1-py3-none-any.whl",
+    "package": "pydantic-extra-types",
+    "sha256": "1722ea2bddae5628ace25f2aa685b69978ef533123e5638cfbddb999e0100ec1",
+    "url": "https://files.pythonhosted.org/packages/17/c1/3226e6d7f5a4f736f38ac11a6fbb262d701889802595cdb0f53a885ac2e0/pydantic_extra_types-2.11.1-py3-none-any.whl",
+    "version": "2.11.1"
+  },
+  "pydantic_settings-2.16.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pydantic_settings-2.16.0-py3-none-any.whl",
+    "package": "pydantic-settings",
+    "sha256": "7e73acf7f61936a15e5a3b6eedaea29f133357faf7272f2607ba479b049dd7f2",
+    "url": "https://files.pythonhosted.org/packages/53/f4/b987bf8c51e5b19a95fa66d1ee596074141e085d9c2ddf97920803c7029b/pydantic_settings-2.16.0-py3-none-any.whl",
+    "version": "2.16.0"
+  },
+  "pygit2-1.20.1-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pygit2-1.20.1-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "pygit2",
+    "sha256": "0f65c55b5217dd2cea0fefe287624bb9522266d984a06d1e87c1879cf6bd7585",
+    "url": "https://files.pythonhosted.org/packages/47/f2/148f971a80fa344f56674173e1c3f53c769da32f35a04214d805e8e4ebe0/pygit2-1.20.1-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "1.20.1"
+  },
+  "pyglet-2.1.19-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pyglet-2.1.19-py3-none-any.whl",
+    "package": "pyglet",
+    "sha256": "5ba6e8cb0b5ac56a284e43ab411e2bbd504191c32a765abdbd6a6c4b7f1ca317",
+    "url": "https://files.pythonhosted.org/packages/75/f7/e5c199eb9c5cb3aae817f9102ba6c64f0c82fd4eb69a5d13dc0b1bc98ec0/pyglet-2.1.19-py3-none-any.whl",
+    "version": "2.1.19"
+  },
+  "pygments-2.21.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pygments-2.21.0-py3-none-any.whl",
+    "package": "pygments",
+    "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+    "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+    "version": "2.21.0"
+  },
+  "pyparsing-3.3.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pyparsing-3.3.3-py3-none-any.whl",
+    "package": "pyparsing",
+    "sha256": "ece8c00a69cf01b45d0b1dedabb469c90d8caf996d4fda40f147627a122849a4",
+    "url": "https://files.pythonhosted.org/packages/38/bb/d215ee7c73b61497b28a5503f9f53523f294fcc936762b7caf90e0c1c2b5/pyparsing-3.3.3-py3-none-any.whl",
+    "version": "3.3.3"
+  },
+  "pytest-9.1.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pytest-9.1.1-py3-none-any.whl",
+    "package": "pytest",
+    "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+    "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+    "version": "9.1.1"
+  },
+  "python_dateutil-2.9.0.post0-py2.py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
+    "package": "python-dateutil",
+    "sha256": "a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427",
+    "url": "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
+    "version": "2.9.0.post0"
+  },
+  "python_dotenv-1.2.4-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/python_dotenv-1.2.4-py3-none-any.whl",
+    "package": "python-dotenv",
+    "sha256": "42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc",
+    "url": "https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl",
+    "version": "1.2.4"
+  },
+  "pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "pyyaml",
+    "sha256": "0f29edc409a6392443abf94b9cf89ce99889a1dd5376d94316ae5145dfedd5d6",
+    "url": "https://files.pythonhosted.org/packages/74/27/e5b8f34d02d9995b80abcef563ea1f8b56d20134d8f4e5e81733b1feceb2/pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "6.0.3"
+  },
+  "pyzmq-27.2.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/pyzmq-27.2.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "pyzmq",
+    "sha256": "dea74fd65f1fc5f7fe167916a473ebe6ed6174e5e5d9de11ea6583661be6cf43",
+    "url": "https://files.pythonhosted.org/packages/62/2c/d5828306f795e8d34676d266823b74e2101e0ad3760d12083de3e02abbb2/pyzmq-27.2.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "27.2.0"
+  },
+  "qrcode-8.2-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/qrcode-8.2-py3-none-any.whl",
+    "package": "qrcode",
+    "sha256": "16e64e0716c14960108e85d853062c9e8bba5ca8252c0b4d0231b9df4060ff4f",
+    "url": "https://files.pythonhosted.org/packages/dd/b8/d2d6d731733f51684bbf76bf34dab3b70a9148e8f2cef2bb544fccec681a/qrcode-8.2-py3-none-any.whl",
+    "version": "8.2"
+  },
+  "rapidfuzz-3.14.6-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/rapidfuzz-3.14.6-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "rapidfuzz",
+    "sha256": "6bb896f89a387219c671ebc33c4a636b222010cc3c5c83884a7fc8707bf0bbf9",
+    "url": "https://files.pythonhosted.org/packages/70/42/4bf9dc905df33bb4515895ff87f777d8df25a3617c0bf8f5d4716813d9ea/rapidfuzz-3.14.6-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "3.14.6"
+  },
+  "rectangle_packer-2.1.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/rectangle_packer-2.1.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "rectangle-packer",
+    "sha256": "2dd4b0e34c6802f64b11738497f3561c3f43300132bfadcdc1e578593110762a",
+    "url": "https://files.pythonhosted.org/packages/44/25/3e3f7a23e0b8fcca3f33c4c5b987cf5d4ea886252b9f7a3860cea11cea90/rectangle_packer-2.1.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "2.1.1"
+  },
+  "rectpack-0.2.2.tar.gz": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/rectpack-0.2.2.tar.gz",
+    "package": "rectpack",
+    "sha256": "15e383505fdfbaeb55ec640a5825d9ca2ce89019a6cdd552d6e57ec36c68ba2a",
+    "url": "https://files.pythonhosted.org/packages/d6/72/b965bbfcfe5bcd486bbfc10a73345d51551971457ac2b84f786bfc6d86db/rectpack-0.2.2.tar.gz",
+    "version": "0.2.2"
+  },
+  "requests-2.34.2-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/requests-2.34.2-py3-none-any.whl",
+    "package": "requests",
+    "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+    "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl",
+    "version": "2.34.2"
+  },
+  "rich-15.0.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/rich-15.0.0-py3-none-any.whl",
+    "package": "rich",
+    "sha256": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb",
+    "url": "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl",
+    "version": "15.0.0"
+  },
+  "ruamel.yaml.string-0.1.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ruamel.yaml.string-0.1.1-py3-none-any.whl",
+    "package": "ruamel-yaml-string",
+    "sha256": "eb146bcb42b116216638034a434e9cf3ae2a5d3933aa37183a9854b5f3ff42de",
+    "url": "https://files.pythonhosted.org/packages/91/2a/b508237a7fcceab8a8724405480eb55d527523419c9dbcde369f954656ad/ruamel.yaml.string-0.1.1-py3-none-any.whl",
+    "version": "0.1.1"
+  },
+  "ruamel_yaml-0.19.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/ruamel_yaml-0.19.1-py3-none-any.whl",
+    "package": "ruamel-yaml",
+    "sha256": "27592957fedf6e0b62f281e96effd28043345e0e66001f97683aa9a40c667c93",
+    "url": "https://files.pythonhosted.org/packages/b8/0c/51f6841f1d84f404f92463fc2b1ba0da357ca1e3db6b7fbda26956c3b82a/ruamel_yaml-0.19.1-py3-none-any.whl",
+    "version": "0.19.1"
+  },
+  "runtype-0.5.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/runtype-0.5.3-py3-none-any.whl",
+    "package": "runtype",
+    "sha256": "ea8cc6828217ebfda5c159dce969e832efd865a09d6ad1fc993f5bf5e1a627ee",
+    "url": "https://files.pythonhosted.org/packages/80/db/879902580d720925092c86eaab2ceee7493e2fadbb5b718f54289b04d277/runtype-0.5.3-py3-none-any.whl",
+    "version": "0.5.3"
+  },
+  "scikit_image-0.26.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/scikit_image-0.26.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "scikit-image",
+    "sha256": "b36ab5e778bf50af5ff386c3ac508027dc3aaeccf2161bdf96bde6848f44d21b",
+    "url": "https://files.pythonhosted.org/packages/a3/b8/0d8eeb5a9fd7d34ba84f8a55753a0a3e2b5b51b2a5a0ade648a8db4a62f7/scikit_image-0.26.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "0.26.0"
+  },
+  "scipy-1.18.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/scipy-1.18.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "scipy",
+    "sha256": "fdaf5ea890a6183d0565f51a61799d67081bd5b1cf03c5f4b3fd3732108625c9",
+    "url": "https://files.pythonhosted.org/packages/41/48/6450ed9243315322bbc19ac57b9b70d66a20bf1d38d124c96bc4bf6af9ea/scipy-1.18.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "1.18.1"
+  },
+  "semver-3.1.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/semver-3.1.0-py3-none-any.whl",
+    "package": "semver",
+    "sha256": "6e4998f8b4762acdfea85f9bfd5b4032e0bb50038dc04bf82011b42d5d1145c5",
+    "url": "https://files.pythonhosted.org/packages/be/02/bce7a1d70e9d0f6ea8623c16386138c251b5855af6cd3a11433d3fba4e66/semver-3.1.0-py3-none-any.whl",
+    "version": "3.1.0"
+  },
+  "setuptools-84.0.0-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/setuptools-84.0.0-py3-none-any.whl",
+    "package": "setuptools",
+    "sha256": "51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",
+    "url": "https://files.pythonhosted.org/packages/95/9c/c510029fc6ef33a6275cd2c5d3cecd6613dfd6aa401d57c54f1c18852ccf/setuptools-84.0.0-py3-none-any.whl",
+    "version": "84.0.0"
+  },
+  "setuptools_scm-10.3.4-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/setuptools_scm-10.3.4-py3-none-any.whl",
+    "package": "setuptools-scm",
+    "sha256": "82f34c3e3084fc2b57d397200637cc13f2338004052d2fee47baa5f0e902464e",
+    "url": "https://files.pythonhosted.org/packages/da/f5/54538a1f17ea753c42b0928dc2e62986d463f8c393340b9a1e602f2d4dd9/setuptools_scm-10.3.4-py3-none-any.whl",
+    "version": "10.3.4"
+  },
+  "shapely-2.2.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/shapely-2.2.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "shapely",
+    "sha256": "f340e7f99aaee3df5acd6b247cddf723051a7c93d1e1ef09025b80d84e4c0ded",
+    "url": "https://files.pythonhosted.org/packages/5d/df/d67d5c56efddf9b8c2e6913c917c8eca78fdd9e7c6fb73b541dd56b1ce1d/shapely-2.2.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "2.2.0"
+  },
+  "shellingham-1.5.4-py2.py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/shellingham-1.5.4-py2.py3-none-any.whl",
+    "package": "shellingham",
+    "sha256": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
+    "url": "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl",
+    "version": "1.5.4"
+  },
+  "six-1.17.0-py2.py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/six-1.17.0-py2.py3-none-any.whl",
+    "package": "six",
+    "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274",
+    "url": "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl",
+    "version": "1.17.0"
+  },
+  "stack_data-0.6.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/stack_data-0.6.3-py3-none-any.whl",
+    "package": "stack-data",
+    "sha256": "d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695",
+    "url": "https://files.pythonhosted.org/packages/f1/7b/ce1eafaf1a76852e2ec9b22edecf1daa58175c090266e9f6c64afcd81d91/stack_data-0.6.3-py3-none-any.whl",
+    "version": "0.6.3"
+  },
+  "tifffile-2026.10.15-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/tifffile-2026.10.15-py3-none-any.whl",
+    "package": "tifffile",
+    "sha256": "3dcf6c56731a45c1f85c81e90dad922b0a380a2d639e77f71207e010f8ef0f7b",
+    "url": "https://files.pythonhosted.org/packages/5b/bc/9e7664e2d30d4e82ada1b29dbb249d2dcac1ed1114cbbf11764f670d8be7/tifffile-2026.10.15-py3-none-any.whl",
+    "version": "2026.10.15"
+  },
+  "tomlkit-0.15.2-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/tomlkit-0.15.2-py3-none-any.whl",
+    "package": "tomlkit",
+    "sha256": "05562412163a3037b94497385fb7f9204c637bc605af7a48199e41cf2272f437",
+    "url": "https://files.pythonhosted.org/packages/da/46/7d84138a60a8bd796825b2d38ebe92d0d16501ca57d501b7c5d677401bbc/tomlkit-0.15.2-py3-none-any.whl",
+    "version": "0.15.2"
+  },
+  "toolz-1.2.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/toolz-1.2.0-py3-none-any.whl",
+    "package": "toolz",
+    "sha256": "890f820b1cb8152785aaf9386d8707770110809035800985ca65cb24ce1120ef",
+    "url": "https://files.pythonhosted.org/packages/db/17/4c8beb6c8c4176c6bf143bfd7e1e4dd6719b00ced90738c7ac471b71c1df/toolz-1.2.0-py3-none-any.whl",
+    "version": "1.2.0"
+  },
+  "tornado-6.5.10-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/tornado-6.5.10-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+    "package": "tornado",
+    "sha256": "bdf942448169e5336451d0494d7e3d81cfa726d5aa312affdc4682dd62a62f6d",
+    "url": "https://files.pythonhosted.org/packages/60/33/df6d7d04854a58619f8349a51e3edb138324130a7562b0bb21f115bb940f/tornado-6.5.10-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+    "version": "6.5.10"
+  },
+  "tqdm-4.70.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/tqdm-4.70.1-py3-none-any.whl",
+    "package": "tqdm",
+    "sha256": "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+    "url": "https://files.pythonhosted.org/packages/a7/03/921a3d3c75785aca9ebfbfcabfbc3a1be12e2ab5265deb026d55a5a3f83e/tqdm-4.70.1-py3-none-any.whl",
+    "version": "4.70.1"
+  },
+  "traitlets-5.16.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/traitlets-5.16.1-py3-none-any.whl",
+    "package": "traitlets",
+    "sha256": "f775618166caa0396c8e337099240f2bd3e5e917d203b2e6fbe21a58d3cb1f6b",
+    "url": "https://files.pythonhosted.org/packages/ad/66/0d785f0bc5e4315a96c989bb476d0fc07ea4f85132550c7b156ca2035d52/traitlets-5.16.1-py3-none-any.whl",
+    "version": "5.16.1"
+  },
+  "trame-4.0.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trame-4.0.0-py3-none-any.whl",
+    "package": "trame",
+    "sha256": "e3c8a89f7a209fea7a595bd877301c851cd0db18cc7620f11b08d4d7966e5dcc",
+    "url": "https://files.pythonhosted.org/packages/4c/a8/137edd4bd17081244dbafd3ebcb35612d791b605eaf9a0c57e47200abd24/trame-4.0.0-py3-none-any.whl",
+    "version": "4.0.0"
+  },
+  "trame_client-4.1.4-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trame_client-4.1.4-py3-none-any.whl",
+    "package": "trame-client",
+    "sha256": "6e1d3e20770f5852ac924d8494515700d9906085ecfcb788f0f504ce998be88f",
+    "url": "https://files.pythonhosted.org/packages/c4/7f/dc3b12c0cde2523b72cea905e0fc421e50a4f5d0decea73175969c9f60e0/trame_client-4.1.4-py3-none-any.whl",
+    "version": "4.1.4"
+  },
+  "trame_common-1.2.9-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trame_common-1.2.9-py3-none-any.whl",
+    "package": "trame-common",
+    "sha256": "14e9747bf247cc446e59ce3f920e31a409149ca60ae2bfc5d02a22cdf1b676c4",
+    "url": "https://files.pythonhosted.org/packages/7c/ad/c1cc127e7cf4fd00d2bb7ebd6bec0252d681628626e034a8a8e8ffd13c07/trame_common-1.2.9-py3-none-any.whl",
+    "version": "1.2.9"
+  },
+  "trame_components-2.5.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trame_components-2.5.0-py3-none-any.whl",
+    "package": "trame-components",
+    "sha256": "897a6c0ebcc72d95a461bde28d2c2e37c4bc4922013ad07df3a65e64d4884672",
+    "url": "https://files.pythonhosted.org/packages/02/e9/627ebbf56e00d80300940e8bbf54c6594f98fd214e3565b3abaa5450e0d4/trame_components-2.5.0-py3-none-any.whl",
+    "version": "2.5.0"
+  },
+  "trame_server-4.1.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trame_server-4.1.0-py3-none-any.whl",
+    "package": "trame-server",
+    "sha256": "7b23147a77d9616d9c787bd60fe77c3c683a38e193d7f9a4d0aac3e601dd453b",
+    "url": "https://files.pythonhosted.org/packages/f7/30/d6ee48a182e09ca6d66f2e48e91ac7c3efbc5f323d6a50c591a2b4f27840/trame_server-4.1.0-py3-none-any.whl",
+    "version": "4.1.0"
+  },
+  "trame_vtk-2.11.17-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trame_vtk-2.11.17-py3-none-any.whl",
+    "package": "trame-vtk",
+    "sha256": "8fe2adbe3b6888ad41cb4311421fbd850cece75a801bf8b5f7af5bdc6473bee4",
+    "url": "https://files.pythonhosted.org/packages/c8/f1/d9b1119bad9c3018b2cc801032447e0f5cf942859845a1eaf03aff9c0905/trame_vtk-2.11.17-py3-none-any.whl",
+    "version": "2.11.17"
+  },
+  "trame_vuetify-3.3.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trame_vuetify-3.3.0-py3-none-any.whl",
+    "package": "trame-vuetify",
+    "sha256": "3a68a8457a439c1f2d456bfa1004091116a4c9988503f594fd44e980222773f2",
+    "url": "https://files.pythonhosted.org/packages/db/77/a2479f57944ea1df8dd52cabdf00b1988dfc4c5b609f27573530fbc1cfc1/trame_vuetify-3.3.0-py3-none-any.whl",
+    "version": "3.3.0"
+  },
+  "trimesh-5.1.1-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trimesh-5.1.1-py3-none-any.whl",
+    "package": "trimesh",
+    "sha256": "c5be85a3e31e9ff749f9b0aecc204e37a2cf7cca4e92cd066bb5f3d3c1127765",
+    "url": "https://files.pythonhosted.org/packages/8f/f6/fb68b8c08f864ecee8f7f7ee2f1203ed5cba2335215de69e4f621eb47db5/trimesh-5.1.1-py3-none-any.whl",
+    "version": "5.1.1"
+  },
+  "trove_classifiers-2026.9.21.13-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/trove_classifiers-2026.9.21.13-py3-none-any.whl",
+    "package": "trove-classifiers",
+    "sha256": "8b1ff4f9c191b1040b71c37f1e445ab99732911e3cd91de52838453a854d7a17",
+    "url": "https://files.pythonhosted.org/packages/30/81/0da8afb52a71d0a4f2bd3152357b1a441e393b286374802b9d3addab4ab5/trove_classifiers-2026.9.21.13-py3-none-any.whl",
+    "version": "2026.9.21.13"
+  },
+  "typer-0.27.3-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/typer-0.27.3-py3-none-any.whl",
+    "package": "typer",
+    "sha256": "e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff",
+    "url": "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl",
+    "version": "0.27.3"
+  },
+  "types_pyyaml-6.0.12.20260906-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/types_pyyaml-6.0.12.20260906-py3-none-any.whl",
+    "package": "types-pyyaml",
+    "sha256": "bca893ff0d51df5c9053137d5d0e6ccd36e939a196356f1d5c16372422f5137b",
+    "url": "https://files.pythonhosted.org/packages/15/c0/fc0644b7ddcfb969e95845837143cb5173ddd6e06ee4ba5fc493cd9329b7/types_pyyaml-6.0.12.20260906-py3-none-any.whl",
+    "version": "6.0.12.20260906"
+  },
+  "typing_extensions-4.16.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/typing_extensions-4.16.0-py3-none-any.whl",
+    "package": "typing-extensions",
+    "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+    "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+    "version": "4.16.0"
+  },
+  "typing_inspection-0.4.4-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/typing_inspection-0.4.4-py3-none-any.whl",
+    "package": "typing-inspection",
+    "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+    "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl",
+    "version": "0.4.4"
+  },
+  "urllib3-2.8.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/urllib3-2.8.0-py3-none-any.whl",
+    "package": "urllib3",
+    "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+    "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl",
+    "version": "2.8.0"
+  },
+  "uv-0.13.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/uv-0.13.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "package": "uv",
+    "sha256": "696dcf6d807d85da978f4db8472da81dccc1254b18b52cbd1367c4d923c421e0",
+    "url": "https://files.pythonhosted.org/packages/14/0b/6602a613533602e7a083e908c4375f9b0e78a94ba2e21c29b21c41a0a611/uv-0.13.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "version": "0.13.1"
+  },
+  "vcs_versioning-2.6.0-py3-none-any.whl": {
+    "locks": [
+      "build-requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/vcs_versioning-2.6.0-py3-none-any.whl",
+    "package": "vcs-versioning",
+    "sha256": "f8bebd1302ebc12e67ceb30fc7dd698ec969414b6fa43b30c3f14ac9b1e72c41",
+    "url": "https://files.pythonhosted.org/packages/73/1d/ad4064bf12f4503bf61e65d74c93c523672776d25ee0a06aaf42ae09ef3f/vcs_versioning-2.6.0-py3-none-any.whl",
+    "version": "2.6.0"
+  },
+  "vtk-9.6.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/vtk-9.6.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "package": "vtk",
+    "sha256": "fb85c7fbad59209a08e428479defbdf96f974a9f39d4212960fb1a24a919613c",
+    "url": "https://files.pythonhosted.org/packages/bd/75/4a1fe360256b99779d534b2387d0efa70952167d53d716f60ff39d62994d/vtk-9.6.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "version": "9.6.2"
+  },
+  "watchdog-6.0.0-py3-none-manylinux2014_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/watchdog-6.0.0-py3-none-manylinux2014_x86_64.whl",
+    "package": "watchdog",
+    "sha256": "20ffe5b202af80ab4266dcd3e91aae72bf2da48c0d33bdb15c66658e685e94e2",
+    "url": "https://files.pythonhosted.org/packages/b5/e8/dbf020b4d98251a9860752a094d09a65e1b436ad181faf929983f697048f/watchdog-6.0.0-py3-none-manylinux2014_x86_64.whl",
+    "version": "6.0.0"
+  },
+  "wcwidth-0.9.2-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/wcwidth-0.9.2-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "package": "wcwidth",
+    "sha256": "751bef0ab404b6a1dc028b56b4b85d46486be1c55833f80da533e42dc691f389",
+    "url": "https://files.pythonhosted.org/packages/db/6c/f940133c71427c208575910e981942bd78c98b1f7cd0d1425ca4b7457c04/wcwidth-0.9.2-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+    "version": "0.9.2"
+  },
+  "widgetsnbextension-4.0.16-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/widgetsnbextension-4.0.16-py3-none-any.whl",
+    "package": "widgetsnbextension",
+    "sha256": "a31a8774885b96fe825462f5d6496166f0c7cae111195b6465c801d230eb5a4e",
+    "url": "https://files.pythonhosted.org/packages/34/95/40e17e20046b7bc820d29d09ae84ec157ec8dd6e6f6cd722626292c31b2e/widgetsnbextension-4.0.16-py3-none-any.whl",
+    "version": "4.0.16"
+  },
+  "wslink-2.6.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/wslink-2.6.0-py3-none-any.whl",
+    "package": "wslink",
+    "sha256": "6edc7ea67c744094702f98857c9316f4805a44af91f6cc4aca69b782392e73d0",
+    "url": "https://files.pythonhosted.org/packages/a5/d1/c0bbb1ee6c46906cac7495a5c4eecbf41ae74b7973c287e19a6ed68abf9a/wslink-2.6.0-py3-none-any.whl",
+    "version": "2.6.0"
+  },
+  "xarray-2026.9.0-py3-none-any.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/xarray-2026.9.0-py3-none-any.whl",
+    "package": "xarray",
+    "sha256": "fe349fa871628b1a0a5217af3fe1283a2862d5485156e6eda354fffb81c3bb7c",
+    "url": "https://files.pythonhosted.org/packages/3f/44/3159af4fb3c868970a412e294320ed6bb1a9fbdfa6431050eda8e0b34b6e/xarray-2026.9.0-py3-none-any.whl",
+    "version": "2026.9.0"
+  },
+  "yarl-1.25.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": {
+    "locks": [
+      "requirements.lock"
+    ],
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/tcad-dev-20261019/yarl-1.25.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "package": "yarl",
+    "sha256": "be80550d9bfe83d9b62398a37081a90434e6df2d978ec345c3d2820de6beddab",
+    "url": "https://files.pythonhosted.org/packages/0e/b7/a82a49bf88340b837ef6972b508a1604ae377b9e6904b46b10cf5f1cf925/yarl-1.25.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "version": "1.25.1"
+  }
+}

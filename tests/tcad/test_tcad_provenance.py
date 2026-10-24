@@ -107,17 +107,30 @@ def test_generator_files_cover_plugin_process_and_sandbox():
 
 
 def test_provenance_contents():
-    prov = tcad.provenance()
-    assert set(prov) == {"generator_sha256", "gplugins_commit", "image", "versions"}
-    assert prov["image"] == tcad.TCAD_IMAGE
-    assert prov["versions"] == json.loads((REPO / "docker/tcad/versions.json").read_bytes())
+    prov = tcad.provenance(images={"moscap1d": "dev", "moscap2d": "stable"})
+    assert set(prov) == {"generator_sha256", "gplugins_commit", "images"}
+    assert prov["images"] == {
+        "moscap1d": {
+            "name": "dev",
+            "ref": tcad.TCAD_DEV_IMAGE,
+            "versions": json.loads((REPO / "docker/tcad-dev/versions.json").read_bytes()),
+        },
+        "moscap2d": {
+            "name": "stable",
+            "ref": tcad.TCAD_IMAGE,
+            "versions": json.loads((REPO / "docker/tcad/versions.json").read_bytes()),
+        },
+    }
     res = subprocess.run(
         ["git", "-C", "third_party/gplugins", "rev-parse", "HEAD"],
         cwd=REPO, capture_output=True, text=True, check=True,
     )  # fmt: skip
     assert prov["gplugins_commit"] == res.stdout.strip()
-    text = json.dumps(prov).lower()
+    # no run date and no host path; the versions are the committed versions.json files (the
+    # dev image's records its upstream sources' commit dates, which are inputs, not run dates)
+    text = json.dumps({k: v for k, v in prov.items() if k != "images"}).lower()
     assert "date" not in text and str(REPO).lower() not in text
+    assert str(REPO).lower() not in json.dumps(prov).lower()
 
 
 def test_provenance_records_calibration(tmp_path, monkeypatch):
@@ -125,7 +138,7 @@ def test_provenance_records_calibration(tmp_path, monkeypatch):
     calib = tmp_path / "nfet_05v0.json"
     calibration.write(calib, "nfet_05v0", values)
     monkeypatch.setattr(tcad, "calibration_file", lambda d, root=None: tmp_path / f"{d}.json")
-    prov = tcad.provenance(("nfet_05v0",))
+    prov = tcad.provenance(("nfet_05v0",), images={"moscap1d": "dev"})
     assert prov["calibration"] == {
         "nfet_05v0": {
             "file_sha256": hashlib.sha256(calib.read_bytes()).hexdigest(),
@@ -183,10 +196,32 @@ def test_committed_tree_roots_are_known():
         assert p.name in TREE_ROOTS, f"results/tcad/{p.name} is not a tree root of the layout"
 
 
+def _result_kinds(root: Path) -> list[str]:
+    """The result kinds (``moscap1d``, ``moscap2d``) a committed tree root holds: itself, or
+    (meshconv) its ``moscap<n>d`` subtrees."""
+    if root.name in tcad.RESULTS_IMAGE:
+        return [root.name]
+    return sorted(p.name for p in root.iterdir() if p.is_dir() and p.name in tcad.RESULTS_IMAGE)
+
+
+def test_committed_results_come_from_the_results_image():
+    """Each committed result kind was made by its image of RESULTS_IMAGE: 1D on dev HEAD, 2D on
+    the stable image (docs/reproduce/image.md, "Which image makes which results")."""
+    for root in _committed_tree_roots():
+        committed = json.loads((root / PROVENANCE_NAME).read_bytes())
+        kinds = _result_kinds(root)
+        assert kinds, root
+        assert {k: v["name"] for k, v in committed["images"].items()} == {
+            k: tcad.RESULTS_IMAGE[k] for k in kinds
+        }, f"{root.relative_to(REPO)}: {REGENERATE}"
+
+
 def test_committed_tcad_provenance_current():
     for root in _committed_tree_roots():
         committed = json.loads((root / PROVENANCE_NAME).read_bytes())
-        current = tcad.tree_provenance(root)
+        current = tcad.tree_provenance(
+            root, {k: tcad.RESULTS_IMAGE[k] for k in _result_kinds(root)}
+        )
         assert committed == current, (
             f"{root.relative_to(REPO)}/provenance.json differs from what the generator would "
             f"write ({sorted(k for k in current if committed.get(k) != current[k])}); {REGENERATE}"

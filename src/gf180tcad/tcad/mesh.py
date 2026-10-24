@@ -10,7 +10,7 @@ of neighbouring spacings). :meth:`MeshSpec.scaled` refines all of them uniformly
 :repo:`Task 10 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-10-mesh-convergence-tooling>`).
 
 The same spec drives both meshers: :meth:`MeshSpec.to_mesh1d` gives the
-`gplugins.devsim.Mesh1D <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/stack1d.py>`_ of the 1D stack and :meth:`MeshSpec.to_resolution_specs` the
+`gplugins.devsim.Mesh1D <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/stack1d.py>`_ of the 1D stack and :meth:`MeshSpec.to_resolution_specs` the
 `meshwell <https://github.com/simbilod/meshwell>`_ resolution specs of the 2D cross-section
 (:repo:`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
 Both import the plugin lazily
@@ -119,7 +119,7 @@ class MeshSpec:
         }
 
     def to_mesh1d(self, poly: str, oxide: str, body: str):
-        """The `gplugins.devsim.Mesh1D <https://github.com/mithro/gplugins/blob/dddaa071321c5177c8471312c565ad86d4b245d7/gplugins/devsim/stack1d.py>`_ of :meth:`spacing_um`, ``max_ratio = grading``."""
+        """The `gplugins.devsim.Mesh1D <https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/stack1d.py>`_ of :meth:`spacing_um`, ``max_ratio = grading``."""
         from gplugins.devsim import Mesh1D
 
         return Mesh1D(self.spacing_um(poly, oxide, body), max_ratio=self.grading)

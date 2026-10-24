@@ -15,6 +15,26 @@ there.
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
   it is now fixed in {{ gplugins_fork }} and re-verified on the latest stack. See
   {doc}`plugin-history`.
+- **Two TCAD stacks.** The final results come from the {term}`dev-HEAD TCAD image`
+  (each project at its development HEAD, pinned by commit); the
+  {term}`stable TCAD image` (PyPI releases) is the baseline for how things used to work and for
+  debugging. A dev HEAD can break what the release did; such drift is reported, never hidden
+  by a looser {term}`tolerance`. See {ref}`tcad-dev-image`.
+- **2D results are on the stable image for now.** The 1D results are made on the dev-HEAD
+  image, byte-identical to the stable image's. The 2D MOS capacitor stays on the stable image
+  until its {term}`mesh convergence` is rerun on the dev image, because {{ gmsh }} 5 meshes the 2D
+  cells differently. That rerun is planned before the {term}`Phase 2` exit. See {ref}`tcad-results-image`.
+- **Two dev-HEAD packages are forks.** The dev-HEAD image runs the full flow. To get there,
+  {{ meshwell }} and the {{ gf180mcu_gdsfactory }} come from mithro forks of their upstream
+  HEADs ({{ meshwell_fork }}, {{ gf180mcu_fork }}), and one test of {{ gplugins_fork }} was
+  replaced by a mesh-independent check
+  ([mithro/gplugins#10](https://github.com/mithro/gplugins/pull/10)). Each fork adds a small fix for {{ gmsh }} 5 or {{ gdsfactory }} 10
+  that upstream does not have yet. These fixes are not upstream, and nothing is sent upstream.
+  The forks, and what each fixes, are listed in {ref}`tcad-dev-forks`.
+- **Build inputs are mirrored.** Every file the dev-HEAD image build fetches is also on
+  {{ input_mirror }}. The build checks each file's sha256, from the mirror or from the original
+  URL. A file that disappears from both stops the build; it cannot change it silently. See
+  {ref}`tcad-dev-mirror`.
 - **Unverified citations.** Several literature items have not been checked yet
   and are marked "unverified". See {doc}`literature`.
 - **The SPICE models are a reference, not the truth.** {term}`BSIM4` is empirical,

@@ -172,7 +172,7 @@ leading hypothesis, and the junction probe confirms it:
 - **The junction drop never changes with bias.** It stays at 0.83450 V, the {term}`built-in potential`
   V_t ln(N_A N_D / n_i²) = 0.834503 V of the rib's own 1e17 / 1e17 cm⁻³ junction, with
   {term}`Boltzmann statistics` and the constants of DEVSIM's
-  [`simple_physics`](https://github.com/devsim/devsim/blob/main/python_packages/simple_physics.py)
+  [`simple_physics`](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/python_packages/simple_physics.py)
   (300 K).
 - **The Potential is discontinuous at the rib's bottom vertices**, by 0.46 V at equilibrium (0.73 V at
   mesh × 0.5). The jump grows by the applied bias, because only the slab moves.
@@ -231,11 +231,13 @@ one host only.
 
 The plugin is fixed in {{ gplugins_fork }} and runs on the latest stack:
 {{ DEVSIM }} 2.11.1, {{ meshwell }} 2.5.2, {{ gmsh }} 4.15.2, {{ gdsfactory }} 9.51.0 and
-{{ Python }} 3.13, in the {term}`TCAD` image ({repo}`docker/TCAD_IMAGE`). The re-verification
+{{ Python }} 3.13, in the {term}`stable TCAD image` ({repo}`docker/TCAD_IMAGE`). The re-verification
 was made with gf180-tcad pinning the fork at [`400f842`](https://github.com/mithro/gplugins/commit/400f8423d7b0d1aac48eea1c0145342d0c1f766a) through the
 {repo}`third_party/gplugins <.gitmodules>` submodule, and all file links below are at that commit.
-The pin is now [`dddaa07`](https://github.com/mithro/gplugins/commit/dddaa071321c5177c8471312c565ad86d4b245d7), which
-also includes {repo}`Task 8 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-8-fork-cv-solver-api>`, the {term}`C–V` solver ([mithro/gplugins#6](https://github.com/mithro/gplugins/pull/6)).
+The pin is now [`1c071d0`](https://github.com/mithro/gplugins/commit/1c071d0565ef4917b48ff907b9426e879ccca7fc), which
+also includes {repo}`Task 8 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-8-fork-cv-solver-api>`, the {term}`C–V` solver ([mithro/gplugins#6](https://github.com/mithro/gplugins/pull/6)),
+and the fork pull requests [mithro/gplugins#9](https://github.com/mithro/gplugins/pull/9) to
+[#12](https://github.com/mithro/gplugins/pull/12).
 
 **Where the numbers come from.** Every latest-stack value in this section is one that the
 linked fork tests assert or record. They ran in the fork's own CI, in the TCAD image, at the

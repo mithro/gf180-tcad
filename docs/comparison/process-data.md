@@ -61,7 +61,7 @@ that the value is right. The `crosscheck` workflow runs it ({repo}`.github/workf
 | {term}`XL`, {term}`XW` | 0 ([37380](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37380), [37392](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37392)) | 0 ([38294](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38294), [38299](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38299)) | 1D bookkeeping, fixed |
 
 CF is not on either card, so {term}`BSIM4` uses its default, 2·EPSROX·ε0/π·ln(1 + 4e-7/TOXE)
-([BSIM4.5.0 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), `doc/BSIM450_Manu.tar`, eq. 7.5.1).
+([BSIM4.5.0 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), `doc/BSIM450_Manu.tar`, eq. 7.5.1).
 
 The nfet ACDE is on line [37059](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37059). Line [37397](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37397) has the same value, but it
 belongs to the next bin, `.model nfet_06v0.1`.
@@ -99,7 +99,7 @@ extrinsic parts: the intrinsic part scales with the capacitance area (L + XL −
 overlap, fringe and gate-bulk parts are added to it
 ({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`). The pfet card sets no DWC, so its DWC is
 the {term}`BSIM4` default, WINT ([`b4set.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4set.c): `BSIM4dwc = BSIM4Wint` when DWC
-is not given; [BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). They are not process
+is not given; [BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). They are not process
 data, so they carry the role `reference-bookkeeping`. They are used only in the 1D comparison,
 where the 1D structure has no source or drain. In 2D, the source/drain geometry gives the overlap
 physically. They are fixed and are not part of the {term}`parameter budget`.
@@ -143,7 +143,7 @@ simulates it.
 
 Δ comes from the BSIM4 charge-thickness model (CTM), which the cards select with `capMod=2`.
 The source is the BSIM4.5.0 user's manual, §7.3
-([BSIM4.5.0 release](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), `doc/BSIM450_Manu.tar`).
+([BSIM4.5.0 release](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), `doc/BSIM450_Manu.tar`).
 {py:func}`gf180tcad.tcad.process.centroid_allowance_nm` evaluates it at Vbs = 0, using the gate
 biases of the SPICE {term}`cv` sweep (50 mV steps) that lie on the two plateaus which set the
 effective oxide:
@@ -167,7 +167,7 @@ oxide-capacitance plateaus. Counting it would widen the fit's freedom for no phy
 
 Δ = max X_DC · EPSROX/ε_si over the plateaus, rounded up to 0.01 nm. In three places the manual's
 text and the reference C code of the same release ([`src/b4ld.c` and `src/b4temp.c` in the
-BSIM4.5.0 release](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), the code {{ ngspice }} runs) differ. Each is settled by the code:
+BSIM4.5.0 release](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), the code {{ ngspice }} runs) differ. Each is settled by the code:
 - Eq. 7.3.2 prints VFBeff in the exponent; `b4ld.c` uses Vfbzb. VFBeff tracks Vgb in
   accumulation, so with it X_DC could not change with bias there.
 - The manual gives no formula for Ldebye; `b4temp.c` uses √(ε_si·vt/(q·NDEP)).
@@ -190,7 +190,7 @@ The gate bias is used in place of Vgse, so the poly-depletion drop is ignored. T
 
 The pfet card is BSIM4 version 4.6 (line [38268](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38268)). Its CTM equations are those of
 4.5.0. §7.3 of the BSIM4.6.0 manual, and the X_DC code of its `b4ld.c`, have the same form
-([BSIM4.6.0 release](https://www.bsim.berkeley.edu/BSIM4/BSIM460.zip)).
+([BSIM4.6.0 release](https://web.archive.org/web/20260420023101/https://bsim.berkeley.edu/BSIM4/BSIM460.zip)).
 
 **Unbinned, long-channel values.** Δ uses the unbinned card values: those with no L, W or P
 term, evaluated at Vbs = 0, with the short-channel terms of Vfbzb dropped. The terms left out are:

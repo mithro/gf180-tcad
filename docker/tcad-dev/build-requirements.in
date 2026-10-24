@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Build tooling of the dev-HEAD TCAD image, with their dependencies: uv (installs Python 3.13 and
+# the venv) and the build backends of the sdists built in the image, used as hash-checked build
+# constraints: hatchling + hatch-vcs (meshwell), flit-core (gdsfactory), setuptools (gf180mcu,
+# rectpack and DEVSIM's own wheel packaging).
+uv==0.13.1
+setuptools
+hatchling
+hatch-vcs
+flit-core
