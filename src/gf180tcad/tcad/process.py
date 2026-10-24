@@ -39,7 +39,7 @@ from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 from types import MappingProxyType
 
-from gf180tcad.devices import SWEEPS
+from gf180tcad.devices import GRID_TOL, SWEEPS
 from gf180tcad.sandbox import REPO_ROOT
 
 # Directory of the process files, ``data/process/<device>.toml``.
@@ -82,6 +82,19 @@ CV_VG = next(s for s in SWEEPS if s.kind == "cv").vgs
 # The plateau window (V): accumulation is polarity·Vg ≤ −PLATEAU_V and strong inversion is
 # polarity·Vg ≥ +PLATEAU_V, the ±2 V plateau convention of the calibration (Task 12).
 PLATEAU_V = 2.0
+
+# The L bins (um) of each device's 6 V model on the card, ``(model, lmin, lmax)``: the cards'
+# LMIN/LMAX (nfet_06v0.0: sm141064.ngspice:37177/37176; nfet_06v0.1: 37515/37514; pfet_06v0.0:
+# 38177/38176), checked against the card by tests/tcad/test_process.py. The process files cite
+# the first bin; the nfet keys they use have the same values in both (also checked there).
+CARD_BINS = {
+    "nfet_05v0": (("nfet_06v0.0", 0.7, 50.001), ("nfet_06v0.1", 0.6, 0.7)),
+    "pfet_05v0": (("pfet_06v0.0", 0.5, 50.01),),
+}
+
+# ngspice's binning tolerance (m): inpgmod.c in_range() accepts min < value < max or a value
+# within 1e-9 (absolute, is_equal) of either bound, so a length on a boundary lies in both bins.
+_BIN_TOL_M = GRID_TOL
 
 _SCHEMA = 1
 _KEYS = {
@@ -341,6 +354,25 @@ class ProcessDescription:
                 raise ValueError(f"{self.device}: {name}={v!r} is outside its bounds [{lo}, {hi}]")
             params[name] = replace(p, value=v, provenance="calibrated")
         return replace(self, params=MappingProxyType(params))
+
+
+def card_bins(device: str, l_um: float) -> tuple[str, ...]:
+    """The card models whose L bin holds the drawn length ``l_um`` (um), in card order.
+
+    As ngspice's ``in_range`` (src/spicelib/parser/inpgmod.c): both bounds are inclusive, so
+    L = 0.7 um lies in both nfet bins (ngspice then takes the first match in its model table);
+    the values the process files use are the same in both bins. Raises ValueError if no bin
+    holds ``l_um``.
+    """
+    l_m = l_um * 1e-6
+    out = tuple(
+        m
+        for m, lo, hi in CARD_BINS[device]
+        if abs(l_m - lo * 1e-6) < _BIN_TOL_M or abs(l_m - hi * 1e-6) < _BIN_TOL_M or lo < l_um < hi
+    )
+    if not out:
+        raise ValueError(f"{device}: no card bin holds L = {l_um!r} um ({CARD_BINS[device]})")
+    return tuple(sorted(out))
 
 
 # --- loading ---------------------------------------------------------------------------------
