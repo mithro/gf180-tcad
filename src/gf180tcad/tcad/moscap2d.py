@@ -100,6 +100,15 @@ _DEVICE, _MESH = "moscap2d", "moscap2d_mesh"
 STATE_HEADER = "header.json"
 STATE_POINTS = "points.jsonl"
 STATE_HANDOFF = "handoff.json"
+# One line per resume that continued from saved points (the job files report the count).
+STATE_RESUMES = "resumes.jsonl"
+
+# Why a 2D job has no AC sweep (cgx.csv): its first drift-diffusion solve fails in DEVSIM's
+# direct solver at this size (the L = 2 um cell at the selected level, 501k nodes; Task 11).
+AC_INFEASIBLE = (
+    "infeasible: the drift-diffusion AC solve fails in UMFPACK 5.1 at this size "
+    "(umfpack numeric failed)"
+)
 
 # A test hook: called with the index of every point once it and its hand-off are saved (the
 # split/resume test raises from it to cut a sweep off). None in production.
@@ -126,6 +135,7 @@ class SweepState:
     """
 
     def __init__(self, directory: Path | str, header: dict) -> None:
+        self.header = header
         self.dir = Path(directory)
         self.dir.mkdir(parents=True, exist_ok=True)
         path = self.dir / STATE_HEADER
@@ -166,7 +176,17 @@ class SweepState:
             raise StaleState(
                 f"{self.dir}: the hand-off is point {k} but points {missing} are missing"
             )
+        total = len(self.header.get("vg_solve", ()))
+        if not total or k + 1 < total:  # a sweep that continues from saved points
+            with (self.dir / STATE_RESUMES).open("a", encoding="utf-8") as f:
+                f.write(json.dumps({"kept": k + 1}) + "\n")
         return [last[i] for i in range(k + 1)], handoff
+
+
+def resume_count(directory: Path | str) -> int:
+    """How often the sweep saved in ``directory`` was resumed (:data:`STATE_RESUMES`)."""
+    path = Path(directory) / STATE_RESUMES
+    return len(path.read_text(encoding="utf-8").splitlines()) if path.is_file() else 0
 
 
 def _write_atomic(path: Path, text: str) -> None:
@@ -579,20 +599,25 @@ def job_dir(root: Path, device: str, params: str, geometry: Geometry) -> Path:
 
 def write(
     qs: MoscapCV2D,
-    ac: MoscapCV2D,
+    ac: MoscapCV2D | None,
     out: Path,
     *,
     proc: ProcessDescription,
     params: str,
     mesh_source: str,
     calibration_sha256: str | None = None,
+    resumed: dict[str, int] | None = None,
 ) -> None:
     """Write :data:`CV_CSV` (the QS sweep ``qs``), :data:`CGX_CSV` (the AC sweep ``ac``) and
-    :data:`META_JSON` into ``out``. The mesh file is written by :func:`simulate` itself."""
+    :data:`META_JSON` into ``out``. The mesh file is written by :func:`simulate` itself.
+
+    ``ac`` None (no AC sweep, :data:`AC_INFEASIBLE`) writes no :data:`CGX_CSV`. ``resumed``
+    gives how often each sweep was resumed (:func:`resume_count`), recorded in the meta.
+    """
     out = Path(out)
-    if qs.method != "qs" or ac.method != "ac" or qs.device != proc.device:
-        raise ValueError("write() takes a QS and an AC sweep of the same device")
-    if not set(ac.vg) <= set(qs.vg):
+    if qs.method != "qs" or qs.device != proc.device or (ac is not None and ac.method != "ac"):
+        raise ValueError("write() takes a QS and an AC sweep (or None) of the same device")
+    if ac is not None and not set(ac.vg) <= set(qs.vg):
         raise ValueError("the AC biases must be biases of the QS sweep")
     w = qs.w_um
     _write_csv(
@@ -608,36 +633,19 @@ def write(
         },
         {"device": qs.device, "dim": "2", "method": "qs", "params": params, "units": CV_UNITS},
     )
-    contacts = ac.non_gate_contacts
-    cols = {"vg": ac.vg, "cgg_per_um": ac.cgg_ff_per_um}
-    cols.update({f"c{c}g_per_um": ac.cgx[c] for c in contacts})
-    cols["sum_rel_error"] = [
-        math.fsum(ac.cgx[c][i] for c in contacts) / ac.cgg_ff_per_um[i] - 1
-        for i in range(len(ac.vg))
-    ]
-    cols["rel_error"] = [p.rel_error for p in ac.points]
-    cols["iterations"] = [int(p.iterations) for p in ac.points]
-    _write_csv(
-        out / CGX_CSV,
-        cols,
-        {
-            "device": ac.device,
-            "dim": "2",
-            "freq_hz": repr(ac.freq_hz),
-            "method": "ac",
-            "params": params,
-            "units": "vg=V c*_per_um=fF/um (per unit width) sum_rel_error=1 rel_error=1 "
-            "iterations=1",
-        },
-    )
+    contacts = () if ac is None else ac.non_gate_contacts
+    if ac is not None:
+        _write_cgx(out, ac, params, contacts)
     origins = tunable_origins(proc, params, calibration_sha256)
     io.write_json(
         out / META_JSON,
         {
-            "ac_freq_hz": ac.freq_hz,
-            "ac_points": len(ac.vg),
+            "ac": AC_INFEASIBLE if ac is None else "computed",
+            "ac_freq_hz": None if ac is None else ac.freq_hz,
+            "ac_points": 0 if ac is None else len(ac.vg),
             "constants": constants_dict(qs.constants),
             "contacts": ["gate", *contacts],
+            "resumed": dict(resumed or {}),
             "device": qs.device,
             "dim": 2,
             "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
@@ -668,6 +676,30 @@ def write(
             "tunables": origins,
             "w_um": qs.w_um,
             "with_sd": qs.with_sd,
+        },
+    )
+
+
+def _write_cgx(out: Path, ac: MoscapCV2D, params: str, contacts) -> None:
+    cols = {"vg": ac.vg, "cgg_per_um": ac.cgg_ff_per_um}
+    cols.update({f"c{c}g_per_um": ac.cgx[c] for c in contacts})
+    cols["sum_rel_error"] = [
+        math.fsum(ac.cgx[c][i] for c in contacts) / ac.cgg_ff_per_um[i] - 1
+        for i in range(len(ac.vg))
+    ]
+    cols["rel_error"] = [p.rel_error for p in ac.points]
+    cols["iterations"] = [int(p.iterations) for p in ac.points]
+    _write_csv(
+        out / CGX_CSV,
+        cols,
+        {
+            "device": ac.device,
+            "dim": "2",
+            "freq_hz": repr(ac.freq_hz),
+            "method": "ac",
+            "params": params,
+            "units": "vg=V c*_per_um=fF/um (per unit width) sum_rel_error=1 rel_error=1 "
+            "iterations=1",
         },
     )
 

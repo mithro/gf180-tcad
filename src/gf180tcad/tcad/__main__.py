@@ -102,8 +102,9 @@ AGREEMENT_NAME = "agreement.json"
 PROGRESS_NAME = "progress.log"
 
 # The steps of a 2D moscap job (run_job_2d): both sweeps and the job files in one job, one sweep
-# alone (two jobs that can run in parallel on one scratch dir), or the job files from both.
-METHODS = ("both", "qs", "ac", "combine")
+# alone (two jobs that can run in parallel on one scratch dir), the job files from both, or
+# the job files from the QS sweep alone (combine-qs: no AC, moscap2d.AC_INFEASIBLE).
+METHODS = ("both", "qs", "ac", "combine", "combine-qs")
 # The AC sweep's own mesh file in the scratch dir (it must equal the QS sweep's mesh.msh).
 AC_MESH_NAME = "mesh_ac.msh"
 
@@ -216,14 +217,15 @@ def run_job_2d(device: str, params: str, gid: str, out: Path, method: str = "bot
             child.join()
             if child.exitcode != 0:
                 raise RuntimeError(f"the {m} sweep failed (exit {child.exitcode})")
-    qs, ac = (
-        moscap2d.from_dict(json.loads((out / f"{m}.json").read_bytes())) for m in ("qs", "ac")
-    )
-    if (out / AC_MESH_NAME).read_bytes() != (out / moscap2d.MESH_FILE).read_bytes():
+    sweeps_done = ("qs",) if method == "combine-qs" else ("qs", "ac")
+    cvs = {m: moscap2d.from_dict(json.loads((out / f"{m}.json").read_bytes())) for m in sweeps_done}
+    if "ac" in cvs and (out / AC_MESH_NAME).read_bytes() != (out / moscap2d.MESH_FILE).read_bytes():
         raise RuntimeError("the QS and AC sweeps were meshed differently")
+    qs = cvs["qs"]
     moscap2d.write(
-        qs, ac, out, proc=proc, params=params, mesh_source=mesh_source(device, 2),
+        qs, cvs.get("ac"), out, proc=proc, params=params, mesh_source=mesh_source(device, 2),
         calibration_sha256=calibration_sha256,
+        resumed={m: moscap2d.resume_count(out / f"state_{m}") for m in sweeps_done},
     )  # fmt: skip
     print(f"{tag}: {len(qs.vg)} points", flush=True)
 
@@ -338,6 +340,8 @@ def run_host(
     else:
         dest = moscap2d.job_dir(root, device, params, geometry_of(device, gid))
         names = (moscap2d.CV_CSV, moscap2d.CGX_CSV, moscap2d.MESH_FILE, moscap2d.META_JSON)
+        if method == "combine-qs":
+            names = tuple(n for n in names if n != moscap2d.CGX_CSV)
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)

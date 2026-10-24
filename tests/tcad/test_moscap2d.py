@@ -117,6 +117,33 @@ def test_sweep_state_resumes_after_the_last_handoff(tmp_path):
     assert handoff == {"i": 1, "v_gate": 0.001, "potential": {"body": [0.3, 0.4]}}
     with pytest.raises(moscap2d.StaleState, match="mesh_sha256"):
         moscap2d.SweepState(tmp_path / "s", {**header, "mesh_sha256": "cd"})
+    # every resume that kept points is recorded (the results disclose them)
+    assert moscap2d.resume_count(tmp_path / "s") == 1
+    moscap2d.SweepState(tmp_path / "s", header).resume()
+    assert moscap2d.resume_count(tmp_path / "s") == 2
+    assert moscap2d.resume_count(tmp_path / "missing") == 0
+
+
+def test_qs_only_combine(tmp_path, monkeypatch):
+    """``--method combine-qs`` (L = 2 um: the AC drift-diffusion solve fails in UMFPACK 5.1 at
+    its size) writes cv.csv, the mesh and the meta from the QS sweep alone, and the meta says
+    why there is no AC and how often the sweep was resumed."""
+    monkeypatch.setattr(cli.meshconv, "selected_spec", lambda d, dim: MeshSpec.DEFAULT_2D)
+    out = tmp_path / "job"
+    out.mkdir()
+    io.write_json(out / "qs.json", moscap2d.to_dict(_synthetic_cv("qs")))
+    (out / moscap2d.MESH_FILE).write_text("mesh", encoding="utf-8")
+    st = out / "state_qs"
+    st.mkdir()
+    (st / moscap2d.STATE_RESUMES).write_text('{"kept": 57}\n{"kept": 97}\n', encoding="utf-8")
+    cli.run_job_2d("nfet_05v0", "start", "w10p0_l0p60", out, method="combine-qs")
+    assert not (out / moscap2d.CGX_CSV).exists()
+    cols, meta = io.read_csv(out / moscap2d.CV_CSV)
+    assert meta["method"] == "qs" and list(cols["c_per_area"]) == [2.2, 0.9, 2.1]
+    info = json.loads((out / moscap2d.META_JSON).read_bytes())
+    assert info["ac"] == moscap2d.AC_INFEASIBLE and "UMFPACK" in info["ac"]
+    assert info["ac_points"] == 0 and info["contacts"] == ["gate"]
+    assert info["resumed"] == {"qs": 2}
 
 
 def test_moscap_split_methods(tmp_path, monkeypatch):
