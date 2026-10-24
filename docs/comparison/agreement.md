@@ -91,8 +91,8 @@ To stop the TCAD from being tuned to the answer, the targets are split.
 ### Parameter sources and budget
 
 Allowed sources, in order of preference: (1) the PDK's public documentation
-({{ gf180mcu_pdk_docs }}); (2) values in the public SPICE card (TOXE, TOXP, NDEP, NSD, {term}`NGATE`,
-XJ, LPE0, RDSW; see the {ref}`BSIM4 manual <lit-bsim4>`), used as starting points and bounds and never as fixed truths, because
+({{ gf180mcu_pdk_docs }}); (2) values in the public SPICE card (TOXE, TOXP, NDEP, {term}`NSD`, {term}`NGATE`,
+{term}`XJ`, LPE0, RDSW; see the {ref}`BSIM4 manual <lit-bsim4>`), used as starting points and bounds and never as fixed truths, because
 {term}`BSIM` parameters are fitted rather than physical; (3) generic published
 0.18 µm-class 5 V values with a citation.
 

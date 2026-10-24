@@ -11,8 +11,12 @@ spike, the depletion capacitance moved by 2 % between two meshes
 
 {py:func}`gf180tcad.tcad.meshconv.converge` solves the {term}`TCAD` {term}`MOSCAP` at four
 levels, the start {py:class}`~gf180tcad.tcad.mesh.MeshSpec` scaled by 1, 2^-0.5, 0.5 and 2^-1.5
-({py:data}`gf180tcad.tcad.meshconv.LEVELS`). Each level multiplies every spacing by its factor
-and keeps the grading fixed ({py:meth}`~gf180tcad.tcad.mesh.MeshSpec.scaled`). The solver's
+({py:data}`gf180tcad.tcad.meshconv.LEVELS`; the 2D study runs the first three, see
+{ref}`mesh-convergence-2d`). Each level multiplies every spacing by its factor
+({py:meth}`~gf180tcad.tcad.mesh.MeshSpec.scaled`). In 1D it keeps the grading, which there only
+caps the ratio of neighbouring spacings. In 2D it scales the grading's slope too, so that the
+size at every point scales ({py:data}`gf180tcad.tcad.meshconv.REFINE_GRADING`,
+{ref}`a uniform refinement must refine the grading <moscap2d-refine-grading>`). The solver's
 relative-error limit, the {term}`QS <C–V>` step
 ({py:data}`~gf180tcad.tcad.moscap1d.DV_QS`) and the physical constants are the same at every
 level. The report holds, per level, the curve, the node count and the largest relative change
@@ -31,9 +35,16 @@ The command is `python -m gf180tcad.tcad meshconv --device D --dim 1 --out resul
 {term}`dev-HEAD TCAD image` ({repo}`docker/TCAD_DEV_IMAGE`; `--image stable` for the
 {term}`stable TCAD image`, see {ref}`tcad-results-image`), under the same memory admission check as the
 {term}`SPICE` reference (concurrent containers × memory ≤ 128 GiB). The report is computed in the same image.
-`--dim 2` is refused until the 2D MOS capacitor of
-{repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
-exists.
+`--dim 2` runs the 2D MOS capacitor ({ref}`mesh-convergence-2d`).
+
+**Oscillation and noise.** Per triple and bias the report also flags oscillatory convergence (the
+change reverses sign between the levels, d12 · d23 < 0), where neither the order nor the
+{term}`Richardson extrapolation` applies, and treats a level difference at or below a noise floor as
+noise: the order is then undefined, not an arbitrary number. The floor is
+{py:data}`~gf180tcad.tcad.meshconv.NOISE_K` = 1e4 times the solver's relative error limit times |C|
+(1e-6 relative at 1e-10). A QS C is a 2 mV central difference of charges of up to C × 6 V, so its
+noise is up to 6e3 × that limit; 1e4 rounds that up. The median order uses only defined,
+monotone biases. In 1D no bias oscillates or falls below the floor.
 
 ## 1D result
 
@@ -91,12 +102,59 @@ structure, where
 {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
 diagnoses it.
 
+(mesh-convergence-2d)=
+
+## 2D result
+
+The 2D study ({py:mod}`gf180tcad.tcad.moscap2d`, {doc}`moscap2d`) runs levels 0–2 from
+{py:attr}`~gf180tcad.tcad.mesh.MeshSpec.DEFAULT_2D` on the {{ gdsfactory }} {term}`PDK` cell at
+{term}`Lmin` with its source and drain ({py:data}`gf180tcad.tcad.meshconv.GEOMETRY_2D`), on the
+201 biases of the SPICE {term}`cv` sweep. Lmin is the calibration geometry whose
+{term}`C–V` the 2D structure (gate edges, overlap, fringe) shapes most; the selected spec is a
+local spacing and applies to every 2D geometry. The 2D mesh is unstructured triangles from
+{{ gmsh }}, which are isotropic, so the interfaces start at 0.5 nm, ten times the 1D spacing:
+0.05 nm along a 10 µm interface would need tens of millions of nodes. The oxide spacing
+matters in 2D, unlike in 1D, and starts at 1 nm ({ref}`moscap2d-artefact`).
+
+**Level 3 is left out** ({py:data}`gf180tcad.tcad.meshconv.LEVELS_BY_DIM`,
+{py:data}`gf180tcad.tcad.meshconv.EXCLUDED_2D`; the report records it as `excluded_levels`).
+Every level was meshed first without solving. With the refined grading, the node count doubles
+per level:
+
+| Lmin cell | Level 0 | Level 1 | Level 2 | Level 3 |
+|---|---|---|---|---|
+| nfet (W 10, L 0.6 µm) | 115,689 | 224,640 | 437,039 | 861,897 |
+| pfet (W 10, L 0.5 µm) | 105,701 | 205,327 | 399,554 | 788,074 |
+| estimated QS time, nfet / pfet | 0.75 / 0.67 h | 1.75 / 1.56 h | 4.1 / 3.65 h | 9.7 / 8.7 h |
+
+The times come from the first 2D study's measured cost: s per bias = 3.25e-6 · nodes^1.278,
+times the 201 biases, times 1.4 for the equilibrium set-up and the retried points. Level 3 would
+take over 8 hours per {term}`job`. It is also as large as the 2D cell at L = 10 µm, whose equilibrium
+{term}`drift-diffusion` solve fails in {{ DEVSIM }}'s direct solver ({ref}`moscap2d-l10`). So
+levels 0 and 1 are the candidates, each with a finer neighbour, and level 2 is only the finer
+neighbour of level 1. The levels 0–2 give one triple, and so one observed order, which the
+report gives with its oscillating and noise-floor biases.
+
+The selection (the report's `levels` and `selected`, in {repo}`results/tcad/meshconv/moscap2d`; the
+2D-equals-1D column is the largest relative difference of the extruded uniform stack's C per area
+against 1D, {py:data}`~gf180tcad.tcad.meshconv.AGREEMENT_1D` = 0.5 %):
+
+| Level | nfet: change to next level | nfet: against 1D | pfet: change to next level | pfet: against 1D |
+|---|---|---|---|---|
+| 0 | 0.256 % | 0.553 % | 0.170 % | 0.546 % |
+| 1 | 0.092 % | 0.289 % | 0.076 % | 0.281 % |
+| 2 | (finest) | 0.152 % | (finest) | 0.152 % |
+
+Level 0 meets the 1 % convergence criterion but not the 0.5 % 2D-equals-1D one, so level 1 (scale
+0.7071) is the coarsest level that meets both, for both devices. The selected level has 224,640
+(nfet) and 205,327 (pfet) nodes. The nfet level-1 and level-2 sweeps each needed round-off
+acceptances at the −0.6 V point ({ref}`moscap2d-solver`); the pfet needed none.
+
 ## Limitations
 
-- **1D only so far.** The 2D mesh convergence comes with
-  {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`.
-- **Numbers from one image.** The 1D results are from the dev-HEAD TCAD image pinned in
-  {repo}`docker/TCAD_DEV_IMAGE` and are regenerated when that image changes. They are
+- **Numbers from one image per dimension.** The 1D results are from the dev-HEAD TCAD image
+  pinned in {repo}`docker/TCAD_DEV_IMAGE` and are regenerated when that image changes. They are
   byte-identical to the stable image's ({repo}`docker/TCAD_IMAGE`), which
-  {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree` checks; see
-  {ref}`tcad-results-image`.
+  {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree` checks. The 2D results
+  are from the stable image: {{ gmsh }} 5 in the dev image meshes the 2D cells differently, so 2D
+  needs its own mesh convergence there; see {ref}`tcad-results-image`.

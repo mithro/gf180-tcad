@@ -27,7 +27,7 @@ mesh is the device's selected mesh-convergence level,
 
 ``meshconv --device D --dim 1|2 --out ROOT [--jobs N]`` runs on the host; the committed tree
 root is :repo:`results/tcad/meshconv`. It runs one ``meshconv-job --level I`` per refinement
-level (:data:`gf180tcad.tcad.meshconv.LEVELS`) as separate sandbox jobs, ``N`` at a time
+level (:func:`gf180tcad.tcad.meshconv.levels`: 0-3 in 1D, 0-2 in 2D) as separate sandbox jobs, ``N`` at a time
 (default: all), under the admission check jobs x memory <= 128 GiB
 (:func:`gf180tcad.tcad.meshconv.check_admission`). Each simulates the device's start values
 on the start spec :attr:`~gf180tcad.tcad.mesh.MeshSpec.DEFAULT_1D` scaled by its level and
@@ -35,15 +35,38 @@ writes :data:`LEVEL_NAME`. Then ``meshconv-job --assemble`` computes the report
 (:func:`gf180tcad.tcad.meshconv.converge`) in the same image and writes
 ``report.json`` and ``selected.json``; the host copies them to ``ROOT/moscap1d/<device>/``,
 writes ``ROOT/provenance.json`` and prints each level's runtime (runtimes stay out of the
-results). ``--dim 2`` needs the 2D MOS capacitor of
-:repo:`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
-and is refused until then.
+results). ``--dim 2`` does the same for the 2D MOS capacitor
+(:mod:`gf180tcad.tcad.moscap2d`) at :data:`gf180tcad.tcad.meshconv.GEOMETRY_2D`, from
+:attr:`~gf180tcad.tcad.mesh.MeshSpec.DEFAULT_2D`, into ``ROOT/moscap2d/<device>/``.
+
+``moscap --device D --dim 2 --params P --geometry GID --out ROOT`` runs the 2D MOS capacitor
+of the PDK cell at the SPICE geometry ``GID`` (e.g. ``w10p0_l10p00``) with its source and drain,
+on the device's selected 2D mesh (``results/tcad/meshconv/moscap2d/<device>/selected.json``):
+the QS sweep (``cv.csv``), the 1 MHz AC sweep with every non-gate contact's Cxg
+(``cgx.csv``), the mesh (``mesh.msh``) and ``cv.meta.json`` go to ``ROOT/<device>/<P>/<GID>/``;
+the committed tree is :repo:`results/tcad/moscap2d`, with its ``ROOT/provenance.json``.
+
+**Split and resumed 2D jobs.** ``--method qs`` and ``--method ac`` (:data:`METHODS`) run one
+sweep alone, so the two can run as parallel sandbox jobs on one scratch directory
+(``--resume DIR``); ``--method combine --resume DIR`` then writes the job files, byte for byte
+those of the default ``--method both``. Every sweep is saved point by point in
+``DIR/state_<qs|ac>`` (:class:`gf180tcad.tcad.moscap2d.SweepState`), so a job that is cut off
+resumes at its last saved point when the same command runs again with ``--resume DIR``.
+``--method combine-qs`` writes the job files from the QS sweep alone, without ``cgx.csv``, for
+a cell whose AC sweep cannot run (:data:`gf180tcad.tcad.moscap2d.AC_INFEASIBLE`); the meta
+records that and how often each sweep was resumed. ``--mem`` sets the sandbox job's memory.
+
+**Progress.** A 2D job appends one line per bias point (stage, index, gate bias, elapsed
+time) to ``progress_qs.log`` or ``progress_ac.log`` in its scratch directory, whose path the
+host prints when the job starts; ``--progress-log FILE`` copies the finished log(s) there.
+Runtimes stay out of the results.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import multiprocessing
 import shutil
 import sys
 import tempfile
@@ -53,6 +76,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from gf180tcad import io, sandbox
+from gf180tcad.devices import DEVICES as SPICE_DEVICES
+from gf180tcad.devices import Geometry, geometry_id
 from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.tcad import (
     IMAGES,
@@ -64,6 +89,7 @@ from gf180tcad.tcad import (
     image_ref,
     meshconv,
     moscap1d,
+    moscap2d,
     process,
     recorded_images,
     tree_provenance,
@@ -71,14 +97,45 @@ from gf180tcad.tcad import (
 from gf180tcad.tcad.mesh import MeshSpec
 
 PARAMS = ("start", "calibrated")
-DIMS = (1,)  # 2 arrives with Task 11
-MESHCONV_DIMS = (1, 2)  # 2 is refused until Task 11 (meshconv.NeedsTask11)
+DIMS = (1, 2)
+MESHCONV_DIMS = (1, 2)
 JOB_MEM = "2g"  # a 1D sweep needs well under 1 GiB
 JOB_CPUS = 1
-MESHCONV_JOB_MEM = {1: JOB_MEM}  # Task 11 adds the 2D jobs' memory
+# A 2D job's memory cap: meshing the L = 10 um cell alone takes 5.2 GiB and its AC sweep runs in
+# extended precision; 16 GiB (the sandbox default) leaves room. 8 of them fit 128 GiB.
+JOB_MEM_2D = "16g"
+MESHCONV_JOB_MEM = {1: JOB_MEM, 2: JOB_MEM_2D}
 
-# The file each meshconv-job --level writes into its /work/out.
+# The file each meshconv-job --level writes into its /work/out, the file of its 2D agreement job
+# (meshconv-job --agreement --level), and the progress log of a job.
 LEVEL_NAME = "level.json"
+AGREEMENT_NAME = "agreement.json"
+PROGRESS_NAME = "progress.log"
+
+# The steps of a 2D moscap job (run_job_2d): both sweeps and the job files in one job, one sweep
+# alone (two jobs that can run in parallel on one scratch dir), the job files from both, or
+# the job files from the QS sweep alone (combine-qs: no AC, moscap2d.AC_INFEASIBLE).
+METHODS = ("both", "qs", "ac", "combine", "combine-qs")
+# The AC sweep's own mesh file in the scratch dir (it must equal the QS sweep's mesh.msh).
+AC_MESH_NAME = "mesh_ac.msh"
+
+
+class _Progress:
+    """Append progress lines to ``<out>/progress.log`` (and stdout)."""
+
+    def __init__(self, out: Path, prefix: str, name: str = PROGRESS_NAME) -> None:
+        self.path = Path(out) / name
+        self.prefix = prefix
+
+    def __call__(self, line: str) -> None:
+        text = f"{self.prefix}: {line}"
+        with self.path.open("a", encoding="utf-8") as f:
+            f.write(text + "\n")
+        print(text, flush=True)
+
+
+class BadGeometry(ValueError):
+    """``--dim 2`` without ``--geometry``, or a geometry id the device does not have."""
 
 
 def job_image(dim: int, image: str | None) -> str:
@@ -122,15 +179,95 @@ def job_vg(proc: process.ProcessDescription) -> tuple[float, ...]:
     return tuple(pol * v + 0.0 for v in process.CV_VG)  # + 0.0: no -0.0
 
 
-def mesh_source(device: str) -> str:
-    """The repo-relative ``selected.json`` that the 1D results of ``device`` take their mesh from."""
-    return (meshconv.job_dir(meshconv.TREE_ROOT, device, 1) / meshconv.SELECTED_NAME).as_posix()
+def mesh_source(device: str, dim: int = 1) -> str:
+    """The repo-relative ``selected.json`` that the ``dim``-D results of ``device`` use."""
+    return (meshconv.job_dir(meshconv.TREE_ROOT, device, dim) / meshconv.SELECTED_NAME).as_posix()
 
 
-def run_job(device: str, params: str, out: Path) -> None:
-    """``moscap-job``: simulate the 1D MOS capacitor and write its files into ``out``."""
+def geometry_of(device: str, gid: str) -> Geometry:
+    """The SPICE geometry of ``device`` with the id ``gid`` (e.g. ``w10p0_l10p00``)."""
+    found = [g for g in SPICE_DEVICES[device].geometries if geometry_id(g) == gid]
+    if not found:
+        ids = [geometry_id(g) for g in SPICE_DEVICES[device].geometries]
+        raise BadGeometry(f"{device} has no geometry {gid!r}; known: {ids}")
+    return found[0]
+
+
+def run_job_2d(device: str, params: str, gid: str, out: Path, method: str = "both") -> None:
+    """``moscap-job --dim 2``: QS and 1 MHz AC sweeps of the 2D MOS capacitor into ``out``.
+
+    ``method`` (:data:`METHODS`): ``qs`` or ``ac`` runs that sweep alone, saved point by point
+    in ``out/state_<method>`` (it resumes there) and written to ``out/<method>.json``;
+    ``combine`` writes the job files from both; ``both`` does the three in one job. So two
+    parallel jobs (``qs``, ``ac``) and ``combine`` give the files of ``both`` byte for byte.
+    """
+    if method not in METHODS:
+        raise ValueError(f"method must be one of {METHODS}, got {method!r}")
+    proc, calibration_sha256 = load_params(device, params)
+    geometry = geometry_of(device, gid)
+    mesh = meshconv.selected_spec(device, 2)
+    vg = job_vg(proc)
+    out = Path(out)
+    tag = f"{device}/{params}/{gid}"
+    sweeps = {
+        "qs": {"vg": vg, "mesh_file": out / moscap2d.MESH_FILE},
+        "ac": {"vg": vg[:: moscap2d.AC_STRIDE], "mesh_file": out / AC_MESH_NAME,
+               "freq_hz": moscap2d.AC_FREQ_HZ},
+    }  # fmt: skip
+
+    def sweep(m: str) -> None:
+        cv = moscap2d.simulate(
+            proc, geometry, with_sd=True, method=m, mesh=mesh, state_dir=out / f"state_{m}",
+            log=_Progress(out, f"{tag}/{m}", f"progress_{m}.log"), **sweeps[m],
+        )  # fmt: skip
+        io.write_json(out / f"{m}.json", moscap2d.to_dict(cv))
+        print(f"{tag}/{m}: {len(cv.vg)} points", flush=True)
+
+    if method in ("qs", "ac"):
+        sweep(method)
+        return
+    if method == "both":
+        # Each sweep in a fresh process, as the split jobs run: DEVSIM keeps state across a
+        # process's devices that moves results at round-off (1e-13), so both = split only so.
+        ctx = multiprocessing.get_context("fork")
+        for m in ("qs", "ac"):
+            child = ctx.Process(target=sweep, args=(m,))
+            child.start()
+            child.join()
+            if child.exitcode != 0:
+                raise RuntimeError(f"the {m} sweep failed (exit {child.exitcode})")
+    sweeps_done = ("qs",) if method == "combine-qs" else ("qs", "ac")
+    cvs = {m: moscap2d.from_dict(json.loads((out / f"{m}.json").read_bytes())) for m in sweeps_done}
+    if "ac" in cvs and (out / AC_MESH_NAME).read_bytes() != (out / moscap2d.MESH_FILE).read_bytes():
+        raise RuntimeError("the QS and AC sweeps were meshed differently")
+    qs = cvs["qs"]
+    moscap2d.write(
+        qs, cvs.get("ac"), out, proc=proc, params=params, mesh_source=mesh_source(device, 2),
+        calibration_sha256=calibration_sha256,
+        resumed={m: moscap2d.resume_count(out / f"state_{m}") for m in sweeps_done},
+    )  # fmt: skip
+    print(f"{tag}: {len(qs.vg)} points", flush=True)
+
+
+def _check_method(dim: int, method: str) -> None:
+    if method not in METHODS:
+        raise ValueError(f"--method must be one of {METHODS}, got {method!r}")
+    if dim == 1 and method != "both":
+        raise ValueError(f"--method {method} applies to --dim 2 only")
+
+
+def run_job(
+    device: str, params: str, out: Path, dim: int = 1, gid: str | None = None, method: str = "both"
+) -> None:
+    """``moscap-job``: simulate the MOS capacitor and write its files into ``out``."""
+    _check_method(dim, method)
     if not sandbox.in_sandbox():
         raise RuntimeError("moscap-job must run inside the sandbox (see tools/sandbox-run)")
+    if dim == 2:
+        if gid is None:
+            raise BadGeometry("moscap-job --dim 2 needs --geometry")
+        run_job_2d(device, params, gid, out, method)
+        return
     proc, calibration_sha256 = load_params(device, params)
     mesh = meshconv.selected_spec(device, 1)
     cv = moscap1d.simulate(proc, vg=job_vg(proc), method="qs", mesh=mesh)
@@ -141,41 +278,109 @@ def run_job(device: str, params: str, out: Path) -> None:
     print(f"{device}/{params}: {len(cv.vg)} points", flush=True)
 
 
-def run_host(device: str, params: str, root: Path, image: str | None = None) -> None:
+def _copy_progress(scratch: Path, progress_log: Path | None, names=(PROGRESS_NAME,)) -> None:
+    found = [scratch / n for n in names if (scratch / n).is_file()]
+    if progress_log is None or not found:
+        return
+    Path(progress_log).write_text("".join(p.read_text(encoding="utf-8") for p in found), "utf-8")
+
+
+def _progress_names(dim: int, method: str) -> tuple[str, ...]:
+    if dim == 1:
+        return (PROGRESS_NAME,)
+    return tuple(f"progress_{m}.log" for m in ("qs", "ac") if method in (m, "both"))
+
+
+def run_host(
+    device: str,
+    params: str,
+    root: Path,
+    dim: int = 1,
+    gid: str | None = None,
+    progress_log: Path | None = None,
+    method: str = "both",
+    resume: Path | None = None,
+    mem: str | None = None,
+    image: str | None = None,
+) -> None:
     """``moscap``: run ``moscap-job`` in the TCAD image, then write the job dir and provenance.
 
-    ``image`` names the TCAD image (default: :func:`job_image`)."""
-    image = job_image(1, image)
+    2D only, ``method`` (:data:`METHODS`): ``qs`` or ``ac`` runs that sweep alone in the
+    scratch directory and keeps it (no job files yet); ``combine`` then writes the job files
+    from both, ``combine-qs`` from the QS sweep alone. ``resume`` is that scratch directory
+    (also of a cut-off job: its sweeps resume at their last saved point); the default is a new
+    one. ``mem`` overrides the sandbox job's memory (:data:`JOB_MEM`, :data:`JOB_MEM_2D`).
+    ``image`` names the TCAD image (default: :func:`job_image`).
+    """
+    _check_method(dim, method)
+    image = job_image(dim, image)
     root = Path(root)
-    check_same_image(
-        root, "moscap1d", image,
-        (root / d / p for d in process.DEVICES for p in PARAMS if (d, p) != (device, params)),
-    )  # fmt: skip
+    if dim == 2:
+        if gid is None:
+            raise BadGeometry("moscap --dim 2 needs --geometry")
+        geometry_of(device, gid)
+        others = (
+            moscap2d.job_dir(root, d, p, g)
+            for d in process.DEVICES for p in PARAMS for g in SPICE_DEVICES[d].geometries
+            if (d, p, geometry_id(g)) != (device, params, gid)
+        )  # fmt: skip
+    else:
+        others = (
+            root / d / p for d in process.DEVICES for p in PARAMS if (d, p) != (device, params)
+        )
+    check_same_image(root, f"moscap{dim}d", image, others)
     load_params(device, params)  # refuses a missing calibration before anything runs
-    meshconv.selected_spec(device, 1)  # refuses a missing mesh-convergence result
+    meshconv.selected_spec(device, dim)  # refuses a missing mesh-convergence result
     gplugins_commit()  # refuses a dirty or unpinned plugin before anything runs
     root = Path(root)
-    scratch = Path(tempfile.mkdtemp(prefix="gf180tcad-moscap1d-"))
+    if resume is not None:
+        scratch = Path(resume)
+        scratch.mkdir(parents=True, exist_ok=True)
+    else:
+        scratch = Path(tempfile.mkdtemp(prefix=f"gf180tcad-moscap{dim}d-"))
     cmd = [
-        "python3", "-m", "gf180tcad.tcad", "moscap-job",
-        "--device", device, "--dim", "1", "--params", params, "--out", "/work/out",
+        "python3", "-m", "gf180tcad.tcad", "moscap-job", "--device", device, "--dim", str(dim),
+        "--params", params, "--out", "/work/out",
     ]  # fmt: skip
+    progress_names = _progress_names(dim, method)
+    if dim == 2:
+        cmd += ["--geometry", gid, "--method", method]
+        for n in progress_names:
+            print(f"{device}/{params}/{gid}: progress in {scratch / n}", flush=True)
+    if mem is None:
+        mem = JOB_MEM if dim == 1 else JOB_MEM_2D
     try:
-        res = sandbox.run(cmd, out_dir=scratch, image=image_ref(image), mem=JOB_MEM, cpus=JOB_CPUS)
+        res = sandbox.run(cmd, out_dir=scratch, image=image_ref(image), mem=mem, cpus=JOB_CPUS)
     except sandbox.SandboxError as e:
-        log = scratch / "job.log"
+        _copy_progress(scratch, progress_log, progress_names)
+        log = scratch / f"job_{method}.log"
         log.write_text(f"{e.result.stdout or ''}\n{e.result.stderr or ''}", encoding="utf-8")
-        raise RuntimeError(f"moscap-job failed (exit {e.result.returncode}); log: {log}") from e
+        raise RuntimeError(
+            f"moscap-job failed (exit {e.result.returncode}); log: {log}; resume with "
+            f"--resume {scratch}"
+        ) from e
+    _copy_progress(scratch, progress_log, progress_names)
     # DEVSIM logs every Newton iteration; echo only the job's summary line.
-    summary = [ln for ln in res.stdout.splitlines() if ln.startswith(f"{device}/{params}:")]
-    print(summary[-1] if summary else f"{device}/{params}: done", flush=True)
-    dest = root / device / params
+    tag = f"{device}/{params}" + (f"/{gid}" if dim == 2 else "")
+    summary = [ln for ln in res.stdout.splitlines() if ln.startswith(f"{tag}")]
+    print(summary[-1] if summary else f"{tag}: done", flush=True)
+    if method in ("qs", "ac"):
+        print(f"{tag}/{method}: kept in {scratch} (then --method combine --resume {scratch})")
+        return
+    if dim == 1:
+        dest = root / device / params
+        names = (moscap1d.PER_AREA_CSV, moscap1d.PER_AREA_META)
+    else:
+        dest = moscap2d.job_dir(root, device, params, geometry_of(device, gid))
+        names = (moscap2d.CV_CSV, moscap2d.CGX_CSV, moscap2d.MESH_FILE, moscap2d.META_JSON)
+        if method == "combine-qs":
+            names = tuple(n for n in names if n != moscap2d.CGX_CSV)
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
-    for name in (moscap1d.PER_AREA_CSV, moscap1d.PER_AREA_META):
+    for name in names:
         shutil.copyfile(scratch / name, dest / name)
-    io.write_json(root / PROVENANCE_NAME, tree_provenance(root, {"moscap1d": image}))
+    io.write_json(root / PROVENANCE_NAME, tree_provenance(root, {f"moscap{dim}d": image}))
     shutil.rmtree(scratch)
 
 
@@ -184,16 +389,20 @@ def run_host(device: str, params: str, root: Path, image: str | None = None) -> 
 
 def run_meshconv_level(device: str, dim: int, level: int, out: Path) -> None:
     """``meshconv-job --level``: simulate refinement level ``level``, write :data:`LEVEL_NAME`."""
-    simulate, _ = meshconv.simulator(device, dim)  # refuses dim 2 (Task 11)
+    meshconv.check_level(dim, level)
+    log = _Progress(out, f"{device}/level{level}") if dim == 2 else None
+    simulate, _ = meshconv.simulator(device, dim, log=log)
     if not sandbox.in_sandbox():
         raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
-    scale = meshconv.LEVELS[level]
-    spec = MeshSpec.DEFAULT_1D.scaled(scale)
+    scale = meshconv.levels(dim)[level]
+    spec = meshconv.START[dim].scaled(scale, refine_grading=meshconv.REFINE_GRADING[dim])
     cv = simulate(spec)
     io.write_json(
         Path(out) / LEVEL_NAME,
         {
             "c_per_area_ff_um2": list(cv.c_per_area_ff_um2),
+            "extended_fallback": list(getattr(cv, "extended_fallback", ())),
+            "roundoff_accepted": [dict(r) for r in getattr(cv, "roundoff_accepted", ())],
             "node_count": cv.node_count,
             "scale": scale,
             "spec": spec.as_dict(),
@@ -203,6 +412,17 @@ def run_meshconv_level(device: str, dim: int, level: int, out: Path) -> None:
     print(f"{device}/level{level}: {cv.node_count} nodes, {len(cv.vg)} points", flush=True)
 
 
+def run_meshconv_agreement(device: str, level: int, out: Path) -> None:
+    """``meshconv-job --agreement --level``: the 2D-equals-1D check of a 2D level."""
+    meshconv.check_level(2, level)
+    if not sandbox.in_sandbox():
+        raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
+    spec = meshconv.START[2].scaled(meshconv.levels(2)[level], refine_grading=True)
+    data = meshconv.agreement_1d(device, spec)
+    io.write_json(Path(out) / AGREEMENT_NAME, data)
+    print(f"{device}/level{level}: agreement with 1D {data['max']!r}", flush=True)
+
+
 class _Curve:
     """A :class:`gf180tcad.tcad.meshconv.CVCurve` read back from a :data:`LEVEL_NAME`."""
 
@@ -210,6 +430,9 @@ class _Curve:
         self.vg = tuple(data["vg"])
         self.c_per_area_ff_um2 = tuple(data["c_per_area_ff_um2"])
         self.node_count = int(data["node_count"])
+        # a level written before the fallback existed converged everywhere in double precision
+        self.extended_fallback = tuple(data.get("extended_fallback", ()))
+        self.roundoff_accepted = tuple(data.get("roundoff_accepted", ()))
 
 
 def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
@@ -223,13 +446,32 @@ def run_meshconv_assemble(device: str, dim: int, out: Path) -> None:
         raise RuntimeError("meshconv-job must run inside the sandbox (see tools/sandbox-run)")
     out = Path(out)
     curves = {}
-    for i, scale in enumerate(meshconv.LEVELS):
+    for i, scale in enumerate(meshconv.levels(dim)):
         data = json.loads((out / f"level{i}" / LEVEL_NAME).read_bytes())
-        spec = MeshSpec.DEFAULT_1D.scaled(scale)
+        spec = meshconv.START[dim].scaled(scale, refine_grading=meshconv.REFINE_GRADING[dim])
         if data["scale"] != scale or MeshSpec(**data["spec"]) != spec:
             raise RuntimeError(f"level{i}/{LEVEL_NAME} is not level {i} of the start spec")
         curves[spec] = _Curve(data)
-    rep = meshconv.converge(curves.__getitem__, MeshSpec.DEFAULT_1D)
+    agreement = curves_1d = None
+    if dim == 2:
+        agreement, curves_1d = [], []
+        for i, scale in enumerate(meshconv.levels(dim)):
+            data = json.loads((out / f"level{i}" / AGREEMENT_NAME).read_bytes())
+            if MeshSpec(**data["spec"]) != meshconv.START[dim].scaled(
+                scale, refine_grading=meshconv.REFINE_GRADING[dim]
+            ):
+                raise RuntimeError(f"level{i}/{AGREEMENT_NAME} is not level {i} of the start spec")
+            agreement.append(data["max"])
+            curves_1d.append(data)
+    rep = meshconv.converge(
+        curves.__getitem__,
+        meshconv.START[dim],
+        meshconv.levels(dim),
+        rel_tol=settings["rel_tol"],
+        agreement=agreement,
+        agreement_curves=curves_1d,
+        refine_grading=meshconv.REFINE_GRADING[dim],
+    )
     meshconv.write(rep, out, device=device, dim=dim, settings=settings)
     print(f"{device}: selected level {rep.selected}", flush=True)
 
@@ -245,39 +487,75 @@ def _sandbox_job(cmd: list[str], out_dir: Path, mem: str, image: str) -> str:
 
 
 def run_meshconv(
-    device: str, dim: int, root: Path, jobs: int | None = None, image: str | None = None
+    device: str,
+    dim: int,
+    root: Path,
+    jobs: int | None = None,
+    progress_dir: Path | None = None,
+    resume: Path | None = None,
+    mem: str | None = None,
+    image: str | None = None,
 ) -> None:
     """``meshconv``: the level jobs and the report job in the TCAD image, then the tree files.
 
-    ``image`` names the TCAD image (default: :func:`job_image`). The tree's provenance.json
-    keeps the image recorded for the other dimension's subtree."""
-    meshconv.check_dim(dim)  # refuses dim 2 (Task 11)
+    ``progress_dir`` receives each level's progress log (``<device>_level<i>.log``) when it ends.
+    ``resume`` is the scratch directory of an earlier, failed run: the levels that finished there
+    (their ``level<i>/level.json``) are kept and only the others run again. A level job is
+    deterministic, so a kept level is the one a rerun would give. ``mem`` overrides the memory
+    of every sandbox job (default :data:`MESHCONV_JOB_MEM`). ``image`` names the TCAD image
+    (default: :func:`job_image`); the tree's provenance.json keeps the image recorded for the
+    other dimension's subtree.
+    """
+    meshconv.check_dim(dim)
     image = job_image(dim, image)
     root = Path(root)
     check_same_image(
         root, f"moscap{dim}d", image,
         (meshconv.job_dir(root, d, dim) for d in process.DEVICES if d != device),
     )  # fmt: skip
-    mem = MESHCONV_JOB_MEM[dim]
-    jobs = len(meshconv.LEVELS) if jobs is None else jobs
+    mem = MESHCONV_JOB_MEM[dim] if mem is None else mem
+    jobs = len(meshconv.levels(dim)) if jobs is None else jobs
     meshconv.check_admission(jobs, mem)
     gplugins_commit()  # refuses a dirty or unpinned plugin before anything runs
     root = Path(root)
-    scratch = Path(tempfile.mkdtemp(prefix="gf180tcad-meshconv-"))
+    scratch = (
+        Path(resume) if resume is not None else Path(tempfile.mkdtemp(prefix="gf180tcad-meshconv-"))
+    )
     base = ["python3", "-m", "gf180tcad.tcad", "meshconv-job", "--device", device,
             "--dim", str(dim), "--out", "/work/out"]  # fmt: skip
 
     def level(i: int) -> float:
         d = scratch / f"level{i}"
-        d.mkdir()
         t = time.monotonic()
-        _sandbox_job([*base, "--level", str(i)], d, mem, image)
+        if dim == 2 and (d / LEVEL_NAME).is_file() and not (d / AGREEMENT_NAME).is_file():
+            a = scratch / f"agreement{i}"
+            a.mkdir(exist_ok=True)
+            _sandbox_job([*base, "--agreement", "--level", str(i)], a, mem, image)
+            shutil.copyfile(a / AGREEMENT_NAME, d / AGREEMENT_NAME)
+        if (d / LEVEL_NAME).is_file():
+            print(f"{device}/level{i}: kept from {d}", flush=True)
+            return time.monotonic() - t
+        if d.exists():
+            shutil.rmtree(d)
+        d.mkdir()
+        if dim == 2:
+            print(f"{device}/level{i}: progress in {d / PROGRESS_NAME}", flush=True)
+        try:
+            _sandbox_job([*base, "--level", str(i)], d, mem, image)
+        finally:
+            if progress_dir is not None:
+                _copy_progress(d, Path(progress_dir) / f"{device}_level{i}.log")
+        if dim == 2:
+            a = scratch / f"agreement{i}"
+            a.mkdir(exist_ok=True)
+            _sandbox_job([*base, "--agreement", "--level", str(i)], a, mem, image)
+            shutil.copyfile(a / AGREEMENT_NAME, d / AGREEMENT_NAME)
         return time.monotonic() - t
 
     with ThreadPoolExecutor(max_workers=jobs) as pool:
-        runtimes = list(pool.map(level, range(len(meshconv.LEVELS))))
+        runtimes = list(pool.map(level, range(len(meshconv.levels(dim)))))
     for i, t in enumerate(runtimes):
-        print(f"{device}/level{i} (scale {meshconv.LEVELS[i]!r}): {t:.1f} s", flush=True)
+        print(f"{device}/level{i} (scale {meshconv.levels(dim)[i]!r}): {t:.1f} s", flush=True)
     stdout = _sandbox_job([*base, "--assemble"], scratch, mem, image)
     summary = [ln for ln in stdout.splitlines() if ln.startswith(f"{device}: selected")]
     print(summary[-1] if summary else f"{device}: done", flush=True)
@@ -313,7 +591,16 @@ def _parser() -> argparse.ArgumentParser:
         p.add_argument(
             "--out", type=Path, required=True, help="tree root, e.g. results/tcad/moscap1d"
         )
+        p.add_argument("--geometry", default=None, help="2D: the SPICE geometry id")
+        p.add_argument(
+            "--method", choices=METHODS, default="both",
+            help="2D: both sweeps (default), one sweep alone (qs, ac), or the job files "
+            "(combine; combine-qs: QS only)",
+        )  # fmt: skip
         if name == "moscap":
+            p.add_argument("--progress-log", type=Path, default=None)
+            p.add_argument("--resume", type=Path, default=None, help="2D: the job's scratch dir")
+            p.add_argument("--mem", default=None, help="memory of the sandbox job (e.g. 12g)")
             _image_arg(p)
     p = sub.add_parser(
         "meshconv", help="mesh convergence of a MOS capacitor (host: runs meshconv-job)"
@@ -322,6 +609,9 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--dim", type=int, choices=MESHCONV_DIMS, required=True)
     p.add_argument("--out", type=Path, required=True, help="tree root: results/tcad/meshconv")
     p.add_argument("--jobs", type=int, default=None, help="concurrent level jobs (default: all)")
+    p.add_argument("--progress-dir", type=Path, default=None, help="copy level progress logs")
+    p.add_argument("--resume", type=Path, default=None, help="scratch dir of a failed run")
+    p.add_argument("--mem", default=None, help="memory of each sandbox job (e.g. 6g)")
     _image_arg(p)
     p = sub.add_parser("meshconv-job", help="internal: one mesh-convergence job, in the sandbox")
     p.add_argument("--device", choices=process.DEVICES, required=True)
@@ -330,6 +620,7 @@ def _parser() -> argparse.ArgumentParser:
     which = p.add_mutually_exclusive_group(required=True)
     which.add_argument("--level", type=int, choices=range(len(meshconv.LEVELS)))
     which.add_argument("--assemble", action="store_true")
+    p.add_argument("--agreement", action="store_true", help="2D: with --level, the 1D check")
     return ap
 
 
@@ -337,16 +628,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     a = _parser().parse_args(argv)
     try:
         if a.command == "moscap-job":
-            run_job(a.device, a.params, a.out)
+            run_job(a.device, a.params, a.out, a.dim, a.geometry, a.method)
         elif a.command == "moscap":
-            run_host(a.device, a.params, a.out, a.image)
+            run_host(
+                a.device, a.params, a.out, a.dim, a.geometry, a.progress_log, a.method, a.resume,
+                a.mem, a.image,
+            )  # fmt: skip
         elif a.command == "meshconv-job" and a.assemble:
             run_meshconv_assemble(a.device, a.dim, a.out)
+        elif a.command == "meshconv-job" and a.agreement:
+            run_meshconv_agreement(a.device, a.level, a.out)
         elif a.command == "meshconv-job":
             run_meshconv_level(a.device, a.dim, a.level, a.out)
         else:
-            run_meshconv(a.device, a.dim, a.out, a.jobs, a.image)
-    except (MissingCalibration, meshconv.NeedsTask11, meshconv.AdmissionError) as e:
+            run_meshconv(
+                a.device, a.dim, a.out, a.jobs, a.progress_dir, a.resume, a.mem, a.image
+            )  # fmt: skip
+    except (MissingCalibration, BadGeometry, meshconv.AdmissionError) as e:
         print(f"{a.command}: {e}", file=sys.stderr)
         return 2
     return 0

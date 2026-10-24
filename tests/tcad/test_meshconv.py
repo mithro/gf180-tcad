@@ -132,6 +132,70 @@ def test_order_undefined_where_the_levels_agree_exactly():
     assert rep.richardson[1] == EXACT[1]
 
 
+def oscillating(exact, a, p):
+    """exact * (1 + a * (-1)^i * h^p) on level i: the sign alternates level to level."""
+
+    def simulate(spec: MeshSpec) -> Curve:
+        h = spec.h_si_surface_nm
+        i = round(math.log(h) / math.log(2**-0.5))
+        c = [e * (1 + ai * (-1) ** i * h**p) for e, ai in zip(exact, a, strict=True)]
+        return Curve(VG, c, round(100 / h))
+
+    return simulate
+
+
+def test_oscillation_flagged_per_bias():
+    """d12 * d23 < 0 (the change reverses sign between the triples' levels) is flagged."""
+    a = [0.01] * 6
+    rep = meshconv.converge(oscillating(EXACT, a, 2.0), START)
+    for o in rep.orders:
+        assert o.oscillating == (True,) * 6
+        assert o.median is None  # Richardson needs monotone convergence
+    assert rep.richardson is None and rep.richardson_order is None
+    mono, _ = synthetic(EXACT, a, 2.0)
+    for o in meshconv.converge(mono, START).orders:
+        assert o.oscillating == (False,) * 6
+
+
+def test_oscillating_biases_left_out_of_the_median():
+    a = [0.01] * 6
+    sim_mono, _ = synthetic(EXACT, a, 2.0)
+    sim_osc = oscillating(EXACT, [0.01] * 6, 1.0)
+
+    def simulate(spec):
+        m, o = sim_mono(spec), sim_osc(spec)
+        c = list(m.c_per_area_ff_um2)
+        c[2] = o.c_per_area_ff_um2[2]  # bias 2 oscillates with another order
+        return Curve(VG, c, m.node_count)
+
+    rep = meshconv.converge(simulate, START)
+    for o in rep.orders:
+        assert o.oscillating[2] is True and o.per_bias[2] is not None
+        assert math.isclose(o.median, 2.0, rel_tol=1e-9)
+
+
+def test_order_undefined_below_the_noise_floor():
+    """A difference within NOISE_K * rel_tol * |C| is solver noise: the order is undefined."""
+    assert meshconv.NOISE_K == 1e4
+    a = [0.01] * 6
+    a[1] = 1e-9  # changes of ~1e-9 relative, below 1e4 * 1e-10 = 1e-6
+    simulate, _ = synthetic(EXACT, a, 2.0)
+    rep = meshconv.converge(simulate, START, rel_tol=1e-10)
+    for o in rep.orders:
+        assert o.per_bias[1] is None and o.oscillating[1] is None
+        assert math.isclose(o.median, 2.0, rel_tol=1e-9)
+    assert rep.noise_floor_rel == 1e-6
+    # with a tighter solver tolerance the same changes are above the floor
+    rep = meshconv.converge(simulate, START, rel_tol=1e-16)
+    assert all(math.isclose(o.per_bias[1], 2.0, rel_tol=1e-5) for o in rep.orders)
+
+
+def test_observed_order_noise_floor():
+    assert meshconv.observed_order(1.0, 1.0 + 1e-7, 1.0 + 2e-7, 2**0.5, floor=1e-6) is None
+    assert meshconv.observed_order(1.0, 1.1, 1.15, 2**0.5, floor=1e-6) is not None
+    assert meshconv.observed_order(1.0, 1.0, 1.1, 2**0.5) is None  # exactly zero: undefined
+
+
 def test_converge_refuses_bad_input():
     simulate, _ = synthetic(EXACT, [0.01] * 6, 2.0)
     for levels in ((1, 0.5), (1, 0.5, 0.5), (0.5, 1, 2**-0.5), (1, 0.7, 0.5)):
@@ -161,8 +225,7 @@ def test_report_deterministic(tmp_path):
         assert (outs[0] / n).read_bytes() == (outs[1] / n).read_bytes()
     data = json.loads((outs[0] / meshconv.REPORT_NAME).read_bytes())
     assert "runtime" not in json.dumps(data) and "time" not in json.dumps(sorted(data))
-    sel = json.loads((outs[0] / meshconv.SELECTED_NAME).read_bytes())
-    assert MeshSpec(**sel) == rep.selected_spec
+    assert meshconv.read_selected(outs[0] / meshconv.SELECTED_NAME) == rep.selected_spec
 
 
 def test_report_contents(tmp_path):
@@ -173,16 +236,22 @@ def test_report_contents(tmp_path):
     assert data["device"] == "nfet_05v0" and data["dim"] == 1 and data["params"] == "start"
     assert data["criterion"] == 0.01 and data["settings"] == {"rel_tol": 1e-10}
     assert data["start"] == START.as_dict() and data["vg"] == list(VG)
-    assert data["selected"] == {"level": 1, "scale": 2**-0.5}
+    assert data["selected"]["level"] == 1 and data["selected"]["scale"] == 2**-0.5
     assert [lv["node_count"] for lv in data["levels"]] == [lv.node_count for lv in rep.levels]
     lv0 = data["levels"][0]
     assert set(lv0) == {
-        "c_per_area_ff_um2", "max_rel_change", "node_count", "rel_change", "scale", "spec"
+        "agreement_1d", "agreement_1d_curve", "c_per_area_ff_um2", "extended_fallback",
+        "max_rel_change",
+        "node_count", "rel_change", "roundoff_accepted", "scale", "spec",
     }  # fmt: skip
+    assert lv0["extended_fallback"] == []
     assert data["levels"][-1]["rel_change"] is None
     assert data["observed_order"][-1]["levels"] == [1, 2, 3]
     assert math.isclose(data["observed_order"][-1]["median"], 2.0, rel_tol=1e-9)
     assert set(data["richardson"]) == {"c_per_area_ff_um2", "levels", "order"}
+    assert set(data["observed_order"][-1]) == {"levels", "median", "oscillating", "per_bias"}
+    assert data["observed_order"][-1]["oscillating"] == [False] * len(VG)
+    assert data["noise_floor"] == {"k": meshconv.NOISE_K, "rel_tol": 1e-10, "rel": 1e-6}
 
 
 def test_write_refuses_an_unconverged_report(tmp_path):
@@ -205,16 +274,15 @@ def test_admission_budget_is_the_spice_one():
         meshconv.check_admission(0, "2g")
 
 
-def test_dim2_requires_task11(tmp_path, capsys):
-    for cmd in ("meshconv", "meshconv-job"):
-        argv = [cmd, "--device", "nfet_05v0", "--dim", "2", "--out", str(tmp_path / "root")]
-        if cmd == "meshconv-job":
-            argv += ["--level", "0"]
-        assert cli.main(argv) == 2
-        assert "requires Task 11" in capsys.readouterr().err
-    assert not (tmp_path / "root").exists()
-    with pytest.raises(meshconv.NeedsTask11):
-        meshconv.simulator("nfet_05v0", 2)
+def test_dim2_simulator_settings():
+    """The 2D study: the PDK cell at Lmin with its S/D, from DEFAULT_2D, settings recorded."""
+    _, settings = meshconv.simulator("nfet_05v0", 2)
+    assert settings["geometry"] == "w10p0_l0p60" and settings["with_sd"] is True
+    assert settings["rel_tol"] == moscap1d.REL_TOL and settings["method"] == "qs"
+    assert meshconv.START == {1: MeshSpec.DEFAULT_1D, 2: MeshSpec.DEFAULT_2D}
+    assert meshconv.geometry_2d("pfet_05v0").l_um == 0.5
+    with pytest.raises(ValueError):
+        meshconv.check_dim(3)
 
 
 def test_meshconv_cli_refuses_too_many_jobs(tmp_path, capsys):
@@ -258,7 +326,7 @@ def test_committed_report(device):
     sel = data["selected"]["level"]
     assert data["levels"][sel]["max_rel_change"] < meshconv.CRITERION
     assert all(lv["max_rel_change"] >= meshconv.CRITERION for lv in data["levels"][:sel])
-    spec = MeshSpec(**json.loads((job / meshconv.SELECTED_NAME).read_bytes()))
+    spec = meshconv.read_selected(job / meshconv.SELECTED_NAME)
     assert spec == MeshSpec.DEFAULT_1D.scaled(meshconv.LEVELS[sel])
     assert spec == meshconv.selected_spec(device, 1)
 
@@ -336,3 +404,175 @@ def test_meshconv_byte_identical(tmp_path):
     )
     for rel in files:
         assert (root / rel).read_bytes() == (TREE / rel).read_bytes(), rel
+
+
+def test_meshconv_resume_keeps_finished_levels(tmp_path, monkeypatch):
+    """``--resume`` reruns only the levels without a level.json in the old scratch directory."""
+    scratch = tmp_path / "scratch"
+    for i in (0, 2, 3):
+        (scratch / f"level{i}").mkdir(parents=True)
+        (scratch / f"level{i}" / cli.LEVEL_NAME).write_text("{}", encoding="utf-8")
+        (scratch / f"level{i}" / cli.AGREEMENT_NAME).write_text("{}", encoding="utf-8")
+    (scratch / "level1").mkdir()
+    (scratch / "level1" / "job.log").write_text("failed", encoding="utf-8")
+    ran = []
+
+    def fake_job(cmd, out_dir, mem, image=None):
+        ran.append(cmd[cmd.index("--level") + 1] if "--level" in cmd else "assemble")
+        raise RuntimeError("stop after the level jobs")
+
+    monkeypatch.setattr(cli, "_sandbox_job", fake_job)
+    monkeypatch.setattr(cli, "gplugins_commit", lambda: "x")
+    with pytest.raises(RuntimeError, match="stop after"):
+        cli.run_meshconv("nfet_05v0", 2, tmp_path / "root", resume=scratch)
+    assert ran == ["1"]
+    assert not (scratch / "level1" / "job.log").exists()  # the failed level starts afresh
+
+
+def test_meshconv_mem_overrides_the_job_memory(tmp_path, monkeypatch, capsys):
+    """``--mem`` sets every sandbox job's memory (e.g. 6g for the 2D wave, 8g to rerun a level
+    that ran out of memory) and is what admission checks."""
+    mems = []
+
+    def fake_job(cmd, out_dir, mem, image=None):
+        mems.append(mem)
+        raise RuntimeError("stop")
+
+    monkeypatch.setattr(cli, "_sandbox_job", fake_job)
+    monkeypatch.setattr(cli, "gplugins_commit", lambda: "x")
+    with pytest.raises(RuntimeError, match="stop"):
+        cli.run_meshconv("nfet_05v0", 2, tmp_path / "root", jobs=1, mem="6g")
+    assert mems and set(mems) == {"6g"}
+    with pytest.raises(RuntimeError, match="stop"):
+        cli.main(["meshconv", "--device", "nfet_05v0", "--dim", "2", "--out",
+                  str(tmp_path / "r"), "--jobs", "1", "--mem", "8g"])  # fmt: skip
+    assert mems[-1] == "8g" and set(mems[-1:]) == {"8g"}
+    argv = ["meshconv", "--device", "nfet_05v0", "--dim", "2", "--out", str(tmp_path / "r")]
+    assert cli.main([*argv, "--jobs", "3", "--mem", "64g"]) == 2  # 192 GiB > the 128 GiB budget
+    assert "128 GiB" in capsys.readouterr().err
+
+
+def test_meshconv_resume_runs_a_missing_agreement(tmp_path, monkeypatch):
+    """A kept 2D level without its agreement.json gets only the agreement job."""
+    scratch = tmp_path / "scratch"
+    for i in range(4):
+        (scratch / f"level{i}").mkdir(parents=True)
+        (scratch / f"level{i}" / cli.LEVEL_NAME).write_text("{}", encoding="utf-8")
+        if i != 2:
+            (scratch / f"level{i}" / cli.AGREEMENT_NAME).write_text("{}", encoding="utf-8")
+    ran = []
+
+    def fake_job(cmd, out_dir, mem, image=None):
+        ran.append(
+            ("agreement" if "--agreement" in cmd else "level", cmd[cmd.index("--level") + 1])
+        )
+        raise RuntimeError("stop")
+
+    monkeypatch.setattr(cli, "_sandbox_job", fake_job)
+    monkeypatch.setattr(cli, "gplugins_commit", lambda: "x")
+    with pytest.raises(RuntimeError, match="stop"):
+        cli.run_meshconv("nfet_05v0", 2, tmp_path / "root", resume=scratch, jobs=1)
+    assert ran == [("agreement", "2")]
+
+
+def test_second_criterion_agreement_with_1d():
+    """2D: the selected level must also match 1D within AGREEMENT_1D on the uniform stack."""
+    assert meshconv.AGREEMENT_1D == 0.005
+    simulate, _ = synthetic(EXACT, [0.001] * 6, 2.0)  # level 0 already converged (< 1 %)
+    rep = meshconv.converge(simulate, START, agreement=(0.0055, 0.0045, 0.003, 0.002))
+    assert rep.convergence_level == 0 and rep.agreement_level == 1
+    assert rep.selected == 1
+    rep2 = meshconv.converge(simulate, START, agreement=(0.006, 0.006, 0.006, 0.001))
+    assert rep2.agreement_level == 3 and rep2.selected is None  # the finest has no change
+    rep3 = meshconv.converge(simulate, START)
+    assert rep3.selected == 0 and rep3.agreement_level is None
+    with pytest.raises(ValueError, match="agreement"):
+        meshconv.converge(simulate, START, agreement=(0.1, 0.1))
+
+
+def test_selected_json_records_the_criteria(tmp_path):
+    simulate, _ = synthetic(EXACT, [0.001] * 6, 2.0)
+    rep = meshconv.converge(simulate, START, agreement=(0.0055, 0.0045, 0.003, 0.002))
+    meshconv.write(rep, tmp_path, device="nfet_05v0", dim=2, settings={})
+    sel = json.loads((tmp_path / meshconv.SELECTED_NAME).read_bytes())
+    assert sel["criteria"] == {
+        "agreement_1d": {"level": 1, "max": 0.005},
+        "convergence": {"level": 0, "max": meshconv.CRITERION},
+        "selected": 1,
+    }
+    assert meshconv.read_selected(tmp_path / meshconv.SELECTED_NAME) == START.scaled(2**-0.5)
+    data = json.loads((tmp_path / meshconv.REPORT_NAME).read_bytes())
+    assert data["selected"]["criteria"] == sel["criteria"]
+    assert [lv["agreement_1d"] for lv in data["levels"]] == [0.0055, 0.0045, 0.003, 0.002]
+
+
+def test_report_keeps_the_agreement_curves(tmp_path):
+    """The per-bias 2D/1D curves of the second criterion are kept in report.json (the scratch
+    directory is deleted on success)."""
+    simulate, _ = synthetic(EXACT, [0.001] * 6, 2.0)
+    curves = [{"vg": [-5.0, 5.0], "rel": [a, -a], "c2d": [1.0, 2.0], "c1d": [1.0, 2.0]}
+              for a in (0.0055, 0.0045, 0.003, 0.002)]  # fmt: skip
+    rep = meshconv.converge(
+        simulate, START, agreement=(0.0055, 0.0045, 0.003, 0.002), agreement_curves=curves
+    )
+    meshconv.write(rep, tmp_path, device="nfet_05v0", dim=2, settings={})
+    data = json.loads((tmp_path / meshconv.REPORT_NAME).read_bytes())
+    assert [lv["agreement_1d_curve"] for lv in data["levels"]] == curves
+
+
+def test_2d_levels_refine_the_grading():
+    """2D levels scale the size field at every point (MeshSpec.scaled(refine_grading=True))."""
+    assert meshconv.REFINE_GRADING == {1: False, 2: True}
+    simulate, calls = synthetic(EXACT, [0.001] * 6, 2.0)
+    rep = meshconv.converge(simulate, START, refine_grading=True)
+    assert calls == [START.scaled(r, refine_grading=True) for r in meshconv.LEVELS]
+    assert rep.refine_grading is True
+    data = meshconv.report_dict(rep, device="nfet_05v0", dim=2, settings={})
+    assert data["refine_grading"] is True
+    assert [lv["spec"]["grading"] for lv in data["levels"]] == [
+        1 + (START.grading - 1) * r for r in meshconv.LEVELS
+    ]
+    rep1 = meshconv.converge(simulate, START)
+    assert rep1.refine_grading is False
+
+
+def test_2d_study_runs_levels_0_to_2():
+    """2D level 3 is out of reach (Task 11: about 9.7 h of QS at 862k nodes against the 8 h
+    rule, at the size where UMFPACK 5.1 fails), so the 2D study runs levels 0-2: levels 0 and 1
+    are the candidates, each with a finer neighbour; level 2 is only level 1's neighbour."""
+    assert meshconv.LEVELS_BY_DIM == {1: meshconv.LEVELS, 2: meshconv.LEVELS[:3]}
+    assert meshconv.levels(1) == meshconv.LEVELS
+    assert meshconv.levels(2) == meshconv.LEVELS[:3]
+    with pytest.raises(ValueError, match="dim"):
+        meshconv.levels(3)
+    simulate, calls = synthetic(EXACT, [0.001] * 6, 2.0)
+    rep = meshconv.converge(simulate, START, meshconv.levels(2), refine_grading=True)
+    assert len(calls) == 3 and len(rep.levels) == 3 and len(rep.orders) == 1
+    assert rep.selected == 0 and rep.levels[-1].max_rel_change is None
+    # the agreement can rule out level 0 and 1; level 2 is never selected (no finer neighbour)
+    rep = meshconv.converge(
+        simulate, START, meshconv.levels(2), refine_grading=True, agreement=(0.0055, 0.006, 0.001)
+    )
+    assert rep.selected is None and rep.agreement_level == 2
+    rep = meshconv.converge(
+        simulate, START, meshconv.levels(2), refine_grading=True, agreement=(0.0055, 0.003, 0.002)
+    )
+    assert rep.selected == 1
+
+
+def test_2d_report_records_the_excluded_level():
+    simulate, _ = synthetic(EXACT, [0.001] * 6, 2.0)
+    rep = meshconv.converge(simulate, START, meshconv.levels(2), refine_grading=True)
+    data = meshconv.report_dict(rep, device="nfet_05v0", dim=2, settings={})
+    (ex,) = data["excluded_levels"]
+    assert ex["level"] == 3 and ex["scale"] == meshconv.LEVELS[3]
+    assert "8 h" in ex["reason"] and "UMFPACK" in ex["reason"]
+    rep1 = meshconv.converge(simulate, START)
+    assert "excluded_levels" not in meshconv.report_dict(
+        rep1, device="nfet_05v0", dim=1, settings={}
+    )
+
+
+def test_meshconv_job_refuses_a_level_outside_the_study(tmp_path):
+    with pytest.raises(ValueError, match="level 3"):
+        cli.run_meshconv_level("nfet_05v0", 2, 3, tmp_path)

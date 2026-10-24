@@ -314,6 +314,16 @@ NGATE
   for the pfet), the doping of the {term}`TCAD` poly-gate region ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A).
   See {ref}`process-data`.
 
+XJ
+  The source/drain junction depth of the {term}`BSIM4` {term}`card <model card>`, 0.15 µm for both 5 V devices
+  ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A); the 2D {term}`TCAD`
+  {term}`MOSCAP` places its source/drain junction there ({py:mod}`gf180tcad.tcad.stack`). See {ref}`process-data`.
+
+NSD
+  The source/drain doping of the {term}`BSIM4` {term}`card <model card>` (1e20 cm⁻³ on the nfet card; the pfet card's
+  6e16 is no source/drain doping and is not used) ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A); the peak of the
+  2D {term}`TCAD` {term}`MOSCAP`'s source and drain ({py:mod}`gf180tcad.tcad.stack`). See {ref}`process-data`.
+
 LLC
 LWC
 LWLC
@@ -351,6 +361,22 @@ Richardson extrapolation
   {term}`observed order <observed order of convergence>` p: C_exact ≈ C₃ + (C₃ − C₂)/(r^p − 1)
   ([Richardson 1911](https://doi.org/10.1098/rsta.1911.0009);
   [Celik et al. 2008](https://doi.org/10.1115/1.2960953)). See {ref}`mesh-convergence`.
+
+UMFPACK
+  The sparse direct linear solver of [SuiteSparse](https://people.engr.tamu.edu/davis/suitesparse.html)
+  that {{ DEVSIM }} uses; version 5.1 fails ("umfpack numeric failed") on the largest 2D cells. See
+  {ref}`moscap2d-l10`.
+
+Newton iteration
+  The solver step of {{ DEVSIM }}: it linearises the discretised equations about the current
+  solution, solves the linear system, updates the solution and repeats until the update falls
+  below the {term}`tolerance` ([Newton's method](https://en.wikipedia.org/wiki/Newton%27s_method)). See
+  {ref}`moscap2d-solver`.
+
+Poisson stage
+  The first solve of a {{ DEVSIM }} device: [Poisson's equation](https://en.wikipedia.org/wiki/Poisson%27s_equation)
+  alone for the potential, before the {term}`drift-diffusion` equations are added. It has fewer
+  unknowns than the full solve (0.86 million against 2.0 million at L = 10 µm). See {ref}`moscap2d-l10`.
 
 MOSCAP
 MOS capacitor

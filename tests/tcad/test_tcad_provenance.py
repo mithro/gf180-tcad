@@ -231,7 +231,7 @@ def test_committed_tcad_provenance_current():
 def test_manifest_covers_the_tcad_results():
     entries = manifest._load(RESULTS / "MANIFEST.sha256")
     for p in TCAD_RESULTS.rglob("*"):
-        if p.is_file():
+        if p.is_file() and p.name != "mesh.msh":  # git-ignored; its sha256 is in cv.meta.json
             rel = p.relative_to(RESULTS).as_posix()
             assert entries.get(rel) == hashlib.sha256(p.read_bytes()).hexdigest(), (
                 f"results/MANIFEST.sha256 does not match results/{rel}; run `make manifest`"

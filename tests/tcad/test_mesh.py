@@ -27,6 +27,30 @@ def test_mesh_poly_refined():
     assert half.grading == SPEC.grading
 
 
+def test_scaled_refines_the_2d_size_field_everywhere():
+    """2D uniform refinement: the threshold size h_min + (grading - 1) * d must scale by r at
+    every distance d, so the growth slope (grading - 1) scales too; distmax is unchanged.
+
+    With the grading fixed, the size beyond a few nm (the depletion region) was the same at every
+    level, and the 2D/1D agreement at the C-V minimum did not converge (Task 11 report).
+    """
+    for r in (2**-0.5, 0.5, 2**-1.5):
+        s = SPEC.scaled(r, refine_grading=True)
+        assert math.isclose(s.grading - 1, (SPEC.grading - 1) * r, rel_tol=1e-12)
+        for f in FIELDS:
+            assert math.isclose(getattr(s, f), getattr(SPEC, f) * r, rel_tol=1e-12), f
+        for d_nm in (0.0, 5.0, 50.0):
+            size = min(SPEC.h_si_surface_nm + (SPEC.grading - 1) * d_nm, SPEC.h_si_bulk_nm)
+            size_r = min(s.h_si_surface_nm + (s.grading - 1) * d_nm, s.h_si_bulk_nm)
+            assert math.isclose(size_r, r * size, rel_tol=1e-12), (r, d_nm)
+        assert math.isclose(
+            s.threshold_distmax_um(s.h_si_surface_nm),
+            SPEC.threshold_distmax_um(SPEC.h_si_surface_nm),
+            rel_tol=1e-12,
+        )
+    assert SPEC.scaled(0.5).grading == SPEC.grading  # the default (1D) keeps the grading
+
+
 def test_scaled_rejects_bad_factors():
     for r in (0, -1, math.inf, math.nan):
         with pytest.raises(ValueError):
@@ -66,6 +90,15 @@ def test_default_1d_is_a_spec():
     assert d.as_dict() == {f.name: getattr(d, f.name) for f in dataclasses.fields(d)}
 
 
+def test_default_2d_is_coarser_at_the_interfaces():
+    """The 2D start spec: isotropic triangles cannot be 0.05 nm along a 10 um interface, so the
+    interfaces start at 0.5 nm (1D error at that spacing: <= 0.44 %, Task 11 report)."""
+    d = MeshSpec.DEFAULT_2D
+    assert d.h_si_surface_nm == d.h_poly_nm == 0.5
+    assert d.h_si_surface_nm > MeshSpec.DEFAULT_1D.h_si_surface_nm
+    assert MeshSpec.MAX_SAMPLING >= 10**6
+
+
 def test_threshold_distmax_follows_the_grading():
     # a size growing at slope (grading - 1) reaches h_bulk at (h_bulk - h_min)/(grading - 1)
     assert math.isclose(SPEC.threshold_distmax_um(0.2), (20.0 - 0.2) / 0.2 * 1e-3, rel_tol=1e-12)
@@ -79,7 +112,9 @@ from gf180tcad.tcad.mesh import MeshSpec
 spec = MeshSpec(**{json.dumps(dataclasses.asdict(SPEC))})
 m = spec.to_mesh1d("gate_poly", "oxide", "body")
 r = spec.to_resolution_specs("gate_poly", "oxide", "body")
+rb = spec.to_resolution_specs("gate_poly", "oxide", "body", background="ild")
 out = {{
+    "res_background": {{k: [(type(x).__name__, x.model_dump(exclude_none=True)) for x in v] for k, v in rb.items()}},
     "type": type(m).__module__ + "." + type(m).__name__,
     "max_ratio": m.max_ratio,
     "spacing": {{k: list(v) for k, v in m.spacing_um.items()}},
@@ -102,3 +137,8 @@ print(json.dumps(out, default=str))
     assert body[1]["sizemin"] == 0.2e-3 and body[1]["sizemax"] == 20e-3
     (poly,) = res_specs["gate_poly"]
     assert poly[1]["sizemin"] == 0.1e-3 and poly[1]["apply_to"] == "curves"
+    # meshwell samples each curve's distance field at mass / (sizemin / 2) points, capped by
+    # max_sampling (default 100: a 10 nm sample pitch on a 1 um interface); the cap is lifted
+    assert body[1]["max_sampling"] == poly[1]["max_sampling"] == MeshSpec.MAX_SAMPLING
+    rb = out["res_background"]["body"]
+    assert rb[0][1]["sharing"] == ["oxide", "ild"]

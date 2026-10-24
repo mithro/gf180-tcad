@@ -159,7 +159,7 @@ def test_stack_validated():
 
 def test_cli_requires_known_choices(capsys):
     for argv in (
-        ["moscap", "--device", "nfet_05v0", "--dim", "2", "--params", "start", "--out", "x"],
+        ["moscap", "--device", "nfet_05v0", "--dim", "3", "--params", "start", "--out", "x"],
         ["moscap", "--device", "nfet_03v3", "--dim", "1", "--params", "start", "--out", "x"],
         ["moscap", "--device", "nfet_05v0", "--dim", "1", "--params", "fitted", "--out", "x"],
     ):

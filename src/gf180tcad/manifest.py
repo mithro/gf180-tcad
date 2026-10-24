@@ -9,6 +9,10 @@ from pathlib import Path
 
 from gf180tcad.layout import ENVELOPE_NAME, PROVENANCE_NAME
 
+# Regenerable 25-62 MB gmsh meshes are git-ignored (see docs/limitations/moscap2d.md); their
+# sha256 is recorded as mesh_sha256 in each cv.meta.json instead.
+_UNTRACKED_MESH_NAME = "mesh.msh"
+
 
 def _digest(p: Path) -> str:
     h = hashlib.sha256()
@@ -35,7 +39,7 @@ def _scan(root: Path, manifest: Path) -> dict[str, str]:
                 f"{rel}: dot-directory in a results tree (a leftover spice-reference staging "
                 "or .old- directory?); remove it before updating or verifying the manifest"
             )
-        if p.is_file() and p != skip:
+        if p.is_file() and p != skip and p.name != _UNTRACKED_MESH_NAME:
             out[rel] = _digest(p)
     return out
 

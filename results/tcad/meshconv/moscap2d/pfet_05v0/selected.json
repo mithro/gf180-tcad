@@ -1,0 +1,18 @@
+{
+  "criteria": {
+    "agreement_1d": {
+      "level": 1,
+      "max": 0.005
+    },
+    "convergence": {
+      "level": 0,
+      "max": 0.01
+    },
+    "selected": 1
+  },
+  "grading": 1.1414213562373094,
+  "h_ox_nm": 0.7071067811865476,
+  "h_poly_nm": 0.3535533905932738,
+  "h_si_bulk_nm": 70.71067811865476,
+  "h_si_surface_nm": 0.3535533905932738
+}
