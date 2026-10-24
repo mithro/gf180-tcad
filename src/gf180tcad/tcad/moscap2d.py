@@ -652,6 +652,7 @@ def write(
             "geometry": None if qs.geometry is None else asdict(qs.geometry),
             "l_um": qs.l_um,
             "mesh": qs.mesh.as_dict(),
+            "mesh_sha256": hashlib.sha256((out / MESH_FILE).read_bytes()).hexdigest(),
             "mesh_source": mesh_source,
             "meshed_l_um": qs.meshed_l_um,
             "meshed_t_ox_nm": qs.meshed_t_ox_nm,

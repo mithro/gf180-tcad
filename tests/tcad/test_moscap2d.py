@@ -7,8 +7,10 @@ and results/tcad/meshconv/moscap2d. The sandbox-marked tests run the TCAD in the
 and a rerun of the CLI for the byte-identity of a committed job.
 """
 
+import hashlib
 import json
 import math
+import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -215,6 +217,12 @@ def test_2d_mesh_converged():
         assert rep["settings"]["with_sd"] is True
         sel = rep["selected"]["level"]
         assert rep["levels"][sel]["max_rel_change"] < meshconv.CRITERION
+        assert rep["levels"][sel]["agreement_1d"] < 5e-3
+        crit = rep["selected"]["criteria"]
+        assert crit["selected"] == sel
+        assert sel == max(crit["agreement_1d"]["level"], crit["convergence"]["level"])
+        assert rep["refine_grading"] is True
+        assert rep["excluded_levels"][0]["level"] == 3
         assert rep["start"] == MeshSpec.DEFAULT_2D.as_dict()
         spec = meshconv.selected_spec(d, 2)
         assert spec == MeshSpec(**rep["levels"][sel]["spec"])
@@ -231,10 +239,11 @@ def test_committed_start_results(device):
         ):  # the L = 10 um cell is not simulated in 2D (docs/limitations/moscap2d.md)
             continue
         job = moscap2d.job_dir(TREE, device, "start", g)
-        names = {p.name for p in job.iterdir()}
+        # mesh.msh is git-ignored (a local regeneration may leave one); its sha256 is checked below
+        names = {p.name for p in job.iterdir()} - {moscap2d.MESH_FILE}
         # L = 2 um is QS-only: its AC solve exceeds the UMFPACK size limit (AC_INFEASIBLE)
         qs_only = g.l_um >= 2.0
-        base = {moscap2d.CV_CSV, moscap2d.MESH_FILE, moscap2d.META_JSON}
+        base = {moscap2d.CV_CSV, moscap2d.META_JSON}
         assert names == (base if qs_only else base | {moscap2d.CGX_CSV})
         cols, meta = io.read_csv(job / moscap2d.CV_CSV)
         assert meta["dim"] == "2" and meta["method"] == "qs" and meta["params"] == "start"
@@ -242,6 +251,10 @@ def test_committed_start_results(device):
         info = json.loads((job / moscap2d.META_JSON).read_bytes())
         assert info["mesh"] == meshconv.selected_spec(device, 2).as_dict()
         assert info["mesh_source"] == cli.mesh_source(device, 2)
+        assert re.fullmatch(r"[0-9a-f]{64}", info["mesh_sha256"])
+        mesh = job / moscap2d.MESH_FILE
+        if mesh.exists():  # a local regeneration: its sha256 must equal the committed one
+            assert hashlib.sha256(mesh.read_bytes()).hexdigest() == info["mesh_sha256"]
         assert info["l_um"] == g.l_um and info["w_um"] == g.w_um and info["with_sd"] is True
         assert abs(info["meshed_t_ox_nm"] - info["t_ox_nm"]) <= stack.POINT_TOLERANCE_UM * 1e3
         assert "calibrated" not in json.dumps(info["tunables"])

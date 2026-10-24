@@ -6,11 +6,10 @@ there.
 - **No silicon data.** No measured device I-V or C-V data exists for any
   {{ wafer_space }} {term}`run 1 or run 2 <wafer.space run>` design. See
   {doc}`silicon-validation`.
-- **{term}`TCAD`: the 1D {term}`MOS capacitor <MOSCAP>` only, no MOSFET TCAD yet.** The
-  {term}`SPICE` reference dataset of {term}`Phases 0 and 1` is complete. On the TCAD side only
-  the 1D MOS capacitor exists, with the start values and a mesh-converged mesh
-  ({doc}`mesh-convergence`). The 2D MOS capacitor is
-  {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>` and the calibration against SPICE is
+- **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD yet.** The
+  {term}`SPICE` reference dataset of {term}`Phases 0 and 1` is complete. On the TCAD side the 1D
+  and 2D MOS capacitors exist, with the start values and mesh-converged meshes
+  ({doc}`mesh-convergence`, {doc}`moscap2d`). The calibration against SPICE is
   {repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`.
 - **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
@@ -51,9 +50,11 @@ there.
   Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
   ({ref}`cross-host-determinism`). The only pass on an AMD EPYC 9V45 runner was an earlier
   8-job subset, before the {{ numpy }} fix described there.
-- **{term}`Mesh convergence <mesh convergence>` is shown in 1D only.** The 1D {term}`MOSCAP` mesh
-  changes by less than 1e-4 under {term}`uniform refinement`; the 2D study comes with the 2D
-  MOS capacitor of {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`. See {doc}`mesh-convergence`.
+- **{term}`Mesh convergence <mesh convergence>` of the triangle mesh is looser in 2D.** The 1D
+  {term}`MOSCAP` mesh changes by less than 1e-4 under {term}`uniform refinement`; the 2D mesh is
+  selected at the 1 % criterion and carries a discretisation bias of a few 0.1 %. See
+  {doc}`mesh-convergence` and {doc}`moscap2d`, which also explains the C/Cox > 1 artefact of the
+  research spike ({{ meshwell }} rounded the oxide to 1 nm).
 - **Not everything the design spec asks for is built yet.** See
   {ref}`limitations-spec-deviations` below.
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
@@ -86,4 +87,5 @@ literature
 engine-cross-check
 plugin-history
 mesh-convergence
+moscap2d
 ```

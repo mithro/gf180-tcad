@@ -32,4 +32,6 @@ Source: {repo}`src/gf180tcad/tcad/process.py`. The data it reads:
 .. autodata:: gf180tcad.tcad.process.PLATEAU_V
 
 .. autodata:: gf180tcad.tcad.process.CONSTANTS
+
+.. autodata:: gf180tcad.tcad.process.CARD_BINS
 ```
