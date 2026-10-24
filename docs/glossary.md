@@ -316,12 +316,12 @@ NGATE
 
 XJ
   The source/drain junction depth of the {term}`BSIM4` {term}`card <model card>`, 0.15 µm for both 5 V devices
-  ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A); the 2D {term}`TCAD`
+  ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A); the 2D {term}`TCAD`
   {term}`MOSCAP` places its source/drain junction there ({py:mod}`gf180tcad.tcad.stack`). See {ref}`process-data`.
 
 NSD
   The source/drain doping of the {term}`BSIM4` {term}`card <model card>` (1e20 cm⁻³ on the nfet card; the pfet card's
-  6e16 is no source/drain doping and is not used) ([BSIM4 manual](https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A); the peak of the
+  6e16 is no source/drain doping and is not used) ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A); the peak of the
   2D {term}`TCAD` {term}`MOSCAP`'s source and drain ({py:mod}`gf180tcad.tcad.stack`). See {ref}`process-data`.
 
 LLC
