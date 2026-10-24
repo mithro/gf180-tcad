@@ -16,7 +16,7 @@ levels, the start {py:class}`~gf180tcad.tcad.mesh.MeshSpec` scaled by 1, 2^-0.5,
 ({py:meth}`~gf180tcad.tcad.mesh.MeshSpec.scaled`). In 1D it keeps the grading, which there only
 caps the ratio of neighbouring spacings. In 2D it scales the grading's slope too, so that the
 size at every point scales ({py:data}`gf180tcad.tcad.meshconv.REFINE_GRADING`,
-{ref}`moscap2d-refine-grading`). The solver's
+{ref}`a uniform refinement must refine the grading <moscap2d-refine-grading>`). The solver's
 relative-error limit, the {term}`QS <C–V>` step
 ({py:data}`~gf180tcad.tcad.moscap1d.DV_QS`) and the physical constants are the same at every
 level. The report holds, per level, the curve, the node count and the largest relative change
@@ -129,7 +129,7 @@ per level:
 
 The times come from the first 2D study's measured cost: s per bias = 3.25e-6 · nodes^1.278,
 times the 201 biases, times 1.4 for the equilibrium set-up and the retried points. Level 3 would
-take over 8 hours per job. It is also as large as the 2D cell at L = 10 µm, whose equilibrium
+take over 8 hours per {term}`job`. It is also as large as the 2D cell at L = 10 µm, whose equilibrium
 {term}`drift-diffusion` solve fails in {{ DEVSIM }}'s direct solver ({ref}`moscap2d-l10`). So
 levels 0 and 1 are the candidates, each with a finer neighbour, and level 2 is only the finer
 neighbour of level 1. The levels 0–2 give one triple, and so one observed order, which the

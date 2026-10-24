@@ -29,5 +29,9 @@ Source: {repo}`src/gf180tcad/tcad/moscap2d.py`.
 
 .. autodata:: gf180tcad.tcad.moscap2d.STATE_HANDOFF
 
+.. autodata:: gf180tcad.tcad.moscap2d.STATE_RESUMES
+
+.. autodata:: gf180tcad.tcad.moscap2d.AC_INFEASIBLE
+
 .. autodata:: gf180tcad.tcad.moscap2d.AFTER_POINT
 ```

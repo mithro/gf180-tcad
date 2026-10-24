@@ -40,7 +40,7 @@ doping. {py:func}`gf180tcad.tcad.moscap2d.simulate` meshes the cross-section wit
 
 ## The C/Cox > 1 artefact
 
-**The symptom.** In the {term}`Phase 2` research spike a 2D MOS capacitor gave C/Cox = 1.0039 at −5 V
+**The symptom.** In the {term}`Phase 2` research spike a 2D MOS capacitor gave C/{term}`Cox` = 1.0039 at −5 V
 with a 15.2 nm oxide, and 0.9909 with the same structure at 16 nm
 ({repo}`Task 11 of the Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
 In 1D, C/Cox > 1 is impossible and does not occur ({ref}`mesh-convergence`). The diagnosis below
@@ -206,9 +206,9 @@ calibration and comparison
 ## The L = 2 µm cell: QS only, resumed, with a memory growth that is not fixed
 
 - **QS only.** The L = 2 µm cell (501k nodes for the nfet) has no AC result (no `cgx.csv`). Its AC
-  sweep needs the drift-diffusion small-signal solve, and that fails in {{ DEVSIM }}'s direct
+  sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
   solver (UMFPACK 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
-  solve does ({ref}`moscap2d-l10`). The job files record it (`ac` is
+  solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
   {py:data}`~gf180tcad.tcad.moscap2d.AC_INFEASIBLE`, `ac_points` is 0).
 - **Resumed after out-of-memory restarts.** The L = 2 µm QS sweeps ran under a memory cap and were
   restarted by the service manager after being killed; each restart resumed from the last saved
