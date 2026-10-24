@@ -35,6 +35,7 @@
     "h_si_bulk_nm": 70.71067811865476,
     "h_si_surface_nm": 0.3535533905932738
   },
+  "mesh_sha256": "47e3a4a7b38f4c73fb39d438afe3e481ec5b7be031612cf89bc2d12f04d8091f",
   "mesh_source": "results/tcad/meshconv/moscap2d/pfet_05v0/selected.json",
   "meshed_l_um": 1.9999999999999998,
   "meshed_t_ox_nm": 15.600000000000001,
