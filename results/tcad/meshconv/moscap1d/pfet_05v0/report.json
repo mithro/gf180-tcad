@@ -4,6 +4,8 @@
   "dim": 1,
   "levels": [
     {
+      "agreement_1d": null,
+      "agreement_1d_curve": null,
       "c_per_area_ff_um2": [
         2.1673994673604478,
         2.166928118145372,
@@ -207,6 +209,7 @@
         2.1063432068958234,
         2.1058535212247964
       ],
+      "extended_fallback": [],
       "max_rel_change": 3.804204658552912e-05,
       "node_count": 676,
       "rel_change": [
@@ -412,6 +415,7 @@
         3.774232843167802e-05,
         3.804204658552912e-05
       ],
+      "roundoff_accepted": [],
       "scale": 1.0,
       "spec": {
         "grading": 1.1,
@@ -422,6 +426,8 @@
       }
     },
     {
+      "agreement_1d": null,
+      "agreement_1d_curve": null,
       "c_per_area_ff_um2": [
         2.1673246898434377,
         2.1668540268801624,
@@ -625,6 +631,7 @@
         2.1062637115990563,
         2.1057734132945094
       ],
+      "extended_fallback": [],
       "max_rel_change": 2.9104822525827245e-05,
       "node_count": 949,
       "rel_change": [
@@ -830,6 +837,7 @@
         2.3305248741056772e-05,
         2.3491032328459838e-05
       ],
+      "roundoff_accepted": [],
       "scale": 0.7071067811865476,
       "spec": {
         "grading": 1.1,
@@ -840,6 +848,8 @@
       }
     },
     {
+      "agreement_1d": null,
+      "agreement_1d_curve": null,
       "c_per_area_ff_um2": [
         2.167276438167964,
         2.1668062009520352,
@@ -1043,6 +1053,7 @@
         2.106214625743301,
         2.10572394766518
       ],
+      "extended_fallback": [],
       "max_rel_change": 1.3895603119706834e-05,
       "node_count": 1343,
       "rel_change": [
@@ -1248,6 +1259,7 @@
         1.133580289813807e-05,
         1.1426975686790186e-05
       ],
+      "roundoff_accepted": [],
       "scale": 0.5,
       "spec": {
         "grading": 1.1,
@@ -1258,6 +1270,8 @@
       }
     },
     {
+      "agreement_1d": null,
+      "agreement_1d_curve": null,
       "c_per_area_ff_um2": [
         2.167252443937442,
         2.1667824231114317,
@@ -1461,9 +1475,11 @@
         2.106190750380089,
         2.10569988588378
       ],
+      "extended_fallback": [],
       "max_rel_change": null,
       "node_count": 1900,
       "rel_change": null,
+      "roundoff_accepted": [],
       "scale": 0.3535533905932738,
       "spec": {
         "grading": 1.1,
@@ -2310,6 +2326,7 @@
     }
   ],
   "params": "start",
+  "refine_grading": false,
   "richardson": {
     "c_per_area_ff_um2": [
       2.167229717304403,
@@ -2522,6 +2539,13 @@
     "order": 2.079365952661703
   },
   "selected": {
+    "criteria": {
+      "convergence": {
+        "level": 0,
+        "max": 0.01
+      },
+      "selected": 0
+    },
     "level": 0,
     "scale": 1.0
   },
