@@ -702,6 +702,8 @@ def _check_rows(rec: dict) -> list[str]:
         "|---|---|---|---|---|",
     ]
     m, reg, tc = rec["metrics"], rec["spice_regions"], rec["tcad_crossings"]
+    if set(rec["verdicts"]) != {key for key, _ in CHECKS}:
+        raise ValueError(f"checks {sorted(rec['verdicts'])} are not docgen.CHECKS")
     for key, label in CHECKS:
         v = rec["verdicts"][key]
         if key.startswith("plateau_"):
@@ -889,6 +891,9 @@ def _meshconv_rows(report: dict) -> list[str]:
 
 
 def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
+    from gf180tcad.calibrate.cv import BOUND_HIT_REL
+
+    bound_rel = f"{BOUND_HIT_REL:.0e}".replace("e-0", "e-")  # 1e-3, as the prose pages write it
     name, cal, val = d.device.name, d.cal, d.val
     ddir = out / "tcad" / name
     ddir.mkdir(parents=True, exist_ok=True)
@@ -920,8 +925,8 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
             f"{{term}}`Parameter budget <parameter budget>` used: {cal['budget_used']} of "
             f"{cal['budget']} per device type. Optimiser: {opt['method']}, "
             f'"{opt["message"].replace("`", "")}", {opt["nfev"]} evaluations and '
-            f"{opt['njev']} Jacobians, final cost {fmt(opt['cost'])}. A value within 1e-3 of a "
-            "bound, relative to the bound width, is a bound hit. The tag is the "
+            f"{opt['njev']} Jacobians, final cost {fmt(opt['cost'])}. A value within "
+            f"{bound_rel} of a bound, relative to the bound width, is a bound hit. The tag is the "
             "{term}`provenance tag`; the kinds say where the start value and each bound come "
             "from: the {term}`model card` (card), computed from card values (derived), or a "
             "project choice, as set out on {ref}`process-data-tunables`."

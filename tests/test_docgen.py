@@ -400,6 +400,28 @@ def test_moscap_summary_2d_sentence_follows_the_statuses(tmp_path):
     assert "not run for any geometry" not in summary and "| compared |" in summary
 
 
+def test_checks_match_the_committed_verdicts():
+    """docgen.CHECKS names exactly the checks of every committed 1D comparison record, so a
+    check added to gf180tcad.calibrate.cv.verdicts cannot be left off the pages silently."""
+    keys = {key for key, _ in docgen.CHECKS}
+    n = 0
+    for name in DEVICES:
+        cal = json.loads((TCAD / "calibration" / f"{name}.result.json").read_text("utf-8"))
+        val = json.loads((TCAD / "validation" / f"{name}.json").read_text("utf-8"))
+        for rec in (*cal["per_geometry"].values(), *val["one_d"].values()):
+            assert set(rec["verdicts"]) == keys
+            n += 1
+    assert n == 12
+
+
+def test_bound_hit_rule_is_the_calibration_constant(tmp_path):
+    from gf180tcad.calibrate.cv import BOUND_HIT_REL
+
+    docgen.generate_tcad(tmp_path)
+    page = (tmp_path / "tcad" / "nfet_05v0" / "index.md").read_text("utf-8")
+    assert BOUND_HIT_REL == 1e-3 and "within 1e-3 of a bound" in page
+
+
 def test_moscap_missing_result_raises(tmp_path):
     tcad = _link_tcad_tree(tmp_path / "tcad_in")
     (tcad / "validation" / "pfet_05v0.json").unlink()
