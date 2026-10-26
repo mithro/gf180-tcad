@@ -922,6 +922,8 @@ Requires the docs-links infrastructure on main.
 
 ### Task 14: secondary PDK `d658698` comparison (carried over from Phase 0–1 Task 15)
 
+> **Done.** This task was completed as Phase 0–1 Task 15, starting on 2026-10-19 (first commit 0f6a977), while Phase 2 was in progress (commits 0f6a977, 0cc79af, bede2d2, 4c11d43, 60f02c7, cdd00a7, 4e5cb70, c37e89f, 02bf0a9). Outcome: rerunning TT ngspice on the `d658698` PDK gives results byte-identical to `results/spice` for these devices (`results/spice-pdk-d658698/comparison.json`: `identical: true`, every metric delta exactly 0). The two PDKs' `sm141064` model libraries differ only in the resistor section `.lib res` (the `fox_sub` capacitor model), which the transistors never load. The page `docs/comparison/pdk-versions.md` records this.
+
 **Context.**
 - `spice-reference` lives in `reference.py`, which is a generator module. Adding `--pdk-root` there therefore changes SPICE provenance (Global Constraints).
 - `_image_pdk` checks the PDK against `docker/base/versions.json`, which would reject d658698.
@@ -948,9 +950,9 @@ If that proves impossible without editing a generator module, the PR also regene
 - Produces: `pdkdiff.compare(a_metrics_dir, b_metrics_dir) -> dict`, a per-metric delta summary.
 - Produces: a docs page. It states whether the run-1/2 PDK models differ from the latest for these devices, and re-checks the spec §4 card values against the latest card. The research already found that the run-2 card sha differs from the image's (`6edba54d…` vs `69a7ab87…`).
 
-- [ ] **Step 1:** Write the tests first: `test_pdkdiff_zero_for_identical`, `test_pdkdiff_reports_metric_delta` and `test_reference_py_untouched` (the generator_sha256 is unchanged). Run them: they FAIL.
-- [ ] **Step 2:** Implement, then run the tests again: they PASS.
-- [ ] **Step 3:** Generate the results, update the manifest and write the page. Then commit, open the PR, get it reviewed and merge.
+- [x] **Step 1:** Write the tests first: `test_pdkdiff_zero_for_identical`, `test_pdkdiff_reports_metric_delta` and `test_reference_py_untouched` (the generator_sha256 is unchanged). Run them: they FAIL.
+- [x] **Step 2:** Implement, then run the tests again: they PASS.
+- [x] **Step 3:** Generate the results, update the manifest and write the page. Then commit, open the PR, get it reviewed and merge.
 
 ### Task 15 (required, first step of spec §12.1): backend seam in the plugin
 
