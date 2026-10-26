@@ -178,8 +178,9 @@ def test_concurrent_docs_generation_does_not_race(tmp_path):
             (
                 subprocess.Popen(
                     [sys.executable, "-I", str(script), str(DOCS / "conf.py")],
-                    stdout=log, stderr=subprocess.STDOUT,
-                ),  # fmt: skip
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                ),
                 log,
             )
         )
