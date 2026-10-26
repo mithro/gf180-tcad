@@ -60,10 +60,20 @@ def test_images_are_the_1d_results_image():
     assert r.stdout.splitlines() == [TCAD_DEV_IMAGE]
 
 
-def test_out_must_not_overlap_results(tmp_path):
-    for out in (REPO / "results", REPO / "results" / "tcad", REPO / "results" / "x" / "y", REPO):
+def test_out_must_not_overlap_results(tmp_path, monkeypatch):
+    # A disposable stand-in for the checkout: if the guard regressed, clean=True would delete
+    # this tree, never the real repository or results/.
+    fake_repo = tmp_path / "repo"
+    fake_results = fake_repo / "results"
+    (fake_results / "tcad").mkdir(parents=True)
+    (fake_results / "x" / "y").mkdir(parents=True)
+    (fake_repo / "keep").write_text("x")
+    (fake_results / "tcad" / "keep").write_text("x")
+    monkeypatch.setattr(tool, "RESULTS", fake_results.resolve())
+    for out in (fake_results, fake_results / "tcad", fake_results / "x" / "y", fake_repo):
         with pytest.raises(ValueError, match="overlaps"):
             tool.check_out(out, clean=True)
+    assert (fake_repo / "keep").exists() and (fake_results / "tcad" / "keep").exists()
     full = tmp_path / "full"
     full.mkdir()
     (full / "f").write_text("x")
