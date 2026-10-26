@@ -954,7 +954,7 @@ If that proves impossible without editing a generator module, the PR also regene
 - [x] **Step 2:** Implement, then run the tests again: they PASS.
 - [x] **Step 3:** Generate the results, update the manifest and write the page. Then commit, open the PR, get it reviewed and merge.
 
-### Task 15 (optional, Phase 4 prep): backend seam in the plugin
+### Task 15 (required, first step of spec §12.1): backend seam in the plugin
 
 **Files (fork):** split `gplugins/devsim/get_solver.py` into `device_description.py` (mesh, regions, contacts, doping, bias plan) and `backends/devsim.py`.
 
