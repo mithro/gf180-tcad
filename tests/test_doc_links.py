@@ -346,7 +346,7 @@ def _pages(generated: Path) -> list[tuple[str, str, bool, bool]]:
             continue
         # The glossary defines the terms; its own term lines are not "uses".
         pages.append((str(rel), p.read_text(encoding="utf-8"), True, p != GLOSSARY))
-    for p in sorted((generated / "results").rglob("*.md")):
+    for p in sorted(generated.rglob("*.md")):
         name = "docgen:" + str(p.relative_to(generated))
         pages.append((name, p.read_text(encoding="utf-8"), True, True))
     for name in OUTSIDE_SPHINX:
@@ -360,6 +360,15 @@ def test_every_reference_is_a_link(generated):
         for p in check(name, text, sphinx=sphinx, terms=terms)
     ]  # fmt: skip
     assert not problems, f"{len(problems)} unlinked references:\n" + "\n".join(map(str, problems))
+
+
+def test_generated_tcad_pages_are_scanned(generated):
+    """The docs-links scan covers the generated TCAD pages (Task 13a) as well as the SPICE ones."""
+    names = {name for name, *_ in _pages(generated)}
+    assert "docgen:results/index.md" in names
+    assert "docgen:tcad/index.md" in names
+    assert "docgen:tcad/nfet_05v0/index.md" in names
+    assert "docgen:tcad/pfet_05v0/w10p0_l0p50.md" in names
 
 
 def test_tool_urls_are_https():

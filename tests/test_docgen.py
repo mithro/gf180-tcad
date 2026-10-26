@@ -135,6 +135,14 @@ def test_docs_build_offline(tmp_path):
     assert r.returncode == 0, log.read_text(encoding="utf-8")[-3000:]
     assert (out / "results" / "index.html").is_file()
     assert Path(out / "_images").is_dir()
+    # the TCAD MOS capacitor pages (Task 13a) are in the build, with their figures
+    tcad = out / "_generated" / "tcad"
+    assert (tcad / "index.html").is_file()
+    for name, d in DEVICES.items():
+        assert (tcad / name / "index.html").is_file()
+        for g in d.geometries:
+            assert (tcad / name / f"{geometry_id(g)}.html").is_file()
+    assert any(p.name.endswith("_cgg.svg") for p in (out / "_images").iterdir())
 
 
 def test_known_diffs_single_source():
@@ -255,3 +263,126 @@ def test_per_area_spec_entries_are_tcad_only(tmp_path):
     docgen.generate(tmp_path)
     s = (tmp_path / "results" / "index.md").read_text(encoding="utf-8")
     assert "### TCAD only" in s and s.count("| TCAD only |") == 2
+
+
+# --- TCAD MOS capacitor pages (Task 13a) ---------------------------------------------------------
+
+TCAD = REPO_ROOT / "results" / "tcad"
+
+
+def _tcad_json(device: str, gid: str) -> dict:
+    """The committed 1D comparison of one geometry: calibration or validation file."""
+    cal = json.loads((TCAD / "calibration" / f"{device}.result.json").read_text("utf-8"))
+    if gid in cal["per_geometry"]:
+        return cal["per_geometry"][gid]
+    val = json.loads((TCAD / "validation" / f"{device}.json").read_text("utf-8"))
+    return val["one_d"][gid]
+
+
+def test_moscap_page_per_device_geometry(tmp_path):
+    docgen.generate(tmp_path)
+    root = tmp_path / "tcad"
+    expected = {f"{name}/{geometry_id(g)}.md" for name, d in DEVICES.items() for g in d.geometries}
+    pages = {str(p.relative_to(root)) for p in root.glob("*/*.md") if p.name != "index.md"}
+    assert len(expected) == 12 and pages == expected
+    for name, device in DEVICES.items():
+        for g in device.geometries:
+            gid = geometry_id(g)
+            page = (root / name / f"{gid}.md").read_text(encoding="utf-8")
+            r = _tcad_json(name, gid)
+            # the overlay (TCAD against ngspice TT and the corner envelope) and the 1D split
+            for fig in ("cgg", "split"):
+                assert f"]({gid}_{fig}.svg)" in page
+                assert (root / name / f"{gid}_{fig}.svg").is_file()
+            # verdicts and numbers rendered from the committed JSON, not recomputed
+            assert f"Verdict (1D): **{r['verdict']}**" in page
+            for key in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv"):
+                assert f"| {r['verdicts'][key]['verdict']} |" in page
+            m = r["metrics"]
+            assert f"{1e3 * m['dv_dep_v']:+.1f} mV" in page
+            assert f"{1e3 * m['dv_inv_v']:+.1f} mV" in page
+            assert f"{100 * m['depletion_max_rel']:.2f} %" in page
+            assert g.role in page
+            # mesh pictures: no mesh file is committed, and the page says so
+            assert "mesh.msh" in page and "not committed" in page
+            meta = TCAD / "moscap2d" / name / "start" / gid / "cv.meta.json"
+            if meta.is_file():
+                assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page
+            else:
+                assert "No 2D result" in page
+        index = (root / name / "index.md").read_text(encoding="utf-8")
+        cal = json.loads((TCAD / "calibration" / f"{name}.result.json").read_text("utf-8"))
+        assert f"{cal['budget_used']} of {cal['budget']}" in index
+        for p in cal["params"]:
+            assert f"`{p}`" in index
+        assert "dlc_nm" in index  # the reference-bookkeeping rows, listed separately
+        for dim in ("1d", "2d"):
+            assert (root / name / f"meshconv_{dim}.svg").is_file()
+            assert f"](meshconv_{dim}.svg)" in index
+    summary = (root / "index.md").read_text(encoding="utf-8")
+    for name, device in DEVICES.items():
+        for g in device.geometries:
+            assert f"<{name}/{geometry_id(g)}>" in summary
+    assert "not run" in summary  # the calibrated 2D validation (issue #35)
+
+
+_RENDER_TCAD = textwrap.dedent(
+    """
+    import sys
+    from pathlib import Path
+    from gf180tcad import docgen
+    docgen.generate(Path(sys.argv[1]))
+    """
+)
+
+
+def test_moscap_pages_deterministic(tmp_path):
+    trees = []
+    for seed in ("1", "2"):
+        out = tmp_path / seed
+        env = {**os.environ, "PYTHONHASHSEED": seed}
+        subprocess.run(
+            [sys.executable, "-c", _RENDER_TCAD, str(out)], env=env, check=True, timeout=600
+        )
+        root = out / "tcad"
+        trees.append(
+            {str(p.relative_to(root)): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+        )
+    a, b = trees
+    assert sum(k.endswith(".svg") for k in a) >= 2 * 12 + 2 * 2
+    assert a.keys() == b.keys() and all(a[k] == b[k] for k in a)
+    for k, data in a.items():
+        assert str(REPO_ROOT).encode() not in data, k
+        if k.endswith(".svg"):
+            assert b"<dc:date>" not in data and b"<text" in data
+
+
+def _link_tcad_tree(dst: Path) -> Path:
+    for p in TCAD.rglob("*"):
+        if p.is_file():
+            q = dst / p.relative_to(TCAD)
+            q.parent.mkdir(parents=True, exist_ok=True)
+            q.symlink_to(p)
+    return dst
+
+
+def test_moscap_verdicts_are_read_not_recomputed(tmp_path):
+    """A verdict changed in the committed JSON shows on the page: docgen renders, it does not
+    recompute the TCAD-vs-SPICE comparison."""
+    tcad = _link_tcad_tree(tmp_path / "tcad_in")
+    path = tcad / "calibration" / "nfet_05v0.result.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["per_geometry"]["w10p0_l10p00"]["verdict"] = "Disagree"
+    data["per_geometry"]["w10p0_l10p00"]["verdicts"]["dv_dep"]["verdict"] = "Disagree"
+    path.unlink()
+    path.write_text(json.dumps(data), encoding="utf-8")
+    docgen.generate(tmp_path / "out", tcad_root=tcad)
+    page = (tmp_path / "out" / "tcad" / "nfet_05v0" / "w10p0_l10p00.md").read_text("utf-8")
+    assert "Verdict (1D): **Disagree**" in page
+
+
+def test_moscap_missing_result_raises(tmp_path):
+    tcad = _link_tcad_tree(tmp_path / "tcad_in")
+    (tcad / "validation" / "pfet_05v0.json").unlink()
+    with pytest.raises(FileNotFoundError, match="pfet_05v0.json"):
+        docgen.generate(tmp_path / "out", tcad_root=tcad)
