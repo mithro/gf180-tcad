@@ -73,6 +73,19 @@ def test_out_must_not_overlap_results(tmp_path, monkeypatch):
     for out in (fake_results, fake_results / "tcad", fake_results / "x" / "y", fake_repo):
         with pytest.raises(ValueError, match="overlaps"):
             tool.check_out(out, clean=True)
+    # inside the repository, only tmp/ may be written (and cleaned): QUICK_OUT=src must not
+    # delete src
+    monkeypatch.setattr(tool, "REPO_ROOT", fake_repo.resolve())
+    (fake_repo / "src").mkdir()
+    (fake_repo / "src" / "code.py").write_text("x")
+    for out in (fake_repo / "src", fake_repo / "src" / "sub", fake_repo / "tmpx"):
+        with pytest.raises(ValueError, match="not under tmp/"):
+            tool.check_out(out, clean=True)
+    assert (fake_repo / "src" / "code.py").exists()
+    (fake_repo / "tmp" / "q").mkdir(parents=True)
+    (fake_repo / "tmp" / "q" / "f").write_text("x")
+    tool.check_out(fake_repo / "tmp" / "q", clean=True)
+    assert not (fake_repo / "tmp" / "q").exists()
     assert (fake_repo / "keep").exists() and (fake_results / "tcad" / "keep").exists()
     full = tmp_path / "full"
     full.mkdir()

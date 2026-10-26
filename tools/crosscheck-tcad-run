@@ -13,7 +13,8 @@ runs the simulation in the TCAD image through tools/sandbox-run and writes the j
 are the committed ones. Afterwards ``python -m gf180tcad.manifest verify-subset OUT --kind tcad
 --prefix tcad/ --against results/MANIFEST.sha256 --subset SUBSET`` compares the files.
 
-``--out`` must be outside ``results/`` and absent or empty (``--clean`` deletes it first).
+``--out`` must be outside ``results/``, outside the repository or under its ``tmp/``, and absent
+or empty (``--clean`` deletes it first).
 Only 1D jobs are supported: a 2D job takes hours and 16 GiB (docs/reproduce/index.md), so it is
 never part of a cross-check. ``--images`` prints the pinned reference of each TCAD image the
 jobs run in, one per line, for ``docker pull``.
@@ -61,12 +62,15 @@ def images(jobs: tuple[str, ...]) -> list[str]:
 
 
 def check_out(out: Path, clean: bool) -> None:
-    """Refuse an ``out`` under ``results/``, and a non-empty one unless ``clean`` (then delete)."""
+    """Refuse an ``out`` under ``results/`` or in the repository outside ``tmp/``, and a non-empty
+    one unless ``clean`` (then delete)."""
     resolved = Path(out).resolve()
     if resolved == RESULTS or resolved.is_relative_to(RESULTS) or RESULTS.is_relative_to(resolved):
         raise ValueError(
             f"--out {out} overlaps {RESULTS}: write the subset to a directory of its own"
         )
+    if resolved.is_relative_to(REPO_ROOT) and not resolved.is_relative_to(REPO_ROOT / "tmp"):
+        raise ValueError(f"--out {out} is inside the repository but not under tmp/")
     if resolved.exists() and any(resolved.iterdir()):
         if not clean:
             raise ValueError(f"--out {out} is not empty (pass --clean to delete it first)")
