@@ -391,7 +391,7 @@ def test_meshconv_byte_identical(tmp_path):
     """A rerun of ``meshconv --dim 1`` gives the committed tree byte for byte."""
     root = tmp_path / "root"
     for device in DEVICES:
-        argv = ["meshconv", "--device", device, "--dim", "1", "--out", str(root)]
+        argv = ["meshconv", "--device", device, "--dim", "1", "--out", str(root), "--jobs", "2"]
         assert cli.main(argv) == 0
     files = sorted(p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file())
     assert files == sorted(
