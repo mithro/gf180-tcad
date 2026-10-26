@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""The output cache: a shared, regenerable git repository of large git-ignored result files.
+
+    uv run --locked python tools/output-cache status
+    uv run --locked python tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<gid>/mesh.msh
+    uv run --locked python tools/output-cache pull <sha256> --out FILE
+    uv run --locked python tools/output-cache init tmp/output-cache
+    uv run --locked python tools/output-cache push --cache tmp/output-cache --dry-run
+    uv run --locked python tools/output-cache push --cache tmp/output-cache --publish
+    uv run --locked python tools/output-cache verify --cache tmp/output-cache
+
+All the logic is in ``gf180tcad.outcache`` (docs/reproduce/output-cache.md); the configuration
+(cacheable files, repository URLs, size cap) is ``data/output-cache.json``.
+"""
+
+import sys
+
+from gf180tcad.outcache import main
+
+if __name__ == "__main__":
+    sys.exit(main())
