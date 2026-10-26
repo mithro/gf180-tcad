@@ -367,9 +367,11 @@ def _summary_page(root, spec: dict, out: Path):
         "",
         (
             "Pages generated at documentation build time from the committed {term}`SPICE` "
-            "reference dataset ({repo}`results/spice`). There is no {term}`TCAD` result yet: these "
-            "plots and tables are the {term}`golden reference` that TCAD will later be compared "
-            "against ({doc}`/comparison/agreement`)."
+            "reference dataset ({repo}`results/spice`): the {term}`golden reference` that "
+            "{term}`TCAD` is compared against ({doc}`/comparison/agreement`). The TCAD results so "
+            "far, the C-V calibration of the {term}`MOS capacitors <MOSCAP>` against these "
+            "{term}`Cgg`-Vg curves, are on {doc}`/_generated/tcad/index` "
+            "({doc}`/comparison/cv-agreement`)."
         ),
         "",
         "## TT against the PDK spec",

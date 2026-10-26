@@ -68,6 +68,9 @@ def test_summary_lists_status_and_engine_diffs(tmp_path):
     assert s.count("| inside |") == 6
     assert s.count("(known)") == 12  # nfet idvg_lin and idvg_sat, six geometries each
     assert "**unexplained**" not in s
+    # the TCAD pages exist next to these: the summary links them and does not deny them
+    assert "{doc}`/_generated/tcad/index`" in s
+    assert "no {term}`TCAD` result" not in s
 
 
 def test_number_format_is_locale_independent():
