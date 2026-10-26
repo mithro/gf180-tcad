@@ -309,7 +309,13 @@ def test_byte_identical(tmp_path):
     ]
     for rel in files:
         assert (roots[0] / rel).read_bytes() == (roots[1] / rel).read_bytes(), rel
-        assert (roots[0] / rel).read_bytes() == (TREE / rel).read_bytes(), rel
+        if rel.name != "provenance.json":
+            assert (roots[0] / rel).read_bytes() == (TREE / rel).read_bytes(), rel
+    # the committed tree also holds the calibrated jobs (Task 12), whose calibration files its
+    # provenance records; without them it is the start-only tree's
+    committed = json.loads((TREE / "provenance.json").read_bytes())
+    assert set(committed.pop("calibration")) == set(DEVICES)
+    assert json.loads((roots[0] / "provenance.json").read_bytes()) == committed
 
 
 @pytest.mark.sandbox
