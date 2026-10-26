@@ -72,15 +72,19 @@ IMAGES = {
 # planned before the Phase 2 exit (docs/reproduce/image.md, "Which image makes which results").
 RESULTS_IMAGE = {"moscap1d": "dev", "moscap2d": "stable"}
 
-# Every gf180tcad module the TCAD entry points import (gf180tcad.tcad.__main__ and, from Task
-# 12, gf180tcad.calibrate.__main__), shared modules included. tests/tcad/test_tcad_provenance.py
+# Every gf180tcad module the TCAD entry points import (gf180tcad.tcad.__main__ and
+# gf180tcad.calibrate.__main__), shared modules included. tests/tcad/test_tcad_provenance.py
 # ties the list to the import graph; a task that adds a TCAD module extends it in the same PR.
 TCAD_GENERATOR_MODULES = (
     "gf180tcad",
+    "gf180tcad.calibrate",
+    "gf180tcad.calibrate.__main__",
+    "gf180tcad.calibrate.cv",
     "gf180tcad.devices",
     "gf180tcad.io",
     "gf180tcad.layout",
     "gf180tcad.sandbox",
+    "gf180tcad.specwindow",
     "gf180tcad.tcad",
     "gf180tcad.tcad.__main__",
     "gf180tcad.tcad.analytic",
@@ -105,6 +109,9 @@ PROCESS_GLOB = "data/process/*.toml"
 
 # Where the calibrated values live (Task 12): results/tcad/calibration/<device>.json.
 CALIBRATION_DIR = Path("results") / "tcad" / "calibration"
+
+# Where the validation of the calibrated values lives (Task 12): results/tcad/validation/<device>.json.
+VALIDATION_DIR = Path("results") / "tcad" / "validation"
 
 
 class ProvenanceError(RuntimeError):
@@ -249,9 +256,16 @@ def provenance(
 
 
 def calibrated_devices(tree_root: Path) -> tuple[str, ...]:
-    """The devices with a ``<device>/calibrated`` job directory under ``tree_root``, sorted."""
+    """The devices whose results under ``tree_root`` used calibrated values, sorted: those with a
+    ``<device>/calibrated`` job directory, and in the validation tree (:data:`VALIDATION_DIR`)
+    those with a ``<device>.json``."""
+    from gf180tcad.tcad.process import DEVICES
+
     tree_root = Path(tree_root)
-    return tuple(sorted(p.parent.name for p in tree_root.glob("*/calibrated") if p.is_dir()))
+    found = {p.parent.name for p in tree_root.glob("*/calibrated") if p.is_dir()}
+    if tree_root.name == VALIDATION_DIR.name:
+        found |= {p.stem for p in tree_root.glob("*.json") if p.stem in DEVICES}
+    return tuple(sorted(found))
 
 
 def tree_provenance(

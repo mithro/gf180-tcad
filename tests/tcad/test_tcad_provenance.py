@@ -23,8 +23,8 @@ from gf180tcad.tcad import calibration
 REPO = Path(__file__).resolve().parents[2]
 RESULTS = REPO / "results"
 TCAD_RESULTS = RESULTS / "tcad"
-# The TCAD entry points. Task 12 adds gf180tcad.calibrate.__main__.
-ROOTS = ("gf180tcad.tcad.__main__",)
+# The TCAD entry points.
+ROOTS = ("gf180tcad.tcad.__main__", "gf180tcad.calibrate.__main__")
 # The tree roots of the plan's results layout (Global Constraints, "Result files").
 TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation")
 REGENERATE = (
@@ -80,7 +80,7 @@ def test_tcad_generator_modules_match_the_import_graph():
 
 def test_tcad_generator_modules_match_what_python_loads():
     code = (
-        "import sys, gf180tcad.tcad.__main__; "
+        "import sys, gf180tcad.tcad.__main__, gf180tcad.calibrate.__main__; "
         "print(' '.join(sorted(m for m in sys.modules if m.split('.')[0] == 'gf180tcad')))"
     )
     res = subprocess.run(
@@ -149,6 +149,17 @@ def test_provenance_records_calibration(tmp_path, monkeypatch):
     (tree / "nfet_05v0" / "calibrated").mkdir(parents=True)
     (tree / "pfet_05v0" / "start").mkdir(parents=True)
     assert tcad.calibrated_devices(tree) == ("nfet_05v0",)
+    # the validation tree: every device validated there used its calibration
+    val = tmp_path / "validation"
+    val.mkdir()
+    for name in ("pfet_05v0.json", "provenance.json", "notes.json"):
+        (val / name).write_text("{}", encoding="utf-8")
+    assert tcad.calibrated_devices(val) == ("pfet_05v0",)
+    # the calibration tree itself was computed from the start values
+    cal = tmp_path / "calibration"
+    cal.mkdir()
+    (cal / "pfet_05v0.json").write_text("{}", encoding="utf-8")
+    assert tcad.calibrated_devices(cal) == ()
 
 
 @pytest.mark.parametrize(
@@ -196,11 +207,17 @@ def test_committed_tree_roots_are_known():
         assert p.name in TREE_ROOTS, f"results/tcad/{p.name} is not a tree root of the layout"
 
 
+# The calibration and validation trees are computed with the 1D model (Task 12).
+MODEL_KINDS = {"calibration": ["moscap1d"], "validation": ["moscap1d"]}
+
+
 def _result_kinds(root: Path) -> list[str]:
-    """The result kinds (``moscap1d``, ``moscap2d``) a committed tree root holds: itself, or
-    (meshconv) its ``moscap<n>d`` subtrees."""
+    """The result kinds (``moscap1d``, ``moscap2d``) a committed tree root holds: itself,
+    (meshconv) its ``moscap<n>d`` subtrees, or (calibration, validation) the 1D model's."""
     if root.name in tcad.RESULTS_IMAGE:
         return [root.name]
+    if root.name in MODEL_KINDS:
+        return MODEL_KINDS[root.name]
     return sorted(p.name for p in root.iterdir() if p.is_dir() and p.name in tcad.RESULTS_IMAGE)
 
 

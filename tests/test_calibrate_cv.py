@@ -331,3 +331,38 @@ def test_result_round_trip(fit, tmp_path):
     for comp in data["per_geometry"].values():
         assert set(comp["spice_regions"]) >= {"u_fb", "u_t", "c_min", "c_acc", "c_inv", "u_dep",
                                               "u_inv"}  # fmt: skip
+
+
+# --- the CLI (host) ------------------------------------------------------------------------------
+
+
+def test_jobs_refuse_outside_the_sandbox(tmp_path):
+    from gf180tcad.calibrate import __main__ as cli
+
+    with pytest.raises(RuntimeError, match="inside the sandbox"):
+        cli.run_job(NFET, tmp_path)
+    with pytest.raises(RuntimeError, match="inside the sandbox"):
+        cli.run_validate_job(NFET, tmp_path)
+
+
+def test_validate_refuses_an_uncommitted_calibration(tmp_path, monkeypatch, capsys):
+    from gf180tcad.calibrate import __main__ as cli
+
+    absent = cv.REPO_ROOT / "results" / "tcad" / "calibration" / "absent" / f"{NFET}.json"
+    monkeypatch.setattr(cli, "calibration_file", lambda device: absent)
+    argv = ["validate", "--device", NFET, "--out", str(tmp_path / "root")]
+    assert cli.main(argv) == 2
+    assert "must be committed" in capsys.readouterr().err
+    assert not (tmp_path / "root").exists()
+
+
+def test_cli_requires_known_choices():
+    from gf180tcad.calibrate import __main__ as cli
+
+    for argv in (
+        ["run", "--device", "nfet_03v3", "--out", "x"],
+        ["fit", "--device", NFET, "--out", "x"],
+        ["validate", "--device", NFET],
+    ):
+        with pytest.raises(SystemExit):
+            cli.main(argv)
