@@ -222,25 +222,74 @@ published as they are; the ngspice/Xyce cross-check is a separate test
 ## Provenance of the TCAD results
 
 Each TCAD tree root holds one `provenance.json` ({py:func}`gf180tcad.tcad.tree_provenance`):
-the images that made it, the plugin commit, the calibration applied (if any) and a
-{term}`generator_sha256`. That hash covers **one** module list for every TCAD tree,
-{py:data}`gf180tcad.tcad.TCAD_GENERATOR_MODULES`, the import closure of both TCAD entry points
-({py:mod}`gf180tcad.tcad.__main__` and {py:mod}`gf180tcad.calibrate.__main__`), plus the
-plugin's `gplugins/devsim` files, the {term}`process files <process file>` and {repo}`tools/sandbox-run`.
-{test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` requires every
-tree's hash to equal the current one. The trees and the commands that regenerate them (then
+the images that made it, the plugin commit, the calibration applied (if any), the entry point
+that wrote the tree (`generator`) and a {term}`generator_sha256`. The hash is **per tree**
+([issue #34](https://github.com/mithro/gf180-tcad/issues/34)): it covers the import closure of the entry point that writes the tree, one module list
+per entry point in {py:data}`gf180tcad.tcad.TCAD_GENERATORS`, plus the inputs both entry points
+share: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
+{repo}`tools/sandbox-run`. The closure is the static one, so an import inside a function counts
+too ({test}`tests/tcad/test_tcad_provenance.py::test_tcad_generator_modules_match_the_import_graph`
+runs once per entry point). {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties each tree to its
+writer, and {test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current`
+requires every tree to name its writer and to carry that writer's current hash. A change to a
+module that a tree's writer never imports therefore leaves the tree's hash alone: the
+calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in the
+closure of {py:mod}`gf180tcad.tcad.__main__`, and the job command line
+({py:mod}`gf180tcad.tcad.__main__`) is not in the closure of
+{py:mod}`gf180tcad.calibrate.__main__`. A change to a shared module (for example
+{py:mod}`gf180tcad.tcad`, {py:mod}`gf180tcad.tcad.moscap1d`) or a shared input still changes
+every hash. The trees, their writers and the commands that regenerate them (then
 `make manifest`):
 
-| tree | regenerate |
-|---|---|
-| {repo}`results/tcad/moscap1d` | `python -m gf180tcad.tcad moscap --device D --dim 1 --params start` (and `--params calibrated`) `--out results/tcad/moscap1d` |
-| {repo}`results/tcad/moscap2d` | `python -m gf180tcad.tcad moscap --device D --dim 2 --params start --geometry GID --out results/tcad/moscap2d`, one 16 GiB job at a time (hours each; L = 2 µm: `--method qs`, then `--method combine-qs`) |
-| {repo}`results/tcad/meshconv` | `python -m gf180tcad.tcad meshconv --device D --dim 1` (and `--dim 2 --jobs 1`) `--out results/tcad/meshconv` |
-| {repo}`results/tcad/calibration` | `python -m gf180tcad.calibrate run --device D --out results/tcad/calibration` |
-| {repo}`results/tcad/validation` | `python -m gf180tcad.calibrate validate --device D --out results/tcad/validation`, after the calibration is committed |
+| tree | written by | regenerate |
+|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `python -m gf180tcad.tcad moscap --device D --dim 1 --params start` (and `--params calibrated`) `--out results/tcad/moscap1d` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `python -m gf180tcad.tcad moscap --device D --dim 2 --params start --geometry GID --out results/tcad/moscap2d`, one 16 GiB job at a time (hours each; L = 2 µm: `--method qs`, then `--method combine-qs`) |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `python -m gf180tcad.tcad meshconv --device D --dim 1` (and `--dim 2 --jobs 1`) `--out results/tcad/meshconv` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate run --device D --out results/tcad/calibration` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate validate --device D --out results/tcad/validation`, after the calibration is committed |
 
-**Restamped without regeneration.** Because the hash covers the whole list, a change to a
-module that a tree's writer never imports still changes that tree's hash. Task 12 added
+**Restamping.** When a change to a writer's closure cannot have changed a tree's data and the
+tree is not regenerated (the 2D jobs take hours), the tree's provenance can be restamped:
+
+```sh
+uv run --locked python tools/restamp-tcad-provenance results/tcad/<tree>   # --dry-run first
+make manifest
+```
+
+{repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`, the writer
+taken from the tree's name, and refuses (exit 2, file unchanged) if anything else in the file
+differs from what the writer would write now: the plugin commit, an image, the calibration
+applied, or a `generator` naming the other entry point. Then the tree has to be regenerated. A
+restamp claims that the data did not change; it does not show it. So every restamp is recorded
+below, with the hash the tree had before.
+
+**Trees written under the old scheme.** Before [issue #34](https://github.com/mithro/gf180-tcad/issues/34) one hash covered both entry points, and
+`provenance.json` had no `generator`. A tree produced that way, for example on a branch that
+was started before the per-tree hash and merges after it, fails
+{test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current`.
+Bring it to the new scheme by rerunning its writer at the merged code, or by restamping it as
+above (after rebasing onto the per-tree hash) and adding it to the record below.
+
+**Restamped to the per-tree hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)), not regenerated.** Every tree was restamped with
+{repo}`tools/restamp-tcad-provenance` from the shared hash
+`deecaa58fe64357d90ebc9aacf86e2607ece0fb65a1b2ceecf6f209eb4a0afde` to its writer's hash at that
+change: {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` and
+{repo}`results/tcad/meshconv` to `b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7`
+({py:mod}`gf180tcad.tcad.__main__`), {repo}`results/tcad/calibration` and
+{repo}`results/tcad/validation` to `5265e5fe223580d9efd878b9ebe33648b21f36dcdbf41ac8c7092f3ce9925950`
+({py:mod}`gf180tcad.calibrate.__main__`). No data file changed. The code that change touched in
+the closures is provenance bookkeeping only (the per-entry-point module lists and the
+`generator` field in {py:mod}`gf180tcad.tcad`, and the `generator=` argument in both entry
+points), nothing that computes a result. No tree could be regenerated for it: the host's
+container budget was taken by another task for hours. The two calibrated 1D jobs, with
+{repo}`results/tcad/moscap1d/provenance.json`, are rerun and compared byte for byte by the
+`crosscheck-tcad` workflow job ({ref}`cross-host-tcad`), which checks that restamp on every
+change to the TCAD code; the other trees have no such check.
+
+**Restamped without regeneration (Task 12).** Under the old scheme the hash covered both entry
+points, so a change to a module that a tree's writer never imports still changed that tree's
+hash. Task 12 added
 {py:mod}`gf180tcad.calibrate` and {py:mod}`gf180tcad.specwindow` to the list, which the 2D MOS
 capacitor job imports neither of. The 2D data were therefore **not** regenerated (hours per job):
 {repo}`results/tcad/moscap2d/provenance.json <results/tcad/moscap2d/provenance.json>` was
@@ -258,9 +307,8 @@ the committed files by {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_id
 (passed; the sandbox session of two tests took 3 min 54 s). That test compares the tree's
 `provenance.json` without its `moscap2d` image, which a 1D rerun cannot know
 ([issue #36](https://github.com/mithro/gf180-tcad/issues/36)); the 2D mesh-convergence results
-were restamped, not rerun, and have no such evidence.
-A per-tree hash over the import closure of the entry point that writes each tree would make such
-restamps unnecessary: [issue #34](https://github.com/mithro/gf180-tcad/issues/34).
+were restamped, not rerun, and have no such evidence. With the per-tree hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)) such a
+calibration-only change no longer touches these trees.
 
 (cross-host-determinism)=
 
@@ -397,9 +445,16 @@ rerun byte for byte locally by
 {test}`tests/tcad/test_moscap1d.py::test_byte_identical`, and the 1D mesh convergence by
 {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical`; see {ref}`tcad-provenance`.
 
+## Output cache
+
+Large regenerable files that are not committed, such as the 2D meshes, are kept in a shared,
+content-addressed cache repository: {repo}`tools/output-cache` `pull` fetches one and checks it against
+the sha256 the committed results name. See {doc}`output-cache`.
+
 ```{toctree}
 :maxdepth: 1
 
 sandbox
 image
+output-cache
 ```

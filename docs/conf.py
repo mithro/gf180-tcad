@@ -58,6 +58,10 @@ _TOOLS = {
     "KLayout": ("KLayout", "https://www.klayout.de/"),
     "meshwell": ("meshwell", "https://github.com/simbilod/meshwell"),
     "gmsh": ("gmsh", "https://gmsh.info/"),
+    "output_cache": (
+        "gf180-tcad-output-cache",
+        "https://github.com/mithro/gf180-tcad-output-cache",
+    ),
     "gplugins": ("gplugins", "https://github.com/gdsfactory/gplugins"),
     "gplugins_fork": ("the gplugins fork", "https://github.com/mithro/gplugins"),
     "meshwell_fork": ("the meshwell fork", "https://github.com/mithro/meshwell"),

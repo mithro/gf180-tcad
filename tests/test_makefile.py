@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from gf180tcad import manifest, reference
+from gf180tcad import manifest, outcache, reference
 from gf180tcad.calibrate.__main__ import _parser as calibrate_parser
 from gf180tcad.tcad import process
 from gf180tcad.tcad.__main__ import _parser as tcad_parser
@@ -52,6 +52,9 @@ def _commands(target: str) -> list[tuple[str, object]]:
         if argv[0] == "make":  # the $(MAKE) sub-target lines; their commands follow
             continue
         assert argv[0] == MARK, f"{target}: a command not run with $(PYTHON): {line!r}"
+        if argv[1] == "tools/output-cache":
+            out.append(("tools/output-cache", outcache._parser().parse_args(argv[2:])))
+            continue
         if argv[1] == "tools/crosscheck-tcad-run":
             out.append(("tools/crosscheck-tcad-run", _tool_parser().parse_args(argv[2:])))
             continue
@@ -188,3 +191,14 @@ def test_reproduce_quick_is_the_crosschecked_subset():
         subset,
     )
     assert verify.against == Path("results/MANIFEST.sha256")
+
+
+def test_cache_targets():
+    ((m, st),) = _commands("cache-status")
+    assert m == "tools/output-cache" and st.command == "status"
+    assert st.cache is None and st.results == Path("results")  # the configured HTTPS URL
+    ((m, pu),) = _commands("cache-push")
+    assert m == "tools/output-cache" and pu.command == "push"
+    assert (pu.cache, pu.results, pu.publish, pu.dry_run) == (
+        Path("tmp/output-cache"), Path("results"), True, False,
+    )  # fmt: skip

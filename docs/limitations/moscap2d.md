@@ -242,8 +242,8 @@ committed 2D {term}`job` files cannot come out byte for byte:
   ({ref}`moscap2d-l2`): `resumed` records
   `{"qs": 4}`, and a resumed sweep is not byte-identical to an uninterrupted one.
 - **Restamped, not rerun.** The 2D mesh convergence and the 2D {term}`provenance` were restamped to the
-  current generator without a rerun ({ref}`tcad-provenance`), so nothing shows that today's code
-  gives their bytes.
+  current generator without a rerun ({ref}`tcad-provenance`), twice: in Task 12 and to the
+  per-tree hash of [issue #34](https://github.com/mithro/gf180-tcad/issues/34). So nothing shows that today's code gives their bytes.
 
 So a full `make reproduce` is expected to report at least the four 2D `cv.meta.json` files in
 `manifest verify`, and the L = 2 µm `cv.csv` too (a resumed sweep agrees with an uninterrupted one
@@ -281,6 +281,12 @@ Its `sha256sum mesh.msh` must equal the `mesh_sha256` in `cv.meta.json`
 rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 --params start
 --geometry w10p0_l0p60 --out <tree root>` writes the mesh too, and the
 {py:func}`~gf180tcad.tcad.moscap2d.simulate` it runs takes hours.
+
+**Output cache.** Instead of regenerating it, a mesh can be fetched from the shared
+{ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`:
+`tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh` writes it
+into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
+committed `cv.meta.json` stays the truth.
 
 (moscap2d-l10)=
 

@@ -22,8 +22,11 @@ there.
   is not run: no calibrated 2D results exist, since each 2D {term}`job` takes hours at 16 GiB, one at a
   time, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
   ({doc}`moscap2d`); [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
-- **The 2D TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
-  names the current generator, not the one that made them; see {ref}`tcad-provenance`.
+- **TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
+  names the current generator, not the one that made them (Task 12), and every TCAD tree was
+  restamped once more to the per-tree {term}`generator_sha256` of [issue #34](https://github.com/mithro/gf180-tcad/issues/34), without a rerun.
+  Only the two calibrated 1D jobs are rerun and compared byte for byte by the cross-check; see
+  {ref}`tcad-provenance`.
 - **`make reproduce` does not yet reproduce the 2D TCAD files, and has not been run end to
   end.** The 2D job files predate the current job format and the L = 2 µm {term}`sweeps <sweep>` were resumed, so a
   fresh run differs from them ({ref}`moscap2d-reproduce`). Only the calibrated 1D

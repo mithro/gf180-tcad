@@ -407,8 +407,9 @@ def test_meshconv_byte_identical(tmp_path):
             assert (root / rel).read_bytes() == (TREE / rel).read_bytes(), rel
     # A 1D rerun into a fresh root cannot know the 2D image the committed provenance.json also
     # records (issue #36), so that one entry is dropped from the committed file; everything else
-    # (generator_sha256, gplugins_commit, the moscap1d image) must match byte for byte. The
-    # exclusion goes away once provenance is recorded per tree (issue #34).
+    # (generator, generator_sha256, gplugins_commit, the moscap1d image) must match byte for
+    # byte. The per-tree generator hash (issue #34) does not remove the exclusion: the image
+    # entry is issue #36.
     committed = json.loads((TREE / "provenance.json").read_bytes())
     assert committed["images"].pop("moscap2d")["name"] == "stable"
     expected = tmp_path / "expected-provenance.json"
