@@ -472,7 +472,7 @@ _NO_MESH = (
 
 _VERDICT_TERMS = (
     "Verdicts are {term}`Agree`, {term}`Same process` or {term}`Disagree` "
-    "({ref}`agreement-verdicts`)."
+    "({ref}`definition <agreement-verdicts>`)."
 )
 
 
