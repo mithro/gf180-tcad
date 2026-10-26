@@ -41,6 +41,7 @@ def _module_level_literals(path: Path):
 def _sources():
     yield from sorted(SRC.rglob("*.py"))
     yield TOOLS / "crosscheck-args"
+    yield TOOLS / "crosscheck-tcad-run"
 
 
 @pytest.mark.parametrize("path", list(_sources()), ids=lambda p: p.name)

@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Run the TCAD jobs of a subset file into a temporary tree root, for a byte-for-byte check.
+
+    uv run --locked python tools/crosscheck-tcad-run tests/crosscheck_tcad_subset.txt --out OUT
+    uv run --locked python tools/crosscheck-tcad-run tests/crosscheck_tcad_subset.txt --images
+
+The subset lists ``<tree>/<device>/<params>`` jobs (``python -m gf180tcad.manifest``,
+``kind="tcad"``). Each job runs, one at a time, as the host command that made the committed
+result, ``python -m gf180tcad.tcad moscap --device D --dim 1 --params P --out OUT/<tree>``, which
+runs the simulation in the TCAD image through tools/sandbox-run and writes the job directory and
+``OUT/<tree>/provenance.json``. Nothing is changed: the mesh, gate biases and calibrated values
+are the committed ones. Afterwards ``python -m gf180tcad.manifest verify-subset OUT --kind tcad
+--prefix tcad/ --against results/MANIFEST.sha256 --subset SUBSET`` compares the files.
+
+``--out`` must be outside ``results/`` and absent or empty (``--clean`` deletes it first).
+Only 1D jobs are supported: a 2D job takes hours and 16 GiB (docs/reproduce/index.md), so it is
+never part of a cross-check. ``--images`` prints the pinned reference of each TCAD image the
+jobs run in, one per line, for ``docker pull``.
+"""
+
+import argparse
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from gf180tcad import manifest
+from gf180tcad.sandbox import REPO_ROOT
+from gf180tcad.tcad import image_ref
+from gf180tcad.tcad.__main__ import job_image
+
+RESULTS = REPO_ROOT / "results"
+
+
+def _job(job: str) -> tuple[str, str, str, int]:
+    tree, device, params = job.split("/")
+    dim = int(tree.removeprefix("moscap").removesuffix("d"))
+    if dim != 1:
+        raise ValueError(
+            f"{job}: only 1D jobs can be cross-checked (a 2D job takes hours and 16 GiB)"
+        )
+    return tree, device, params, dim
+
+
+def commands(jobs: tuple[str, ...], out: Path) -> list[list[str]]:
+    """The ``python -m gf180tcad.tcad moscap`` command line of each job, in order."""
+    cmds = []
+    for j in jobs:
+        tree, device, params, dim = _job(j)
+        cmds.append([
+            sys.executable, "-m", "gf180tcad.tcad", "moscap", "--device", device,
+            "--dim", str(dim), "--params", params, "--out", str(Path(out) / tree),
+        ])  # fmt: skip
+    return cmds
+
+
+def images(jobs: tuple[str, ...]) -> list[str]:
+    """The pinned references of the TCAD images the ``jobs`` run in, sorted, without repeats."""
+    return sorted({image_ref(job_image(_job(j)[3], None)) for j in jobs})
+
+
+def check_out(out: Path, clean: bool) -> None:
+    """Refuse an ``out`` under ``results/``, and a non-empty one unless ``clean`` (then delete)."""
+    resolved = Path(out).resolve()
+    if resolved == RESULTS or resolved.is_relative_to(RESULTS) or RESULTS.is_relative_to(resolved):
+        raise ValueError(
+            f"--out {out} overlaps {RESULTS}: write the subset to a directory of its own"
+        )
+    if resolved.exists() and any(resolved.iterdir()):
+        if not clean:
+            raise ValueError(f"--out {out} is not empty (pass --clean to delete it first)")
+        shutil.rmtree(resolved)
+
+
+def parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(prog="tools/crosscheck-tcad-run")
+    ap.add_argument("subset", type=Path, help="subset file of <tree>/<device>/<params> jobs")
+    which = ap.add_mutually_exclusive_group(required=True)
+    which.add_argument("--out", type=Path, help="tree root to write the jobs to")
+    which.add_argument("--images", action="store_true", help="print the image references")
+    ap.add_argument("--clean", action="store_true", help="delete a non-empty --out first")
+    return ap
+
+
+def main(argv: list[str] | None = None) -> int:
+    a = parser().parse_args(argv)
+    try:
+        jobs = manifest.load_subset(a.subset, kind="tcad")
+        if a.images:
+            print("\n".join(images(jobs)))
+            return 0
+        cmds = commands(jobs, a.out)
+        check_out(a.out, a.clean)
+    except ValueError as e:
+        print(f"crosscheck-tcad-run: {e}", file=sys.stderr)
+        return 2
+    for n, cmd in enumerate(cmds, 1):
+        print(f"[{n}/{len(cmds)}] {' '.join(cmd[1:])}", flush=True)
+        rc = subprocess.run(cmd, check=False).returncode
+        if rc != 0:
+            print(f"[{n}/{len(cmds)}] failed with exit code {rc}", file=sys.stderr, flush=True)
+            return rc
+    print(f"{len(cmds)} job(s) written under {a.out}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
