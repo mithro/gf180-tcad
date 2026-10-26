@@ -406,9 +406,14 @@ def test_tool_is_a_thin_wrapper():
 def test_outcache_is_not_a_generator_module():
     from gf180tcad import reference, tcad
 
-    assert "gf180tcad.outcache" not in tcad.TCAD_GENERATOR_MODULES
+    assert tcad.TCAD_GENERATORS  # every TCAD entry point's own list (issue #34)
+    for entry, modules in tcad.TCAD_GENERATORS.items():
+        assert "gf180tcad.outcache" not in modules, entry
+        files = tcad.generator_files(entry)
+        assert "data/output-cache.json" not in files, entry
+        assert "src/gf180tcad/outcache.py" not in files, entry
     assert "gf180tcad.outcache" not in reference.GENERATOR_MODULES
-    assert "data/output-cache.json" not in tcad.generator_files()
+    assert not any("outcache" in f or "output-cache" in f for f in tcad.TCAD_GENERATOR_EXTRA_FILES)
 
 
 # --- review fixes (PR #49) --------------------------------------------------------------------

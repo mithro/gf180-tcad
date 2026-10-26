@@ -540,6 +540,33 @@ def test_cli_requires_known_choices():
             cli.main(argv)
 
 
+@pytest.mark.parametrize("command", ["run", "validate"])
+def test_host_side_writes_the_committed_provenance(tmp_path, monkeypatch, command):
+    """With each sandbox job's output replaced by the committed files, the host side of ``run``
+    and ``validate`` writes the committed tree's provenance.json byte for byte: both trees are
+    stamped by their writer, gf180tcad.calibrate.__main__, and its own hash (issue #34)."""
+    import shutil
+    from pathlib import Path
+
+    from gf180tcad.calibrate import __main__ as cli
+
+    committed = cv.CALIBRATION_ROOT if command == "run" else cv.VALIDATION_ROOT
+
+    def fake_job(cmd, scratch, what):
+        device = cmd[cmd.index("--device") + 1]
+        for f in committed.glob(f"{device}*.json"):
+            shutil.copyfile(f, Path(scratch) / f.name)
+        return ""
+
+    monkeypatch.setattr(cli, "_sandbox_job", fake_job)
+    root = tmp_path / "out"
+    for device in process.DEVICES:
+        assert cli.main([command, "--device", device, "--out", str(root)]) == 0
+    prov = json.loads((root / "provenance.json").read_bytes())
+    assert prov["generator"] == "gf180tcad.calibrate.__main__"
+    assert (root / "provenance.json").read_bytes() == (committed / "provenance.json").read_bytes()
+
+
 # --- the committed results (host) ----------------------------------------------------------------
 
 DOC = cv.REPO_ROOT / "docs" / "comparison" / "cv-agreement.md"

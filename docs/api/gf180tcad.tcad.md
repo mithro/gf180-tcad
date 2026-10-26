@@ -22,7 +22,13 @@ Source: {repo}`src/gf180tcad/tcad/__init__.py`.
 
 .. autodata:: gf180tcad.tcad.RESULTS_IMAGE
 
-.. autodata:: gf180tcad.tcad.TCAD_GENERATOR_MODULES
+.. autodata:: gf180tcad.tcad.TCAD_MAIN
+
+.. autodata:: gf180tcad.tcad.CALIBRATE_MAIN
+
+.. autodata:: gf180tcad.tcad.TCAD_GENERATORS
+
+.. autodata:: gf180tcad.tcad.TREE_GENERATORS
 
 .. autodata:: gf180tcad.tcad.TCAD_GENERATOR_EXTRA_FILES
 
