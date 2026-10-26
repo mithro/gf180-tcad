@@ -558,6 +558,20 @@ def init(cache: Path, *, remote: str | None = None, config: dict | None = None) 
     _git(["commit", "-q", "-m", "Initialise the output cache (README.md, empty index.json)"], cache)
 
 
+def _require_own_repository(cache: Path) -> None:
+    """Refuse a ``cache`` that is not the root of its own git repository (a directory inside
+    another repository would get the commit)."""
+    try:
+        top = _git(["rev-parse", "--show-toplevel"], cache).strip()
+    except RuntimeError:
+        top = None
+    if top is None or Path(top).resolve() != Path(cache).resolve():
+        raise ValueError(
+            f"{cache} is not the root of its own git repository (git toplevel: {top}); "
+            "use a clone of the cache repository or a directory made by tools/output-cache init"
+        )
+
+
 def _primary_commit(results: Path) -> tuple[str, str]:
     """``(commit, committer date YYYY-MM-DD)`` of HEAD of the repository holding ``results``."""
     out = _git(["log", "-1", "--format=%H %cs", "HEAD"], Path(results))
@@ -582,6 +596,8 @@ def push(
     """
     cfg = config or load_config()
     cache, results = Path(cache), Path(results)
+    load_index(cache)
+    _require_own_repository(cache)
     arts = scan(results, cfg)
     if commit is None or date is None:
         c, d = _primary_commit(results)
