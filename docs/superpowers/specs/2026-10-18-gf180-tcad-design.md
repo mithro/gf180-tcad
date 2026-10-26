@@ -1,6 +1,6 @@
 # gf180-tcad — Open-source TCAD validated against the GF180MCU PDK
 
-Status: draft for review · Date: 2026-10-18 · Repo: `github.com/mithro/gf180-tcad` (my call)
+Status: draft for review · Date: 2026-10-18, amended 2026-10-27 (§16) · Repo: `github.com/mithro/gf180-tcad` (my call)
 
 ## 1. Intent
 
@@ -25,7 +25,7 @@ versus what was *predicted*.
 - G4. Compare TCAD vs SPICE with a documented, two-level agreement definition (§5), and document every mismatch with its probable cause (§6).
 - G5. Run every simulation inside Docker under hard resource limits (§8).
 - G6. Bit-identical reproducibility of every published result (§9).
-- G7. Sphinx documentation on Read the Docs covering (a) reproduction, (b) current results, (c) comparison with the PDK, (d) limitations / in-progress / known shortcomings (§10).
+- G7. Sphinx documentation on Read the Docs covering (a) reproduction, (b) current results, (c) comparison with the PDK, (d) limitations / in-progress / known shortcomings (§10), with 3D renders of every simulation process (§10.1).
 - G8. Identify taped-out wafer.space structures for future physical validation and pre-generate matching TCAD/SPICE predictions (§7).
 - G9. Ground claims in the academic literature (§11).
 - G10. Be structured so that adding the rest of the PDK's devices later is mechanical.
@@ -166,7 +166,7 @@ Source pointers: the per-design summaries of the wafer.space run 1 and run 2 des
 
 ## 8. Execution sandbox
 
-- Every simulation (SPICE, meshing, DEVSIM, Charon) runs in a container launched by one wrapper (`tools/sandbox-run`), never directly on the host.
+- Every simulation (SPICE, meshing, DEVSIM, Charon) and every render (§10.1) runs in a container launched by one wrapper (`tools/sandbox-run`), never directly on the host.
 - Per container: `--memory=X --memory-swap=X` (no swap), `--cpus`, `--pids-limit`, `--network=none` for simulation steps, non-root user, read-only image, results written only to a mounted output dir. Defaults (my call): 16 GiB / 8 CPUs per job.
 - Aggregate cap: total memory across all concurrently running jobs ≤ a budget (default 128 GiB, mirroring `ws-layout.slice`). Enforced by putting containers under a dedicated cgroup slice (`--cgroup-parent`) if that can be configured on this host, otherwise by the job runner's admission control (jobs × per-job limit ≤ budget). The builder confirms which works here.
 - OOM inside a container is a reported job failure (exit 137), never a host event.
@@ -185,10 +185,114 @@ Source pointers: the per-design summaries of the wafer.space run 1 and run 2 des
 
 Sources in `docs/`; built in CI; published from `main` on Read the Docs. Sections map to the user's four requirements:
 - (a) **Reproduce** — prerequisites, one-command reproduction, image digests, how hashes are checked, how to run a single device.
-- (b) **Results** — auto-generated per device/geometry pages: I-V/C-V overlay plots (TCAD vs ngspice vs Xyce), extracted metrics table, verdict badges, mesh pictures, the process file in use.
+- (b) **Results** — auto-generated per device/geometry pages: I-V/C-V overlay plots (TCAD vs ngspice vs Xyce), extracted metrics table, verdict badges, mesh pictures (drawn as part of the renders of §10.1), the process file in use.
 - (c) **Comparison with the PDK** — the agreement definition (§5, both levels), a summary matrix (device × metric → Agree / Same process / Disagree), and per-mismatch explanations (§6) at both depths.
 - (d) **Limitations & status** — known shortcomings, what's in progress, roadmap, assumptions and their public sources, the "no measured silicon yet" caveat, the silicon-validation inventory (§7), a literature page (§11).
 Results pages are generated from the hashed result files, so the docs never show numbers that are not reproducible.
+
+### 10.1 3D renders of the simulated processes
+
+Added 2026-10-27 at the user's request (§16). The documentation shows every simulation process
+as a high-quality 3D render, so that a reader sees what is simulated and what happens during it
+before reading a single plot. A render may simplify and exaggerate (not to scale, stretched
+axes, omitted parts), but every quantity in it comes from the committed numbers.
+
+**What is rendered.** One render per simulation process: a still image, plus a short animation
+where the process is a sweep or a time or iteration evolution. Initial set:
+
+| # | Process | Kind | Shows |
+|---|---|---|---|
+| R1 | 1D MOS capacitor C–V sweep | animation over Vg (+ poster still) | the gate/oxide/silicon stack, the band edges and Fermi levels bending through accumulation, depletion and inversion, the carrier and depletion charge, and a marker moving along the Cgg–Vg curve |
+| R2 | 2D MOS capacitor cross-section | still (optional slow orbit) | the cross-section with its regions, mesh (near the gate) and net doping |
+| R3 | Calibration loop | animation over optimiser iterations | which tunable moves (`t_ox_eff_nm`, `n_ch_cm3`, `dv_fb_v`), between which bounds, and what each step does to the TCAD curve against the SPICE target |
+| R4 | SPICE reference sweeps | still per device (optional animation over geometry) | the I-V and C-V sweeps of §5.2 as surfaces over the bias plane, with the five-corner envelope |
+| R5 | Mesh convergence | animation over refinement levels | the mesh refining and the curve difference to the next finer level shrinking below the 1 % criterion |
+| R6 | Later phases | per phase | the 2D MOSFET bias sweeps (potential, carrier and current density), the 3D narrow-width device, and the devsim/Charon comparison (§12.1) side by side |
+
+Each render has its own docs page (or section of the process's existing page) that states, in
+words, **what is shown, what is to scale, and what is exaggerated and by how much**. The same
+statement is drawn into the image (for example "oxide thickness ×40, not to scale").
+
+**Based on the actual numbers.** Every geometric or physical quantity in a render (thicknesses,
+lengths, doping, potentials, band energies, charges, capacitances, parameter values, mesh
+nodes) is read from a committed result or process-data file. Nothing is invented, interpolated
+by hand or typed into a render script.
+- Each render has a **render manifest** next to the image (`<render>.render.json`). For every
+  quantity it names the source file, the key inside it (JSON key path, or CSV column and row
+  selector), the unit, the value used and the scale factor applied (1 when to scale). It also
+  lists the derived quantities with the formula that derives them (for example a band edge
+  from the potential and the band gap, with the band gap's own source).
+- If a render needs a quantity that no committed file contains (for example the 1D potential
+  and carrier profiles at each bias for R1, or the optimiser's iteration history for R3, neither
+  of which is committed today), the simulation job is extended to write it, with provenance,
+  as a reduced result file. A render never recomputes physics itself.
+- A test (`tests/test_renders.py`) re-reads every manifest entry from its named source and
+  fails if a value differs, a source is missing, or a scale factor is not stated.
+
+**Pipeline and provenance.**
+- Renders are made by a committed, re-runnable generator under the repo (scene builders under
+  `src/gf180tcad/render/`, Blender scripts under `render/blender/`, one shared style file for
+  camera, lights, materials and palette). Step 1 reads the committed inputs and writes a scene
+  description holding every number and scale factor; step 2 runs Blender on it; step 3 encodes
+  animation frames. The Blender scripts take every quantity from the scene description and
+  contain only styling.
+- Blender is pinned: an official Blender release (latest at the time, version and archive
+  sha256 recorded) in a thin project render image `ghcr.io/mithro/gf180-tcad-render`, built
+  reproducibly like the other images (§9), with the video encoder pinned the same way. It runs
+  only through `tools/sandbox-run`, with `--network none`, under the §8 limits, from committed
+  inputs only. Cycles on CPU, fixed seed, fixed sample count, fixed thread count, so a rerun on
+  the same host gives the same file.
+- The rendered files (PNG stills, WebM animations with a PNG poster frame) are committed under
+  `results/renders/<process>/`, registered in `results/MANIFEST.sha256`, with a
+  `provenance.json` per tree root as for the TCAD results: the sha256 of every input named in
+  the manifests, the generator sha256 (scene builders, Blender scripts, style file), the render
+  image reference and the Blender version.
+- The docs build only embeds the committed files. It stays offline and deterministic: no
+  Blender, no rendering and no video encoding at docs build time.
+- **Size budget.** A still is at most 2 MB; an animation is at most 20 s and 6 MB; the whole
+  `results/renders/` tree is at most 100 MB. A test enforces the three limits.
+- **When to regenerate.** A render must be regenerated in the same PR whenever any input named
+  in its manifest, or the generator, changes. The test above compares the recorded input and
+  generator hashes with the current files and fails on a stale render, so a stale render cannot
+  be merged. Cross-host bit-identity of renders is not assumed: renders are outside the
+  GitHub-hosted hash cross-check (§9), and if two hosts give different files, the difference is
+  measured (per-pixel) and documented as §9's fallback allows.
+
+**Quality bar ("good looking, high quality").**
+- Resolution: stills 1920×1080 (16:9); animations 1920×1080 at 30 fps, VP9 WebM. Text in the
+  image legible at the docs' content width.
+- One lighting rig and one material library for every render: the same material and colour
+  always means the same thing (silicon, oxide, poly, metal, mesh edges, electrons, holes), on a
+  neutral background readable in the light and the dark docs theme. Any external asset (HDRI,
+  font) is committed with its licence.
+- Labels and legends in the image: region names, axis names with units, a scale bar, colour
+  bars for every colour-mapped quantity, and the exaggeration statement. Each embedded image has
+  alt text and a caption; the page text repeats what the image says, so nothing is only visual.
+- Colour-blind-safe palette: Okabe–Ito for categories (regions, carriers, backends); a
+  perceptually uniform map (cividis or viridis) for magnitudes; a diverging map centred on zero
+  for signed quantities (net doping, potential). Colour is never the only cue.
+- Consistent camera conventions across devices, so that pages compare: gate on top, substrate
+  down, source left and drain right; x along the channel, y into the depth, z along the width;
+  one fixed camera angle and framing per render kind, the same for nfet and pfet and for every
+  geometry, with the same exaggeration factors where the geometry allows.
+- Each render is reviewed against this list as part of its PR's review.
+
+**Mesh pictures (§10(b), issue #39).** The mesh pictures of §10(b) are part of these renders
+(R2, R5), drawn from a committed **reduced mesh artefact** with provenance, never from the full
+mesh. The full 2D meshes (`mesh.msh`, 25–62 MB each) stay uncommitted. The reduced artefact is
+written in the TCAD image by a generator module from the job's own mesh: the node coordinates,
+the triangle connectivity and the region of each element, restricted to a window around the
+gate (or the mesher's own export of that window), at most 2 MB per job. It records the sha256
+of the full mesh it came from, which must equal the committed `mesh_sha256` of that job
+(`cv.meta.json`), so the picture is tied to the mesh that produced the results. The same
+artefact feeds the 2D docs pages' flat mesh figure. Until it exists, the deviation stays on the
+limitations page. If a fresh mesh-only run does not reproduce the committed `mesh_sha256` (the
+committed 2D trees predate the current job format), the 2D job is rerun, so that the results
+and the artefact come from one mesh.
+
+**Phasing.** Render image first; then R1 and R2 (with the reduced mesh artefact and the 1D
+profile files they need); then R3, R4 and R5; then the later phases' renders as those phases
+produce results.
 
 ## 11. Literature (initial; [verify] items to be checked before citing)
 
@@ -239,3 +343,16 @@ Each phase ends with merged, reviewed work on `main`, published docs and passing
 - Mesh strategy (meshwell vs direct gmsh), solver settings, analytic profile forms.
 - Docs theme, plotting library, CI provider details (GitHub Actions assumed).
 - How the aggregate memory cap is enforced on this host (§8).
+
+## 16. Change log
+
+Amendments after the 2026-10-18 draft, newest last. Each quotes the user's request verbatim, so
+that the intent survives later rewording of the sections it changed.
+
+- **2026-10-27: 3D renders of the simulated processes.** New §10.1; §10(b) mesh pictures now
+  come from it (resolving issue #39 by requirement; not yet implemented). The user's words:
+  > "Add to the spec that we should include good looking, high quality 3d renders (probably
+  > using blender 3d) of all various simulation processes in the documentation which allows a
+  > person to see and understand what is being simulated and what is happening. These renders
+  > can simplify or exadurate the real world results (making diagrams not to scale, etc) but
+  > should still be based on the actual numbers."
