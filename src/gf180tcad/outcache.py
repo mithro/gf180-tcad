@@ -167,9 +167,20 @@ def dump_index(index: dict) -> str:
     return json.dumps(index, indent=2, sort_keys=True) + "\n"
 
 
+def _not_initialised(where: str) -> ValueError:
+    return ValueError(
+        f"{where}: the output cache is not initialised (no {INDEX_NAME}); run "
+        "tools/output-cache init DIR --remote URL, then tools/output-cache push --cache DIR "
+        "--publish"
+    )
+
+
 def load_index(cache: Path) -> dict:
-    """The ``index.json`` of the cache checkout ``cache``."""
-    index = json.loads((Path(cache) / INDEX_NAME).read_text(encoding="utf-8"))
+    """The ``index.json`` of the cache checkout ``cache`` (ValueError if there is none)."""
+    path = Path(cache) / INDEX_NAME
+    if not path.is_file():
+        raise _not_initialised(str(cache))
+    index = json.loads(path.read_text(encoding="utf-8"))
     if index.get("format") != INDEX_FORMAT:
         raise ValueError(f"{INDEX_NAME}: format {index.get('format')!r}, not {INDEX_FORMAT}")
     return index
@@ -232,6 +243,13 @@ Add files after a run (needs write access; `--dry-run` first):
 
 ```sh
 git clone --depth 1 {ssh} tmp/output-cache
+tools/output-cache push --cache tmp/output-cache --results results --publish
+```
+
+First population, while this repository is still empty (a clone of it has no `index.json`):
+
+```sh
+tools/output-cache init tmp/output-cache --remote {ssh}
 tools/output-cache push --cache tmp/output-cache --results results --publish
 ```
 
@@ -636,6 +654,8 @@ def open_cache(
     scratch.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix="output-cache-", dir=scratch))
     try:
+        if not _git(["ls-remote", "--heads", url, branch], tmp).strip():
+            raise _not_initialised(f"{spec} (no branch {branch})")
         d = tmp / "cache"
         _git(
             ["clone", "-q", "--depth", "1", "--filter=blob:none", "--no-checkout",

@@ -61,6 +61,15 @@ tools/output-cache push --cache tmp/output-cache --publish   # or: make cache-pu
 tools/output-cache verify --cache tmp/output-cache
 ```
 
+**First population.** While the cache repository is still empty, a clone of it has no
+`index.json`, and `push`, `status` and `pull` say the cache is not initialised. Create the
+checkout with `init` instead of cloning, then push:
+
+```sh
+tools/output-cache init tmp/output-cache --remote git@github.com:mithro/gf180-tcad-output-cache.git
+tools/output-cache push --cache tmp/output-cache --publish
+```
+
 `push` scans {repo}`results/` (`--results` elsewhere) for the configured files, refuses one whose
 sha256 differs from the hash its meta names (a stale mesh), compresses and adds the missing
 objects, rewrites `index.json` and the README, and commits with a message naming this
