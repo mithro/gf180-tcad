@@ -280,6 +280,26 @@ def test_committed_start_results(device):
         assert max(abs(e) for e in gx["sum_rel_error"]) < 1e-3  # charge conservation
 
 
+# The committed 1 MHz AC Cgg against the QS Cgg of the same job: measured at most 3.3e-7
+# relative (nfet 10/0.6 at +1 V; pfet 10/0.5, 3.0e-7 at -1 V), pinned with a 30x margin.
+# docs/limitations/index.md (QS, not HF) cites this test.
+AC_FOLLOWS_QS_REL = 1e-5
+
+
+def test_committed_ac_follows_qs():
+    """At every AC bias of every committed cgx.csv, the 1 MHz Cgg equals the QS Cgg of cv.csv
+    at that bias within AC_FOLLOWS_QS_REL: the S/D supply the inversion charge at 1 MHz."""
+    jobs = sorted(TREE.glob(f"*/start/*/{moscap2d.CGX_CSV}"))
+    assert {j.parent.parent.parent.name for j in jobs} == set(DEVICES)
+    for job in jobs:
+        gx, _ = io.read_csv(job)
+        cols, _ = io.read_csv(job.with_name(moscap2d.CV_CSV))
+        qs = dict(zip(cols["vg"].tolist(), cols["cgg_per_um"].tolist(), strict=True))
+        assert len(gx["vg"]) == 21
+        for v, c in zip(gx["vg"].tolist(), gx["cgg_per_um"].tolist(), strict=True):
+            assert abs(c / qs[v] - 1) < AC_FOLLOWS_QS_REL, (job, v, c, qs[v])
+
+
 # --- in the TCAD image -----------------------------------------------------------------------
 
 

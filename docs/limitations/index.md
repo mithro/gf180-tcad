@@ -9,7 +9,9 @@ there.
 - **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD yet.** The
   {term}`SPICE` reference dataset of {term}`Phases 0 and 1` is complete. On the TCAD side the 1D
   and 2D MOS capacitors exist, with the start values and mesh-converged meshes
-  ({doc}`mesh-convergence`, {doc}`moscap2d`).
+  ({doc}`mesh-convergence`, {doc}`moscap2d`), and the 1D one also with the calibrated values.
+  The generated pages are {doc}`/_generated/tcad/index`; the limits of the model are
+  {ref}`below <limitations-moscap>`.
 - **The {term}`C–V` calibration is 1D only, and the pfet disagrees.** The 1D MOS capacitor is calibrated
   against the SPICE {term}`Cgg`–Vg
   ({repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
@@ -71,6 +73,65 @@ there.
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
   open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
 
+(limitations-moscap)=
+
+## The TCAD MOS capacitor model
+
+What the {term}`MOS capacitor <MOSCAP>` of {doc}`/comparison/cv-agreement` leaves out or lumps
+together. Each is a modelling choice, stated so that the {term}`calibrated <calibrated parameter budget>`
+values are not read as more physical than they are.
+
+- **Quasi-static, not high-frequency.** The TCAD curve is the {term}`QS` one: the
+  equilibrium {term}`Cgg`, the counterpart of the {term}`BSIM4` `capMod=2` Cgg of the
+  {{ ngspice }} {term}`cv` sweep it is compared with. A MOS capacitor with only a body contact,
+  measured with a small signal, gives the {term}`HF C–V` curve instead: in inversion it stays
+  near its depletion minimum. The 2D cells have source and drain, which supply the inversion
+  charge: at {term}`Lmin` their committed 1 MHz small-signal Cgg
+  ({repo}`nfet cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>`,
+  {repo}`pfet cgx.csv <results/tcad/moscap2d/pfet_05v0/start/w10p0_l0p50/cgx.csv>`) follows
+  their QS curve ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.csv>`):
+  at all 21 AC biases from −5 V to +5 V the two differ by less than 1e-5 relative (3.3e-7
+  measured), {test}`tests/tcad/test_moscap2d.py::test_committed_ac_follows_qs`. The in-image
+  check is {test}`tests/tcad/test_moscap2d.py::test_ac_1mhz_recovers_inversion`; the runs are
+  described on {doc}`moscap2d`. A measured test-structure C–V would have to be compared with
+  the curve of its own contacts.
+- **No quantum correction; the effective oxide absorbs it.** {{ DEVSIM }} 2.11.1 has no built-in
+  {term}`density-gradient` model, and none is added here: classical {term}`drift-diffusion`
+  puts the carrier charge at the interface. The quantum-mechanical dark space, the charge
+  centroid that makes TOXE differ from TOXP, is folded into the
+  {term}`effective oxide thickness` `t_ox_eff_nm`, bounded by TOXE below and by TOXP plus the
+  charge-centroid allowance above ({ref}`process-data-tunables`; cause `oxide-qm` of the
+  {ref}`mismatch taxonomy <mismatch-taxonomy>`).
+- **The poly gate is simulated, with {term}`Boltzmann statistics`.** The gate is a poly-silicon region
+  doped at {term}`NGATE` (n+ 1e20 cm⁻³ for the nfet, p+ 3.6e19 cm⁻³ for the pfet), so
+  {term}`poly depletion` is in the model, not in a fitted term. Its carriers follow
+  Boltzmann statistics, which place the Fermi level beyond the band edge at these
+  dopings. At the start body doping of 1.7e17 cm⁻³ the Boltzmann flat band is **−1.029 V** for
+  the nfet and **+1.003 V** for the pfet; at the calibrated body doping (`n_ch_cm3`
+  8.81e16 cm⁻³ for the nfet, 2.15e17 cm⁻³ for the pfet,
+  {repo}`results/tcad/calibration`) it is −1.012 V and +1.009 V ({py:mod}`gf180tcad.tcad.analytic`).
+  With the degenerate gate's Fermi level pinned at its band edge instead (Eg/2 = 0.56 V from the
+  intrinsic level, an estimate), the start flat band would be −0.993 V for the nfet and
+  +0.993 V for the pfet. The Boltzmann gate puts the Fermi level beyond the band edge by
+  36.5 mV in the nfet's n+ gate and 10.2 mV in the pfet's p+ gate, at any body doping. That
+  difference is absorbed by the flat-band offset `dv_fb_v` with SPICE's empirical flat band
+  and any interface charge ({ref}`process-data-tunables`). All of these numbers are checked by
+  {test}`tests/tcad/test_analytic.py::test_flat_band_numbers_of_the_limitations_page`.
+- **{term}`DLC` and the parasitics are reference bookkeeping.** The 1D C per area becomes a Cgg of one
+  geometry through fixed BSIM4 values of the {term}`card <model card>`: the capacitance area
+  (L − 2·DLC)·(W − 2·{term}`DWC`) and the overlap, fringe and {term}`CGBO` terms
+  ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). They are not fitted and not part of
+  the {term}`parameter budget`. At Lmin they are a large part of Cgg (about 4 of 14 fF
+  in accumulation), so Lmin tests the bookkeeping as much as the TCAD. The split is plotted on
+  each generated geometry page ({doc}`/_generated/tcad/index`).
+- **{{ Xyce }} has no C–V analysis.** Cgg has one SPICE reference, ngspice, and the 0.5 %
+  {term}`engine cross-check` cannot apply to it ({ref}`results-layout`).
+- **The ΔV ≤ 50 mV crossing {term}`tolerance` is a proposal.** No published standard exists for
+  it ({ref}`cv-agreement-metric`).
+- **{repo}`results/plugin-history` is not cross-checked.** The {term}`manifest` lists it and two
+  local runs give identical files, but it is not part of the GitHub-hosted cross-host check: its
+  2023 stack has no cross-host bit-identity guarantee ({doc}`plugin-history`).
+
 (limitations-spec-deviations)=
 
 ## Deviations from the design spec
@@ -89,6 +150,13 @@ Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
   of log10(Id). Defined differently: the {term}`body effect` uses the
   {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
   in {ref}`not yet extracted, or defined differently <metrics-not-yet-extracted>`.
+- **No mesh pictures on the TCAD results pages.** The
+  {repo}`design spec, section 10(b) <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#10-documentation-sphinx--read-the-docs>`
+  asks for mesh pictures on the generated device and geometry pages. The 2D meshes are not
+  committed ({ref}`moscap2d-meshes`), and the pages render only committed files, so
+  {doc}`/_generated/tcad/index` shows each 2D job's mesh sha256 instead. The options (commit a
+  reduced mesh artefact with provenance, or amend the spec) are in
+  [issue #39](https://github.com/mithro/gf180-tcad/issues/39).
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two

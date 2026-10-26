@@ -55,6 +55,15 @@ class Curve:
 
 
 @dataclass(frozen=True)
+class Key:
+    """One legend entry: a solid or dashed line, or a shaded band (``kind``)."""
+
+    label: str
+    color: str
+    kind: str = "line"  # "line", "dashed" or "band"
+
+
+@dataclass(frozen=True)
 class Panel:
     title: str
     xlabel: str
@@ -62,10 +71,25 @@ class Panel:
     curves: list[Curve] = field(default_factory=list)
     yscale: str = "linear"
     ylim: tuple[float, float] | None = None
+    keys: list[Key] = field(default_factory=list)  # own legend (replaces the engine legend)
+
+
+def _handle(k: Key):
+    if k.kind == "band":
+        return Patch(color=k.color, alpha=0.25, label=k.label)
+    if k.kind not in ("line", "dashed"):
+        raise ValueError(f"unknown legend kind {k.kind!r}")
+    return Line2D(
+        [], [], color=k.color, linestyle="--" if k.kind == "dashed" else "-", label=k.label
+    )
 
 
 def figure_svg(panels: list[Panel], legend: dict[str, str] | None = None) -> bytes:
-    """Render panels side by side to SVG bytes. ``legend`` maps line label to colour."""
+    """Render panels side by side to SVG bytes. ``legend`` maps line label to colour.
+
+    Without :attr:`Panel.keys` the last panel carries the engine legend (ngspice TT, its corner
+    envelope, Xyce TT). If any panel has ``keys``, each such panel carries its own legend instead.
+    """
     with matplotlib.rc_context(RC):
         fig = Figure(figsize=(FIG_W, FIG_H), layout="constrained")
         FigureCanvasAgg(fig)
@@ -84,6 +108,14 @@ def figure_svg(panels: list[Panel], legend: dict[str, str] | None = None) -> byt
             ax.set_title(panel.title, fontsize=10)
             ax.set_xlabel(panel.xlabel)
             ax.set_ylabel(panel.ylabel)
+        if any(p.keys for p in panels):
+            for ax, panel in zip(axes, panels, strict=True):
+                if panel.keys:
+                    handles = [_handle(k) for k in panel.keys]
+                    ax.legend(handles=handles, fontsize=8, loc="best", framealpha=0.85)
+            buf = BytesIO()
+            fig.savefig(buf, format="svg", metadata=METADATA)
+            return buf.getvalue()
         # With a colour family (Id-Vd) the colour is the Vgs, so the engine key is neutral grey.
         key = "#555555" if legend else NGSPICE_COLOR
         handles = [

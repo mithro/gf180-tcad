@@ -19,4 +19,21 @@ Source: {repo}`src/gf180tcad/docgen.py`.
 .. autodata:: gf180tcad.docgen.SPEC_DOC
 
 .. autodata:: gf180tcad.docgen.ID_FLOOR
+
+.. autodata:: gf180tcad.docgen.TCAD_RESULTS
+   :no-value:
+
+.. autodata:: gf180tcad.docgen.CV_DOC
+
+.. autodata:: gf180tcad.docgen.TCAD_COLOR
+
+.. autodata:: gf180tcad.docgen.START_COLOR
+
+.. autodata:: gf180tcad.docgen.INTRINSIC_COLOR
+
+.. autodata:: gf180tcad.docgen.PARASITIC_COLOR
+
+.. autodata:: gf180tcad.docgen.TOL_COLOR
+
+.. autodata:: gf180tcad.docgen.CHECKS
 ```
