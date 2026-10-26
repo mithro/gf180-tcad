@@ -28,8 +28,18 @@ ROOTS = ("gf180tcad.tcad.__main__", "gf180tcad.calibrate.__main__")
 # The tree roots of the plan's results layout (Global Constraints, "Result files").
 TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation")
 REGENERATE = (
-    "rerun `uv run --locked python -m gf180tcad.tcad moscap --device <device> --dim 1 "
-    "--params start --out results/tcad/moscap1d` for each device, then `make manifest`"
+    "regenerate the tree for each device with `uv run --locked python -m ...`: "
+    "moscap1d: `gf180tcad.tcad moscap --device <device> --dim 1 --params start` (and "
+    "`--params calibrated`) `--out results/tcad/moscap1d`; "
+    "moscap2d: `gf180tcad.tcad moscap --device <device> --dim 2 --params start --geometry <gid> "
+    "--out results/tcad/moscap2d`, one 16 GiB job at a time (L = 2 um: `--method qs`, then "
+    "`--method combine-qs`); "
+    "meshconv: `gf180tcad.tcad meshconv --device <device> --dim 1|2 --jobs 1 --out "
+    "results/tcad/meshconv`; "
+    "calibration: `gf180tcad.calibrate run --device <device> --out results/tcad/calibration`; "
+    "validation (after the calibration is committed): `gf180tcad.calibrate validate --device "
+    "<device> --out results/tcad/validation`; then `make manifest`. A tree whose data are not "
+    "regenerated and only restamped is recorded on docs/reproduce/index.md (tcad-provenance)"
 )
 
 
