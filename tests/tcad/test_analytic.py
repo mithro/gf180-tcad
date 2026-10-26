@@ -70,7 +70,10 @@ def test_flat_band_numbers_of_the_limitations_page(device):
     base = stack_of(process.load(device))
     pol = 1 if base.polarity == "n" else -1
     diffs = []
-    for which, want, pinned_want in (("start", want_start, want_pinned), ("values", want_cal, None)):
+    for which, want, pinned_want in (
+        ("start", want_start, want_pinned),
+        ("values", want_cal, None),
+    ):
         s = dataclasses.replace(base, n_ch_cm3=cal[which]["n_ch_cm3"])
         vfb = analytic.moscap(s.body_net_cm3, s.t_ox_nm, s.gate_net_cm3, eps_ox=s.eps_ox).vfb_v
         assert round(vfb, 3) == want, (which, vfb)
