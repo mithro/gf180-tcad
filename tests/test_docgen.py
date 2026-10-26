@@ -3,9 +3,11 @@
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
+import time
 from pathlib import Path
 
 import pytest
@@ -146,6 +148,44 @@ def test_docs_build_offline(tmp_path):
         for g in d.geometries:
             assert (tcad / name / f"{geometry_id(g)}.html").is_file()
     assert any(p.name.endswith("_cgg.svg") for p in (out / "_images").iterdir())
+
+
+def test_concurrent_docs_builds_of_one_checkout(tmp_path):
+    """A second offline build started while the first is generating both succeed (issue #40).
+
+    conf.py used to rmtree docs/_generated and rewrite it on every build, so a build that ran
+    while another was generating failed with FileNotFoundError under docs/_generated. The second
+    build starts once the first has created docs/_generated/tcad (its generation is under way).
+    """
+    importorskip("sphinx")
+    (tmp_path / "sitecustomize.py").write_text(_NO_NETWORK, encoding="utf-8")
+    env = {**os.environ, "PYTHONPATH": str(tmp_path)}
+    generated = DOCS / "_generated"
+    shutil.rmtree(generated, ignore_errors=True)  # so the marker below is written by this build
+
+    def start(i):
+        out = tmp_path / f"html{i}"
+        log = tmp_path / f"build{i}.log"
+        with log.open("wb") as f:
+            p = subprocess.Popen(
+                [sys.executable, "-m", "sphinx", "-W", "-b", "html", "-d",
+                 str(tmp_path / f"dt{i}"), str(DOCS), str(out)],
+                env=env, stdout=f, stderr=subprocess.STDOUT,
+            )  # fmt: skip
+        return p, log, out
+
+    first = start(0)
+    deadline = time.monotonic() + 1800
+    while not (generated / "tcad").is_dir():
+        assert first[0].poll() is None, first[1].read_text(encoding="utf-8")[-3000:]
+        assert time.monotonic() < deadline, "first build never reached generation"
+        time.sleep(0.05)
+    builds = [first, start(1)]
+    for p, log, out in builds:
+        rc = p.wait(timeout=1800)
+        assert rc == 0, f"exit {rc}\n" + log.read_text(encoding="utf-8")[-3000:]
+        assert (out / "_generated" / "tcad" / "index.html").is_file()
+        assert (out / "results" / "index.html").is_file()
 
 
 def test_known_diffs_single_source():
