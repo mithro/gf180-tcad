@@ -184,8 +184,9 @@ Source pointers: the per-design summaries of the wafer.space run 1 and run 2 des
 ### 9.1 Output cache for large regenerable artefacts
 
 Added 2026-10-27 at the user's request (§16). Large generated files that can be regenerated
-and should stay out of the primary repo (the gmsh meshes `mesh.msh`, the 2D resume state
-`state_qs`, later the inputs of the §10.1 renders) live in a separate repo,
+and should stay out of the primary repo (the gmsh meshes `mesh.msh` of the 2D jobs, which are
+also the full meshes that the §10.1 reduced mesh artefacts are cut from, and later other large
+job outputs of the same kind) live in a separate repo,
 [`mithro/gf180-tcad-output-cache`](https://github.com/mithro/gf180-tcad-output-cache), which
 is a shared cache for everyone, not an archive.
 - **Content-addressed.** Each file is stored under the sha256 that the primary repo already
@@ -198,11 +199,12 @@ is a shared cache for everyone, not an archive.
   nothing may depend on its history, its commit ids or its continued existence.
 - **Never fetched by the docs build**, which stays offline and reads only the primary repo.
 - Access goes through one tool, `tools/output-cache` (with `src/gf180tcad/outcache.py` and
-  `data/output-cache.json`); the tool itself is specified and built in its own branch
-  (`feat/output-cache`).
-- A generator that needs a large artefact (the mesh pictures and 3D renders of §10.1) pulls it
-  from the cache by hash (or regenerates it), and commits only its small output (the rendered
-  image, the reduced mesh artefact) with provenance to the primary repo.
+  `data/output-cache.json`), specified and built separately.
+- **Only reduction generators read the cache.** A generator that cuts a small committed
+  artefact from a large one (the reduced mesh artefact of §10.1) fetches the large file by hash
+  on the host, before its sandboxed `--network none` run (or regenerates it in the sandbox), and
+  commits only the reduced artefact with provenance. Renders, tests, CI and the docs build read
+  only committed files, never the cache.
 
 ## 10. Documentation (Sphinx → Read the Docs)
 
@@ -245,10 +247,11 @@ by hand or typed into a render script.
   selector), the unit, the value used and the scale factor applied (1 when to scale). It also
   lists the derived quantities with the formula that derives them (for example a band edge
   from the potential and the band gap, with the band gap's own source).
-- If a render needs a quantity that no committed file contains (for example the 1D potential
-  and carrier profiles at each bias for R1, or the optimiser's iteration history for R3, neither
-  of which is committed today), the simulation job is extended to write it, with provenance,
-  as a reduced result file. A render never recomputes physics itself.
+- A render generator may derive a quantity from committed outputs when the derivation (its
+  inputs and formula) is recorded in the manifest. A simulation job is extended to write a
+  quantity, with provenance, only when it cannot be derived from committed outputs (for example
+  the 1D potential and carrier profiles at each bias for R1, or the optimiser's iteration
+  history for R3, neither of which is committed today).
 - A test (`tests/test_renders.py`) re-reads every manifest entry from its named source and
   fails if a value differs, a source is missing, or a scale factor is not stated.
 
@@ -259,13 +262,13 @@ by hand or typed into a render script.
   description holding every number and scale factor; step 2 runs Blender on it; step 3 encodes
   animation frames. The Blender scripts take every quantity from the scene description and
   contain only styling.
-- Blender is pinned: an official Blender release (latest at the time, version and archive
+- Blender (the user's suggestion; pinned once chosen): an official Blender release (latest at the time, version and archive
   sha256 recorded) in a thin project render image `ghcr.io/mithro/gf180-tcad-render`, built
   reproducibly like the other images (§9), with the video encoder pinned the same way. It runs
   only through `tools/sandbox-run`, with `--network none`, under the §8 limits, from committed
-  inputs only (plus large inputs pulled by sha256 from the §9.1 output cache,
-  never from its history). Cycles on CPU, fixed seed, fixed sample count, fixed thread count, so a rerun on
-  the same host gives the same file.
+  inputs only (never from the §9.1 output cache). Seeds, sample counts and thread counts are
+  fixed, so a rerun on the same host should give the same file; that is best effort and not
+  tested, and render files are not part of the bit-identity rule of §9.
 - The rendered files (PNG stills, WebM animations with a PNG poster frame) are committed under
   `results/renders/<process>/`, registered in `results/MANIFEST.sha256`, with a
   `provenance.json` per tree root as for the TCAD results: the sha256 of every input named in
@@ -278,9 +281,9 @@ by hand or typed into a render script.
 - **When to regenerate.** A render must be regenerated in the same PR whenever any input named
   in its manifest, or the generator, changes. The test above compares the recorded input and
   generator hashes with the current files and fails on a stale render, so a stale render cannot
-  be merged. Cross-host bit-identity of renders is not assumed: renders are outside the
-  GitHub-hosted hash cross-check (§9), and if two hosts give different files, the difference is
-  measured (per-pixel) and documented as §9's fallback allows.
+  be merged. Bit-identity of renders is not assumed: renders are outside the GitHub-hosted
+  hash cross-check (§9); what is checked is the manifest (values and input hashes), not the
+  pixels.
 
 **Quality bar ("good looking, high quality").**
 - Resolution: stills 1920×1080 (16:9); animations 1920×1080 at 30 fps, VP9 WebM. Text in the
@@ -305,8 +308,9 @@ by hand or typed into a render script.
 (R2, R5), drawn from a committed **reduced mesh artefact** with provenance, never from the full
 mesh. The full 2D meshes (`mesh.msh`, 25–62 MB each) stay out of the primary repo, in the output
 cache of §9.1, keyed by their `mesh_sha256`. The reduced artefact is
-written in the TCAD image by a generator module from the job's own mesh, pulled from the
-output cache by hash (`tools/output-cache`) or regenerated: the node coordinates,
+written in the TCAD image by a generator module from the job's own mesh, fetched from the
+output cache by hash (`tools/output-cache`, on the host before the sandboxed run) or
+regenerated: the node coordinates,
 the triangle connectivity and the region of each element, restricted to a window around the
 gate (or the mesher's own export of that window), at most 2 MB per job. It records the sha256
 of the full mesh it came from, which must equal the committed `mesh_sha256` of that job
@@ -318,7 +322,9 @@ and the artefact come from one mesh.
 
 **Phasing.** Render image first; then R1 and R2 (with the reduced mesh artefact and the 1D
 profile files they need); then R3, R4 and R5; then the later phases' renders as those phases
-produce results.
+produce results. Cost: every 2D job whose mesh is neither in the cache nor reproduced with its
+committed `mesh_sha256` is rerun, one 16 GiB job at a time and hours each (§8; the committed 2D
+trees predate the current job format, so this is likely for all of them).
 
 ### 10.2 How it works: explainer section
 
