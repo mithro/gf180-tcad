@@ -159,9 +159,14 @@ Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
   {repo}`design spec, section 10(b) <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#10-documentation-sphinx--read-the-docs>`
   asks for mesh pictures on the generated device and geometry pages. The 2D meshes are not
   committed ({ref}`moscap2d-meshes`), and the pages render only committed files, so
-  {doc}`/_generated/tcad/index` shows each 2D job's mesh sha256 instead. The options (commit a
-  reduced mesh artefact with provenance, or amend the spec) are in
-  [issue #39](https://github.com/mithro/gf180-tcad/issues/39).
+  {doc}`/_generated/tcad/index` shows each 2D job's mesh sha256 instead
+  ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)). The spec now settles how:
+  {repo}`section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`
+  (amended 2026-10-27) draws the mesh pictures as part of the 3D renders of the simulated
+  processes, from a committed reduced mesh artefact with provenance that is tied to each job's
+  mesh sha256. That requirement has a plan of sub-tasks
+  ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)) but is not implemented yet, so
+  no render and no mesh picture exists.
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two
