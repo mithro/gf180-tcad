@@ -139,7 +139,7 @@ Fitted values, from {repo}`results/tcad/calibration/nfet_05v0.json` and
 windows) are beside them in {repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`
 and {repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json>`. Budget used:
 3 of 8 per device type. No value is within 1e-3 of a bound. The pfet `dv_fb_v`, +187.2 mV,
-is the nearest: 13 mV inside the +200 mV bound (97 % of the way from 0), not a bound hit by the
+is the nearest: 13 mV inside the +200 mV bound (93.6 % of the way from 0 to it), not a bound hit by the
 1e-3 rule but close to one.
 
 | Device | `t_ox_eff_nm` [bounds] | `n_ch_cm3` [bounds] | `dv_fb_v` [bounds] | Optimiser |
