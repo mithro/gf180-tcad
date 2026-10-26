@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# TCAD jobs that .github/workflows/crosscheck.yml (job crosscheck-tcad) and `make reproduce-quick`
+# regenerate with tools/crosscheck-tcad-run into a temporary tree root and compare byte for byte
+# with results/MANIFEST.sha256
+# (python -m gf180tcad.manifest verify-subset --kind tcad --prefix tcad/).
+#
+# One job per line, <tree>/<device>/<params>, <tree> in {moscap1d, moscap2d} and <params> in
+# {start, calibrated}. Each job reruns exactly the committed configuration: the selected mesh
+# (results/tcad/meshconv/moscap1d/<device>/selected.json), the SPICE cv gate biases and the
+# committed calibrated values (results/tcad/calibration/<device>.json). The tree's
+# provenance.json is compared too; it lists the calibration of every calibrated job in the
+# tree, so both calibrated 1D jobs are listed to match the committed one.
+moscap1d/nfet_05v0/calibrated
+moscap1d/pfet_05v0/calibrated

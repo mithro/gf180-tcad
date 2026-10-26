@@ -514,3 +514,33 @@ def test_spice_subset_unchanged(setup, tmp_path):
         r = _cli(tree, *extra, "--against", m, "--prefix", "spice/", "--subset", subset)
         assert r.returncode == 0, r.stdout + r.stderr
         assert "identical: 5 files of 2 jobs" in r.stdout and "envelope.json excluded" in r.stdout
+
+
+TCAD_SUBSET = REPO / "tests" / "crosscheck_tcad_subset.txt"
+TCAD = REPO / "results" / "tcad"
+
+
+def test_crosscheck_tcad_subset_is_the_calibrated_1d_jobs():
+    assert manifest.load_subset(TCAD_SUBSET, kind="tcad") == (
+        "moscap1d/nfet_05v0/calibrated",
+        "moscap1d/pfet_05v0/calibrated",
+    )
+
+
+def test_committed_tcad_subset_verifies(tmp_path):
+    """A copy of the committed jobs of the TCAD subset, with their tree's provenance, passes."""
+    jobs = manifest.load_subset(TCAD_SUBSET, kind="tcad")
+    tree = tmp_path / "tcad"
+    for j in jobs:
+        shutil.copytree(TCAD / j, tree / j)
+    for t in manifest.tcad_trees(jobs):
+        shutil.copyfile(TCAD / t / "provenance.json", tree / t / "provenance.json")
+    full = manifest.tcad_all_jobs()
+    assert manifest.verify_subset(tree, COMMITTED, "tcad/", jobs, kind="tcad", full=full) == []
+    r = _cli(
+        tree, "--kind", "tcad", "--against", COMMITTED, "--prefix", "tcad/", "--subset",
+        TCAD_SUBSET,
+    )  # fmt: skip
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "identical: 5 files of 2 jobs" in r.stdout
+    assert "partial subset; provenance moscap1d/provenance.json" in r.stdout
