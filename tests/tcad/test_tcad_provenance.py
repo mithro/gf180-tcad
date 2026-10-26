@@ -114,7 +114,9 @@ def test_tcad_generator_modules_match_the_import_graph(entry):
 
 
 @pytest.mark.parametrize("entry", ROOTS)
-def test_tcad_generator_modules_match_what_python_loads(entry):
+def test_tcad_generator_modules_cover_what_python_loads(entry):
+    """Importing the entry point loads only listed modules. The list can hold more: imports inside
+    functions count too (the static closure of the test above)."""
     code = (
         f"import sys, {entry}; "
         "print(' '.join(sorted(m for m in sys.modules if m.split('.')[0] == 'gf180tcad')))"
@@ -122,7 +124,11 @@ def test_tcad_generator_modules_match_what_python_loads(entry):
     res = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=REPO
     )
-    assert set(res.stdout.split()) == set(tcad.TCAD_GENERATORS[entry])
+    loaded = set(res.stdout.split())
+    assert entry in loaded
+    assert not loaded - set(tcad.TCAD_GENERATORS[entry]), sorted(
+        loaded - set(tcad.TCAD_GENERATORS[entry])
+    )
 
 
 def test_the_tcad_entry_point_does_not_hash_the_calibration_code():

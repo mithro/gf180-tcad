@@ -10,7 +10,9 @@ changes to this package never touch ``results/spice/provenance.json``.
 ``provenance.json``, written from :func:`tree_provenance`. It holds, under ``images``, for each
 result kind in the tree (``moscap1d``, ``moscap2d``) the TCAD image that made it: its name
 (:data:`IMAGES`), reference and ``versions.json`` contents. It also holds the plugin
-commit ``gplugins_commit`` and ``generator_sha256`` (:func:`generator_sha256`), and, for a tree
+commit ``gplugins_commit``, the entry point that wrote the tree, ``generator``
+(:data:`TREE_GENERATORS`), and that entry point's ``generator_sha256`` (:func:`generator_sha256`),
+and, for a tree
 with calibrated results (:func:`calibrated_devices`: calibrated job directories, and every device
 with a validation result at the tree root), per device the sha256 of its calibration file
 ``results/tcad/calibration/<device>.json`` (:mod:`gf180tcad.tcad.calibration`, written by
@@ -30,6 +32,12 @@ of the gplugins fork. Its commit is read on the host with
 submodule's working tree is clean (``git status --porcelain`` is empty) and its commit equals
 the gitlink recorded in ``HEAD`` (``git ls-tree HEAD third_party/gplugins``), so the hashed
 plugin files are exactly the pinned commit's.
+
+**One hash per entry point** (issue #34). ``generator_sha256`` covers the import closure of the
+entry point that writes the tree (:data:`TCAD_GENERATORS`), not of both: a change to a module that
+a tree's writer never imports (the calibration code, for the MOS capacitor and mesh-convergence
+trees) leaves that tree's hash alone. The non-module inputs (:data:`TCAD_GENERATOR_EXTRA_FILES`,
+the plugin's files and the process files) are the same for both entry points.
 
 Only the plugin's ``gplugins/devsim/`` files are hashed into ``generator_sha256``. The rest of
 the plugin that the TCAD imports (``gplugins/__init__.py``, ``gplugins.common``,
@@ -73,30 +81,65 @@ IMAGES = {
 # planned before the Phase 2 exit (docs/reproduce/image.md, "Which image makes which results").
 RESULTS_IMAGE = {"moscap1d": "dev", "moscap2d": "stable"}
 
-# Every gf180tcad module the TCAD entry points import (gf180tcad.tcad.__main__ and
-# gf180tcad.calibrate.__main__), shared modules included. tests/tcad/test_tcad_provenance.py
-# ties the list to the import graph; a task that adds a TCAD module extends it in the same PR.
-TCAD_GENERATOR_MODULES = (
-    "gf180tcad",
-    "gf180tcad.calibrate",
-    "gf180tcad.calibrate.__main__",
-    "gf180tcad.calibrate.cv",
-    "gf180tcad.devices",
-    "gf180tcad.io",
-    "gf180tcad.layout",
-    "gf180tcad.sandbox",
-    "gf180tcad.specwindow",
-    "gf180tcad.tcad",
-    "gf180tcad.tcad.__main__",
-    "gf180tcad.tcad.analytic",
-    "gf180tcad.tcad.calibration",
-    "gf180tcad.tcad.mesh",
-    "gf180tcad.tcad.meshconv",
-    "gf180tcad.tcad.moscap1d",
-    "gf180tcad.tcad.moscap2d",
-    "gf180tcad.tcad.process",
-    "gf180tcad.tcad.stack",
-)
+# The two TCAD entry points: the MOS capacitor and mesh-convergence jobs, and the calibration.
+TCAD_MAIN = "gf180tcad.tcad.__main__"
+CALIBRATE_MAIN = "gf180tcad.calibrate.__main__"
+
+# Per entry point, every gf180tcad module it imports (its import closure, shared modules
+# included), sorted. The closure is the static one: every import statement counts, also one
+# inside a function (calibrate.cv and meshconv import moscap2d and stack that way), so it is a
+# superset of what one run loads. tests/tcad/test_tcad_provenance.py ties each list to that
+# entry point's import graph; a task that adds a TCAD module extends the lists that import it
+# in the same PR.
+TCAD_GENERATORS = {
+    TCAD_MAIN: (
+        "gf180tcad",
+        "gf180tcad.devices",
+        "gf180tcad.io",
+        "gf180tcad.layout",
+        "gf180tcad.sandbox",
+        "gf180tcad.tcad",
+        "gf180tcad.tcad.__main__",
+        "gf180tcad.tcad.analytic",
+        "gf180tcad.tcad.calibration",
+        "gf180tcad.tcad.mesh",
+        "gf180tcad.tcad.meshconv",
+        "gf180tcad.tcad.moscap1d",
+        "gf180tcad.tcad.moscap2d",
+        "gf180tcad.tcad.process",
+        "gf180tcad.tcad.stack",
+    ),
+    CALIBRATE_MAIN: (
+        "gf180tcad",
+        "gf180tcad.calibrate",
+        "gf180tcad.calibrate.__main__",
+        "gf180tcad.calibrate.cv",
+        "gf180tcad.devices",
+        "gf180tcad.io",
+        "gf180tcad.layout",
+        "gf180tcad.sandbox",
+        "gf180tcad.specwindow",
+        "gf180tcad.tcad",
+        "gf180tcad.tcad.analytic",
+        "gf180tcad.tcad.calibration",
+        "gf180tcad.tcad.mesh",
+        "gf180tcad.tcad.meshconv",
+        "gf180tcad.tcad.moscap1d",
+        "gf180tcad.tcad.moscap2d",
+        "gf180tcad.tcad.process",
+        "gf180tcad.tcad.stack",
+    ),
+}
+
+# The entry point that writes each committed tree root under results/tcad (and whose hash its
+# provenance.json records). tools/restamp-tcad-provenance picks the generator from it.
+TREE_GENERATORS = {
+    "moscap1d": TCAD_MAIN,
+    "moscap2d": TCAD_MAIN,
+    "meshconv": TCAD_MAIN,
+    "calibration": CALIBRATE_MAIN,
+    "validation": CALIBRATE_MAIN,
+}
 
 # Non-module files hashed with them: the sandbox (thread environment, limits, mounts).
 TCAD_GENERATOR_EXTRA_FILES = ("tools/sandbox-run",)
@@ -154,16 +197,18 @@ def module_relpath(name: str, repo_root: Path | None = None) -> Path:
     return init if (root / init).is_file() else base.with_suffix(".py")
 
 
-def generator_files(repo_root: Path | None = None) -> list[str]:
-    """Repo-relative POSIX paths hashed by :func:`generator_sha256`, sorted by UTF-8 bytes.
+def generator_files(generator: str, repo_root: Path | None = None) -> list[str]:
+    """Repo-relative POSIX paths hashed by :func:`generator_sha256` for the entry point
+    ``generator``, sorted by UTF-8 bytes.
 
-    The files of :data:`TCAD_GENERATOR_MODULES` and :data:`TCAD_GENERATOR_EXTRA_FILES`, the
-    git-tracked files under ``third_party/gplugins/gplugins/devsim/`` and the process files
-    ``data/process/*.toml``. A missing one raises FileNotFoundError.
+    The files of its modules (:data:`TCAD_GENERATORS`, KeyError for another entry point), of
+    :data:`TCAD_GENERATOR_EXTRA_FILES`, the git-tracked files under
+    ``third_party/gplugins/gplugins/devsim/`` and the process files ``data/process/*.toml``. A
+    missing one raises FileNotFoundError.
     """
     root = Path(repo_root) if repo_root is not None else REPO_ROOT
     files = []
-    for name in TCAD_GENERATOR_MODULES:
+    for name in TCAD_GENERATORS[generator]:
         rel = module_relpath(name, root)
         if not (root / rel).is_file():
             raise FileNotFoundError(f"TCAD generator module {name} not found: {root / rel}")
@@ -188,13 +233,14 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def generator_sha256(repo_root: Path | None = None) -> str:
-    """sha256 over the lines ``<file sha256>  <relpath>\\n`` of the :func:`generator_files`.
+def generator_sha256(generator: str, repo_root: Path | None = None) -> str:
+    """sha256 over the lines ``<file sha256>  <relpath>\\n`` of the :func:`generator_files` of
+    the entry point ``generator`` (:data:`TCAD_GENERATORS`).
 
     It depends on file contents and repo-relative paths only, so it is the same in every clone.
     """
     root = Path(repo_root) if repo_root is not None else REPO_ROOT
-    lines = [f"{_sha256(root / r)}  {r}\n" for r in generator_files(root)]
+    lines = [f"{_sha256(root / r)}  {r}\n" for r in generator_files(generator, root)]
     return hashlib.sha256("".join(lines).encode("utf-8")).hexdigest()
 
 
@@ -221,16 +267,20 @@ def provenance(
     repo_root: Path | None = None,
     *,
     images: Mapping[str, str],
+    generator: str,
 ) -> dict:
     """The ``provenance.json`` of a tree root in which the ``calibrated`` devices used calibration.
 
     ``images`` maps each result kind of the tree (``moscap1d``, ``moscap2d``) to the name of the
-    image that made it. Raises :class:`ProvenanceError` if the plugin submodule is not clean and
-    pinned, and FileNotFoundError if a calibrated device has no calibration file.
+    image that made it; ``generator`` is the entry point writing the tree (:data:`TCAD_MAIN` or
+    :data:`CALIBRATE_MAIN`, KeyError for another). Raises :class:`ProvenanceError` if the plugin
+    submodule is not clean and pinned, and FileNotFoundError if a calibrated device has no
+    calibration file.
     """
     root = Path(repo_root) if repo_root is not None else REPO_ROOT
     out = {
-        "generator_sha256": generator_sha256(root),
+        "generator": generator,
+        "generator_sha256": generator_sha256(generator, root),
         "gplugins_commit": gplugins_commit(root),
         "images": {
             kind: {
@@ -275,11 +325,15 @@ def calibrated_devices(tree_root: Path) -> tuple[str, ...]:
 
 
 def tree_provenance(
-    tree_root: Path, images: Mapping[str, str], repo_root: Path | None = None
+    tree_root: Path,
+    images: Mapping[str, str],
+    repo_root: Path | None = None,
+    *,
+    generator: str,
 ) -> dict:
     """:func:`provenance` of the tree root ``tree_root``, from its calibrated job directories,
-    with ``images`` (result kind to image name)."""
-    return provenance(calibrated_devices(tree_root), repo_root, images=images)
+    with ``images`` (result kind to image name), written by the entry point ``generator``."""
+    return provenance(calibrated_devices(tree_root), repo_root, images=images, generator=generator)
 
 
 def recorded_images(tree_root: Path) -> dict[str, str]:
