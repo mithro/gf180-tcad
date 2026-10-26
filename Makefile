@@ -2,6 +2,8 @@
 # Reproduce the published results. See docs/reproduce/index.md.
 
 PYTHON ?= uv run --locked python
+# SPICE jobs at once, each admitted at 4 GiB (8 -> 32 GiB): pass JOBS=4 on a host with less than
+# 32 GiB of memory.
 JOBS ?= 8
 TCAD = $(PYTHON) -m gf180tcad.tcad
 CALIBRATE = $(PYTHON) -m gf180tcad.calibrate

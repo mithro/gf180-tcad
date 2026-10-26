@@ -84,7 +84,8 @@ listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Doc
 parser of the command line it calls, and compare the jobs with the committed job directories.
 
 **The expected runtime is hours.** The 120 SPICE jobs take about a minute with 8 jobs, the
-default (`make reproduce JOBS=16` runs more at once, up to the
+default (a host with less than 32 GiB of memory should pass `make reproduce JOBS=4`, because each job is
+admitted at 4 GiB; `make reproduce JOBS=16` runs more at once, up to the
 {ref}`memory admission <reproduce-how-it-works>` limit of 32). The 1D {term}`TCAD` jobs take
 minutes. The 2D ones take hours: the 2D {term}`mesh convergence` and every 2D
 {term}`MOS capacitor` job run one 16 GiB job at a time, hours each ({doc}`../limitations/moscap2d`),
@@ -93,6 +94,8 @@ so the host needs 16 GiB of memory free for the sandbox.
 **Not yet run end to end, and the 2D files are not expected to match.** The TCAD half of
 `make reproduce` has not been run in one go. Its 2D job files were made by older code, and the
 L = 2 µm {term}`sweeps <sweep>` were resumed, so a fresh run differs from them; see {ref}`moscap2d-reproduce`.
+So the final `manifest verify` of `make reproduce` is expected to exit non-zero until the 2D results are
+regenerated and committed ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 `make spice-reference` followed by `python -m gf180tcad.manifest verify results/` checks the SPICE
 half alone.
 
@@ -101,7 +104,7 @@ half alone.
 **`make reproduce-quick`** runs only the cross-checked TCAD subset,
 {repo}`tests/crosscheck_tcad_subset.txt` (the two calibrated 1D MOS capacitor jobs), as the
 {ref}`crosscheck-tcad job <cross-host-tcad>` does: {repo}`tools/crosscheck-tcad-run` writes the jobs
-into `tmp/reproduce-quick` (`QUICK_OUT=`; a path under {repo}`results` is refused), then
+into `tmp/reproduce-quick` (`QUICK_OUT=`; a path under {repo}`results`, or inside the repository but outside `tmp/`, is refused), then
 `python -m gf180tcad.manifest verify-subset tmp/reproduce-quick --kind tcad --prefix tcad/`
 compares them byte for byte with the manifest. A TCAD subset `all` covers the `moscap1d` and `moscap2d` trees only and reports `moscap2d/*/calibrated` as `unknown job` until issue [#35](https://github.com/mithro/gf180-tcad/issues/35) commits the 2D calibrated results. It takes about a minute; on 2026-10-26 it printed
 `identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under tcad/`.
