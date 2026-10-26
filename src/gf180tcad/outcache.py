@@ -436,6 +436,9 @@ def add_objects(
     rep = PushReport()
     for a in artefacts:
         entry = objects.get(a.sha256)
+        old_paths = entry["paths"] if entry is not None else []
+        if entry is not None and not (cache / entry.get("object", "")).is_file():
+            entry = None  # indexed but its object is missing: store it again
         if entry is not None:
             rep.present.append(a)
             if not dry_run and a.path not in entry["paths"]:
@@ -470,7 +473,7 @@ def add_objects(
             "generator_sha256": a.generator_sha256,
             "job": a.job,
             "object": rel,
-            "paths": [a.path],
+            "paths": sorted({*old_paths, a.path}),
             "primary_commit": commit,
             "size": a.size,
         }
