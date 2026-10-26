@@ -192,7 +192,7 @@ Results pages are generated from the hashed result files, so the docs never show
 
 ### 10.1 3D renders of the simulated processes
 
-Added 2026-10-27 at the user's request (§16). The documentation shows every simulation process
+Added 2026-10-27 at the user's request (§16); tracked in issue #43. The documentation shows every simulation process
 as a high-quality 3D render, so that a reader sees what is simulated and what happens during it
 before reading a single plot. A render may simplify and exaggerate (not to scale, stretched
 axes, omitted parts), but every quantity in it comes from the committed numbers.
@@ -315,7 +315,7 @@ produce results.
 
 ### 12.1 Dual-backend cross-comparison: devsim and Charon
 
-Added 2026-10-27 at the user's request (§16). DEVSIM and Charon run **in parallel** on every TCAD
+Added 2026-10-27 at the user's request (§16); tracked in issue #44. DEVSIM and Charon run **in parallel** on every TCAD
 job, not only as a late Phase 4 check, and their results are cross-compared job by job. Two
 independent simulators agreeing on the same inputs is the evidence that a TCAD-vs-SPICE result
 is a property of the device description, not of one simulator's discretisation, models or bugs.

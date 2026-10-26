@@ -182,8 +182,12 @@ These are prerequisites: no comparison counts unless they pass.
   is smooth through Vds = 0.
 - **Charge conservation** in AC: Cgg = -(Cgd + Cgs + Cgb) within 0.1 %.
 - **{{ DEVSIM }} versus {{ Charon }}** on the identical mesh and identical models: at most
-  1 % on Id and 2 mV on Vt. A larger difference is a simulator problem and
-  blocks process conclusions.
+  1 % on Id and 2 mV on Vt. Every other metric is held by kind: 1 % for relative quantities
+  (the {term}`mesh convergence` criterion) and 2 mV for voltages. A larger difference is a
+  simulator problem and blocks process conclusions. The two backends run in parallel on every
+  {term}`TCAD` {term}`job`
+  ({repo}`design spec, section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`,
+  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)); no {{ Charon }} job has run yet.
 
 (mismatch-taxonomy)=
 
