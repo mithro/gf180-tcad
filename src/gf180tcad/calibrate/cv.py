@@ -88,6 +88,7 @@ PLATEAU_TOL = 0.05  # max |dCgg|/Cgg over each plateau (spec §5.2)
 DV_TOL_V = 0.05  # each mid-capacitance crossing (a proposal: no published standard)
 PLATEAU_OFFSET_V = 1.0  # plateaus start 1 V beyond u_fb and u_t
 FB_FRACTION = 0.9  # u_fb: SPICE C = 0.9 * C_acc
+U_END_V = 5.0  # the grid spans u = -5..+5 V: C_acc = C(u = -5 V), C_inv = C(u = +5 V)
 BOUND_HIT_REL = 1e-3  # a value this close to a bound, relative to the bound width, is a hit
 
 # The optimiser settings, fixed (with x_scale = the bound widths and x0 = the start values).
@@ -251,18 +252,34 @@ def _check_u(u: Sequence[float]) -> None:
         raise ValueError("u must be strictly increasing")
 
 
+def _check_ends(u: Sequence[float]) -> None:
+    """Raise ValueError unless the ascending grid ``u`` runs from -:data:`U_END_V` to
+    +:data:`U_END_V`: C_acc and C_inv are read at its two ends."""
+    if not u or not (
+        math.isclose(u[0], -U_END_V, abs_tol=1e-9) and math.isclose(u[-1], U_END_V, abs_tol=1e-9)
+    ):
+        span = f"{u[0]!r}..{u[-1]!r} V" if u else "empty"
+        raise ValueError(
+            f"the grid must span u = -{U_END_V:g}..+{U_END_V:g} V (C_acc and C_inv are read at its "
+            f"ends), got {span}"
+        )
+
+
 def crossings(u: Sequence[float], c: Sequence[float]) -> tuple[float, float]:
     """``(u_dep, u_inv)``: where ``c`` (u ascending) passes its own (C_min + C_acc)/2 below and
-    above its minimum."""
+    above its minimum (C_acc = C at u = -5 V, the grid's first point)."""
     _check_u(u)
+    _check_ends(u)
     i = _argmin(c)
     mid = (c[i] + c[0]) / 2
     return _crossing(u, c, mid, i, -1), _crossing(u, c, mid, i, +1)
 
 
 def regions(u: Sequence[float], c: Sequence[float]) -> Regions:
-    """The :class:`Regions` of the SPICE curve ``c`` on the ascending grid ``u``."""
+    """The :class:`Regions` of the SPICE curve ``c`` on the ascending grid ``u``, which must run
+    from u = -5 V (C_acc) to u = +5 V (C_inv); else ValueError."""
     _check_u(u)
+    _check_ends(u)
     i = _argmin(c)
     c_acc, c_min, c_inv = c[0], c[i], c[-1]
     u_dep, u_inv = crossings(u, c)
@@ -596,6 +613,23 @@ def _model_dict(m: moscap1d.MoscapCV) -> dict:
 # --- the calibration ----------------------------------------------------------------------------
 
 
+def _checked_targets(
+    device: str, targets: Mapping[str, Target], geometries: Sequence[Geometry]
+) -> list[Target]:
+    """The targets of ``geometries`` (by geometry id), each checked (:func:`check_target`) and
+    required to be the target of that geometry; ValueError if one is missing."""
+    chosen = []
+    for g in geometries:
+        t = targets.get(geometry_id(g))
+        if t is None:
+            raise ValueError(f"{device}: no target for {geometry_id(g)}")
+        if t.geometry != g:
+            raise CalibrationLeak(f"{device}: the target of {geometry_id(g)} is {t.geometry}")
+        check_target(device, t)
+        chosen.append(t)
+    return chosen
+
+
 def _check_geometries(device: str, geometries: Sequence[Geometry]) -> None:
     allowed = {g for g in DEVICES[device].geometries if g.role == "calibration"}
     if not geometries:
@@ -720,15 +754,7 @@ def calibrate_cv(
     params = tuple(params)
     if targets is None:
         targets = {geometry_id(g): load_target(device, g) for g in geometries}
-    chosen = []
-    for g in geometries:
-        t = targets.get(geometry_id(g))
-        if t is None:
-            raise ValueError(f"{device}: no target for {geometry_id(g)}")
-        if t.geometry != g:
-            raise CalibrationLeak(f"{device}: the target of {geometry_id(g)} is {t.geometry}")
-        check_target(device, t)
-        chosen.append(t)
+    chosen = _checked_targets(device, targets, geometries)
     vg = chosen[0].tt.vg
     if any(t.tt.vg != vg for t in chosen):
         raise ValueError(f"{device}: the targets' vg grids differ")
@@ -798,7 +824,7 @@ def calibrate_cv(
         start=start,
         bounds=bounds,
         bound_hits=hits,
-        budget_used=len(process.TUNABLES),
+        budget_used=len(params),
         budget=BUDGET,
         geometries=tuple(c["geometry"] for c in comps.values()),
         optimiser=optimiser,
@@ -948,8 +974,8 @@ def validate_cv(
     held_out = [g for g in DEVICES[device].geometries if g.role == "validation"]
     if targets is None:
         targets = {geometry_id(g): load_target(device, g) for g in DEVICES[device].geometries}
-    for g in held_out:
-        check_target(device, targets[geometry_id(g)])
+    # every target used: the held-out ones (1D) and, for the 2D checks, all geometries
+    _checked_targets(device, targets, DEVICES[device].geometries)
     vg = targets[geometry_id(held_out[0])].tt.vg
     cox = cox_spec(device)
     simulate = simulate if simulate is not None else devsim_simulator(device)

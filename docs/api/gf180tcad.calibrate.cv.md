@@ -17,6 +17,8 @@ Source: {repo}`src/gf180tcad/calibrate/cv.py`.
 
 .. autodata:: gf180tcad.calibrate.cv.FB_FRACTION
 
+.. autodata:: gf180tcad.calibrate.cv.U_END_V
+
 .. autodata:: gf180tcad.calibrate.cv.BOUND_HIT_REL
 
 .. autodata:: gf180tcad.calibrate.cv.RESULT_SUFFIX

@@ -116,6 +116,19 @@ def test_recovers_known_params(fit):
     assert res.param_sha256 == calibration.param_sha256(res.values)
 
 
+def test_budget_used_counts_the_fitted_params():
+    """budget_used is the number of parameters fitted, not the number of tunables."""
+    truth = {**TRUTH, "dv_fb_v": 0.0}
+    targets = synthetic_targets(NFET, truth, cal_geometries(), grid=GRID[::2])
+    res = cv.calibrate_cv(
+        NFET, geometries=cal_geometries(), params=("t_ox_eff_nm", "n_ch_cm3"), targets=targets,
+        simulate=Recorder(),
+    )  # fmt: skip
+    assert res.params == ("t_ox_eff_nm", "n_ch_cm3")
+    assert res.budget_used == 2 and res.budget == cv.BUDGET
+    assert res.values["dv_fb_v"] == res.start["dv_fb_v"]
+
+
 def test_validation_geometry_raises():
     geoms = (*cal_geometries(), val_geometries()[0])
     with pytest.raises(cv.CalibrationLeak, match="validation"):
@@ -225,6 +238,31 @@ def test_validate_requires_frozen_hash(fit, tmp_path):
         cv.load_frozen(NFET, tmp_path)
 
 
+def test_validate_checks_every_target(fit, tmp_path):
+    """validate_cv checks the target of every geometry it may use (the held-out ones in 1D, all
+    of them in 2D), not only the held-out ones."""
+    res, _, _ = fit
+    res.write(tmp_path)
+    frozen = cv.load_frozen(NFET, tmp_path)
+    targets = synthetic_targets(NFET, TRUTH, DEVICES[NFET].geometries, grid=GRID[::10])
+    gid = geometry_id(cal_geometries()[0])
+    t = targets[gid]
+    bad = dict(targets)
+    bad[gid] = dataclasses.replace(
+        t, tt=dataclasses.replace(t.tt, meta=MappingProxyType({**t.tt.meta, "sweep": "idvg_lin"}))
+    )
+    sim = Recorder()
+    with pytest.raises(cv.CalibrationLeak):
+        cv.validate_cv(NFET, frozen, simulate=sim, targets=bad, calibration_root=tmp_path)
+    missing = {k: v for k, v in targets.items() if k != gid}
+    with pytest.raises(ValueError, match="no target"):
+        cv.validate_cv(NFET, frozen, simulate=sim, targets=missing, calibration_root=tmp_path)
+    swapped = {**targets, gid: targets[geometry_id(cal_geometries()[1])]}
+    with pytest.raises(cv.CalibrationLeak):
+        cv.validate_cv(NFET, frozen, simulate=sim, targets=swapped, calibration_root=tmp_path)
+    assert sim.calls == []  # refused before any simulation
+
+
 # --- the reference windows and the metric ------------------------------------------------------
 
 
@@ -285,6 +323,21 @@ def test_metric_regions():
     assert m.plateau_inv_max_rel == 0.0
     assert all(u <= r.u_fb - 1.0 for u in m.acc_u) and all(u >= r.u_t + 1.0 for u in m.inv_u)
     assert len(m.acc_u) == sum(1 for u in U if u <= r.u_fb - 1.0)
+
+
+def test_regions_require_the_full_grid():
+    """C_acc and C_inv are read at the grid's ends, so a grid that does not run from u = -5 V to
+    +5 V is refused, not silently misread."""
+    spice = _hand_curve(U)
+    assert (U[0], U[-1]) == (-cv.U_END_V, cv.U_END_V)
+    for lo, hi in ((1, len(U)), (0, len(U) - 1), (10, len(U) - 10)):
+        u, c = U[lo:hi], spice[lo:hi]
+        with pytest.raises(ValueError, match=r"must span u = -5\.\.\+5 V"):
+            cv.regions(u, c)
+        with pytest.raises(ValueError, match=r"must span u = -5\.\.\+5 V"):
+            cv.crossings(u, c)
+    with pytest.raises(ValueError, match="must span"):
+        cv.regions((), ())
 
 
 def test_crossing_windows():
@@ -444,7 +497,7 @@ def test_validation_reproduces_the_committed_files(tmp_path):
     """validate (in the sandbox) gives the committed validation files byte for byte."""
     from gf180tcad.calibrate import __main__ as cli
 
-    root = tmp_path / "validation"  # the tree name decides its provenance's calibration entry
+    root = tmp_path / "out"  # any name: the provenance is decided by the files' content
     for device in process.DEVICES:
         assert cli.main(["validate", "--device", device, "--out", str(root)]) == 0
     for name in (*(f"{d}.json" for d in process.DEVICES), "provenance.json"):
