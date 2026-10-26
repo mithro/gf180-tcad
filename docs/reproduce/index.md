@@ -397,9 +397,16 @@ rerun byte for byte locally by
 {test}`tests/tcad/test_moscap1d.py::test_byte_identical`, and the 1D mesh convergence by
 {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical`; see {ref}`tcad-provenance`.
 
+## Output cache
+
+Large regenerable files that are not committed, such as the 2D meshes, are kept in a shared,
+content-addressed cache repository: {repo}`tools/output-cache` `pull` fetches one and checks it against
+the sha256 the committed results name. See {doc}`output-cache`.
+
 ```{toctree}
 :maxdepth: 1
 
 sandbox
 image
+output-cache
 ```
