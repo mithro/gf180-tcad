@@ -19,7 +19,11 @@ dependencies = [
 Documentation = "https://gf180-tcad.readthedocs.io/"
 
 [dependency-groups]
-dev = ["pytest", "ruff"]
+dev = [
+    "pytest",
+    "ruff",
+    "scipy>=1.18.1",
+]
 docs = [
     "furo>=2025.12.19",
     "matplotlib>=3.11.2",
