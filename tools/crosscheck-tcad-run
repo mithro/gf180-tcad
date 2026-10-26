@@ -69,7 +69,8 @@ def check_out(out: Path, clean: bool) -> None:
         raise ValueError(
             f"--out {out} overlaps {RESULTS}: write the subset to a directory of its own"
         )
-    if resolved.is_relative_to(REPO_ROOT) and not resolved.is_relative_to(REPO_ROOT / "tmp"):
+    tmp = REPO_ROOT / "tmp"
+    if resolved.is_relative_to(REPO_ROOT) and (resolved == tmp or not resolved.is_relative_to(tmp)):
         raise ValueError(f"--out {out} is inside the repository but not under tmp/")
     if resolved.exists() and any(resolved.iterdir()):
         if not clean:
