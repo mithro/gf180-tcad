@@ -57,6 +57,7 @@ OBJECTS_DIR = "objects/sha256"
 # How index paths name the primary repository's results tree.
 RESULTS_PREFIX = "results/"
 _SHA256 = re.compile(r"[0-9a-f]{64}")
+_EXT = re.compile(r"[a-z0-9]+(\.[a-z0-9]+)*")
 _GIT_VARS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE")
 _CHUNK = 1 << 20
 _COMPRESSIONS = {"gzip": ".gz", None: ""}
@@ -131,9 +132,34 @@ def object_relpath(sha256: str, ext: str, compression: str | None) -> str:
     """Cache-relative POSIX path of the object of ``sha256`` (of the uncompressed file)."""
     if not _SHA256.fullmatch(sha256):
         raise ValueError(f"not a lowercase hex sha256: {sha256!r}")
+    if not isinstance(ext, str) or not _EXT.fullmatch(ext):
+        raise ValueError(f"bad ext {ext!r} (lowercase letters and digits, dot-separated)")
     if compression not in _COMPRESSIONS:
         raise ValueError(f"unknown compression {compression!r}")
     return f"{OBJECTS_DIR}/{sha256[:2]}/{sha256}.{ext}{_COMPRESSIONS[compression]}"
+
+
+def results_destination(path: str, results: Path) -> Path:
+    """The file under ``results`` that the index path ``path`` names.
+
+    An index path is ``results/`` plus a relative POSIX path without empty, ``.`` or ``..``
+    segments, and its destination must stay under ``results`` (symlinks resolved); anything
+    else raises ValueError, so a tampered index cannot write elsewhere.
+    """
+    rel = path.removeprefix(RESULTS_PREFIX) if isinstance(path, str) else ""
+    parts = rel.split("/")
+    if (
+        not isinstance(path, str)
+        or not path.startswith(RESULTS_PREFIX)
+        or "\\" in rel
+        or any(part in ("", ".", "..") for part in parts)
+    ):
+        raise ValueError(f"bad index path {path!r}: not {RESULTS_PREFIX}<relative path>")
+    root = Path(results).resolve()
+    dest = Path(results).joinpath(*parts)
+    if not dest.resolve().is_relative_to(root):
+        raise ValueError(f"bad index path {path!r}: resolves outside {results}")
+    return dest
 
 
 def dump_index(index: dict) -> str:
@@ -465,6 +491,11 @@ def verify(cache: Path, config: dict | None = None) -> list[str]:
             problems.append(f"{sha}: bad index entry ({err})")
             continue
         listed.add(rel)
+        for path in e.get("paths") or [None]:
+            try:
+                results_destination(path, cache / "results")  # a syntax check only
+            except ValueError as err:
+                problems.append(f"{sha}: {err}")
         if e.get("object") != rel:
             problems.append(f"{sha}: object path {e.get('object')!r}, expected {rel}")
         obj = cache / rel
@@ -644,7 +675,7 @@ def pull(
         if out is not None:
             dest = Path(out)
         elif dest is None:
-            dest = results / e["paths"][0].removeprefix(RESULTS_PREFIX)
+            dest = results_destination(e["paths"][0], results)
         if dest.exists():
             if sha256_file(dest) == sha:
                 return dest
