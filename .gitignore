@@ -8,6 +8,9 @@ dist/
 *.egg-info/
 docs/_build/
 docs/_generated/
+docs/.generated.lock
+docs/_generated.tmp-*/
+docs/_generated.old-*/
 results/.*.staging-*/
 results/.*.old-*/
 results/**/mesh.msh

@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Sphinx configuration for the gf180-tcad documentation."""
 
+import fcntl
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -196,17 +198,56 @@ linkcheck_rate_limit_timeout = 120.0
 # option (no change to the RTD install, and a local editable install resolves to the same code).
 sys.path.insert(0, str(_root / "src"))
 
-_generated = Path(__file__).parent / "_generated"
+_docs = Path(__file__).parent
+_generated = _docs / "_generated"
+_build_lock = None  # docs/.generated.lock, held from builder-inited to build-finished
+
+
+def _lock_docs_build():
+    """Take an exclusive lock on this checkout's docs build, blocking until another build ends.
+
+    Two builds of one checkout used to rmtree and rewrite docs/_generated under each other
+    (issue #40). The lock is held for the whole build, because the pages are read after
+    generation. The kernel releases it if the process dies.
+    """
+    global _build_lock
+    _build_lock = open(_docs / ".generated.lock", "a", encoding="utf-8")
+    fcntl.flock(_build_lock, fcntl.LOCK_EX)
+
+
+def _unlock_docs_build(app, exception):
+    global _build_lock
+    if _build_lock is not None:
+        _build_lock.close()
+        _build_lock = None
 
 
 def _generate_results(app):
-    """Regenerate docs/_generated (committed files in, only docs/_generated out)."""
+    """Regenerate docs/_generated (committed files in, only docs/_generated out).
+
+    The pages are written to a fresh sibling directory and swapped in, so docs/_generated is
+    never half-written, even when a build is killed. Leftovers of a killed build are removed
+    here, under the lock.
+    """
     from gf180tcad import docgen
 
-    shutil.rmtree(_generated, ignore_errors=True)  # also drops stale pages from older builds
-    _generated.mkdir()
-    docgen.generate(_generated)
+    _lock_docs_build()
+    for leftover in [*_docs.glob("_generated.tmp-*"), *_docs.glob("_generated.old-*")]:
+        shutil.rmtree(leftover, ignore_errors=True)
+    new = _docs / f"_generated.tmp-{os.getpid()}"
+    new.mkdir()
+    try:
+        docgen.generate(new)
+    except BaseException:
+        shutil.rmtree(new, ignore_errors=True)
+        raise
+    old = _docs / f"_generated.old-{os.getpid()}"
+    if _generated.exists():
+        os.replace(_generated, old)
+    os.replace(new, _generated)
+    shutil.rmtree(old, ignore_errors=True)  # also drops stale pages from older builds
 
 
 def setup(app):
     app.connect("builder-inited", _generate_results)
+    app.connect("build-finished", _unlock_docs_build)
