@@ -8,6 +8,8 @@ per device and geometry (2 devices x 6 geometries), each with Id-Vg (linear and 
 generated into `docs/_generated/` (git-ignored) at documentation build time by
 {py:func}`gf180tcad.docgen.generate`, called from {repo}`docs/conf.py`, from the committed
 {repo}`results/spice` files, so they never show numbers that are not in the dataset.
+Builds of one checkout serialise on a lock file (`docs/.generated.lock`) and swap the finished
+tree in atomically, so two docs builds can run at the same time without corrupting each other.
 
 ```{admonition} What exists so far
 :class: warning

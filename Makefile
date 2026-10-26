@@ -13,9 +13,13 @@ TCAD_SCRATCH ?= tmp/reproduce-scratch
 # The temporary tree root of reproduce-quick (never results/: tools/crosscheck-tcad-run refuses).
 QUICK_OUT ?= tmp/reproduce-quick
 TCAD_SUBSET = tests/crosscheck_tcad_subset.txt
+# A checkout of the output cache repository (docs/reproduce/output-cache.md) for cache-push:
+# git clone --depth 1 git@github.com:mithro/gf180-tcad-output-cache.git tmp/output-cache
+OUTPUT_CACHE ?= tmp/output-cache
 
 .PHONY: reproduce reproduce-quick manifest spice-reference \
-	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate
+	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate \
+	cache-status cache-push
 
 # Everything, in dependency order: the SPICE reference, then the TCAD trees (mesh convergence,
 # start values, calibration, calibrated values, validation), then the manifest check. Hours:
@@ -88,3 +92,12 @@ reproduce-quick:
 # Rewrite results/MANIFEST.sha256 from the files under results/.
 manifest:
 	$(PYTHON) -m gf180tcad.manifest update results/
+
+# The output cache: which files the committed metas name (mesh.msh by mesh_sha256) are in it.
+cache-status:
+	$(PYTHON) tools/output-cache status --results results
+
+# Add the cacheable files under results/ to $(OUTPUT_CACHE), commit there and push it (needs
+# write access to the cache repository; run tools/output-cache push --dry-run first).
+cache-push:
+	$(PYTHON) tools/output-cache push --cache $(OUTPUT_CACHE) --results results --publish
