@@ -48,7 +48,7 @@ versus what was *predicted*.
 ## 3. Constraints (decided by the user)
 
 - Open-source tools only.
-- gdsfactory for structure generation. **Fix and extend the existing gplugins DEVSIM plugin** (currently raises `NotImplementedError` after a meshwell API change) in the fork `mithro/gplugins`, rather than writing a new plugin. Add a Charon backend there too if needed ("plugins that add new TCAD simulators").
+- gdsfactory for structure generation. **Fix and extend the existing gplugins DEVSIM plugin** (currently raises `NotImplementedError` after a meshwell API change) in the fork `mithro/gplugins`, rather than writing a new plugin. Add a Charon backend there too ("plugins that add new TCAD simulators"; required since 2026-10-27, §12.1).
 - Licence: everything developed is **Apache-2.0**. Using GPL (or other OSS) libraries in-process is fine (DMT-core, meshwell, Charon); so is running tools in containers.
 - Containers built reproducibly by GitHub Actions and published to **ghcr.io** (under `ghcr.io/mithro/…`).
 - Review (user decision): every PR is reviewed by independent review subagents; findings are fixed before merge; the user spot-checks but is not a merge blocker. PRs are opened only inside `mithro/*` repos.
@@ -373,10 +373,10 @@ numbers.
 ## 12. Architecture and reuse
 
 - **This repo (`mithro/gf180-tcad`, Apache-2.0)**: device definitions, process description files, SPICE reference generation, metric extraction, comparison/verdicts, docs, sandbox, CI.
-- **`mithro/gplugins` fork**: fix `gplugins.devsim` — first reproduce it working against the old meshwell/gdsfactory versions it was written for, then port to the latest meshwell, gdsfactory and DEVSIM and re-verify (meshing against latest meshwell; contacts; doping from layer stack + analytic profiles from `gplugins/process`); extend it for MOSFETs (gate stack, Dualgate oxide, LDD/S/D/well doping, body contact); add a Charon backend (gmsh → Exodus) if it fits the plugin's shape. Work done on fork branches, reviewed by PRs inside the fork (`gh pr create --repo mithro/gplugins`).
+- **`mithro/gplugins` fork**: fix `gplugins.devsim` — first reproduce it working against the old meshwell/gdsfactory versions it was written for, then port to the latest meshwell, gdsfactory and DEVSIM and re-verify (meshing against latest meshwell; contacts; doping from layer stack + analytic profiles from `gplugins/process`); extend it for MOSFETs (gate stack, Dualgate oxide, LDD/S/D/well doping, body contact); add a Charon backend (gmsh → Exodus) behind the backend seam (§12.1). Work done on fork branches, reviewed by PRs inside the fork (`gh pr create --repo mithro/gplugins`).
 - **gdsfactory `gf180mcu` PDK package**: source of `nfet_05v0`/`pfet_05v0` cells; its LayerStack is illustrative only, so process-accurate vertical data comes from this repo's process file (forked only if a change is needed).
 - **DMT-core (GPL-3, in-process OK)**: reuse for ngspice/Xyce sweep control and data handling, if it fits; otherwise borrow its patterns. SemiMod's `ihp_sg13g2_compact_models` is the template for the comparison/report pipeline. Hdev, OpenVAF: not used.
-- **Charon**: latest Charon (v2.2 unless newer found) with the latest Trilinos it builds against; start from an existing popular image or conda package if a trustworthy one exists, otherwise our own reproducible image on ghcr.io.
+- **Charon**: latest Charon (v2.2 unless newer found) with the latest Trilinos it builds against; always our own reproducible, pinned image on ghcr.io (§12.1), which may be built from a trusted existing upstream recipe, image or conda package.
 
 ### 12.1 Dual-backend cross-comparison: devsim and Charon
 
@@ -409,12 +409,14 @@ for that model, and the reason is recorded.
 **What "agree" means.** No new numbers: the tolerances are the numerical-acceptance ones of
 §5.2.
 - The DEVSIM-vs-Charon line of §5.2 sets 1 % on Id and 2 mV on Vt, on the identical mesh and
-  models. It is extended to every other metric by kind: relative quantities (currents,
-  capacitances at each bias, plateau values, conductances) agree within **1 %**, which is also
-  the mesh-convergence criterion of §5.2 (`CRITERION = 0.01` in
+  models. It is inherited unchanged and applied to every other metric by kind: relative
+  quantities (currents, capacitances at each bias, plateau values, conductances) within
+  **1 %**, the same value as the mesh-convergence criterion of §5.2 (`CRITERION = 0.01` in
   `src/gf180tcad/tcad/meshconv.py`); voltage quantities (Vt, flat band, the C–V crossing
-  voltages) agree within **2 mV**, twice the 1 mV mesh-convergence Vt criterion, because the two
-  backends' own discretisation errors, each bounded by mesh convergence, can add.
+  voltages) within **2 mV**.
+- A relative tolerance is meaningless for quantities near zero (Id near Vds = 0, small
+  capacitances). They need an absolute floor; its value is an open question (below), to be set
+  from the solver-noise floor the mesh-convergence tooling already uses, not chosen freely.
 - The normative values live in §5.2 and are rendered on `docs/comparison/agreement.md`
   (numerical acceptance). The code holds them once, in the comparison module, which imports the
   mesh-convergence criterion rather than repeating it; a test ties the module's values to the
@@ -443,7 +445,8 @@ the tolerance is never loosened to make a job pass.
   (the start values, and the calibrated values of the backend that was calibrated), so a delta
   is a simulator difference and nothing else. Anti-goal A1 applies to each backend.
 
-**Phasing.** First the backend seam (Phase 2 plan, Task 15, no Charon code); then the Charon
+**Phasing.** First the backend seam (Phase 2 plan, Task 15, no Charon code; its submodule bump
+keeps every committed TCAD result byte-identical); then the Charon
 image; then the 1D MOS capacitor on Charon; then the 2D MOS capacitor; then each later device
 on both backends from its first result. The cross-comparison pages appear with the first
 Charon job. The detailed plan is a separate plan document.
@@ -466,6 +469,9 @@ limitations page as they are answered):
 - **C–V method.** How Charon gives the quasi-static Cgg (dQ/dV from a DC sweep, or a
   small-signal AC solve) and whether it matches DEVSIM's method closely enough to compare
   within 1 %.
+- **Absolute floor.** The absolute tolerance for near-zero quantities (see "What agree
+  means"), and whether it can be taken from the mesh-convergence noise floor (`NOISE_K` times
+  the solver tolerance in `meshconv.py`) for both backends.
 - **Calibration.** Whether each backend is also calibrated independently (comparing the two
   calibrated parameter sets is a further check), in addition to running Charon on DEVSIM's
   calibrated values.
@@ -479,8 +485,8 @@ Each phase ends with merged, reviewed work on `main`, published docs and passing
 - **Phase 0 — Foundations.** Repo skeleton, Apache-2.0, sandbox wrapper with limits verified by a deliberate OOM test, base container images built reproducibly on GitHub → ghcr.io, Sphinx skeleton live on Read the Docs, CI (lint, tests, docs, hash check), contribution/review/merge rules written down.
 - **Phase 1 — SPICE golden reference.** Pinned PDK; ngspice + Xyce sweeps for the device/geometry/bias matrix (§5.2); metric extraction library with tests; docs pages (b)/(c) showing SPICE-only results and spec-window checks (sanity: SPICE reproduces the PDK's own electrical spec table).
 - **Phase 2 — gplugins DEVSIM fix + 1D/2D MOSCAP.** Fix the fork's plugin; MOS capacitor from gdsfactory geometry; mesh-convergence tooling; calibrate oxide and channel doping against SPICE Cgg–Vg.
-- **Phase 3 — 2D MOSFET in DEVSIM.** Extend the plugin for MOSFETs; process description file with public sources; calibration on §5.2 calibration targets; validation on held-out targets; mismatch taxonomy filled in; full results/comparison docs.
-- **Phase 4 — Charon in parallel (amended 2026-10-27, §12.1).** No longer after Phase 3: it starts once the Phase 2 backend seam exists and runs alongside Phases 2–3. Reproducible Charon image; Charon backend in the plugin; the 1D, then 2D MOS capacitor on Charon, then every later device on both backends; per-job DEVSIM-vs-Charon comparison files and agreement page; Charon-only physics (BGN, impact ionisation) used to explain mismatches.
+- **Phase 3 — 2D MOSFET (DEVSIM and Charon, §12.1).** Extend the plugin for MOSFETs; process description file with public sources; calibration on §5.2 calibration targets; validation on held-out targets; mismatch taxonomy filled in; full results/comparison docs.
+- **Phase 4 — Charon in parallel (amended 2026-10-27, §12.1).** No longer after Phase 3: it starts once the Phase 2 backend seam exists and runs alongside Phases 2–3. Reproducible Charon image; Charon backend in the plugin; the 1D, then 2D MOS capacitor on Charon, then every later device on both backends; per-job DEVSIM-vs-Charon comparison files and agreement page; Charon-only physics (BGN, impact ionisation) used to explain mismatches. Phases 2 and 3 can close without Charon results for their devices; Phase 4 closes when every device has results from both backends and the comparison page.
 - **Phase 5 — 3D and silicon-readiness.** 3D narrow-width (1.6/0.7) simulation; silicon-validation inventory and predictions at the exact TRID/ASHES/T0P3 geometries; temperature extension; roadmap for the rest of the PDK device list.
 
 ## 14. Calls I made (the user can override)
