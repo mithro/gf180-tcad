@@ -25,7 +25,7 @@ versus what was *predicted*.
 - G4. Compare TCAD vs SPICE with a documented, two-level agreement definition (§5), and document every mismatch with its probable cause (§6).
 - G5. Run every simulation inside Docker under hard resource limits (§8).
 - G6. Bit-identical reproducibility of every published result (§9).
-- G7. Sphinx documentation on Read the Docs covering (a) reproduction, (b) current results, (c) comparison with the PDK, (d) limitations / in-progress / known shortcomings (§10), with 3D renders of every simulation process (§10.1).
+- G7. Sphinx documentation on Read the Docs covering (a) reproduction, (b) current results, (c) comparison with the PDK, (d) limitations / in-progress / known shortcomings (§10), with 3D renders of every simulation process (§10.1) and an explainer section on how the parts of a semiconductor device work (§10.2).
 - G8. Identify taped-out wafer.space structures for future physical validation and pre-generate matching TCAD/SPICE predictions (§7).
 - G9. Ground claims in the academic literature (§11).
 - G10. Be structured so that adding the rest of the PDK's devices later is mechanical.
@@ -332,11 +332,17 @@ Added 2026-10-27 at the user's request (§16); tracked in issue #46. The docs ga
 reader-first section, `docs/explained/`: a general explanation of how the parts of a
 semiconductor device work, grounded in this repo's real artefacts rather than in textbook
 numbers.
-- **Scope.** First the MOS capacitor: oxide, accumulation, depletion, inversion, flat band, the
-  C–V curve and what sets each part of it. Later, with the MOSFET phases: the channel, threshold
-  voltage, body effect, short-channel effects (Vt roll-off, DIBL), saturation. Each concept is
-  explained in plain language first, then with the equation and the literature reference already
-  cited in §11 or the docs' literature page.
+- **Scope, in three tiers.**
+  1. *Basics*: silicon, doping and carriers; the band diagram and the Fermi level; the pn
+     junction and its depletion region; wells; source, drain and LDD; oxide and poly-silicon as
+     materials. Grounded in the GF180MCU process data (`data/process/`) and the §10.1 renders.
+  2. *The MOS capacitor*: oxide, accumulation, depletion, inversion, flat band, the C–V curve
+     and what sets each part of it.
+  3. *The MOSFET*, with the MOSFET phases: the channel, threshold voltage, body effect,
+     short-channel effects (Vt roll-off, DIBL), saturation.
+
+  Each concept is explained in plain language first, then with the equation and the literature
+  reference already cited in §11 or the docs' literature page.
 - **Grounded in the repo.** Every number and figure comes from committed inputs: the GF180MCU
   process data files (`data/process/`), the committed SPICE reference sweeps and extracted
   metrics (`results/spice/`), the TCAD results and calibration outcome (`results/tcad/`), and the
@@ -348,9 +354,10 @@ numbers.
   example the pfet C–V disagreement of the 1D calibration, poly depletion, the quasi-static vs
   high-frequency curve).
 - **Kept current by the same machinery.** The pages are built offline from committed inputs like
-  the rest of the docs (generated where they show numbers, by `docgen`), and a test checks that
-  every artefact an explainer page references exists and that every number it quotes matches
-  its source, so a moved or regenerated result cannot leave a stale explanation.
+  the rest of the docs. A number enters a page by `docgen` substitution from its source file
+  (preferred), or, when hand-written, is listed in `tests/test_doc_numbers.py` with its source.
+  A test checks that every artefact an explainer page references exists, so a moved or
+  regenerated result cannot leave a stale explanation.
 
 ## 11. Literature (initial; [verify] items to be checked before citing)
 
