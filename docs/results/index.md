@@ -29,13 +29,26 @@ The 2D results were made on the {term}`stable TCAD image` for now (see
 - the 2D mesh convergence, in {repo}`results/tcad/meshconv/moscap2d`, discussed in
   {ref}`mesh-convergence-2d`.
 
-They are compared with the PDK in {doc}`/comparison/index`, and their caveats are in
-{doc}`/limitations/index`. Calibration of the
-TCAD against SPICE is still to come ({repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`).
+The 1D MOS capacitor is also calibrated against the SPICE {term}`Cgg`–Vg and validated at the
+{term}`held-out geometries <held-out geometry>`, in 1D only
+({repo}`results/tcad/calibration`, {repo}`results/tcad/validation`,
+{doc}`/comparison/cv-agreement`). The calibrated 2D validation is not run
+([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). They are compared with the PDK in
+{doc}`/comparison/index`, and their caveats are in {doc}`/limitations/index`.
 ```
+
+The TCAD pages are generated the same way, by {py:func}`gf180tcad.docgen.generate_tcad`, from
+the committed {repo}`results/tcad` files: a summary of the 1D verdicts, one page per device
+(calibrated parameters with their bounds and {term}`provenance tags <provenance tag>`, the fixed bookkeeping, the
+{term}`mesh convergence` plots) and one per device and geometry (the TCAD-against-ngspice Cgg
+overlay with the {term}`corner envelope`, the verdicts, the intrinsic and parasitic parts, the
+committed 2D result). Every verdict and error on them is read from the calibration and
+validation files, which were computed in the TCAD image; docgen only renders them. No 2D mesh
+is committed, so the pages show no mesh picture and say so.
 
 ```{toctree}
 :maxdepth: 2
 
 ../_generated/results/index
+../_generated/tcad/index
 ```
