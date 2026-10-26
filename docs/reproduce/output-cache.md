@@ -12,12 +12,12 @@ fetch them instead of rerunning the job. It is effectively a shared cache for ev
 - **Everything in it is regenerable** from this repository. It holds no original data.
 - **It may be wiped and recreated at any time.** Clone it with `git clone --depth 1` and never
   depend on its history.
-- **No provenance lives there.** {repo}`results/MANIFEST.sha256` and the `provenance.json` and
+- **No {term}`provenance` lives there.** {repo}`results/MANIFEST.sha256` and the `provenance.json` and
   `cv.meta.json` files here are the truth. The cache stores a file under the sha256 of its
   uncompressed content, the hash a committed meta already names (`mesh_sha256`), and
   `tools/output-cache pull` writes a file only if its sha256 is that hash. Using the cache never
   changes a result or its provenance: {py:mod}`gf180tcad.outcache` is not a generator module,
-  so it is not part of any `generator_sha256`.
+  so it is not part of any {term}`generator_sha256`.
 - **The documentation build never fetches from it.** The build stays offline and uses only
   committed files.
 - No git-LFS (it has bandwidth quotas). Each object is a plain git blob under 95 MB after
@@ -30,11 +30,11 @@ fetch them instead of rerunning the job. It is effectively a shared cache for ev
 - `index.json`: sorted JSON mapping each sha256 to its object path, sizes, the results paths it
   was found at, the `generator_sha256` of its tree root, the commit of this repository it was
   pushed from, the date and the job (device, dimension, parameter set, directory).
-- `README.md`: the contract, written by `tools/output-cache init`, so the whole repository can
+- a README: the contract, written by `tools/output-cache init`, so the whole repository can
   be recreated from nothing.
 
 The cacheable files, the repository URLs and the size cap are in {repo}`data/output-cache.json`.
-A gmsh mesh compresses to about a third (27.5 MB to 9.5 MB measured, 10 s).
+A {{ gmsh }} mesh compresses to about a third (27.5 MB to 9.5 MB measured, 10 s).
 
 ## Commands
 
@@ -61,9 +61,9 @@ tools/output-cache push --cache tmp/output-cache --publish   # or: make cache-pu
 tools/output-cache verify --cache tmp/output-cache
 ```
 
-`push` scans `results/` (`--results` elsewhere) for the configured files, refuses one whose
+`push` scans {repo}`results/` (`--results` elsewhere) for the configured files, refuses one whose
 sha256 differs from the hash its meta names (a stale mesh), compresses and adds the missing
-objects, rewrites `index.json` and `README.md`, and commits with a message naming this
+objects, rewrites `index.json` and the README, and commits with a message naming this
 repository's commit; `--publish` then pushes. `verify` checks every object's hash against its
 name, the sizes, the size cap and that the index and the objects agree.
 

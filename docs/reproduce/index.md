@@ -400,7 +400,7 @@ rerun byte for byte locally by
 ## Output cache
 
 Large regenerable files that are not committed, such as the 2D meshes, are kept in a shared,
-content-addressed cache repository: `tools/output-cache pull` fetches one and checks it against
+content-addressed cache repository: {repo}`tools/output-cache` `pull` fetches one and checks it against
 the sha256 the committed results name. See {doc}`output-cache`.
 
 ```{toctree}
