@@ -1,12 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Generate the results pages of the documentation from the committed SPICE reference.
+"""Generate the results pages of the documentation from the committed results.
 
 ``generate`` is called by ``docs/conf.py`` at the start of every documentation build. It reads
-only committed files (``results/spice/**``, ``data/pdk_elec_spec.json``) and writes only the
-output directory it is given (``docs/_generated``). Nothing here is a published result: the
-tables and plots are presentation of the committed dataset. The one derived quantity, the
+only committed files (``results/spice/**``, ``results/tcad/**``, ``data/pdk_elec_spec.json``,
+``data/process/*.toml``) and writes only the output directory it is given
+(``docs/_generated``). Nothing here is a published result: the tables and plots are
+presentation of the committed datasets. The one derived quantity of the SPICE pages, the
 ngspice-vs-Xyce maximum relative difference, is computed with
 :func:`~gf180tcad.spice.xyce.engine_diff` on the host from the committed CSVs.
+
+The TCAD pages (:func:`generate_tcad`, under ``tcad/``) render the MOS capacitor calibration,
+validation and mesh convergence. Every TCAD-vs-SPICE number and verdict on them is read from
+the committed calibration and validation files, which were computed in the TCAD image; this
+module never compares TCAD with SPICE itself. For the plots it applies the fixed BSIM4
+bookkeeping (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`, the function the
+calibration uses) to the committed 1D C per area. No mesh picture is drawn: the 2D meshes are
+not committed, and the pages say so.
 
 Plots are drawn against polarity-stripped axes (|Vgs|, |Vds|, |Id|) so the nfet and the pfet
 look alike. Numbers in tables use :func:`fmt` (fixed significant figures, locale independent),
@@ -410,8 +419,9 @@ def _summary_page(root, spec: dict, out: Path):
     (out / "results" / "index.md").write_bytes("\n".join(lines).encode("utf-8"))
 
 
-def generate(out_dir: Path, results_root: Path = RESULTS) -> None:
-    """Write the summary page, 12 geometry pages and their SVGs under ``out_dir/results``."""
+def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None = None) -> None:
+    """Write the SPICE pages under ``out_dir/results`` (summary, 12 geometry pages, SVGs) and
+    the TCAD pages under ``out_dir/tcad`` (:func:`generate_tcad`)."""
     out = Path(out_dir)
     shutil.rmtree(out / "results", ignore_errors=True)
     (out / "results").mkdir(parents=True)
@@ -421,3 +431,647 @@ def generate(out_dir: Path, results_root: Path = RESULTS) -> None:
         for g in device.geometries:
             _geometry_page(results_root, device, g, spec, envelope, out)
     _summary_page(results_root, spec, out)
+    generate_tcad(out, TCAD_RESULTS if tcad_root is None else tcad_root, results_root)
+
+
+# --- TCAD MOS capacitor pages (Task 13a) ------------------------------------------------------
+# Rendered from the committed results/tcad/** only. Every verdict, error, crossing shift, window
+# and fitted value is read from the calibration and validation files, which were computed in the
+# TCAD image; nothing here compares TCAD with SPICE. The one model step done on the host is the
+# fixed BSIM4 bookkeeping that turns the committed 1D C per area into a Cgg of one geometry
+# (MoscapCV.area_scaled, the same function the calibration uses), for the plots.
+
+TCAD_RESULTS = REPO_ROOT / "results" / "tcad"
+CV_DOC = "/comparison/cv-agreement"
+TCAD_COLOR = "#009E73"  # calibrated TCAD
+START_COLOR = "#E69F00"  # TCAD at the start values
+INTRINSIC_COLOR = "#56B4E9"
+PARASITIC_COLOR = "#CC79A7"
+TOL_COLOR = "#555555"
+# The four checks of a geometry, in page order (gf180tcad.calibrate.cv.verdicts).
+CHECKS = (
+    ("plateau_acc", "Accumulation plateau"),
+    ("plateau_inv", "Inversion plateau"),
+    ("dv_dep", "ΔV_dep (depletion-side crossing)"),
+    ("dv_inv", "ΔV_inv (inversion-side crossing)"),
+)
+# Sources the process files cite on a host that has refused automated clients since
+# 2026-10-24: linked to the web.archive.org snapshot the rest of the docs use (docs/conf.py).
+_URL_ALIASES = {
+    "https://www.bsim.berkeley.edu/BSIM4/BSIM450.zip": (
+        "https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip"
+    ),
+}
+_NO_MESH = (
+    "No mesh picture: the 2D meshes (`mesh.msh`) are not committed (git-ignored, 25-62 MB "
+    "each), and this page renders only committed files. A {term}`job`'s `cv.meta.json` records the "
+    "sha256 of its mesh, from which it regenerates byte for byte "
+    "({ref}`the meshes are not committed <moscap2d-meshes>`)."
+)
+
+
+_VERDICT_TERMS = (
+    "Verdicts are {term}`Agree`, {term}`Same process` or {term}`Disagree` "
+    "({ref}`agreement-verdicts`)."
+)
+
+
+def _read_json(path: Path) -> dict:
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(f"missing result file {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _mv(v: float) -> str:
+    return f"{1e3 * v:+.1f} mV"
+
+
+def _pct(x: float) -> str:
+    return f"{100 * x:.2f} %"
+
+
+def _source_text(src: str) -> str:
+    """A process-file source: a card line as text, a URL as a link."""
+    if src.startswith("https://"):
+        return f"[link]({_URL_ALIASES.get(src, src)})"
+    return src
+
+
+class _Device:
+    """The committed TCAD results of one device that its pages render."""
+
+    def __init__(self, tcad_root: Path, device: Device):
+        from gf180tcad.tcad import moscap1d, process
+
+        self.device = device
+        name = device.name
+        self.root = Path(tcad_root)
+        self.cal = _read_json(self.root / "calibration" / f"{name}.result.json")
+        self.val = _read_json(self.root / "validation" / f"{name}.json")
+        self.proc = process.load(name)
+        self.start = moscap1d.read(self.root / "moscap1d" / name / "start")
+        self.calibrated = moscap1d.read(self.root / "moscap1d" / name / "calibrated")
+        self.meshconv = {
+            dim: _read_json(self.root / "meshconv" / f"moscap{dim}" / name / "report.json")
+            for dim in ("1d", "2d")
+        }
+
+    def comparison(self, gid: str) -> tuple[dict, str]:
+        """``(record, repo path)`` of the committed 1D comparison of one geometry."""
+        name = self.device.name
+        if gid in self.cal["per_geometry"]:
+            return self.cal["per_geometry"][gid], f"results/tcad/calibration/{name}.result.json"
+        if gid in self.val["one_d"]:
+            return self.val["one_d"][gid], f"results/tcad/validation/{name}.json"
+        raise KeyError(f"{name} {gid}: in neither the calibration nor the validation file")
+
+    def two_d(self, gid: str) -> Path | None:
+        """The committed 2D start-parameter job of one geometry, if there is one."""
+        job = self.root / "moscap2d" / self.device.name / "start" / gid
+        return job if (job / "cv.meta.json").is_file() else None
+
+
+def _u_sorted(vg, pol: int, *ys) -> list[np.ndarray]:
+    """``u = polarity * vg`` ascending, and each of ``ys`` in the same order."""
+    u = pol * np.asarray(vg, dtype=float)
+    order = np.argsort(u, kind="stable")
+    return [u[order], *(np.asarray(y, dtype=float)[order] for y in ys)]
+
+
+def _spice_cv(spice_root: Path, device: Device, gid: str) -> list[plots.Curve]:
+    """ngspice corner envelope (band) and TT (line) of the cv sweep, against u."""
+    curves, _ = _curves(spice_root, device, gid, "cv", 1.0, None)
+    return curves
+
+
+def _tcad_total(d: _Device, g: Geometry, which: str):
+    m = d.calibrated if which == "calibrated" else d.start
+    vg, intrinsic, parasitic, total = m.area_scaled(g, d.proc)
+    return _u_sorted(vg, d.device.polarity, intrinsic, parasitic, total)
+
+
+_U_LABEL = "u = polarity x Vg (V)"
+_SPICE_KEYS = (
+    plots.Key("ngspice TT", plots.NGSPICE_COLOR),
+    plots.Key("ngspice corner envelope", plots.NGSPICE_COLOR, "band"),
+)
+
+
+def _cgg_svg(spice_root: Path, d: _Device, g: Geometry, rec: dict) -> bytes:
+    gid = geometry_id(g)
+    u, _, _, cal = _tcad_total(d, g, "calibrated")
+    us, _, _, start = _tcad_total(d, g, "start")
+    overlay = plots.Panel(
+        "Cgg-Vg: 1D TCAD against ngspice",
+        _U_LABEL,
+        "Cgg (fF)",
+        [
+            *_spice_cv(spice_root, d.device, gid),
+            plots.Curve(us, start, START_COLOR, dashed=True),
+            plots.Curve(u, cal, TCAD_COLOR),
+        ],
+        keys=[
+            *_SPICE_KEYS,
+            plots.Key("TCAD calibrated", TCAD_COLOR),
+            plots.Key("TCAD start values", START_COLOR, "dashed"),
+        ],
+    )
+    res = rec["residuals"]
+    tol = 100 * rec["verdicts"]["plateau_acc"]["tolerance"]
+    span = np.array([min(res["plateau_acc_u"]), max(res["plateau_inv_u"])])
+    errors = plots.Panel(
+        "Plateau errors (from the result file)",
+        _U_LABEL,
+        "(TCAD - SPICE) / SPICE (%)",
+        [
+            plots.Curve(np.array(res["plateau_acc_u"]), 100 * np.array(res["plateau_acc_rel"]),
+                        TCAD_COLOR),
+            plots.Curve(np.array(res["plateau_inv_u"]), 100 * np.array(res["plateau_inv_rel"]),
+                        TCAD_COLOR),
+            plots.Curve(span, np.array([tol, tol]), TOL_COLOR, dashed=True),
+            plots.Curve(span, np.array([-tol, -tol]), TOL_COLOR, dashed=True),
+        ],
+        keys=[
+            plots.Key("TCAD calibrated, plateau points", TCAD_COLOR),
+            plots.Key(f"tolerance ±{fmt(tol)} %", TOL_COLOR, "dashed"),
+        ],
+    )  # fmt: skip
+    return plots.figure_svg([overlay, errors])
+
+
+def _split_svg(spice_root: Path, d: _Device, g: Geometry) -> bytes:
+    gid = geometry_id(g)
+    u, intrinsic, parasitic, total = _tcad_total(d, g, "calibrated")
+    spice = [c for c in _spice_cv(spice_root, d.device, gid) if c.y2 is None]
+    panel = plots.Panel(
+        "Calibrated 1D TCAD Cgg: intrinsic and parasitic parts",
+        _U_LABEL,
+        "Cgg (fF)",
+        [
+            *spice,
+            plots.Curve(u, total, TCAD_COLOR),
+            plots.Curve(u, intrinsic, INTRINSIC_COLOR),
+            plots.Curve(u, parasitic, PARASITIC_COLOR),
+        ],
+        keys=[
+            plots.Key("ngspice TT", plots.NGSPICE_COLOR),
+            plots.Key("TCAD total", TCAD_COLOR),
+            plots.Key("intrinsic: C per area x LeffCV x WeffCV", INTRINSIC_COLOR),
+            plots.Key("parasitic: overlap, fringe, gate-bulk", PARASITIC_COLOR),
+        ],
+    )
+    return plots.figure_svg([panel])
+
+
+def _two_d_svg(d: _Device, job: Path) -> bytes:
+    cols, _ = io.read_csv(job / "cv.csv")
+    pol = d.device.polarity
+    u2, c2 = _u_sorted(cols["vg"], pol, cols["c_per_area"])
+    u1, c1 = _u_sorted(d.start.vg, pol, d.start.c_per_area_ff_um2)
+    panel = plots.Panel(
+        "C per area at the start values: 2D cell against the 1D stack",
+        _U_LABEL,
+        "C per area (fF/um^2)",
+        [plots.Curve(u1, c1, START_COLOR, dashed=True), plots.Curve(u2, c2, "#000000")],
+        keys=[
+            plots.Key("2D, with source and drain (start values)", "#000000"),
+            plots.Key("1D stack (start values)", START_COLOR, "dashed"),
+        ],
+    )
+    return plots.figure_svg([panel])
+
+
+def _meshconv_svg(d: _Device, report: dict) -> bytes:
+    pol = d.device.polarity
+    sel = report["selected"]["level"]
+    vals, changes, keys = [], [], []
+    for i, lv in enumerate(report["levels"]):
+        color = plots.FAMILY[i % len(plots.FAMILY)]
+        u, c = _u_sorted(report["vg"], pol, lv["c_per_area_ff_um2"])
+        vals.append(plots.Curve(u, c, color, dashed=i != sel))
+        if lv["rel_change"] is not None:
+            u, r = _u_sorted(report["vg"], pol, lv["rel_change"])
+            changes.append(plots.Curve(u, np.maximum(np.abs(r), 1e-12), color, dashed=i != sel))
+        mark = ", selected" if i == sel else ""
+        keys.append(
+            plots.Key(f"level {i}: {lv['node_count']} nodes{mark}", color,
+                      "line" if i == sel else "dashed")
+        )  # fmt: skip
+    crit = report["criterion"]
+    span = np.array([-5.0, 5.0])
+    changes.append(plots.Curve(span, np.array([crit, crit]), TOL_COLOR))
+    dim = report["dim"]
+    panels = [
+        plots.Panel(f"{dim}D C per area by mesh level", _U_LABEL, "C per area (fF/um^2)", vals,
+                    keys=keys),
+        plots.Panel(
+            f"{dim}D change against the next finer level", _U_LABEL, "|C / C_finer - 1|",
+            changes, "log",
+            keys=[plots.Key(f"criterion {fmt(crit)}", TOL_COLOR)],
+        ),
+    ]  # fmt: skip
+    return plots.figure_svg(panels)
+
+
+# --- TCAD tables ------------------------------------------------------------------------------
+
+
+def _window_cell(key: str, check: dict) -> str:
+    w = check.get("window")
+    if not w:
+        return "none"
+    if key.startswith("dv_"):
+        which = key.replace("dv_", "u_")
+        return f"{which} in {_interval(w['lo'], w['hi'])} V ({w['source']})"
+    t = w["tightest"]
+    inside = "TCAD inside at every bias" if w["all_inside"] else "TCAD outside at some bias"
+    return (
+        f"{inside}; set by {', '.join(w['sources'])}; tightest at u = {fmt(t['u'])} V: "
+        f"{fmt(t['c_tcad'])} fF in {_interval(t['lo'], t['hi'])} fF"
+    )
+
+
+def _check_rows(rec: dict) -> list[str]:
+    rows = [
+        '| Check | TCAD | Tolerance | {term}`"Same process" window` | Verdict |',
+        "|---|---|---|---|---|",
+    ]
+    m, reg, tc = rec["metrics"], rec["spice_regions"], rec["tcad_crossings"]
+    for key, label in CHECKS:
+        v = rec["verdicts"][key]
+        if key.startswith("plateau_"):
+            side = key.removeprefix("plateau_")
+            tcad = (
+                f"max \\|ΔCgg\\|/Cgg = {_pct(v['max_rel'])} ({m[f'plateau_{side}_points']} points)"
+            )
+            tol = f"≤ {fmt(100 * v['tolerance'])} %"
+        else:
+            which = key.replace("dv_", "u_")
+            tcad = f"{_mv(v['dv_v'])} ({which} TCAD {fmt(tc[which])} V, SPICE {fmt(reg[which])} V)"
+            tol = f"≤ {fmt(1e3 * v['tolerance_v'])} mV (a proposal)"
+        rows.append(f"| {label} | {tcad} | {tol} | {_window_cell(key, v)} | {v['verdict']} |")
+    rows.append(
+        f"| Depletion, max \\|ΔC\\|/C (reported only) | {_pct(m['depletion_max_rel'])} | none | "
+        "none | no verdict |"
+    )
+    return rows
+
+
+def _regions_line(rec: dict) -> str:
+    r = rec["spice_regions"]
+    return (
+        f"SPICE regions of this geometry (from the result file): u_fb = {fmt(r['u_fb'])} V, "
+        f"u_t = {fmt(r['u_t'])} V, C_acc = {fmt(r['c_acc'])} fF, C_min = {fmt(r['c_min'])} fF "
+        f"at u = {fmt(r['u_min'])} V, C_inv = {fmt(r['c_inv'])} fF, C_mid = {fmt(r['c_mid'])} fF."
+    )
+
+
+def _two_d_status(d: _Device, gid: str) -> str:
+    entry = d.val["two_d"].get(gid)
+    if entry is None:
+        raise KeyError(f"{d.device.name} validation file has no two_d entry for {gid}")
+    return entry["status"]
+
+
+def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) -> None:
+    name, gid = d.device.name, geometry_id(g)
+    ddir = out / "tcad" / name
+    rec, src = d.comparison(gid)
+    causes = rec.get("causes") or []
+    cause_text = (
+        f" Causes tagged in advance: {', '.join(f'`{c}`' for c in causes)} "
+        "({ref}`mismatch taxonomy <mismatch-taxonomy>`)."
+        if causes
+        else ""
+    )
+    lines = [
+        f"# {name} MOS capacitor, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} um",
+        "",
+        (
+            f"{{term}}`{name}`, {{term}}`geometry <geometry id>` `{gid}`, a {g.role} geometry "
+            f"({{ref}}`calibration-validation`). The 1D {{term}}`TCAD` "
+            "{term}`MOS capacitor <MOSCAP>` against the {term}`SPICE` {term}`Cgg`-Vg of "
+            "{{ ngspice }} ({term}`TT`, 1 MHz, Vds = 0). Every number and verdict below is read "
+            f"from {{repo}}`{src}`; the method is {{doc}}`{CV_DOC}`. Device summary: "
+            "{doc}`index`. " + _VERDICT_TERMS
+        ),
+        "",
+        f"Verdict (1D): **{rec['verdict']}**.{cause_text}",
+        "",
+        "## Cgg-Vg overlay",
+        "",
+        (
+            "Left: the TCAD Cgg of this geometry, the committed 1D C per area "
+            f"({{repo}}`results/tcad/moscap1d/{name}`) through the fixed {{term}}`BSIM4` "
+            "bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`), at the "
+            "calibrated and at the start values, over the ngspice TT curve and the "
+            "{term}`corner envelope` (min-max over the five {term}`corners <corner>`, at each "
+            "bias). Right: the relative error at each plateau bias, as recorded in the result "
+            "file."
+        ),
+        "",
+        f"![TCAD and ngspice Cgg against u, and the plateau errors]({gid}_cgg.svg)",
+        "",
+        "## Verdicts",
+        "",
+        *_check_rows(rec),
+        "",
+        _regions_line(rec),
+        "",
+        "## Intrinsic and parasitic parts (1D)",
+        "",
+        (
+            "The calibrated TCAD Cgg split into its intrinsic part, the C per area times the "
+            "BSIM4 capacitance area LeffCV x WeffCV ({term}`DLC`, {term}`DWC`), and its "
+            "parasitic part, the BSIM4 overlap, fringe and {term}`CGBO` terms "
+            "({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`). The parasitic part is fixed "
+            "reference-model bookkeeping, not part of the {term}`parameter budget`."
+        ),
+        "",
+        f"![Intrinsic, parasitic and total TCAD Cgg]({gid}_split.svg)",
+        "",
+        "## 2D",
+        "",
+    ]
+    (ddir / f"{gid}_cgg.svg").write_bytes(_cgg_svg(spice_root, d, g, rec))
+    (ddir / f"{gid}_split.svg").write_bytes(_split_svg(spice_root, d, g))
+    job = d.two_d(gid)
+    status = _two_d_status(d, gid)
+    lines.append(
+        f"Calibrated 2D validation: {status} ({{doc}}`{CV_DOC}`, "
+        "[issue #35](https://github.com/mithro/gf180-tcad/issues/35))."
+    )
+    lines.append("")
+    if job is None:
+        lines += [
+            (
+                "No 2D result at the start values is committed for this geometry "
+                "({doc}`/limitations/moscap2d`)."
+            ),
+            "",
+        ]
+    else:
+        meta = _read_json(job / "cv.meta.json")
+        rel = f"results/tcad/moscap2d/{name}/start/{gid}"
+        lines += [
+            (
+                f"The committed 2D cell at the start values ({{repo}}`{rel}`): "
+                f"{meta['node_count']} nodes, source and drain "
+                f"{'included' if meta['with_sd'] else 'left out'}, mesh from "
+                f"{{repo}}`{meta['mesh_source']}`, mesh sha256 `{meta['mesh_sha256']}`. Its C "
+                "per area against the 1D stack at the same start values (both TCAD; the 2D "
+                "C per area divides the per-width Cgg by the drawn L, with no bookkeeping):"
+            ),
+            "",
+            f"![2D and 1D C per area at the start values]({gid}_2d.svg)",
+            "",
+        ]
+        (ddir / f"{gid}_2d.svg").write_bytes(_two_d_svg(d, job))
+    lines += ["### Mesh picture", "", _NO_MESH, ""]
+    if job is None:
+        lines += ["No 2D result exists for this geometry, so there is no mesh either.", ""]
+    (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
+
+
+def _param_rows(d: _Device) -> list[str]:
+    cal = d.cal
+    rows = [
+        (
+            "| Parameter | Start | Fitted | Bounds [lo, hi] | Bound hit | Tag | Start from | "
+            "Bounds from |"
+        ),
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for p in cal["params"]:
+        par = d.proc.params[p]
+        lo, hi = cal["bounds"][p]
+        hit = cal["bound_hits"].get(p, "no")
+        rows.append(
+            f"| `{p}` | {fmt(cal['start'][p], 6)} {par.unit} | {fmt(cal['values'][p], 6)} "
+            f"{par.unit} | {_interval(lo, hi)} | {hit} | `{par.provenance}` | "
+            f"{par.start_kind} | {' / '.join(par.bounds_kind or ())} |"
+        )
+    return rows
+
+
+def _bookkeeping_rows(d: _Device) -> list[str]:
+    rows = ["| Parameter | Value | Tag | Source |", "|---|---|---|---|"]
+    for n, p in d.proc.params.items():
+        if p.role != "reference-bookkeeping":
+            continue
+        srcs = ", ".join(_source_text(s) for s in p.source)
+        rows.append(f"| `{n}` | {fmt(p.value, 6)} {p.unit} | `{p.provenance}` | {srcs} |")
+    return rows
+
+
+def _meshconv_rows(report: dict) -> list[str]:
+    sel = report["selected"]["level"]
+    two_d = report["dim"] == 2
+    head = "| Level | Scale | Nodes | max change to next finer |"
+    rule = "|---|---|---|---|"
+    if two_d:
+        head += " max \\|2D/1D - 1\\| |"
+        rule += "---|"
+    rows = [head + " Selected |", rule + "---|"]
+    for i, lv in enumerate(report["levels"]):
+        mc = "finest" if lv["max_rel_change"] is None else fmt(lv["max_rel_change"], 3)
+        row = f"| {i} | {fmt(lv['scale'])} | {lv['node_count']} | {mc} |"
+        if two_d:
+            a = lv["agreement_1d"]
+            row += f" {'n/a' if a is None else fmt(a, 3)} |"
+        rows.append(row + f" {'yes' if i == sel else ''} |")
+    return rows
+
+
+def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
+    name, cal, val = d.device.name, d.cal, d.val
+    ddir = out / "tcad" / name
+    ddir.mkdir(parents=True, exist_ok=True)
+    opt = cal["optimiser"]
+    cox = cal["cox_check"]
+    lines = [
+        f"# {name} MOS capacitor (TCAD)",
+        "",
+        (
+            f"The {{term}}`TCAD` {{term}}`MOS capacitor <MOSCAP>` of {{term}}`{name}`: the "
+            "C-V calibration of its 1D stack against the {term}`SPICE` {term}`Cgg`-Vg, its "
+            "validation at the {term}`held-out geometries <held-out geometry>`, and the mesh "
+            "{term}`convergence <mesh convergence>` of the 1D and 2D structures. Generated from "
+            f"{{repo}}`results/tcad/calibration/{name}.result.json`, "
+            f"{{repo}}`results/tcad/validation/{name}.json`, {{repo}}`results/tcad/meshconv` "
+            f"and the {{term}}`process file` {{repo}}`data/process/{name}.toml`. The method and "
+            f"its deviations are on {{doc}}`{CV_DOC}`; summary: {{doc}}`../index`. "
+            + _VERDICT_TERMS
+        ),
+        "",
+        (
+            f"Verdict of the calibration geometries: **{cal['verdict']}**; of the held-out "
+            f"geometries (1D): **{val['verdict_1d']}**."
+        ),
+        "",
+        "## Calibrated parameters",
+        "",
+        (
+            f"{{term}}`Parameter budget <parameter budget>` used: {cal['budget_used']} of "
+            f"{cal['budget']} per device type. Optimiser: {opt['method']}, "
+            f'"{opt["message"].replace("`", "")}", {opt["nfev"]} evaluations and '
+            f"{opt['njev']} Jacobians, final cost {fmt(opt['cost'])}. A value within 1e-3 of a "
+            "bound, relative to the bound width, is a bound hit. The tag is the "
+            "{term}`provenance tag`; the kinds say where the start value and each bound come "
+            "from: the {term}`model card` (card), computed from card values (derived), or a "
+            "project choice, as set out on {ref}`process-data-tunables`."
+        ),
+        "",
+        *_param_rows(d),
+        "",
+        (
+            f"{{term}}`Cox` check: the oxide's own Cox is {fmt(cox['c_ox_ff_per_um2'])} "
+            f"fF/um^2 and the 1D C per area is {fmt(cox['c_per_area_acc_ff_per_um2'])} "
+            f"(accumulation) and {fmt(cox['c_per_area_inv_ff_per_um2'])} fF/um^2 (inversion), "
+            f"against the public spec {_interval(cox['spec']['min'], cox['spec']['max'])} "
+            f"fF/um^2 ([{cox['spec']['section']}]({cox['spec']['source_url']})): "
+            f"{'inside' if cox['inside'] else 'OUTSIDE'}."
+        ),
+        "",
+        "### Fixed reference bookkeeping",
+        "",
+        (
+            "Not fitted and not part of the budget: the {term}`BSIM4` values that turn the C per area "
+            "into a Cgg of one geometry ({term}`DLC`, {term}`DWC`, {term}`XL`, {term}`XW`) and "
+            "its parasitic part (overlaps, fringe, {term}`CGBO`). Card lines are in the card "
+            "the process file names; they are linked line by line on {ref}`process-data-card`."
+        ),
+        "",
+        *_bookkeeping_rows(d),
+        "",
+        "## Geometries",
+        "",
+        (
+            "| W/L (um) | Role | Accumulation | Inversion | ΔV_dep | ΔV_inv | Depletion | "
+            "Verdict (1D) | 2D (calibrated) |"
+        ),
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for g in d.device.geometries:
+        gid = geometry_id(g)
+        rec, _ = d.comparison(gid)
+        m = rec["metrics"]
+        lines.append(
+            f"| {{doc}}`{fmt(g.w_um)}/{fmt(g.l_um)} <{gid}>` | {g.role} | "
+            f"{_pct(m['plateau_acc_max_rel'])} | {_pct(m['plateau_inv_max_rel'])} | "
+            f"{_mv(m['dv_dep_v'])} | {_mv(m['dv_inv_v'])} | {_pct(m['depletion_max_rel'])} | "
+            f"{rec['verdict']} | {_two_d_status(d, gid)} |"
+        )
+    lines += [
+        "",
+        (
+            "The plateau and depletion columns are max |ΔCgg|/Cgg; ΔV is the shift of the "
+            "TCAD mid-capacitance crossing from the SPICE one. Validation reasons for the 2D "
+            "column are in the validation file."
+        ),
+        "",
+        "## Mesh convergence",
+        "",
+        (
+            "From {repo}`results/tcad/meshconv` ({doc}`/limitations/mesh-convergence`). Each "
+            "level refines every mesh spacing of the previous one; the dashed curves are the "
+            "levels not selected."
+        ),
+        "",
+    ]
+    for dim in ("1d", "2d"):
+        report = d.meshconv[dim]
+        (ddir / f"meshconv_{dim}.svg").write_bytes(_meshconv_svg(d, report))
+        lines += [
+            f"### {dim.upper()}",
+            "",
+            f"![{dim.upper()} mesh convergence of the C per area](meshconv_{dim}.svg)",
+            "",
+            *_meshconv_rows(report),
+            "",
+        ]
+        for ex in report.get("excluded_levels", []):
+            lines += [
+                f"Level {ex['level']} is not run. The reason recorded in the report:",
+                "",
+                "```text",
+                ex["reason"],
+                "```",
+                "",
+            ]
+        if dim == "2d":
+            lines += [
+                (
+                    f"The 2D study runs at the geometry `{report['settings']['geometry']}`, "
+                    "where the 2D C per area exceeds {term}`Cox` by the fringe and the source/drain "
+                    "overlap at the gate edges ({doc}`/limitations/moscap2d`). " + _NO_MESH
+                ),
+                "",
+            ]
+    lines += ["```{toctree}", ":maxdepth: 1", "", *(geometry_id(g) for g in d.device.geometries)]
+    lines += ["```", ""]
+    (ddir / "index.md").write_bytes("\n".join(lines).encode("utf-8"))
+    for g in d.device.geometries:
+        _tcad_geometry_page(spice_root, d, g, out)
+
+
+def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
+    lines = [
+        "# TCAD MOS capacitor results",
+        "",
+        (
+            "Pages generated at documentation build time from the committed {term}`TCAD` "
+            "results ({repo}`results/tcad`): the C-V calibration of the 1D "
+            "{term}`MOS capacitor <MOSCAP>` against the {term}`SPICE` {term}`Cgg`-Vg and its "
+            "validation at the {term}`held-out geometries <held-out geometry>` "
+            f"({{doc}}`{CV_DOC}`). Every verdict is read from "
+            "{repo}`results/tcad/calibration` and {repo}`results/tcad/validation`, which were "
+            "computed in the TCAD image; these pages only render them. How the trees were made "
+            "and which were restamped: {ref}`tcad-provenance`. " + _VERDICT_TERMS
+        ),
+        "",
+        "## Verdicts (1D)",
+        "",
+        "| Device | Geometry | Role | Verdict (1D) | 2D (calibrated) |",
+        "|---|---|---|---|---|",
+    ]
+    for d in devices:
+        name = d.device.name
+        for g in d.device.geometries:
+            gid = geometry_id(g)
+            rec, _ = d.comparison(gid)
+            lines.append(
+                f"| {{term}}`{name}` | {{doc}}`{fmt(g.w_um)}/{fmt(g.l_um)} <{name}/{gid}>` | "
+                f"{g.role} | {rec['verdict']} | {_two_d_status(d, gid)} |"
+            )
+    lines += [
+        "",
+        (
+            "The 2D column is the calibrated 2D validation: not run for any geometry, since no "
+            "calibrated 2D result is committed ([issue "
+            "#35](https://github.com/mithro/gf180-tcad/issues/35)). The committed 2D results "
+            "are at the start values only, and are shown on the geometry pages that have one."
+        ),
+        "",
+        "## Devices",
+        "",
+        "```{toctree}",
+        ":maxdepth: 2",
+        "",
+        *(f"{d.device.name}/index" for d in devices),
+        "```",
+        "",
+    ]
+    (out / "tcad" / "index.md").write_bytes("\n".join(lines).encode("utf-8"))
+
+
+def generate_tcad(out_dir: Path, tcad_root: Path = TCAD_RESULTS, spice_root: Path = RESULTS):
+    """Write the TCAD summary, device and geometry pages and their SVGs under ``out_dir/tcad``."""
+    out = Path(out_dir)
+    shutil.rmtree(out / "tcad", ignore_errors=True)
+    (out / "tcad").mkdir(parents=True)
+    devices = [_Device(tcad_root, device) for device in DEVICES.values()]
+    for d in devices:
+        _tcad_device_page(spice_root, d, out)
+    _tcad_summary_page(devices, out)
