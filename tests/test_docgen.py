@@ -414,12 +414,18 @@ def test_checks_match_the_committed_verdicts():
     assert n == 12
 
 
-def test_bound_hit_rule_is_the_calibration_constant(tmp_path):
+def test_bound_hit_rule_is_the_calibration_constant(tmp_path, monkeypatch):
+    """The bound-hit sentence is formatted from the constant, not typed: change it and the page follows."""
     from gf180tcad.calibrate.cv import BOUND_HIT_REL
 
-    docgen.generate_tcad(tmp_path)
-    page = (tmp_path / "tcad" / "nfet_05v0" / "index.md").read_text("utf-8")
+    docgen.generate_tcad(tmp_path / "a")
+    page = (tmp_path / "a" / "tcad" / "nfet_05v0" / "index.md").read_text("utf-8")
     assert BOUND_HIT_REL == 1e-3 and "within 1e-3 of a bound" in page
+
+    monkeypatch.setattr("gf180tcad.calibrate.cv.BOUND_HIT_REL", 2e-3)
+    docgen.generate_tcad(tmp_path / "b")
+    page = (tmp_path / "b" / "tcad" / "nfet_05v0" / "index.md").read_text("utf-8")
+    assert "within 2e-3 of a bound" in page and "1e-3" not in page
 
 
 def test_plateau_tolerance_lines_are_per_side(tmp_path):
