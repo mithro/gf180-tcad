@@ -24,4 +24,6 @@ Source: {repo}`src/gf180tcad/calibrate/cv.py`.
 .. autodata:: gf180tcad.calibrate.cv.NARROW_CAUSES
 
 .. autodata:: gf180tcad.calibrate.cv.LMIN_CAUSES
+
+.. autodata:: gf180tcad.calibrate.cv.COX_METRIC
 ```

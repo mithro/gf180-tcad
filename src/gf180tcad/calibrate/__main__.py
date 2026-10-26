@@ -100,9 +100,7 @@ def run_validate_job(device: str, out: Path) -> None:
 
 def _sandbox_job(cmd: list[str], scratch: Path, what: str) -> str:
     try:
-        res = sandbox.run(
-            cmd, out_dir=scratch, image=image_ref(IMAGE), mem=JOB_MEM, cpus=JOB_CPUS
-        )
+        res = sandbox.run(cmd, out_dir=scratch, image=image_ref(IMAGE), mem=JOB_MEM, cpus=JOB_CPUS)
     except sandbox.SandboxError as e:
         log = scratch / "job.log"
         log.write_text(f"{e.result.stdout or ''}\n{e.result.stderr or ''}", encoding="utf-8")
