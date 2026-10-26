@@ -694,7 +694,7 @@ def _window_cell(key: str, check: dict) -> str:
 
 def _check_rows(rec: dict) -> list[str]:
     rows = [
-        '| Check | TCAD | Tolerance | {term}`"Same process" window` | Verdict |',
+        '| Check | TCAD | {term}`Tolerance <tolerance>` | {term}`"Same process" window` | Verdict |',
         "|---|---|---|---|---|",
     ]
     m, reg, tc = rec["metrics"], rec["spice_regions"], rec["tcad_crossings"]
@@ -896,8 +896,8 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         (
             f"The {{term}}`TCAD` {{term}}`MOS capacitor <MOSCAP>` of {{term}}`{name}`: the "
             "C-V calibration of its 1D stack against the {term}`SPICE` {term}`Cgg`-Vg, its "
-            "validation at the {term}`held-out geometries <held-out geometry>`, and the mesh "
-            "{term}`convergence <mesh convergence>` of the 1D and 2D structures. Generated from "
+            "validation at the {term}`held-out geometries <held-out geometry>`, and the "
+            "{term}`mesh convergence` of the 1D and 2D structures. Generated from "
             f"{{repo}}`results/tcad/calibration/{name}.result.json`, "
             f"{{repo}}`results/tcad/validation/{name}.json`, {{repo}}`results/tcad/meshconv` "
             f"and the {{term}}`process file` {{repo}}`data/process/{name}.toml`. The method and "
