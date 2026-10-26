@@ -382,7 +382,8 @@ mesh, the SPICE `cv` gate biases and the committed calibrated values. Its steps 
    --prefix tcad/ --subset tests/crosscheck_tcad_subset.txt`. TCAD jobs are `<tree>/<device>/<params>`
    paths; each tree the jobs name must have its own `provenance.json`, which is compared (it holds
    the calibration file's sha256 for both devices, which is why both are listed). There is no
-   envelope. On success it prints `identical: 5 files of 2 jobs ...`.
+   envelope. On success it prints `identical: 5 files of 2 jobs ...`. The first run passed on an AMD EPYC 7763
+   ([run](https://github.com/mithro/gf180-tcad/actions/runs/40308867413), 2026-10-26).
 5. On failure, the artefact `crosscheck-tcad-differences` holds the generated and committed copy
    of each differing file, their `diff -u`, the logs and the scratch directory of any failed job.
 
