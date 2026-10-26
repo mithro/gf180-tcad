@@ -283,7 +283,7 @@ the closures is provenance bookkeeping only (the per-entry-point module lists an
 `generator` field in {py:mod}`gf180tcad.tcad`, and the `generator=` argument in both entry
 points), nothing that computes a result. No tree could be regenerated for it: the host's
 container budget was taken by another task for hours. The two calibrated 1D jobs, with
-`results/tcad/moscap1d/provenance.json`, are rerun and compared byte for byte by the
+{repo}`results/tcad/moscap1d/provenance.json`, are rerun and compared byte for byte by the
 `crosscheck-tcad` workflow job ({ref}`cross-host-tcad`), which checks that restamp on every
 change to the TCAD code; the other trees have no such check.
 
