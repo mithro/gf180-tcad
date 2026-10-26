@@ -81,7 +81,7 @@ What the {term}`MOS capacitor <MOSCAP>` of {doc}`/comparison/cv-agreement` leave
 together. Each is a modelling choice, stated so that the {term}`calibrated <calibrated parameter budget>`
 values are not read as more physical than they are.
 
-- **Quasi-static, not high-frequency.** The TCAD curve is the {term}`QS <C–V>` one: the
+- **Quasi-static, not high-frequency.** The TCAD curve is the {term}`QS` one: the
   equilibrium {term}`Cgg`, the counterpart of the {term}`BSIM4` `capMod=2` Cgg of the
   {{ ngspice }} {term}`cv` sweep it is compared with. A MOS capacitor with only a body contact,
   measured with a small signal, gives the {term}`HF C–V` curve instead: in inversion it stays

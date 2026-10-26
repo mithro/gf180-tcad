@@ -17,7 +17,7 @@ start values (`--params start`, the uncalibrated parameters). The 1D results wer
 {term}`dev-HEAD TCAD image` ({repo}`docker/TCAD_DEV_IMAGE`,
 {ref}`which image makes which results <tcad-results-image>`):
 
-- the 1D {term}`MOS capacitor <MOSCAP>` C-V curves, in {repo}`results/tcad/moscap1d`;
+- the 1D {term}`MOS capacitor <MOSCAP>` {term}`C–V` curves, in {repo}`results/tcad/moscap1d`;
 - the 1D {term}`mesh convergence`, in {repo}`results/tcad/meshconv`, discussed in
   {doc}`/limitations/mesh-convergence`.
 
@@ -37,14 +37,17 @@ The 1D MOS capacitor is also calibrated against the SPICE {term}`Cgg`–Vg and v
 {doc}`/comparison/index`, and their caveats are in {doc}`/limitations/index`.
 ```
 
-The TCAD pages are generated the same way, by {py:func}`gf180tcad.docgen.generate_tcad`, from
-the committed {repo}`results/tcad` files: a summary of the 1D verdicts, one page per device
+The TCAD pages ({doc}`/_generated/tcad/index`) are generated the same way, by
+{py:func}`gf180tcad.docgen.generate_tcad`, from the committed {repo}`results/tcad` files: a summary of the 1D verdicts, one page per device
 (calibrated parameters with their bounds and {term}`provenance tags <provenance tag>`, the fixed bookkeeping, the
 {term}`mesh convergence` plots) and one per device and geometry (the TCAD-against-ngspice Cgg
 overlay with the {term}`corner envelope`, the verdicts, the intrinsic and parasitic parts, the
 committed 2D result). Every verdict and error on them is read from the calibration and
-validation files, which were computed in the TCAD image; docgen only renders them. No 2D mesh
-is committed, so the pages show no mesh picture and say so.
+validation files, which were computed in the {term}`dev-HEAD TCAD image`;
+{py:mod}`gf180tcad.docgen` only renders them. No 2D mesh is committed
+({ref}`moscap2d-meshes`), so the pages show no mesh picture and say so, a
+{ref}`recorded deviation <limitations-spec-deviations>` from the design spec
+([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
 
 ```{toctree}
 :maxdepth: 2

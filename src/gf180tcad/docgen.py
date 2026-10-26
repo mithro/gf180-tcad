@@ -369,7 +369,7 @@ def _summary_page(root, spec: dict, out: Path):
             "Pages generated at documentation build time from the committed {term}`SPICE` "
             "reference dataset ({repo}`results/spice`): the {term}`golden reference` that "
             "{term}`TCAD` is compared against ({doc}`/comparison/agreement`). The TCAD results so "
-            "far, the C-V calibration of the {term}`MOS capacitors <MOSCAP>` against these "
+            "far, the {term}`C–V` calibration of the {term}`MOS capacitors <MOSCAP>` against these "
             "{term}`Cgg`-Vg curves, are on {doc}`/_generated/tcad/index` "
             "({doc}`/comparison/cv-agreement`)."
         ),
@@ -780,8 +780,9 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
             "bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`), at the "
             "calibrated and at the start values, over the ngspice TT curve and the "
             "{term}`corner envelope` (min-max over the five {term}`corners <corner>`, at each "
-            "bias). Right: the relative error at each plateau bias, as recorded in the result "
-            "file."
+            "bias), against u = polarity × Vg ({term}`polarity-stripped`). Right: the relative "
+            "error at each plateau bias, as recorded in the result file. The plateaus, crossings "
+            "and regions are defined in {ref}`the agreement metric <cv-agreement-metric>`."
         ),
         "",
         f"![TCAD and ngspice Cgg against u, and the plateau errors]({gid}_cgg.svg)",
@@ -911,7 +912,7 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         (
             f"The {{term}}`TCAD` {{term}}`MOS capacitor <MOSCAP>` of {{term}}`{name}`: the "
-            "C-V calibration of its 1D stack against the {term}`SPICE` {term}`Cgg`-Vg, its "
+            "{term}`C–V` calibration of its 1D stack against the {term}`SPICE` {term}`Cgg`-Vg, its "
             "validation at the {term}`held-out geometries <held-out geometry>`, and the "
             "{term}`mesh convergence` of the 1D and 2D structures. Generated from "
             f"{{repo}}`results/tcad/calibration/{name}.result.json`, "
@@ -930,10 +931,12 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         (
             f"{{term}}`Parameter budget <parameter budget>` used: {cal['budget_used']} of "
-            f"{cal['budget']} per device type. Optimiser: {opt['method']}, "
+            f"{cal['budget']} per device type. Optimiser: {{{{ scipy }}}} `least_squares` "
+            f"{opt['method']} ({{py:data}}`~gf180tcad.calibrate.cv.LSQ`), "
             f'"{opt["message"].replace("`", "")}", {opt["nfev"]} evaluations and '
             f"{opt['njev']} Jacobians, final cost {fmt(opt['cost'])}. A value within "
-            f"{bound_rel} of a bound, relative to the bound width, is a bound hit. The tag is the "
+            f"{bound_rel} of a bound, relative to the bound width, is a bound hit "
+            "({py:data}`~gf180tcad.calibrate.cv.BOUND_HIT_REL`). The tag is the "
             "{term}`provenance tag`; the kinds say where the start value and each bound come "
             "from: the {term}`model card` (card), computed from card values (derived), or a "
             "project choice, as set out on {ref}`process-data-tunables`."
@@ -983,15 +986,17 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         (
             "The plateau and depletion columns are max |ΔCgg|/Cgg; ΔV is the shift of the "
-            "TCAD mid-capacitance crossing from the SPICE one. Validation reasons for the 2D "
-            "column are in the validation file."
+            "TCAD mid-capacitance crossing from the SPICE one "
+            "({ref}`the agreement metric <cv-agreement-metric>`). Validation reasons for the 2D "
+            f"column are in {{repo}}`results/tcad/validation/{name}.json`."
         ),
         "",
         "## Mesh convergence",
         "",
         (
             "From {repo}`results/tcad/meshconv` ({doc}`/limitations/mesh-convergence`). Each "
-            "level refines every mesh spacing of the previous one; the dashed curves are the "
+            "level refines every mesh spacing of the previous one ({term}`uniform refinement`); "
+            "the dashed curves are the "
             "levels not selected."
         ),
         "",
@@ -1017,9 +1022,10 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
                 "",
             ]
         if dim == "2d":
+            study = report["settings"]["geometry"]
             lines += [
                 (
-                    f"The 2D study runs at the geometry `{report['settings']['geometry']}`, "
+                    f"The 2D study runs at the geometry {{doc}}`{study} <{study}>`, "
                     "where the 2D C per area exceeds {term}`Cox` by the fringe and the source/drain "
                     "overlap at the gate edges ({doc}`/limitations/moscap2d`). " + _NO_MESH
                 ),
@@ -1038,12 +1044,13 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
         "",
         (
             "Pages generated at documentation build time from the committed {term}`TCAD` "
-            "results ({repo}`results/tcad`): the C-V calibration of the 1D "
+            "results ({repo}`results/tcad`): the {term}`C–V` calibration of the 1D "
             "{term}`MOS capacitor <MOSCAP>` against the {term}`SPICE` {term}`Cgg`-Vg and its "
             "validation at the {term}`held-out geometries <held-out geometry>` "
             f"({{doc}}`{CV_DOC}`). Every verdict is read from "
             "{repo}`results/tcad/calibration` and {repo}`results/tcad/validation`, which were "
-            "computed in the TCAD image; these pages only render them. How the trees were made "
+            "computed in the {term}`dev-HEAD TCAD image`; these pages only render them. How the "
+            "trees were made "
             "and which were restamped: {ref}`tcad-provenance`. " + _VERDICT_TERMS
         ),
         "",
