@@ -168,7 +168,7 @@ def test_moscap_split_methods(tmp_path, monkeypatch):
     monkeypatch.setattr(cli.sandbox, "run", fake_run)
     monkeypatch.setattr(cli, "gplugins_commit", lambda: "x")
     monkeypatch.setattr(cli.meshconv, "selected_spec", lambda d, dim: MeshSpec.DEFAULT_2D)
-    monkeypatch.setattr(cli, "tree_provenance", lambda root, images=None: {"p": 1})
+    monkeypatch.setattr(cli, "tree_provenance", lambda root, images=None, *, generator: {"p": 1})
     scratch, root = tmp_path / "scratch", tmp_path / "root"
     scratch.mkdir()
     gid = "w10p0_l2p00"
