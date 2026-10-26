@@ -25,8 +25,12 @@ from gf180tcad.tcad.mesh import MeshSpec
 from gf180tcad.tcad.process import CONSTANTS
 
 NFET = "nfet_05v0"
+PFET = "pfet_05v0"
 GRID = tuple((i - 50) / 10 for i in range(101))  # -5..5 V, 0.1 V
 TRUTH = {"t_ox_eff_nm": 15.9, "n_ch_cm3": 2.1e17, "dv_fb_v": 0.06}
+# A pfet truth inside the pfet bounds (data/process/pfet_05v0.toml), with a negative flat-band
+# offset, so the pfet sign path (polarity -1, u = -Vg) is fitted too.
+PFET_TRUTH = {"t_ox_eff_nm": 15.9, "n_ch_cm3": 2.1e17, "dv_fb_v": -0.06}
 # The five synthetic corners: (C scale, gate-bias shift in V); typical is the truth itself.
 CORNER_SHAPE = {
     "typical": (1.0, 0.0),
@@ -103,12 +107,36 @@ def fit():
 # --- the fit ---------------------------------------------------------------------------------
 
 
-def test_recovers_known_params(fit):
-    res, _, _ = fit
-    assert math.isclose(res.values["t_ox_eff_nm"], TRUTH["t_ox_eff_nm"], rel_tol=5e-3)
-    assert math.isclose(res.values["n_ch_cm3"], TRUTH["n_ch_cm3"], rel_tol=5e-3)
-    assert abs(res.values["dv_fb_v"] - TRUTH["dv_fb_v"]) <= 1e-3
+@pytest.fixture(scope="module")
+def pfet_fit():
+    targets = synthetic_targets(PFET, PFET_TRUTH, cal_geometries(PFET))
+    return cv.calibrate_cv(
+        PFET, geometries=cal_geometries(PFET), targets=targets, simulate=Recorder()
+    )
+
+
+@pytest.mark.parametrize("device", [NFET, PFET])
+def test_recovers_known_params(device, request):
+    res = (
+        request.getfixturevalue("fit")[0] if device == NFET else request.getfixturevalue("pfet_fit")
+    )
+    truth = TRUTH if device == NFET else PFET_TRUTH
+    proc = process.load(device)
+    for n, v in truth.items():  # the truth is a fair one: inside the bounds
+        lo, hi = proc.params[n].bounds
+        assert lo < v < hi, (n, v)
+    assert res.device == device
+    assert math.isclose(res.values["t_ox_eff_nm"], truth["t_ox_eff_nm"], rel_tol=5e-3)
+    assert math.isclose(res.values["n_ch_cm3"], truth["n_ch_cm3"], rel_tol=5e-3)
+    assert abs(res.values["dv_fb_v"] - truth["dv_fb_v"]) <= 1e-3
     assert res.bound_hits == {}
+    for gid, comp in res.per_geometry.items():  # the regions in u = polarity * Vg, ordered
+        r = comp["spice_regions"]
+        assert r["u_fb"] < r["u_dep"] < r["u_min"] < r["u_inv"], gid
+        assert r["c_min"] < r["c_acc"] and r["c_min"] < r["c_inv"], gid
+    cc = res.cox_check  # accumulation and inversion plateaus taken from the right ends
+    assert cc["c_per_area_acc_ff_per_um2"] > 0.9 * cc["c_ox_ff_per_um2"]
+    assert cc["c_per_area_inv_ff_per_um2"] > 0.9 * cc["c_ox_ff_per_um2"]
     assert res.budget_used == 3 and res.budget == 8
     assert res.verdict == "Agree"
     for gid, comp in res.per_geometry.items():
@@ -236,6 +264,97 @@ def test_validate_requires_frozen_hash(fit, tmp_path):
         )
     with pytest.raises(cv.NotFrozen):
         cv.load_frozen(NFET, tmp_path)
+
+
+def _write_2d(root, device, geometry, vg, cgg, param_sha256):
+    """A calibrated 2D job directory as ``python -m gf180tcad.tcad moscap --dim 2`` writes it
+    (the columns and meta key that cv._two_d reads)."""
+    from gf180tcad.tcad import moscap2d
+
+    job = moscap2d.job_dir(root, device, "calibrated", geometry)
+    job.mkdir(parents=True)
+    area = geometry.w_um * geometry.l_um
+    io.write_csv(
+        job / moscap2d.CV_CSV,
+        {
+            "vg": vg,
+            "c_per_area": [c / area for c in cgg],
+            "cgg_per_um": [c / geometry.w_um for c in cgg],
+            "cgg_total": cgg,
+        },
+        {"device": device, "dim": "2", "method": "qs", "params": "calibrated"},
+    )
+    io.write_json(job / moscap2d.META_JSON, {"device": device, "param_sha256": param_sha256})
+
+
+def test_validate_two_d(fit, tmp_path):
+    """cv._two_d compares the committed calibrated 2D results it finds (drawn-area Cox window, no
+    parasitic term), refuses one computed with other values, and lists the rest as not run."""
+    res, _, _ = fit
+    res.write(tmp_path / "cal")
+    frozen = cv.load_frozen(NFET, tmp_path / "cal")
+    targets = synthetic_targets(NFET, TRUTH, DEVICES[NFET].geometries)
+    by_id = {geometry_id(g): g for g in DEVICES[NFET].geometries}
+    done = ("w10p0_l10p00", "w10p0_l0p70")  # a calibration and a held-out geometry
+    # 8 % high: outside the 5 % and the +-2 % corner envelope; at W10/L10 (C close to Cox * W*L)
+    # inside the drawn-area Cox window, so "Same process" there
+    scale = 1.08
+    m2d = tmp_path / "moscap2d"
+    for gid in done:
+        t = targets[gid]
+        _write_2d(m2d, NFET, by_id[gid], t.tt.vg, [scale * c for c in t.tt.cgg_ff],
+                  frozen.param_sha256)  # fmt: skip
+    out = cv.validate_cv(
+        NFET, frozen, simulate=Recorder(), targets=targets, calibration_root=tmp_path / "cal",
+        moscap2d_root=m2d,
+    )  # fmt: skip
+    assert set(out.two_d) == set(by_id)
+    cox = cv.cox_spec(NFET)
+    for gid, entry in out.two_d.items():
+        g = by_id[gid]
+        assert entry["causes"] == cv.causes(NFET, g), gid
+        if gid not in done:
+            assert entry["status"] == "not run", gid
+            assert f"{NFET}/calibrated/{gid}" in entry["reason"]
+            assert "metrics" not in entry
+            continue
+        assert entry["status"] == "compared", gid
+        assert entry["geometry"]["geometry_id"] == gid
+        m = entry["metrics"]
+        assert math.isclose(m["plateau_acc_max_rel"], scale - 1, rel_tol=1e-9)
+        assert math.isclose(m["plateau_inv_max_rel"], scale - 1, rel_tol=1e-9)
+        # a uniform scale moves each curve's own C_mid with it: no crossing shift
+        assert abs(m["dv_dep_v"]) < 1e-9 and abs(m["dv_inv_v"]) < 1e-9
+        # the plateau window is the Cox spec times the drawn area W*L (no parasitic term),
+        # hulled with the corner envelope, at the tightest plateau point
+        _, elo, ehi = cv.envelope_of(targets[gid].corners)
+        vg = targets[gid].tt.vg
+        for key in ("plateau_acc", "plateau_inv"):
+            v = entry["verdicts"][key]
+            assert v["max_rel"] > cv.PLATEAU_TOL
+            want_verdict = "Same process" if v["window"]["all_inside"] else "Disagree"
+            assert v["verdict"] == want_verdict, (gid, key)
+            if gid == "w10p0_l10p00":
+                assert v["window"]["all_inside"], key
+            tight = v["window"]["tightest"]
+            i = vg.index(tight["u"])  # nfet: u = vg
+            want = specwindow.window(
+                "cgg_ff",
+                (cox["min"] * g.w_um * g.l_um, cox["max"] * g.w_um * g.l_um),
+                (elo[i], ehi[i]),
+            )
+            assert (tight["lo"], tight["hi"], tight["source"]) == (want.lo, want.hi, want.source)
+            assert tight["lo"] == min(cox["min"] * g.w_um * g.l_um, elo[i])
+        assert entry["verdict"] == cv.worst(x["verdict"] for x in entry["verdicts"].values())
+    assert out.two_d["w10p0_l10p00"]["verdict"] == "Same process"
+    # a calibrated 2D result computed with other values is refused
+    meta = m2d / NFET / "calibrated" / done[1] / "cv.meta.json"
+    io.write_json(meta, {"device": NFET, "param_sha256": "0" * 64})
+    with pytest.raises(cv.NotFrozen, match="not computed with the frozen calibration"):
+        cv.validate_cv(
+            NFET, frozen, simulate=Recorder(), targets=targets, calibration_root=tmp_path / "cal",
+            moscap2d_root=m2d,
+        )  # fmt: skip
 
 
 def test_validate_checks_every_target(fit, tmp_path):
@@ -490,6 +609,20 @@ def test_docs_quote_the_committed_results(device):
 
 
 # --- in the TCAD image ---------------------------------------------------------------------------
+
+
+@pytest.mark.sandbox
+def test_calibration_reproduces_the_committed_files(tmp_path):
+    """run (in the sandbox) gives the committed calibration files byte for byte (the claim
+    "two runs give byte-identical files" of docs/comparison/cv-agreement.md)."""
+    from gf180tcad.calibrate import __main__ as cli
+
+    root = tmp_path / "out"
+    for device in process.DEVICES:
+        assert cli.main(["run", "--device", device, "--out", str(root)]) == 0
+    names = [f"{d}{s}" for d in process.DEVICES for s in (".json", cv.RESULT_SUFFIX)]
+    for name in (*names, "provenance.json"):
+        assert (root / name).read_bytes() == (cv.CALIBRATION_ROOT / name).read_bytes(), name
 
 
 @pytest.mark.sandbox
