@@ -121,7 +121,11 @@ def tcad_axes() -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
 
 def tcad_all_jobs() -> tuple[str, ...]:
     """Relpaths ``<tree>/<device>/<params>`` of every TCAD MOS capacitor job: every combination
-    of :func:`tcad_axes`, in that order."""
+    of :func:`tcad_axes`, in that order.
+
+    This covers the ``moscap1d`` and ``moscap2d`` trees only. The 2D ``calibrated`` jobs are not
+    committed (issue #35), so a TCAD subset of ``all`` reports ``moscap2d/*/calibrated`` as
+    ``unknown job`` until they are."""
     trees, devices, params = tcad_axes()
     return tuple(f"{t}/{d}/{p}" for t in trees for d in devices for p in params)
 

@@ -103,7 +103,7 @@ half alone.
 {ref}`crosscheck-tcad job <cross-host-tcad>` does: {repo}`tools/crosscheck-tcad-run` writes the jobs
 into `tmp/reproduce-quick` (`QUICK_OUT=`; a path under {repo}`results` is refused), then
 `python -m gf180tcad.manifest verify-subset tmp/reproduce-quick --kind tcad --prefix tcad/`
-compares them byte for byte with the manifest. It takes about a minute; on 2026-10-26 it printed
+compares them byte for byte with the manifest. A TCAD subset `all` covers the `moscap1d` and `moscap2d` trees only and reports `moscap2d/*/calibrated` as `unknown job` until issue [#35](https://github.com/mithro/gf180-tcad/issues/35) commits the 2D calibrated results. It takes about a minute; on 2026-10-26 it printed
 `identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under tcad/`.
 
 After an intended change to the results, regenerate them and rewrite the
