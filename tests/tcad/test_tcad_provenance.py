@@ -149,16 +149,24 @@ def test_provenance_records_calibration(tmp_path, monkeypatch):
     (tree / "nfet_05v0" / "calibrated").mkdir(parents=True)
     (tree / "pfet_05v0" / "start").mkdir(parents=True)
     assert tcad.calibrated_devices(tree) == ("nfet_05v0",)
-    # the validation tree: every device validated there used its calibration
-    val = tmp_path / "validation"
-    val.mkdir()
-    for name in ("pfet_05v0.json", "provenance.json", "notes.json"):
-        (val / name).write_text("{}", encoding="utf-8")
-    assert tcad.calibrated_devices(val) == ("pfet_05v0",)
-    # the calibration tree itself was computed from the start values
+    # a validation tree: every device validated there used its calibration, recognised by the
+    # validation result's content (it records the calibration file's sha256), whatever the
+    # tree's directory is called
+    validated = json.dumps({"calibration_file_sha256": "0" * 64, "device": "pfet_05v0"})
+    for name in ("validation", "elsewhere"):
+        val = tmp_path / name
+        val.mkdir()
+        (val / "pfet_05v0.json").write_text(validated, encoding="utf-8")
+        for other in ("provenance.json", "notes.json"):
+            (val / other).write_text(validated, encoding="utf-8")
+        (val / "nfet_05v0.json").write_text("{}", encoding="utf-8")
+        assert tcad.calibrated_devices(val) == ("pfet_05v0",), name
+    # the calibration tree itself was computed from the start values: its <device>.json is a
+    # calibration file (schema, device, values); the sha256 is only in <device>.result.json
     cal = tmp_path / "calibration"
     cal.mkdir()
-    (cal / "pfet_05v0.json").write_text("{}", encoding="utf-8")
+    calibration.write(cal / "pfet_05v0.json", "pfet_05v0", values)
+    (cal / "pfet_05v0.result.json").write_text(validated, encoding="utf-8")
     assert tcad.calibrated_devices(cal) == ()
 
 

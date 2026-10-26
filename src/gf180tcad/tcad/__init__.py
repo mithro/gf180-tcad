@@ -12,7 +12,7 @@ result kind in the tree (``moscap1d``, ``moscap2d``) the TCAD image that made it
 (:data:`IMAGES`), reference and ``versions.json`` contents. It also holds the plugin
 commit ``gplugins_commit`` and ``generator_sha256`` (:func:`generator_sha256`), and, for a tree
 with calibrated results (:func:`calibrated_devices`: calibrated job directories, and every device
-of the validation tree), per device the sha256 of its calibration file
+with a validation result at the tree root), per device the sha256 of its calibration file
 ``results/tcad/calibration/<device>.json`` (:mod:`gf180tcad.tcad.calibration`, written by
 :repo:`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`) and the ``param_sha256`` of the
 values applied (:func:`gf180tcad.tcad.calibration.param_sha256`). It holds no date.
@@ -258,14 +258,19 @@ def provenance(
 
 def calibrated_devices(tree_root: Path) -> tuple[str, ...]:
     """The devices whose results under ``tree_root`` used calibrated values, sorted: those with a
-    ``<device>/calibrated`` job directory, and in the validation tree (:data:`VALIDATION_DIR`)
-    those with a ``<device>.json``."""
+    ``<device>/calibrated`` job directory, and those with a validation result ``<device>.json``
+    at the tree root (as in :data:`VALIDATION_DIR`), recognised by its content: it records the
+    ``calibration_file_sha256`` of the calibration it applied. The decision never depends on the
+    tree's directory name, so a validation written to any ``--out`` gets the same provenance."""
     from gf180tcad.tcad.process import DEVICES
 
     tree_root = Path(tree_root)
     found = {p.parent.name for p in tree_root.glob("*/calibrated") if p.is_dir()}
-    if tree_root.name == VALIDATION_DIR.name:
-        found |= {p.stem for p in tree_root.glob("*.json") if p.stem in DEVICES}
+    for p in tree_root.glob("*.json"):
+        if p.stem in DEVICES:
+            data = json.loads(p.read_bytes())
+            if isinstance(data, dict) and "calibration_file_sha256" in data:
+                found.add(p.stem)
     return tuple(sorted(found))
 
 
