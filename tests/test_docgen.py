@@ -384,6 +384,22 @@ def test_moscap_verdicts_are_read_not_recomputed(tmp_path):
     assert "Verdict (1D): **Disagree**" in page
 
 
+def test_moscap_summary_2d_sentence_follows_the_statuses(tmp_path):
+    """The summary's 2D sentence is derived from the two_d statuses, not fixed text."""
+    tree = _link_tcad_tree(tmp_path / "tcad_in")
+    out = tmp_path / "out"
+    docgen.generate_tcad(out, tcad_root=tree)
+    assert "not run for any geometry" in (out / "tcad" / "index.md").read_text("utf-8")
+    path = tree / "validation" / "nfet_05v0.json"
+    val = json.loads(path.read_text("utf-8"))
+    val["two_d"][next(iter(val["two_d"]))]["status"] = "compared"
+    path.unlink()
+    path.write_text(json.dumps(val), "utf-8")
+    docgen.generate_tcad(out, tcad_root=tree)
+    summary = (out / "tcad" / "index.md").read_text("utf-8")
+    assert "not run for any geometry" not in summary and "| compared |" in summary
+
+
 def test_moscap_missing_result_raises(tmp_path):
     tcad = _link_tcad_tree(tmp_path / "tcad_in")
     (tcad / "validation" / "pfet_05v0.json").unlink()

@@ -1049,14 +1049,23 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
                 f"| {{term}}`{name}` | {{doc}}`{fmt(g.w_um)}/{fmt(g.l_um)} <{name}/{gid}>` | "
                 f"{g.role} | {rec['verdict']} | {_two_d_status(d, gid)} |"
             )
-    lines += [
-        "",
-        (
+    statuses = {_two_d_status(d, geometry_id(g)) for d in devices for g in d.device.geometries}
+    if statuses == {"not run"}:
+        two_d_text = (
             "The 2D column is the calibrated 2D validation: not run for any geometry, since no "
             "calibrated 2D result is committed ([issue "
             "#35](https://github.com/mithro/gf180-tcad/issues/35)). The committed 2D results "
             "are at the start values only, and are shown on the geometry pages that have one."
-        ),
+        )
+    else:
+        two_d_text = (
+            "The 2D column is the status of the calibrated 2D validation of each geometry, read "
+            "from {repo}`results/tcad/validation` ([issue "
+            "#35](https://github.com/mithro/gf180-tcad/issues/35))."
+        )
+    lines += [
+        "",
+        two_d_text,
         "",
         "## Devices",
         "",
