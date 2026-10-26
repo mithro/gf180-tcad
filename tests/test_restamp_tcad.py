@@ -126,3 +126,33 @@ def test_main_reports_a_refusal(tmp_path, capsys):
     io.write_json(root / PROVENANCE_NAME, prov)
     assert tool.main([str(root)]) == 2
     assert "gplugins_commit" in capsys.readouterr().err
+
+
+def test_main_refuses_a_generator_other_than_the_tree_s_writer(tmp_path, capsys):
+    """For a known tree name, --generator may only repeat TREE_GENERATORS, never override it."""
+    root = _old_scheme_tree(tmp_path, "moscap2d")
+    before = (root / PROVENANCE_NAME).read_bytes()
+    assert tool.main([str(root), "--generator", tcad.CALIBRATE_MAIN]) == 2
+    err = capsys.readouterr().err
+    assert "gf180tcad.tcad.__main__" in err and "moscap2d" in err
+    assert (root / PROVENANCE_NAME).read_bytes() == before
+    assert tool.main([str(root), "--generator", tcad.TCAD_MAIN]) == 0
+    assert (root / PROVENANCE_NAME).read_bytes() == _expected(root, tcad.TCAD_MAIN)
+
+
+def test_main_writes_nothing_if_any_tree_refuses(tmp_path, capsys):
+    """Every tree is checked before any is written: a refusal leaves all of them unchanged."""
+    good = _old_scheme_tree(tmp_path / "a", "moscap1d")
+    bad = _old_scheme_tree(tmp_path / "b", "moscap1d")
+    prov = json.loads((bad / PROVENANCE_NAME).read_bytes())
+    prov["gplugins_commit"] = "0" * 40
+    io.write_json(bad / PROVENANCE_NAME, prov)
+    before = {p: (p / PROVENANCE_NAME).read_bytes() for p in (good, bad)}
+    assert tool.main([str(good), str(bad)]) == 2
+    assert "gplugins_commit" in capsys.readouterr().err
+    for p, b in before.items():
+        assert (p / PROVENANCE_NAME).read_bytes() == b, p
+    # an unknown tree name after a good one: nothing written either
+    other = _old_scheme_tree(tmp_path / "c", "elsewhere")
+    assert tool.main([str(good), str(other)]) == 2
+    assert (good / PROVENANCE_NAME).read_bytes() == before[good]
