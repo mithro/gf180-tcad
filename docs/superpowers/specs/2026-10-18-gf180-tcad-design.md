@@ -20,7 +20,7 @@ versus what was *predicted*.
 
 **Goals**
 - G1. Generate device structures from gdsfactory layouts (gdsfactory `gf180mcu` PDK cells) and turn them into TCAD meshes and doping.
-- G2. Simulate an initial small set of 5 V devices with **DEVSIM** (primary) and **Charon** (cross-check).
+- G2. Simulate an initial small set of 5 V devices with **DEVSIM** and **Charon** in parallel, cross-comparing their results job by job (§12.1).
 - G3. Produce a golden SPICE dataset from the pinned PDK with ngspice (and Xyce as a second SPICE engine).
 - G4. Compare TCAD vs SPICE with a documented, two-level agreement definition (§5), and document every mismatch with its probable cause (§6).
 - G5. Run every simulation inside Docker under hard resource limits (§8).
@@ -128,7 +128,7 @@ Metrics are always reported also as error / σ_mismatch where σ_Vt = A_Vt/√(W
 - Solver convergence: relative update < 1e-10 on potential, documented per bias point; no bias point silently skipped.
 - Gummel symmetry test (McAndrew 2006) smooth through Vds = 0.
 - Charge conservation in AC (Cgg = −(Cgd + Cgs + Cgb) within 0.1 %).
-- DEVSIM vs Charon on the identical mesh and identical models: ≤ 1 % on Id, ≤ 2 mV on Vt. (A larger difference is a *simulator* problem and blocks process conclusions.)
+- DEVSIM vs Charon on the identical mesh and identical models: ≤ 1 % on Id, ≤ 2 mV on Vt; every other metric by kind, ≤ 1 % for relative quantities and ≤ 2 mV for voltages (§12.1). (A larger difference is a *simulator* problem and blocks process conclusions.)
 
 ## 6. Mismatch taxonomy (documented per result)
 
@@ -313,6 +313,100 @@ produce results.
 - **DMT-core (GPL-3, in-process OK)**: reuse for ngspice/Xyce sweep control and data handling, if it fits; otherwise borrow its patterns. SemiMod's `ihp_sg13g2_compact_models` is the template for the comparison/report pipeline. Hdev, OpenVAF: not used.
 - **Charon**: latest Charon (v2.2 unless newer found) with the latest Trilinos it builds against; start from an existing popular image or conda package if a trustworthy one exists, otherwise our own reproducible image on ghcr.io.
 
+### 12.1 Dual-backend cross-comparison: devsim and Charon
+
+Added 2026-10-27 at the user's request (§16). DEVSIM and Charon run **in parallel** on every TCAD
+job, not only as a late Phase 4 check, and their results are cross-compared job by job. Two
+independent simulators agreeing on the same inputs is the evidence that a TCAD-vs-SPICE result
+is a property of the device description, not of one simulator's discretisation, models or bugs.
+
+**Same device description.** Both backends consume one backend-neutral device description:
+mesh, regions and materials, contacts, doping, physical constants and models, and the bias
+plan. It is produced once, through the backend seam of the Phase 2 plan, Task 15
+(`device_description.py` plus `backends/devsim.py` in the `mithro/gplugins` fork), with a
+`backends/charon.py` that translates it into Charon's mesh and input files. The physics is
+pinned identically on both sides: the constants table of the Phase 2 plan (ε0, q, k_B, ε_si,
+ε_ox, T, n_i), Boltzmann statistics, the same mobility, recombination and gate treatment. A
+model one backend lacks is not approximated on the other; the job is marked as not comparable
+for that model, and the reason is recorded.
+
+**Committed results.**
+- Each TCAD job's committed results carry both backends' outputs, in parallel per-backend
+  trees with one `provenance.json` per tree root, as in Phase 2. The existing DEVSIM trees keep
+  their paths; the exact layout is fixed in the plan.
+- Each job also gets a **comparison file** (`compare.json`): per metric and per bias, the two
+  values, the delta (absolute and relative), the tolerance applied and a pass/fail, in the
+  style of `pdkdiff.compare`'s per-metric delta summary. It is computed inside one stated image,
+  never by comparing numbers from different images bit-wise (Phase 2 Global Constraints).
+- An agreement page in `docs/comparison/` (generated from the comparison files only) shows,
+  per device and job, the overlay of both backends, the delta plots and the pass/fail matrix.
+
+**What "agree" means.** No new numbers: the tolerances are the numerical-acceptance ones of
+§5.2.
+- The DEVSIM-vs-Charon line of §5.2 sets 1 % on Id and 2 mV on Vt, on the identical mesh and
+  models. It is extended to every other metric by kind: relative quantities (currents,
+  capacitances at each bias, plateau values, conductances) agree within **1 %**, which is also
+  the mesh-convergence criterion of §5.2 (`CRITERION = 0.01` in
+  `src/gf180tcad/tcad/meshconv.py`); voltage quantities (Vt, flat band, the C–V crossing
+  voltages) agree within **2 mV**, twice the 1 mV mesh-convergence Vt criterion, because the two
+  backends' own discretisation errors, each bounded by mesh convergence, can add.
+- The normative values live in §5.2 and are rendered on `docs/comparison/agreement.md`
+  (numerical acceptance). The code holds them once, in the comparison module, which imports the
+  mesh-convergence criterion rather than repeating it; a test ties the module's values to the
+  page.
+- Each backend must first pass the §5.2 numerical acceptance on its own (mesh and solver
+  convergence, charge conservation). A backend comparison on an unconverged result does not
+  count.
+
+**On disagreement.** A difference above tolerance is a simulator problem and blocks process
+conclusions for that job (§5.2). Both results stay committed and shown; the disagreement is
+recorded on the limitations page with its numbers and its probable cause (discretisation
+scheme, model implementation, contact or boundary treatment, solver), tagged `numerics` in the
+§6 taxonomy, and gets an issue. One backend is never silently picked, preferred or dropped, and
+the tolerance is never loosened to make a job pass.
+
+**Sandbox, provenance, reproduction.** Charon runs only in a sandbox image, like DEVSIM:
+- a pinned Charon build (latest release and the Trilinos it builds against, by version and
+  source sha256, §9), in its own reproducible image on ghcr.io, run through
+  `tools/sandbox-run` with `--network none` and the §8 limits, single-rank and single-threaded
+  in the reference configuration for determinism. The **Charon image is a prerequisite task**.
+- Charon trees carry the same provenance as the DEVSIM trees (image reference, plugin commit,
+  generator sha256, parameter sha256) and are registered in the manifest; `make reproduce`
+  regenerates both backends.
+- The SPICE reference stays the yardstick for both backends. Calibration (§5.2) and the
+  TCAD-vs-SPICE verdicts are reported per backend, and the comparison runs on identical inputs
+  (the start values, and the calibrated values of the backend that was calibrated), so a delta
+  is a simulator difference and nothing else. Anti-goal A1 applies to each backend.
+
+**Phasing.** First the backend seam (Phase 2 plan, Task 15, no Charon code); then the Charon
+image; then the 1D MOS capacitor on Charon; then the 2D MOS capacitor; then each later device
+on both backends from its first result. The cross-comparison pages appear with the first
+Charon job. The detailed plan is a separate plan document.
+
+**Open questions** (to be settled by the Charon image and plan work, and recorded on the
+limitations page as they are answered):
+- **Build cost.** Charon needs a large Trilinos build (Panzer and its dependencies): build
+  time, image size, and whether a trustworthy existing image or package exists (§12) are
+  unknown. Whether a single-rank, single-threaded build is bit-reproducible across hosts is
+  also unknown; if not, Charon results are compared numerically, as §9's fallback allows.
+- **Meshing and input format.** Charon reads Exodus II meshes and its own input files. Whether
+  the backend can write Exodus from the gmsh/meshwell mesh without changing node positions
+  (so that "the identical mesh" holds exactly), and how regions, contacts and the doping field
+  map onto Charon's input, is not yet known.
+- **Which physics models both support identically.** Overriding every constant (ε_si 11.7, the
+  Altermatt n_i, T = 298.15 K), Boltzmann statistics in the degenerate poly gate, constant
+  mobility and SRH with given lifetimes must be checked in Charon. The two discretisations
+  differ (DEVSIM's finite-volume Scharfetter–Gummel; Charon's finite-element formulations), so
+  their discretisation errors differ on the same mesh.
+- **C–V method.** How Charon gives the quasi-static Cgg (dQ/dV from a DC sweep, or a
+  small-signal AC solve) and whether it matches DEVSIM's method closely enough to compare
+  within 1 %.
+- **Calibration.** Whether each backend is also calibrated independently (comparing the two
+  calibrated parameter sets is a further check), in addition to running Charon on DEVSIM's
+  calibrated values.
+- **Cost of 2D on this host.** 2D DEVSIM jobs already take hours at 16 GiB, one at a time;
+  doubling them with Charon doubles the 2D run time unless Charon is faster.
+
 ## 13. Phases
 
 Each phase ends with merged, reviewed work on `main`, published docs and passing reproducibility checks.
@@ -321,7 +415,7 @@ Each phase ends with merged, reviewed work on `main`, published docs and passing
 - **Phase 1 — SPICE golden reference.** Pinned PDK; ngspice + Xyce sweeps for the device/geometry/bias matrix (§5.2); metric extraction library with tests; docs pages (b)/(c) showing SPICE-only results and spec-window checks (sanity: SPICE reproduces the PDK's own electrical spec table).
 - **Phase 2 — gplugins DEVSIM fix + 1D/2D MOSCAP.** Fix the fork's plugin; MOS capacitor from gdsfactory geometry; mesh-convergence tooling; calibrate oxide and channel doping against SPICE Cgg–Vg.
 - **Phase 3 — 2D MOSFET in DEVSIM.** Extend the plugin for MOSFETs; process description file with public sources; calibration on §5.2 calibration targets; validation on held-out targets; mismatch taxonomy filled in; full results/comparison docs.
-- **Phase 4 — Charon cross-check.** Reproducible Charon image; Charon backend in the plugin; DEVSIM-vs-Charon numerical agreement; Charon-only physics (BGN, impact ionisation) used to explain mismatches.
+- **Phase 4 — Charon in parallel (amended 2026-10-27, §12.1).** No longer after Phase 3: it starts once the Phase 2 backend seam exists and runs alongside Phases 2–3. Reproducible Charon image; Charon backend in the plugin; the 1D, then 2D MOS capacitor on Charon, then every later device on both backends; per-job DEVSIM-vs-Charon comparison files and agreement page; Charon-only physics (BGN, impact ionisation) used to explain mismatches.
 - **Phase 5 — 3D and silicon-readiness.** 3D narrow-width (1.6/0.7) simulation; silicon-validation inventory and predictions at the exact TRID/ASHES/T0P3 geometries; temperature extension; roadmap for the rest of the PDK device list.
 
 ## 14. Calls I made (the user can override)
@@ -331,7 +425,7 @@ Each phase ends with merged, reviewed work on `main`, published docs and passing
 - Agreement thresholds from ITRS 2007; subthreshold and Isub tolerances are my proposals.
 - Three-level verdict (Agree / Same process / Disagree).
 - Resource defaults 16 GiB / 8 CPU per job, 128 GiB aggregate.
-- DEVSIM first, Charon as cross-check; ngspice primary SPICE, Xyce secondary.
+- DEVSIM first, Charon as cross-check; ngspice primary SPICE, Xyce secondary. *(Superseded 2026-10-27 by the user: DEVSIM and Charon run in parallel and are cross-compared, §12.1.)*
 - MOSCAP before MOSFET.
 - Parameter-source hierarchy, 8-parameter calibration budget, held-out geometries, SPICE reference instance parameters, corner-envelope "Same process" window (all §5.2).
 - IIC-OSIC-TOOLS as the base container; latest gf180mcuD as primary reference, run-1/2 `d658698` as secondary.
@@ -356,3 +450,6 @@ that the intent survives later rewording of the sections it changed.
   > person to see and understand what is being simulated and what is happening. These renders
   > can simplify or exadurate the real world results (making diagrams not to scale, etc) but
   > should still be based on the actual numbers."
+- **2026-10-27: devsim and Charon in parallel.** New §12.1; G2, the §5.2 DEVSIM-vs-Charon
+  line, Phase 4 (§13) and the §14 call changed to match. The user's words:
+  > "We should also be using devsim and charon in parallel and cross comparing their results."
