@@ -43,10 +43,18 @@ uncalibrated start parameters:
   equilibrium solve fails there too; see the
   [2D MOS capacitor page](https://gf180-tcad.readthedocs.io/en/latest/limitations/moscap2d.html).
 
-Next are the calibration of the TCAD against the SPICE
+The 1D MOS capacitor is calibrated against the SPICE
 [Cgg](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Cgg)–Vg
-([Task 12](docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg))
-and the TCAD results and comparison pages
+([Task 12](docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg),
+[`results/tcad/calibration`](results/tcad/calibration),
+[`results/tcad/validation`](results/tcad/validation),
+[C–V calibration page](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html)):
+three tunables, 3 of the 8-parameter budget. The nfet agrees with SPICE at every geometry,
+fitted and held out. The pfet is published as a disagreement: the SPICE pfet's depletion edge
+moves by 0.57 V between L = 10 µm and the minimum length, which one length-independent 1D stack
+cannot follow. The calibrated 1D curves are in
+[`results/tcad/moscap1d`](results/tcad/moscap1d); the 2D validation is not run yet. Next are the
+TCAD results and comparison pages
 ([Task 13a](docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-13a-tcad-results-and-docs-pages)).
 The current limitations, including the deviations from the design spec, are listed on the
 [limitations page](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html).

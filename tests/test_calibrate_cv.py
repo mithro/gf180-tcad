@@ -366,3 +366,86 @@ def test_cli_requires_known_choices():
     ):
         with pytest.raises(SystemExit):
             cli.main(argv)
+
+
+# --- the committed results (host) ----------------------------------------------------------------
+
+DOC = cv.REPO_ROOT / "docs" / "comparison" / "cv-agreement.md"
+
+
+@pytest.mark.parametrize("device", process.DEVICES)
+def test_committed_calibration(device):
+    res = cv.load_frozen(device)
+    proc = process.load(device)
+    assert res.budget_used == 3 and res.budget == cv.BUDGET
+    assert set(res.per_geometry) == {geometry_id(g) for g in cal_geometries(device)}
+    assert all(c["geometry"]["role"] == "calibration" for c in res.per_geometry.values())
+    assert res.start == {n: proc.params[n].value for n in process.TUNABLES}
+    for n, v in res.values.items():
+        lo, hi = proc.params[n].bounds
+        assert res.bounds[n] == (lo, hi) and lo <= v <= hi
+        near = min(v - lo, hi - v) <= cv.BOUND_HIT_REL * (hi - lo)
+        assert (n in res.bound_hits) == near
+    assert res.verdict == cv.worst(c["verdict"] for c in res.per_geometry.values())
+    assert {k: res.optimiser[k] for k in cv.LSQ} == dict(cv.LSQ)
+
+
+@pytest.mark.parametrize("device", process.DEVICES)
+def test_committed_validation(device):
+    frozen = cv.load_frozen(device)
+    data = json.loads((cv.VALIDATION_ROOT / f"{device}.json").read_bytes())
+    assert data["param_sha256"] == frozen.param_sha256
+    assert data["values"] == frozen.values
+    cal = cv.CALIBRATION_ROOT / f"{device}.json"
+    assert data["calibration_file_sha256"] == calibration.sha256_file(cal)
+    assert set(data["one_d"]) == {geometry_id(g) for g in val_geometries(device)}
+    assert set(data["two_d"]) == {geometry_id(g) for g in DEVICES[device].geometries}
+    for gid, c in data["one_d"].items():
+        g = next(x for x in DEVICES[device].geometries if geometry_id(x) == gid)
+        assert c["causes"] == cv.causes(device, g)
+
+
+def _doc_row(c: dict) -> str:
+    m, g = c["metrics"], c["geometry"]
+    return (
+        f"| {g['w_um']:g}/{g['l_um']:g} | {g['role']} | {100 * m['plateau_acc_max_rel']:.2f} % | "
+        f"{100 * m['plateau_inv_max_rel']:.2f} % | {1000 * m['dv_dep_v']:+.1f} mV | "
+        f"{1000 * m['dv_inv_v']:+.1f} mV | {100 * m['depletion_max_rel']:.1f} % | {c['verdict']} |"
+    )
+
+
+@pytest.mark.parametrize("device", process.DEVICES)
+def test_docs_quote_the_committed_results(device):
+    """The tables of docs/comparison/cv-agreement.md are the committed numbers."""
+    text = DOC.read_text(encoding="utf-8")
+    res = cv.load_frozen(device)
+    val = json.loads((cv.VALIDATION_ROOT / f"{device}.json").read_bytes())
+    for c in [*res.per_geometry.values(), *val["one_d"].values()]:
+        assert _doc_row(c) in text, _doc_row(c)
+    v = res.values
+    row = (
+        f"| {{term}}`{device}` | {v['t_ox_eff_nm']:.3f} [{res.bounds['t_ox_eff_nm'][0]:g}, "
+        f"{res.bounds['t_ox_eff_nm'][1]:g}] | {v['n_ch_cm3']:.3e}".replace("e+", "e")
+    )
+    assert row in text, row
+    assert f"| {1000 * v['dv_fb_v']:+.1f} mV [±200 mV] |" in text
+    assert f"{res.optimiser['nfev']} evaluations" in text
+    cc = res.cox_check
+    for x in (cc["c_ox_ff_per_um2"], cc["c_per_area_acc_ff_per_um2"]):
+        assert f"{x:.3f}" in text
+    assert res.bound_hits == {} and "No value is within 1e-3 of a bound" in text
+
+
+# --- in the TCAD image ---------------------------------------------------------------------------
+
+
+@pytest.mark.sandbox
+def test_validation_reproduces_the_committed_files(tmp_path):
+    """validate (in the sandbox) gives the committed validation files byte for byte."""
+    from gf180tcad.calibrate import __main__ as cli
+
+    root = tmp_path / "validation"  # the tree name decides its provenance's calibration entry
+    for device in process.DEVICES:
+        assert cli.main(["validate", "--device", device, "--out", str(root)]) == 0
+    for name in (*(f"{d}.json" for d in process.DEVICES), "provenance.json"):
+        assert (root / name).read_bytes() == (cv.VALIDATION_ROOT / name).read_bytes(), name
