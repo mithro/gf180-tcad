@@ -331,3 +331,184 @@ def test_cli_complete_counts_and_compares_envelope(tmp_path):
     n = sum(1 for p in tree.rglob("*") if p.is_file())
     assert f"identical: {n} files of 120 jobs" in r.stdout
     assert "envelope.json compared" in r.stdout and "excluded" not in r.stdout
+
+
+# --- TCAD subsets (kind="tcad") ---------------------------------------------------------------
+#
+# TCAD jobs are <tree>/<device>/<params> under the manifest prefix tcad/; each tree named by the
+# jobs has its own provenance.json, and there is no envelope.
+
+T1N = "moscap1d/nfet_05v0/calibrated"
+T1P = "moscap1d/pfet_05v0/calibrated"
+T2N = "moscap2d/nfet_05v0/start"
+TCAD_ALL = tuple(
+    f"{t}/{d}/{p}"
+    for t in ("moscap1d", "moscap2d")
+    for d in ("nfet_05v0", "pfet_05v0")
+    for p in ("start", "calibrated")
+)
+
+
+def _tcad_job(root, rel):
+    d = root / rel
+    if rel.startswith("moscap2d/"):
+        d = d / "w10p0_l0p60"  # 2D job dirs hold one directory per geometry
+    d.mkdir(parents=True)
+    (d / "per_area.csv").write_bytes(f"# {rel}\n-5.0,1.25e-05\n".encode())
+    (d / "per_area.meta.json").write_bytes(f'{{"job": "{rel}"}}\n'.encode())
+
+
+@pytest.fixture
+def tcad_setup(tmp_path):
+    """A committed results/ with every TCAD job, per-tree provenance, and a 1D subset tree."""
+    results = tmp_path / "results"
+    tcad = results / "tcad"
+    for rel in TCAD_ALL:
+        _tcad_job(tcad, rel)
+    for tree in ("moscap1d", "moscap2d", "meshconv", "calibration"):
+        (tcad / tree).mkdir(exist_ok=True)
+        (tcad / tree / "provenance.json").write_bytes(f'{{"tree": "{tree}"}}\n'.encode())
+    (tcad / "calibration" / "nfet_05v0.json").write_bytes(b'{"x": 1}\n')
+    _job(results / "spice", A, A)
+    (results / "spice" / "provenance.json").write_bytes(b'{"generator_sha256": "abc"}\n')
+    m = results / "MANIFEST.sha256"
+    manifest.update(results, m)
+
+    subset = tmp_path / "tcad_subset.txt"
+    subset.write_text(f"# the TCAD cross-check subset\n\n{T1N}\n{T1P}\n")
+
+    tree = tmp_path / "out"
+    for rel in (T1N, T1P):
+        shutil.copytree(tcad / rel, tree / rel)
+    shutil.copyfile(tcad / "moscap1d" / "provenance.json", tree / "moscap1d" / "provenance.json")
+    return tree, m, subset
+
+
+def _tcad_check(tree, m, jobs):
+    return manifest.verify_subset(
+        tree, m, "tcad/", jobs, kind="tcad", full=manifest.tcad_all_jobs()
+    )
+
+
+def test_tcad_subset_parse(tmp_path):
+    p = tmp_path / "s.txt"
+    p.write_text(f"# comment\n\n{T1N}\n{T2N}\n")
+    assert manifest.load_subset(p, kind="tcad") == (T1N, T2N)
+    for text in (
+        "moscap1d/nfet_05v0\n",  # 2 components
+        "moscap1d/nfet_05v0/calibrated/w10p0_l0p60\n",  # 4 components
+        "ngspice/typical/nfet_05v0/w10p0_l0p60\n",  # a SPICE job
+        "moscap3d/nfet_05v0/start\n",  # unknown tree
+        "meshconv/nfet_05v0/start\n",  # not a job tree
+        "moscap1d/nfet_05v0/tuned\n",  # unknown params
+        "moscap1d/nfet_33v0/start\n",  # unknown device
+        "moscap1d/nfet_05v0/start/\n",  # trailing slash
+        "/moscap1d/nfet_05v0/start\n",
+        f"{T1N}\n{T1N}\n",  # duplicate
+        "# only comments\n",
+        f"all\n{T1N}\n",
+    ):
+        p.write_text(text)
+        with pytest.raises(ValueError):
+            manifest.load_subset(p, kind="tcad")
+    p.write_text(f"{T1N}\n")
+    with pytest.raises(ValueError, match="kind"):
+        manifest.load_subset(p, kind="xyce")
+
+
+def test_tcad_all_expands(tmp_path):
+    p = tmp_path / "s.txt"
+    p.write_text("# every TCAD job\nall\n")
+    jobs = manifest.load_subset(p, kind="tcad")
+    assert jobs == manifest.tcad_all_jobs()
+    assert sorted(jobs) == sorted(TCAD_ALL) and len(set(jobs)) == 8
+    assert not set(jobs) & set(manifest.all_jobs())
+
+
+def test_tcad_verify_subset_detects_change(tcad_setup):
+    tree, m, subset = tcad_setup
+    jobs = manifest.load_subset(subset, kind="tcad")
+    assert _tcad_check(tree, m, jobs) == []
+    f = tree / T1P / "per_area.csv"
+    f.write_bytes(f.read_bytes().replace(b"1.25e-05", b"1.2500000000000001e-05"))
+    assert _tcad_check(tree, m, jobs) == [(f"tcad/{T1P}/per_area.csv", "changed")]
+    (tree / T1N / "per_area.meta.json").unlink()
+    (tree / T1N / "extra.csv").write_bytes(b"1\n")
+    assert _tcad_check(tree, m, jobs) == [
+        (f"tcad/{T1N}/extra.csv", "not in manifest"),
+        (f"tcad/{T1N}/per_area.meta.json", "missing"),
+        (f"tcad/{T1P}/per_area.csv", "changed"),
+    ]
+
+
+def test_tcad_verify_requires_tree_provenance(tcad_setup):
+    tree, m, subset = tcad_setup
+    jobs = manifest.load_subset(subset, kind="tcad")
+    # no root provenance.json is required (the TCAD trees have one each)
+    assert not (tree / "provenance.json").exists()
+    assert _tcad_check(tree, m, jobs) == []
+    (tree / "moscap1d" / "provenance.json").unlink()
+    assert _tcad_check(tree, m, jobs) == [("tcad/moscap1d/provenance.json", "missing")]
+    # a job of a second tree requires that tree's provenance too
+    shutil.copytree(m.parent / "tcad" / T2N, tree / T2N)
+    shutil.copyfile(
+        m.parent / "tcad" / "moscap1d" / "provenance.json", tree / "moscap1d" / "provenance.json"
+    )
+    assert _tcad_check(tree, m, (*jobs, T2N)) == [("tcad/moscap2d/provenance.json", "missing")]
+    p2 = tree / "moscap2d" / "provenance.json"
+    p2.write_bytes(b'{"tree": "other"}\n')
+    assert _tcad_check(tree, m, (*jobs, T2N)) == [("tcad/moscap2d/provenance.json", "changed")]
+    # ... but not when its jobs are not listed; envelope.json is never special
+    (tree / "envelope.json").write_bytes(b"{}\n")
+    assert _tcad_check(tree, m, jobs) == [
+        ("tcad/envelope.json", "not in subset"),
+        (f"tcad/{T2N}/w10p0_l0p60/per_area.csv", "not in subset"),
+        (f"tcad/{T2N}/w10p0_l0p60/per_area.meta.json", "not in subset"),
+        ("tcad/moscap2d/provenance.json", "not in subset"),
+    ]
+
+
+def test_tcad_full_passed_explicitly(tcad_setup):
+    tree, m, subset = tcad_setup
+    jobs = manifest.load_subset(subset, kind="tcad")
+    # "complete" is never judged against the SPICE plan (the all_jobs() default)
+    with pytest.raises(ValueError, match="full"):
+        manifest.verify_subset(tree, m, "tcad/", jobs, kind="tcad")
+    assert manifest.full_jobs("tcad") == manifest.tcad_all_jobs()
+    assert manifest.full_jobs("spice") == manifest.all_jobs()
+    r = _cli(tree, "--kind", "tcad", "--against", m, "--prefix", "tcad/", "--subset", subset)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "identical: 5 files of 2 jobs" in r.stdout and "partial subset" in r.stdout
+    # every TCAD job is the complete TCAD set, whatever the SPICE plan holds
+    full = tree.parent / "full"
+    shutil.copytree(m.parent / "tcad", full, ignore=shutil.ignore_patterns("meshconv", "calib*"))
+    (subset.parent / "all.txt").write_text("all\n")
+    r = _cli(
+        full, "--kind", "tcad", "--against", m, "--prefix", "tcad/", "--subset",
+        subset.parent / "all.txt",
+    )  # fmt: skip
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "identical: 18 files of 8 jobs" in r.stdout and "complete subset" in r.stdout
+
+
+def test_spice_subset_unchanged(setup, tmp_path):
+    tree, m, subset = setup
+    assert manifest.load_subset(subset) == manifest.load_subset(subset, kind="spice") == (A, B)
+    jobs = manifest.load_subset(subset)
+    assert manifest.verify_subset(tree, m, "spice/", jobs, kind="spice") == []
+    (tree / "provenance.json").unlink()
+    assert manifest.verify_subset(tree, m, "spice/", jobs, kind="spice") == [
+        ("spice/provenance.json", "missing")
+    ]
+    p = tmp_path / "t.txt"
+    p.write_text(f"{T1N}\n")  # a TCAD job is not a SPICE job
+    with pytest.raises(ValueError):
+        manifest.load_subset(p)
+    p.write_text("all\n")
+    assert manifest.load_subset(p) == manifest.all_jobs()
+    # the CLI defaults to --kind spice
+    shutil.copyfile(m.parent / "spice" / "provenance.json", tree / "provenance.json")
+    for extra in ((), ("--kind", "spice")):
+        r = _cli(tree, *extra, "--against", m, "--prefix", "spice/", "--subset", subset)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert "identical: 5 files of 2 jobs" in r.stdout and "envelope.json excluded" in r.stdout
