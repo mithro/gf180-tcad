@@ -261,8 +261,8 @@
 - Consumes: Task 7 `locate(pdk_root=…)`, Task 11 CLI with `--pdk-root`.
 - Produces: `ciel`-fetched gf180mcu `d658698bd8bc` PDK (inside the sandbox, network enabled only for the fetch step, then pinned by file hashes in `data/pdk-d658698.sha256`); TT ngspice run of all geometries; `pdkdiff.compare(a_metrics_dir, b_metrics_dir) -> dict` summarising per-metric differences; a doc page stating whether the run-1/2 PDK models differ from latest for these devices, and re-checking the spec §4 card values (TOXE, NDEP, …) against the latest card.
 
-- [ ] **Step 1:** Test `test_pdkdiff_zero_for_identical` and `test_pdkdiff_reports_metric_delta`. Run → FAIL; implement; run → PASS.
-- [ ] **Step 2:** Generate, update manifest, write page. Commit, PR, review, merge.
+- [x] **Step 1:** Test `test_pdkdiff_zero_for_identical` and `test_pdkdiff_reports_metric_delta`. Run → FAIL; implement; run → PASS.
+- [x] **Step 2:** Generate, update manifest, write page. Commit, PR, review, merge.
 
 ---
 
