@@ -5,11 +5,15 @@ Every hand value uses :data:`gf180tcad.tcad.process.CONSTANTS` on both sides. Th
 on the host; the TCAD-against-analytic comparison is in tests/tcad/test_moscap1d.py.
 """
 
+import dataclasses
+import json
 import math
+from pathlib import Path
 
 import pytest
 
-from gf180tcad.tcad import analytic
+from gf180tcad.tcad import analytic, process
+from gf180tcad.tcad.moscap1d import stack_of
 from gf180tcad.tcad.process import CONSTANTS
 
 C = CONSTANTS
@@ -43,6 +47,40 @@ def test_boltzmann_flat_band(case, vfb):
     # -pol Vt ln(NGATE N / n_i^2) up to the exact (not N >> n_i) neutral densities
     pol = 1 if case["n_cm3"] < 0 else -1
     assert math.isclose(cap.vfb_v, -pol * C.vt_v * math.log(ng * nb / C.n_i_cm3**2), rel_tol=1e-12)
+
+
+# The flat-band numbers of docs/limitations/index.md (the poly gate is Boltzmann): the
+# Boltzmann flat band at the start and the calibrated body doping, the flat band with the
+# degenerate gate's Fermi level pinned at its band edge (Eg/2 = 0.56 V from the intrinsic level,
+# Eg = 1.12 eV), and the difference, which is the Boltzmann gate's Fermi level beyond the band
+# edge and so independent of the body doping. Rounded as the page writes them.
+EG_HALF_V = 0.56
+CALIBRATION = Path(__file__).resolve().parents[2] / "results" / "tcad" / "calibration"
+FLAT_BAND = {
+    # device: (Boltzmann start, Boltzmann calibrated, pinned start, pinned - Boltzmann in mV)
+    "nfet_05v0": (-1.029, -1.012, -0.993, 36.5),
+    "pfet_05v0": (1.003, 1.009, 0.993, -10.2),
+}
+
+
+@pytest.mark.parametrize("device", FLAT_BAND)
+def test_flat_band_numbers_of_the_limitations_page(device):
+    want_start, want_cal, want_pinned, want_diff_mv = FLAT_BAND[device]
+    cal = json.loads((CALIBRATION / f"{device}.result.json").read_text("utf-8"))
+    base = stack_of(process.load(device))
+    pol = 1 if base.polarity == "n" else -1
+    diffs = []
+    for which, want, pinned_want in (("start", want_start, want_pinned), ("values", want_cal, None)):
+        s = dataclasses.replace(base, n_ch_cm3=cal[which]["n_ch_cm3"])
+        vfb = analytic.moscap(s.body_net_cm3, s.t_ox_nm, s.gate_net_cm3, eps_ox=s.eps_ox).vfb_v
+        assert round(vfb, 3) == want, (which, vfb)
+        pinned = analytic.Semiconductor(s.body_net_cm3).bulk_potential_v - pol * EG_HALF_V
+        if pinned_want is not None:
+            assert round(pinned, 3) == pinned_want, pinned
+        diffs.append(1e3 * (pinned - vfb))
+    assert cal["start"]["n_ch_cm3"] == 1.7e17
+    assert round(diffs[0], 1) == want_diff_mv
+    assert math.isclose(diffs[0], diffs[1], rel_tol=1e-9)  # independent of the body doping
 
 
 @pytest.mark.parametrize("case", [NFET, PFET], ids=["nfet", "pfet"])

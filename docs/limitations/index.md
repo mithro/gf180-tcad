@@ -106,12 +106,17 @@ values are not read as more physical than they are.
   doped at {term}`NGATE` (n+ 1e20 cm⁻³ for the nfet, p+ 3.6e19 cm⁻³ for the pfet), so
   {term}`poly depletion` is in the model, not in a fitted term. Its carriers follow
   Boltzmann statistics, which place the Fermi level beyond the band edge at these
-  dopings. The Boltzmann flat band is **−1.029 V** for the nfet and **+1.003 V** for the pfet
-  ({py:mod}`gf180tcad.tcad.analytic`,
-  {test}`tests/tcad/test_analytic.py::test_boltzmann_flat_band`); with the degenerate gate's
-  Fermi level pinned at the band edge the nfet flat band is about −0.99 V. The difference,
-  about 40 mV, is absorbed by the flat-band offset `dv_fb_v` with SPICE's empirical flat band and
-  any interface charge ({ref}`process-data-tunables`).
+  dopings. At the start body doping of 1.7e17 cm⁻³ the Boltzmann flat band is **−1.029 V** for
+  the nfet and **+1.003 V** for the pfet; at the calibrated body doping (`n_ch_cm3`
+  8.81e16 cm⁻³ for the nfet, 2.15e17 cm⁻³ for the pfet,
+  {repo}`results/tcad/calibration`) it is −1.012 V and +1.009 V ({py:mod}`gf180tcad.tcad.analytic`).
+  With the degenerate gate's Fermi level pinned at its band edge instead (Eg/2 = 0.56 V from the
+  intrinsic level, an estimate), the start flat band would be −0.993 V for the nfet and
+  +0.993 V for the pfet. The Boltzmann gate puts the Fermi level beyond the band edge by
+  36.5 mV in the nfet's n+ gate and 10.2 mV in the pfet's p+ gate, at any body doping. That
+  difference is absorbed by the flat-band offset `dv_fb_v` with SPICE's empirical flat band
+  and any interface charge ({ref}`process-data-tunables`). All of these numbers are checked by
+  {test}`tests/tcad/test_analytic.py::test_flat_band_numbers_of_the_limitations_page`.
 - **{term}`DLC` and the parasitics are reference bookkeeping.** The 1D C per area becomes a Cgg of one
   geometry through fixed BSIM4 values of the {term}`card <model card>`: the capacitance area
   (L − 2·DLC)·(W − 2·{term}`DWC`) and the overlap, fringe and {term}`CGBO` terms
