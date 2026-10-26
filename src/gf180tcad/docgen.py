@@ -194,11 +194,21 @@ def _interval(lo: float, hi: float) -> str:
 
 
 def _spec_entries(spec: dict, device: str, gid: str) -> dict[str, dict]:
+    """The compared spec entries of one SPICE geometry; ``per_area`` entries (no geometry, a
+    metric SPICE does not extract) are never among them."""
     return {
         e["metric"]: e
         for e in spec["entries"]
-        if e["metric"] and e["device"] == device and e["geometry_id"] == gid
+        if e["metric"]
+        and not e.get("per_area")
+        and e["device"] == device
+        and e["geometry_id"] == gid
     }
+
+
+def _tcad_only(spec: dict) -> list[dict]:
+    """The ``per_area`` spec entries: metrics SPICE does not extract, compared by the TCAD."""
+    return [e for e in spec["entries"] if e["metric"] and e.get("per_area")]
 
 
 def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: dict) -> list[str]:
@@ -286,7 +296,7 @@ def _spec_status(root, spec: dict) -> list[str]:
         "|---|---|---|---|---|---|",
     ]
     for e in spec["entries"]:
-        if not e["metric"]:
+        if not e["metric"] or e.get("per_area"):
             continue
         v = _metrics(root, "ngspice", TT, e["device"], e["geometry_id"])[e["metric"]]
         lo, hi = specwindow.spec_range(e)
@@ -296,6 +306,20 @@ def _spec_status(root, spec: dict) -> list[str]:
             f"| {{term}}`{e['device']}` {{doc}}`{fmt(e['w_um'])}/{fmt(e['l_um'])} <{page}>` "
             f"| {{term}}`{e['symbol']}` | {{term}}`{e['metric']}` | {fmt(v)} | {_interval(lo, hi)} "
             f"| {status} |"
+        )
+    return rows
+
+
+def _tcad_only_rows(spec: dict) -> list[str]:
+    """The "TCAD only" table: the per-area spec entries, with no SPICE value."""
+    rows = [
+        "| Device | Parameter | Metric | Spec [min, max] | Status |",
+        "|---|---|---|---|---|",
+    ]
+    for e in _tcad_only(spec):
+        rows.append(
+            f"| {{term}}`{e['device']}` | {e['symbol']} | `{e['metric']}` "
+            f"| {_interval(float(e['min']), float(e['max']))} {e['units']} | TCAD only |"
         )
     return rows
 
@@ -348,6 +372,16 @@ def _summary_page(root, spec: dict, out: Path):
         ),
         "",
         *_spec_status(root, spec),
+        "",
+        "### TCAD only",
+        "",
+        (
+            "Per-area specs with no geometry, for a metric the SPICE reference does not extract. "
+            "They are compared with the 1D TCAD plateau C per area, not with SPICE "
+            "({doc}`/comparison/cv-agreement`)."
+        ),
+        "",
+        *_tcad_only_rows(spec),
         "",
         "## ngspice against Xyce",
         "",
