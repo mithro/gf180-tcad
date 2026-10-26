@@ -248,8 +248,8 @@ committed 2D {term}`job` files cannot come out byte for byte:
 So a full `make reproduce` is expected to report at least the four 2D `cv.meta.json` files in
 `manifest verify`, and the L = 2 µm `cv.csv` too (a resumed sweep agrees with an uninterrupted one
 only within the solver tolerance), until the 2D results are regenerated and committed. It has not been run end to end: the 2D jobs take hours at 16 GiB
-each, one at a time. The 1D results are reproduced byte for byte, locally and on GitHub-hosted
-runners ({ref}`cross-host-tcad`).
+each, one at a time. All the 1D results are reproduced byte for byte locally, and the calibrated 1D
+results on GitHub-hosted runners ({ref}`cross-host-tcad`).
 
 (moscap2d-meshes)=
 
