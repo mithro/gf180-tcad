@@ -515,7 +515,8 @@ Amendments after the 2026-10-18 draft, newest last. Each quotes the user's reque
 that the intent survives later rewording of the sections it changed.
 
 - **2026-10-27: 3D renders of the simulated processes.** New §10.1; §10(b) mesh pictures now
-  come from it (resolving issue #39 by requirement; not yet implemented). The user's words:
+  come from it (settling issue #39 by requirement; the issue stays open until the artefact and
+  the picture exist). The user's words:
   > "Add to the spec that we should include good looking, high quality 3d renders (probably
   > using blender 3d) of all various simulation processes in the documentation which allows a
   > person to see and understand what is being simulated and what is happening. These renders
