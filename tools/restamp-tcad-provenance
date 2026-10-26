@@ -11,9 +11,11 @@ issue #34). This rewrites only those two fields, to what the entry point would w
 tree written under the old scheme (one hash over both entry points, no ``generator``), or after a
 change to the generator's code that cannot have changed the tree's data, when regenerating the
 tree (hours for the 2D jobs) is not worth it. The entry point comes from the tree's name
-(:data:`gf180tcad.tcad.TREE_GENERATORS`) unless ``--generator`` names it.
+(:data:`gf180tcad.tcad.TREE_GENERATORS`); ``--generator`` names it for a tree of another name,
+and is refused if it disagrees with the writer of a known tree.
 
-It refuses (exit 2, file unchanged) when anything else in the file differs from what the
+Every tree is checked before any is written. It refuses (exit 2, no file written) when, for
+any tree, anything else in the file differs from what the
 generator would write now: the plugin commit, an image, the calibration applied, or a
 ``generator`` naming another entry point. Then the tree has to be regenerated. ``--dry-run``
 prints what would change and writes nothing.
@@ -81,32 +83,47 @@ def parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _writer(tree: Path, override: str | None) -> str:
+    """The entry point that wrote ``tree``: :data:`gf180tcad.tcad.TREE_GENERATORS` for a known
+    tree name (``override`` may only repeat it), else ``override``; ValueError otherwise."""
+    name = Path(tree).resolve().name
+    known = tcad.TREE_GENERATORS.get(name)
+    if known is not None and override is not None and override != known:
+        raise ValueError(
+            f"{tree}: the {name} tree is written by {known}, not {override} (--generator)"
+        )
+    if known is None and override is None:
+        raise ValueError(
+            f"{tree} is not one of {sorted(tcad.TREE_GENERATORS)}; name its writer with --generator"
+        )
+    return known or override
+
+
 def main(argv: list[str] | None = None) -> int:
     a = parser().parse_args(argv)
-    for tree in a.trees:
-        generator = a.generator or tcad.TREE_GENERATORS.get(Path(tree).resolve().name)
-        if generator is None:
-            print(
-                f"restamp-tcad-provenance: {tree} is not one of {sorted(tcad.TREE_GENERATORS)}; "
-                "name its writer with --generator",
-                file=sys.stderr,
-            )
-            return 2
-        prov = Path(tree) / PROVENANCE_NAME
-        try:
+    # Check every tree before writing any, so that a refusal leaves all of them unchanged.
+    plan = []
+    try:
+        for tree in a.trees:
+            generator = _writer(tree, a.generator)
+            prov = Path(tree) / PROVENANCE_NAME
             stamped = json.loads(prov.read_bytes()).get("generator") == generator
-            old, new = restamp(tree, generator, write=not a.dry_run)
-        except (FileNotFoundError, ValueError) as e:
-            print(f"restamp-tcad-provenance: {e}", file=sys.stderr)
-            return 2
+            old, new = restamp(tree, generator, write=False)
+            plan.append((tree, prov, generator, stamped, old, new))
+    except (FileNotFoundError, ValueError) as e:
+        print(f"restamp-tcad-provenance: {e}; nothing written", file=sys.stderr)
+        return 2
+    for tree, prov, generator, stamped, old, new in plan:
         if stamped and old == new:
             print(f"{prov.as_posix()}: current ({generator}, generator_sha256 {new})")
-        else:
-            verb = "would restamp" if a.dry_run else "restamped"
-            print(
-                f"{prov.as_posix()}: generator_sha256 {old} -> {new} ({generator}); {verb}, "
-                "data not regenerated"
-            )
+            continue
+        if not a.dry_run:
+            restamp(tree, generator)
+        verb = "would restamp" if a.dry_run else "restamped"
+        print(
+            f"{prov.as_posix()}: generator_sha256 {old} -> {new} ({generator}); {verb}, "
+            "data not regenerated"
+        )
     return 0
 
 
