@@ -95,6 +95,7 @@ def verify(root: Path, manifest: Path) -> list[str]:
 #   name; there is no root provenance.json and no envelope.
 
 ALL = "all"
+#: The kinds of subset: SPICE reference jobs and TCAD MOS capacitor jobs.
 KINDS = ("spice", "tcad")
 
 
@@ -109,7 +110,7 @@ def all_jobs() -> tuple[str, ...]:
 
 
 def tcad_axes() -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
-    """The TCAD job axes: trees (``moscap1d``, ``moscap2d``), devices and params
+    """The :term:`TCAD` job axes: trees (``moscap1d``, ``moscap2d``), devices and params
     (``start``, ``calibrated``), as the TCAD command line defines them."""
     # imported here so that `manifest update` / `verify` do not load the TCAD code
     from gf180tcad.tcad import RESULTS_IMAGE, process
