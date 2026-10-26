@@ -478,7 +478,10 @@ provenance
 generator_sha256
   The sha256 over the sorted (path, sha256) pairs of the source files of
   {py:data}`gf180tcad.reference.GENERATOR_MODULES` plus {repo}`tools/sandbox-run`. See
-  {py:func}`gf180tcad.reference.generator_sha256` and {ref}`results-layout`.
+  {py:func}`gf180tcad.reference.generator_sha256` and {ref}`results-layout`. Each TCAD tree has
+  its own, over the import closure of the entry point that writes it
+  ({py:data}`gf180tcad.tcad.TCAD_GENERATORS`, {py:func}`gf180tcad.tcad.generator_sha256`) and
+  the shared inputs; see {ref}`tcad-provenance`.
 
 Phase 0
 Phase 1
