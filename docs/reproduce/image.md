@@ -347,7 +347,7 @@ workflows.
     that fork test in the dev image and requires it to pass. The fork test is the one that holds
     the invariant. It runs from a [`git archive`](https://git-scm.com/docs/git-archive) of the submodule pin,
     {repo}`third_party/gplugins <.gitmodules>` at
-    [`1c071d0`](https://github.com/mithro/gplugins/commit/1c071d0565ef4917b48ff907b9426e879ccca7fc),
+    [`1eae814`](https://github.com/mithro/gplugins/commit/1eae814f8584f9cb111493c32496f8e7f6c82503),
     the commit the committed results are made with.
 
 **The full flow runs in the current dev image** (2026-10-24, image {term}`config digest` `b4bae2b3…`,
