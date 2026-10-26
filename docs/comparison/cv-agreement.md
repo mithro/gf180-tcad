@@ -45,7 +45,7 @@ At {term}`Lmin` it is a large part of Cgg (about 4 of 14 fF in accumulation), so
 the bookkeeping.
 
 The targets are the {term}`TT` {{ ngspice }} {term}`cv` sweeps (1 MHz, Vds = 0) of the three
-calibration geometries, W = 10 µm at L = 10 µm, 2 µm and Lmin. {{ Xyce }} has no C–V analysis,
+calibration geometries, W = 10 µm at L = 10 µm, 2 µm and Lmin. {{ Xyce }} has no {term}`C–V` analysis,
 so the spec's 0.5 % {term}`engine cross-check` cannot apply to Cgg and ngspice is the only Cgg
 reference.
 
@@ -60,7 +60,7 @@ until that file is committed.
 **Optimiser.** {{ scipy }} `least_squares` with `method="trf"`, `jac="2-point"`,
 `diff_step=1e-4`, `ftol = xtol = gtol = 1e-10`, `max_nfev=200`, `x0` the start values and
 `x_scale` the bound widths ({py:data}`~gf180tcad.calibrate.cv.LSQ`): deterministic, with no
-restarts, run in the dev-HEAD TCAD image. The residuals are the relative Cgg error at every
+restarts, run in the {term}`dev-HEAD TCAD image`. The residuals are the relative Cgg error at every
 plateau bias and ΔV_dep/50 mV and ΔV_inv/50 mV, at each calibration geometry. Two details of
 scipy's finite differences: the start `t_ox_eff_nm` sits on its lower bound, which `trf` moves
 inside by 1e-10 relative; and for a parameter at 0 (`dv_fb_v` at the start) scipy replaces the
@@ -83,7 +83,7 @@ SPICE TT curve of each geometry ({py:func}`~gf180tcad.calibrate.cv.regions`):
   C_mid = (C_min + C_acc)/2 twice, once on the depletion side (u_dep, below the minimum) and
   once on the inversion side (u_inv, above it), linearly interpolated between grid points.
   ΔV_dep = u_dep(TCAD) − u_dep(SPICE) probes the flat band and the doping, ΔV_inv the threshold.
-  Each must be ≤ 50 mV. **This tolerance is a proposal: no published standard exists.** Using each
+  Each must be ≤ 50 mV. **This {term}`tolerance` is a proposal: no published standard exists.** Using each
   curve's own C_mid makes the ΔV a shift of the transition, independent of a plateau error;
 - the **depletion error**, max |ΔC|/C for u_fb − 1 V < u < u_t + 1 V, is reported for every
   geometry but is not a pass/fail metric.
@@ -100,7 +100,7 @@ SPICE Cgg rises from 81.84 fF at u = 0.5 V to 143.75 fF at 0.7 V, and its slope 
 0.513 fF/mV at 0.675 V. There C is about 131 fF, so a curve shifted by only 13 mV (5 % of 131 fF
 over 0.513 fF/mV) already fails 5 %; on the 50 mV grid, with linear interpolation, the
 smallest whole-millivolt rigid shift that fails 5 % at some bias is 15 mV. A 15 mV shift is a
-small fraction of the corner spread of the crossings (about ±125 mV, below). The deviation is
+small fraction of the {term}`corner` spread of the crossings (about ±125 mV, below). The deviation is
 also listed on {ref}`the limitations page <limitations-spec-deviations>`.
 
 (cv-agreement-windows)=
@@ -143,7 +143,7 @@ and {repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json
 
 The `t_ox_eff_nm` upper bounds are TOXP plus the charge-centroid allowance Δ: 0.95 nm for the
 nfet and 0.79 nm for the pfet, the maximum over both plateaus of the BSIM4 charge-thickness
-centroid X_DC times EPSROX/ε_si (X_DC = 2.841 nm and 2.361 nm at the plateau edges); the
+centroid X_DC times {term}`EPSROX`/ε_si (X_DC = 2.841 nm and 2.361 nm at the plateau edges); the
 calculation is on {doc}`process-data` ("The charge-centroid allowance Δ"). The fitted nfet oxide,
 16.05 nm, is TOXP plus 0.05 nm; the pfet's, 15.72 nm, is TOXE plus 0.12 nm. With them the oxide's own
 Cox is 2.151 and 2.197 fF/µm², and the 1D C per area at u = −5 / +5 V is 2.112 / 2.097 (nfet) and
@@ -203,8 +203,8 @@ as ΔV/50 mV): Lmin (+309 mV) and L = 10 µm (−218 mV), pulling in opposite di
 - *Technical note.* The corner windows do not cover the spread either: at L = 10 µm the
   five corners span −0.718 to −0.464 V and the TCAD crossing is −0.808 V; at Lmin they span −1.360
   to −0.949 V and the TCAD is at −0.851 V. A length-dependent flat band in the C–V of a
-  {term}`BSIM4` card is a property of the fitted model (`spice-fit`): in `capMod=2` the C–V flat
-  band is computed from the threshold-voltage model, so the card's length dependence of Vt
+  {term}`BSIM4` {term}`card` is a property of the fitted model (`spice-fit`): in `capMod=2` the C–V flat
+  band is computed from the threshold-voltage model, so the card's length dependence of {term}`Vt`
   carries into Cgg. This is a hypothesis, not checked here against the card's equations term by
   term. Physically, a length-dependent flat band and depletion edge in a real pfet points at
   a non-uniform channel (`doping`): pockets or a lateral well profile, which a uniform 1D body
@@ -230,8 +230,9 @@ Lmin with `spice-fit`.
 - **2D: not run yet.** The 2D check uses the calibrated 2D results,
   `python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID
   --out results/tcad/moscap2d` (the same `moscap2d.simulate` with source and drain, QS, on the
-  selected 2D mesh and the SPICE grid; one job at a time, 16 GiB each). None exists: a 2D job
-  takes hours, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
+  selected 2D mesh and the SPICE grid; one {term}`job` at a time, 16 GiB each). None exists: the
+  {repo}`results/tcad/moscap2d` tree holds only start-parameter results, and a 2D job takes
+  hours, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
   ({doc}`/limitations/moscap2d`). The validation files list every geometry under `two_d` with
   status "not run"; rerunning `python -m gf180tcad.calibrate validate` after the 2D jobs fills
   them in. This deviates from the plan in one respect: the plan has
@@ -246,7 +247,7 @@ uv run --locked python -m gf180tcad.calibrate run --device nfet_05v0 --out resul
 uv run --locked python -m gf180tcad.calibrate validate --device nfet_05v0 --out results/tcad/validation
 ```
 
-and the same for `pfet_05v0`. Each `run` is one sandbox job of 1 CPU and 2 GiB (about 20 minutes
+and the same for `pfet_05v0`. Each `run` is one {term}`sandbox` job of 1 CPU and 2 GiB (about 20 minutes
 here); two runs give byte-identical files. The result-file schema: `<device>.json` is the
 calibration file of {py:mod}`gf180tcad.tcad.calibration`, unchanged, so that `--params calibrated`
 reads it; everything else is in `<device>.result.json`, which records the first file's sha256.
