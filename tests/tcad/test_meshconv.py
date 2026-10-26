@@ -403,7 +403,16 @@ def test_meshconv_byte_identical(tmp_path):
         + ["provenance.json"]
     )
     for rel in files:
-        assert (root / rel).read_bytes() == (TREE / rel).read_bytes(), rel
+        if rel != "provenance.json":
+            assert (root / rel).read_bytes() == (TREE / rel).read_bytes(), rel
+    # A 1D rerun into a fresh root cannot know the 2D image the committed provenance.json also
+    # records (issue #36), so that one entry is dropped from the committed file; everything else
+    # (generator_sha256, gplugins_commit, the moscap1d image) must match byte for byte.
+    committed = json.loads((TREE / "provenance.json").read_bytes())
+    assert committed["images"].pop("moscap2d")["name"] == "stable"
+    expected = tmp_path / "expected-provenance.json"
+    io.write_json(expected, committed)
+    assert (root / "provenance.json").read_bytes() == expected.read_bytes()
 
 
 def test_meshconv_resume_keeps_finished_levels(tmp_path, monkeypatch):
