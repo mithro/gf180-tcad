@@ -39,7 +39,7 @@ A second independent review checked the revised plan against the code on main, t
 - **`dv_fb_v` is a lumped flat-band offset**, applied as a rigid gate-bias shift (exact in 1D). It is not described as fixed oxide charge. Its ±0.2 V is a project choice.
 - **Results layout:** `results/tcad/moscap{1d,2d}/<device>/{start,calibrated}/`. TCAD jobs have 3 parts. There is one `provenance.json` per tree root. The cross-check reruns exactly the committed configuration, and `verify_subset` gets `full=` explicitly.
 - **Every non-gate contact gets its own voltage source** in `sweep_cv`. The `tie` argument is gone. Charge conservation sums Cgx over every non-gate contact. The `tie` mechanics test moves to a minimal `create_2d_mesh` device in the fork.
-- **TCAD provenance is structural.** `TCAD_GENERATOR_MODULES` has an import-graph test (Task 9b). The plugin commit comes from `git -C third_party/gplugins rev-parse HEAD` with a clean-tree check.
+- **TCAD provenance is structural.** `TCAD_GENERATOR_MODULES` has an import-graph test (Task 9b). (Superseded by issue #34, PR #50: one module list per entry point, `TCAD_GENERATORS`, and a per-tree hash; see docs/reproduce/index.md, tcad-provenance.) The plugin commit comes from `git -C third_party/gplugins rev-parse HEAD` with a clean-tree check.
 - Smaller fixes:
   - `MeshSpec` gains `h_poly_nm`;
   - the accumulation series test uses a metal gate;
@@ -144,11 +144,11 @@ A second independent review checked the revised plan against the code on main, t
     - the `docker/TCAD_IMAGE` reference;
     - the contents of `docker/tcad/versions.json`;
     - `gplugins_commit`: taken on the host with `git -C third_party/gplugins rev-parse HEAD`, because the read-only mount cannot run git. Writing raises unless `git -C third_party/gplugins status --porcelain` is empty and the commit equals the gitlink in `git ls-tree HEAD third_party/gplugins`;
-    - `generator_sha256`, over the files of `gf180tcad.tcad.TCAD_GENERATOR_MODULES`, `tools/sandbox-run`, `third_party/gplugins/gplugins/devsim/**` and `data/process/*.toml`;
+    - `generator_sha256`, over the files of `gf180tcad.tcad.TCAD_GENERATOR_MODULES`, `tools/sandbox-run`, `third_party/gplugins/gplugins/devsim/**` and `data/process/*.toml`; (Superseded by issue #34, PR #50: one module list per entry point, `TCAD_GENERATORS`, and a per-tree hash; see docs/reproduce/index.md, tcad-provenance.)
     - for trees computed with calibrated values, the `param_sha256` and sha256 of `results/tcad/calibration/<device>.json`.
 
     It deliberately holds no date.
-  - **`TCAD_GENERATOR_MODULES`** (in `gf180tcad/tcad/__init__.py`, Task 9b) lists every gf180tcad module that the TCAD entry points import: `gf180tcad.tcad.__main__` and `gf180tcad.calibrate.__main__`. The list includes the shared modules (`gf180tcad.io`, `.devices`, `.sandbox`, …).
+  - **`TCAD_GENERATOR_MODULES`** (Superseded by issue #34, PR #50: one module list per entry point, `TCAD_GENERATORS`, and a per-tree hash; see docs/reproduce/index.md, tcad-provenance.) (in `gf180tcad/tcad/__init__.py`, Task 9b) lists every gf180tcad module that the TCAD entry points import: `gf180tcad.tcad.__main__` and `gf180tcad.calibrate.__main__`. The list includes the shared modules (`gf180tcad.io`, `.devices`, `.sandbox`, …).
     - `tests/tcad/test_tcad_provenance.py::test_tcad_generator_modules_match_the_import_graph` ties the list to the import graph, as the SPICE test does. Every later task that adds a TCAD module extends the list in the same PR.
     - `tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` checks that every committed tree root's `provenance.json` matches the current one, as `tests/test_results_provenance.py` does for SPICE.
 - **Public data only.** Every process number cites a public source and carries a provenance tag: `pdk-doc`, `spice-card`, `literature` or `calibrated`. No NDA material.
