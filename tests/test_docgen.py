@@ -148,6 +148,51 @@ def test_docs_build_offline(tmp_path):
     assert any(p.name.endswith("_cgg.svg") for p in (out / "_images").iterdir())
 
 
+_RACE_WORKER = textwrap.dedent(
+    """
+    import runpy
+    import sys
+    from pathlib import Path
+
+    conf = runpy.run_path(sys.argv[1])
+    release = conf.get("_release_lock", lambda app, exc=None: None)
+    generated = Path(sys.argv[1]).parent / "_generated"
+    for _ in range(2):
+        conf["_generate_results"](None)
+        # the read phase of a build: every file of the tree must stay put until the build ends
+        for f in sorted(p for p in generated.rglob("*") if p.is_file()):
+            f.read_bytes()
+        release(None)
+    """
+)
+
+
+def test_concurrent_docs_generation_does_not_race(tmp_path):
+    """Two builds of one checkout (issue #40) both finish and never see a missing file."""
+    script = tmp_path / "worker.py"
+    script.write_text(_RACE_WORKER, encoding="utf-8")
+    procs = []
+    for i in range(2):
+        log = (tmp_path / f"w{i}.log").open("wb")
+        procs.append(
+            (
+                subprocess.Popen(
+                    [sys.executable, "-I", str(script), str(DOCS / "conf.py")],
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                ),
+                log,
+            )
+        )
+    codes = []
+    for proc, log in procs:
+        codes.append(proc.wait(timeout=900))
+        log.close()
+    logs = [(tmp_path / f"w{i}.log").read_text(encoding="utf-8")[-2000:] for i in range(2)]
+    assert codes == [0, 0], logs
+    assert not list(DOCS.glob("_generated.*")), "temporary directories left behind"
+
+
 def test_known_diffs_single_source():
     assert docgen.KNOWN_DIFFS is KNOWN_ENGINE_DIFFS
     assert KNOWN_ENGINE_DIFFS == {("nfet_05v0", "idvg_sat"), ("nfet_05v0", "idvg_lin")}
