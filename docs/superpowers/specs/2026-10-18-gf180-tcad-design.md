@@ -181,9 +181,32 @@ Source pointers: the per-design summaries of the wafer.space run 1 and run 2 des
 - **Where things run (user decision).** Simulations start **local** (this host, sandboxed per §8). **No self-hosted GitHub runners.** Once a simulation is working well and is cheap enough, it is *also* run on **GitHub-hosted runners**, and CI fails on any hash difference against the committed manifest. This cross-check between local and GitHub-hosted results is the evidence for deterministic output across machines; at least a representative subset (SPICE reference + one MOSCAP + one 2D MOSFET bias sweep, coarse mesh if needed) must be cross-checked this way. Expensive runs (fine meshes, 3D, Charon) stay local, with their hashes committed and the docs stating which results were cross-checked on GitHub and which only locally.
 - If some step proves non-deterministic despite this, that step is documented in (d) with the observed variation, and its outputs are compared numerically (with a stated tolerance) instead of by hash. This is a fallback, not the plan.
 
+### 9.1 Output cache for large regenerable artefacts
+
+Added 2026-10-27 at the user's request (§16). Large generated files that can be regenerated
+and should stay out of the primary repo (the gmsh meshes `mesh.msh`, the 2D resume state
+`state_qs`, later the inputs of the §10.1 renders) live in a separate repo,
+[`mithro/gf180-tcad-output-cache`](https://github.com/mithro/gf180-tcad-output-cache), which
+is a shared cache for everyone, not an archive.
+- **Content-addressed.** Each file is stored under the sha256 that the primary repo already
+  records for it (for example `mesh_sha256` in a 2D job's `cv.meta.json`). A fetched file is
+  checked against that sha256 before use.
+- **The primary repo is the only source of truth.** Its manifest (`results/MANIFEST.sha256`) and
+  `provenance.json` files decide what a result is; the cache only saves regeneration time. A
+  missing or wrong cache entry is regenerated in the sandbox, never trusted.
+- **Disposable.** The cache may be wiped and rebuilt from the primary repo at any time, so
+  nothing may depend on its history, its commit ids or its continued existence.
+- **Never fetched by the docs build**, which stays offline and reads only the primary repo.
+- Access goes through one tool, `tools/output-cache` (with `src/gf180tcad/outcache.py` and
+  `data/output-cache.json`); the tool itself is specified and built in its own branch
+  (`feat/output-cache`).
+- A generator that needs a large artefact (the mesh pictures and 3D renders of §10.1) pulls it
+  from the cache by hash (or regenerates it), and commits only its small output (the rendered
+  image, the reduced mesh artefact) with provenance to the primary repo.
+
 ## 10. Documentation (Sphinx → Read the Docs)
 
-Sources in `docs/`; built in CI; published from `main` on Read the Docs. Sections map to the user's four requirements:
+Sources in `docs/`; built in CI; published from `main` on Read the Docs. Sections map to the user's four requirements, plus the explainer section of §10.2:
 - (a) **Reproduce** — prerequisites, one-command reproduction, image digests, how hashes are checked, how to run a single device.
 - (b) **Results** — auto-generated per device/geometry pages: I-V/C-V overlay plots (TCAD vs ngspice vs Xyce), extracted metrics table, verdict badges, mesh pictures (drawn as part of the renders of §10.1), the process file in use.
 - (c) **Comparison with the PDK** — the agreement definition (§5, both levels), a summary matrix (device × metric → Agree / Same process / Disagree), and per-mismatch explanations (§6) at both depths.
@@ -240,7 +263,8 @@ by hand or typed into a render script.
   sha256 recorded) in a thin project render image `ghcr.io/mithro/gf180-tcad-render`, built
   reproducibly like the other images (§9), with the video encoder pinned the same way. It runs
   only through `tools/sandbox-run`, with `--network none`, under the §8 limits, from committed
-  inputs only. Cycles on CPU, fixed seed, fixed sample count, fixed thread count, so a rerun on
+  inputs only (plus large inputs pulled by sha256 from the §9.1 output cache,
+  never from its history). Cycles on CPU, fixed seed, fixed sample count, fixed thread count, so a rerun on
   the same host gives the same file.
 - The rendered files (PNG stills, WebM animations with a PNG poster frame) are committed under
   `results/renders/<process>/`, registered in `results/MANIFEST.sha256`, with a
@@ -279,8 +303,10 @@ by hand or typed into a render script.
 
 **Mesh pictures (§10(b), issue #39).** The mesh pictures of §10(b) are part of these renders
 (R2, R5), drawn from a committed **reduced mesh artefact** with provenance, never from the full
-mesh. The full 2D meshes (`mesh.msh`, 25–62 MB each) stay uncommitted. The reduced artefact is
-written in the TCAD image by a generator module from the job's own mesh: the node coordinates,
+mesh. The full 2D meshes (`mesh.msh`, 25–62 MB each) stay out of the primary repo, in the output
+cache of §9.1, keyed by their `mesh_sha256`. The reduced artefact is
+written in the TCAD image by a generator module from the job's own mesh, pulled from the
+output cache by hash (`tools/output-cache`) or regenerated: the node coordinates,
 the triangle connectivity and the region of each element, restricted to a window around the
 gate (or the mesher's own export of that window), at most 2 MB per job. It records the sha256
 of the full mesh it came from, which must equal the committed `mesh_sha256` of that job
@@ -293,6 +319,32 @@ and the artefact come from one mesh.
 **Phasing.** Render image first; then R1 and R2 (with the reduced mesh artefact and the 1D
 profile files they need); then R3, R4 and R5; then the later phases' renders as those phases
 produce results.
+
+### 10.2 How it works: explainer section
+
+Added 2026-10-27 at the user's request (§16); tracked in issue #46. The docs gain a fifth,
+reader-first section, `docs/explained/`: a general explanation of how the parts of a
+semiconductor device work, grounded in this repo's real artefacts rather than in textbook
+numbers.
+- **Scope.** First the MOS capacitor: oxide, accumulation, depletion, inversion, flat band, the
+  C–V curve and what sets each part of it. Later, with the MOSFET phases: the channel, threshold
+  voltage, body effect, short-channel effects (Vt roll-off, DIBL), saturation. Each concept is
+  explained in plain language first, then with the equation and the literature reference already
+  cited in §11 or the docs' literature page.
+- **Grounded in the repo.** Every number and figure comes from committed inputs: the GF180MCU
+  process data files (`data/process/`), the committed SPICE reference sweeps and extracted
+  metrics (`results/spice/`), the TCAD results and calibration outcome (`results/tcad/`), and the
+  3D renders of §10.1. Each explainer page names the committed files it draws from. No invented
+  numbers; a deliberately idealised example (for example a textbook uniform-doping case) is
+  labelled as such and computed by the docs generator from stated inputs.
+- **Honest about the gap.** Each page links to the results and limitations pages of the same
+  device and says where the simple picture and the simulated or SPICE reality differ (for
+  example the pfet C–V disagreement of the 1D calibration, poly depletion, the quasi-static vs
+  high-frequency curve).
+- **Kept current by the same machinery.** The pages are built offline from committed inputs like
+  the rest of the docs (generated where they show numbers, by `docgen`), and a test checks that
+  every artefact an explainer page references exists and that every number it quotes matches
+  its source, so a moved or regenerated result cannot leave a stale explanation.
 
 ## 11. Literature (initial; [verify] items to be checked before citing)
 
@@ -453,3 +505,13 @@ that the intent survives later rewording of the sections it changed.
 - **2026-10-27: devsim and Charon in parallel.** New §12.1; G2, the §5.2 DEVSIM-vs-Charon
   line, Phase 4 (§13) and the §14 call changed to match. The user's words:
   > "We should also be using devsim and charon in parallel and cross comparing their results."
+- **2026-10-27: output cache for large regenerable files.** New §9.1; §10.1 and the #39
+  resolution take the full meshes from it. The user's words:
+  > "Around #39 -- Let's create a seperate gf180-tcad-output-cache repo for large generated
+  > files that should be kept out of the primary repo and can be regenerated. This repo should
+  > be able to be regenerated fresh at any time and is effectively just a shared cache for
+  > everyone."
+- **2026-10-27: explainer section.** New §10.2. The user's words:
+  > "Add to the spec that there should be a section of the documentation which is designed to
+  > be a general explaination how the various parts of semiconductors work using the
+  > references / assets from the repo to ground things in the real world."
