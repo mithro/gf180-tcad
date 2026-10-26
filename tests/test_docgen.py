@@ -422,6 +422,23 @@ def test_bound_hit_rule_is_the_calibration_constant(tmp_path):
     assert BOUND_HIT_REL == 1e-3 and "within 1e-3 of a bound" in page
 
 
+def test_plateau_tolerance_lines_are_per_side(tmp_path):
+    """The errors panel draws each plateau's own tolerance (one key while they are equal)."""
+    tree = _link_tcad_tree(tmp_path / "tcad_in")
+    out = tmp_path / "out"
+    svg = out / "tcad" / "nfet_05v0" / "w10p0_l10p00_cgg.svg"
+    docgen.generate_tcad(out, tcad_root=tree)
+    assert "tolerance ±5 %" in svg.read_text("utf-8")
+    path = tree / "calibration" / "nfet_05v0.result.json"
+    data = json.loads(path.read_text("utf-8"))
+    data["per_geometry"]["w10p0_l10p00"]["verdicts"]["plateau_inv"]["tolerance"] = 0.1
+    path.unlink()
+    path.write_text(json.dumps(data), "utf-8")
+    docgen.generate_tcad(out, tcad_root=tree)
+    text = svg.read_text("utf-8")
+    assert "tolerance (acc) ±5 %" in text and "tolerance (inv) ±10 %" in text
+
+
 def test_moscap_missing_result_raises(tmp_path):
     tcad = _link_tcad_tree(tmp_path / "tcad_in")
     (tcad / "validation" / "pfet_05v0.json").unlink()

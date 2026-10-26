@@ -582,25 +582,32 @@ def _cgg_svg(spice_root: Path, d: _Device, g: Geometry, rec: dict) -> bytes:
         ],
     )
     res = rec["residuals"]
-    tol = 100 * rec["verdicts"]["plateau_acc"]["tolerance"]
-    span = np.array([min(res["plateau_acc_u"]), max(res["plateau_inv_u"])])
+    # each plateau's points, and its own tolerance drawn over its own span
+    curves, tols = [], {}
+    for side in ("acc", "inv"):
+        u = np.array(res[f"plateau_{side}_u"])
+        tol = 100 * rec["verdicts"][f"plateau_{side}"]["tolerance"]
+        tols[side] = tol
+        span = np.array([u.min(), u.max()])
+        curves += [
+            plots.Curve(u, 100 * np.array(res[f"plateau_{side}_rel"]), TCAD_COLOR),
+            plots.Curve(span, np.array([tol, tol]), TOL_COLOR, dashed=True),
+            plots.Curve(span, np.array([-tol, -tol]), TOL_COLOR, dashed=True),
+        ]
+    if tols["acc"] == tols["inv"]:
+        tol_keys = [plots.Key(f"tolerance ±{fmt(tols['acc'])} %", TOL_COLOR, "dashed")]
+    else:
+        tol_keys = [
+            plots.Key(f"tolerance ({side}) ±{fmt(t)} %", TOL_COLOR, "dashed")
+            for side, t in tols.items()
+        ]
     errors = plots.Panel(
         "Plateau errors (from the result file)",
         _U_LABEL,
         "(TCAD - SPICE) / SPICE (%)",
-        [
-            plots.Curve(np.array(res["plateau_acc_u"]), 100 * np.array(res["plateau_acc_rel"]),
-                        TCAD_COLOR),
-            plots.Curve(np.array(res["plateau_inv_u"]), 100 * np.array(res["plateau_inv_rel"]),
-                        TCAD_COLOR),
-            plots.Curve(span, np.array([tol, tol]), TOL_COLOR, dashed=True),
-            plots.Curve(span, np.array([-tol, -tol]), TOL_COLOR, dashed=True),
-        ],
-        keys=[
-            plots.Key("TCAD calibrated, plateau points", TCAD_COLOR),
-            plots.Key(f"tolerance ±{fmt(tol)} %", TOL_COLOR, "dashed"),
-        ],
-    )  # fmt: skip
+        curves,
+        keys=[plots.Key("TCAD calibrated, plateau points", TCAD_COLOR), *tol_keys],
+    )
     return plots.figure_svg([overlay, errors])
 
 
