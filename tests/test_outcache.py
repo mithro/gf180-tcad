@@ -409,3 +409,85 @@ def test_outcache_is_not_a_generator_module():
     assert "gf180tcad.outcache" not in tcad.TCAD_GENERATOR_MODULES
     assert "gf180tcad.outcache" not in reference.GENERATOR_MODULES
     assert "data/output-cache.json" not in tcad.generator_files()
+
+
+# --- review fixes (PR #49) --------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "results/../../escaped.txt",
+        "/etc/escaped.txt",
+        "results//x.msh",
+        "results/",
+        "elsewhere/x.msh",
+        "results/a/../../x.msh",
+    ],
+)
+def test_pull_refuses_an_index_path_outside_results(results, cache, tmp_path, bad):
+    outcache.push(cache, results, commit=COMMIT, date=DATE)
+    h = _sha(results / JOB_A / "mesh.msh")
+    index = json.loads((cache / "index.json").read_text("utf-8"))
+    index["objects"][h]["paths"] = [bad]
+    (cache / "index.json").write_text(outcache.dump_index(index), "utf-8")
+    (results / JOB_A / "mesh.msh").unlink()
+    with pytest.raises(ValueError, match="index path"):
+        outcache.pull(str(cache), h, results=results, scratch=tmp_path / "s")
+    assert not list(tmp_path.rglob("escaped.txt"))
+
+
+def test_push_refuses_a_cache_that_is_not_its_own_repository(results, cache, tmp_path):
+    outer = tmp_path / "outer"
+    outer.mkdir()
+    _git("init", "-q", "-b", "main", cwd=outer)
+    (outer / "unrelated.txt").write_text("unrelated\n", "utf-8")
+    inner = outer / "cache"
+    inner.mkdir()
+    for name in ("index.json", "README.md", ".gitattributes"):
+        (inner / name).write_bytes((cache / name).read_bytes())
+    with pytest.raises(ValueError, match="not the root of its own git repository"):
+        outcache.push(inner, results, commit=COMMIT, date=DATE)
+    assert _git("status", "--porcelain", cwd=outer).startswith("??")  # nothing staged
+    r = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=outer, capture_output=True, text=True, check=False
+    )
+    assert r.returncode != 0  # no commit was made
+
+
+@pytest.mark.parametrize("ext", ["", "../x", "MSH", "msh/..", "a..b", ".msh"])
+def test_object_relpath_refuses_a_bad_ext(ext):
+    with pytest.raises(ValueError, match="ext"):
+        outcache.object_relpath("a" * 64, ext, "gzip")
+    assert outcache.object_relpath("a" * 64, "tar.gz", None).endswith(".tar.gz")
+
+
+def test_an_uninitialised_cache_is_reported_clearly(results, tmp_path, bare):
+    empty = tmp_path / "empty-clone"
+    empty.mkdir()
+    with pytest.raises(ValueError, match="not initialised.*init.*--remote"):
+        outcache.push(empty, results, commit=COMMIT, date=DATE)
+    with pytest.raises(ValueError, match="not initialised.*init.*--remote"):
+        outcache.status(str(bare), results, scratch=tmp_path / "s")
+    r = _run_tool("status", "--cache", str(bare), "--results", str(results),
+                  "--scratch", str(tmp_path / "s"), cwd=tmp_path)  # fmt: skip
+    assert r.returncode == 1 and "not initialised" in r.stderr and "Traceback" not in r.stderr
+
+
+def test_readme_documents_the_first_population():
+    text = outcache.readme_text(outcache.load_config())
+    assert (
+        "init tmp/output-cache --remote git@github.com:mithro/gf180-tcad-output-cache.git" in text
+    )
+    doc = (REPO / "docs" / "reproduce" / "output-cache.md").read_text("utf-8")
+    assert "--remote git@github.com:mithro/gf180-tcad-output-cache.git" in doc
+
+
+def test_push_restores_an_indexed_object_that_is_missing(results, cache):
+    outcache.push(cache, results, commit=COMMIT, date=DATE)
+    h = _sha(results / JOB_A / "mesh.msh")
+    obj = cache / outcache.object_relpath(h, "msh", "gzip")
+    obj.unlink()
+    rep = outcache.push(cache, results, commit=COMMIT, date=DATE)
+    assert [a.sha256 for a in rep.added] == [h]
+    assert obj.is_file() and outcache.verify(cache) == []
