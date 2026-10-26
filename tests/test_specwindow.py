@@ -135,8 +135,33 @@ def test_spec_file_matches_the_published_page():
         "w10p0_l0p50",
     )
     for e in spec["entries"]:
-        assert e["source_url"] == spec["source_url"] and e["retrieved"] == spec["retrieved"]
         assert e["units"] and e["bias"]
+        if e.get("per_area"):
+            continue  # its own page (test_cox_entry_is_tcad_only)
+        assert e["source_url"] == spec["source_url"] and e["retrieved"] == spec["retrieved"]
+
+
+COX_PAGE = (
+    "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_3.html"
+)
+
+
+def test_cox_entry_is_tcad_only():
+    """The public 6 V Cox (section 5.3, rows 'COX (Poly) 6V', 6V GATE N and P): a per-area
+    entry with no geometry, for a metric SPICE does not extract, so the SPICE spec check lists it
+    as "TCAD only" and never compares it (gf180tcad.docgen._tcad_only)."""
+    spec = specwindow.load_spec()
+    cox = [e for e in spec["entries"] if e.get("per_area")]
+    assert sorted(e["device"] for e in cox) == ["nfet_05v0", "pfet_05v0"]
+    for e in cox:
+        assert (e["geometry_id"], e["w_um"], e["l_um"]) == (None, None, None)
+        assert e["metric"] == "cox_ff_per_um2" and e["units"] == "fF/um^2"
+        assert [e[k] for k in ("min", "typ", "max")] == [1.8, 2.3, 2.8]
+        assert e["source_url"] == COX_PAGE and e["section"] == "5.3 Gate oxide capacitance"
+        assert e["retrieved"]
+        assert e not in _compared_entries()
+    tt = _metrics("ngspice", "typical", "nfet_05v0", "w10p0_l10p00")
+    assert "cox_ff_per_um2" not in tt  # SPICE does not extract it
 
 
 @pytest.mark.parametrize(
@@ -177,7 +202,8 @@ def _metrics(engine, corner, device, gid):
 
 
 def _compared_entries():
-    return [e for e in specwindow.load_spec()["entries"] if e["metric"]]
+    """The entries compared with a SPICE metric (not the per-area, TCAD-only ones)."""
+    return [e for e in specwindow.load_spec()["entries"] if e["metric"] and not e.get("per_area")]
 
 
 @pytest.mark.parametrize("entry", _compared_entries(), ids=lambda e: f"{e['device']}-{e['symbol']}")
