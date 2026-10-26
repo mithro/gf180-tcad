@@ -1,0 +1,80 @@
+{
+  "constants": {
+    "eps0_f_per_cm": 8.8541878128e-14,
+    "eps_si": 11.7,
+    "k_b_j_per_k": 1.380649e-23,
+    "mu_n_cm2_per_vs": 1417.0,
+    "mu_p_cm2_per_vs": 470.5,
+    "n_i300_cm3": 9650000000.0,
+    "n_i_cm3": 8265841554.853887,
+    "q_c": 1.602176634e-19,
+    "t_k": 298.15,
+    "tau_n_s": 1e-05,
+    "tau_p_s": 1e-05,
+    "vt_v": 0.02569257912108585
+  },
+  "device": "nfet_05v0",
+  "dim": 1,
+  "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
+  "mesh": {
+    "grading": 1.1,
+    "h_ox_nm": 0.5,
+    "h_poly_nm": 0.05,
+    "h_si_bulk_nm": 20.0,
+    "h_si_surface_nm": 0.05
+  },
+  "mesh_1d_note": "oxide spacing is min(h_ox, neighbour) at each face (exact: the oxide potential is linear)",
+  "mesh_1d_spacing_um": {
+    "body": [
+      5e-05,
+      0.02
+    ],
+    "gate_poly": [
+      0.02,
+      5e-05
+    ],
+    "oxide": [
+      5e-05,
+      5e-05
+    ]
+  },
+  "mesh_source": "results/tcad/meshconv/moscap1d/nfet_05v0/selected.json",
+  "method": "qs",
+  "node_count": 686,
+  "param_sha256": "791e01ae1b48d92cc287e575324a83aa1cf9b60987a76f06fe57468c0941125c",
+  "params": "calibrated",
+  "points": 201,
+  "stack": {
+    "body_um": 1.0,
+    "eps_ox": 3.9,
+    "n_ch_cm3": 8.813323306821749e+16,
+    "ngate_cm3": 1e+20,
+    "polarity": "n",
+    "poly_um": 0.2,
+    "t_ox_nm": 16.050483616382458
+  },
+  "sweep": {
+    "abs_tol_v": 1e-12,
+    "dv_qs_v": 0.001,
+    "max_iterations": 50,
+    "rel_tol": 1e-10
+  },
+  "tunables": {
+    "dv_fb_v": {
+      "calibration_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+      "origin": "calibrated",
+      "value": 0.09874753146964436
+    },
+    "n_ch_cm3": {
+      "calibration_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+      "origin": "calibrated",
+      "value": 8.813323306821749e+16
+    },
+    "t_ox_eff_nm": {
+      "calibration_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+      "origin": "calibrated",
+      "value": 16.050483616382458
+    }
+  },
+  "unit": "fF/um^2"
+}

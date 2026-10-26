@@ -5,13 +5,14 @@ Nothing here is a SPICE generator module (:data:`gf180tcad.reference.GENERATOR_M
 changes to this package never touch ``results/spice/provenance.json``.
 
 **Provenance.** Each TCAD tree root (:repo:`results/tcad/moscap1d`, :repo:`results/tcad/moscap2d`,
-:repo:`results/tcad/meshconv`, and later ``calibration`` and ``validation`` under
+:repo:`results/tcad/meshconv`, and the ``calibration`` and ``validation`` trees of Task 12 under
 :repo:`results/tcad`) holds one
 ``provenance.json``, written from :func:`tree_provenance`. It holds, under ``images``, for each
 result kind in the tree (``moscap1d``, ``moscap2d``) the TCAD image that made it: its name
 (:data:`IMAGES`), reference and ``versions.json`` contents. It also holds the plugin
 commit ``gplugins_commit`` and ``generator_sha256`` (:func:`generator_sha256`), and, for a tree
-with calibrated results, per device the sha256 of its calibration file
+with calibrated results (:func:`calibrated_devices`: calibrated job directories, and every device
+with a validation result at the tree root), per device the sha256 of its calibration file
 ``results/tcad/calibration/<device>.json`` (:mod:`gf180tcad.tcad.calibration`, written by
 :repo:`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`) and the ``param_sha256`` of the
 values applied (:func:`gf180tcad.tcad.calibration.param_sha256`). It holds no date.
@@ -72,15 +73,19 @@ IMAGES = {
 # planned before the Phase 2 exit (docs/reproduce/image.md, "Which image makes which results").
 RESULTS_IMAGE = {"moscap1d": "dev", "moscap2d": "stable"}
 
-# Every gf180tcad module the TCAD entry points import (gf180tcad.tcad.__main__ and, from Task
-# 12, gf180tcad.calibrate.__main__), shared modules included. tests/tcad/test_tcad_provenance.py
+# Every gf180tcad module the TCAD entry points import (gf180tcad.tcad.__main__ and
+# gf180tcad.calibrate.__main__), shared modules included. tests/tcad/test_tcad_provenance.py
 # ties the list to the import graph; a task that adds a TCAD module extends it in the same PR.
 TCAD_GENERATOR_MODULES = (
     "gf180tcad",
+    "gf180tcad.calibrate",
+    "gf180tcad.calibrate.__main__",
+    "gf180tcad.calibrate.cv",
     "gf180tcad.devices",
     "gf180tcad.io",
     "gf180tcad.layout",
     "gf180tcad.sandbox",
+    "gf180tcad.specwindow",
     "gf180tcad.tcad",
     "gf180tcad.tcad.__main__",
     "gf180tcad.tcad.analytic",
@@ -105,6 +110,9 @@ PROCESS_GLOB = "data/process/*.toml"
 
 # Where the calibrated values live (Task 12): results/tcad/calibration/<device>.json.
 CALIBRATION_DIR = Path("results") / "tcad" / "calibration"
+
+# Where the validation of the calibrated values lives (Task 12): results/tcad/validation/<device>.json.
+VALIDATION_DIR = Path("results") / "tcad" / "validation"
 
 
 class ProvenanceError(RuntimeError):
@@ -249,9 +257,21 @@ def provenance(
 
 
 def calibrated_devices(tree_root: Path) -> tuple[str, ...]:
-    """The devices with a ``<device>/calibrated`` job directory under ``tree_root``, sorted."""
+    """The devices whose results under ``tree_root`` used calibrated values, sorted: those with a
+    ``<device>/calibrated`` job directory, and those with a validation result ``<device>.json``
+    at the tree root (as in :data:`VALIDATION_DIR`), recognised by its content: it records the
+    ``calibration_file_sha256`` of the calibration it applied. The decision never depends on the
+    tree's directory name, so a validation written to any ``--out`` gets the same provenance."""
+    from gf180tcad.tcad.process import DEVICES
+
     tree_root = Path(tree_root)
-    return tuple(sorted(p.parent.name for p in tree_root.glob("*/calibrated") if p.is_dir()))
+    found = {p.parent.name for p in tree_root.glob("*/calibrated") if p.is_dir()}
+    for p in tree_root.glob("*.json"):
+        if p.stem in DEVICES:
+            data = json.loads(p.read_bytes())
+            if isinstance(data, dict) and "calibration_file_sha256" in data:
+                found.add(p.stem)
+    return tuple(sorted(found))
 
 
 def tree_provenance(

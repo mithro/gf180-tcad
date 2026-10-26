@@ -34,4 +34,7 @@ Source: {repo}`src/gf180tcad/tcad/__init__.py`.
 
 .. autodata:: gf180tcad.tcad.CALIBRATION_DIR
    :no-value:
+
+.. autodata:: gf180tcad.tcad.VALIDATION_DIR
+   :no-value:
 ```

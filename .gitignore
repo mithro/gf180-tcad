@@ -11,3 +11,4 @@ docs/_generated/
 results/.*.staging-*/
 results/.*.old-*/
 results/**/mesh.msh
+/tmp/

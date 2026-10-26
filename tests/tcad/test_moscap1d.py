@@ -167,11 +167,14 @@ def test_cli_requires_known_choices(capsys):
             cli.main(argv)
 
 
-def test_calibrated_refused_without_calibration(tmp_path, capsys):
-    assert not (REPO / "results" / "tcad" / "calibration" / "nfet_05v0.json").exists()
+def test_calibrated_refused_without_calibration(tmp_path, capsys, monkeypatch):
+    # the committed calibration file exists since Task 12: point the CLI at an absent one
+    absent = REPO / "results" / "tcad" / "calibration" / "absent" / "nfet_05v0.json"
+    assert not absent.exists()
+    monkeypatch.setattr(cli, "calibration_file", lambda device: absent)
     argv = ["moscap", "--device", "nfet_05v0", "--dim", "1", "--params", "calibrated"]
     assert cli.main([*argv, "--out", str(tmp_path / "root")]) == 2
-    assert "results/tcad/calibration/nfet_05v0.json" in capsys.readouterr().err
+    assert "results/tcad/calibration/absent/nfet_05v0.json" in capsys.readouterr().err
     assert not (tmp_path / "root").exists()
 
 
@@ -306,7 +309,13 @@ def test_byte_identical(tmp_path):
     ]
     for rel in files:
         assert (roots[0] / rel).read_bytes() == (roots[1] / rel).read_bytes(), rel
-        assert (roots[0] / rel).read_bytes() == (TREE / rel).read_bytes(), rel
+        if rel.name != "provenance.json":
+            assert (roots[0] / rel).read_bytes() == (TREE / rel).read_bytes(), rel
+    # the committed tree also holds the calibrated jobs (Task 12), whose calibration files its
+    # provenance records; without them it is the start-only tree's
+    committed = json.loads((TREE / "provenance.json").read_bytes())
+    assert set(committed.pop("calibration")) == set(DEVICES)
+    assert json.loads((roots[0] / "provenance.json").read_bytes()) == committed
 
 
 @pytest.mark.sandbox

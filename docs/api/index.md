@@ -9,6 +9,9 @@ links the highlighted source. Code identifiers elsewhere in these pages link her
 
 gf180tcad
 gf180tcad.__main__
+gf180tcad.calibrate
+gf180tcad.calibrate.__main__
+gf180tcad.calibrate.cv
 gf180tcad.devices
 gf180tcad.docgen
 gf180tcad.history

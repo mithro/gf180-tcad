@@ -180,6 +180,49 @@ published as they are; the ngspice/Xyce cross-check is a separate test
 ({test}`tests/spice/test_xyce.py::test_engines_agree`), described in
 {doc}`../limitations/engine-cross-check`.
 
+(tcad-provenance)=
+
+## Provenance of the TCAD results
+
+Each TCAD tree root holds one `provenance.json` ({py:func}`gf180tcad.tcad.tree_provenance`):
+the images that made it, the plugin commit, the calibration applied (if any) and a
+{term}`generator_sha256`. That hash covers **one** module list for every TCAD tree,
+{py:data}`gf180tcad.tcad.TCAD_GENERATOR_MODULES`, the import closure of both TCAD entry points
+({py:mod}`gf180tcad.tcad.__main__` and {py:mod}`gf180tcad.calibrate.__main__`), plus the
+plugin's `gplugins/devsim` files, the {term}`process files <process file>` and {repo}`tools/sandbox-run`.
+{test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` requires every
+tree's hash to equal the current one. The trees and the commands that regenerate them (then
+`make manifest`):
+
+| tree | regenerate |
+|---|---|
+| {repo}`results/tcad/moscap1d` | `python -m gf180tcad.tcad moscap --device D --dim 1 --params start` (and `--params calibrated`) `--out results/tcad/moscap1d` |
+| {repo}`results/tcad/moscap2d` | `python -m gf180tcad.tcad moscap --device D --dim 2 --params start --geometry GID --out results/tcad/moscap2d`, one 16 GiB job at a time (hours each; L = 2 µm: `--method qs`, then `--method combine-qs`) |
+| {repo}`results/tcad/meshconv` | `python -m gf180tcad.tcad meshconv --device D --dim 1` (and `--dim 2 --jobs 1`) `--out results/tcad/meshconv` |
+| {repo}`results/tcad/calibration` | `python -m gf180tcad.calibrate run --device D --out results/tcad/calibration` |
+| {repo}`results/tcad/validation` | `python -m gf180tcad.calibrate validate --device D --out results/tcad/validation`, after the calibration is committed |
+
+**Restamped without regeneration.** Because the hash covers the whole list, a change to a
+module that a tree's writer never imports still changes that tree's hash. Task 12 added
+{py:mod}`gf180tcad.calibrate` and {py:mod}`gf180tcad.specwindow` to the list, which the 2D MOS
+capacitor job imports neither of. The 2D data were therefore **not** regenerated (hours per job):
+{repo}`results/tcad/moscap2d/provenance.json <results/tcad/moscap2d/provenance.json>` was
+rewritten from generator `8fd11fb03ced74d0fae78c4a84e9b8974d4beff5d8c75e1b41602657ec6d1326`, the
+code that made the committed 2D results (Task 11), to the current hash. The same holds for the
+whole {repo}`results/tcad/meshconv` tree: its `provenance.json` (1D and 2D) was rewritten, and
+its 1D data were last regenerated in 690cf7b. The shared module {py:mod}`gf180tcad.tcad` also
+changed since that generator, but only in provenance bookkeeping (the module list,
+`VALIDATION_DIR`, `calibrated_devices`), not in anything that computes a result. The
+calibration and the validation were rerun at the code they record and compared byte for
+byte with the committed files; the 1D {term}`MOS capacitor` tree is rerun and compared byte for byte
+by the sandbox test {test}`tests/tcad/test_moscap1d.py::test_byte_identical`. The matching
+mesh-convergence test {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical`
+cannot currently pass against the committed tree
+([issue #36](https://github.com/mithro/gf180-tcad/issues/36)), so the 1D meshconv data have
+no byte-identity evidence at the current hash.
+A per-tree hash over the import closure of the entry point that writes each tree would make such
+restamps unnecessary: [issue #34](https://github.com/mithro/gf180-tcad/issues/34).
+
 (cross-host-determinism)=
 
 ## Cross-host determinism

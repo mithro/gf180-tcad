@@ -9,8 +9,19 @@ there.
 - **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD yet.** The
   {term}`SPICE` reference dataset of {term}`Phases 0 and 1` is complete. On the TCAD side the 1D
   and 2D MOS capacitors exist, with the start values and mesh-converged meshes
-  ({doc}`mesh-convergence`, {doc}`moscap2d`). The calibration against SPICE is
-  {repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`.
+  ({doc}`mesh-convergence`, {doc}`moscap2d`).
+- **The {term}`C–V` calibration is 1D only, and the pfet disagrees.** The 1D MOS capacitor is calibrated
+  against the SPICE {term}`Cgg`–Vg
+  ({repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
+  {doc}`/comparison/cv-agreement`). In 1D the nfet is {term}`Agree` at every geometry,
+  fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
+  follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
+  ({ref}`mismatch analysis <cv-agreement-mismatch>`). The 2D validation of the calibrated stack
+  is not run: no calibrated 2D results exist, since each 2D {term}`job` takes hours at 16 GiB, one at a
+  time, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
+  ({doc}`moscap2d`); [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
+- **The 2D TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
+  names the current generator, not the one that made them; see {ref}`tcad-provenance`.
 - **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
   it is now fixed in {{ gplugins_fork }} and re-verified on the latest stack. See
@@ -78,6 +89,12 @@ Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
   of log10(Id). Defined differently: the {term}`body effect` uses the
   {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
   in {ref}`not yet extracted, or defined differently <metrics-not-yet-extracted>`.
+- **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
+  accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
+  to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two
+  mid-capacitance crossings, each ≤ 50 mV (a proposal: no published standard). In the
+  transition a relative-C metric measures the slope of the curve, not agreement; the numbers
+  are on {doc}`/comparison/cv-agreement`. The depletion error is still reported.
 
 ```{toctree}
 :maxdepth: 1

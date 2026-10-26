@@ -147,6 +147,46 @@
       "definition_note": "No BVDSS metric in our reference (breakdown is not simulated); listed for completeness, not compared.",
       "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html",
       "retrieved": "2026-10-18"
+    },
+    {
+      "device": "nfet_05v0",
+      "geometry_id": null,
+      "w_um": null,
+      "l_um": null,
+      "per_area": true,
+      "parameter": "Gate oxide capacitance",
+      "symbol": "COX (Poly) 6V",
+      "metric": "cox_ff_per_um2",
+      "min": 1.8,
+      "typ": 2.3,
+      "max": 2.8,
+      "units": "fF/um^2",
+      "bias": "Not specified on the page",
+      "vt_definition": null,
+      "definition_note": "The page's row 'COX (Poly) 6V', transistor '6V GATE N': the 6 V gate oxide, which nfet_05v0 uses (nfet_05v0 is a wrapper of the nfet_06v0 card). A per-area spec with no geometry. SPICE extracts no such metric, so the SPICE spec-check page lists it as TCAD only; the TCAD compares the 1D plateau C per area (and the oxide's own Cox) with it, and maps it to Cgg for the plateau windows (gf180tcad.calibrate.cv). Published as a positive magnitude and compared as published.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_3.html",
+      "section": "5.3 Gate oxide capacitance",
+      "retrieved": "2026-10-26"
+    },
+    {
+      "device": "pfet_05v0",
+      "geometry_id": null,
+      "w_um": null,
+      "l_um": null,
+      "per_area": true,
+      "parameter": "Gate oxide capacitance",
+      "symbol": "COX (Poly) 6V",
+      "metric": "cox_ff_per_um2",
+      "min": 1.8,
+      "typ": 2.3,
+      "max": 2.8,
+      "units": "fF/um^2",
+      "bias": "Not specified on the page",
+      "vt_definition": null,
+      "definition_note": "The page's row 'COX (Poly) 6V', transistor '6V GATE P': the 6 V gate oxide, which pfet_05v0 uses (pfet_05v0 is a wrapper of the pfet_06v0 card). A per-area spec with no geometry. SPICE extracts no such metric, so the SPICE spec-check page lists it as TCAD only; the TCAD compares the 1D plateau C per area (and the oxide's own Cox) with it, and maps it to Cgg for the plateau windows (gf180tcad.calibrate.cv). Published as a positive magnitude and compared as published.",
+      "source_url": "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_3.html",
+      "section": "5.3 Gate oxide capacitance",
+      "retrieved": "2026-10-26"
     }
   ]
 }

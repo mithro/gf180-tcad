@@ -235,3 +235,23 @@ def test_window_column_shows_the_envelope_where_there_is_no_spec():
             assert cells[-1] == f"[{docgen.fmt(lo)}, {docgen.fmt(hi)}] (envelope)"
         # Xyce has no cv sweep, so only its Cgg cells are "n/a"
         assert (cells[3] == "n/a") == name.startswith("cgg_")
+
+
+def test_per_area_spec_entries_are_tcad_only(tmp_path):
+    """The Cox spec is per area (no geometry) and SPICE extracts no such metric: it is left out
+    of the SPICE spec table and the geometry pages and listed under "TCAD only"."""
+    spec = docgen.specwindow.load_spec()
+    per_area = [e for e in spec["entries"] if e.get("per_area")]
+    assert {e["device"] for e in per_area} == set(DEVICES)
+    assert {e["metric"] for e in per_area} == {"cox_ff_per_um2"}
+    for device in DEVICES.values():
+        for g in device.geometries:
+            assert "cox_ff_per_um2" not in docgen._spec_entries(spec, device.name, geometry_id(g))
+    rows = docgen._spec_status(docgen.RESULTS, spec)
+    assert not any("cox_ff_per_um2" in r for r in rows)
+    tcad = docgen._tcad_only_rows(spec)[2:]
+    assert len(tcad) == 2 and all(r.endswith("| TCAD only |") for r in tcad)
+    assert all("[1.8, 2.8] fF/um^2" in r for r in tcad)
+    docgen.generate(tmp_path)
+    s = (tmp_path / "results" / "index.md").read_text(encoding="utf-8")
+    assert "### TCAD only" in s and s.count("| TCAD only |") == 2

@@ -1,4 +1,11 @@
 {
+  "criteria": {
+    "convergence": {
+      "level": 0,
+      "max": 0.01
+    },
+    "selected": 0
+  },
   "grading": 1.1,
   "h_ox_nm": 0.5,
   "h_poly_nm": 0.05,
