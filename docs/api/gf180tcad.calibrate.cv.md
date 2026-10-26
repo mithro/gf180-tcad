@@ -26,4 +26,23 @@ Source: {repo}`src/gf180tcad/calibrate/cv.py`.
 .. autodata:: gf180tcad.calibrate.cv.LMIN_CAUSES
 
 .. autodata:: gf180tcad.calibrate.cv.COX_METRIC
+
+.. autodata:: gf180tcad.calibrate.cv.SPICE_ROOT
+   :no-value:
+
+.. autodata:: gf180tcad.calibrate.cv.CALIBRATION_ROOT
+   :no-value:
+
+.. autodata:: gf180tcad.calibrate.cv.VALIDATION_ROOT
+   :no-value:
+
+.. autodata:: gf180tcad.calibrate.cv.MOSCAP2D_ROOT
+   :no-value:
+
+.. autodata:: gf180tcad.calibrate.cv.SCHEMA
+
+.. autodata:: gf180tcad.calibrate.cv.VERDICTS
+
+.. autodata:: gf180tcad.calibrate.cv.Simulate
+   :no-value:
 ```

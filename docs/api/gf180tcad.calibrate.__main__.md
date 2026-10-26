@@ -10,4 +10,6 @@ Source: {repo}`src/gf180tcad/calibrate/__main__.py`.
 .. autodata:: gf180tcad.calibrate.__main__.JOB_CPUS
 
 .. autodata:: gf180tcad.calibrate.__main__.IMAGE
+
+.. autodata:: gf180tcad.calibrate.__main__.PROGRESS_NAME
 ```
