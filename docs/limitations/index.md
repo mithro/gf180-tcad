@@ -24,6 +24,11 @@ there.
   ({doc}`moscap2d`); [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
 - **The 2D TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
   names the current generator, not the one that made them; see {ref}`tcad-provenance`.
+- **`make reproduce` does not yet reproduce the 2D TCAD files, and has not been run end to
+  end.** The 2D job files predate the current job format and the L = 2 µm {term}`sweeps <sweep>` were resumed, so a
+  fresh run differs from them ({ref}`moscap2d-reproduce`). Only the calibrated 1D
+  {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
+  `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
 - **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
   it is now fixed in {{ gplugins_fork }} and re-verified on the latest stack. See

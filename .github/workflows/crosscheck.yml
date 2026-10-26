@@ -5,6 +5,8 @@
 # (sha256) to results/MANIFEST.sha256, which was generated locally. No tolerance anywhere.
 # The subset goes to a temporary --out, never results/spice: spice-reference replaces --out, so
 # a subset written there would replace the full tree. See docs/reproduce/index.md.
+# The crosscheck-tcad job does the same for the TCAD jobs of tests/crosscheck_tcad_subset.txt
+# (tools/crosscheck-tcad-run, then verify-subset --kind tcad --prefix tcad/).
 name: crosscheck
 
 on:
@@ -15,7 +17,14 @@ on:
       - "docker/**"
       - "results/**"
       - "tests/crosscheck_subset.txt"
+      - "tests/crosscheck_tcad_subset.txt"
+      # the TCAD inputs (some also matched by the patterns above; listed for crosscheck-tcad)
+      - "third_party/**"
       - "data/process/**"
+      - "docker/TCAD_IMAGE"
+      - "docker/TCAD_DEV_IMAGE"
+      - "src/gf180tcad/tcad/**"
+      - "results/tcad/**"
       - "tests/tcad/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -167,4 +176,113 @@ jobs:
         with:
           name: crosscheck-differences
           path: ${{ runner.temp }}/crosscheck-artefact
+          retention-days: 30
+
+  # The TCAD half: the calibrated 1D MOS capacitor jobs of tests/crosscheck_tcad_subset.txt,
+  # rerun at exactly the committed configuration (selected mesh, SPICE cv biases, committed
+  # calibration) in the TCAD image that made them, into a temporary tree root, then compared
+  # with results/MANIFEST.sha256 under tcad/, per-tree provenance.json included.
+  crosscheck-tcad:
+    name: crosscheck-tcad
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Directories
+        run: |
+          {
+            echo "OUT=$RUNNER_TEMP/crosscheck-tcad/tcad"
+            echo "LOGS=$RUNNER_TEMP/crosscheck-tcad-logs"
+            # the TCAD host commands make each job's scratch dir under $TMPDIR (kept on failure)
+            echo "TMPDIR=$RUNNER_TEMP/tmp"
+          } >> "$GITHUB_ENV"
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
+          df -h /
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # the plugin (third_party/gplugins) is imported from the submodule, and its commit is
+          # recorded in each tree's provenance.json
+          submodules: true
+      - name: Prepare directories
+        run: mkdir -p "$LOGS" "$TMPDIR" "$(dirname "$OUT")"
+      - name: Runner
+        run: |
+          {
+            echo "## runner"; uname -a; nproc; free -g; df -h /
+            echo "## cpu"; lscpu
+            echo "## docker"; docker version
+            echo "## submodule"; git submodule status; git -C third_party/gplugins status --porcelain
+          } > "$LOGS/runner.txt" 2>&1
+          cat "$LOGS/runner.txt"
+      - name: Sandbox setup (gf180-tcad.slice)
+        run: |
+          sudo tools/sandbox-setup > "$LOGS/sandbox-setup.txt" 2>&1 || { cat "$LOGS/sandbox-setup.txt"; exit 1; }
+          cat "$LOGS/sandbox-setup.txt"
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.1"
+      - run: uv sync --locked
+      - name: Pull the TCAD image of the subset's jobs by digest
+        run: |
+          # the 1D results image (gf180tcad.tcad.RESULTS_IMAGE): docker/TCAD_DEV_IMAGE
+          uv run --locked python tools/crosscheck-tcad-run tests/crosscheck_tcad_subset.txt \
+            --images > "$LOGS/images.txt" 2>&1 || { cat "$LOGS/images.txt"; exit 1; }
+          cat "$LOGS/images.txt"
+          [ -s "$LOGS/images.txt" ] || { echo "::error::no TCAD image listed"; exit 1; }
+          while IFS= read -r image; do
+            case "$image" in *@sha256:*) ;; *) echo "::error::TCAD image is not pinned by digest: $image"; exit 1 ;; esac
+            time docker pull --quiet "$image"
+            docker image inspect "$image" --format 'id={{.Id}} size={{.Size}}'
+          done < "$LOGS/images.txt"
+          df -h /
+      - name: Regenerate the TCAD subset (temporary --out tree root, never results/tcad)
+        run: |
+          uv run --locked python tools/crosscheck-tcad-run tests/crosscheck_tcad_subset.txt \
+            --out "$OUT" > "$LOGS/crosscheck-tcad-run.log" 2>&1 \
+            || { cat "$LOGS/crosscheck-tcad-run.log"; exit 1; }
+          cat "$LOGS/crosscheck-tcad-run.log"
+      - name: verify-subset --kind tcad against results/MANIFEST.sha256
+        run: |
+          rc=0
+          uv run --locked python -m gf180tcad.manifest verify-subset "$OUT" --kind tcad \
+            --against results/MANIFEST.sha256 --prefix tcad/ --subset tests/crosscheck_tcad_subset.txt \
+            > "$LOGS/verify-subset.txt" 2>&1 || rc=$?
+          cat "$LOGS/verify-subset.txt"
+          {
+            echo "### crosscheck-tcad: verify-subset (exit $rc)"
+            echo '```'
+            cat "$LOGS/verify-subset.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+      - name: Collect differing files
+        if: failure()
+        run: |
+          d="$RUNNER_TEMP/crosscheck-tcad-artefact"
+          mkdir -p "$d/generated" "$d/committed"
+          cp -r "$LOGS" "$d/logs"
+          # verify-subset lines: "<reason>: tcad/<relpath>"
+          if [ -f "$LOGS/verify-subset.txt" ]; then
+            sed -n 's/^[a-z ]*: tcad\///p' "$LOGS/verify-subset.txt" > "$d/paths.txt"
+            while IFS= read -r rel; do
+              case "$rel" in */) continue ;; esac
+              if [ -f "$OUT/$rel" ]; then mkdir -p "$d/generated/$(dirname "$rel")"; cp "$OUT/$rel" "$d/generated/$rel"; fi
+              if [ -f "results/tcad/$rel" ]; then mkdir -p "$d/committed/$(dirname "$rel")"; cp "results/tcad/$rel" "$d/committed/$rel"; fi
+              if [ -f "$OUT/$rel" ] && [ -f "results/tcad/$rel" ]; then
+                diff -u "results/tcad/$rel" "$OUT/$rel" >> "$d/diff.txt" || true
+              fi
+            done < "$d/paths.txt"
+          fi
+          # failed jobs' scratch dirs (job logs), if generation failed
+          find "$TMPDIR" -maxdepth 1 -name 'gf180tcad-moscap*' -exec cp -r {} "$d/" \;
+          ls -R "$d" > "$d/listing.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: crosscheck-tcad-differences
+          path: ${{ runner.temp }}/crosscheck-tcad-artefact
           retention-days: 30

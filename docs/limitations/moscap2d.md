@@ -228,6 +228,29 @@ calibration and comparison
   dielectric region), or memory-allocator fragmentation at large node counts. This is an open
   follow-up, not a fix: the resume mechanism works around it.
 
+(moscap2d-reproduce)=
+
+## `make reproduce` does not yet reproduce the 2D files
+
+`make reproduce` ({ref}`one-command`) reruns the committed 2D cells with today's code, but the
+committed 2D {term}`job` files cannot come out byte for byte:
+
+- **Older job files.** The Lmin cells (`w10p0_l0p60`, `w10p0_l0p50`) were written by the
+  Task 11 code. Their `cv.meta.json` has no `ac` and no `resumed` entry; the current job writes
+  both (`"ac": "computed"`, `"resumed": {}`).
+- **Resumed sweeps.** The L = 2 µm cells were resumed four times each
+  ({ref}`moscap2d-l2`): `resumed` records
+  `{"qs": 4}`, and a resumed sweep is not byte-identical to an uninterrupted one.
+- **Restamped, not rerun.** The 2D mesh convergence and the 2D {term}`provenance` were restamped to the
+  current generator without a rerun ({ref}`tcad-provenance`), so nothing shows that today's code
+  gives their bytes.
+
+So a full `make reproduce` is expected to report at least the four 2D `cv.meta.json` files in
+`manifest verify`, and the L = 2 µm `cv.csv` too (a resumed sweep agrees with an uninterrupted one
+only within the solver tolerance), until the 2D results are regenerated and committed. It has not been run end to end: the 2D jobs take hours at 16 GiB
+each, one at a time. All the 1D results are reproduced byte for byte locally, and the calibrated 1D
+results on GitHub-hosted runners ({ref}`cross-host-tcad`).
+
 (moscap2d-meshes)=
 
 ## The meshes are not committed

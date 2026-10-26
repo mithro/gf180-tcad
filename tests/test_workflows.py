@@ -106,3 +106,38 @@ def test_crosscheck_runs_the_sandbox_card_fidelity_test():
     i = next(i for i, ln in enumerate(lines) if "pytest -m sandbox" in ln)
     assert lines.index("      - name: Pull docker/IMAGE by digest") < i
     assert lines.index("      - run: uv sync --locked") < i
+
+
+def test_crosscheck_tcad_job():
+    """crosscheck-tcad: submodule checkout, image by digest, temporary tree root, --kind tcad."""
+    lines = _lines("crosscheck.yml")
+    body = _jobs(lines)["crosscheck-tcad"]
+    text = "\n".join(body)
+    assert "          submodules: true" in body
+    # the images the subset's jobs run in, pulled by digest
+    assert "tools/crosscheck-tcad-run tests/crosscheck_tcad_subset.txt \\" in text
+    assert "--images" in text and "*@sha256:*" in text and 'docker pull --quiet "$image"' in text
+    assert 'echo "OUT=$RUNNER_TEMP/crosscheck-tcad/tcad"' in text
+    assert '--out "$OUT"' in text and "--out results" not in text
+    assert (
+        'verify-subset "$OUT" --kind tcad \\\n'
+        "            --against results/MANIFEST.sha256 --prefix tcad/ "
+        "--subset tests/crosscheck_tcad_subset.txt"
+    ) in text
+    # order: uv, then the image, then the jobs, then the comparison
+    steps = [ln for ln in body if ln.startswith("      - ")]
+    order = [
+        "      - run: uv sync --locked",
+        "      - name: Pull the TCAD image of the subset's jobs by digest",
+        "      - name: Regenerate the TCAD subset (temporary --out tree root, never results/tcad)",
+        "      - name: verify-subset --kind tcad against results/MANIFEST.sha256",
+    ]
+    assert [steps.index(s) for s in order] == sorted(steps.index(s) for s in order)
+    paths = {ln.strip() for ln in lines[: lines.index("  schedule:")]}
+    assert {
+        f'- "{p}"'
+        for p in (
+            "third_party/**", "data/process/**", "docker/TCAD_IMAGE", "docker/TCAD_DEV_IMAGE",
+            "src/gf180tcad/tcad/**", "results/tcad/**", "tests/crosscheck_tcad_subset.txt",
+        )
+    } <= paths  # fmt: skip

@@ -61,16 +61,53 @@ is a commit on the fork's `main`.
 make reproduce
 ```
 
-This target of the {repo}`Makefile` regenerates the {term}`SPICE` reference dataset for both
-engines ({{ ngspice }} and {{ Xyce }}), all {term}`corners <corner>`, both devices and every
-geometry into {repo}`results/spice`, then runs `python -m gf180tcad.manifest verify results/`
-({py:mod}`gf180tcad.manifest`). It exits non-zero if any {term}`job` fails or if any file
-differs from, is missing from, or is not listed in the {term}`manifest`,
-{repo}`results/MANIFEST.sha256`. On a clean checkout a successful run leaves
-`git status` clean. It needs {{ Docker }}, the sandbox (see {doc}`sandbox`) and the
-pinned image (see {doc}`image`). The 120 jobs take about a minute with 8 jobs,
-the default (`make reproduce JOBS=16` runs more at once, up to the
-{ref}`memory admission <reproduce-how-it-works>` limit of 32).
+This target of the {repo}`Makefile` regenerates every committed result in place, in dependency
+order, and then runs `python -m gf180tcad.manifest verify results/` ({py:mod}`gf180tcad.manifest`).
+Each step is a target of its own, which can also be run alone:
+
+| target | runs | writes |
+|---|---|---|
+| `spice-reference` | `python -m gf180tcad spice-reference --engine both --jobs $(JOBS)`: the {term}`SPICE` reference for both engines ({{ ngspice }} and {{ Xyce }}), all {term}`corners <corner>`, both devices and every geometry | {repo}`results/spice` |
+| `tcad-meshconv` | `python -m gf180tcad.tcad meshconv --dim 1` for both devices, then `--dim 2 --jobs 1` (one 16 GiB {term}`job` at a time) | {repo}`results/tcad/meshconv` |
+| `tcad-start` | `python -m gf180tcad.tcad moscap --params start`: `--dim 1` for both devices, and `--dim 2` for each committed 2D cell; the L = 2 µm cells run `--method qs`, then `--method combine-qs` on the same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job resumes when the target runs again | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
+| `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
+| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices (no 2D calibrated results are committed) | {repo}`results/tcad/moscap1d` |
+| `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
+
+It exits non-zero if any job fails or if any file differs from, is missing from, or is not
+listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Docker }}, the sandbox
+(see {doc}`sandbox`), the pinned images (see {doc}`image`) and the plugin submodule
+({ref}`getting-the-source`), so clone with `--recurse-submodules`. The commands are those of the
+{ref}`TCAD provenance table <tcad-provenance>`;
+{test}`tests/test_makefile.py::test_reproduce_runs_in_dependency_order` and the other tests of
+{repo}`tests/test_makefile.py` parse every command `make -n reproduce` prints with the argument
+parser of the command line it calls, and compare the jobs with the committed job directories.
+
+**The expected runtime is hours.** The 120 SPICE jobs take about a minute with 8 jobs, the
+default (a host with less than 32 GiB of memory should pass `make reproduce JOBS=4`, because each job is
+admitted at 4 GiB; `make reproduce JOBS=16` runs more at once, up to the
+{ref}`memory admission <reproduce-how-it-works>` limit of 32). The 1D {term}`TCAD` jobs take
+minutes. The 2D ones take hours: the 2D {term}`mesh convergence` and every 2D
+{term}`MOS capacitor` job run one 16 GiB job at a time, hours each ({doc}`../limitations/moscap2d`),
+so the host needs 16 GiB of memory free for the sandbox.
+
+**Not yet run end to end, and the 2D files are not expected to match.** The TCAD half of
+`make reproduce` has not been run in one go. Its 2D job files were made by older code, and the
+L = 2 µm {term}`sweeps <sweep>` were resumed, so a fresh run differs from them; see {ref}`moscap2d-reproduce`.
+So the final `manifest verify` of `make reproduce` is expected to exit non-zero until the 2D results are
+regenerated and committed ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+`make spice-reference` followed by `python -m gf180tcad.manifest verify results/` checks the SPICE
+half alone.
+
+(reproduce-quick)=
+
+**`make reproduce-quick`** runs only the cross-checked TCAD subset,
+{repo}`tests/crosscheck_tcad_subset.txt` (the two calibrated 1D MOS capacitor jobs), as the
+{ref}`crosscheck-tcad job <cross-host-tcad>` does: {repo}`tools/crosscheck-tcad-run` writes the jobs
+into `tmp/reproduce-quick` (`QUICK_OUT=`; a path under {repo}`results`, or inside the repository but outside `tmp/`, is refused), then
+`python -m gf180tcad.manifest verify-subset tmp/reproduce-quick --kind tcad --prefix tcad/`
+compares them byte for byte with the manifest. A TCAD subset `all` covers the `moscap1d` and `moscap2d` trees only and reports `moscap2d/*/calibrated` as `unknown job` until issue [#35](https://github.com/mithro/gf180-tcad/issues/35) commits the 2D calibrated results. It takes about a minute; on 2026-10-26 it printed
+`identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under tcad/`.
 
 After an intended change to the results, regenerate them and rewrite the
 manifest with:
@@ -240,7 +277,7 @@ varies from run to run. The full reference has passed on an AMD EPYC 7763; the o
 pass on an AMD EPYC 9V45 was an earlier 8-job subset, before the numpy fix below. There is no {term}`tolerance`: a difference in the last digit of one float
 fails it.
 
-**Everything is cross-checked on GitHub-hosted runners.** The
+**The whole SPICE reference is cross-checked on GitHub-hosted runners.** The
 {repo}`subset file <tests/crosscheck_subset.txt>` holds the single line `all`, which stands
 for every job of the reference: both engines, all five corners, both devices and all six
 geometries of each, 120 jobs. Each job includes every sweep its engine runs
@@ -248,7 +285,8 @@ geometries of each, 120 jobs. Each job includes every sweep its engine runs
 The check covers all 660 CSV and metrics files, the {term}`provenance` file
 ({repo}`results/spice/provenance.json`) and the {term}`corner envelope`
 ({repo}`results/spice/envelope.json`).
-Nothing is checked only locally.
+Nothing of it is checked only locally. The TCAD results are
+cross-checked in part ({ref}`cross-host-tcad`).
 
 **What we found and fixed.** The first full cross-check
 ([run](https://github.com/mithro/gf180-tcad/actions/runs/39115902279), on an
@@ -280,8 +318,9 @@ envelope always differs from the committed one. The envelope is computed only
 by selecting from the metrics floats, and those are compared.
 
 The workflow runs on pull requests that change the sources, tools, image
-pin, results, project metadata, lock file, Makefile, subset file or the
-workflow itself, and also weekly and on demand. Its steps are:
+pins, results, project metadata, lock file, Makefile, either subset file, the plugin
+submodule, the process files, the TCAD tests or the workflow itself, and also weekly and on
+demand. The steps of its SPICE job, `crosscheck`, are:
 
 1. Free disk space and pull {repo}`docker/IMAGE` by its {term}`digest <manifest digest>`.
 2. Install the sandbox {term}`slice` with `sudo tools/sandbox-setup`
@@ -319,6 +358,44 @@ workflow itself, and also weekly and on demand. Its steps are:
 {repo}`provenance.json <results/spice/provenance.json>` is compared. A change to the
 generator's sources changes {term}`generator_sha256`, so the cross-check fails until the reference has been
 regenerated and the manifest updated, the same as `make reproduce`.
+
+(cross-host-tcad)=
+
+### The TCAD cross-check: `crosscheck-tcad`
+
+A second job of the same workflow, `crosscheck-tcad`, does the same for the {term}`TCAD`
+results. It regenerates the jobs of {repo}`tests/crosscheck_tcad_subset.txt`, the calibrated
+1D {term}`MOS capacitor` of both devices (`moscap1d/nfet_05v0/calibrated` and
+`moscap1d/pfet_05v0/calibrated`), on a GitHub-hosted runner and requires every file to be
+byte-identical to the manifest. The jobs rerun exactly the committed configuration: the selected
+mesh, the SPICE `cv` gate biases and the committed calibrated values. Its steps are:
+
+1. Free disk space, check out with `submodules: true` (the plugin is imported from
+   {repo}`third_party/gplugins <third_party>`, and its commit is recorded in the tree's provenance),
+   and install the sandbox slice as above.
+2. Pull, by {term}`digest <manifest digest>`, the image the jobs run in. That is the image of the
+   1D results ({py:data}`gf180tcad.tcad.RESULTS_IMAGE`), the {term}`dev-HEAD TCAD image`
+   {repo}`docker/TCAD_DEV_IMAGE`, which made the committed files; `tools/crosscheck-tcad-run
+   --images` prints it.
+3. {repo}`tools/crosscheck-tcad-run` runs each job as the host command that made it,
+   `python -m gf180tcad.tcad moscap --device D --dim 1 --params calibrated --out <out>/moscap1d`
+   (2 GiB, 1 CPU), one at a time, into a temporary tree root. It refuses an `--out` under
+   {repo}`results`.
+4. `python -m gf180tcad.manifest verify-subset <out> --kind tcad --against results/MANIFEST.sha256
+   --prefix tcad/ --subset tests/crosscheck_tcad_subset.txt`. TCAD jobs are `<tree>/<device>/<params>`
+   paths; each tree the jobs name must have its own `provenance.json`, which is compared (it holds
+   the calibration file's sha256 for both devices, which is why both are listed). There is no
+   envelope. On success it prints `identical: 5 files of 2 jobs ...`. The first run passed on an AMD EPYC 7763
+   ([run](https://github.com/mithro/gf180-tcad/actions/runs/40308867413), 2026-10-26).
+5. On failure, the artefact `crosscheck-tcad-differences` holds the generated and committed copy
+   of each differing file, their `diff -u`, the logs and the scratch directory of any failed job.
+
+**Checked only locally.** The 1D start values, the calibration and validation, the mesh
+convergence and the 2D results are not cross-checked on GitHub-hosted runners. The 2D jobs take
+hours at 16 GiB each, more than the runner has. The 1D start-value and calibrated jobs are
+rerun byte for byte locally by
+{test}`tests/tcad/test_moscap1d.py::test_byte_identical`, and the 1D mesh convergence by
+{test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical`; see {ref}`tcad-provenance`.
 
 ```{toctree}
 :maxdepth: 1
