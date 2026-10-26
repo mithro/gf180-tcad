@@ -922,7 +922,7 @@ Requires the docs-links infrastructure on main.
 
 ### Task 14: secondary PDK `d658698` comparison (carried over from Phase 0–1 Task 15)
 
-> **Done.** This task was completed as Phase 0–1 Task 15, before Phase 2 started (commits 0f6a977, 0cc79af, bede2d2, 4c11d43, 60f02c7, cdd00a7, 4e5cb70, c37e89f, 02bf0a9). Outcome: rerunning TT ngspice on the `d658698` PDK gives results byte-identical to `results/spice` for these devices (`results/spice-pdk-d658698/comparison.json`: `identical: true`, every metric delta exactly 0). The two PDKs' `sm141064` model libraries differ only in the resistor section `.lib res` (the `fox_sub` capacitor model), which the transistors never load. The page `docs/comparison/pdk-versions.md` records this.
+> **Done.** This task was completed as Phase 0–1 Task 15, starting on 2026-10-19 (first commit 0f6a977), while Phase 2 was in progress (commits 0f6a977, 0cc79af, bede2d2, 4c11d43, 60f02c7, cdd00a7, 4e5cb70, c37e89f, 02bf0a9). Outcome: rerunning TT ngspice on the `d658698` PDK gives results byte-identical to `results/spice` for these devices (`results/spice-pdk-d658698/comparison.json`: `identical: true`, every metric delta exactly 0). The two PDKs' `sm141064` model libraries differ only in the resistor section `.lib res` (the `fox_sub` capacitor model), which the transistors never load. The page `docs/comparison/pdk-versions.md` records this.
 
 **Context.**
 - `spice-reference` lives in `reference.py`, which is a generator module. Adding `--pdk-root` there therefore changes SPICE provenance (Global Constraints).
