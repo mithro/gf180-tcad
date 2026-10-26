@@ -87,9 +87,14 @@ values are not read as more physical than they are.
   measured with a small signal, gives the {term}`HF C–V` curve instead: in inversion it stays
   near its depletion minimum. The 2D cells have source and drain, which supply the inversion
   charge: at {term}`Lmin` their committed 1 MHz small-signal Cgg
-  ({repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>`, nfet; the pfet's
-  is beside it) follows their QS curve. A measured test-structure C–V would have to be compared
-  with the curve of its own contacts. See {ref}`plugin-history-latest`.
+  ({repo}`nfet cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>`,
+  {repo}`pfet cgx.csv <results/tcad/moscap2d/pfet_05v0/start/w10p0_l0p50/cgx.csv>`) follows
+  their QS curve ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.csv>`):
+  at all 21 AC biases from −5 V to +5 V the two differ by less than 1e-5 relative (3.3e-7
+  measured), {test}`tests/tcad/test_moscap2d.py::test_committed_ac_follows_qs`. The in-image
+  check is {test}`tests/tcad/test_moscap2d.py::test_ac_1mhz_recovers_inversion`; the runs are
+  described on {doc}`moscap2d`. A measured test-structure C–V would have to be compared with
+  the curve of its own contacts.
 - **No quantum correction; the effective oxide absorbs it.** {{ DEVSIM }} 2.11.1 has no built-in
   {term}`density-gradient` model, and none is added here: classical {term}`drift-diffusion`
   puts the carrier charge at the interface. The quantum-mechanical dark space, the charge
