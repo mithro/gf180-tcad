@@ -6,7 +6,7 @@ Some generated files are too large to commit here but slow to regenerate, for ex
 results name each one by its sha256 (``mesh_sha256`` in the ``cv.meta.json`` beside it). The
 output cache is a separate plain git repository,
 https://github.com/mithro/gf180-tcad-output-cache, holding those bytes under their
-hash so that anyone can fetch them instead of rerunning the job:
+hash so that anyone can fetch them instead of rerunning the job::
 
     objects/sha256/<first 2 hex>/<sha256>.<ext>[.gz]    the file, gzip-compressed if configured
     index.json                                          sha256 -> paths, sizes, producing commit
@@ -90,14 +90,22 @@ class Artefact:
     job: dict
 
 
+@dataclass(frozen=True)
+class TooLarge:
+    """An artefact whose compressed object would exceed the size cap."""
+
+    artefact: Artefact
+    compressed_size: int
+
+
 @dataclass
 class PushReport:
-    """What :func:`push` did: ``added`` and already ``present`` artefacts, and those
-    ``too_large`` (artefact, compressed size) to store."""
+    """What :func:`push` did: ``added`` and already ``present`` artefacts, those
+    ``too_large`` to store, and whether it ``committed``."""
 
     added: list[Artefact] = field(default_factory=list)
     present: list[Artefact] = field(default_factory=list)
-    too_large: list[tuple[Artefact, int]] = field(default_factory=list)
+    too_large: list[TooLarge] = field(default_factory=list)
     committed: bool = False
 
 
@@ -403,7 +411,7 @@ def add_objects(
                 shutil.copyfile(a.file, part)
             csize = part.stat().st_size
             if csize > cap:
-                rep.too_large.append((a, csize))
+                rep.too_large.append(TooLarge(a, csize))
                 continue
             os.replace(part, dest)
         finally:
@@ -705,9 +713,10 @@ def _run(a: argparse.Namespace, cfg: dict) -> int:
                 print(f"added {x.sha256}  {x.path} ({x.size} bytes)")
         for x in rep.present:
             print(f"present {x.sha256}  {x.path}")
-        for x, csize in rep.too_large:
+        for t in rep.too_large:
             print(
-                f"too large {x.sha256}  {x.path}: {csize} bytes compressed, cap "
+                f"too large {t.artefact.sha256}  {t.artefact.path}: {t.compressed_size} bytes "
+                f"compressed, cap "
                 f"{cfg['max_object_bytes']}",
                 file=sys.stderr,
             )
