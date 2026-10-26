@@ -214,7 +214,7 @@ its 1D data were last regenerated in 690cf7b. The shared module {py:mod}`gf180tc
 changed since that generator, but only in provenance bookkeeping (the module list,
 `VALIDATION_DIR`, `calibrated_devices`), not in anything that computes a result. The
 calibration and the validation were rerun at the code they record and compared byte for
-byte with the committed files; the 1D MOS capacitor tree is rerun and compared byte for byte
+byte with the committed files; the 1D {term}`MOS capacitor` tree is rerun and compared byte for byte
 by the sandbox test {test}`tests/tcad/test_moscap1d.py::test_byte_identical`. The matching
 mesh-convergence test {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical`
 cannot currently pass against the committed tree
