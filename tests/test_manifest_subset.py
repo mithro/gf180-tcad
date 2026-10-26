@@ -481,7 +481,9 @@ def test_tcad_full_passed_explicitly(tcad_setup):
     assert "identical: 5 files of 2 jobs" in r.stdout and "partial subset" in r.stdout
     # every TCAD job is the complete TCAD set, whatever the SPICE plan holds
     full = tree.parent / "full"
-    shutil.copytree(m.parent / "tcad", full, ignore=shutil.ignore_patterns("meshconv", "calib*"))
+    shutil.copytree(
+        m.parent / "tcad", full, ignore=shutil.ignore_patterns("meshconv", "calibration")
+    )
     (subset.parent / "all.txt").write_text("all\n")
     r = _cli(
         full, "--kind", "tcad", "--against", m, "--prefix", "tcad/", "--subset",
