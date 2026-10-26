@@ -193,14 +193,15 @@ linkcheck_timeout = 30
 linkcheck_rate_limit_timeout = 120.0
 
 # docs/_generated/ is git-ignored and rebuilt from the committed SPICE reference at the start of
-# every build (builder-inited). Read the Docs installs only the docs dependency group, which does
+# every build (builder-inited), under docs/.generated.lock so that two builds of one checkout run
+# one after the other (see _generate_results). Read the Docs installs only the docs dependency group, which does
 # not install gf180tcad itself, so put the source tree on sys.path: it is the least fragile
 # option (no change to the RTD install, and a local editable install resolves to the same code).
 sys.path.insert(0, str(_root / "src"))
 
 _docs = Path(__file__).parent
 _generated = _docs / "_generated"
-_build_lock = None  # docs/.generated.lock, held from builder-inited to build-finished
+_build_lock = None  # fd of docs/.generated.lock, held from builder-inited to build-finished
 
 
 def _lock_docs_build():
@@ -211,14 +212,14 @@ def _lock_docs_build():
     generation. The kernel releases it if the process dies.
     """
     global _build_lock
-    _build_lock = open(_docs / ".generated.lock", "a", encoding="utf-8")
+    _build_lock = os.open(_docs / ".generated.lock", os.O_RDWR | os.O_CREAT, 0o644)
     fcntl.flock(_build_lock, fcntl.LOCK_EX)
 
 
 def _unlock_docs_build(app, exception):
     global _build_lock
     if _build_lock is not None:
-        _build_lock.close()
+        os.close(_build_lock)  # releases the flock
         _build_lock = None
 
 
