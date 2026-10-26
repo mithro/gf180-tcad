@@ -218,7 +218,7 @@ byte with the committed files; the 1D {term}`MOS capacitor` tree is rerun and co
 by the sandbox test {test}`tests/tcad/test_moscap1d.py::test_byte_identical`. The 1D
 mesh-convergence data were rerun in the sandbox on 2026-10-26 and compared byte for byte with
 the committed files by {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical`
-(passed, 3 min 54 s). That test compares the tree's `provenance.json` without its `moscap2d`
+(passed; the sandbox session of two tests took 3 min 54 s). That test compares the tree's `provenance.json` without its `moscap2d`
 image, which a 1D rerun cannot know
 ([issue #36](https://github.com/mithro/gf180-tcad/issues/36)); the 2D mesh-convergence results
 were restamped, not rerun, and have no such evidence.
