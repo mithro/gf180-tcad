@@ -5,13 +5,14 @@ Nothing here is a SPICE generator module (:data:`gf180tcad.reference.GENERATOR_M
 changes to this package never touch ``results/spice/provenance.json``.
 
 **Provenance.** Each TCAD tree root (:repo:`results/tcad/moscap1d`, :repo:`results/tcad/moscap2d`,
-:repo:`results/tcad/meshconv`, and later ``calibration`` and ``validation`` under
+:repo:`results/tcad/meshconv`, and the ``calibration`` and ``validation`` trees of Task 12 under
 :repo:`results/tcad`) holds one
 ``provenance.json``, written from :func:`tree_provenance`. It holds, under ``images``, for each
 result kind in the tree (``moscap1d``, ``moscap2d``) the TCAD image that made it: its name
 (:data:`IMAGES`), reference and ``versions.json`` contents. It also holds the plugin
 commit ``gplugins_commit`` and ``generator_sha256`` (:func:`generator_sha256`), and, for a tree
-with calibrated results, per device the sha256 of its calibration file
+with calibrated results (:func:`calibrated_devices`: calibrated job directories, and every device
+of the validation tree), per device the sha256 of its calibration file
 ``results/tcad/calibration/<device>.json`` (:mod:`gf180tcad.tcad.calibration`, written by
 :repo:`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`) and the ``param_sha256`` of the
 values applied (:func:`gf180tcad.tcad.calibration.param_sha256`). It holds no date.

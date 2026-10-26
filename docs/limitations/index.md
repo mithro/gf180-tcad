@@ -78,6 +78,12 @@ Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
   of log10(Id). Defined differently: the {term}`body effect` uses the
   {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
   in {ref}`not yet extracted, or defined differently <metrics-not-yet-extracted>`.
+- **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
+  accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
+  to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two
+  mid-capacitance crossings, each ≤ 50 mV (a proposal: no published standard). In the
+  transition a relative-C metric measures the slope of the curve, not agreement; the numbers
+  are on {doc}`/comparison/cv-agreement`. The depletion error is still reported.
 
 ```{toctree}
 :maxdepth: 1
