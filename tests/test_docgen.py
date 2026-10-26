@@ -307,7 +307,7 @@ def test_moscap_page_per_device_geometry(tmp_path):
             assert f"{100 * m['depletion_max_rel']:.2f} %" in page
             assert g.role in page
             # mesh pictures: no mesh file is committed, and the page says so
-            assert "mesh.msh" in page and "not committed" in page
+            assert "mesh.msh" in page and "not committed" in page and "issues/39" in page
             meta = TCAD / "moscap2d" / name / "start" / gid / "cv.meta.json"
             if meta.is_file():
                 assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page

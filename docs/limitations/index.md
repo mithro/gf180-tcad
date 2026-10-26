@@ -150,6 +150,13 @@ Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
   of log10(Id). Defined differently: the {term}`body effect` uses the
   {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
   in {ref}`not yet extracted, or defined differently <metrics-not-yet-extracted>`.
+- **No mesh pictures on the TCAD results pages.** The
+  {repo}`design spec, section 10(b) <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#10-documentation-sphinx--read-the-docs>`
+  asks for mesh pictures on the generated device and geometry pages. The 2D meshes are not
+  committed ({ref}`moscap2d-meshes`), and the pages render only committed files, so
+  {doc}`/_generated/tcad/index` shows each 2D job's mesh sha256 instead. The options (commit a
+  reduced mesh artefact with provenance, or amend the spec) are in
+  [issue #39](https://github.com/mithro/gf180-tcad/issues/39).
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two

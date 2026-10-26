@@ -465,10 +465,12 @@ _URL_ALIASES = {
     ),
 }
 _NO_MESH = (
-    "No mesh picture: the 2D meshes (`mesh.msh`) are not committed (git-ignored, 25-62 MB "
-    "each), and this page renders only committed files. A {term}`job`'s `cv.meta.json` records the "
-    "sha256 of its mesh, from which it regenerates byte for byte "
-    "({ref}`the meshes are not committed <moscap2d-meshes>`)."
+    "No mesh picture: the 2D meshes (`mesh.msh`) are not committed (git-ignored, "
+    "{ref}`for their size <moscap2d-meshes>`), and this page renders only committed files. A "
+    "{term}`job`'s `cv.meta.json` records the sha256 of its mesh, from which it regenerates "
+    "byte for byte. The design spec asks for mesh pictures here: a recorded "
+    "{ref}`deviation <limitations-spec-deviations>`, "
+    "[issue #39](https://github.com/mithro/gf180-tcad/issues/39)."
 )
 
 
