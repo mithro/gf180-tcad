@@ -17,7 +17,7 @@ heavily the silicon under it is doped, and a small offset of the voltage at whic
 turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are frozen, and the TCAD is compared with SPICE at gate lengths it never
-saw. For the nfet the result is good: the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw. For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
+saw. For the nfet the result is good: in 1D the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check is not run yet). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
 
 ## What is fitted
 
@@ -83,8 +83,12 @@ SPICE TT curve of each geometry ({py:func}`~gf180tcad.calibrate.cv.regions`):
   C_mid = (C_min + C_acc)/2 twice, once on the depletion side (u_dep, below the minimum) and
   once on the inversion side (u_inv, above it), linearly interpolated between grid points.
   ΔV_dep = u_dep(TCAD) − u_dep(SPICE) probes the flat band and the doping, ΔV_inv the threshold.
-  Each must be ≤ 50 mV. **This {term}`tolerance` is a proposal: no published standard exists.** Using each
-  curve's own C_mid makes the ΔV a shift of the transition, independent of a plateau error;
+  Each must be ≤ 50 mV. **This {term}`tolerance` is a proposal: no published standard exists.**
+  **Interpretation of the plan:** the plan defines C_mid = (C_min + C_acc)/2 from SPICE's own curve
+  and records C_min and C_acc of SPICE in `spice_regions`; here each curve, TCAD and SPICE,
+  crosses its *own* C_mid, computed from its own minimum and accumulation value. That makes the
+  ΔV a shift of the transition, independent of a plateau error (with SPICE's level, a 3 % plateau
+  error alone would move the TCAD crossing);
 - the **depletion error**, max |ΔC|/C for u_fb − 1 V < u < u_t + 1 V, is reported for every
   geometry but is not a pass/fail metric.
 
@@ -134,12 +138,19 @@ Fitted values, from {repo}`results/tcad/calibration/nfet_05v0.json` and
 {repo}`results/tcad/calibration/pfet_05v0.json`; the full results (residuals, regions,
 windows) are beside them in {repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`
 and {repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json>`. Budget used:
-3 of 8 per device type. No value is within 1e-3 of a bound.
+3 of 8 per device type. No value is within 1e-3 of a bound. The pfet `dv_fb_v`, +187.2 mV,
+is the nearest: 13 mV inside the +200 mV bound (97 % of the way from 0), not a bound hit by the
+1e-3 rule but close to one.
 
 | Device | `t_ox_eff_nm` [bounds] | `n_ch_cm3` [bounds] | `dv_fb_v` [bounds] | Optimiser |
 |---|---|---|---|---|
 | {term}`nfet_05v0` | 16.050 [15.2, 16.95] | 8.813e16 [6.30e16, 3.4e17] | +98.7 mV [±200 mV] | xtol reached, 15 evaluations |
 | {term}`pfet_05v0` | 15.721 [15.6, 16.39] | 2.147e17 [6.78e16, 3.4e17] | +187.2 mV [±200 mV] | ftol reached, 11 evaluations |
+
+"Evaluations" is scipy's `nfev`, the residual evaluations of the optimiser's steps. It leaves
+out the finite-difference Jacobians (`njev`: 8 for the nfet and 11 for the pfet, each 3
+evaluations), so the 1D {{ DEVSIM }} sweeps were about 15 + 3 × 8 = 39 (nfet) and
+11 + 3 × 11 = 44 (pfet); the {term}`job`'s `progress.log` counts every one.
 
 The `t_ox_eff_nm` upper bounds are TOXP plus the charge-centroid allowance Δ: 0.95 nm for the
 nfet and 0.79 nm for the pfet, the maximum over both plateaus of the BSIM4 charge-thickness
@@ -235,7 +246,9 @@ Lmin with `spice-fit`.
   hours, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
   ({doc}`/limitations/moscap2d`). The validation files list every geometry under `two_d` with
   status "not run"; rerunning `python -m gf180tcad.calibrate validate` after the 2D jobs fills
-  them in. This deviates from the plan in one respect: the plan has
+  them in; the remaining work is [issue #35](https://github.com/mithro/gf180-tcad/issues/35) (L = 2 µm needs
+  `--method qs` then `--method combine-qs`; L = 10 µm does not solve in 2D). This deviates from
+  the plan in one respect: the plan has
   {py:func}`~gf180tcad.calibrate.cv.validate_cv` call `moscap2d.simulate` itself; it reads the
   committed calibrated 2D results instead, so the multi-hour 2D sweeps run once, through the
   resumable 2D job, and serve both the result tree and the validation.
