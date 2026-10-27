@@ -10,4 +10,8 @@ Source: {repo}`src/gf180tcad/render/manifest.py`.
 .. autodata:: gf180tcad.render.manifest.REQUIRED
 
 .. autodata:: gf180tcad.render.manifest.OPTIONAL
+
+.. autodata:: gf180tcad.render.manifest.DISPLAY_SOURCE
+
+.. autodata:: gf180tcad.render.manifest.NOT_TO_SCALE
 ```

@@ -466,16 +466,16 @@ manifest digest
   ([OCI image manifest](https://github.com/opencontainers/image-spec/blob/main/manifest.md)),
   recorded in {repo}`docker/IMAGE`; it selects the image to run. See {ref}`image-pinning`.
 
-render manifest
-  The file `<render>.render.json` beside a 3D render. It names the source, value and scale of
-  every number the render draws. See {ref}`render-manifest`.
-
 config digest
 image ID
   The digest of the image configuration
   ([OCI image configuration](https://github.com/opencontainers/image-spec/blob/main/config.md)),
   which covers the layer `diff_id`s; recorded in {repo}`docker/base/IMAGE_ID`. See
   {ref}`image-pinning`.
+
+render manifest
+  The file `<render>.render.json` beside a 3D render. It names the source, value and scale of
+  every number the render draws. See {ref}`render-manifest`.
 
 provenance
   The recorded tool and {term}`PDK` versions ({repo}`docker/base/versions.json`) and the generator

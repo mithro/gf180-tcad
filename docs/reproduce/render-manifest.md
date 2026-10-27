@@ -30,20 +30,15 @@ Key is the JSON key, Holds what its value is, Required whether every render mani
 ## Entry keys
 
 An entry is either read from a file (`source` and `selector`) or derived (`derived` and `inputs`).
-Key is the JSON key inside an entry, Holds what its value is.
+Its keys, read entries first:
 
-| Key | Holds |
-|---|---|
-| `unit` | the unit, or one unit per column for a several-column selector |
-| `role` | `geometry`, `axis`, `value` or `display` |
-| `scale` | the factor the render applies, 1 when drawn to scale |
-| `label` | the words that name the entry in its exaggeration statement |
-| `source` | the repo-relative path of the file read |
-| `selector` | where the value sits inside that file |
-| `derived` | the name of a function of {py:mod}`gf180tcad.derive` |
-| `inputs` | the names of the entries passed to that function, in its parameter order |
-| `value` | the value of a scalar entry |
-| `value_sha256` | the sha256 of the canonical JSON of an array entry |
+- `source`: the repo-relative path of the file read, with no `..` part;
+- `selector`: where the value sits inside that file;
+- `derived` and `inputs`: a function of {py:mod}`gf180tcad.derive` and the entries passed to it;
+- `unit`: the unit, or one unit per column for a several-column selector;
+- `role` and `scale`: `geometry`, `axis`, `value` or `display`, and the factor the render applies;
+- `label`: the words that name the entry in its exaggeration statement;
+- `value` or `value_sha256`: a scalar's value, or the sha256 of an array's canonical JSON.
 
 An entry with the role `geometry` or `axis` always has a `scale`. An entry whose scale is not 1
 always has a `label`. Its exaggeration statement, such as "oxide thickness ×40, not to scale", is
@@ -75,14 +70,16 @@ render never recomputes what a simulation computed.
 The file {repo}`data/render/display.toml` holds the band gaps and the Si–SiO₂ band offsets that a band
 diagram is drawn with. No simulation reads the file. Each value has a unit and a source in the
 {ref}`literature list <lit-sze>`. The file's `mismatch` text compares the band gap the simulation
-implies with the band gap the drawing uses.
+implies with the band gap the drawing uses. A committed render manifest reads every `display`
+entry from this file and no other ({py:meth}`gf180tcad.render.manifest.Manifest.display_problems`).
 
 ## What the check rejects
 
 The method {py:meth}`gf180tcad.render.manifest.Manifest.verify` reports each of these:
 
 - an input file whose sha256 changed;
-- a source file that is missing, or not listed in `inputs`;
+- a source file that is missing, unreadable, or not listed in `inputs`;
 - a value read again that differs from the recorded value;
 - a derived value that differs when the function is evaluated again;
-- a scale other than 1 without its exaggeration statement.
+- a scale other than 1 without its exaggeration statement;
+- an exaggeration statement that no entry's scale matches.
