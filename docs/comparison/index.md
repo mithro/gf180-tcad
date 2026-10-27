@@ -8,8 +8,8 @@ geometry → {term}`Agree` / {term}`Same process` / {term}`Disagree` in 1D, is g
 committed results on {doc}`/_generated/tcad/index`, with one page per device and geometry.
 
 There
-is no matrix for the full transistor (MOSFET); it is Phase 3 on the {doc}`roadmap </roadmap>`.
-Two SPICE checks exist besides. The {term}`SPICE reference <SPICE reference results>` is checked
+is no matrix for the full transistor (MOSFET); it is {term}`Phase 3` on the {doc}`roadmap </roadmap>`.
+Two {term}`SPICE` checks exist besides. The {term}`SPICE reference <SPICE reference results>` is checked
 against the PDK spec ({doc}`pdk-spec-check`), and {{ ngspice }} against {{ Xyce }}
 ({doc}`../limitations/engine-cross-check`). Both are summarised, with the current numbers, on the
 generated {doc}`SPICE reference results </_generated/results/index>` page.

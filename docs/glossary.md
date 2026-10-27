@@ -133,7 +133,7 @@ Same process
   specifies, not at its typical point. See {ref}`the verdicts <agreement-verdicts>`.
 
 Disagree
-  Verdict for a device and metric: outside the "Same process" window; the {term}`TCAD` is
+  Verdict for a device and metric: outside the {term}`"Same process" window`; the {term}`TCAD` is
   describing a different process. See {ref}`the verdicts <agreement-verdicts>`.
 
 tolerance

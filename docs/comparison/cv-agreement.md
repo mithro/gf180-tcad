@@ -332,22 +332,22 @@ Lmin with `spice-fit`.
 - **2D: first cell nfet Lmin, {term}`Disagree`.** The 2D check uses the calibrated 2D
   results, made by this command:
 
-  ```
-  python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID --out results/tcad/moscap2d
-  ```
+```
+python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID --out results/tcad/moscap2d
+```
 
-  That is the same `moscap2d.simulate` with source
-  and drain, QS, on the selected 2D mesh and the SPICE grid. It runs one {term}`job` at a time,
-  16 GiB each, hours each.
+That is the same `moscap2d.simulate` with source
+and drain, QS, on the selected 2D mesh and the SPICE grid. It runs one {term}`job` at a time,
+16 GiB each, hours each.
 
-  The first one is committed,
-  {repo}`results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60 <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`
-  (its run: {ref}`moscap2d-calibrated`). It is compared with the TT ngspice Cgg by the
-  function {py:func}`~gf180tcad.calibrate.cv.validate_cv` uses (its 2D part, run on the host).
-  The committed validation file records every 2D cell as "not run"; it is regenerated with the
-  2D results, as the {doc}`roadmap </roadmap>` lists
-  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The fixed stack in 2D, with its
-  own overlap and fringe, does **not** agree:
+The first one is committed,
+{repo}`results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60 <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`
+(its run: {ref}`moscap2d-calibrated`). It is compared with the TT ngspice Cgg by the
+function {py:func}`~gf180tcad.calibrate.cv.validate_cv` uses (its 2D part, run on the host).
+The committed validation file records every 2D cell as "not run"; it is regenerated with the
+2D results, as the {doc}`roadmap </roadmap>` lists
+([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The fixed stack in 2D, with its
+own overlap and fringe, does **not** agree:
 
 A plateau row is its worst point below SPICE. At the calibrated values:
 
