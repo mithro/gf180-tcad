@@ -46,8 +46,8 @@ PRs but is not a merge blocker.
   the user's `writing-sourced-docs` and `docs-writing` skills (from the user's
   [mithro/dot-claude](https://github.com/mithro/dot-claude) repository; `docs-writing` is on its
   `docs-writing-skill` branch). A reader page states only what a source backs, with the source
-  linked in the sentence. It carries no hedge or unknown word (not yet, unverified, not public,
-  probably, likely, "about" before a number and the others listed in section 10.3). An
+  linked in the sentence. It carries no hedge or unknown word (`not yet`, `unverified`, `not public`,
+  `probably`, `likely`, `about` before a number and the others listed in section 10.3). An
   unsourced statement is removed and filed as an issue. Before handing a page over, run
   `uv run --no-project python -I tools/measure_docs.py <page>` ([`tools/measure_docs.py`](tools/measure_docs.py)), `uv run --no-project python -I tools/docs_lint.py --no-front-matter <page>` ([`tools/docs_lint.py`](tools/docs_lint.py)) and the docs tests
   ([`tests/test_doc_style.py`](tests/test_doc_style.py),
