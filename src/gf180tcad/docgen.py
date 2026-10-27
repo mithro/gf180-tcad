@@ -285,15 +285,19 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
     return [
         "### Values",
         "",
-        "The {term}`TT` value of each metric from both engines. Xyce has no C-V sweep, so its "
-        "{term}`Cgg` cells are not applicable.",
+        (
+            "The {term}`TT` value of each metric from both engines. Xyce has no C-V sweep, so "
+            "its {term}`Cgg` cells are not applicable."
+        ),
         "",
         *_table(["Metric", "Unit", "TT ngspice", "TT Xyce"], values),
         "",
         "### Corner envelope",
         "",
-        "The {term}`corner envelope`: min and max over the five corners (ngspice), in the unit "
-        "of the values table.",
+        (
+            "The {term}`corner envelope`: min and max over the five corners (ngspice), in the "
+            "unit of the values table."
+        ),
         "",
         *_table(["Metric", "Corner min", "Corner max"], corners),
         "",
@@ -305,8 +309,10 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
             "({ref}`pdk-same-process-window`)."
         ),
         "",
-        "Where the PDK publishes no spec for a metric at this geometry, the window is the "
-        "corner envelope alone.",
+        (
+            "Where the PDK publishes no spec for a metric at this geometry, the window is the "
+            "corner envelope alone."
+        ),
         "",
         *_table(["Metric", "Window min", "Window max", "Set by"], windows),
     ]
@@ -808,19 +814,28 @@ def _check_rows(rec: dict) -> list[str]:
         "",
         *_table(["Plateau", "max \\|ΔCgg\\|/Cgg (%)", "Points", f"{tol} (%)", "Verdict"], plateau),
         "",
-        "The window that decides {term}`Same process`, and whether the TCAD is inside it at "
-        "every plateau bias:",
+        (
+            "The window that decides {term}`Same process`, and whether the TCAD is inside it "
+            "at every plateau bias:"
+        ),
         "",
         *_table(["Plateau", "Window set by", "Inside at every bias"], p_window),
         "",
-        "The tightest bias u is where the TCAD value is closest to, or furthest past, a window "
-        "edge; the window there:",
+        (
+            "The tightest bias u is where the TCAD value is closest to, or furthest past, a "
+            "window edge; the window there:"
+        ),
         "",
         *_table(
-            ["Plateau", "Tightest u (V)", "TCAD C there (fF)", "Window min (fF)",
-             "Window max (fF)"],
+            [
+                "Plateau",
+                "Tightest u (V)",
+                "TCAD C there (fF)",
+                "Window min (fF)",
+                "Window max (fF)",
+            ],
             p_tight,
-        ),  # fmt: skip
+        ),
         "",
         "### Crossings",
         "",

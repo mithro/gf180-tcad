@@ -97,9 +97,10 @@ def test_geometry_links_name_the_geometry(tmp_path):
         links = re.findall(r"\{doc\}`([^`<]*?)\s*<([^`>]*)>`", text)
         for label, target in links:
             assert not re.fullmatch(r"[\d.]+", label), (p.name, label, target)
-        if any(re.fullmatch(r"w\d+p\d+_l\d+p\d+", label) for label, _ in links):
-            if p.name == "index.md":
-                assert docgen.GEOMETRY_ID_TEXT in text, p
+        if p.name == "index.md" and any(
+            re.fullmatch(r"w\d+p\d+_l\d+p\d+", label) for label, _ in links
+        ):
+            assert docgen.GEOMETRY_ID_TEXT in text, p
         assert " um" not in text and "um^2" not in text, p
 
 
