@@ -602,9 +602,10 @@ _HTML_SKIP_TAGS = {"pre", "script", "style", "nav", "aside"}
 # Verdict names are ordinary English words in lower case ("the engines agree"), so they are
 # matched with their capital letter only. Every other term and tool is matched ignoring case.
 _CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process"}
-# Phrases that contain a glossary term's word but are not the term: the journal name "IEEE Trans.
-# Electron Devices" (literature page) is not a use of "electron". Blanked before the term scan.
-_NOT_TERM_PHRASES = re.compile(r"\bElectron Devices\b")
+# Phrases that contain a glossary term's word but are not the term: the journal names "IEEE Trans.
+# Electron Devices" and "IEEE Electron Device Letters" (literature page) are not a use of
+# "electron". Blanked before the term scan.
+_NOT_TERM_PHRASES = re.compile(r"\bElectron Devices?\b")
 
 
 def _case_sensitive(name: str) -> bool:
@@ -1064,7 +1065,8 @@ def test_html_scan_short_names_are_case_sensitive():
 def test_journal_name_is_not_the_electron_term():
     """The journal name is blanked; a capitalised "Electrons" in prose is still a first use."""
     journal = (
-        '<html><body><div id="furo-main-content"><p>IEEE Trans. Electron Devices 30(7), 1983.'
+        '<html><body><div id="furo-main-content"><p>IEEE Trans. Electron Devices 30(7), 1983;'
+        " IEEE Electron Device Letters 16(1), 1995."
         "</p></div></body></html>"
     )
     assert [q for q in check_html("u.html", journal) if q.kind == "html-term"] == []
