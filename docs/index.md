@@ -12,10 +12,33 @@ the documentation separates what was calibrated from what was predicted.
 
 ```{admonition} Status
 :class: warning
-{term}`Phases 0 and 1` (foundations and the SPICE reference dataset) are in progress.
-**No TCAD simulation has been run yet, and there are no results yet.** No
-measured silicon data exists ({doc}`limitations/silicon-validation`). See
-{doc}`limitations/index`.
+{term}`Phases 0 and 1` (foundations and the SPICE reference dataset) are complete
+({doc}`/_generated/results/index`). {term}`Phase 2` (the {{ gplugins }} {{ DEVSIM }} plugin fix
+and the {term}`MOS capacitor <MOSCAP>`) is in progress. The committed {term}`TCAD` results are
+MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MOSFET TCAD yet:
+
+- the 1D and 2D MOS capacitor {term}`C–V` curves at the start values, in
+  {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`),
+  and the first calibrated 2D cell (nfet, minimum length) in {repo}`results/tcad/moscap2d`;
+- their {term}`mesh convergence`, 1D and 2D, in {repo}`results/tcad/meshconv`
+  ({doc}`limitations/mesh-convergence`);
+- the 1D calibration against the SPICE {term}`Cgg`–Vg, in {repo}`results/tcad/calibration`,
+  and its validation at the {term}`held-out geometries <held-out geometry>`, in
+  {repo}`results/tcad/validation`, with the calibrated 1D curves in
+  {repo}`results/tcad/moscap1d` ({doc}`comparison/cv-agreement`). In 1D the nfet is
+  {term}`Agree` at every geometry and the pfet is published as {term}`Disagree`.
+
+The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation of the
+calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)):
+its first cell, the nfet at minimum length, is {term}`Disagree` ({ref}`cv-agreement-validation`).
+Planned, not built yet: {{ DEVSIM }}-versus-{{ Charon }} cross-comparison on every {term}`job`
+({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
+[issue #44](https://github.com/mithro/gf180-tcad/issues/44); none has run yet), 3D renders
+of the simulated processes
+({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
+[issue #43](https://github.com/mithro/gf180-tcad/issues/43)) and explainer pages
+([issue #46](https://github.com/mithro/gf180-tcad/issues/46)). No measured silicon data exists
+({doc}`limitations/silicon-validation`). See {doc}`limitations/index`.
 ```
 
 No published {{ DEVSIM }}- or {{ Charon }}-versus-{term}`BSIM` comparison for any open PDK was

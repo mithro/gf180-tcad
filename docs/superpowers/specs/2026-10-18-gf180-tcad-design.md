@@ -51,7 +51,7 @@ versus what was *predicted*.
 - gdsfactory for structure generation. **Fix and extend the existing gplugins DEVSIM plugin** (currently raises `NotImplementedError` after a meshwell API change) in the fork `mithro/gplugins`, rather than writing a new plugin. Add a Charon backend there too ("plugins that add new TCAD simulators"; required since 2026-10-27, §12.1).
 - Licence: everything developed is **Apache-2.0**. Using GPL (or other OSS) libraries in-process is fine (DMT-core, meshwell, Charon); so is running tools in containers.
 - Containers built reproducibly by GitHub Actions and published to **ghcr.io** (under `ghcr.io/mithro/…`).
-- Review (user decision): every PR is reviewed by independent review subagents; findings are fixed before merge; the user spot-checks but is not a merge blocker. PRs are opened only inside `mithro/*` repos.
+- Review (user decision): every PR is reviewed by independent review subagents; findings are fixed before merge; the user spot-checks but is not a merge blocker. PRs are opened only inside `mithro/*` repos. Since 2026-10-27, each PR also updates the status pages it affects (README Status, the docs index Status, the plan checkboxes, the limitations index, the affected results and comparison pages), and every review checks that it did; a PR whose docs lag is "needs fixes" (§16).
 - Account actions: the builder may create `mithro/gf180-tcad`, forks under `mithro/`, and ghcr.io packages via the authenticated `gh` CLI; creating the Read the Docs project is handed to the user when Phase 0 needs it.
 - Git: small logical commits; feature branches in worktrees; nothing committed directly to `main`; every change reviewed before merge; merges into `main` are real merge commits (`--no-ff`); no squash or rebase merges (rebasing a branch while working on it is fine). `main` = latest stable state.
 - **Latest versions of everything** (tools, libraries, PDK, base images). An older version may be used only to confirm that something once worked (e.g. the gplugins DEVSIM plugin against the meshwell release it was written for); the item is then upgraded to the latest version and re-verified to give the right result. Each such "worked on old → verified on latest" step is recorded in the docs.
@@ -535,3 +535,11 @@ that the intent survives later rewording of the sections it changed.
   > "Add to the spec that there should be a section of the documentation which is designed to
   > be a general explaination how the various parts of semiconductors work using the
   > references / assets from the repo to ground things in the real world."
+- **2026-10-27: docs updated with every PR.** §3 (the Review constraint) and `CONTRIBUTING.md` (PR
+  checklist) changed: the author updates the affected status pages in the same PR, and every
+  review checks it. The user's words (11:45 and 11:50 ACDT):
+  > "Make sure that the documentatoin is getting updated as work is done. It is currently out
+  > of date."
+  >
+  > "Make sure that as part of every review it also checks if the docs have been correctly
+  > updated at the same time."

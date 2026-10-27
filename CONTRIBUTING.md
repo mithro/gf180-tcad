@@ -30,6 +30,19 @@ Every PR is reviewed by an independent review agent (a separate subagent that di
 write the change). Its findings are fixed before merge. The project owner spot-checks
 PRs but is not a merge blocker.
 
+## PR checklist
+
+- The documentation is updated in the same PR as the change, never later. The author updates
+  every status page the change affects: the Status section of [README.md](README.md), the
+  Status admonition of [docs/index.md](docs/index.md), the task checkboxes of the plan in
+  [docs/superpowers/plans](docs/superpowers/plans) (ticked with the PR number and merge date),
+  the [limitations index](docs/limitations/index.md), and the results and comparison pages
+  whose content it changes. [`tests/test_docs_status.py`](tests/test_docs_status.py) catches
+  only two narrow cases (a top-level results tree the Status does not name, and a few known
+  stale phrases); passing it says nothing about whether the pages are current.
+- Every review checks that those pages were updated correctly at the same time. A PR whose
+  documentation lags behind the change is "needs fixes", like any other finding.
+
 ## Forks only
 
 Never interact with upstream or third-party repositories: no PRs, issues, comments or
