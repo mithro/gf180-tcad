@@ -8,10 +8,8 @@ validated against the [PDK](https://gf180-tcad.readthedocs.io/en/latest/glossary
 
 This project builds a scriptable TCAD flow (structures from
 [gdsfactory](https://gdsfactory.github.io/gdsfactory/) layouts, simulated with
-[DEVSIM](https://devsim.org/), with [Charon](https://charon.sandia.gov/) planned in parallel for
-cross-comparison) for
-GF180MCU transistors, and measures, quantitatively, reproducibly and in public,
-how closely it agrees with the PDK SPICE models.
+[DEVSIM](https://devsim.org/)) for GF180MCU transistors, and measures, quantitatively,
+reproducibly and in public, how closely it agrees with the PDK SPICE models.
 
 The PDK's SPICE models are the [reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE-reference-results);
 the TCAD is what is being tested. Each mismatch is documented with its cause and the evidence
@@ -71,7 +69,9 @@ The 2D validation of the calibrated stack is in progress ([issue #35](https://gi
 calibrated 2D cell, the nfet at the minimum length, is committed and disagrees with SPICE.
 
 Planned work, each item with its issue, is on the
-[roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html).
+[roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html), among it a
+[Charon](https://charon.sandia.gov/) backend beside DEVSIM for cross-comparison
+([issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
 The current limitations, including the deviations from the design spec, are listed on the
 [limitations page](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html).
 
