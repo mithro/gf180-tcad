@@ -291,15 +291,18 @@ The plugin is fixed in {{ gplugins_fork }} and runs on the latest stack:
 {{ Python }} 3.13, in the {term}`stable TCAD image` ({repo}`docker/TCAD_IMAGE`). The re-verification
 was made with gf180-tcad pinning the fork at [`400f842`](https://github.com/mithro/gplugins/commit/400f8423d7b0d1aac48eea1c0145342d0c1f766a) through the
 {repo}`third_party/gplugins <.gitmodules>` submodule, and all file links below are at that commit.
-The pin is now [`1eae814`](https://github.com/mithro/gplugins/commit/1eae814f8584f9cb111493c32496f8e7f6c82503), which
+The pin is now [`0715c81`](https://github.com/mithro/gplugins/commit/0715c81c4439533512621a97358d9d779411ebf6), which
 also includes {repo}`Task 8 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-8-fork-cv-solver-api>`, the {term}`C–V` solver ([mithro/gplugins#6](https://github.com/mithro/gplugins/pull/6)),
 the fork pull requests [mithro/gplugins#9](https://github.com/mithro/gplugins/pull/9) to
 [#12](https://github.com/mithro/gplugins/pull/12), and the backend seam of
-{repo}`Task 15 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-15-required-first-step-of-spec-121-backend-seam-in-the-plugin>`
-(fork branch `gf180/backend-seam`): `gplugins/devsim/get_solver.py` became
-`gplugins/devsim/backends/devsim.py` (the DEVSIM backend; `gplugins.devsim.get_solver` is an
-alias of it) behind the backend-neutral `gplugins/devsim/device_description.py`, with no change
-to the API or to any result. The file links in this section stay at the commits they name.
+{repo}`Task 15 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-15-required-first-step-of-spec-121-backend-seam-in-the-plugin>`,
+[mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13) (merge commit [`0715c81`](https://github.com/mithro/gplugins/commit/0715c81c4439533512621a97358d9d779411ebf6)).
+The seam puts the backend-neutral `gplugins/devsim/device_description.py` and `results.py`
+in front of the DEVSIM backend, `gplugins/devsim/backends/devsim.py` (formerly `get_solver.py`;
+`gplugins.devsim.get_solver` is an alias of it), makes `import gplugins.devsim` lazy and adds a
+`backends/charon/` stub. It changes no API that gf180-tcad uses and no result: at this pin
+`make reproduce-quick` reproduces the committed 1D jobs byte for byte ({ref}`tcad-provenance`).
+The file links in this section stay at the commits they name.
 
 **Where the numbers come from.** Every latest-stack value in this section is one that the
 linked fork tests assert or record. They ran in the fork's own continuous integration (CI), in the TCAD image, at the
