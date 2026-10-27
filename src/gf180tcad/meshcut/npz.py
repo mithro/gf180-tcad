@@ -3,7 +3,7 @@
 
 ``numpy.savez_compressed`` stamps each member with the current time, so its output differs
 from run to run. :func:`write_npz` writes the zip itself: members sorted by name, each a
-``.npy`` file with a format 1.0 header from :mod:`numpy.lib.format`, every member dated
+``.npy`` file with a format 1.0 header from ``numpy.lib.format``, every member dated
 1980-01-01 00:00:00 (the zip epoch), ``ZIP_DEFLATED`` at level 9, no extra fields and no
 comments. ``numpy.load`` reads the result like any ``.npz``; :func:`read_npz` does so with
 pickles refused.
