@@ -28,12 +28,12 @@ The structures of each design, and what to note about them:
 - **Priority 2, 0000 / ASHES.** `06v0` n and p FETs of W = 2 µm, L = 1 µm (five of each).
   ASHES also holds `03v3` FETs. **No licence**: reference only, do not redistribute. The pad
   map is not documented.
-- **Priority 3, T0P3 (Tiny Tapeout GF0.3).** `tt_asw_5v0` analog switches (`05v0`,
+- **Priority 3, T0P3 ({{ Tiny_Tapeout }} GF0.3).** `tt_asw_5v0` analog switches (`05v0`,
   on-resistance versus voltage) and a 5 V current mirror with Kelvin sense. An indirect `05v0`
   check.
 - **Priority 4, CAB1, CLON, DCO0 and 2975.** Ring oscillators from 5 V 7-track cells. The
   `05v0` inverter is W = 0.82 µm, L = 0.60 µm (n) and W = 1.22 µm, L = 0.50 µm (p). Their
-  frequency is compared with SPICE and with the Standard Delay Format (SDF) timing: a
+  frequency is compared with {term}`SPICE` and with the Standard Delay Format (SDF) timing: a
   circuit-level check.
 - **Priority 5, ISHI.** Probe-padded inverters (`05v0` and `06v0`). Check that
   {term}`Dualgate` is over each device: some "5 V" devices are built thin-oxide.

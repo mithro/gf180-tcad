@@ -32,7 +32,7 @@ there.
   It also asks for its bounds across the {term}`PDK`'s SPICE corners and a Monte Carlo spread.
   These are not computed ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
 - **One TCAD backend.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
-  for {{ Charon }} in parallel on every job, with a per-job cross-comparison
+  for {{ Charon }} in parallel on every {term}`job`, with a per-job cross-comparison
   ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
   No Charon job has run ({ref}`numerical-acceptance`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).

@@ -92,7 +92,7 @@ Each annotation names what the project uses the item for.
 
 - Pelgrom, Duinmaijer and Welbers, "Matching properties of MOS transistors", IEEE JSSC 24(5),
   1989, {doi}`10.1109/JSSC.1989.572629`: the mismatch scale ({term}`σ_mismatch`). It covers the
-  matching of threshold voltage, substrate factor and current factor.
+  matching of {term}`threshold voltage`, substrate factor and current factor.
 
 ## Inverse modelling of doping from I-V and C-V (the calibration method)
 
