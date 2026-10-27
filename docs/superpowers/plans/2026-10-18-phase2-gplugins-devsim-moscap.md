@@ -1167,5 +1167,5 @@ The docs style pass (spec §10.3) states the present only; these facts about how
 - A QS sweep of the L = 10 µm cell's 201 biases was estimated at 7–8 hours from the measured rates; under spec §8.1 run time is no longer a reason for not running it (issue #58).
 - `make reproduce` had not been run end to end because the 2D jobs take hours at 16 GiB each (no longer a reason, spec §8.1).
 - The C/Cox > 1 diagnosis was done in the research spike (Task 11), whose plan named four candidate causes, each measured.
-- The 2 % mesh dependence and C/Cox = 1.0039 in 1D come from the research spike, Tasks 10 and 11.
+- The 2 % mesh dependence and the 2D prototype's C/Cox = 1.0039 (15.2 nm oxide) come from the research spike, Tasks 10 and 11.
 - Level 3 of the 2D mesh-convergence study was left out partly because it "would take over 8 hours per job"; the time estimates stay as data, and the remaining reason is the L = 10 µm-sized solve failure (#58).
