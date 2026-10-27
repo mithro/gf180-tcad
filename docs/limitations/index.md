@@ -139,7 +139,7 @@ values are not read as more physical than they are.
 - **The poly gate is simulated, with {term}`Boltzmann statistics`.** The gate is a {term}`poly-silicon` region
   doped at {term}`NGATE` (n+ 1e20 cm⁻³ for the nfet, p+ 3.6e19 cm⁻³ for the pfet), so
   {term}`poly depletion` is in the model, not in a fitted term. Its carriers follow
-  Boltzmann statistics, which place the Fermi level beyond the band edge at these
+  Boltzmann statistics, which place the {term}`Fermi level` beyond the band edge at these
   dopings. At the start body doping of 1.7e17 cm⁻³ the Boltzmann flat band is **−1.029 V** for
   the nfet and **+1.003 V** for the pfet; at the calibrated body doping (`n_ch_cm3`
   8.81e16 cm⁻³ for the nfet, 2.15e17 cm⁻³ for the pfet,

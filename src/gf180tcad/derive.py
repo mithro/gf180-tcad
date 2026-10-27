@@ -8,7 +8,7 @@ function's parameters, and records the value. The test re-evaluates the formula 
 :attr:`Formula.equation`, and names a reference. None of them solves anything: a render never
 recomputes physics that a simulation job computes.
 
-Energies are in eV with the body's Fermi level at 0 and the electrostatic potential ψ in V
+Energies are in eV with the body's :term:`Fermi level` at 0 and the electrostatic potential ψ in V
 referred to the intrinsic level, as DEVSIM reports it, so E_i = −ψ. Lengths are in µm and
 densities in cm⁻³. The explainer pages import the formulas they share with the renders from
 here and keep their idealised-example formulas elsewhere, outside the render hash.

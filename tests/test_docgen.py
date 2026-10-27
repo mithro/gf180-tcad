@@ -55,9 +55,25 @@ _RENDER_EXPLAINED = textwrap.dedent(
 )
 
 
-@pytest.mark.parametrize(
-    "figure", ["silicon-doping", "oxide-stack", "parts-cell", "junction-cell", "junction-panels"]
-)
+# Every explainer figure (test_explained_figures_all_deterministic holds the list complete).
+EXPLAINED_FIGURES = [
+    "silicon-doping",
+    "oxide-stack",
+    "bands-stack",
+    "bands-flat",
+    "parts-cell",
+    "junction-cell",
+    "junction-panels",
+]
+
+
+def test_explained_figures_all_deterministic():
+    from gf180tcad.explain import figures
+
+    assert sorted(EXPLAINED_FIGURES) == sorted(figures.FIGURES)
+
+
+@pytest.mark.parametrize("figure", EXPLAINED_FIGURES)
 @pytest.mark.parametrize("palette", ["light", "dark"])
 def test_explained_svg_deterministic(figure, palette):
     """An explainer figure, both palettes: two fresh processes give the same bytes."""

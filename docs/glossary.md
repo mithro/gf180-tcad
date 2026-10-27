@@ -553,6 +553,27 @@ electron
   by a {term}`donor`, move through the crystal and carry current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
   {ref}`explained-carriers`.
 
+conduction band
+  The range of energies of the free {term}`electrons <electron>` in a crystal, the ones that move
+  and carry current. A band diagram draws it above the {term}`band gap`
+  ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-bands-energy`.
+
+valence band
+  The range of energies of the {term}`electrons <electron>` held in the bonds between atoms. A
+  {term}`hole` is an empty place in it. A band diagram draws it below the {term}`band gap`
+  ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-bands-energy`.
+
+band gap
+  The range of energies between the {term}`valence band` and the {term}`conduction band`, which no
+  {term}`electron` of a perfect crystal can have. Freeing an electron from a bond takes at least
+  this energy ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-bands-energy`.
+
+Fermi level
+  The energy at which a place for an {term}`electron` is filled half of the time. The
+  nearer it lies to the {term}`conduction band`, the more free electrons there are; the nearer to
+  the {term}`valence band`, the more {term}`holes <hole>` ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`).
+  See {ref}`explained-bands-fermi`.
+
 pn junction
   The boundary inside silicon where n-type material meets p-type material. Carriers cross it and
   leave a layer of fixed charge with no free carriers on each side, held by the
@@ -612,7 +633,7 @@ minority carrier
 Boltzmann statistics
   The non-degenerate approximation of carrier statistics. In detail: the Fermi-Dirac
   occupation is replaced by its Boltzmann tail, so n = n_i exp((ψ − φ_n) / V_t) and
-  p = n_i exp((φ_p − ψ) / V_t). It holds while the Fermi level stays a few k_B T away from the
+  p = n_i exp((φ_p − ψ) / V_t). It holds while the {term}`Fermi level` stays a few k_B T away from the
   band edges, and fails in degenerately doped regions ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`).
   See {ref}`the junction probe <plugin-history-junction>`.
 

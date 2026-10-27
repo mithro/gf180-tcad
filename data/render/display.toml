@@ -18,7 +18,7 @@ nc_cm3 = "cm^-3"
 nv_cm3 = "cm^-3"
 
 [silicon.sources]
-band_gap_ev = "Sze and Ng 2006 (lit-sze), Appendix G, Properties of Si and GaAs: energy gap of Si at 300 K"
+band_gap_ev = "Ioffe NSM archive (lit-ioffe), Si, Band structure and carrier concentration, Basic Parameters: energy gap of Si at 300 K; also Sze and Ng 2006 (lit-sze), Appendix G, Properties of Si and GaAs"
 nc_cm3 = "Sze and Ng 2006 (lit-sze), Appendix G, Properties of Si and GaAs: effective density of states in the conduction band of Si at 300 K"
 nv_cm3 = "Sze and Ng 2006 (lit-sze), Appendix G, Properties of Si and GaAs: effective density of states in the valence band of Si at 300 K"
 

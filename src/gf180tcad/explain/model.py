@@ -51,7 +51,8 @@ class Layer:
 @dataclass(frozen=True)
 class Device:
     """The model of one device: its layers from the gate down, the committed intrinsic density
-    and the drawing's scale factors (part to factor; a missing part or 1 is to scale)."""
+    and thermal voltage V_t = kT/q, and the drawing's scale factors (part to factor; a missing
+    part or 1 is to scale)."""
 
     name: str
     params: str
@@ -59,6 +60,7 @@ class Device:
     layers: tuple[Layer, ...]
     n_i_cm3: float
     t_k: float
+    vt_v: float
     scales: Mapping[str, float] = field(default_factory=dict)
 
     def layer(self, part: str) -> Layer:
@@ -97,6 +99,7 @@ def device(
         layers,
         consts["n_i_cm3"],
         consts["t_k"],
+        consts["vt_v"],
         dict(scales),
     )
 

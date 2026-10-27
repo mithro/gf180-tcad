@@ -52,6 +52,14 @@ STYLE = {
     "nm_below_um": 0.1,
     # Most significant digits a label shows (fewer when they print the same value).
     "label_digits": {"thickness": 4, "doping": 3},
+    # The band diagram: room above the conduction band edge and below the valence band edge,
+    # as a fraction of the band gap; band names sit this far into that room.
+    "band_room": 0.45,
+    "band_name_at": 0.6,
+    # Line labels sit this fraction of the band gap above their line, at this x (0 to 1).
+    "level_label_lift": 0.02,
+    "level_label_x": 0.04,
+    "fill_alpha": 0.22,
     # The 2D cross-section: extents with no committed source, drawn at a chosen size (µm).
     "drawn_um": {"source and drain width": 0.6},
     # Contacts are bars this fraction of the drawing's height thick, the source and drain ones
@@ -268,6 +276,68 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
         return _svg(fig)
 
 
+def band_levels(dev: model.Device, part: str) -> dict[str, float]:
+    """The flat-band energy levels of the silicon layer ``part`` (eV, from the middle of the gap,
+    taken as the intrinsic level): the band edges half the :term:`band gap` above and below it
+    (``band_gap_si``, a textbook value), and the :term:`Fermi level` of Boltzmann statistics
+    (:func:`gf180tcad.explain.idealised.boltzmann_fermi`) from the layer's electron density,
+    the doping for donors or the mass-action minority density for acceptors."""
+    layer = dev.layer(part)
+    if layer.dopant is None:
+        raise ValueError(f"{part} is not a silicon layer")
+    half = numbers.value("band_gap_si") / 2
+    n = layer.doping_cm3
+    if layer.dopant == "acceptor":
+        n = idealised.mass_action(dev.n_i_cm3, layer.doping_cm3)
+    fermi = idealised.boltzmann_fermi(n, dev.n_i_cm3, dev.vt_v)
+    return {"conduction": half, "valence": -half, "intrinsic": 0, "fermi": fermi}
+
+
+_DOPED = {"donor": "n-type", "acceptor": "p-type"}
+
+
+def band_flat(dev: model.Device, parts: tuple[str, ...], palette: str) -> bytes:
+    """One flat band diagram per silicon layer in ``parts``, side by side on one energy axis:
+    the :term:`conduction band` (shaded above its edge), the :term:`valence band` (shaded below
+    its edge), the middle of the gap (dotted) and the Fermi level (:func:`band_levels`)."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    gap = numbers.value("band_gap_si")
+    room = gap * STYLE["band_room"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(parts), sharey=True)
+        for ax, part in zip(axes, parts, strict=True):
+            lv = band_levels(dev, part)
+            top, bottom = lv["conduction"] + room, lv["valence"] - room
+            ax.set_xlim(0, 1)
+            ax.set_ylim(bottom, top)
+            ax.set_xticks([])
+            ax.axhspan(
+                lv["conduction"], top, color=pal["electron"], alpha=STYLE["fill_alpha"], lw=0
+            )
+            ax.axhspan(bottom, lv["valence"], color=pal["hole"], alpha=STYLE["fill_alpha"], lw=0)
+            ax.axhline(lv["conduction"], color=pal["electron"], lw=lw)
+            ax.axhline(lv["valence"], color=pal["hole"], lw=lw)
+            ax.axhline(lv["intrinsic"], color=pal["intrinsic"], lw=lw, ls=":")
+            ax.axhline(lv["fermi"], color=pal["highlight"], lw=lw, ls="--")
+            mid = (ax.get_xlim()[0] + ax.get_xlim()[1]) / 2
+            at = STYLE["band_name_at"] * room
+            ax.text(mid, lv["conduction"] + at, "conduction band", ha="center", va="center")
+            ax.text(mid, lv["valence"] - at, "valence band", ha="center", va="center")
+            lift = gap * STYLE["level_label_lift"]
+            x = STYLE["level_label_x"]
+            ax.text(x, lv["fermi"] + lift, "Fermi level", ha="left", va="bottom",
+                    color=pal["highlight"], fontweight="bold")  # fmt: skip
+            ax.text(x, lv["intrinsic"] - lift, "middle of the gap", ha="left", va="top",
+                    color=pal["intrinsic"])  # fmt: skip
+            layer = dev.layer(part)
+            ax.set_title(f"{_DOPED[layer.dopant]} {_PART_LABEL[part]}", fontsize=STYLE["text_pt"])
+        axes[0].set_ylabel("energy from the middle of the gap (eV)")
+        return _svg(fig)
+
+
 def _silicon_doping(palette: str) -> bytes:
     dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
     return doping_profile(dev, "body", palette)
@@ -276,6 +346,16 @@ def _silicon_doping(palette: str) -> bytes:
 def _oxide_stack(palette: str) -> bytes:
     dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
     return stack_1d(dev, ("gate", "oxide"), palette)
+
+
+def _bands_stack(palette: str) -> bytes:
+    dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
+    return stack_1d(dev, ("gate", "body"), palette)
+
+
+def _bands_flat(palette: str) -> bytes:
+    dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
+    return band_flat(dev, ("gate", "body"), palette)
 
 
 class Box(NamedTuple):
@@ -457,6 +537,8 @@ def _junction_cell(palette: str) -> bytes:
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
     "oxide-stack": _oxide_stack,
+    "bands-stack": _bands_stack,
+    "bands-flat": _bands_flat,
     "parts-cell": _parts_cell,
     "junction-cell": _junction_cell,
     "junction-panels": junction_panels,
@@ -466,7 +548,7 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
 # The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
 # computed curves (not drawings of the device) carry no statement.
 _CELL_FIGURES = ("parts-cell", "junction-cell")
-_PLOTS = ("junction-panels",)
+_PLOTS = ("bands-flat", "junction-panels")
 
 
 def substitutions() -> dict[str, str]:
