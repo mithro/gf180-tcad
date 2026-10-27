@@ -53,7 +53,7 @@ All Phase 2 and Phase 4 Global Constraints apply unchanged (licences, git rules,
 
 ---
 
-### Task R0: reduced mesh artefact generator (`gf180tcad.meshcut`), resolves #39
+### Task R0: reduced mesh artefact generator (`gf180tcad.meshcut`), for #39 (closed in R4)
 
 **Context.** Spec §10.1 "Mesh pictures" and §9.1: the full 2D meshes (`mesh.msh`, gmsh MSH 2.2 ASCII, 25–62 MB, 205 k–503 k nodes) stay out of the repo; a reduction generator cuts a ≤ 2 MB artefact around the gate and commits it with provenance tied to `mesh_sha256`. The four committed start-parameter meshes are on no disk and the cache is empty. The meshes regenerate deterministically from the committed cell and `selected.json` (`docs/limitations/moscap2d.md`, "The meshes are not committed") **if** today's code on the stable image still produces the bytes the committed trees recorded; the spec expects it may not ("the committed 2D trees predate the current job format, so this is likely for all of them").
 
