@@ -31,9 +31,8 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
   {term}`Agree` at every geometry and the pfet is published as {term}`Disagree`.
 
 The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation of the
-calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
-Its nfet cells are {term}`Disagree` at W10/L0.6 and W10/L0.7 and {term}`Same process` at W10/L1
-({ref}`cv-agreement-validation`).
+calibrated stack ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)) is {term}`Disagree`
+at nfet W10/L0.6 and W10/L0.7 and {term}`Same process` at W10/L1 ({ref}`cv-agreement-validation`).
 Planned work, each item with its issue, is on the {doc}`roadmap`. No measured silicon data
 exists ({doc}`limitations/silicon-validation`). See {doc}`limitations/index`.
 ```
