@@ -213,7 +213,9 @@ calibration and comparison
   sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
   solver ({term}`UMFPACK` 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
-  {py:data}`~gf180tcad.tcad.moscap2d.AC_INFEASIBLE`, `ac_points` is 0).
+  {py:data}`~gf180tcad.tcad.moscap2d.AC_INFEASIBLE`, `ac_points` is 0). This is an open
+  correctness problem, not a size limit to accept:
+  [issue #59](https://github.com/mithro/gf180-tcad/issues/59).
 - **Resumed after out-of-memory restarts.** The L = 2 µm QS sweeps ran under a memory cap and were
   restarted by the service manager after being killed; each restart resumed from the last saved
   point ({py:func}`~gf180tcad.tcad.moscap2d.resume_count`; `resumed` in the job files: 4 restarts for each
@@ -247,8 +249,8 @@ committed 2D {term}`job` files cannot come out byte for byte:
 
 So a full `make reproduce` is expected to report at least the four 2D `cv.meta.json` files in
 `manifest verify`, and the L = 2 µm `cv.csv` too (a resumed sweep agrees with an uninterrupted one
-only within the solver tolerance), until the 2D results are regenerated and committed. It has not been run end to end: the 2D jobs take hours at 16 GiB
-each, one at a time. All the 1D results are reproduced byte for byte locally, and the calibrated 1D
+only within the solver tolerance), until the 2D results are regenerated and committed. It has not been run end to end; that run
+waits for the regenerated 2D results ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). All the 1D results are reproduced byte for byte locally, and the calibrated 1D
 results on GitHub-hosted runners ({ref}`cross-host-tcad`).
 
 (moscap2d-meshes)=
@@ -315,14 +317,15 @@ inside it ([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
 
 (moscap2d-l10)=
 
-## Not run: the 2D cell at L = 10 µm
+## The 2D cell at L = 10 µm: the equilibrium solve fails
 
-The L = 10 µm cell is not simulated in 2D. At `DEFAULT_2D` it has about 2.0 million {term}`drift-diffusion`
+The L = 10 µm cell has no 2D result, because its solve fails; this is an open correctness
+problem ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)). At `DEFAULT_2D` it has 2.0 million {term}`drift-diffusion`
 unknowns, and the equilibrium drift-diffusion solve that sets up every 2D device fails inside
 {{ DEVSIM }}'s direct solver ({term}`UMFPACK` 5.1: "umfpack numeric failed"; the {term}`Poisson stage`, 0.86 million
-unknowns, still solves). A QS sweep of its 201 biases alone would take an estimated 7–8 hours from
-the measured rates. Its long-channel C per area is covered by the 2D-equals-1D check and by the 1D
-MOS capacitor. Later options are an iterative solver or a symmetric half domain.
+unknowns, still solves). Until it is solved, its long-channel C per area is covered by the
+2D-equals-1D check and by the 1D MOS capacitor. The directions to test (another direct or an
+iterative solver, a symmetric half domain) are on the issue.
 
 ## C/Cox > 1 that is physics: the fringe
 

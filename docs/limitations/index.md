@@ -21,16 +21,22 @@ there.
   ({ref}`mismatch analysis <cv-agreement-mismatch>`). The 2D validation of the calibrated stack
   is under way: the first calibrated 2D cell, the nfet at {term}`Lmin`, is {term}`Disagree` (plateaus 8.8 % and
   15.6 % below SPICE, depletion crossing −240 mV; {ref}`cv-agreement-validation`), and the other
-  cells follow one 16 GiB {term}`job` at a time, hours each. The L = 10 µm cell does not solve in 2D
-  ({doc}`moscap2d`), and the validation file does not yet list the 2D result;
-  [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
+  cells follow one 16 GiB {term}`job` at a time; the validation file does not list the 2D
+  result ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and
+  are open correctness problems: the L = 2 µm cell's AC solve
+  ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)) and the L = 10 µm cell's
+  equilibrium solve ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)); see
+  {doc}`moscap2d`.
+- **No {term}`corner` bounds are computed.** The design spec asks for the typical value, the lower and upper
+  bound across the {term}`PDK`'s SPICE corners, and a Monte Carlo spread of every physical input
+  ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)); none is computed.
 - **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
   `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
 - **TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
   names the current generator, not the one that made them (Task 12), and every TCAD tree was
   restamped once more to the per-tree {term}`generator_sha256` of [issue #34](https://github.com/mithro/gf180-tcad/issues/34), without a rerun.
-  Only the two calibrated 1D jobs are rerun and compared byte for byte by the cross-check; see
+  Only the two calibrated 1D {term}`jobs <job>` are rerun and compared byte for byte by the cross-check; see
   {ref}`tcad-provenance`.
 - **`make reproduce` does not yet reproduce the 2D TCAD files, and has not been run end to
   end.** The 2D job files predate the current job format and the L = 2 µm {term}`sweeps <sweep>` were resumed, so a
