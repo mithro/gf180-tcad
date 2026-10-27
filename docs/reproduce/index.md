@@ -329,7 +329,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 They ran at gplugins `1c071d0`, before the backend seam below.
 
-The `w10p0_l2p00` QS command ran three times on one `--resume`. The first two attempts reached
+The `w10p0_l2p00` {term}`QS <C–V>` command ran three times on one `--resume`. The first two attempts reached
 the 16 GiB cap after points 67 and 147 and were killed; the third finished ({ref}`moscap2d-l2`).
 Its wall time covers all three. The `combine-qs` step took 3 s, less than one memory sample, so it has no memory row.
 
