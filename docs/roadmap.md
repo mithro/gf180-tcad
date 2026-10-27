@@ -53,4 +53,5 @@ the issue says what is open and what settles it. The phases are those of the
   ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
   [issue #43](https://github.com/mithro/gf180-tcad/issues/43)).
 - **Explainer pages** on how the parts of a semiconductor work
-  ([issue #46](https://github.com/mithro/gf180-tcad/issues/46)).
+  ({repo}`explainer plan <docs/superpowers/plans/2026-10-27-explainer-docs.md>`,
+  [issue #46](https://github.com/mithro/gf180-tcad/issues/46)).
