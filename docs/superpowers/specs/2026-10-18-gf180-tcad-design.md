@@ -145,33 +145,46 @@ reference already runs (`gf180tcad.devices.CORNERS`). The library also has:
 - a `statistical` section: Monte Carlo of the global (die-to-die and wafer-to-wafer) variation,
   switched on by `sw_stat_global = 1`;
 - a mismatch wrapper per device (`fets_mm`, switched on by `sw_stat_mismatch = 1`): a random
-  threshold-voltage offset per transistor that falls with the square root of its area (for the
-  6 V nfet the coefficient is 11.55 mV·µm, the A_Vt of §5.2);
+  threshold-voltage offset per transistor that falls with the square root of its area. In the
+  upstream file the 6 V nfet (`nmos_6p0`) wrapper has `par_vth` = 11.55 mV·µm, the pair-difference
+  coefficient (the A_Vt of §5.2); one transistor's σ is 0.7071 · par_vth / √(area), with
+  the wrapper's own length and width offsets;
 - corner sections for other devices (`moscap_*`, `bjt_*`, `diode_*`, `res_*`, `mimcap_*`),
   with typical, ff and ss only. They are out of scope with those devices (§2).
 
 The SPICE reference runs with both statistical switches at 0 (`design.ngspice`), so each corner
 is one deterministic curve.
 
-**What the 6 V corners change.** Each corner adds an offset to a few BSIM4 inputs, the same for
-every geometry. The values below were read from the upstream model file
-(`google/globalfoundries-pdk-libs-gf180mcu_fd_pr` commit `9f992d5`,
-`models/ngspice/sm141064.ngspice`, sections `.LIB ff` and `.LIB ss`). The first step of the
-implementing task re-reads them from the pinned PDK's copy and corrects this table if they
-differ.
+**What the 6 V corners change.** Each corner adds an offset to some BSIM4 inputs and multiplies
+others by a factor, the same for every geometry. The values below were read from the upstream
+model file (`google/globalfoundries-pdk-libs-gf180mcu_fd_pr` commit `9f992d5`,
+`models/ngspice/sm141064.ngspice`, sha256 `73fc67d3…`, sections `.LIB ff` and `.LIB ss`). That
+file is not the pinned one: the pinned PDK's copy (sha256 `69a7ab87…`, recorded in
+`results/spice/provenance.json`) differs from it, and only the pinned copy has the
+`nfet_05v0`/`pfet_05v0` wrappers. The first step of the implementing task re-reads every value
+from the pinned copy and corrects these tables where they differ.
+
+Offsets added to the card value:
 
 | Input | BSIM4 parameter | Unit | nfet ff | nfet ss | pfet ff | pfet ss |
 |---|---|---|---|---|---|---|
 | Threshold voltage offset | VTH0 | V | −0.1298 | +0.1193 | +0.1245 | −0.1225 |
-| Oxide thickness offset | TOXE, TOXP | nm | −1.0 | +1.0 | −1.0 | +1.0 |
+| Oxide thickness offset, nfet | TOXE, TOXP | nm | −1.0 | +1.0 | — | — |
+| Oxide thickness offset, pfet | TOXE | nm | — | — | −1.0 | +1.0 |
 | Gate length offset | XL | nm | −42 | +70 | −46.5 | +69 |
 | Gate width offset | XW | nm | +50 | −50 | +50 | −50 |
-| Overlap capacitance factor | CGSO, CGDO | 1 | 0.90 | 1.10 | 0.90 | 1.10 |
-| Saturation velocity factor | VSAT | 1 | 1.0846 | 0.899 | 1 | 1 |
 
-The pfet VTH0 is negative, so a positive offset makes the pfet faster. `fs` and `sf` scale the
-`ff` and `ss` nfet offsets by 0.67 or 0.75 and give the pfet its own values, between those of
-`ff` and `ss`. The `statistical` section gives each of the same inputs a Gaussian spread (for
+Factors that multiply the card value:
+
+| Input | BSIM4 parameters | nfet ff | nfet ss | pfet ff | pfet ss |
+|---|---|---|---|---|---|
+| Overlap capacitance | CGSO, CGDO, CGSL, CGDL | 0.90 | 1.10 | 0.90 | 1.10 |
+| Saturation velocity | VSAT | 1.0846 | 0.899 | — | — |
+
+The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet card shifts
+TOXE only, not TOXP. `fs` and `sf` scale the nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT)
+or 0.75 (VTH0, TOXE) and give the pfet its own values between those of `ff` and `ss`; their
+overlap factors are 0.93 and 1.07 (nfet) and 1.07 and 0.93 (pfet). The `statistical` section gives each of the same inputs a Gaussian spread (for
 the 6 V nfet, for example, a VTH0 term of 8 mV shared with the pfet plus 28 mV of its own, and
 a TOXE term of 0.4 nm plus 0.13 nm, each at one standard deviation with `mc_skew = 3`).
 
@@ -179,16 +192,24 @@ a TOXE term of 0.4 nm plus 0.13 nm, each at one standard deviation with `mc_skew
 - *Corner calibration.* Each device's process description is calibrated against each of the
   five corners, by the same procedure, the same tunables, the same geometries and the same
   parameter budget as the typical-corner calibration (§5.2), with the corner's SPICE curves as
-  targets. The bounds of a tunable follow the corner where the card shifts the same quantity
-  (for example the oxide bounds move by the corner's TOXE offset) and stay as at TT otherwise.
-  A bound hit is reported, as at TT. Anti-goal A1 applies: the corner fits never change the
+  targets. The card values the fit does not tune are the corner's own: the area and overlap
+  bookkeeping that turns a C per area into a Cgg (XL and XW in the capacitance length and width,
+  the overlap and fringe terms CGSO, CGDO, CGSL, CGDL) uses that corner's card values as fixed
+  inputs. Otherwise the corner's XL, XW and overlap shifts, several percent of the gate area at
+  L = 1–2 µm, would be absorbed into the oxide and doping tunables. The bounds of a tunable
+  follow the corner where the card shifts the same quantity: the oxide bounds move by the
+  corner's TOXE offset and the flat-band bounds by its VTH0 offset; the doping bounds stay as at
+  TT. A bound hit is reported, as at TT, and a minimum or maximum that sits on a bound is
+  reported as that bound, not as a measured value. Anti-goal A1 applies: the corner fits never change the
   typical calibration, and each corner's validation uses the held-out geometries of §5.2
   against the same corner.
 - *What is reported.* For every tunable physical input of the device: the typical value (the
   TT fit), the minimum and the maximum across the five corner fits, and which corner gave each.
   Where a distribution is available (the `statistical` section), also the mean, the standard
   deviation and the 2.5 % and 97.5 % percentiles over a fixed-seed Monte Carlo of the global
-  variation (mismatch off), each sample's SPICE curve calibrated the same way. The number of
+  variation (mismatch off), each sample's SPICE curve calibrated the same way, with that
+  sample's own drawn XL, XW and overlap values in the bookkeeping (printed by ngspice for each
+  seed and recorded with the sample). The number of
   samples and the seeds are fixed in the plan and recorded with the results.
 - *Cross-check against the card.* Where the card states the shift of a physical quantity
   directly (TOXE ±1 nm, XL, XW), the spread of the TCAD-fitted quantity is compared with it
@@ -283,6 +304,9 @@ day is not. So:
 - Deterministic numerics: fixed thread counts (single-threaded linear solvers in the reference configuration), fixed mesh seeds, no wall-clock or hostname in outputs.
 - Every result file has a SHA-256 recorded in a committed manifest. The full set is reproducible with one command (`make reproduce` or equivalent) inside the pinned images.
 - **Where things run (user decision).** Simulations start **local** (this host, sandboxed per §8). **No self-hosted GitHub runners.** Once a simulation is working well and fits a GitHub-hosted runner's limits (time per job and memory), it is *also* run on **GitHub-hosted runners**, and CI fails on any hash difference against the committed manifest. This cross-check between local and GitHub-hosted results is the evidence for deterministic output across machines; at least a representative subset (SPICE reference + one MOSCAP + one 2D MOSFET bias sweep, coarse mesh if needed) must be cross-checked this way. Runs that do not fit those limits (fine meshes, 3D, Charon) stay local, with their hashes committed and the docs stating which results were cross-checked on GitHub and which only locally.
+- **Restamps.** Updating a committed tree's `provenance.json` to a new generator hash without
+  rerunning it (a restamp) is allowed only where the rerun is shown to give the same bytes, for
+  example by rerunning a representative job and comparing hashes. Otherwise the tree is rerun.
 - If some step proves non-deterministic despite this, that step is documented in (d) with the observed variation, and its outputs are compared numerically (with a stated tolerance) instead of by hash. This is a fallback, not the plan.
 
 ### 9.1 Output cache for large regenerable artefacts
@@ -720,12 +744,13 @@ that the intent survives later rewording of the sections it changed.
   - *Level 3 of the 2D mesh-convergence study is left out*, for an estimated 9.7 h of QS
     ("over the 8 h job rule", `gf180tcad.tcad.meshconv.EXCLUDED_2D`) and for the L = 10 µm
     solver failure. There is no 8-hour rule any more; the run-time half of the reason is
-    withdrawn. The level stays out until #58 is solved, since it fails the same way; the
+    withdrawn. The level stays out until #58 is solved, since it is expected to fail the same
+    way (the same size; not yet attempted, and #58 includes running it); the
     recorded reason is reworded when the 2D study is next rerun (it is part of the committed
     report, so changing it restamps that tree).
   - *Provenance restamped instead of rerun* (Task 12 and issue #34, the 2D trees and the 2D mesh
     convergence): replaced by the reruns of #35, which regenerate the 2D trees with today's
-    code. A restamp stays allowed only where the bytes are shown to be unchanged.
+    code. The restamp rule is now in §9.
   - *`make reproduce` not run end to end, because the 2D jobs take hours*: to be run, managed
     per §8.1, once #35's 2D reruns are in.
   - *GitHub-hosted cross-check only where a run is "cheap enough"* (§9): reworded to the
