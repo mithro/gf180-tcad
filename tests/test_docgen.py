@@ -307,7 +307,7 @@ def test_per_area_spec_entries_are_tcad_only(tmp_path):
     assert not any("cox_ff_per_um2" in r for r in rows)
     tcad = docgen._tcad_only_rows(spec)[2:]
     assert len(tcad) == 2 and all(r.endswith("| TCAD only |") for r in tcad)
-    assert all("[1.8, 2.8] fF/um^2" in r for r in tcad)
+    assert all("| fF/um^2 | 1.8 | 2.8 |" in r for r in tcad)
     docgen.generate(tmp_path)
     s = (tmp_path / "results" / "index.md").read_text(encoding="utf-8")
     assert "### TCAD only" in s and s.count("| TCAD only |") == 2
