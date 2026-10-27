@@ -61,9 +61,9 @@ on pull requests and on pushes to `main` (only when `docker/**` or
 
 Pull requests push the tag `pr-<number>`, `main` pushes `latest` and
 `sha-<commit>`, each only after the checks above passed (the build itself pushes only the
-staging tag `unverified`, which can point at an unverified image) ([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions));
-the weekly and manual runs only rebuild and verify. Cross-host byte-identity of the results
-is described in {ref}`cross-host-determinism`.
+staging tag `unverified`, which can point at an image that has not passed the checks) ([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions));
+the weekly and manual runs only rebuild and verify. Whether the results are the same bytes on
+another computer is described in {ref}`cross-host-determinism`.
 
 (tcad-image)=
 
@@ -168,7 +168,7 @@ the base image updates both images in **one** pull request:
 5. Merge only when every check is green.
 
 On the first push of step 1, the TCAD entry can also fail to pull a base that the base entry has
-not pushed yet (the two entries run in parallel). That failure is expected; it goes away on
+not pushed (the two entries run in parallel). That failure is expected; it goes away on
 the next push, or with a re-run of the failed job once the base is pushed. The from-scratch
 rebuild of each entry runs even when the other entry failed.
 
@@ -340,7 +340,8 @@ workflows.
   - **Fix.** The test now checks the mesh-independent invariant. Between bias steps only the slab
     moves, so the signed core − slab jump at the rib's right bottom vertex changes by exactly the
     step of the contact potential difference (−0.1 V) and at the left one by 0. Both hold to
-    1e-3 V at mesh ×1 and ×0.5 (measured to about 2e-15 V on both gmsh versions). This is a
+    1e-3 V at mesh ×1 and ×0.5; the fork test records them as measured to 1e-15 V
+    ([`RIB_JUMP_TOL_V`](https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/tests/test_mesh.py#L48)). This is a
     stronger check: it fails for a coupled rib.
   - **Check here.**
     {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained` runs
@@ -383,7 +384,7 @@ kind is generated with, and it is the default of `python -m gf180tcad.tcad mosca
 |---|---|---|
 | 1D {term}`MOS capacitor <MOSCAP>`, {repo}`results/tcad/moscap1d` | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the stack of the final results |
 | 1D {term}`mesh convergence`, {repo}`results/tcad/meshconv` (`moscap1d/`) | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the same |
-| 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | for now: see below |
+| 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | see below |
 
 The top folder of each set of results holds a `provenance.json`. Under `images`, it records which
 image made each result kind in it: the image's name, its reference and its `versions.json`. The mesh-convergence results folder holds
@@ -396,17 +397,16 @@ image made each result kind in it: the image's name, its reference and its `vers
   the dev image, and {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`
   runs both 1D CLIs on both images and requires the same bytes. That last test is the drift
   guard between the two stacks.
-- **2D on stable, for now.** {{ gmsh }} 5 (the dev image) meshes the 2D cells differently
-  from gmsh 4.15.2 (the stable image), so a 2D result on dev needs its own mesh convergence on
-  dev; the stable image's selected 2D mesh does not carry over. The 2D results of
+- **2D on stable.** {{ gmsh }} 5 (the dev image) meshes the 2D cells differently
+  from gmsh 4.15.2 (the stable image). A 2D result on dev therefore needs its own mesh
+  convergence on dev; the stable image's selected 2D mesh does not carry over. The 2D results of
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
-  are therefore made on the stable image, explicitly.
-- **Planned.** Before the {term}`Phase 2` exit, the 2D mesh convergence is rerun on the dev image and
-  the 2D results are regenerated there; {py:data}`~gf180tcad.tcad.RESULTS_IMAGE` then names dev for 2D as well.
-- **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, still has the laxer
-  builder check: unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
-  driver and BuildKit image before using it. Tightening it would change that image's build
-  inputs, so it waits for the next re-pin of the stable image.
+  are therefore made on the stable image, explicitly. The 2D mesh convergence has not been rerun
+  on the dev image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
+- **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, has the laxer
+  builder check. Unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
+  driver and BuildKit image before using it
+  ([issue #81](https://github.com/mithro/gf180-tcad/issues/81)).
 
 (tcad-dev-mirror)=
 
