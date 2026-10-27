@@ -210,7 +210,7 @@ the PR #95 re-review nits; E1b is the other three pages, with Steps 1–4 above 
   and `figures.stack_1d`, committed per unit.
 - [x] **E1a Step 2:** `docs/explained/oxide-and-poly.md`, opening with the stack view (gate and
   oxide highlighted, body muted); lint, measure, build, screenshots as in E0.
-- [ ] **E1a Step 3:** PR; review by use, audit; merge.
+- [ ] **E1a Step 3:** PR #101; review by use, audit; merge.
 
 **As built (E1a).**
 
