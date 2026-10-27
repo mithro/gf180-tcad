@@ -262,7 +262,7 @@ high-frequency C–V
 
 Cox
 oxide capacitance
-  The capacitance per area of the gate oxide alone, the ceiling of the {term}`C–V` curve.
+  The capacitance per area of the {term}`gate oxide` alone, the ceiling of the {term}`C–V` curve.
   Technically Cox = ε_ox·ε0/t_ox; for the nfet's 15.2 nm and {term}`EPSROX` 3.9 it is
   2.2718 fF/µm² ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`process-data`.
 
@@ -275,7 +275,7 @@ t_ox_eff
   `t_ox_eff_nm`. See {ref}`process-data-tunables`.
 
 poly depletion
-  The depletion of the poly-silicon gate next to the oxide, which adds a capacitance in series
+  The depletion of the {term}`poly-silicon` gate next to the oxide, which adds a capacitance in series
   with {term}`Cox` and lowers the inversion capacitance. Technically the gate is a second
   semiconductor at {term}`NGATE`, whose space charge follows the same charge function as the
   body ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329); [BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), the poly-depletion model). See
@@ -313,11 +313,11 @@ VFBSDOFF
   unset (default 0) on the pfet card ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
 
 EPSROX
-  The relative permittivity of the gate oxide in the {term}`BSIM4` {term}`card <model card>`, 3.9 for both 5 V
+  The relative permittivity of the {term}`gate oxide` in the {term}`BSIM4` {term}`card <model card>`, 3.9 for both 5 V
   devices; the {term}`TCAD` oxide uses it ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
 
 NGATE
-  The poly-silicon gate doping of the {term}`BSIM4` {term}`card <model card>` (1e20 cm⁻³ n⁺ for the nfet, 3.6e19 p⁺
+  The {term}`poly-silicon` gate doping of the {term}`BSIM4` {term}`card <model card>` (1e20 cm⁻³ n⁺ for the nfet, 3.6e19 p⁺
   for the pfet), the doping of the {term}`TCAD` poly-gate region ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A).
   See {ref}`process-data`.
 
@@ -549,8 +549,24 @@ ohmic contact
   V_t asinh(N / 2 n_i) ({ref}`Sze and Ng 2006, ch. 3 <lit-sze>`). See {ref}`plugin-history-latest-pn`.
 
 electron
-  A negative charge carrier in silicon: an electron freed from the bond between two atoms,
-  which moves through the crystal and carries current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-carriers`.
+  A negatively charged particle. In silicon the free ones, released from a broken bond or given
+  by a {term}`donor`, move through the crystal and carry current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-carriers`.
+
+gate oxide
+  The thin insulating layer of silicon dioxide between a transistor's gate and the silicon under
+  it. The gate voltage acts on the silicon through it, as across the plates of a capacitor
+  ({ref}`Taur and Ning, the chapter on MOS capacitors <lit-taur>`). See {ref}`explained-dopants`.
+
+poly-silicon
+  Silicon made of many small crystals instead of one. Heavily doped, it is the gate of the
+  {term}`GF180MCU` transistors; its doping is the {term}`NGATE` of the {term}`model card`
+  ({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). See {ref}`explained-dopants`.
+
+n-well
+  The region of n-type silicon that forms the body of a p-channel transistor, here the
+  {term}`pfet_05v0`. This repo's simulations dope it uniformly
+  ({py:mod}`gf180tcad.tcad.stack`). See {ref}`explained-dopants`.
 
 hole
   A positive charge carrier in silicon: a bond that is missing its {term}`electron`. A
