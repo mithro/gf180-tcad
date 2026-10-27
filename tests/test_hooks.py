@@ -53,10 +53,10 @@ def _install(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )  # fmt: skip
 
 
-def _hook(repo: Path, stdin: str) -> subprocess.CompletedProcess[str]:
+def _hook(repo: Path, stdin: str, **env: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [str(HOOK), "origin", "git@example.com:x.git"],
-        cwd=repo, env=_env(), input=stdin, capture_output=True, text=True, check=False,
+        cwd=repo, env=_env() | env, input=stdin, capture_output=True, text=True, check=False,
     )  # fmt: skip
 
 
@@ -119,6 +119,13 @@ def test_hook_refuses_when_make_pre_push_fails(tmp_path):
     r = _hook(repo, _push_line(repo))
     assert r.returncode == 1
     assert "refused" in r.stderr
+
+
+def test_hook_unsets_the_git_variables_git_gives_it(tmp_path):
+    """git runs the hook with GIT_DIR set; the tests' own git calls must not inherit it."""
+    repo = _repo(tmp_path, 'test -z "$$GIT_DIR$$GIT_INDEX_FILE"')
+    r = _hook(repo, _push_line(repo), GIT_DIR=str(repo / ".git"), GIT_INDEX_FILE="x")
+    assert r.returncode == 0, r.stderr
 
 
 def test_hook_skips_a_deletion_only_push(tmp_path):

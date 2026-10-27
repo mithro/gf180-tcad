@@ -36,6 +36,11 @@ cd "$(git rev-parse --show-toplevel)"
 if [ "$differs" = 1 ] || ! git diff --quiet HEAD --; then
   echo "pre-push: note: checking the working tree, which differs from the pushed commit(s)" >&2
 fi
+# git exports GIT_DIR (and in a worktree GIT_INDEX_FILE and others) to its hooks; the tests run git
+# in other repositories (the third_party/gplugins submodule, throwaway ones), where those would
+# point git back at this one.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH
 targets=(pre-push)
 [ "$docs" = 1 ] && targets+=(pre-push-docs)
 if ! make --no-print-directory "${targets[@]}"; then
