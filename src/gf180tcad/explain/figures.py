@@ -137,6 +137,9 @@ def doping_profile(dev: model.Device, highlight: str, palette: str) -> bytes:
         ax.set_ylim(lo, hi)
         x0, x1 = edges[0][1], edges[-1][2]
         ax.set_xlim(x0, x1)
+        # Left of the surface the drawing is stretched (the oxide scale) and is not a distance
+        # below the surface, so only the body carries tick labels.
+        ax.set_xticks([t for t in ax.get_xticks() if 0 <= t <= x1])
         label_y = hi / (hi / lo) ** STYLE["label_drop"]
         for layer, a, b in edges:
             role = "highlight" if layer.part == highlight else "muted"
