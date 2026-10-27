@@ -3,6 +3,8 @@
 Known shortcomings of this project, so that nobody reads more into it than is
 there.
 
+## What is simulated
+
 - **No silicon data.** No measured device I-V or C-V data exists for any
   {{ wafer_space }} {term}`run 1 or run 2 <wafer.space run>` design. See
   {doc}`silicon-validation`.
@@ -23,13 +25,29 @@ there.
   15.6 % below SPICE, depletion crossing −240 mV; {ref}`cv-agreement-validation`), and the other
   cells follow one 16 GiB {term}`job` at a time; the validation file does not yet list the 2D
   result ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and
-  are open correctness problems: the L = 2 µm cell's AC solve
-  ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)) and the L = 10 µm cell's
-  equilibrium solve ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)); see
+  are open correctness problems. One is the L = 2 µm cell's AC solve
+  ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)); the other is the L = 10 µm
+  cell's equilibrium solve ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)). See
   {doc}`moscap2d`.
 - **No {term}`corner` bounds yet.** The design spec asks for the typical value, the lower and upper
   bound across the {term}`PDK`'s SPICE corners, and a Monte Carlo spread of every physical input
-  ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)); none is computed yet.
+  ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)). None is computed yet.
+- **One TCAD backend so far.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
+  for {{ Charon }} in parallel on every job, with a per-job cross-comparison
+  ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
+  It is planned
+  ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
+  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)); its first step, splitting the
+  plugin so that a second simulator can plug in, is a draft
+  ([PR #51](https://github.com/mithro/gf180-tcad/pull/51)), and no
+  Charon job has run ({ref}`numerical-acceptance`).
+- **Not everything the design spec asks for is built yet.** See
+  {ref}`limitations-spec-deviations` below.
+- **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
+  open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
+
+## Reproducing the results
+
 - **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
   `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
@@ -43,15 +61,14 @@ there.
   fresh run differs from them ({ref}`moscap2d-reproduce`). Only the calibrated 1D
   {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
   `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
-- **One TCAD backend so far.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
-  for {{ Charon }} in parallel on every job, with a per-job cross-comparison
-  ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
-  It is planned
-  ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
-  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)); its first step, splitting the
-  plugin so that a second simulator can plug in, is a draft
-  ([PR #51](https://github.com/mithro/gf180-tcad/pull/51)), and no
-  Charon job has run ({ref}`numerical-acceptance`).
+- **The same bytes on another computer: only on some processors.** Byte-identical results are
+  guaranteed only on {term}`x86-64-v2` or newer hosts. The full reference is verified on an
+  Intel Xeon Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
+  ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
+  and that run did not have the {{ numpy }} fix described there.
+
+## Software stacks
+
 - **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
   it is now fixed in {{ gplugins_fork }} and re-verified on the latest stack. See
@@ -76,8 +93,9 @@ there.
   {{ input_mirror }}. The build checks each file's sha256, from the mirror or from the original
   URL. A file that disappears from both stops the build; it cannot change it silently. See
   {ref}`tcad-dev-mirror`.
-- **Unverified citations.** Several literature items have not been checked yet
-  and are marked "unverified". See {doc}`literature`.
+
+## The SPICE reference and the numerics
+
 - **The SPICE models are a reference, not the truth.** {term}`BSIM4` is empirical,
   {term}`binned` in L (the {term}`bin` boundary is at 0.7 µm) and fitted to silicon, so it can
   be non-physical between bins (the `spice-fit` cause in the
@@ -86,20 +104,13 @@ there.
 - **{{ ngspice }} and {{ Xyce }} disagree by 0.6 % on the nfet in subthreshold.** The
   nfet {term}`card <model card>` declares BSIM4 `version=4.5`; ngspice runs it with BSIM4 4.5.0,
   Xyce's oldest BSIM4 is 4.6.1. See {doc}`engine-cross-check`.
-- **The same bytes on another computer: only on some processors.** Byte-identical results are
-  guaranteed only on {term}`x86-64-v2` or newer hosts, and the full reference is verified on an
-  Intel Xeon Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
-  ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
-  and that run did not have the {{ numpy }} fix described there.
 - **{term}`Mesh convergence <mesh convergence>` of the triangle mesh is looser in 2D.** The 1D
   {term}`MOSCAP` mesh changes by less than 1e-4 under {term}`uniform refinement`; the 2D mesh is
   selected at the 1 % criterion and carries a discretisation bias of a few 0.1 %. See
-  {doc}`mesh-convergence` and {doc}`moscap2d`, which also explains the C/Cox > 1 artefact of the
-  {{ meshwell }} default mesh (it rounds the oxide to 1 nm).
-- **Not everything the design spec asks for is built yet.** See
-  {ref}`limitations-spec-deviations` below.
-- **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
-  open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
+  {doc}`mesh-convergence` and {doc}`moscap2d`. The moscap2d page also explains the C/Cox > 1
+  artefact of the {{ meshwell }} default mesh, which rounds the oxide to 1 nm.
+- **Unverified citations.** Several literature items have not been checked yet
+  and are marked "unverified". See {doc}`literature`.
 
 (limitations-moscap)=
 
