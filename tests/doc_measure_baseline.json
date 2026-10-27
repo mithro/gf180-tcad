@@ -1,10 +1,10 @@
 {
-  "docs_lint FAIL sentence of N words": 330,
+  "docs_lint FAIL sentence of N words": 325,
   "docs_lint warn N links on the page (at most N)": 6,
   "docs_lint warn paragraph of N sentences (N to N wanted)": 4,
   "docs_lint warn watch word": 47,
   "measure_docs first sentence": 2,
   "measure_docs item": 40,
-  "measure_docs paragraph": 16,
+  "measure_docs paragraph": 15,
   "measure_docs sentence": 35
 }
