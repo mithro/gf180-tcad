@@ -332,11 +332,11 @@ Lmin with `spice-fit`.
 
 **2D: {term}`Disagree` at the two shortest nfet cells.** The
 {repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each calibrated 2D
-cell with the TT ngspice Cgg. W10/L1 is {term}`Same process`.
+cell with the TT ngspice Cgg. W10/L1 and W10/L2 are {term}`Same process`.
 
 A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh and the SPICE
-grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6, W10/L0.7 and
-W10/L1; the other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6, W10/L0.7,
+W10/L1 and W10/L2; the other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
 A plateau row is its worst difference from SPICE. At W10/L0.6:
 
@@ -364,6 +364,15 @@ At W10/L1:
 | Inversion plateau (%) | 10.3 | Same process |
 | Depletion crossing shift (mV) | −131 | Same process |
 | Inversion crossing shift (mV) | −27 | Agree |
+
+At W10/L2, a calibration geometry of the 1D fit, with QS only ({ref}`moscap2d-l2`):
+
+| Check | 2D | Verdict |
+|---|---|---|
+| Accumulation plateau (%) | 3.0 | Agree |
+| Inversion plateau (%) | 5.5 | Same process |
+| Depletion crossing shift (mV) | −45 | Agree |
+| Inversion crossing shift (mV) | +1 | Agree |
 
 The 2D Cgg lies below SPICE on both plateaus, by more on the inversion side. At W10/L0.6 it
 is 14.12 fF at +5 V

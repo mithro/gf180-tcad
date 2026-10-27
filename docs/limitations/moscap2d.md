@@ -250,6 +250,8 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
   the pfet after points 34, 73, 113 and 162. The hand-off between points is the saved state, so a resumed sweep agrees
   with an uninterrupted one within 1e-12 (the solver tolerance) but is not byte-identical to it.
   The restart counts in these job files were written after the runs, from the progress logs.
+- **The calibrated nfet cell is resumed too.** Its job file records 2 restarts, after points 67
+  and 147 ({ref}`moscap2d-calibrated`). Its job driver reran the command on the same `--resume`.
 - **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
   every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
   sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
@@ -334,15 +336,21 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 |
 | nfet `w10p0_l0p70` | 245515 | 112 | 97 | 210 |
 | nfet `w10p0_l1p00` | 306136 | 133 | 120 | 253 |
+| nfet `w10p0_l2p00` | 506292 | 244 | none | 246 |
 
 | Cell | Peak memory (GiB) | Attempts |
 |---|---|---|
 | nfet `w10p0_l0p60` | 7.8 | 1 |
 | nfet `w10p0_l0p70` | 5.9 | 1 |
 | nfet `w10p0_l1p00` | 6.1 | 1 |
+| nfet `w10p0_l2p00` | 16.0 | 3 |
 
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
+
+The L = 2 µm cell has no AC sweep ({ref}`moscap2d-l2`). Its QS time is the sum over its three attempts.
+Its first two attempts reached the 16 GiB cap and were killed.
+
 The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
 The run record, with the exit code and the image, is on {ref}`tcad-provenance`.
 
@@ -417,5 +425,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   agreement criterion ({ref}`mesh-convergence-2d`).
 - **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
   ({ref}`moscap2d-l2`).
-- **Calibrated 2D results only at the nfet W10/L0.6, W10/L0.7 and W10/L1** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+- **Calibrated 2D results only at the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).

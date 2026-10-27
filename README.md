@@ -66,9 +66,9 @@ calibrated 1D [jobs](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#t
 ([TCAD cross-check](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-tcad)).
 
 The 2D validation of the calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
-The calibrated 2D nfet cells at W10/L0.6, W10/L0.7 and W10/L1 are committed. They disagree with SPICE at the
+The calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1 and W10/L2 are committed. They disagree with SPICE at the
 two shorter gates and are
-[Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) at W10/L1.
+[Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) at W10/L1 and W10/L2.
 
 Planned work, each item with its issue, is on the
 [roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html), among it a
