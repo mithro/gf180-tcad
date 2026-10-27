@@ -528,7 +528,7 @@ asks for one descriptive inline link in the sentence that needs it and no footno
 `Sources:` lines. This repo keeps its existing form: an inline descriptive link, or a MyST role
 (`{repo}`, `{ref}`, `{term}`, `{py:…}`, `{test}`) that the build checks. No footnotes.
 
-*Owner decision (unknowns and hedges, 14:40, §16).* This overrides the five hedged kinds of
+*Owner decision (unknowns and hedges, 14:42, §16).* This overrides the five hedged kinds of
 statement of writing-sourced-docs. An unsourced statement is removed from the page and an issue
 is filed saying what would settle it. A reader page (everything under `docs/` except
 `docs/superpowers/` and the API stubs, and `README.md`) carries none of these words: not yet,
@@ -814,7 +814,7 @@ that the intent survives later rewording of the sections it changed.
   (phasing) and §12.1 (the open question on 2D run time) lost their cost reasoning. Directives
   2 and 3 are new §5.3, with Task 16 in the Phase 2 plan and a Phase 3 item (§13); issue #57.
   Directives 4 to 6 are new §10.3, whose rules are those of the user's `writing-sourced-docs`
-  skill (named there by the user at 13:50 the same day), enforced by `tests/test_doc_style.py`
+  skill (named there by the user at 13:44 the same day), enforced by `tests/test_doc_style.py`
   and the vendored `tools/measure_docs.py`.
 
   Decisions that had been taken on run time, and their status under §8.1:
@@ -842,17 +842,17 @@ that the intent survives later rewording of the sections it changed.
   - *GitHub-hosted cross-check only where a run is "cheap enough"* (§9): reworded to the
     runners' actual limits (time per job and memory), which a run must fit; anything that does
     not fit is cross-checked locally and the docs say so, as before.
-- **2026-10-27 13:50 and 14:05 ACDT: the documentation skills.** §10.3 takes its rules from two
+- **2026-10-27 13:44 and 13:48 ACDT: the documentation skills.** §10.3 takes its rules from two
   of the user's skills, both installed here from the path marketplace `mithro-local`. The user's
-  words, at 13:50:
+  words, at 13:44:
   > "Install writing-sourced-docs@mithro-personal and start using it."
 
-  and at 14:05:
+  and at 13:48:
   > "Also use the docs-writing-skill shown below;"
 
   followed by pasted install instructions for `docs-writing@mithro-personal`. The paste gave the
   command-line installation steps, not rules; the rules are those of the installed skill.
-- **2026-10-27 14:40 ACDT: no "not public", no hedges.** §10.3's house decision that allowed
+- **2026-10-27 14:42 ACDT: no "not public", no hedges.** §10.3's house decision that allowed
   "not public" on a reader page is replaced: reader pages carry neither that wording nor hedges,
   and a fact without a source is left out and filed as an issue. The user's words:
   > "Both not public and hedges are banned."
