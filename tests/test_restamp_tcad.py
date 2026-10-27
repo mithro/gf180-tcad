@@ -28,9 +28,17 @@ def _load():
 tool = _load()
 
 
-def _old_scheme_tree(tmp_path: Path, name: str = "moscap1d") -> Path:
-    """A tree root as the old scheme wrote it: no ``generator``, one shared hash."""
-    root = tmp_path / name
+@pytest.fixture(autouse=True)
+def results_root(tmp_path, monkeypatch):
+    """The registry's tree paths are relative to results/: here, a results/ under tmp_path."""
+    monkeypatch.setattr(tool, "RESULTS_ROOT", tmp_path / "results")
+    return tmp_path / "results"
+
+
+def _old_scheme_tree(tmp_path: Path, rel: str = "results/tcad/moscap1d") -> Path:
+    """A tree root as the old scheme wrote it: no ``generator``, one shared hash, at
+    ``tmp_path/rel``."""
+    root = tmp_path / rel
     (root / "nfet_05v0" / "start").mkdir(parents=True)
     prov = tcad.tree_provenance(root, {"moscap1d": "dev"}, generator=tcad.TCAD_MAIN)
     del prov["generator"]
@@ -97,8 +105,8 @@ def test_restamp_refuses_another_writer(tmp_path):
         tool.restamp(root, tcad.CALIBRATE_MAIN)
 
 
-def test_main_picks_the_writer_by_tree_name(tmp_path, capsys):
-    root = _old_scheme_tree(tmp_path, "validation")
+def test_main_picks_the_writer_by_tree_path(tmp_path, capsys):
+    root = _old_scheme_tree(tmp_path, "results/tcad/validation")
     assert tool.main([str(root)]) == 0
     out = capsys.readouterr().out
     new = tcad.generator_sha256(tcad.CALIBRATE_MAIN)
@@ -129,8 +137,8 @@ def test_main_reports_a_refusal(tmp_path, capsys):
 
 
 def test_main_refuses_a_generator_other_than_the_tree_s_writer(tmp_path, capsys):
-    """For a known tree name, --generator may only repeat TREE_GENERATORS, never override it."""
-    root = _old_scheme_tree(tmp_path, "moscap2d")
+    """For a registered tree, --generator may only repeat TREE_GENERATORS, never override it."""
+    root = _old_scheme_tree(tmp_path, "results/tcad/moscap2d")
     before = (root / PROVENANCE_NAME).read_bytes()
     assert tool.main([str(root), "--generator", tcad.CALIBRATE_MAIN]) == 2
     err = capsys.readouterr().err
@@ -142,8 +150,8 @@ def test_main_refuses_a_generator_other_than_the_tree_s_writer(tmp_path, capsys)
 
 def test_main_writes_nothing_if_any_tree_refuses(tmp_path, capsys):
     """Every tree is checked before any is written: a refusal leaves all of them unchanged."""
-    good = _old_scheme_tree(tmp_path / "a", "moscap1d")
-    bad = _old_scheme_tree(tmp_path / "b", "moscap1d")
+    good = _old_scheme_tree(tmp_path, "results/tcad/moscap1d")
+    bad = _old_scheme_tree(tmp_path, "results/tcad/moscap2d")
     prov = json.loads((bad / PROVENANCE_NAME).read_bytes())
     prov["gplugins_commit"] = "0" * 40
     io.write_json(bad / PROVENANCE_NAME, prov)
@@ -153,6 +161,31 @@ def test_main_writes_nothing_if_any_tree_refuses(tmp_path, capsys):
     for p, b in before.items():
         assert (p / PROVENANCE_NAME).read_bytes() == b, p
     # an unknown tree name after a good one: nothing written either
-    other = _old_scheme_tree(tmp_path / "c", "elsewhere")
+    other = _old_scheme_tree(tmp_path, "elsewhere")
     assert tool.main([str(good), str(other)]) == 2
     assert (good / PROVENANCE_NAME).read_bytes() == before[good]
+
+
+def test_restamp_resolves_writer_by_tree_path(tmp_path, capsys):
+    """Charon plan Task B0: the writer comes from the tree's path relative to results/, never
+    from its base name. A tree named like a DEVSIM tree in another root (results/tcad-charon/
+    moscap1d), or outside results/, is not a registered tree and needs --generator."""
+    assert tool.tree_key(tmp_path / "results" / "tcad" / "moscap1d") == "tcad/moscap1d"
+    assert tool.tree_key(tmp_path / "results" / "tcad" / "moscap1d" / ".") == "tcad/moscap1d"
+    assert tool.tree_key(tmp_path / "moscap1d") is None
+    assert tool.tree_key(REPO / "results" / "tcad" / "meshconv", REPO / "results") == (
+        "tcad/meshconv"
+    )
+    for rel in ("results/tcad-charon/moscap1d", "results/moscap1d", "moscap1d"):
+        root = _old_scheme_tree(tmp_path, rel)
+        before = (root / PROVENANCE_NAME).read_bytes()
+        assert tool.main([str(root)]) == 2, rel
+        assert "--generator" in capsys.readouterr().err
+        assert (root / PROVENANCE_NAME).read_bytes() == before
+    # every registered tree resolves to its registry writer
+    for key, writer in tcad.TREE_GENERATORS.items():
+        assert tool._writer(tmp_path / "results" / key, None) == writer, key
+    # the committed trees resolve through the real results/ root
+    for prov in sorted((REPO / "results").glob(f"tcad*/*/{PROVENANCE_NAME}")):
+        key = tool.tree_key(prov.parent, REPO / "results")
+        assert tcad.TREE_GENERATORS[key] == json.loads(prov.read_bytes())["generator"], key

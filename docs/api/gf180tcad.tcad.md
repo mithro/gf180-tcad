@@ -17,6 +17,9 @@ Source: {repo}`src/gf180tcad/tcad/__init__.py`.
 .. autodata:: gf180tcad.tcad.TCAD_DEV_IMAGE
    :no-value:
 
+.. autodata:: gf180tcad.tcad.REGISTRY_FILE
+   :no-value:
+
 .. autodata:: gf180tcad.tcad.IMAGES
    :no-value:
 
@@ -30,6 +33,8 @@ Source: {repo}`src/gf180tcad/tcad/__init__.py`.
 
 .. autodata:: gf180tcad.tcad.TREE_GENERATORS
 
+.. autodata:: gf180tcad.tcad.PLUGIN_EXCLUDES
+
 .. autodata:: gf180tcad.tcad.TCAD_GENERATOR_EXTRA_FILES
 
 .. autodata:: gf180tcad.tcad.GPLUGINS_SUBMODULE
@@ -37,6 +42,9 @@ Source: {repo}`src/gf180tcad/tcad/__init__.py`.
 .. autodata:: gf180tcad.tcad.GPLUGINS_HASHED_DIR
 
 .. autodata:: gf180tcad.tcad.PROCESS_GLOB
+
+.. autodata:: gf180tcad.tcad.CALIBRATION_DIRS
+   :no-value:
 
 .. autodata:: gf180tcad.tcad.CALIBRATION_DIR
    :no-value:

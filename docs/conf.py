@@ -159,6 +159,10 @@ linkcheck_ignore = [
     # and pinned to the commit being built; checking them again would only hit GitHub's rate
     # limit.
     r"https://github\.com/mithro/gf180-tcad/(blob|tree)/",
+    # Issue and pull request links answer HTTP 429 to GitHub-hosted runners (issue #87). The
+    # linkcheck workflow checks that each number exists through the GitHub API instead, with the
+    # workflow's own GITHUB_TOKEN, which has a far higher limit.
+    r"https://github\.com/mithro/gf180-tcad/(issues|pull)/\d+",
     # Flaky host: www.osti.gov (where doi:10.2172/... resolves) times out for automated clients.
     # The DOI itself was checked against its Crossref record when it was added.
     r"https://doi\.org/10\.2172/",

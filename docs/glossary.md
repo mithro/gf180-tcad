@@ -483,8 +483,8 @@ generator_sha256
   {py:data}`gf180tcad.reference.GENERATOR_MODULES` plus {repo}`tools/sandbox-run`. See
   {py:func}`gf180tcad.reference.generator_sha256` and {ref}`results-layout`. Each {term}`TCAD` results folder has
   its own, over the import closure of the entry point that writes it
-  ({py:data}`gf180tcad.tcad.TCAD_GENERATORS`, {py:func}`gf180tcad.tcad.generator_sha256`) and
-  the shared inputs; see {ref}`tcad-provenance`.
+  ({py:data}`gf180tcad.tcad.TCAD_GENERATORS`, from {repo}`src/gf180tcad/generators.json`;
+  {py:func}`gf180tcad.tcad.generator_sha256`) and the shared inputs; see {ref}`tcad-provenance`.
 
 Phase 0
 Phase 1

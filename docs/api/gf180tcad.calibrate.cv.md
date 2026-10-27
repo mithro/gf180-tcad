@@ -47,4 +47,7 @@ Source: {repo}`src/gf180tcad/calibrate/cv.py`.
 
 .. autodata:: gf180tcad.calibrate.cv.Simulate
    :no-value:
+
+.. autodata:: gf180tcad.calibrate.cv.Simulate2D
+   :no-value:
 ```
