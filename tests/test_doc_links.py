@@ -600,10 +600,11 @@ _HTML_BLOCK = {
 _HTML_VOID = {"br", "img", "hr", "meta", "link", "input", "wbr", "source"}
 _HTML_SKIP_TAGS = {"pre", "script", "style", "nav", "aside"}
 # Verdict names are ordinary English words in lower case ("the engines agree"), so they are
-# matched with their capital letter only, and "electron" in lower case only, because the
-# journal name "IEEE Trans. Electron Devices" is not the term. Every other term and tool is
-# matched ignoring case.
-_CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process", "electron"}
+# matched with their capital letter only. Every other term and tool is matched ignoring case.
+_CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process"}
+# Phrases that contain a glossary term's word but are not the term: the journal name "IEEE Trans.
+# Electron Devices" (literature page) is not a use of "electron". Blanked before the term scan.
+_NOT_TERM_PHRASES = re.compile(r"\bElectron Devices\b")
 
 
 def _case_sensitive(name: str) -> bool:
@@ -781,7 +782,8 @@ def check_html(name: str, html_text: str) -> list[Problem]:
     # literal `cv` is the sweep; `rsd`, `ff` or `provenance.json` are other identifiers).
     exact = {t: i for i, e in enumerate(glossary()) for t in e}
     term_hits = []
-    for m in _ci_term_regex().finditer(s):
+    s_terms = _NOT_TERM_PHRASES.sub(lambda m: " " * len(m.group(0)), s)
+    for m in _ci_term_regex().finditer(s_terms):
         if not p.flags[m.start()][1]:
             term_hits.append((m.start(), m.group(0), _ci_lookup(m.group(0))))
     for start, end, _in_a, _skip, _cls in p.code:
@@ -1057,3 +1059,18 @@ def test_html_scan_short_names_are_case_sensitive():
         "values; it writes provenance.json.</p></div></body></html>"
     )
     assert check_html("u.html", page) == [], [str(q) for q in check_html("u.html", page)]
+
+
+def test_journal_name_is_not_the_electron_term():
+    """The journal name is blanked; a capitalised "Electrons" in prose is still a first use."""
+    journal = (
+        '<html><body><div id="furo-main-content"><p>IEEE Trans. Electron Devices 30(7), 1983.'
+        "</p></div></body></html>"
+    )
+    assert [q for q in check_html("u.html", journal) if q.kind == "html-term"] == []
+    prose = (
+        '<html><body><div id="furo-main-content"><p>Electrons carry the current.</p>'
+        "</div></body></html>"
+    )
+    found = [str(q) for q in check_html("u.html", prose) if q.kind == "html-term"]
+    assert any("Electrons" in f for f in found), found

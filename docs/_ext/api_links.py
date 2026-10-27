@@ -35,9 +35,7 @@ from sphinx.errors import ExtensionError
 
 DOCS = Path(__file__).resolve().parents[1]
 ROOT = DOCS.parent
-# The verdicts (lower case is a verb), and "electron" (the journal name "IEEE Trans. Electron
-# Devices" is not the term).
-CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process", "electron"}
+CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process"}  # verdicts; lower case is a verb
 
 
 def case_sensitive(name: str) -> bool:
