@@ -49,8 +49,8 @@ SPEC_DOC = "/comparison/pdk-spec-check"
 ID_FLOOR = 1e-15  # A, lower edge of the log-scale panels
 
 _UNITS = {
-    "_ua_per_um": "uA/um",
-    "_pa_per_um": "pA/um",
+    "_ua_per_um": "µA/µm",
+    "_pa_per_um": "pA/µm",
     "_mv_per_dec": "mV/dec",
     "_mv_per_v": "mV/V",
     "_ff": "fF",
@@ -65,6 +65,38 @@ def fmt(x: float, digits: int = 4) -> str:
     if math.isinf(x):
         return "inf" if x > 0 else "-inf"
     return format(x, f".{digits}g")
+
+
+def num(x: float, digits: int = 4) -> str:
+    """:func:`fmt` for a table cell: the exponent sign is U+2212 MINUS SIGN, which a browser
+    never breaks a line at (an ASCII hyphen in ``2.63e-05`` wraps in a narrow column)."""
+    return fmt(x, digits).replace("e-", "e−")
+
+
+# Unit spellings of the data files, as the pages print them.
+_UNIT_TEXT = {"fF/um^2": "fF/µm²", "um^2": "µm²", "um": "µm", "cm^-3": "cm⁻³"}
+
+
+def unit_text(unit: str) -> str:
+    """A unit as a page prints it: ``fF/um^2`` becomes ``fF/µm²``, ``um`` becomes ``µm``."""
+    return _UNIT_TEXT.get(unit, unit)
+
+
+# How to read a geometry id, said once on each page whose tables are keyed by it.
+GEOMETRY_ID_TEXT = (
+    "A {term}`geometry id` gives W and L in µm, with p for the decimal point: "
+    "`w10p0_l0p60` is W = 10 µm, L = 0.6 µm."
+)
+
+
+def _table(header: list[str], rows: list[list[str]]) -> list[str]:
+    """A pipe table; every cell must hold text (a blank cell is a bug, not a gap)."""
+    for r in rows:
+        if len(r) != len(header) or any(not str(c).strip() or str(c).strip() == "-" for c in r):
+            raise ValueError(f"table row {r} does not fill the columns {header}")
+    out = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
+    out += ["| " + " | ".join(str(c) for c in r) + " |" for r in rows]
+    return out
 
 
 def _unit(metric: str) -> str:
@@ -233,31 +265,51 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
     xy = _metrics(root, "xyce", TT, device.name, gid)
     env = envelope["ngspice"][device.name][gid]
     specs = _spec_entries(spec, device.name, gid)
-    rows = [
-        (
-            "| Metric | Unit | TT ngspice | TT Xyce | Corner min | Corner max | Window min "
-            "| Window max | Window set by |"
-        ),
-        "|---|---|---|---|---|---|---|---|---|",
-    ]
+    values, corners, windows = [], [], []
     for name in sorted(tt):
         lo, hi = env[name]
+        key = f"{{term}}`{name}`"
         if name in specs:
             w = specwindow.window(name, specwindow.spec_range(specs[name]), (lo, hi))
-            sw = f"{fmt(w.lo)} | {fmt(w.hi)} | {_WINDOW_SOURCE[w.source]}"
+            windows.append([key, num(w.lo), num(w.hi), _WINDOW_SOURCE[w.source]])
         else:
-            sw = f"{fmt(lo)} | {fmt(hi)} | {_WINDOW_SOURCE['envelope']}"
+            windows.append([key, num(lo), num(hi), _WINDOW_SOURCE["envelope"]])
         if name in xy:
-            x = fmt(xy[name])
+            x = num(xy[name])
         elif name in metrics.CV_METRICS and not _has_sweep("xyce", "cv"):
-            x = "n/a"
+            x = "not applicable"
         else:
             raise KeyError(f"xyce {TT} {device.name} {gid} metrics.json has no {name}")
-        rows.append(
-            f"| {{term}}`{name}` | {_unit(name)} | {fmt(tt[name])} | {x} | {fmt(lo)} | {fmt(hi)} "
-            f"| {sw} |"
-        )
-    return rows
+        values.append([key, _unit(name) or "none", num(tt[name]), x])
+        corners.append([key, num(lo), num(hi)])
+    return [
+        "### Values",
+        "",
+        "The {term}`TT` value of each metric from both engines. Xyce has no C-V sweep, so its "
+        "Cgg cells are not applicable.",
+        "",
+        *_table(["Metric", "Unit", "TT ngspice", "TT Xyce"], values),
+        "",
+        "### Corner envelope",
+        "",
+        "The {term}`corner envelope`: min and max over the five corners (ngspice), in the unit "
+        "of the values table.",
+        "",
+        *_table(["Metric", "Corner min", "Corner max"], corners),
+        "",
+        "### Same process window",
+        "",
+        (
+            'The {term}`"Same process" window`: the {term}`combined range` of the {term}`PDK` '
+            "{term}`spec window` and the corner envelope. The last column says which sets it "
+            "({ref}`pdk-same-process-window`)."
+        ),
+        "",
+        "Where the PDK publishes no spec for a metric at this geometry, the window is the "
+        "corner envelope alone.",
+        "",
+        *_table(["Metric", "Window min", "Window max", "Set by"], windows),
+    ]
 
 
 def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict, out: Path):
@@ -265,7 +317,7 @@ def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict
     ddir = out / "results" / device.name
     ddir.mkdir(parents=True, exist_ok=True)
     lines = [
-        f"# {device.name}, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} um",
+        f"# {device.name}, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} µm",
         "",
         (
             f"{{term}}`{device.name}`, {{term}}`geometry <geometry id>` `{gid}` "
@@ -291,82 +343,88 @@ def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict
         lines += [f"## {titles[suffix]}", "", f"![{alt}]({name})", ""]
     lines += ["## Metrics", ""]
     lines += _metrics_table(root, device, gid, spec, envelope)
-    lines += [
-        "",
-        (
-            "Every value is in the unit of its row. Corner min and max are the "
-            "{term}`corner envelope` (the five corners, ngspice). The window columns are the "
-            '{term}`"Same process" window`: the {term}`combined range` of the {term}`PDK` '
-            "{term}`spec window` and the corner envelope; the last column says which sets it "
-            "(see {ref}`pdk-same-process-window`). Where the PDK publishes no spec for this "
-            "metric at this geometry, the window is the corner envelope alone. Xyce has no C-V "
-            "sweep, so its Cgg cells are n/a."
-        ),
-        "",
-    ]
+    lines += [""]
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
 
 
 def _spec_status(root, spec: dict) -> list[str]:
-    rows = [
-        "| Device | W (um) | L (um) | Parameter | Metric | TT ngspice | Spec min | Spec max | Status |",
-        "|---|---|---|---|---|---|---|---|---|",
+    """The TT-against-spec tables: which PDK parameter each metric is, then one table per
+    device and geometry (the device and the geometry page are named in its lead-in)."""
+    compared = [e for e in spec["entries"] if e["metric"] and not e.get("per_area")]
+    names = {}
+    for e in compared:
+        names.setdefault((e["symbol"], e["metric"]), None)
+    lines = [
+        "The PDK parameter each metric stands for:",
+        "",
+        *_table(
+            ["PDK parameter", "Metric"],
+            [[f"{{term}}`{s}`", f"{{term}}`{m}`"] for s, m in names],
+        ),
     ]
-    for e in spec["entries"]:
-        if not e["metric"] or e.get("per_area"):
-            continue
+    groups: dict[tuple[str, str], list[list[str]]] = {}
+    for e in compared:
         v = _metrics(root, "ngspice", TT, e["device"], e["geometry_id"])[e["metric"]]
         lo, hi = specwindow.spec_range(e)
         status = "inside" if lo <= v <= hi else "OUTSIDE"
-        page = f"{e['device']}/{e['geometry_id']}"
-        rows.append(
-            f"| {{term}}`{e['device']}` | {{doc}}`{fmt(e['w_um'])} <{page}>` | {fmt(e['l_um'])} "
-            f"| {{term}}`{e['symbol']}` | {{term}}`{e['metric']}` | {fmt(v)} | {fmt(lo)} | {fmt(hi)} "
-            f"| {status} |"
+        groups.setdefault((e["device"], e["geometry_id"]), []).append(
+            [f"{{term}}`{e['metric']}`", num(v), num(lo), num(hi), status]
         )
-    return rows
+    for (device, gid), rows in groups.items():
+        lines += [
+            "",
+            f"{{term}}`{device}` at geometry {{doc}}`{gid} <{device}/{gid}>`:",
+            "",
+            *_table(["Metric", "TT ngspice", "Spec min", "Spec max", "Status"], rows),
+        ]
+    return lines
 
 
 def _tcad_only_rows(spec: dict) -> list[str]:
-    """The "TCAD only" table: the per-area spec entries, with no SPICE value."""
-    rows = [
-        "| Device | Parameter | Metric | Unit | Spec min | Spec max | Status |",
-        "|---|---|---|---|---|---|---|",
-    ]
-    for e in _tcad_only(spec):
-        rows.append(
-            f"| {{term}}`{e['device']}` | {e['symbol']} | `{e['metric']}` | {e['units']} "
-            f"| {fmt(float(e['min']))} | {fmt(float(e['max']))} | TCAD only |"
-        )
-    return rows
+    """The "TCAD only" table: the per-area spec entries, with no SPICE value. Their one unit
+    is in the header."""
+    entries = _tcad_only(spec)
+    units = {e["units"] for e in entries}
+    if len(units) != 1:
+        raise ValueError(f"TCAD-only spec entries in several units {sorted(units)}")
+    u = unit_text(units.pop())
+    return _table(
+        ["Device", "Parameter", "Metric", f"Spec min ({u})", f"Spec max ({u})"],
+        [
+            [f"{{term}}`{e['device']}`", e["symbol"], f"`{e['metric']}`",
+             num(float(e["min"])), num(float(e["max"]))]
+            for e in entries
+        ],
+    )  # fmt: skip
 
 
 def _engine_table(root) -> list[str]:
-    rows = [
-        "| Device | Geometry | " + " | ".join(f"{{term}}`{s}` (%)" for s in DIFF_SWEEPS) + " |",
-        "|---|---|" + "---|" * len(DIFF_SWEEPS),
-    ]
+    """One engine_diff table per device, keyed by the geometry id."""
+    lines = []
     for device in DEVICES.values():
+        rows = []
         for g in device.geometries:
             gid = geometry_id(g)
-            cells = []
+            cells = [f"{{doc}}`{gid} <{device.name}/{gid}>`"]
             for sweep in DIFF_SWEEPS:
                 a = _cols(root, "ngspice", TT, device.name, gid, sweep)
                 b = _cols(root, "xyce", TT, device.name, gid, sweep)
                 d = engine_diff(a, b)
-                cell = fmt(100 * d, 3)
+                cell = num(100 * d, 3)
                 if d > ENGINE_DIFF_THRESHOLD:
                     if (device.name, sweep) in KNOWN_DIFFS:
                         cell += f" {{doc}}`(known) <{ENGINE_DOC}>`"
                     else:
                         cell += f" **unexplained** ({{doc}}`{ENGINE_DOC}`)"
                 cells.append(cell)
-            rows.append(
-                f"| {{term}}`{device.name}` | {{doc}}`{gid} <{device.name}/{gid}>` | "
-                + " | ".join(cells)
-                + " |"
-            )
-    return rows
+            rows.append(cells)
+        lines += [
+            "",
+            f"{{term}}`{device.name}`:",
+            "",
+            *_table(["Geometry", *(f"{{term}}`{s}` (%)" for s in DIFF_SWEEPS)], rows),
+        ]
+    return lines[1:]
 
 
 def _summary_page(root, spec: dict, out: Path):
@@ -390,6 +448,8 @@ def _summary_page(root, spec: dict, out: Path):
             f"sources and caveats are on {{doc}}`{SPEC_DOC}`."
         ),
         "",
+        GEOMETRY_ID_TEXT,
+        "",
         *_spec_status(root, spec),
         "",
         "### TCAD only",
@@ -399,6 +459,8 @@ def _summary_page(root, spec: dict, out: Path):
             "They are compared with the 1D TCAD plateau C per area, not with {term}`SPICE` "
             "({doc}`/comparison/cv-agreement`)."
         ),
+        "",
+        'The status of every row is "TCAD only": these specs have no SPICE value.',
         "",
         *_tcad_only_rows(spec),
         "",
@@ -802,7 +864,7 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
         else ""
     )
     lines = [
-        f"# {name} MOS capacitor, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} um",
+        f"# {name} MOS capacitor, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} µm",
         "",
         (
             f"{{term}}`{name}`, {{term}}`geometry <geometry id>` `{gid}`, a {g.role} geometry "
