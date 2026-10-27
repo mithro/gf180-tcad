@@ -1024,3 +1024,15 @@ If that proves impossible without editing a generator module, the PR also regene
 - [ ] At the calibration geometries, nfet and pfet Cgg–Vg reach both plateau maxima ≤ 5 % and both ΔV crossings ≤ 50 mV (the latter a proposal, and a recorded deviation from spec §5.2). Otherwise they carry a published verdict with the §6 analysis. Held-out geometries are validated against the frozen `param_sha256` and reported.
 - [ ] `make reproduce` verifies on a clean `--recurse-submodules` clone. The GitHub cross-check is green for both SPICE and `crosscheck-tcad`. Read the Docs is green, and the docs-links checks pass. `results/spice/provenance.json` is unchanged from the Phase 1 exit, unless a PR regenerated it by the Global Constraints rule.
 - [ ] A whole-branch review of main since the Phase 1 exit is done and its findings fixed. The Phase 3 plan (2D MOSFET) is written.
+
+## Record: history moved out of the docs pages (2026-10-27)
+
+The docs style pass (spec §10.3) states the present only; these facts about how the 2D and mesh-convergence results came about moved here from `docs/limitations/moscap2d.md` and `docs/limitations/mesh-convergence.md`:
+- The Lmin 2D job files (`w10p0_l0p60`, `w10p0_l0p50`) were written by the Task 11 code, which is why their `cv.meta.json` has no `ac` and no `resumed` entry.
+- The 2D mesh convergence and 2D provenance were restamped to the current generator without a rerun twice: in Task 12, and to the per-tree hash of issue #34.
+- The restart counts in the L = 2 µm job files were backfilled from the progress logs, because the runs predate the `resumed` record.
+- A QS sweep of the L = 10 µm cell's 201 biases was estimated at 7–8 hours from the measured rates; under spec §8.1 run time is no longer a reason for not running it (issue #58).
+- `make reproduce` had not been run end to end because the 2D jobs take hours at 16 GiB each (no longer a reason, spec §8.1).
+- The C/Cox > 1 diagnosis was done in the research spike (Task 11), whose plan named four candidate causes, each measured.
+- The 2 % mesh dependence and C/Cox = 1.0039 in 1D come from the research spike, Tasks 10 and 11.
+- Level 3 of the 2D mesh-convergence study was left out partly because it "would take over 8 hours per job"; the time estimates stay as data, and the remaining reason is the L = 10 µm-sized solve failure (#58).
