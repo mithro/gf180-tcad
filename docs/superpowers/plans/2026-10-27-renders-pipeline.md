@@ -175,7 +175,12 @@ Scalars carry `value`; arrays carry `value_sha256` over a canonical JSON encodin
   the closed set `axis`, `display`, `geometry`, `value`; `derive` also holds `intrinsic_level`,
   `oxide_band_edge_ec`/`_ev`, `gate_fermi_level`, `midgap_offset` and `oxide_capacitance` (the
   R1 table's formulas); `Builder` writes a manifest from its sources; the reader page is
-  `docs/reproduce/render-manifest.md`.
+  `docs/reproduce/render-manifest.md`. After review (PR #89): each `derive` docstring ends with
+  its reference; `source` and `inputs` paths must be normalised repo-relative paths; a committed
+  manifest reads `display` entries only from `data/render/display.toml`
+  (`Manifest.display_problems`, checked by `test_every_entry_rereads_its_source`; the fixture
+  keeps its own display file as the negative control); `verify` also reports an unreadable source
+  and a stale "×N, not to scale" statement. The six display values wait on issue #88.
 
 **Provenance impact.** None (no tree, no entry point yet; the render closure starts in R2b). **Host:** host only, minutes. **Calendar:** 0.5–1 day. **Reviewer's checklist:** selectors closed and unambiguous; arrays hashed canonically; every display constant cited and marked display-only; derivations pure and hand-checked; the negative controls fail for the right reason.
 
@@ -329,7 +334,7 @@ Total about 13–16 working days of implementation, two to three weeks of calend
 ## Phase exit
 
 - [ ] The render image is pinned, reproducible on a runner, documented with its size and the GPL notice; its corresponding source is complete: the Blender source tarball and every bundled library's source are mirrored and listed in `SOURCES.json`, or the §6(d) reliance is documented per library. Cycles CPU only (R2a).
-- [x] The manifest format, the derivation table, the display-only constants and `tests/test_renders.py` are on `main` (R1a), and every committed render passes it.
+- [ ] The manifest format, the derivation table, the display-only constants and `tests/test_renders.py` are on `main` (R1a), and every committed render passes it.
 - [ ] The reduced mesh artefact generator is on `main`, the M0 and M1 records are on the limitations page, and every committed artefact is tied to its job's `mesh_sha256` (R0), and #39 has a comment with the remaining jobs' status.
 - [ ] The 1D profiles and the calibration history are committed trees with their own provenance, each proven to be the committed job's by a byte-identical C–V or result (R1b, R1c), and in the cross-host subset.
 - [ ] Renders R1–R5 are committed for both devices with manifests, scene files and provenance, within the size budget, reviewed against the quality checklist, embedded in the docs with their scale statements (R3).
