@@ -8,8 +8,9 @@ Some generated files are too large to commit but take hours to regenerate: today
 fetch them instead of rerunning the job. It is effectively a shared cache for everyone
 ({repo}`design spec, section 9.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#91-output-cache-for-large-regenerable-artefacts>`).
 
-The cache holds one object: the `mesh.msh` of the calibrated {term}`Lmin` nfet cell of
-[issue #35](https://github.com/mithro/gf180-tcad/issues/35) (sha256 `8dad0ca787dc…`). The
+The cache holds two objects: the `mesh.msh` of the calibrated nfet cells of
+[issue #35](https://github.com/mithro/gf180-tcad/issues/35), W10/L0.6 (sha256 `8dad0ca787dc…`)
+and W10/L0.7 (sha256 `e0437cde0b28…`). The
 meshes of the four committed 2D start jobs are not in it and are on no disk: they have to be
 regenerated before they can be pushed ({ref}`first population <output-cache-first-population>`).
 
