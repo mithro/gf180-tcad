@@ -473,6 +473,10 @@ image ID
   which covers the layer `diff_id`s; recorded in {repo}`docker/base/IMAGE_ID`. See
   {ref}`image-pinning`.
 
+render manifest
+  The file `<render>.render.json` beside a 3D render. It names the source, value and scale of
+  every number the render draws. See {ref}`render-manifest`.
+
 provenance
   The recorded tool and {term}`PDK` versions ({repo}`docker/base/versions.json`) and the generator
   identity, both written to {repo}`results/spice/provenance.json`. See {ref}`image-pinning` and

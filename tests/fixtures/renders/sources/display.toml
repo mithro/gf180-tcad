@@ -1,0 +1,3 @@
+# A synthetic display file for the manifest fixture.
+[silicon]
+band_gap_ev = 1.12

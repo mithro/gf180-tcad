@@ -616,10 +616,16 @@ content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a 
 the sha256 the committed results name. It holds the meshes of the four calibrated nfet cells, W10/L0.6, W10/L0.7, W10/L1 and W10/L2;
 see {doc}`output-cache`.
 
+## Render manifest
+
+A 3D render records the source, value and scale of every number it draws in its render
+manifest ({doc}`render-manifest`).
+
 ```{toctree}
 :maxdepth: 1
 
 sandbox
 image
 output-cache
+render-manifest
 ```

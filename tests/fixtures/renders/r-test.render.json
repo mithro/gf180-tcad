@@ -1,0 +1,154 @@
+{
+  "device": "synthetic",
+  "exaggeration": [
+    "oxide thickness ×40, not to scale",
+    "depth axis: log scale from 1 nm"
+  ],
+  "format": 1,
+  "inputs": {
+    "tests/fixtures/renders/sources/curve.csv": "89a63557f555c20e84d821487daaba072b811bbaf6103a018215bf1bfa249271",
+    "tests/fixtures/renders/sources/display.toml": "13db445596e48b082fd90ec0fed99f8c4cede07b0ce0d1265f3eea74d1418dc0",
+    "tests/fixtures/renders/sources/stack.meta.json": "58b38e409b5b4de8f6dbecf41765fdc7e819003d3e262541000c83583a042949"
+  },
+  "params": "start",
+  "quantities": {
+    "cv": {
+      "role": "value",
+      "selector": {
+        "csv": {
+          "columns": [
+            "vg",
+            "c_per_area"
+          ],
+          "rows": "all"
+        }
+      },
+      "source": "tests/fixtures/renders/sources/curve.csv",
+      "unit": [
+        "V",
+        "fF/um^2"
+      ],
+      "value_sha256": "0329561adedb8e1d89807db993112ed1b7b1a61a049b8441c9bc190424db7de4"
+    },
+    "e_c": {
+      "derived": "band_edge_ec",
+      "inputs": [
+        "psi",
+        "e_g"
+      ],
+      "role": "value",
+      "unit": "eV",
+      "value_sha256": "24fc9f7de0f3731c2b65e4f4412ab7fc8f4deec1731f96cfc7ea3e9f7b275669"
+    },
+    "e_c_at_0": {
+      "derived": "band_edge_ec",
+      "inputs": [
+        "psi_at_0",
+        "e_g"
+      ],
+      "role": "value",
+      "unit": "eV",
+      "value": 0.4600000000000001
+    },
+    "e_g": {
+      "role": "display",
+      "selector": {
+        "toml": [
+          "silicon",
+          "band_gap_ev"
+        ]
+      },
+      "source": "tests/fixtures/renders/sources/display.toml",
+      "unit": "eV",
+      "value": 1.12
+    },
+    "first_c": {
+      "role": "value",
+      "selector": {
+        "csv": {
+          "columns": [
+            "c_per_area"
+          ],
+          "index": 0
+        }
+      },
+      "source": "tests/fixtures/renders/sources/curve.csv",
+      "unit": "fF/um^2",
+      "value": 2.1
+    },
+    "poly": {
+      "label": "poly thickness",
+      "role": "geometry",
+      "scale": 1.0,
+      "selector": {
+        "json": [
+          "stack",
+          "poly_um"
+        ]
+      },
+      "source": "tests/fixtures/renders/sources/stack.meta.json",
+      "unit": "um",
+      "value": 0.2
+    },
+    "psi": {
+      "role": "value",
+      "selector": {
+        "csv": {
+          "columns": [
+            "psi_v"
+          ],
+          "rows": "all"
+        }
+      },
+      "source": "tests/fixtures/renders/sources/curve.csv",
+      "unit": "V",
+      "value_sha256": "f31987887d4f93235545a1020fc668faee5e99c724cbb594e441cbb4826107cb"
+    },
+    "psi_at_0": {
+      "role": "value",
+      "selector": {
+        "csv": {
+          "columns": [
+            "psi_v"
+          ],
+          "where": {
+            "vg": 0.0
+          }
+        }
+      },
+      "source": "tests/fixtures/renders/sources/curve.csv",
+      "unit": "V",
+      "value": 0.1
+    },
+    "t_ox": {
+      "label": "oxide thickness",
+      "role": "geometry",
+      "scale": 40.0,
+      "selector": {
+        "json": [
+          "stack",
+          "t_ox_nm"
+        ]
+      },
+      "source": "tests/fixtures/renders/sources/stack.meta.json",
+      "unit": "nm",
+      "value": 16.4
+    },
+    "vg": {
+      "role": "axis",
+      "scale": 1.0,
+      "selector": {
+        "csv": {
+          "columns": [
+            "vg"
+          ],
+          "rows": "all"
+        }
+      },
+      "source": "tests/fixtures/renders/sources/curve.csv",
+      "unit": "V",
+      "value_sha256": "b43d4e517e4af858c633910487ddbc7f823b5b766c82c53c15a9a1ed2307e8d1"
+    }
+  },
+  "render": "r-test"
+}
