@@ -16,8 +16,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
+from typing import NamedTuple
 
 import matplotlib
+import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
@@ -50,7 +52,23 @@ STYLE = {
     "nm_below_um": 0.1,
     # Most significant digits a label shows (fewer when they print the same value).
     "label_digits": {"thickness": 4, "doping": 3},
+    # The 2D cross-section: extents with no committed source, drawn at a chosen size (µm).
+    "drawn_um": {"source and drain width": 0.6},
+    # Contacts are bars this fraction of the drawing's height thick, the source and drain ones
+    # this fraction of their region's width wide.
+    "contact_frac": 0.025,
+    "contact_width": 0.5,
+    "cell_alpha": 0.55,
+    "junction_width": 4.0,
+    # Labels of the cross-section sit this fraction of the drawing's height off their part.
+    "cell_label_gap": 0.03,
+    # The junction panels: positions from (1 + pad) widths into the body to pad widths into the
+    # source, on this many points; the charge axis spans the dopings with headroom.
+    "junction_pad": 0.25,
+    "junction_points": 20001,
 }
+
+UNITS = {"um_per_cm": 1e4, "kv_per_v": 1e-3}
 
 # Okabe-Ito colours for the carriers and the highlight; greys for the muted parts.
 PALETTES = {
@@ -259,10 +277,188 @@ def _oxide_stack(palette: str) -> bytes:
     return stack_1d(dev, ("gate", "oxide"), palette)
 
 
+class Box(NamedTuple):
+    """A drawn rectangle (µm): x from ``x0`` to ``x1``, depth from ``y0`` to ``y1``."""
+
+    x0: float
+    x1: float
+    y0: float
+    y1: float
+
+
+def cell_extents(c: model.Cell) -> dict[str, Box]:
+    """The drawn extent ``(x0, x1, y0, y1)`` of each part of the 2D cell (µm), the silicon surface
+    at y = 0 and depth growing downwards, the gate centred on x = 0. The oxide is drawn at its
+    scale factor; the source and drain width is the drawn extent ``c.drawn``."""
+    half = c.l_um / 2
+    sd = c.drawn["source and drain width"]
+    t_ox = c.t_ox_um * c.scales.get("oxide", 1)
+    return {
+        "gate": Box(-half, half, -(t_ox + c.poly_um), -t_ox),
+        "oxide": Box(-half, half, -t_ox, 0.0),
+        "source": Box(-half - sd, -half, 0.0, c.xj_um),
+        "drain": Box(half, half + sd, 0.0, c.xj_um),
+        "body": Box(-half - sd, half + sd, 0.0, c.body_um),
+    }
+
+
+_CELL_LABEL = {"gate": "gate", "oxide": "gate oxide", "source": "source", "drain": "drain"}
+_BODY_LABEL = {"n": "body", "p": "n-well (body)"}
+
+
+def cross_section(c: model.Cell, highlight: tuple[str, ...], palette: str) -> bytes:
+    """The 2D cell cut along its length: gate, gate oxide, source, drain and body, each filled
+    with its carrier's colour (n-type: electrons, p-type: holes; the oxide its own) and labelled
+    on the part, and the contacts of ``c.contacts`` as dark bars. With ``highlight``, the parts
+    named there keep their colour and the rest are muted; ``"junction"`` draws the boundary of
+    the source and the drain with the body in the highlight colour."""
+    pal = PALETTES[palette]
+    ext = cell_extents(c)
+    carrier = {"donor": "electron", "acceptor": "hole"}
+    fill = {
+        "gate": pal[carrier[c.sd_dopant]],
+        "oxide": pal["highlight_oxide"],
+        "source": pal[carrier[c.sd_dopant]],
+        "drain": pal[carrier[c.sd_dopant]],
+        "body": pal[carrier[c.body_dopant]],
+    }
+    x0, x1 = ext["body"].x0, ext["body"].x1
+    top, bottom = ext["gate"].y0, ext["body"].y1
+    height = bottom - top
+    bar = height * STYLE["contact_frac"]
+    gap = height * STYLE["cell_label_gap"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.set_axis_off()
+        pad = (x1 - x0) * STYLE["stack_margin"]
+        ax.set_xlim(x0 - pad, x1 + pad)
+        ax.set_ylim(bottom + bar + gap * 2, top - bar - gap * 2)  # depth grows downwards
+        for part in ("body", "source", "drain", "oxide", "gate"):
+            a, b, y0, y1 = ext[part]
+            muted = bool(highlight) and part not in highlight
+            colour = pal["muted"] if muted else fill[part]
+            alpha = STYLE["band_alpha"]["muted"] if muted else STYLE["cell_alpha"]
+            # An opaque ground first, so a part drawn over another keeps its own tint.
+            ax.fill_between([a, b], y0, y1, color=pal["background"], linewidth=0)
+            ax.fill_between([a, b], y0, y1, color=colour, alpha=alpha, linewidth=0)
+            ax.plot(
+                [a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"], lw=STYLE["edge_width"]
+            )
+        if "junction" in highlight:
+            for side in ("source", "drain"):
+                a, b, _y0, y1 = ext[side]
+                edge_x = b if side == "source" else a
+                far_x = a if side == "source" else b
+                ax.plot([far_x, edge_x, edge_x], [y1, y1, 0.0], color=pal["highlight"],
+                        lw=STYLE["junction_width"])  # fmt: skip
+        labels = {
+            "gate": ((ext["gate"].x0 + ext["gate"].x1) / 2, (ext["gate"].y0 + ext["gate"].y1) / 2),
+            "source": ((ext["source"].x0 + ext["source"].x1) / 2, ext["source"].y1 / 2),
+            "drain": ((ext["drain"].x0 + ext["drain"].x1) / 2, ext["drain"].y1 / 2),
+        }
+        for part, (x, y) in labels.items():
+            bold = "bold" if part in highlight else "normal"
+            ax.text(x, y, _CELL_LABEL[part], ha="center", va="center", fontweight=bold)
+        body_y = (ext["source"].y1 + ext["body"].y1) / 2
+        ax.text(0.0, body_y, _BODY_LABEL[c.polarity], ha="center", va="center",
+                fontweight="bold" if "body" in highlight else "normal")  # fmt: skip
+        ox = ext["oxide"]
+        ax.annotate("gate oxide", xy=(ox.x1, (ox.y0 + ox.y1) / 2),
+                    xytext=(ext["drain"].x1 - pad, top + gap), ha="right", va="center",
+                    arrowprops={"arrowstyle": "-", "color": pal["text"], "lw": STYLE["edge_width"]},
+                    fontweight="bold" if "oxide" in highlight else "normal")  # fmt: skip
+        if "junction" in highlight:
+            a, b, _y0, y1 = ext["drain"]
+            ax.text((a + b) / 2, y1 + gap, "junction", ha="center", va="top",
+                    color=pal["highlight"], fontweight="bold")  # fmt: skip
+        width = ext["source"].x1 - ext["source"].x0
+        cw = width * STYLE["contact_width"]
+        bars = {
+            "gate": (ext["gate"].x0, ext["gate"].x1, top - bar, top),
+            "body": (x0, x1, bottom, bottom + bar),
+        }
+        for side in ("source", "drain"):
+            mid = (ext[side][0] + ext[side][1]) / 2
+            bars[side] = (mid - cw / 2, mid + cw / 2, -bar, 0.0)
+        for name in c.contacts:
+            a, b, y0, y1 = bars[name]
+            ax.fill_between([a, b], y0, y1, color=pal["text"], linewidth=0)
+            if name in ("source", "drain"):
+                ax.text((a + b) / 2, y0 - gap / 2, "contact", ha="center", va="bottom")
+        statement = model.exaggeration(c.scales, c.drawn).replace(". ", ".\n")
+        ax.set_title(statement, fontsize=STYLE["text_pt"])
+        return _svg(fig)
+
+
+_JUNCTION_PANELS = ("charge", "field", "potential")
+
+
+def junction_panels(palette: str) -> bytes:
+    """The charge, field and potential of the idealised abrupt junction between the nfet's
+    source and its body (:func:`gf180tcad.explain.idealised.abrupt_junction`), from the
+    registry's dopings, built-in potential and constants, against the distance from the
+    junction into the body."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    n_a, n_d = numbers.value("n_ch_nfet_cal"), numbers.value("sd_peak_nfet")
+    vbi = numbers.value("vbi_nfet")
+    consts = (numbers.value("eps_si_tcad"), numbers.value("eps0_tcad"), numbers.value("q_tcad"))
+    w = idealised.depletion_width(n_a, n_d, vbi, *consts)
+    pad = STYLE["junction_pad"]
+    # x > 0 is the body (the p side): the formula puts the n side at x < 0.
+    x = np.linspace(-pad * w, (1 + pad) * w, STYLE["junction_points"])
+    prof = idealised.abrupt_junction(x, n_a, n_d, vbi, *consts)
+    x_um = x * UNITS["um_per_cm"]
+    x_p = w * n_d / (n_a + n_d) * UNITS["um_per_cm"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax_q, ax_e, ax_v = fig.subplots(len(_JUNCTION_PANELS), 1, sharex=True)
+        charge = prof["charge_cm3"]
+        pos = np.where(charge > 0, charge, np.nan)
+        neg = np.where(charge < 0, -charge, np.nan)
+        ax_q.set_yscale("log")
+        ax_q.plot(x_um, pos, color=pal["electron"], lw=lw, label="donors (+)")
+        ax_q.plot(x_um, neg, color=pal["hole"], lw=lw, label="acceptors (−)")
+        ax_q.vlines(0.0, n_a, n_d, color=pal["electron"], lw=lw)
+        ax_q.set_ylim(n_a / STYLE["headroom"], n_d * STYLE["headroom"])
+        ax_q.set_ylabel("ions (cm⁻³)")
+        ax_q.legend(loc="upper right", frameon=False, ncols=2)
+        ax_e.plot(x_um, prof["field_v_per_cm"] * UNITS["kv_per_v"], color=pal["highlight"], lw=lw)
+        ax_e.set_ylabel("field (kV/cm)")
+        ax_v.plot(x_um, prof["potential_v"], color=pal["highlight"], lw=lw)
+        ax_v.set_ylabel("potential (V)")
+        ax_v.set_xlabel("distance from the junction into the body (µm)")
+        for ax in (ax_q, ax_e, ax_v):
+            ax.axvline(0.0, color=pal["text"], lw=STYLE["edge_width"])
+            ax.axvline(x_p, color=pal["intrinsic"], lw=STYLE["edge_width"], ls=":")
+        ax_v.text(x_p, vbi, "depletion edge ", ha="right", va="top", color=pal["intrinsic"])
+        return _svg(fig)
+
+
+def _parts_cell(palette: str) -> bytes:
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+    )
+    return cross_section(c, (), palette)
+
+
+def _junction_cell(palette: str) -> bytes:
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+    )
+    return cross_section(c, ("junction",), palette)
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
     "oxide-stack": _oxide_stack,
+    "parts-cell": _parts_cell,
+    "junction-cell": _junction_cell,
+    "junction-panels": junction_panels,
 }
 
 
