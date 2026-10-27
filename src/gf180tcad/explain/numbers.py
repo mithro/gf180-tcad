@@ -65,20 +65,14 @@ _CM3 = "cm⁻³"
 _ENTRIES = (
     Number("n_i_tcad", "committed", _CM3, 3, _meta("nfet_05v0"), {"json": ["constants", "n_i_cm3"]}),
     Number("t_tcad", "committed", "K", 5, _meta("nfet_05v0"), {"json": ["constants", "t_k"]}),
-    Number("vt_tcad", "committed", "V", 3, _meta("nfet_05v0"), {"json": ["constants", "vt_v"]}),
     Number("ndep_nfet", "committed", _CM3, 2, _proc("nfet_05v0"), {"toml": ["param", "ndep_cm3", "value"]}),
     Number("n_ch_nfet_cal", "committed", _CM3, 3, _meta("nfet_05v0"), {"json": ["stack", "n_ch_cm3"]}),
     Number("n_ch_pfet_cal", "committed", _CM3, 3, _meta("pfet_05v0"), {"json": ["stack", "n_ch_cm3"]}),
     Number("ngate_nfet", "committed", _CM3, 1, _proc("nfet_05v0"), {"toml": ["param", "ngate_cm3", "value"]}),
     Number("sd_peak_nfet", "committed", _CM3, 1, _proc("nfet_05v0"), {"toml": ["param", "sd_peak_cm3", "value"]}),
-    Number("nc_si", "textbook", _CM3, 2, DISPLAY, {"toml": ["silicon", "nc_cm3"]}),
     Number(
         "n_minority_nfet", "idealised", _CM3, 3,
         formula="mass_action", inputs=("n_i_tcad", "n_ch_nfet_cal"),
-    ),
-    Number(
-        "degenerate_offset_gate", "idealised", "mV", 2,
-        formula="degenerate_offset", inputs=("ngate_nfet", "nc_si", "vt_tcad"), factor=1e3,
     ),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
