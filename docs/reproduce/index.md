@@ -226,7 +226,9 @@ published as they are; the ngspice/Xyce cross-check is a separate test
 The top folder of each set of TCAD results holds one `provenance.json`
 ({py:func}`gf180tcad.tcad.tree_provenance`). It records the images that made it, the plugin
 commit and the calibration applied (if any). It also records the entry point that wrote the
-folder (`generator`) and a {term}`generator_sha256`. The hash is **per results folder**
+folder (`generator`) and a {term}`generator_sha256`.
+
+The hash is **per results folder**
 ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)). It covers the import closure of
 the entry point that writes the folder, one module list per entry point in
 {py:data}`gf180tcad.tcad.TCAD_GENERATORS`. It also covers the inputs both entry points share: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
@@ -234,8 +236,9 @@ the entry point that writes the folder, one module list per entry point in
 too ({test}`tests/tcad/test_tcad_provenance.py::test_tcad_generator_modules_match_the_import_graph`
 runs once per entry point). {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties each results folder
 to its writer, and {test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current`
-requires every results folder to name its writer and to carry that writer's current hash. A
-change to a module that a folder's writer never imports therefore leaves the folder's hash alone.
+requires every results folder to name its writer and to carry that writer's current hash.
+
+A change to a module that a folder's writer never imports therefore leaves the folder's hash alone.
 The calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in
 the closure of {py:mod}`gf180tcad.tcad.__main__`. The job command line
 ({py:mod}`gf180tcad.tcad.__main__`) is not in the closure of
@@ -287,7 +290,9 @@ change. The folders {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d`
 {repo}`results/tcad/meshconv` got `b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7`
 ({py:mod}`gf180tcad.tcad.__main__`). The folders {repo}`results/tcad/calibration` and
 {repo}`results/tcad/validation` got `5265e5fe223580d9efd878b9ebe33648b21f36dcdbf41ac8c7092f3ce9925950`
-({py:mod}`gf180tcad.calibrate.__main__`). No data file changed. The code that change touched in
+({py:mod}`gf180tcad.calibrate.__main__`).
+
+No data file changed. The code that change touched in
 the closures is provenance bookkeeping only (the per-entry-point module lists and the
 `generator` field in {py:mod}`gf180tcad.tcad`, and the `generator=` argument in both entry
 points), nothing that computes a result. No results folder could be regenerated for it: the host's
@@ -327,20 +332,25 @@ modules before the merge. The `calibration` entry of the file is the writer's ow
 both entry points. A change to a module that a folder's writer never imports still changed that
 folder's hash. Task 12 added
 {py:mod}`gf180tcad.calibrate` and {py:mod}`gf180tcad.specwindow` to the list, which the 2D MOS
-capacitor job imports neither of. The 2D data were therefore **not** regenerated (hours per job):
+capacitor job imports neither of.
+
+The 2D data were therefore **not** regenerated (hours per job):
 {repo}`results/tcad/moscap2d/provenance.json <results/tcad/moscap2d/provenance.json>` was
 rewritten from generator `8fd11fb03ced74d0fae78c4a84e9b8974d4beff5d8c75e1b41602657ec6d1326`, the
 code that made the committed 2D results (Task 11), to the current hash. The same holds for the
 whole {repo}`results/tcad/meshconv` folder: its `provenance.json` (1D and 2D) was rewritten, and
 its 1D data were last regenerated in 690cf7b. The shared module {py:mod}`gf180tcad.tcad` also
 changed since that generator, but only in provenance bookkeeping (the module list,
-`VALIDATION_DIR`, `calibrated_devices`), not in anything that computes a result. The
-calibration and the validation were rerun at the code they record and compared byte for
+`VALIDATION_DIR`, `calibrated_devices`), not in anything that computes a result.
+
+The calibration and the validation were rerun at the code they record and compared byte for
 byte with the committed files; the 1D {term}`MOS capacitor` results folder is rerun and compared byte for byte
 by the sandbox test {test}`tests/tcad/test_moscap1d.py::test_byte_identical`. The 1D
 mesh-convergence data were rerun in the sandbox on 2026-10-26 and compared byte for byte with
 the committed files by {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical`
-(passed; the sandbox session of two tests took 3 min 54 s). That test compares the folder's
+(passed; the sandbox session of two tests took 3 min 54 s).
+
+That test compares the folder's
 `provenance.json` without its `moscap2d` image, which a 1D rerun cannot know
 ([issue #36](https://github.com/mithro/gf180-tcad/issues/36)). The 2D mesh-convergence results
 had their provenance updated, not rerun, and have no such evidence. With the per-folder hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)) such a
@@ -364,7 +374,9 @@ fails it.
 **The whole {term}`SPICE reference <SPICE reference results>` is cross-checked on GitHub-hosted runners.** The
 {repo}`subset file <tests/crosscheck_subset.txt>` holds the single line `all`. That line stands
 for every job of the reference, 120 jobs. They cover both engines, all five corners, both
-devices and all six geometries of each. Each job includes every sweep its engine runs
+devices and all six geometries of each.
+
+Each job includes every sweep its engine runs
 ({term}`idvg_lin`, {term}`idvg_sat`, {term}`idvd`, `ioff` and, for ngspice only, {term}`cv`).
 The check covers all 660 CSV and metrics files, the {term}`provenance` file
 ({repo}`results/spice/provenance.json`) and the {term}`corner envelope`
@@ -380,7 +392,9 @@ the {term}`DIBL` derived from them. The cause was numpy's run-time {term}`SIMD d
 numpy picks a kernel for each operation by CPU feature level, and its
 `log10` kernels for AVX-512 and for AVX2 differ by one {term}`ulp` on some inputs.
 The local Xeon and an earlier EPYC 9V45 runner both have AVX-512; the
-EPYC 7763 has only AVX2. The sandbox ({repo}`tools/sandbox-run`) now pins numpy to its
+EPYC 7763 has only AVX2.
+
+The sandbox ({repo}`tools/sandbox-run`) now pins numpy to its
 baseline ({term}`x86-64-v2`) kernels by disabling every dispatch target with
 [`NPY_DISABLE_CPU_FEATURES`](https://numpy.org/doc/stable/reference/simd/build-options.html#runtime-dispatch),
 so all such hosts compute the same bits. The
