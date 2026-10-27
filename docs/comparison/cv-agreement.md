@@ -319,9 +319,15 @@ Lmin with `spice-fit`.
   L = 0.7 µm and 1.6/0.7, both from the depletion-side crossing (+124 and +132 mV, inside the
   corner window) and, at 1.6/0.7, the accumulation plateau (6.12 %).
 - **2D: first cell nfet Lmin, {term}`Disagree`.** The 2D check uses the calibrated 2D
-  results, `python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID
-  --out results/tcad/moscap2d` (the same `moscap2d.simulate` with source and drain, QS, on the
-  selected 2D mesh and the SPICE grid; one {term}`job` at a time, 16 GiB each, hours each). The
+  results, made by this command:
+
+  ```
+  python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID --out results/tcad/moscap2d
+  ```
+
+  That is the same `moscap2d.simulate` with source
+  and drain, QS, on the selected 2D mesh and the SPICE grid. It runs one {term}`job` at a time,
+  16 GiB each, hours each. The
   first one is committed,
   {repo}`results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60 <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`
   (its run: {ref}`moscap2d-calibrated`). It is compared with the TT ngspice Cgg by the
