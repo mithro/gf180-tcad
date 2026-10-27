@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# pre-push hook (installed by tools/install-hooks): refuses a push that would fail CI's lint-test
+# job in the ways it failed most often, before anything leaves the machine. Runs `make pre-push`
+# (make lint, then the tests except the slow docs build and calibration fits: about a minute),
+# and `make pre-push-docs` (the docs-links rule: minutes) when a pushed commit changes docs/,
+# src/, results/, README.md or CONTRIBUTING.md. See CONTRIBUTING.md.
+set -euo pipefail
+
+zero=0000000000000000000000000000000000000000
+head="$(git rev-parse HEAD)"
+current="$(git symbolic-ref -q HEAD)" || current=""
+pushing=0
+differs=0
+docs=0
+branches=0
+foreign=()
+while read -r local_ref local_sha _remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue # a branch deletion: nothing to check
+  pushing=1
+  case "$local_ref" in
+    refs/heads/*)
+      branches=$((branches + 1))
+      [ "$local_ref" = "$current" ] || foreign+=("${local_ref#refs/heads/}")
+      ;;
+  esac
+  [ "$local_sha" = "$head" ] || differs=1
+  # the commits this push adds: since the remote's old tip, or for a new branch since main
+  if [ "$remote_sha" != "$zero" ] && git rev-parse -q --verify "$remote_sha^{commit}" >/dev/null; then
+    base="$remote_sha"
+  else
+    base="$(git merge-base origin/main "$local_sha")" || base=""
+  fi
+  if [ -z "$base" ] \
+    || git diff --name-only "$base" "$local_sha" -- docs src results README.md CONTRIBUTING.md \
+      | grep -q .; then
+    docs=1
+  fi
+done
+[ "$pushing" = 1 ] || exit 0
+
+# push.default=matching pushes every local branch that also exists on the remote, and all worktrees
+# of a clone share their branches, so a bare `git push` pushes other sessions' unfinished work (and
+# starts CI on it). Refused: a branch other than the checked-out one when push.default is matching
+# (git lists only the refs that are ahead, so that may be the only line), and several branches at
+# once that are not all the checked-out one, whatever the setting.
+push_default="$(git config --get push.default)" || push_default=""
+if [ "${#foreign[@]}" -gt 0 ] && { [ "$branches" -gt 1 ] || [ "$push_default" = matching ]; }; then
+  {
+    echo "pre-push: refused: this push would also push branches other than the checked-out one:"
+    printf '  %s\n' "${foreign[@]}"
+    echo "Push only your branch (git push origin HEAD), and set: git config push.default simple"
+  } >&2
+  exit 1
+fi
+
+cd "$(git rev-parse --show-toplevel)"
+# The checks run on the working tree, which is what the pushed commit contains only when the push
+# is of HEAD and nothing tracked is modified; say so when that is not the case.
+if [ "$differs" = 1 ] || ! git diff --quiet HEAD --; then
+  echo "pre-push: note: checking the working tree, which differs from the pushed commit(s)" >&2
+fi
+# git exports GIT_DIR (and in a worktree GIT_INDEX_FILE and others) to its hooks; the tests run git
+# in other repositories (the third_party/gplugins submodule, throwaway ones), where those would
+# point git back at this one.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH
+targets=(pre-push)
+[ "$docs" = 1 ] && targets+=(pre-push-docs)
+if ! make --no-print-directory "${targets[@]}"; then
+  echo "pre-push: refused: 'make ${targets[*]}' failed (the same checks fail CI). Fix and push again." >&2
+  exit 1
+fi

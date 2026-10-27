@@ -9,8 +9,9 @@
       "param_sha256": "4b850baac972f26280b60ee7d5871852f4612ebd060da2af1a99db2809fb5cbf"
     }
   },
-  "generator_sha256": "4ee155669208c14c95ebd7bdca5b0b4743a37ae3bc555ae1e2babc405fd1fec1",
-  "gplugins_commit": "1eae814f8584f9cb111493c32496f8e7f6c82503",
+  "generator": "gf180tcad.tcad.__main__",
+  "generator_sha256": "b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7",
+  "gplugins_commit": "1c071d0565ef4917b48ff907b9426e879ccca7fc",
   "images": {
     "moscap1d": {
       "name": "dev",

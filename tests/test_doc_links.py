@@ -870,7 +870,7 @@ def test_every_reference_in_the_html_is_a_link(built_html):
 _HTML_BAD = """<html><body><div id="furo-main-content"><h1>Title about the TCAD and Xyce</h1>
 <p>Uses <code class="docutils literal"><span class="pre">tools/sandbox-run</span></code>,
 <code class="xref py py-func docutils literal"><span class="pre">nope()</span></code>, the module
-gf180tcad.metrics, the test test_engines_agree and a ngspice run on the Golden Reference.</p>
+gf180tcad.metrics, the test test_engines_agree and a ngspice run on the Spice Reference Results.</p>
 <pre>tools/sandbox-run gf180tcad.metrics ngspice</pre>
 <p>Run <code class="docutils literal">sudo tools/sandbox-setup</code>.</p>
 </div></body></html>"""
@@ -903,7 +903,7 @@ def test_positive_control_html_detector_fires(kind):
 
 def test_positive_control_html_details():
     problems = [str(q) for q in check_html("control.html", _HTML_BAD)]
-    assert any("'Golden Reference'" in q for q in problems), "long terms ignore case"
+    assert any("'Spice Reference Results'" in q for q in problems), "long terms ignore case"
     assert any("tools/sandbox-setup (inside" in q for q in problems), "paths in commands"
     assert not any("'TCAD'" in q or "'Xyce'" in q for q in problems), "headings are skipped"
     heading = "<h1>The gf180tcad.metrics module</h1>"

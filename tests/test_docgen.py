@@ -55,7 +55,7 @@ def test_pages_cover_all_geometries(tmp_path):
     assert len(expected) == 12
     assert pages == expected
     page = (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60.md").read_text(encoding="utf-8")
-    for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Envelope", '"Same process" window'):
+    for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Corner min", '"Same process" window'):
         assert needle in page
     assert (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60_idvd.svg").is_file()
 
@@ -77,6 +77,31 @@ def test_number_format_is_locale_independent():
     assert docgen.fmt(1234.56789) == "1235"
     assert docgen.fmt(0.000123456) == "0.0001235"
     assert docgen.fmt(float("inf")) == "inf" and docgen.fmt(-float("inf")) == "-inf"
+
+
+def test_table_numbers_do_not_break_at_the_exponent():
+    """A table cell's exponent sign is U+2212, which a browser never breaks a line at."""
+    assert docgen.num(2.63e-05, 3) == "2.63e\u221205"
+    assert docgen.num(-0.2) == "-0.2" and docgen.num(1.7e17) == "1.7e+17"
+    assert docgen.unit_text("fF/um^2") == "fF/µm²" and docgen.unit_text("um") == "µm"
+
+
+def test_geometry_links_name_the_geometry(tmp_path):
+    """S7: a link to a geometry page shows the geometry id, never a bare W that links to
+    different pages; each page with such links says how to read the id."""
+    import re
+
+    docgen.generate(tmp_path)
+    for p in tmp_path.rglob("*.md"):
+        text = p.read_text(encoding="utf-8")
+        links = re.findall(r"\{doc\}`([^`<]*?)\s*<([^`>]*)>`", text)
+        for label, target in links:
+            assert not re.fullmatch(r"[\d.]+", label), (p.name, label, target)
+        if p.name == "index.md" and any(
+            re.fullmatch(r"w\d+p\d+_l\d+p\d+", label) for label, _ in links
+        ):
+            assert docgen._GEOMETRY_ID_TEXT in text, p
+        assert " um" not in text and "um^2" not in text, p
 
 
 _NO_NETWORK = textwrap.dedent(
@@ -146,6 +171,51 @@ def test_docs_build_offline(tmp_path):
         for g in d.geometries:
             assert (tcad / name / f"{geometry_id(g)}.html").is_file()
     assert any(p.name.endswith("_cgg.svg") for p in (out / "_images").iterdir())
+
+
+_RACE_WORKER = textwrap.dedent(
+    """
+    import runpy
+    import sys
+    from pathlib import Path
+
+    conf = runpy.run_path(sys.argv[1])
+    release = conf.get("_release_lock", lambda app, exc=None: None)
+    generated = Path(sys.argv[1]).parent / "_generated"
+    for _ in range(2):
+        conf["_generate_results"](None)
+        # the read phase of a build: every file of the tree must stay put until the build ends
+        for f in sorted(p for p in generated.rglob("*") if p.is_file()):
+            f.read_bytes()
+        release(None)
+    """
+)
+
+
+def test_concurrent_docs_generation_does_not_race(tmp_path):
+    """Two builds of one checkout (issue #40) both finish and never see a missing file."""
+    script = tmp_path / "worker.py"
+    script.write_text(_RACE_WORKER, encoding="utf-8")
+    procs = []
+    for i in range(2):
+        log = (tmp_path / f"w{i}.log").open("wb")
+        procs.append(
+            (
+                subprocess.Popen(
+                    [sys.executable, "-I", str(script), str(DOCS / "conf.py")],
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                ),
+                log,
+            )
+        )
+    codes = []
+    for proc, log in procs:
+        codes.append(proc.wait(timeout=900))
+        log.close()
+    logs = [(tmp_path / f"w{i}.log").read_text(encoding="utf-8")[-2000:] for i in range(2)]
+    assert codes == [0, 0], logs
+    assert not list(DOCS.glob("_generated.*")), "temporary directories left behind"
 
 
 def test_known_diffs_single_source():
@@ -231,21 +301,38 @@ def test_xyce_metric_missing_raises(tmp_path):
         docgen._metrics_table(root, NFET, GID, spec, env)
 
 
+def _md_tables(lines: list[str]) -> list[tuple[list[str], list[list[str]]]]:
+    """``(header, rows)`` of each pipe table in ``lines``, cells stripped."""
+    out, block = [], []
+    for line in [*lines, ""]:
+        if line.startswith("|"):
+            block.append([c.strip() for c in line.strip().strip("|").split("|")])
+        elif block:
+            out.append((block[0], block[2:]))
+            block = []
+    return out
+
+
 def test_window_column_shows_the_envelope_where_there_is_no_spec():
     spec = docgen.specwindow.load_spec()
     env = json.loads((docgen.RESULTS / "envelope.json").read_text(encoding="utf-8"))
-    rows = docgen._metrics_table(docgen.RESULTS, NFET, GID, spec, env)[2:]
+    tables = _md_tables(docgen._metrics_table(docgen.RESULTS, NFET, GID, spec, env))
+    (vh, values), (ch, corners), (wh, windows) = tables
+    assert vh == ["Metric", "Unit", "TT ngspice", "TT Xyce"]
+    assert ch == ["Metric", "Corner min", "Corner max"]
+    assert wh == ["Metric", "Window min", "Window max", "Set by"]
     with_spec = set(docgen._spec_entries(spec, NFET.name, GID))
-    assert with_spec and len(rows) > len(with_spec)
-    for row in rows:
-        cells = [c.strip() for c in row.strip("|").split("|")]
-        name = cells[0].split("`")[1]
+    assert with_spec and len(windows) > len(with_spec)
+    assert [r[0] for r in values] == [r[0] for r in corners] == [r[0] for r in windows]
+    for v, c, w in zip(values, corners, windows, strict=True):
+        name = v[0].split("`")[1]
         lo, hi = env["ngspice"][NFET.name][GID][name]
-        assert cells[-1] != "-"
+        assert c[1:] == [docgen.num(lo), docgen.num(hi)]
+        assert w[-1] not in ("", "-")
         if name not in with_spec:
-            assert cells[-1] == f"[{docgen.fmt(lo)}, {docgen.fmt(hi)}] (envelope)"
-        # Xyce has no cv sweep, so only its Cgg cells are "n/a"
-        assert (cells[3] == "n/a") == name.startswith("cgg_")
+            assert w[1:] == [docgen.num(lo), docgen.num(hi), "corner envelope"]
+        # Xyce has no cv sweep, so only its Cgg cells are "not applicable"
+        assert (v[3] == "not applicable") == name.startswith("cgg_")
 
 
 def test_per_area_spec_entries_are_tcad_only(tmp_path):
@@ -260,12 +347,15 @@ def test_per_area_spec_entries_are_tcad_only(tmp_path):
             assert "cox_ff_per_um2" not in docgen._spec_entries(spec, device.name, geometry_id(g))
     rows = docgen._spec_status(docgen.RESULTS, spec)
     assert not any("cox_ff_per_um2" in r for r in rows)
-    tcad = docgen._tcad_only_rows(spec)[2:]
-    assert len(tcad) == 2 and all(r.endswith("| TCAD only |") for r in tcad)
-    assert all("[1.8, 2.8] fF/um^2" in r for r in tcad)
+    ((header, tcad),) = _md_tables(docgen._tcad_only_rows(spec))
+    assert header[-2:] == ["Spec min (fF/µm²)", "Spec max (fF/µm²)"]
+    assert len(tcad) == 2 and all(r[-3:] == ["`cox_ff_per_um2`", "1.8", "2.8"] for r in tcad)
     docgen.generate(tmp_path)
     s = (tmp_path / "results" / "index.md").read_text(encoding="utf-8")
-    assert "### TCAD only" in s and s.count("| TCAD only |") == 2
+    # the two rows sit under "TCAD only", whose lead-in gives their one status
+    section = s.split("### TCAD only", 1)[1].split("\n## ", 1)[0]
+    assert 'The status of every row is "TCAD only"' in section
+    assert section.count("| `cox_ff_per_um2` |") == 2
 
 
 # --- TCAD MOS capacitor pages (Task 13a) ---------------------------------------------------------
@@ -302,8 +392,8 @@ def test_moscap_page_per_device_geometry(tmp_path):
             for key in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv"):
                 assert f"| {r['verdicts'][key]['verdict']} |" in page
             m = r["metrics"]
-            assert f"{1e3 * m['dv_dep_v']:+.1f} mV" in page
-            assert f"{1e3 * m['dv_inv_v']:+.1f} mV" in page
+            assert f"| {1e3 * m['dv_dep_v']:+.1f} |" in page  # mV, the unit in the header
+            assert f"| {1e3 * m['dv_inv_v']:+.1f} |" in page
             assert f"{100 * m['depletion_max_rel']:.2f} %" in page
             assert g.role in page
             # mesh pictures: no mesh file is committed, and the page says so
@@ -313,6 +403,13 @@ def test_moscap_page_per_device_geometry(tmp_path):
                 assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page
             else:
                 assert "No 2D result" in page
+            # a committed calibrated 2D cell is named on its page, with its mesh
+            cal_meta = TCAD / "moscap2d" / name / "calibrated" / gid / "cv.meta.json"
+            if cal_meta.is_file():
+                rel = f"results/tcad/moscap2d/{name}/calibrated/{gid}"
+                assert f"{{repo}}`{rel}`" in page
+                assert json.loads(cal_meta.read_text("utf-8"))["mesh_sha256"] in page
+                assert "Calibrated 2D validation: not run" not in page
         index = (root / name / "index.md").read_text(encoding="utf-8")
         cal = json.loads((TCAD / "calibration" / f"{name}.result.json").read_text("utf-8"))
         assert f"{cal['budget_used']} of {cal['budget']}" in index
@@ -326,7 +423,23 @@ def test_moscap_page_per_device_geometry(tmp_path):
     for name, device in DEVICES.items():
         for g in device.geometries:
             assert f"<{name}/{geometry_id(g)}>" in summary
-    assert "not run" in summary  # the calibrated 2D validation (issue #35)
+    # the calibrated 2D validation (issue #35): the summary never says "not run for any
+    # geometry" while a calibrated 2D cell is committed
+    if list((TCAD / "moscap2d").glob("*/calibrated/*/cv.csv")):
+        assert "not run for any geometry" not in summary
+    else:
+        assert "not run for any geometry" in summary
+
+
+def test_validation_two_d_matches_committed_calibrated_cells():
+    """A validation ``two_d`` entry is "not run" if and only if no calibrated 2D cv.csv is
+    committed for its geometry."""
+    for name, device in DEVICES.items():
+        val = json.loads((TCAD / "validation" / f"{name}.json").read_text("utf-8"))
+        for g in device.geometries:
+            gid = geometry_id(g)
+            committed = (TCAD / "moscap2d" / name / "calibrated" / gid / "cv.csv").is_file()
+            assert (val["two_d"][gid]["status"] == "not run") == (not committed), (name, gid)
 
 
 _RENDER_TCAD = textwrap.dedent(
@@ -385,19 +498,55 @@ def test_moscap_verdicts_are_read_not_recomputed(tmp_path):
 
 
 def test_moscap_summary_2d_sentence_follows_the_statuses(tmp_path):
-    """The summary's 2D sentence is derived from the two_d statuses, not fixed text."""
+    """The summary's 2D sentence and column are derived from the two_d statuses and the
+    committed calibrated 2D cells, not fixed text."""
     tree = _link_tcad_tree(tmp_path / "tcad_in")
     out = tmp_path / "out"
-    docgen.generate_tcad(out, tcad_root=tree)
-    assert "not run for any geometry" in (out / "tcad" / "index.md").read_text("utf-8")
+
+    def summary() -> str:
+        docgen.generate_tcad(out, tcad_root=tree)
+        return (out / "tcad" / "index.md").read_text("utf-8")
+
+    def row(text: str, gid: str) -> str:
+        return next(ln for ln in text.splitlines() if f"<nfet_05v0/{gid}>" in ln)
+
+    # a committed calibrated 2D cell the validation file does not compare: pending
+    first = min(tree.glob("moscap2d/*/calibrated/*/cv.csv"), default=None)
+    if first is not None:
+        vpath = tree / "validation" / f"{first.parents[2].name}.json"
+        val = json.loads(vpath.read_text("utf-8"))
+        val["two_d"][first.parent.name] = {"causes": [], "reason": "none", "status": "not run"}
+        vpath.unlink()
+        vpath.write_text(json.dumps(val), "utf-8")
+    # each committed calibrated 2D cell: its verdict once compared, else pending
+    text = summary()
+    if first is not None:
+        assert docgen._TWO_D_PENDING in text
+    for csv in sorted(tree.glob("moscap2d/*/calibrated/*/cv.csv")):
+        device, gid = csv.parents[2].name, csv.parent.name
+        entry = json.loads((tree / "validation" / f"{device}.json").read_text("utf-8"))
+        entry = entry["two_d"][gid]
+        want = entry["verdict"] if entry["status"] == "compared" else docgen._TWO_D_PENDING
+        line = next(ln for ln in text.splitlines() if f"<{device}/{gid}>" in ln)
+        assert line.endswith(f"| {want} |"), line
+        for f in csv.parent.iterdir():
+            f.unlink()
+    # no calibrated 2D cell and nothing compared: every geometry not run
     path = tree / "validation" / "nfet_05v0.json"
     val = json.loads(path.read_text("utf-8"))
-    val["two_d"][next(iter(val["two_d"]))]["status"] = "compared"
+    for gid in val["two_d"]:
+        val["two_d"][gid] = {"causes": [], "reason": "none", "status": "not run"}
     path.unlink()
     path.write_text(json.dumps(val), "utf-8")
-    docgen.generate_tcad(out, tcad_root=tree)
-    summary = (out / "tcad" / "index.md").read_text("utf-8")
-    assert "not run for any geometry" not in summary and "| compared |" in summary
+    text = summary()
+    assert "not run for any geometry" in text and docgen._TWO_D_PENDING not in text
+    # a compared entry shows its verdict
+    gid = next(iter(val["two_d"]))
+    val["two_d"][gid].update(status="compared", verdict="Disagree")
+    path.unlink()
+    path.write_text(json.dumps(val), "utf-8")
+    text = summary()
+    assert "not run for any geometry" not in text and row(text, gid).endswith("| Disagree |")
 
 
 def test_checks_match_the_committed_verdicts():

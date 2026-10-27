@@ -13,22 +13,23 @@ dev-HEAD TCAD image
   commit: the stack of the final results. See {ref}`tcad-dev-image`.
 
 stable TCAD image
-  The {term}`TCAD` image built from the latest PyPI releases of the TCAD stack: the baseline for how
-  things used to work and for debugging. See {ref}`tcad-image`.
+  The {term}`TCAD` image built from the latest PyPI releases of the TCAD stack: the released
+  baseline, used to tell a regression in a development version from a bug here. See {ref}`tcad-image`.
 
 TCAD
   Technology computer-aided design: physics-based device simulation, here with {{ DEVSIM }}
-  cross-checked with {{ Charon }}. In this project it is the suspect being validated against the
-  {term}`golden reference`. See {doc}`index`.
+  cross-checked with {{ Charon }}. In this project it is what is being tested: its results are
+  compared with the {term}`SPICE reference <SPICE reference results>`. See {doc}`index`.
 
 SPICE
   Circuit simulation with compact models. Here the {term}`PDK`'s {term}`BSIM4`
   {term}`model cards <model card>`, evaluated by {{ ngspice }} (primary) and {{ Xyce }}
   (secondary). See {ref}`comparison-space`.
 
-golden reference
-  The {term}`PDK` {term}`SPICE` models, against which the {term}`TCAD` is judged: "the SPICE models are the golden
-  reference; the TCAD is the suspect". See {doc}`index`.
+SPICE reference results
+  The results of the {term}`PDK`'s {term}`SPICE` models, simulated by {{ ngspice }} and {{ Xyce }}
+  and committed under {repo}`results/spice`: the yardstick the {term}`TCAD` is compared with.
+  See {doc}`index`.
 
 PDK
   Process design kit. Here the open {{ gf180mcu_pdk }}, its public documentation
@@ -109,14 +110,16 @@ spec window
   The {term}`PDK`'s published min-max of a metric. A one-sided limit becomes an interval from 0, because
   a magnitude cannot be negative. See {doc}`comparison/pdk-spec-check`.
 
-hull
-  Of two intervals: the interval from the lowest lower bound to the highest upper bound. See
+combined range
+  Of two ranges: the range from the lower of the two minimums to the higher of the two maximums
+  (in interval arithmetic, the interval hull). The code calls it `hull`. See
   {ref}`pdk-same-process-window`.
 
 "Same process" window
-  The interval used for the {term}`Same process` verdict: the {term}`hull` of the
+  The interval used for the {term}`Same process` verdict: the {term}`combined range` of the
   {term}`spec window` and the {term}`corner envelope`, or the corner envelope alone where the
-  {term}`PDK` publishes no spec. The results pages say which one sets it (`spec`, `envelope` or `hull`).
+  {term}`PDK` publishes no spec. The results pages say which one sets it (spec, corner envelope
+  or combined range).
   See {ref}`same-process-window`.
 
 Agree
@@ -124,13 +127,14 @@ Agree
   {ref}`the verdicts <agreement-verdicts>`.
 
 Same process
-  Verdict for a device and metric: outside the {term}`tolerance` but inside the {term}`PDK`'s own
-  min-max {term}`spec window`. The {term}`TCAD` device is plausibly *a* GF180 device, not *the* typical
-  one. See {ref}`the verdicts <agreement-verdicts>`.
+  Verdict for a device and metric: outside the {term}`tolerance` but inside the
+  {term}`"Same process" window`, which combines the {term}`PDK`'s own min-max {term}`spec window`
+  and the {term}`corner envelope`. The {term}`TCAD` device is then inside the range the PDK
+  specifies, not at its typical point. See {ref}`the verdicts <agreement-verdicts>`.
 
 Disagree
-  Verdict for a device and metric: outside the {term}`spec window`; the {term}`TCAD` is describing a
-  different process. See {ref}`the verdicts <agreement-verdicts>`.
+  Verdict for a device and metric: outside the {term}`"Same process" window`; the {term}`TCAD` is
+  describing a different process. See {ref}`the verdicts <agreement-verdicts>`.
 
 tolerance
   The allowed {term}`TCAD`-versus-SPICE error of a metric, from the {ref}`ITRS 2007 <lit-itrs>` Modeling and Simulation
@@ -148,7 +152,10 @@ validation target
 
 held-out geometry
   A geometry fixed before calibration and used for validation only: W = 10 µm at L = 0.7 and
-  1 µm, and the narrow 1.6/0.7. See {ref}`calibration-validation`.
+  1 µm, and the narrow W = 1.6 µm, L = 0.7 µm. It plays the part of the test set of statistics,
+  which "should be kept in a “vault,” and be brought out only at the end of the data analysis"
+  ([Hastie, Tibshirani and Friedman, *The Elements of Statistical Learning*, 2nd ed., section 7.2](https://hastie.su.domains/ElemStatLearn/)).
+  See {ref}`calibration-validation`.
 
 calibrated parameter budget
 parameter budget
@@ -241,7 +248,7 @@ C–V
 quasi-static
 QS
   Capacitance–voltage: the gate capacitance {term}`Cgg` against the gate bias. The quasi-static
-  (QS, low-frequency) curve is the equilibrium one and recovers to about the {term}`oxide capacitance <Cox>` in
+  (QS, low-frequency) curve is the equilibrium one and rises back towards the {term}`oxide capacitance <Cox>` in
   inversion; {term}`BSIM4` [`capMod=2`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) gives it. A {term}`MOSCAP` solved by small-signal AC with only
   a body contact gives the high-frequency curve instead. See {ref}`plugin-history-latest`.
 
@@ -249,7 +256,7 @@ HF C–V
 high-frequency C–V
   The {term}`C–V` measured with a small signal too fast for the inversion layer to follow: in inversion
   the capacitance stays near its depletion minimum instead of recovering to {term}`Cox`.
-  Technically, minority carriers are generated thermally in about 2τ·N/n_i, so above that rate
+  Technically, minority carriers are generated thermally in a time of order 2τ·N/n_i, so above that rate
   only the depletion edge responds; a 1D {term}`MOSCAP` with only a body contact gives this
   curve at any practical frequency ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`plugin-history-latest`.
 
@@ -336,8 +343,8 @@ WWLC
 
 uniform refinement
 mesh convergence
-  Refining every spacing of a mesh by the same factor, with the grading fixed, to show that the
-  results no longer depend on the mesh. Here each {term}`TCAD` {term}`MOSCAP` is solved at four
+  Refining every spacing of a mesh by the same factor, grading fixed, to show that the
+  results do not depend on the mesh. Here each {term}`TCAD` {term}`MOSCAP` is solved at four
   levels a factor √2 apart ({py:data}`gf180tcad.tcad.meshconv.LEVELS`), and a level is converged
   when the next finer one changes its {term}`C–V` by less than 1 % at every bias
   ([Roache 1994](https://doi.org/10.1115/1.2910291)). See {ref}`mesh-convergence`.
@@ -373,11 +380,6 @@ Newton iteration
   below the {term}`tolerance` ([Newton's method](https://en.wikipedia.org/wiki/Newton%27s_method)). See
   {ref}`moscap2d-solver`.
 
-Poisson stage
-  The first solve of a {{ DEVSIM }} device: [Poisson's equation](https://en.wikipedia.org/wiki/Poisson%27s_equation)
-  alone for the potential, before the {term}`drift-diffusion` equations are added. It has fewer
-  unknowns than the full solve (0.86 million against 2.0 million at L = 10 µm). See {ref}`moscap2d-l10`.
-
 MOSCAP
 MOS capacitor
   A poly-gate, oxide and body stack without source and drain, simulated by the {term}`TCAD` to
@@ -397,9 +399,9 @@ A_Vt
   and L ({ref}`Pelgrom 1989 <lit-pelgrom>`), used to express an error
   in physical units. See {ref}`tolerances`.
 
-polarity-stripped
-  Voltages and currents multiplied by the device polarity, so the nfet and the pfet plot alike
-  (|Vgs|, |Vds|, |Id|). See {py:mod}`gf180tcad.docgen`.
+sign-flipped
+  Voltages and currents multiplied by the device polarity (+1 for the nfet, −1 for the pfet),
+  so the nfet and the pfet plot alike (|Vgs|, |Vds|, |Id|). See {py:mod}`gf180tcad.docgen`.
 
 sweep
 idvg_lin
@@ -412,10 +414,10 @@ cv
 
 gmin
   The small conductance (1e-12 S) that {term}`SPICE` puts across every junction. At Vds = 5 V it lets
-  about 5 pA flow with the device off, a leakage floor. See {doc}`limitations/engine-cross-check`.
+  5 pA flow (1e-12 S × 5 V) with the device off, a leakage floor. See {doc}`limitations/engine-cross-check`.
 
 engine cross-check
-  The ngspice-versus-Xyce comparison of the {term}`SPICE` reference. A difference above 0.5 % flags a
+  The ngspice-versus-Xyce comparison of the {term}`SPICE reference <SPICE reference results>`. A difference above 0.5 % flags a
   problem with the reference, not with the {term}`TCAD`. See {ref}`comparison-space` and
   {doc}`limitations/engine-cross-check`.
 
@@ -431,8 +433,9 @@ xfail
   {doc}`limitations/engine-cross-check`.
 
 job
-  One engine, {term}`corner`, device and geometry of the {term}`SPICE` reference, run as one {term}`sandbox`
-  container. See {ref}`how the reference runs <reproduce-how-it-works>`.
+  One simulation run in its own {term}`sandbox` container: for the {term}`SPICE reference <SPICE reference results>` one
+  engine, {term}`corner`, device and geometry; for the {term}`TCAD` one device, geometry and
+  set of parameter values. See {ref}`how the reference runs <reproduce-how-it-works>`.
 
 sandbox
   The resource-limited container wrapper {repo}`tools/sandbox-run` ({{ Python }}:
@@ -478,22 +481,31 @@ provenance
 generator_sha256
   The sha256 over the sorted (path, sha256) pairs of the source files of
   {py:data}`gf180tcad.reference.GENERATOR_MODULES` plus {repo}`tools/sandbox-run`. See
-  {py:func}`gf180tcad.reference.generator_sha256` and {ref}`results-layout`.
+  {py:func}`gf180tcad.reference.generator_sha256` and {ref}`results-layout`. Each {term}`TCAD` results folder has
+  its own, over the import closure of the entry point that writes it
+  ({py:data}`gf180tcad.tcad.TCAD_GENERATORS`, {py:func}`gf180tcad.tcad.generator_sha256`) and
+  the shared inputs; see {ref}`tcad-provenance`.
 
 Phase 0
 Phase 1
 Phases 0 and 1
-  The project phases so far: foundations (Phase 0) and the {term}`SPICE` reference dataset (Phase 1).
-  Later phases add the {term}`TCAD`. See the
+  The first two project phases, both complete: foundations (Phase 0) and the {term}`SPICE`
+  reference dataset (Phase 1). Later phases add the {term}`TCAD`. See the
   {repo}`design spec, section 13 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#13-phases>`.
 
 Phase 2
 Phase 3
+Phase 4
+  The {term}`TCAD` phases. Phase 2, in progress: the {{ gplugins }} {{ DEVSIM }} plugin fix and the
+  1D and 2D {term}`MOS capacitor <MOSCAP>`, calibrated against the {term}`SPICE` {term}`Cgg`–Vg.
+  Phase 3, not started: the 2D MOSFET, on both backends. Phase 4, planned, alongside Phases 2
+  and 3: {{ Charon }} beside {{ DEVSIM }}, and their comparison. See the
+  {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md>` and the
+  {repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`.
+
 Phase 3 entry gate
-  The next phases: a {term}`MOS capacitor <MOSCAP>` in {{ DEVSIM }} (Phase 2), then the 2D MOSFET (Phase 3). The
-  Phase 3 entry gate is the list of what must exist before any MOSFET {term}`TCAD` result,
-  including the deviations from the design spec still open at the end of
-  {term}`Phases 0 and 1`. See
+  The list of what must exist before any MOSFET {term}`TCAD` result, including the deviations
+  from the design spec still open at the end of {term}`Phases 0 and 1`. See
   {ref}`limitations-spec-deviations` and the
   {repo}`design spec, section 13 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#13-phases>`.
 

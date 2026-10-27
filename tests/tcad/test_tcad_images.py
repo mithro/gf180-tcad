@@ -70,7 +70,11 @@ def fake(monkeypatch) -> FakeSandbox:
 
 
 def _images(root: Path) -> dict:
-    return json.loads((root / PROVENANCE_NAME).read_bytes())["images"]
+    prov = json.loads((root / PROVENANCE_NAME).read_bytes())
+    # every tree python -m gf180tcad.tcad writes is stamped with its own entry point (issue #34)
+    assert prov["generator"] == "gf180tcad.tcad.__main__"
+    assert prov["generator_sha256"] == tcad.generator_sha256("gf180tcad.tcad.__main__")
+    return prov["images"]
 
 
 def _entry(name: str) -> dict:
@@ -110,7 +114,7 @@ def test_meshconv_keeps_the_other_dimension_s_image(fake, tmp_path):
     """The meshconv tree root holds 1D and 2D results, each recorded with its own image."""
     root = tmp_path / "root"
     (root / "moscap2d" / "nfet_05v0").mkdir(parents=True)
-    prov = tcad.tree_provenance(root, {"moscap2d": "stable"})
+    prov = tcad.tree_provenance(root, {"moscap2d": "stable"}, generator=tcad.TCAD_MAIN)
     (root / PROVENANCE_NAME).write_text(json.dumps(prov), encoding="utf-8")
     assert _meshconv(root) == 0
     assert _images(root) == {"moscap1d": _entry("dev"), "moscap2d": _entry("stable")}
@@ -122,7 +126,9 @@ def test_meshconv_keeps_the_other_dimension_s_image(fake, tmp_path):
 def test_recorded_images_only_for_present_subtrees(tmp_path):
     root = tmp_path / "root"
     (root / "moscap1d").mkdir(parents=True)
-    prov = tcad.tree_provenance(root, {"moscap1d": "dev", "moscap2d": "stable"})
+    prov = tcad.tree_provenance(
+        root, {"moscap1d": "dev", "moscap2d": "stable"}, generator=tcad.TCAD_MAIN
+    )
     (root / PROVENANCE_NAME).write_text(json.dumps(prov), encoding="utf-8")
     assert tcad.recorded_images(root) == {"moscap1d": "dev"}
     assert tcad.recorded_images(tmp_path / "nothing") == {}
@@ -169,6 +175,6 @@ def test_check_same_image_without_provenance_or_others(tmp_path):
     tcad.check_same_image(tmp_path / "none", "moscap1d", "dev", [tmp_path / "x"])
     root = tmp_path / "root"
     root.mkdir()
-    prov = tcad.tree_provenance(root, {"moscap1d": "stable"})
+    prov = tcad.tree_provenance(root, {"moscap1d": "stable"}, generator=tcad.TCAD_MAIN)
     (root / PROVENANCE_NAME).write_text(json.dumps(prov), encoding="utf-8")
     tcad.check_same_image(root, "moscap1d", "dev", [root / "absent"])  # nothing would be kept

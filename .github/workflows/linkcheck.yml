@@ -19,6 +19,12 @@ on:
 permissions:
   contents: read
 
+# As in ci.yml: a newer push to a pull request cancels the older run; scheduled and manual runs
+# are each their own group and never cancelled.
+concurrency:
+  group: linkcheck-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   linkcheck:
     name: linkcheck

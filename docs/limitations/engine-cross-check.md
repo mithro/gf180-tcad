@@ -1,6 +1,6 @@
 # SPICE engine cross-check (ngspice vs Xyce)
 
-The {term}`SPICE` reference is computed with {{ ngspice }} and cross-checked with {{ Xyce }}
+The {term}`SPICE reference <SPICE reference results>` is computed with {{ ngspice }} and cross-checked with {{ Xyce }}
 on the same {term}`PDK` {term}`model cards <model card>`, bias grid and instance parameters.
 The {ref}`definition of agreement <comparison-space>` says a difference of more than 0.5 %
 between the two engines flags a problem with the reference itself. The check is
@@ -11,9 +11,9 @@ between the two engines flags a problem with the reference itself. The check is
 |Id,ngspice − Id,Xyce| / max(|Id,ngspice|, |Id,Xyce|), taken over the bias
 points where either engine gives |Id| > 1 pA. That threshold is the order of the
 {term}`gmin` leakage floor: every junction carries a conductance gmin = 1e-12 S, so at
-Vds = 5 V about 5 pA flows even with the device off. Points below 1 pA, such
-as Vds = 0 where Id is about 1e-20 A, carry no meaningful device current and
-are excluded.
+Vds = 5 V 5 pA (1e-12 S × 5 V) flows even with the device off. Points below 1 pA carry no
+meaningful device current and are excluded. At Vds = 0, |Id| is below 2e-18 A in every
+typical-corner `idvd` file of both engines.
 
 The threshold is not loosened. **Twelve of the 36 cases fail:** `idvg_lin`
 (0.555 to 0.562 %) and `idvg_sat` (0.56 to 0.61 %) for all six `nfet_05v0` geometries. They are marked as
@@ -44,16 +44,17 @@ BSIM4 4.5.0 in ngspice and BSIM4 4.6.1 in Xyce.
 
 ### Evidence
 
-nfet W = 10 µm, L = 0.6 µm, typical corner, Vbs = 0:
+nfet W = 10 µm, L = 0.6 µm, typical corner, Vbs = 0, Vds = 5 V. The gate voltage at which
+the drain current Id reaches each level:
 
-| Gate voltage at Id | ngspice (4.5) | Xyce | Shift |
+| Id | Vg, ngspice 4.5 (V) | Vg, Xyce (V) | Shift (mV) |
 |---|---|---|---|
-| 1 nA (Vds = 5 V) | 0.281972 V | 0.281743 V | −0.229 mV |
-| 100 nA (Vds = 5 V) | 0.463006 V | 0.462770 V | −0.237 mV |
-| 1 µA (Vds = 5 V) | 0.558662 V | 0.558408 V | −0.254 mV |
+| 1 nA | 0.281972 | 0.281743 | −0.229 |
+| 100 nA | 0.463006 | 0.462770 | −0.237 |
+| 1 µA | 0.558662 | 0.558408 | −0.254 |
 
 In subthreshold, Xyce's current is a nearly constant 0.59 % higher. That is
-a gate-voltage shift of about 0.23 mV, and its effect fades in strong
+a gate-voltage shift of 0.229 to 0.254 mV, and its effect fades in strong
 inversion (7e-5 at Vgs = 5 V).
 
 These model-card changes were tried as a bisection. Each was applied
@@ -104,14 +105,28 @@ subdirectory of the working directory. It asserts three things:
 - Stock against patched ngspice exceeds 0.005, so the patch took effect.
 - Patched ngspice against Xyce stays below 0.005.
 
-| Geometry | `idvg_lin` stock | `idvg_lin` at 4.6 | `idvg_sat` stock | `idvg_sat` at 4.6 |
-|---|---|---|---|---|
-| W10/L0.6 | 5.62e-3 | 1.47e-4 | 6.05e-3 | 3.64e-3 |
-| W10/L0.7 | 5.59e-3 | 2.32e-4 | 5.80e-3 | 1.93e-3 |
-| W10/L1 | 5.57e-3 | 1.29e-4 | 5.71e-3 | 1.87e-3 |
-| W10/L2 | 5.58e-3 | 1.93e-4 | 5.61e-3 | 1.85e-3 |
-| W10/L10 | 5.60e-3 | 1.59e-4 | 5.59e-3 | 2.28e-3 |
-| W1.6/L0.7 | 5.55e-3 | 3.9e-5 | 5.76e-3 | 2.73e-4 |
+The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6.
+The `idvg_lin` sweep:
+
+| W (µm) | L (µm) | Stock | At 4.6 |
+|---|---|---|---|
+| 10 | 0.6 | 5.62e-3 | 1.47e-4 |
+| 10 | 0.7 | 5.59e-3 | 2.32e-4 |
+| 10 | 1 | 5.57e-3 | 1.29e-4 |
+| 10 | 2 | 5.58e-3 | 1.93e-4 |
+| 10 | 10 | 5.60e-3 | 1.59e-4 |
+| 1.6 | 0.7 | 5.55e-3 | 3.9e-5 |
+
+The `idvg_sat` sweep:
+
+| W (µm) | L (µm) | Stock | At 4.6 |
+|---|---|---|---|
+| 10 | 0.6 | 6.05e-3 | 3.64e-3 |
+| 10 | 0.7 | 5.80e-3 | 1.93e-3 |
+| 10 | 1 | 5.71e-3 | 1.87e-3 |
+| 10 | 2 | 5.61e-3 | 1.85e-3 |
+| 10 | 10 | 5.59e-3 | 2.28e-3 |
+| 1.6 | 0.7 | 5.76e-3 | 2.73e-4 |
 
 (engine-consequence)=
 
@@ -142,7 +157,7 @@ The Xyce cross-check claims exactly the following, at the typical corner and
 The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA.
 
 For scale, the effect of the nfet version is small next to the
-{term}`TCAD`-vs-SPICE comparison ({doc}`../comparison/agreement`): about 0.23 mV of {term}`threshold voltage <Vt>`. It is still a
+{term}`TCAD`-vs-SPICE comparison ({doc}`../comparison/agreement`): 0.229 to 0.254 mV of {term}`threshold voltage <Vt>`. It is still a
 real ambiguity in the reference, because the same card gives a 0.6 %
 difference in subthreshold current depending on which BSIM4 release evaluates
 it.
@@ -176,9 +191,8 @@ it.
 
 The PDK libraries pull in their sections through relative
 `.lib 'sm141064.spice' <section>` lines ([ngspice](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice)
-and [Xyce](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/xyce/sm141064.spice) versions). While the scratch libraries above
-were being patched, ngspice resolved those lines to a copy other than the one
-next to the top-level library. A stray [`sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice) in a simulator's
+and [Xyce](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/xyce/sm141064.spice) versions). In ngspice those lines can resolve to a copy other than the one next to the
+top-level library. That happened once, while the scratch libraries above were being patched. A stray [`sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice) in a simulator's
 working directory could therefore replace the PDK models without any warning.
 
 Both runners therefore refuse to start in a working directory that holds

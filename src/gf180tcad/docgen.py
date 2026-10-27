@@ -17,7 +17,7 @@ bookkeeping (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`, the function 
 calibration uses) to the committed 1D C per area. No mesh picture is drawn: the 2D meshes are
 not committed, and the pages say so.
 
-Plots are drawn against polarity-stripped axes (|Vgs|, |Vds|, |Id|) so the nfet and the pfet
+Plots are drawn against sign-flipped axes (|Vgs|, |Vds|, |Id|) so the nfet and the pfet
 look alike. Numbers in tables use :func:`fmt` (fixed significant figures, locale independent),
 so the generated text is byte-identical from run to run.
 """
@@ -49,8 +49,8 @@ SPEC_DOC = "/comparison/pdk-spec-check"
 ID_FLOOR = 1e-15  # A, lower edge of the log-scale panels
 
 _UNITS = {
-    "_ua_per_um": "uA/um",
-    "_pa_per_um": "pA/um",
+    "_ua_per_um": "µA/µm",
+    "_pa_per_um": "pA/µm",
     "_mv_per_dec": "mV/dec",
     "_mv_per_v": "mV/V",
     "_ff": "fF",
@@ -65,6 +65,38 @@ def fmt(x: float, digits: int = 4) -> str:
     if math.isinf(x):
         return "inf" if x > 0 else "-inf"
     return format(x, f".{digits}g")
+
+
+def num(x: float, digits: int = 4) -> str:
+    """:func:`fmt` for a table cell: the exponent sign is U+2212 MINUS SIGN, which a browser
+    never breaks a line at (an ASCII hyphen in ``2.63e-05`` wraps in a narrow column)."""
+    return fmt(x, digits).replace("e-", "e−")
+
+
+# Unit spellings of the data files, as the pages print them.
+_UNIT_TEXT = {"fF/um^2": "fF/µm²", "um^2": "µm²", "um": "µm", "cm^-3": "cm⁻³"}
+
+
+def unit_text(unit: str) -> str:
+    """A unit as a page prints it: ``fF/um^2`` becomes ``fF/µm²``, ``um`` becomes ``µm``."""
+    return _UNIT_TEXT.get(unit, unit)
+
+
+# How to read a geometry id, said once on each page whose tables are keyed by it.
+_GEOMETRY_ID_TEXT = (
+    "A {term}`geometry id` gives W and L in µm, with p for the decimal point: "
+    "`w10p0_l0p60` is W = 10 µm, L = 0.6 µm."
+)
+
+
+def _table(header: list[str], rows: list[list[str]]) -> list[str]:
+    """A pipe table; every cell must hold text (a blank cell is a bug, not a gap)."""
+    for r in rows:
+        if len(r) != len(header) or any(not str(c).strip() or str(c).strip() == "-" for c in r):
+            raise ValueError(f"table row {r} does not fill the columns {header}")
+    out = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
+    out += ["| " + " | ".join(str(c) for c in r) + " |" for r in rows]
+    return out
 
 
 def _unit(metric: str) -> str:
@@ -182,7 +214,7 @@ def _figures(root: Path, device: Device, gid: str) -> list[tuple[str, str, bytes
     )
     curves, _ = _curves(root, device, gid, "cv", 1.0, None)
     panel = plots.Panel("Cgg-Vg, 1 MHz, ngspice only", "Vgs x polarity (V)", "Cgg (fF)", curves)
-    out.append(("cv", "Gate capacitance against polarity-stripped Vgs", plots.figure_svg([panel])))
+    out.append(("cv", "Gate capacitance against sign-flipped Vgs", plots.figure_svg([panel])))
     return out
 
 
@@ -200,6 +232,14 @@ def demo_svg() -> bytes:
 
 def _interval(lo: float, hi: float) -> str:
     return f"[{fmt(lo)}, {fmt(hi)}]"
+
+
+# What sets a "Same process" window (specwindow.Window.source), in the words the pages use.
+_WINDOW_SOURCE = {
+    "spec": "spec",
+    "envelope": "corner envelope",
+    "hull": "{term}`combined range`",
+}
 
 
 def _spec_entries(spec: dict, device: str, gid: str) -> dict[str, dict]:
@@ -225,32 +265,57 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
     xy = _metrics(root, "xyce", TT, device.name, gid)
     env = envelope["ngspice"][device.name][gid]
     specs = _spec_entries(spec, device.name, gid)
-    rows = [
-        (
-            "| Metric | Unit | TT ngspice | TT Xyce | Envelope [lo, hi] (5 corners, ngspice) "
-            '| {term}`"Same process" window` (set by) |'
-        ),
-        "|---|---|---|---|---|---|",
-    ]
+    values, corners, windows = [], [], []
     for name in sorted(tt):
         lo, hi = env[name]
+        key = f"{{term}}`{name}`"
         if name in specs:
             w = specwindow.window(name, specwindow.spec_range(specs[name]), (lo, hi))
-            source = "{term}`hull`" if w.source == "hull" else w.source
-            sw = f"{_interval(w.lo, w.hi)} ({source})"
+            windows.append([key, num(w.lo), num(w.hi), _WINDOW_SOURCE[w.source]])
         else:
-            sw = f"{_interval(lo, hi)} (envelope)"
+            windows.append([key, num(lo), num(hi), _WINDOW_SOURCE["envelope"]])
         if name in xy:
-            x = fmt(xy[name])
+            x = num(xy[name])
         elif name in metrics.CV_METRICS and not _has_sweep("xyce", "cv"):
-            x = "n/a"
+            x = "not applicable"
         else:
             raise KeyError(f"xyce {TT} {device.name} {gid} metrics.json has no {name}")
-        rows.append(
-            f"| {{term}}`{name}` | {_unit(name)} | {fmt(tt[name])} | {x} | {_interval(lo, hi)} "
-            f"| {sw} |"
-        )
-    return rows
+        values.append([key, _unit(name) or "none", num(tt[name]), x])
+        corners.append([key, num(lo), num(hi)])
+    return [
+        "### Values",
+        "",
+        (
+            "The {term}`TT` value of each metric from both engines. Xyce has no C-V sweep, so "
+            "its {term}`Cgg` cells are not applicable."
+        ),
+        "",
+        *_table(["Metric", "Unit", "TT ngspice", "TT Xyce"], values),
+        "",
+        "### Corner envelope",
+        "",
+        (
+            "The {term}`corner envelope`: min and max over the five corners (ngspice), in the "
+            "unit of the values table."
+        ),
+        "",
+        *_table(["Metric", "Corner min", "Corner max"], corners),
+        "",
+        "### Same process window",
+        "",
+        (
+            'The {term}`"Same process" window`: the {term}`combined range` of the {term}`PDK` '
+            "{term}`spec window` and the corner envelope. The last column says which sets it "
+            "({ref}`pdk-same-process-window`)."
+        ),
+        "",
+        (
+            "Where the PDK publishes no spec for a metric at this geometry, the window is the "
+            "corner envelope alone."
+        ),
+        "",
+        *_table(["Metric", "Window min", "Window max", "Set by"], windows),
+    ]
 
 
 def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict, out: Path):
@@ -258,12 +323,12 @@ def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict
     ddir = out / "results" / device.name
     ddir.mkdir(parents=True, exist_ok=True)
     lines = [
-        f"# {device.name}, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} um",
+        f"# {device.name}, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} µm",
         "",
         (
             f"{{term}}`{device.name}`, {{term}}`geometry <geometry id>` `{gid}` "
-            f"({{ref}}`{g.role} <calibration-validation>`). {{term}}`SPICE` reference at 25 C "
-            "from {repo}`results/spice`. Axes are {term}`polarity-stripped` (|Vgs|, |Vds|, |Id|), "
+            f"({{ref}}`{g.role} <calibration-validation>`). {{term}}`SPICE reference <SPICE reference results>` at 25 C "
+            "from {repo}`results/spice`. Axes are {term}`sign-flipped` (|Vgs|, |Vds|, |Id|), "
             "so the nfet and the pfet look alike. The shaded band is the {term}`corner envelope`, "
             "the min-max over the {term}`TT`, {term}`FF`, {term}`SS <SS corner>`, {term}`FS` and "
             "{term}`SF` {term}`corners <corner>` ({{ ngspice }}); the solid line is ngspice TT "
@@ -284,81 +349,88 @@ def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict
         lines += [f"## {titles[suffix]}", "", f"![{alt}]({name})", ""]
     lines += ["## Metrics", ""]
     lines += _metrics_table(root, device, gid, spec, envelope)
-    lines += [
-        "",
-        (
-            "The last two columns are in the units of the metric. The last column is the "
-            '{term}`"Same process" window`: the {term}`hull` of the {term}`PDK` '
-            "{term}`spec window` and the corner envelope, and the word in brackets says which "
-            "sets it (see {ref}`pdk-same-process-window`). Where the PDK publishes no spec for "
-            "this metric at this geometry, the window is the corner envelope alone. Xyce has no "
-            "C-V sweep, so its Cgg cells are n/a."
-        ),
-        "",
-    ]
+    lines += [""]
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
 
 
 def _spec_status(root, spec: dict) -> list[str]:
-    rows = [
-        "| Device | Parameter | Metric | TT ngspice | Spec window | Status |",
-        "|---|---|---|---|---|---|",
+    """The TT-against-spec tables: which PDK parameter each metric is, then one table per
+    device and geometry (the device and the geometry page are named in its lead-in)."""
+    compared = [e for e in spec["entries"] if e["metric"] and not e.get("per_area")]
+    names = {}
+    for e in compared:
+        names.setdefault((e["symbol"], e["metric"]), None)
+    lines = [
+        "The PDK parameter each metric stands for:",
+        "",
+        *_table(
+            ["PDK parameter", "Metric"],
+            [[f"{{term}}`{s}`", f"{{term}}`{m}`"] for s, m in names],
+        ),
     ]
-    for e in spec["entries"]:
-        if not e["metric"] or e.get("per_area"):
-            continue
+    groups: dict[tuple[str, str], list[list[str]]] = {}
+    for e in compared:
         v = _metrics(root, "ngspice", TT, e["device"], e["geometry_id"])[e["metric"]]
         lo, hi = specwindow.spec_range(e)
         status = "inside" if lo <= v <= hi else "OUTSIDE"
-        page = f"{e['device']}/{e['geometry_id']}"
-        rows.append(
-            f"| {{term}}`{e['device']}` {{doc}}`{fmt(e['w_um'])}/{fmt(e['l_um'])} <{page}>` "
-            f"| {{term}}`{e['symbol']}` | {{term}}`{e['metric']}` | {fmt(v)} | {_interval(lo, hi)} "
-            f"| {status} |"
+        groups.setdefault((e["device"], e["geometry_id"]), []).append(
+            [f"{{term}}`{e['metric']}`", num(v), num(lo), num(hi), status]
         )
-    return rows
+    for (device, gid), rows in groups.items():
+        lines += [
+            "",
+            f"{{term}}`{device}` at geometry {{doc}}`{gid} <{device}/{gid}>`:",
+            "",
+            *_table(["Metric", "TT ngspice", "Spec min", "Spec max", "Status"], rows),
+        ]
+    return lines
 
 
 def _tcad_only_rows(spec: dict) -> list[str]:
-    """The "TCAD only" table: the per-area spec entries, with no SPICE value."""
-    rows = [
-        "| Device | Parameter | Metric | Spec [min, max] | Status |",
-        "|---|---|---|---|---|",
-    ]
-    for e in _tcad_only(spec):
-        rows.append(
-            f"| {{term}}`{e['device']}` | {e['symbol']} | `{e['metric']}` "
-            f"| {_interval(float(e['min']), float(e['max']))} {e['units']} | TCAD only |"
-        )
-    return rows
+    """The "TCAD only" table: the per-area spec entries, with no SPICE value. Their one unit
+    is in the header."""
+    entries = _tcad_only(spec)
+    units = {e["units"] for e in entries}
+    if len(units) != 1:
+        raise ValueError(f"TCAD-only spec entries in several units {sorted(units)}")
+    u = unit_text(units.pop())
+    return _table(
+        ["Device", "Parameter", "Metric", f"Spec min ({u})", f"Spec max ({u})"],
+        [
+            [f"{{term}}`{e['device']}`", e["symbol"], f"`{e['metric']}`",
+             num(float(e["min"])), num(float(e["max"]))]
+            for e in entries
+        ],
+    )  # fmt: skip
 
 
 def _engine_table(root) -> list[str]:
-    rows = [
-        "| Device | Geometry | " + " | ".join(f"{{term}}`{s}`" for s in DIFF_SWEEPS) + " |",
-        "|---|---|" + "---|" * len(DIFF_SWEEPS),
-    ]
+    """One engine_diff table per device, keyed by the geometry id."""
+    lines = []
     for device in DEVICES.values():
+        rows = []
         for g in device.geometries:
             gid = geometry_id(g)
-            cells = []
+            cells = [f"{{doc}}`{gid} <{device.name}/{gid}>`"]
             for sweep in DIFF_SWEEPS:
                 a = _cols(root, "ngspice", TT, device.name, gid, sweep)
                 b = _cols(root, "xyce", TT, device.name, gid, sweep)
                 d = engine_diff(a, b)
-                cell = f"{fmt(100 * d, 3)} %"
+                cell = num(100 * d, 3)
                 if d > ENGINE_DIFF_THRESHOLD:
                     if (device.name, sweep) in KNOWN_DIFFS:
                         cell += f" {{doc}}`(known) <{ENGINE_DOC}>`"
                     else:
                         cell += f" **unexplained** ({{doc}}`{ENGINE_DOC}`)"
                 cells.append(cell)
-            rows.append(
-                f"| {{term}}`{device.name}` | {{doc}}`{gid} <{device.name}/{gid}>` | "
-                + " | ".join(cells)
-                + " |"
-            )
-    return rows
+            rows.append(cells)
+        lines += [
+            "",
+            f"{{term}}`{device.name}`:",
+            "",
+            *_table(["Geometry", *(f"{{term}}`{s}` (%)" for s in DIFF_SWEEPS)], rows),
+        ]
+    return lines[1:]
 
 
 def _summary_page(root, spec: dict, out: Path):
@@ -367,7 +439,7 @@ def _summary_page(root, spec: dict, out: Path):
         "",
         (
             "Pages generated at documentation build time from the committed {term}`SPICE` "
-            "reference dataset ({repo}`results/spice`): the {term}`golden reference` that "
+            "reference dataset ({repo}`results/spice`): the {term}`SPICE reference <SPICE reference results>` that "
             "{term}`TCAD` is compared against ({doc}`/comparison/agreement`). The TCAD results so "
             "far, the {term}`C–V` calibration of the {term}`MOS capacitors <MOSCAP>` against these "
             "{term}`Cgg`-Vg curves, are on {doc}`/_generated/tcad/index` "
@@ -382,15 +454,19 @@ def _summary_page(root, spec: dict, out: Path):
             f"sources and caveats are on {{doc}}`{SPEC_DOC}`."
         ),
         "",
+        _GEOMETRY_ID_TEXT,
+        "",
         *_spec_status(root, spec),
         "",
         "### TCAD only",
         "",
         (
             "Per-area specs with no geometry, for a metric the SPICE reference does not extract. "
-            "They are compared with the 1D TCAD plateau C per area, not with SPICE "
+            "They are compared with the 1D TCAD plateau C per area, not with {term}`SPICE` "
             "({doc}`/comparison/cv-agreement`)."
         ),
+        "",
+        'The status of every row is "TCAD only": these specs have no SPICE value.',
         "",
         *_tcad_only_rows(spec),
         "",
@@ -487,12 +563,18 @@ def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _mv(v: float) -> str:
-    return f"{1e3 * v:+.1f} mV"
-
-
 def _pct(x: float) -> str:
     return f"{100 * x:.2f} %"
+
+
+def _mv_num(v: float) -> str:
+    """A voltage in mV, signed, for a table column whose header carries the unit."""
+    return f"{1e3 * v:+.1f}"
+
+
+def _pct_num(x: float) -> str:
+    """A fraction in %, for a table column whose header carries the unit."""
+    return f"{100 * x:.2f}"
 
 
 def _source_text(src: str) -> str:
@@ -530,9 +612,9 @@ class _Device:
             return self.val["one_d"][gid], f"results/tcad/validation/{name}.json"
         raise KeyError(f"{name} {gid}: in neither the calibration nor the validation file")
 
-    def two_d(self, gid: str) -> Path | None:
-        """The committed 2D start-parameter job of one geometry, if there is one."""
-        job = self.root / "moscap2d" / self.device.name / "start" / gid
+    def two_d(self, gid: str, params: str = "start") -> Path | None:
+        """The committed 2D job of one geometry at ``params``, if there is one."""
+        job = self.root / "moscap2d" / self.device.name / params / gid
         return job if (job / "cv.meta.json").is_file() else None
 
 
@@ -643,7 +725,7 @@ def _two_d_svg(d: _Device, job: Path) -> bytes:
     panel = plots.Panel(
         "C per area at the start values: 2D cell against the 1D stack",
         _U_LABEL,
-        "C per area (fF/um^2)",
+        "C per area (fF/µm²)",
         [plots.Curve(u1, c1, START_COLOR, dashed=True), plots.Curve(u2, c2, "#000000")],
         keys=[
             plots.Key("2D, with source and drain (start values)", "#000000"),
@@ -674,7 +756,7 @@ def _meshconv_svg(d: _Device, report: dict) -> bytes:
     changes.append(plots.Curve(span, np.array([crit, crit]), TOL_COLOR))
     dim = report["dim"]
     panels = [
-        plots.Panel(f"{dim}D C per area by mesh level", _U_LABEL, "C per area (fF/um^2)", vals,
+        plots.Panel(f"{dim}D C per area by mesh level", _U_LABEL, "C per area (fF/µm²)", vals,
                     keys=keys),
         plots.Panel(
             f"{dim}D change against the next finer level", _U_LABEL, "|C / C_finer - 1|",
@@ -688,47 +770,90 @@ def _meshconv_svg(d: _Device, report: dict) -> bytes:
 # --- TCAD tables ------------------------------------------------------------------------------
 
 
-def _window_cell(key: str, check: dict) -> str:
-    w = check.get("window")
-    if not w:
-        return "none"
-    if key.startswith("dv_"):
-        which = key.replace("dv_", "u_")
-        return f"{which} in {_interval(w['lo'], w['hi'])} V ({w['source']})"
-    t = w["tightest"]
-    inside = "TCAD inside at every bias" if w["all_inside"] else "TCAD outside at some bias"
-    return (
-        f"{inside}; set by {', '.join(w['sources'])}; tightest at u = {fmt(t['u'])} V: "
-        f"{fmt(t['c_tcad'])} fF in {_interval(t['lo'], t['hi'])} fF"
-    )
-
-
 def _check_rows(rec: dict) -> list[str]:
-    rows = [
-        '| Check | TCAD | {term}`Tolerance <tolerance>` | {term}`"Same process" window` | Verdict |',
-        "|---|---|---|---|---|",
-    ]
+    """The plateau checks and the crossing checks, as two tables of bare values."""
     m, reg, tc = rec["metrics"], rec["spice_regions"], rec["tcad_crossings"]
     if set(rec["verdicts"]) != {key for key, _ in CHECKS}:
         raise ValueError(f"checks {sorted(rec['verdicts'])} are not docgen.CHECKS")
+    tol = "{term}`Tolerance <tolerance>`"
+    na = "not applicable"
+    plateau, p_window, p_tight, crossing, c_window = [], [], [], [], []
     for key, label in CHECKS:
         v = rec["verdicts"][key]
+        w = v.get("window")
         if key.startswith("plateau_"):
             side = key.removeprefix("plateau_")
-            tcad = (
-                f"max \\|ΔCgg\\|/Cgg = {_pct(v['max_rel'])} ({m[f'plateau_{side}_points']} points)"
-            )
-            tol = f"≤ {fmt(100 * v['tolerance'])} %"
+            plateau.append(
+                [label, _pct_num(v["max_rel"]), str(m[f"plateau_{side}_points"]),
+                 num(100 * v["tolerance"]), v["verdict"]]
+            )  # fmt: skip
+            if w:
+                src = ", ".join(w["sources"])
+                tt = w["tightest"]
+                p_window.append(
+                    [label, _WINDOW_SOURCE.get(src, src), "yes" if w["all_inside"] else "no"]
+                )
+                p_tight.append(
+                    [label, num(tt["u"]), num(tt["c_tcad"]), num(tt["lo"]), num(tt["hi"])]
+                )
+            else:
+                p_window.append([label, "none", na])
+                p_tight.append([label, na, na, na, na])
         else:
             which = key.replace("dv_", "u_")
-            tcad = f"{_mv(v['dv_v'])} ({which} TCAD {fmt(tc[which])} V, SPICE {fmt(reg[which])} V)"
-            tol = f"≤ {fmt(1e3 * v['tolerance_v'])} mV (a proposal)"
-        rows.append(f"| {label} | {tcad} | {tol} | {_window_cell(key, v)} | {v['verdict']} |")
-    rows.append(
-        f"| Depletion, max \\|ΔC\\|/C (reported only) | {_pct(m['depletion_max_rel'])} | none | "
-        "none | no verdict |"
-    )
-    return rows
+            src = _WINDOW_SOURCE.get(w["source"], w["source"]) if w else "none"
+            crossing.append(
+                [label, _mv_num(v["dv_v"]), num(1e3 * v["tolerance_v"]), src, v["verdict"]]
+            )
+            c_window.append(
+                [label, num(tc[which]), num(reg[which]),
+                 num(w["lo"]) if w else na, num(w["hi"]) if w else na]
+            )  # fmt: skip
+    return [
+        "### Plateaus",
+        "",
+        *_table(["Plateau", "max \\|ΔCgg\\|/Cgg (%)", "Points", f"{tol} (%)", "Verdict"], plateau),
+        "",
+        (
+            "The window that decides {term}`Same process`, and whether the TCAD is inside it "
+            "at every plateau bias:"
+        ),
+        "",
+        *_table(["Plateau", "Window set by", "Inside at every bias"], p_window),
+        "",
+        (
+            "The tightest bias u is where the TCAD value is closest to, or furthest past, a "
+            "window edge; the window there:"
+        ),
+        "",
+        *_table(
+            [
+                "Plateau",
+                "Tightest u (V)",
+                "TCAD C there (fF)",
+                "Window min (fF)",
+                "Window max (fF)",
+            ],
+            p_tight,
+        ),
+        "",
+        "### Crossings",
+        "",
+        *_table(["Crossing", "ΔV (mV)", f"{tol} (mV)", "Window set by", "Verdict"], crossing),
+        "",
+        "The crossing biases of the TCAD and the SPICE curves, and the window of the crossing:",
+        "",
+        *_table(
+            ["Crossing", "TCAD u (V)", "SPICE u (V)", "Window min (V)", "Window max (V)"],
+            c_window,
+        ),
+        "",
+        (
+            "The crossing tolerance is a proposal: no published standard exists "
+            "({ref}`the agreement metric <cv-agreement-metric>`). The depletion region has no "
+            f"verdict; its max |ΔC|/C, reported only, is {_pct(m['depletion_max_rel'])}."
+        ),
+    ]
 
 
 def _regions_line(rec: dict) -> str:
@@ -740,10 +865,22 @@ def _regions_line(rec: dict) -> str:
     )
 
 
+# The 2D status of a geometry whose calibrated 2D cell is committed but which the validation
+# file does not list (the file was written before the cell; issue #35).
+_TWO_D_PENDING = "not compared"
+_ISSUE_35 = "[issue #35](https://github.com/mithro/gf180-tcad/issues/35)"
+
+
 def _two_d_status(d: _Device, gid: str) -> str:
+    """The calibrated 2D validation of ``gid``: the verdict, ``_TWO_D_PENDING`` or the
+    validation file's status ("not run")."""
     entry = d.val["two_d"].get(gid)
     if entry is None:
         raise KeyError(f"{d.device.name} validation file has no two_d entry for {gid}")
+    if entry["status"] == "compared":
+        return entry["verdict"]
+    if d.two_d(gid, "calibrated") is not None:
+        return _TWO_D_PENDING
     return entry["status"]
 
 
@@ -759,7 +896,7 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
         else ""
     )
     lines = [
-        f"# {name} MOS capacitor, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} um",
+        f"# {name} MOS capacitor, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} µm",
         "",
         (
             f"{{term}}`{name}`, {{term}}`geometry <geometry id>` `{gid}`, a {g.role} geometry "
@@ -780,7 +917,7 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
             "bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`), at the "
             "calibrated and at the start values, over the ngspice TT curve and the "
             "{term}`corner envelope` (min-max over the five {term}`corners <corner>`, at each "
-            "bias), against u = polarity × Vg ({term}`polarity-stripped`). Right: the relative "
+            "bias), against u = polarity × Vg ({term}`sign-flipped`). Right: the relative "
             "error at each plateau bias, as recorded in the result file. The plateaus, crossings "
             "and regions are defined in {ref}`the agreement metric <cv-agreement-metric>`."
         ),
@@ -812,11 +949,31 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
     (ddir / f"{gid}_split.svg").write_bytes(_split_svg(spice_root, d, g))
     job = d.two_d(gid)
     status = _two_d_status(d, gid)
-    lines.append(
-        f"Calibrated 2D validation: {status} ({{doc}}`{CV_DOC}`, "
-        "[issue #35](https://github.com/mithro/gf180-tcad/issues/35))."
-    )
+    if status == _TWO_D_PENDING:
+        lines += [
+            f"Calibrated 2D validation: {status}.",
+            "",
+            (
+                "The calibrated 2D cell is committed; the validation file "
+                f"({{repo}}`results/tcad/validation/{name}.json`) does not list it ({_ISSUE_35}). "
+                "Its comparison is in {ref}`the validation section <cv-agreement-validation>` "
+                f"of {{doc}}`{CV_DOC}`."
+            ),
+        ]
+    else:
+        lines.append(f"Calibrated 2D validation: {status} ({{doc}}`{CV_DOC}`, {_ISSUE_35}).")
     lines.append("")
+    cal_job = d.two_d(gid, "calibrated")
+    if cal_job is not None:
+        cal_meta = _read_json(cal_job / "cv.meta.json")
+        rel = f"results/tcad/moscap2d/{name}/calibrated/{gid}"
+        lines += [
+            (
+                f"The committed 2D cell at the calibrated values ({{repo}}`{rel}`): "
+                f"{cal_meta['node_count']} nodes, mesh sha256 `{cal_meta['mesh_sha256']}`."
+            ),
+            "",
+        ]
     if job is None:
         lines += [
             (
@@ -843,59 +1000,67 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
         ]
         (ddir / f"{gid}_2d.svg").write_bytes(_two_d_svg(d, job))
     lines += ["### Mesh picture", "", _NO_MESH, ""]
-    if job is None:
+    if job is None and cal_job is None:
         lines += ["No 2D result exists for this geometry, so there is no mesh either.", ""]
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
 
 
 def _param_rows(d: _Device) -> list[str]:
     cal = d.cal
-    rows = [
-        (
-            "| Parameter | Start | Fitted | Bounds [lo, hi] | Bound hit | Tag | Start from | "
-            "Bounds from |"
-        ),
-        "|---|---|---|---|---|---|---|---|",
-    ]
+    values, bounds, kinds = [], [], []
     for p in cal["params"]:
         par = d.proc.params[p]
         lo, hi = cal["bounds"][p]
         hit = cal["bound_hits"].get(p, "no")
-        rows.append(
-            f"| `{p}` | {fmt(cal['start'][p], 6)} {par.unit} | {fmt(cal['values'][p], 6)} "
-            f"{par.unit} | {_interval(lo, hi)} | {hit} | `{par.provenance}` | "
-            f"{par.start_kind} | {' / '.join(par.bounds_kind or ())} |"
+        lo_kind, hi_kind = par.bounds_kind or ("not recorded", "not recorded")
+        key = f"`{p}`"
+        values.append(
+            [key, unit_text(par.unit), num(cal["start"][p], 6), num(cal["values"][p], 6), hit]
         )
-    return rows
+        bounds.append([key, num(lo), num(hi), f"`{par.provenance}`"])
+        kinds.append([key, par.start_kind or "not recorded", lo_kind, hi_kind])
+    return [
+        *_table(["Parameter", "Unit", "Start", "Fitted", "Bound hit"], values),
+        "",
+        "The bounds, in the unit of the table above, and the {term}`provenance tag`:",
+        "",
+        *_table(["Parameter", "Lower bound", "Upper bound", "Tag"], bounds),
+        "",
+        "Where the start value and each bound come from:",
+        "",
+        *_table(["Parameter", "Start from", "Lower bound from", "Upper bound from"], kinds),
+    ]
 
 
 def _bookkeeping_rows(d: _Device) -> list[str]:
-    rows = ["| Parameter | Value | Tag | Source |", "|---|---|---|---|"]
+    """The bookkeeping values as a table, then their sources as a list below it (a parameter
+    can have several sources, and a cell holds one value)."""
+    rows = []
+    sources = ["", "Sources:", ""]
     for n, p in d.proc.params.items():
         if p.role != "reference-bookkeeping":
             continue
-        srcs = ", ".join(_source_text(s) for s in p.source)
-        rows.append(f"| `{n}` | {fmt(p.value, 6)} {p.unit} | `{p.provenance}` | {srcs} |")
-    return rows
+        rows.append([f"`{n}`", num(p.value, 6), unit_text(p.unit), f"`{p.provenance}`"])
+        sources.append(f"- `{n}`: " + "; ".join(_source_text(s) for s in p.source))
+    return _table(["Parameter", "Value", "Unit", "Tag"], rows) + sources
 
 
 def _meshconv_rows(report: dict) -> list[str]:
+    """The levels of one mesh-convergence report; the selected level is named below the table."""
     sel = report["selected"]["level"]
     two_d = report["dim"] == 2
-    head = "| Level | Scale | Nodes | max change to next finer |"
-    rule = "|---|---|---|---|"
+    header = ["Level", "Scale", "Nodes", "max change to next finer"]
     if two_d:
-        head += " max \\|2D/1D - 1\\| |"
-        rule += "---|"
-    rows = [head + " Selected |", rule + "---|"]
+        header.append("max \\|2D/1D - 1\\|")
+    rows = []
     for i, lv in enumerate(report["levels"]):
-        mc = "finest" if lv["max_rel_change"] is None else fmt(lv["max_rel_change"], 3)
-        row = f"| {i} | {fmt(lv['scale'])} | {lv['node_count']} | {mc} |"
+        mc = "finest" if lv["max_rel_change"] is None else num(lv["max_rel_change"], 3)
+        row = [str(i), num(lv["scale"]), str(lv["node_count"]), mc]
         if two_d:
             a = lv["agreement_1d"]
-            row += f" {'n/a' if a is None else fmt(a, 3)} |"
-        rows.append(row + f" {'yes' if i == sel else ''} |")
-    return rows
+            row.append("not applicable" if a is None else num(a, 3))
+        rows.append(row)
+    return [*_table(header, rows), "", f"Level {sel} is the selected mesh."]
 
 
 def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
@@ -946,10 +1111,10 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         (
             f"{{term}}`Cox` check: the oxide's own Cox is {fmt(cox['c_ox_ff_per_um2'])} "
-            f"fF/um^2 and the 1D C per area is {fmt(cox['c_per_area_acc_ff_per_um2'])} "
-            f"(accumulation) and {fmt(cox['c_per_area_inv_ff_per_um2'])} fF/um^2 (inversion), "
+            f"fF/µm² and the 1D C per area is {fmt(cox['c_per_area_acc_ff_per_um2'])} "
+            f"(accumulation) and {fmt(cox['c_per_area_inv_ff_per_um2'])} fF/µm² (inversion), "
             f"against the public spec {_interval(cox['spec']['min'], cox['spec']['max'])} "
-            f"fF/um^2 ([{cox['spec']['section']}]({cox['spec']['source_url']})): "
+            f"fF/µm² ([{cox['spec']['section']}]({cox['spec']['source_url']})): "
             f"{'inside' if cox['inside'] else 'OUTSIDE'}."
         ),
         "",
@@ -966,30 +1131,36 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         "## Geometries",
         "",
-        (
-            "| W/L (um) | Role | Accumulation | Inversion | ΔV_dep | ΔV_inv | Depletion | "
-            "Verdict (1D) | 2D (calibrated) |"
-        ),
-        "|---|---|---|---|---|---|---|---|---|",
+        _GEOMETRY_ID_TEXT,
+        "",
     ]
+    verdicts, errors, shifts = [], [], []
     for g in d.device.geometries:
         gid = geometry_id(g)
         rec, _ = d.comparison(gid)
         m = rec["metrics"]
-        lines.append(
-            f"| {{doc}}`{fmt(g.w_um)}/{fmt(g.l_um)} <{gid}>` | {g.role} | "
-            f"{_pct(m['plateau_acc_max_rel'])} | {_pct(m['plateau_inv_max_rel'])} | "
-            f"{_mv(m['dv_dep_v'])} | {_mv(m['dv_inv_v'])} | {_pct(m['depletion_max_rel'])} | "
-            f"{rec['verdict']} | {_two_d_status(d, gid)} |"
-        )
+        key = f"{{doc}}`{gid} <{gid}>`"
+        verdicts.append([key, g.role, rec["verdict"], _two_d_status(d, gid)])
+        errors.append(
+            [key, _pct_num(m["plateau_acc_max_rel"]), _pct_num(m["plateau_inv_max_rel"]),
+             _pct_num(m["depletion_max_rel"])]
+        )  # fmt: skip
+        shifts.append([key, _mv_num(m["dv_dep_v"]), _mv_num(m["dv_inv_v"])])
     lines += [
+        *_table(["Geometry", "Role", "Verdict (1D)", "2D (calibrated)"], verdicts),
+        "",
+        f"Validation reasons for the 2D column are in {{repo}}`results/tcad/validation/{name}.json`.",
+        "",
+        "The largest relative error max |ΔCgg|/Cgg in each region:",
+        "",
+        *_table(["Geometry", "Accumulation (%)", "Inversion (%)", "Depletion (%)"], errors),
         "",
         (
-            "The plateau and depletion columns are max |ΔCgg|/Cgg; ΔV is the shift of the "
-            "TCAD mid-capacitance crossing from the SPICE one "
-            "({ref}`the agreement metric <cv-agreement-metric>`). Validation reasons for the 2D "
-            f"column are in {{repo}}`results/tcad/validation/{name}.json`."
+            "ΔV is the shift of the TCAD mid-capacitance crossing from the SPICE one "
+            "({ref}`the agreement metric <cv-agreement-metric>`):"
         ),
+        "",
+        *_table(["Geometry", "ΔV_dep (mV)", "ΔV_inv (mV)"], shifts),
         "",
         "## Mesh convergence",
         "",
@@ -1014,11 +1185,17 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         ]
         for ex in report.get("excluded_levels", []):
             lines += [
-                f"Level {ex['level']} is not run. The reason recorded in the report:",
+                (
+                    f"Level {ex['level']} is not run: it is as large as the 2D cell at L = 10 µm, "
+                    "whose equilibrium solve fails. Level "
+                    f"{ex['level']} has not been attempted "
+                    "([issue #58](https://github.com/mithro/gf180-tcad/issues/58))."
+                ),
                 "",
-                "```text",
-                ex["reason"],
-                "```",
+                (
+                    "Its node counts and estimated run times are on "
+                    "{ref}`the mesh-convergence page <mesh-convergence-2d>`."
+                ),
                 "",
             ]
         if dim == "2d":
@@ -1049,27 +1226,36 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
             "validation at the {term}`held-out geometries <held-out geometry>` "
             f"({{doc}}`{CV_DOC}`). Every verdict is read from "
             "{repo}`results/tcad/calibration` and {repo}`results/tcad/validation`, which were "
-            "computed in the {term}`dev-HEAD TCAD image`; these pages only render them. How the "
-            "trees were made "
-            "and which were restamped: {ref}`tcad-provenance`. " + _VERDICT_TERMS
+            "computed in the {term}`dev-HEAD TCAD image`; these pages only render them. How "
+            "each results folder was made: {ref}`tcad-provenance`. " + _VERDICT_TERMS
         ),
         "",
         "## Verdicts (1D)",
         "",
-        "| Device | Geometry | Role | Verdict (1D) | 2D (calibrated) |",
-        "|---|---|---|---|---|",
+        _GEOMETRY_ID_TEXT,
+        "",
     ]
+    rows = []
     for d in devices:
         name = d.device.name
         for g in d.device.geometries:
             gid = geometry_id(g)
             rec, _ = d.comparison(gid)
-            lines.append(
-                f"| {{term}}`{name}` | {{doc}}`{fmt(g.w_um)}/{fmt(g.l_um)} <{name}/{gid}>` | "
-                f"{g.role} | {rec['verdict']} | {_two_d_status(d, gid)} |"
-            )
+            rows.append(
+                [f"{{term}}`{name}`", f"{{doc}}`{gid} <{name}/{gid}>`", g.role, rec["verdict"],
+                 _two_d_status(d, gid)]
+            )  # fmt: skip
+    lines += _table(["Device", "Geometry", "Role", "Verdict (1D)", "2D (calibrated)"], rows)
     statuses = {_two_d_status(d, geometry_id(g)) for d in devices for g in d.device.geometries}
-    if statuses == {"not run"}:
+    if _TWO_D_PENDING in statuses:
+        two_d_text = (
+            "The 2D column is the calibrated 2D validation of each geometry, read from "
+            f'{{repo}}`results/tcad/validation`. "{_TWO_D_PENDING}": the calibrated 2D cell is '
+            "committed under {repo}`results/tcad/moscap2d`; the validation file does not list "
+            f"it ({_ISSUE_35}). Its comparison is in "
+            "{ref}`the validation section <cv-agreement-validation>`."
+        )
+    elif statuses == {"not run"}:
         two_d_text = (
             "The 2D column is the calibrated 2D validation: not run for any geometry, since no "
             "calibrated 2D result is committed ([issue "

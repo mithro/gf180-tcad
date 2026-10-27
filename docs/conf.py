@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Sphinx configuration for the gf180-tcad documentation."""
 
+import fcntl
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -22,6 +24,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "repo_roles",
     "api_links",
+    "table_cells",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
@@ -31,6 +34,8 @@ root_doc = "index"
 exclude_patterns = ["_build", "_ext", "superpowers", "superpowers/**"]
 
 html_theme = "furo"
+# docs/_static/narrow.css: tables at phone width (docs/_ext/table_cells.py adds it).
+html_static_path = ["_static"]
 html_title = "gf180-tcad"
 # Keep build dates out of pages so two builds are identical.
 html_last_updated_fmt = None
@@ -56,6 +61,10 @@ _TOOLS = {
     "KLayout": ("KLayout", "https://www.klayout.de/"),
     "meshwell": ("meshwell", "https://github.com/simbilod/meshwell"),
     "gmsh": ("gmsh", "https://gmsh.info/"),
+    "output_cache": (
+        "gf180-tcad-output-cache",
+        "https://github.com/mithro/gf180-tcad-output-cache",
+    ),
     "gplugins": ("gplugins", "https://github.com/gdsfactory/gplugins"),
     "gplugins_fork": ("the gplugins fork", "https://github.com/mithro/gplugins"),
     "meshwell_fork": ("the meshwell fork", "https://github.com/mithro/meshwell"),
@@ -197,16 +206,54 @@ linkcheck_rate_limit_timeout = 120.0
 sys.path.insert(0, str(_root / "src"))
 
 _generated = Path(__file__).parent / "_generated"
+_lock_path = Path(__file__).parent / ".generated.lock"
+_lock_file = None
+
+
+def _acquire_lock():
+    """Take the exclusive lock of this checkout's docs/_generated; held until the build ends."""
+    global _lock_file
+    if _lock_file is None:
+        _lock_file = _lock_path.open("a+b")
+        fcntl.flock(_lock_file, fcntl.LOCK_EX)  # blocks while another build of this checkout runs
+
+
+def _release_lock(app, exception=None):
+    """build-finished: let the next build of this checkout start."""
+    global _lock_file
+    if _lock_file is not None:
+        _lock_file.close()  # closing drops the flock
+        _lock_file = None
 
 
 def _generate_results(app):
-    """Regenerate docs/_generated (committed files in, only docs/_generated out)."""
+    """Regenerate docs/_generated (committed files in, only docs/_generated out).
+
+    Concurrent builds of one checkout serialise on an exclusive lock held from here to
+    build-finished (the whole read phase), and the tree is generated into a temporary sibling and
+    swapped in, so a crashed build never leaves a half-written docs/_generated (issue #40).
+    """
     from gf180tcad import docgen
 
-    shutil.rmtree(_generated, ignore_errors=True)  # also drops stale pages from older builds
-    _generated.mkdir()
-    docgen.generate(_generated)
+    _acquire_lock()
+    # Leftovers of crashed builds; safe to remove because the lock is held.
+    for stale in _generated.parent.glob("_generated.*"):
+        shutil.rmtree(stale, ignore_errors=True)
+    tmp = _generated.with_name(f"_generated.tmp-{os.getpid()}")
+    try:
+        tmp.mkdir()
+        docgen.generate(tmp)
+        old = _generated.with_name(f"_generated.old-{os.getpid()}")
+        if _generated.exists():  # also drops stale pages from older builds
+            os.replace(_generated, old)
+        os.replace(tmp, _generated)
+        shutil.rmtree(old, ignore_errors=True)
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        _release_lock(app)
+        raise
 
 
 def setup(app):
     app.connect("builder-inited", _generate_results)
+    app.connect("build-finished", _release_lock)

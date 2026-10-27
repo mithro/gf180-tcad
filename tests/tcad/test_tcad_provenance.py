@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-"""TCAD provenance: TCAD_GENERATOR_MODULES and every committed tree root's provenance.json.
+"""TCAD provenance: TCAD_GENERATORS and every committed tree root's provenance.json.
 
-As for the SPICE reference (tests/test_reference.py, tests/test_results_provenance.py), the
-hashed module list is tied to the import graph of the TCAD entry points, and each committed
-``results/tcad/<tree>/provenance.json`` must equal what the generator would write now. These
-need the plugin submodule checked out (``git submodule update --init``).
+As for the SPICE reference (tests/test_reference.py, tests/test_results_provenance.py), each TCAD
+entry point's hashed module list is tied to its own import graph (issue #34: one list per entry
+point, so a change to code a tree's writer never imports leaves that tree's hash alone), each
+committed tree root is tied to the entry point that writes it (TREE_GENERATORS), and each
+committed ``results/tcad/<tree>/provenance.json`` must equal what that entry point would write
+now. These need the plugin submodule checked out (``git submodule update --init``).
 """
 
 import ast
@@ -24,7 +26,17 @@ REPO = Path(__file__).resolve().parents[2]
 RESULTS = REPO / "results"
 TCAD_RESULTS = RESULTS / "tcad"
 # The TCAD entry points.
-ROOTS = ("gf180tcad.tcad.__main__", "gf180tcad.calibrate.__main__")
+TCAD_MAIN = "gf180tcad.tcad.__main__"
+CALIBRATE_MAIN = "gf180tcad.calibrate.__main__"
+ROOTS = (TCAD_MAIN, CALIBRATE_MAIN)
+# The entry point that writes each tree root (docs/reproduce/index.md, tcad-provenance).
+WRITERS = {
+    "moscap1d": TCAD_MAIN,
+    "moscap2d": TCAD_MAIN,
+    "meshconv": TCAD_MAIN,
+    "calibration": CALIBRATE_MAIN,
+    "validation": CALIBRATE_MAIN,
+}
 # The tree roots of the plan's results layout (Global Constraints, "Result files").
 TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation")
 REGENERATE = (
@@ -39,7 +51,8 @@ REGENERATE = (
     "calibration: `gf180tcad.calibrate run --device <device> --out results/tcad/calibration`; "
     "validation (after the calibration is committed): `gf180tcad.calibrate validate --device "
     "<device> --out results/tcad/validation`; then `make manifest`. A tree whose data are not "
-    "regenerated and only restamped is recorded on docs/reproduce/index.md (tcad-provenance)"
+    "regenerated is restamped with `uv run --locked python tools/restamp-tcad-provenance "
+    "results/tcad/<tree>` and recorded on docs/reproduce/index.md (tcad-provenance)"
 )
 
 
@@ -79,34 +92,66 @@ def _ast_import_closure(roots: tuple[str, ...]) -> set[str]:
     return seen
 
 
-def test_tcad_generator_modules_match_the_import_graph():
-    graph = _ast_import_closure(ROOTS)
-    listed = set(tcad.TCAD_GENERATOR_MODULES)
-    assert not graph - listed, (
-        f"imported by the TCAD entry points but not hashed: {sorted(graph - listed)}"
-    )
-    assert not listed - graph, f"hashed but not imported: {sorted(listed - graph)}"
+def test_tcad_generators_are_the_two_entry_points():
+    assert tuple(tcad.TCAD_GENERATORS) == ROOTS
+    assert (tcad.TCAD_MAIN, tcad.CALIBRATE_MAIN) == ROOTS
+    for entry, modules in tcad.TCAD_GENERATORS.items():
+        assert entry in modules
+        assert list(modules) == sorted(set(modules)), entry
 
 
-def test_tcad_generator_modules_match_what_python_loads():
+def test_tree_generators_tie_each_tree_to_its_writer():
+    assert tcad.TREE_GENERATORS == WRITERS
+    assert set(tcad.TREE_GENERATORS) == set(TREE_ROOTS)
+
+
+@pytest.mark.parametrize("entry", ROOTS)
+def test_tcad_generator_modules_match_the_import_graph(entry):
+    graph = _ast_import_closure((entry,))
+    listed = set(tcad.TCAD_GENERATORS[entry])
+    assert not graph - listed, f"imported by {entry} but not hashed: {sorted(graph - listed)}"
+    assert not listed - graph, f"hashed for {entry} but not imported: {sorted(listed - graph)}"
+
+
+@pytest.mark.parametrize("entry", ROOTS)
+def test_tcad_generator_modules_cover_what_python_loads(entry):
+    """Importing the entry point loads only listed modules. The list can hold more: imports inside
+    functions count too (the static closure of the test above)."""
     code = (
-        "import sys, gf180tcad.tcad.__main__, gf180tcad.calibrate.__main__; "
+        f"import sys, {entry}; "
         "print(' '.join(sorted(m for m in sys.modules if m.split('.')[0] == 'gf180tcad')))"
     )
     res = subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=REPO
     )
-    assert set(res.stdout.split()) == set(tcad.TCAD_GENERATOR_MODULES)
+    loaded = set(res.stdout.split())
+    assert entry in loaded
+    assert not loaded - set(tcad.TCAD_GENERATORS[entry]), sorted(
+        loaded - set(tcad.TCAD_GENERATORS[entry])
+    )
+
+
+def test_the_tcad_entry_point_does_not_hash_the_calibration_code():
+    """The point of issue #34: the MOS capacitor and mesh-convergence trees do not depend on the
+    calibration-only modules, and the calibration trees do not depend on the CLI of the jobs."""
+    tcad_main = set(tcad.TCAD_GENERATORS[TCAD_MAIN])
+    calibrate_main = set(tcad.TCAD_GENERATORS[CALIBRATE_MAIN])
+    assert {"gf180tcad.calibrate", "gf180tcad.calibrate.cv", "gf180tcad.specwindow"} <= (
+        calibrate_main - tcad_main
+    )
+    assert TCAD_MAIN not in calibrate_main and CALIBRATE_MAIN not in tcad_main
 
 
 def test_spice_provenance_untouched_by_tcad():
     """No TCAD module is a SPICE generator module, and the reverse holds for the TCAD-only ones."""
-    tcad_only = {m for m in tcad.TCAD_GENERATOR_MODULES if m.startswith("gf180tcad.tcad")}
+    every = {m for modules in tcad.TCAD_GENERATORS.values() for m in modules}
+    tcad_only = {m for m in every if m.startswith("gf180tcad.tcad")}
     assert not tcad_only & set(reference.GENERATOR_MODULES)
 
 
-def test_generator_files_cover_plugin_process_and_sandbox():
-    files = tcad.generator_files()
+@pytest.mark.parametrize("entry", ROOTS)
+def test_generator_files_cover_plugin_process_and_sandbox(entry):
+    files = tcad.generator_files(entry)
     assert "tools/sandbox-run" in files
     assert "data/process/nfet_05v0.toml" in files and "data/process/pfet_05v0.toml" in files
     assert "third_party/gplugins/gplugins/devsim/cv.py" in files
@@ -114,11 +159,60 @@ def test_generator_files_cover_plugin_process_and_sandbox():
     assert "src/gf180tcad/tcad/moscap1d.py" in files
     assert files == sorted(files, key=lambda s: s.encode())
     assert not any("__pycache__" in f for f in files)
+    modules = {tcad.module_relpath(m).as_posix() for m in tcad.TCAD_GENERATORS[entry]}
+    assert {f for f in files if f.startswith("src/")} == modules
+
+
+def test_generator_files_per_entry_point():
+    tcad_files = set(tcad.generator_files(TCAD_MAIN))
+    calibrate_files = set(tcad.generator_files(CALIBRATE_MAIN))
+    assert "src/gf180tcad/tcad/__main__.py" in tcad_files - calibrate_files
+    assert "src/gf180tcad/calibrate/cv.py" in calibrate_files - tcad_files
+    assert "src/gf180tcad/specwindow.py" in calibrate_files - tcad_files
+    # the shared non-module inputs are the same for both
+    shared = {f for f in tcad_files if not f.startswith("src/")}
+    assert shared == {f for f in calibrate_files if not f.startswith("src/")}
+    with pytest.raises(KeyError):
+        tcad.generator_files("gf180tcad.__main__")
+
+
+def test_generator_sha256_per_entry_point(monkeypatch):
+    """Deterministic, different per entry point, and a change to a calibration-only file changes
+    the calibration entry point's hash only (a change to a shared file changes both)."""
+    before = {e: tcad.generator_sha256(e) for e in ROOTS}
+    assert before == {e: tcad.generator_sha256(e) for e in ROOTS}
+    assert len(set(before.values())) == 2 and all(len(h) == 64 for h in before.values())
+    real = tcad._sha256
+
+    def changed(path):
+        return "0" * 64 if path.as_posix().endswith(target) else real(path)
+
+    monkeypatch.setattr(tcad, "_sha256", changed)
+    target = "src/gf180tcad/calibrate/cv.py"
+    assert tcad.generator_sha256(TCAD_MAIN) == before[TCAD_MAIN]
+    assert tcad.generator_sha256(CALIBRATE_MAIN) != before[CALIBRATE_MAIN]
+    target = "src/gf180tcad/tcad/__main__.py"
+    assert tcad.generator_sha256(TCAD_MAIN) != before[TCAD_MAIN]
+    assert tcad.generator_sha256(CALIBRATE_MAIN) == before[CALIBRATE_MAIN]
+    for target in ("tools/sandbox-run", "data/process/nfet_05v0.toml", "src/gf180tcad/io.py"):
+        for e in ROOTS:
+            assert tcad.generator_sha256(e) != before[e], (target, e)
+
+
+@pytest.mark.parametrize("entry", ROOTS)
+def test_provenance_names_its_generator(entry):
+    prov = tcad.provenance(images={"moscap1d": "dev"}, generator=entry)
+    assert prov["generator"] == entry
+    assert prov["generator_sha256"] == tcad.generator_sha256(entry)
+    with pytest.raises(KeyError):
+        tcad.provenance(images={"moscap1d": "dev"}, generator="gf180tcad.__main__")
+    with pytest.raises(TypeError):
+        tcad.provenance(images={"moscap1d": "dev"})  # the generator is never implied
 
 
 def test_provenance_contents():
-    prov = tcad.provenance(images={"moscap1d": "dev", "moscap2d": "stable"})
-    assert set(prov) == {"generator_sha256", "gplugins_commit", "images"}
+    prov = tcad.provenance(images={"moscap1d": "dev", "moscap2d": "stable"}, generator=TCAD_MAIN)
+    assert set(prov) == {"generator", "generator_sha256", "gplugins_commit", "images"}
     assert prov["images"] == {
         "moscap1d": {
             "name": "dev",
@@ -148,7 +242,7 @@ def test_provenance_records_calibration(tmp_path, monkeypatch):
     calib = tmp_path / "nfet_05v0.json"
     calibration.write(calib, "nfet_05v0", values)
     monkeypatch.setattr(tcad, "calibration_file", lambda d, root=None: tmp_path / f"{d}.json")
-    prov = tcad.provenance(("nfet_05v0",), images={"moscap1d": "dev"})
+    prov = tcad.provenance(("nfet_05v0",), images={"moscap1d": "dev"}, generator=CALIBRATE_MAIN)
     assert prov["calibration"] == {
         "nfet_05v0": {
             "file_sha256": hashlib.sha256(calib.read_bytes()).hexdigest(),
@@ -254,8 +348,14 @@ def test_committed_results_come_from_the_results_image():
 def test_committed_tcad_provenance_current():
     for root in _committed_tree_roots():
         committed = json.loads((root / PROVENANCE_NAME).read_bytes())
+        assert committed.get("generator") == WRITERS[root.name], (
+            f"{root.relative_to(REPO)}/provenance.json names generator "
+            f"{committed.get('generator')!r}, not its writer {WRITERS[root.name]}; {REGENERATE}"
+        )
         current = tcad.tree_provenance(
-            root, {k: tcad.RESULTS_IMAGE[k] for k in _result_kinds(root)}
+            root,
+            {k: tcad.RESULTS_IMAGE[k] for k in _result_kinds(root)},
+            generator=WRITERS[root.name],
         )
         assert committed == current, (
             f"{root.relative_to(REPO)}/provenance.json differs from what the generator would "

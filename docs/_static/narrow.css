@@ -1,0 +1,22 @@
+/* Narrow screens (spec §10.3: no sideways scroll at 400 px, no number broken across lines).
+   Loaded by docs/_ext/table_cells.py, which marks one-number cells with the class "num". */
+@media (max-width: 480px) {
+  article table.docutils {
+    font-size: 0.75rem;
+  }
+  article table.docutils th,
+  article table.docutils td {
+    padding: 0.25rem 0.3rem;
+  }
+  article table.docutils p {
+    margin: 0;
+  }
+  article table.docutils td.num {
+    white-space: nowrap;
+  }
+  article table.docutils code.literal {
+    font-size: 0.95em;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+}

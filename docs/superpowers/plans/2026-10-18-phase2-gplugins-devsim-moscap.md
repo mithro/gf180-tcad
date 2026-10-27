@@ -39,7 +39,7 @@ A second independent review checked the revised plan against the code on main, t
 - **`dv_fb_v` is a lumped flat-band offset**, applied as a rigid gate-bias shift (exact in 1D). It is not described as fixed oxide charge. Its ±0.2 V is a project choice.
 - **Results layout:** `results/tcad/moscap{1d,2d}/<device>/{start,calibrated}/`. TCAD jobs have 3 parts. There is one `provenance.json` per tree root. The cross-check reruns exactly the committed configuration, and `verify_subset` gets `full=` explicitly.
 - **Every non-gate contact gets its own voltage source** in `sweep_cv`. The `tie` argument is gone. Charge conservation sums Cgx over every non-gate contact. The `tie` mechanics test moves to a minimal `create_2d_mesh` device in the fork.
-- **TCAD provenance is structural.** `TCAD_GENERATOR_MODULES` has an import-graph test (Task 9b). The plugin commit comes from `git -C third_party/gplugins rev-parse HEAD` with a clean-tree check.
+- **TCAD provenance is structural.** `TCAD_GENERATOR_MODULES` has an import-graph test (Task 9b). (Superseded by issue #34, PR #50: one module list per entry point, `TCAD_GENERATORS`, and a per-tree hash; see docs/reproduce/index.md, tcad-provenance.) The plugin commit comes from `git -C third_party/gplugins rev-parse HEAD` with a clean-tree check.
 - Smaller fixes:
   - `MeshSpec` gains `h_poly_nm`;
   - the accumulation series test uses a metal gate;
@@ -144,11 +144,11 @@ A second independent review checked the revised plan against the code on main, t
     - the `docker/TCAD_IMAGE` reference;
     - the contents of `docker/tcad/versions.json`;
     - `gplugins_commit`: taken on the host with `git -C third_party/gplugins rev-parse HEAD`, because the read-only mount cannot run git. Writing raises unless `git -C third_party/gplugins status --porcelain` is empty and the commit equals the gitlink in `git ls-tree HEAD third_party/gplugins`;
-    - `generator_sha256`, over the files of `gf180tcad.tcad.TCAD_GENERATOR_MODULES`, `tools/sandbox-run`, `third_party/gplugins/gplugins/devsim/**` and `data/process/*.toml`;
+    - `generator_sha256`, over the files of `gf180tcad.tcad.TCAD_GENERATOR_MODULES`, `tools/sandbox-run`, `third_party/gplugins/gplugins/devsim/**` and `data/process/*.toml`; (Superseded by issue #34, PR #50: one module list per entry point, `TCAD_GENERATORS`, and a per-tree hash; see docs/reproduce/index.md, tcad-provenance.)
     - for trees computed with calibrated values, the `param_sha256` and sha256 of `results/tcad/calibration/<device>.json`.
 
     It deliberately holds no date.
-  - **`TCAD_GENERATOR_MODULES`** (in `gf180tcad/tcad/__init__.py`, Task 9b) lists every gf180tcad module that the TCAD entry points import: `gf180tcad.tcad.__main__` and `gf180tcad.calibrate.__main__`. The list includes the shared modules (`gf180tcad.io`, `.devices`, `.sandbox`, …).
+  - **`TCAD_GENERATOR_MODULES`** (Superseded by issue #34, PR #50: one module list per entry point, `TCAD_GENERATORS`, and a per-tree hash; see docs/reproduce/index.md, tcad-provenance.) (in `gf180tcad/tcad/__init__.py`, Task 9b) lists every gf180tcad module that the TCAD entry points import: `gf180tcad.tcad.__main__` and `gf180tcad.calibrate.__main__`. The list includes the shared modules (`gf180tcad.io`, `.devices`, `.sandbox`, …).
     - `tests/tcad/test_tcad_provenance.py::test_tcad_generator_modules_match_the_import_graph` ties the list to the import graph, as the SPICE test does. Every later task that adds a TCAD module extends the list in the same PR.
     - `tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` checks that every committed tree root's `provenance.json` matches the current one, as `tests/test_results_provenance.py` does for SPICE.
 - **Public data only.** Every process number cites a public source and carries a provenance tag: `pdk-doc`, `spice-card`, `literature` or `calibrated`. No NDA material.
@@ -165,6 +165,7 @@ A second independent review checked the revised plan against the code on main, t
 
 ## Review Focus
 
+- **Docs updated in the same PR (2026-10-27).** Every review checks that the PR updated the status pages it affects (README Status, the `docs/index.md` Status, this plan's checkboxes, the limitations index, the affected results and comparison pages) at the same time; a PR whose docs lag is "needs fixes" (CONTRIBUTING.md, PR checklist).
 - **Quasi-static vs high-frequency C–V.** SPICE Cgg (BSIM4 capmod=2) is quasi-static and recovers to about Cox in inversion. A MOSCAP solved with AC at 1 MHz and only a body contact gives the high-frequency curve instead. A comparison must use matching physics: quasi-static/equilibrium in 1D, or, in 2D, S/D contacts held at the body potential by their own sources (Task 8). A reviewer should reject any mismatched pairing.
 - **Units.** DEVSIM works in cm (charge in C/cm², capacitance in F/cm²). gdsfactory, the SPICE data and the docs use µm and fF. Every conversion needs a unit test with a hand-computed value, for example Cox(15.2 nm) = 2.272 fF/µm², or 224.7 fF for W10/L10 with DLC = 54 nm.
 - **pfet MOSCAP.** The pfet MOSCAP has:
@@ -178,6 +179,8 @@ A second independent review checked the revised plan against the code on main, t
 ---
 
 ### Task 1: TCAD image (Python 3.13 stack)
+
+> **Done** in PR #17 (merged 2026-10-18).
 
 **Context.**
 - meshwell ≥ 2.4 requires Python ≥ 3.13, and the base image has 3.12.3. The base venv has no pip, and the base image has no uv.
@@ -214,7 +217,7 @@ A second independent review checked the revised plan against the code on main, t
   - `docker/tcad/build` copies `docker/base/build`. `NAME` is `ghcr.io/mithro/gf180-tcad-tcad`. `INPUTS` are the Dockerfile, the three `.lock` files and `docker/IMAGE`; the base digest is the `FROM` (via `ARG BASE_IMAGE`), so it must date the build.
 - Produces: `sandbox.run(cmd, out_dir=..., image=TCAD)` and `tools/sandbox-run --image "$(cat docker/TCAD_IMAGE)"` work unchanged (`sandbox.py:148-180`, `sandbox-run:20`).
 
-- [ ] **Step 1:** Write the tests first.
+- [x] **Step 1:** Write the tests first.
   - These are sandbox-marked and run in the TCAD image:
     - `test_tcad_versions_json_matches_image`: the probe output equals `docker/tcad/versions.json` byte for byte.
     - `test_tcad_imports`: `devsim`, `meshwell.orchestrator`, `gmsh`, `gdsfactory` and `gf180mcu` all import. `gf.get_active_pdk()` does not raise, and its name is gf180mcu.
@@ -230,19 +233,21 @@ A second independent review checked the revised plan against the code on main, t
     - `test_tcad_numpy_matches_base`: the numpy pin in `docker/tcad/requirements.lock` equals the one in `docker/base/requirements.lock`.
 
   Run them: they FAIL because there is no image.
-- [ ] **Step 2:** Build `FROM` the base image by digest.
+- [x] **Step 2:** Build `FROM` the base image by digest.
   - Install uv from the hashed `build-requirements.lock` with `/usr/bin/python3 -m pip --require-hashes` into a throwaway build venv.
   - Install uv-managed CPython `3.13.<patch>`, pinned exactly. uv verifies the download against the sha256 it embeds for that pinned version.
   - Create the venv. Install `requirements.lock`, then `gf180mcu.lock --no-deps`, with `--require-hashes`, no bytecode and `test -z "$(find … -name '*.pyc')"`, as `docker/base/Dockerfile` does.
   - Use the same `SOURCE_DATE_EPOCH` and `rewrite-timestamp` as `docker/base/build`.
-- [ ] **Step 3:** Two local `--no-cache` builds must give the same config digest. Commit `IMAGE_ID`, then push via CI and commit `docker/TCAD_IMAGE`.
+- [x] **Step 3:** Two local `--no-cache` builds must give the same config digest. Commit `IMAGE_ID`, then push via CI and commit `docker/TCAD_IMAGE`.
   - Generalise `image.yml` into a matrix over `{base, tcad}`. Each image has its own build, IMAGE_ID, pinned-manifest and versions-probe checks, and its own reproducible rebuild job.
   - The tcad entry pulls the pinned base by digest; the package is public, so no login is needed on schedule runs.
   - New ghcr packages are private by default. After the first push, set `ghcr.io/mithro/gf180-tcad-tcad` to public (`gh api --method PATCH` on the package's visibility, or the package settings page), and record the step in `docs/reproduce/image.md`. The fork CI and the GitHub cross-check pull it without credentials. A test-free check in the PR: an anonymous `docker pull` of the digest succeeds.
   - If a future PR changes the base, `docker/IMAGE` is updated first, and the TCAD image and its results are rebuilt in a follow-up PR. Document this in `docs/reproduce/image.md`.
-- [ ] **Step 4:** Run the tests: they PASS. Then commit, open the PR, review and merge.
+- [x] **Step 4:** Run the tests: they PASS. Then commit, open the PR, review and merge.
 
 ### Task 2: Fork CI hygiene and submodule wiring
+
+> **Done** in PR #19 (merged 2026-10-18), with the fork's CI hygiene in mithro/gplugins#1: submodule bump 1 of 3.
 
 **Context.**
 - Actions are already enabled on `mithro/gplugins`.
@@ -270,16 +275,18 @@ A second independent review checked the revised plan against the code on main, t
 - Produces: inside the TCAD image, `gplugins.__file__` starts with `/work/src/third_party/gplugins/`.
 - Produces: the jobs that need TCAD code check out submodules: `actions/checkout` with `submodules: true`, in the Task 13b crosscheck TCAD job. `make reproduce` documents `--recurse-submodules`. The existing lint-test and SPICE crosscheck jobs keep checking out without submodules.
 
-- [ ] **Step 1:** Fork branch `gf180/ci-hygiene`. List each workflow with what it does, in the PR description. Disable the unsafe ones. The remaining test workflow must go green on a PR inside the fork.
-- [ ] **Step 2:** In gf180-tcad, write `test_submodule.py` first.
+- [x] **Step 1:** Fork branch `gf180/ci-hygiene`. List each workflow with what it does, in the PR description. Disable the unsafe ones. The remaining test workflow must go green on a PR inside the fork.
+- [x] **Step 2:** In gf180-tcad, write `test_submodule.py` first.
   - `test_submodule_pinned_on_fork_main` (not sandbox-marked; needs `gh`): `gh api repos/mithro/gplugins/compare/main...<sha>` reports `status` `behind` or `identical`. Take `<sha>` from `git ls-tree HEAD third_party/gplugins`.
   - `test_plugin_imports_from_submodule` (sandbox-marked, in the TCAD image): `gplugins.__file__` is under `/work/src/third_party/gplugins/`.
   - `test_ruff_excludes_third_party`: `third_party` is in `extend-exclude`.
 
   Run them: they FAIL. Add the submodule and the ruff exclude. Run them: they PASS.
-- [ ] **Step 3:** For both repos: commit, open the PR, review and merge. This is submodule bump 1 of 3.
+- [x] **Step 3:** For both repos: commit, open the PR, review and merge. This is submodule bump 1 of 3.
 
 ### Task 3: Prove the plugin once worked (committed, re-runnable record)
+
+> **Done** in PR #20 (merged 2026-10-18).
 
 **Context.** At gplugins v0.8.0 on Sept-2023 packages, `test_pin_waveguide` passed (276 s) and `DDComponent.ddsolver()` converged (5.8 s). `get_refined_mesh` has a `NameError` (`get_solver.py:359`). At v1.4.2 from its frozen lock, the import fails.
 
@@ -321,7 +328,7 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - `pin`: the contact currents at V = 0 and −1 V of the PINWaveguide ramp. `depletion_width_um` is defined as the width of the region where n and p are both < 1e-2·|NetDoping|, measured along the waveguide-centre cut.
   - `ddcomponent`: the region, contact and interface names; the node count; and the anode/cathode contact currents after `ramp_voltage` to 0.1 and 0.2 V. Task 5 re-verifies these, because this is the path that broke. The PIN path uses DEVSIM's own mesh and still works today.
 
-- [ ] **Step 1:** Write the tests first, sandbox-marked and allowed to be slow.
+- [x] **Step 1:** Write the tests first, sandbox-marked and allowed to be slow.
   - `test_v080_once_worked`:
     - `import`, `pin_test`, `ddcomponent_mesh`, `ddsolver` and `ramp` all pass;
     - `refine` fails with `NameError` (the `c`/`self` bug at `get_solver.py:359`);
@@ -330,10 +337,10 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - Not sandbox-marked: `test_history_json_has_no_timings_or_paths`.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement and run, then commit the JSON. This includes `--version v0.8.0 --mesh-scale 0.5` into `v0.8.0-mesh0p5.json`.
+- [x] **Step 2:** Implement and run, then commit the JSON. This includes `--version v0.8.0 --mesh-scale 0.5` into `v0.8.0-mesh0p5.json`.
   - Two local runs must agree byte for byte.
   - `results/plugin-history` is **not** part of the GitHub crosscheck, because the old stack has no cross-host bit-identity guarantee. The docs say so.
-- [ ] **Step 3:** Docs: `docs/limitations/plugin-history.md`, giving the plugin's history (commits `a019e5a`, `0ce7b30`, `017cede`) and the "once worked" evidence. It has a placeholder section, "Re-verified on latest", which Tasks 4 and 5 fill in (spec §3). Requires the docs-links infrastructure on main. Then commit, open the PR, review and merge.
+- [x] **Step 3:** Docs: `docs/limitations/plugin-history.md`, giving the plugin's history (commits `a019e5a`, `0ce7b30`, `017cede`) and the "once worked" evidence. It has a placeholder section, "Re-verified on latest", which Tasks 4 and 5 fill in (spec §3). Requires the docs-links infrastructure on main. Then commit, open the PR, review and merge.
 
 ### Fork-task conventions (Tasks 4–8, 15)
 
@@ -355,6 +362,8 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 
 ### Task 4 (fork): import and test `gplugins.devsim` on latest, no physics change
 
+> **Done** in mithro/gplugins#2; in gf180-tcad by the bump to fork main `400f842` and the "Re-verified on latest" numbers, PR #23 (merged 2026-10-18).
+
 **Context.** These latest-stack failures are documented:
 - `pydantic.Extra`/`Config` (`get_solver.py:24,142`);
 - `get_refined_mesh` uses `c` instead of `self` (`:359-371`);
@@ -373,15 +382,17 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 **Interfaces:**
 - Produces: `pytest gplugins/devsim -m "not tidy3d"` green in fork CI and inside the TCAD image.
 
-- [ ] **Step 1:** Add real assertions to the PIN test first, as `test_pin_currents_match_v080` and `test_pin_depletion_width_match_v080`. Copy the expected values as constants from gf180-tcad `results/plugin-history/v0.8.0.json` (biases 0 and −1 V; depletion width with the Task 3 definition), and cite the file and gf180-tcad commit in a comment. Run on latest: it FAILS on import.
-- [ ] **Step 2:** Fix only what's needed to import and run. Make no physics or default changes; the new material constants come in Task 6.
-- [ ] **Step 3:** Run it: it PASSES. The PIN numbers should match v0.8.0 within 1e-6 relative.
+- [x] **Step 1:** Add real assertions to the PIN test first, as `test_pin_currents_match_v080` and `test_pin_depletion_width_match_v080`. Copy the expected values as constants from gf180-tcad `results/plugin-history/v0.8.0.json` (biases 0 and −1 V; depletion width with the Task 3 definition), and cite the file and gf180-tcad commit in a comment. Run on latest: it FAILS on import.
+- [x] **Step 2:** Fix only what's needed to import and run. Make no physics or default changes; the new material constants come in Task 6.
+- [x] **Step 3:** Run it: it PASSES. The PIN numbers should match v0.8.0 within 1e-6 relative.
   - If DEVSIM 2.6.3 → 2.11.1 moves them more, do not loosen the threshold silently.
   - Record the measured difference and attribute it with evidence, e.g. by reading the same mesh into both DEVSIM versions.
   - Set the tolerance to the justified value in the test, with a comment.
-- [ ] **Step 4:** Commit, open the PR (fork), review and merge. Append the numbers to the gf180-tcad "Re-verified on latest" section (Task 3 page) in the after-Task-8 bump PR.
+- [x] **Step 4:** Commit, open the PR (fork), review and merge. Append the numbers to the gf180-tcad "Re-verified on latest" section (Task 3 page) in the after-Task-8 bump PR.
 
 ### Task 5 (fork): port `create_2Duz_simulation` meshing to meshwell 2.5
+
+> **Done** in mithro/gplugins#4; bumped in PR #23 (merged 2026-10-18).
 
 **Context.**
 - meshwell 2.5.2 provides `meshwell.orchestrator.generate_mesh(entities, dim, output_mesh, **kw)`. It is a thin pipeline: `cad(...)` → `ModelManager(point_tolerance=...)` → `ensure_initialized` → `load_occ_entities` → `meshwell.mesh.mesh(model=mm, ...)` (`orchestrator.py:185-266`).
@@ -401,7 +412,7 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - For the PN-slab example, it returns the same regions, contacts and interfaces as the v0.8.0 record.
 - The interface naming scheme `a___b`/`a___None` is kept and documented.
 
-- [ ] **Step 1:** Write `test_mesh.py` first.
+- [x] **Step 1:** Write `test_mesh.py` first.
   - `test_pn_slab_names_match_v080`: the PN-slab device has the v0.8.0 region, contact and interface names.
   - `test_pn_slab_currents_match_v080`: the anode/cathode currents after the ramp to 0.1 and 0.2 V match `ddcomponent` in `v0.8.0.json`. The tolerance comes from refining both meshers, taking the larger of the two self-differences:
     - v0.8.0: `v0.8.0.json` against `v0.8.0-mesh0p5.json` (Task 3, `--mesh-scale 0.5`);
@@ -410,10 +421,12 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - `test_gmsh_threads_one`: after `mesh_xsection`, `General.NumThreads == 1`, `Mesh.MaxNumThreads2D == 1`, `Geometry.OCCParallel == 0`, and `Mesh.RandomSeed` equals the pinned value. Run it once with `PYTHON_CPU_COUNT` unset (`env -u PYTHON_CPU_COUNT`), to prove the fork does not rely on the image ENV alone.
 
   Run them: they FAIL (`NotImplementedError`).
-- [ ] **Step 2:** Implement with meshwell 2.5.2. Run the tests: they PASS. Fix the two `meshwell.cad` `__main__` blocks.
-- [ ] **Step 3:** Commit, open the PR, review and merge. Record the re-verification numbers for the gf180-tcad Task 3 page; they land in the after-Task-8 bump PR.
+- [x] **Step 2:** Implement with meshwell 2.5.2. Run the tests: they PASS. Fix the two `meshwell.cad` `__main__` blocks.
+- [x] **Step 3:** Commit, open the PR, review and merge. Record the re-verification numbers for the gf180-tcad Task 3 page; they land in the after-Task-8 bump PR.
 
 ### Task 6 (fork): materials, typed contacts, interfaces and the 1D stack builder
+
+> **Done** in mithro/gplugins#5; bumped in PR #23 (merged 2026-10-18).
 
 **Context.**
 - `CreateOxideContact` has no work-function term.
@@ -436,7 +449,7 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 - Produces: interfaces chosen by material pair. Si/oxide and poly/oxide get continuous potential; Si/Si gets drift-diffusion continuity.
 - The old `contact_info` dict keeps working through an adapter, with a deprecation note.
 
-- [ ] **Step 1:** Write the tests first:
+- [x] **Step 1:** Write the tests first:
   - `test_parallel_plate_charge` and `test_parallel_plate_ac`: an oxide-only 1D stack gives C = ε_ox·ε0/t. It is measured through `get_contact_charge` (dQ/dV), and through small-signal AC (`circuit_element` + `solve(type="ac")`, the `testing/ssac_cap.py` pattern). Each agrees within 1e-6 relative (the field is uniform, so this is exact up to solver tolerance).
   - `test_workfunction_offset_shifts_vfb`: on a 1D metal-gate/oxide/p-Si stack, the flat band moves by exactly the offset, within 1 mV. Vfb is the Vg where the gate charge is 0.
   - `test_stack1d_regions_and_spacing`: `create_1d_stack` gives the stated regions, interfaces and contacts, and node spacings within the `Mesh1D` limits, with the grading ratio respected.
@@ -445,9 +458,11 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - `test_poly_gate_flatband`: a p-Si 1.7e17 / 15.2 nm oxide / n⁺ 1e20 poly stack gives the Boltzmann flat band Vfb = −V_t·ln(NGATE·N_A/n_i²) within 1 mV. This is −1.029 V with the Global Constraints constants. The pfet mirror (n-Si 1.7e17 / 15.6 nm / p⁺ 3.6e19) gives +1.003 V.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, review and merge.
+- [x] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, review and merge.
 
 ### Task 7 (fork): doping from analytic profiles
+
+> **Done** in mithro/gplugins#3; bumped in PR #23 (merged 2026-10-18).
 
 **Context.** `gplugins/process` has Gaussian and skewed-Gaussian implant profiles, which the plugin does not use. Reading `silicon_diffused_gaussian_profile` suggests two bugs, both unconfirmed until tested:
 - the exponent is missing a factor of 2 (`diffusion.py:132`);
@@ -461,15 +476,17 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
   - The doping is assigned to DEVSIM `NetDoping` / `Donors` / `Acceptors` node models, as node-model expressions where possible.
   - `Layer1D.doping` and the 2D builder both take a `DopingProfile`.
 
-- [ ] **Step 1:** Write the tests first:
+- [x] **Step 1:** Write the tests first:
   - `test_dose_conserved`: the integrated dose of the assigned doping equals the input dose within 0.5 %;
   - `test_diffused_equals_gaussian_at_t0`: `silicon_diffused_gaussian_profile` at t=0 equals `silicon_gaussian_profile` (relative 1e-12);
   - `test_uniform_bulk_potential`: a uniform 1.7e17 region gives the analytic bulk potential −V_t·ln(N_A/n_i) within 0.1 mV, using the Task 6 constants.
 
   Run them: they FAIL wherever a bug exists.
-- [ ] **Step 2:** Implement and fix. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
+- [x] **Step 2:** Implement and fix. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
 
 ### Task 8 (fork): C–V solver API
+
+> **Done** in mithro/gplugins#6. Submodule bump 2 of 3 (fork main `dddaa07`, commit ce29e02) landed with PR #24 (merged 2026-10-19); the "Re-verified on latest" section had been filled at `400f842` in PR #23. The pin moved on to `1c071d0` (mithro/gplugins#9 to #12) in PR #28 (merged 2026-10-24).
 
 **Context.** There are two routes:
 - quasi-static: `C = dQgate/dVg`, a central difference of `get_contact_charge`;
@@ -499,7 +516,7 @@ The inversion response time with only a body contact is ≈ 2·τ_g·N_A/n_i ≈
   Use `solve(..., info=True)` for the per-point info.
 - Any non-converged point raises `CVConvergenceError(points: list[float])`. So does a point that converges only at a relaxed tolerance. It never drops or interpolates points.
 
-- [ ] **Step 1:** Write the tests first, on a 1D poly/oxide/Si stack from `create_1d_stack`:
+- [x] **Step 1:** Write the tests first, on a 1D poly/oxide/Si stack from `create_1d_stack`:
   - `test_qs_equals_ac_low_freq_acc_dep`: QS and AC at 1 Hz agree within 0.1 % for `polarity·vg ≤ Vfb + 0.3 V` (accumulation and depletion only).
   - `test_ac_inversion_is_hf`: at 1 MHz, 1D AC in strong inversion is below QS by more than 30 %. This shows the HF behaviour is understood, not hidden.
   - `test_accumulation_series_exact`: on a **metal-gate** 1D stack (`kind="gate"` contact on the oxide), so that no gate-side capacitance enters, accumulation C equals the series combination of Cox and the exact Poisson–Boltzmann semiconductor capacitance C_s(ψ_s) within 0.5 %. ψ_s is taken from the solution, and C_s comes from the Sze & Ng ch. 4 charge function, with a link. With a poly gate, the n⁺ poly's own accumulation capacitance (≈ 0.3–0.9 % of Cox) would sit inside the tolerance.
@@ -509,13 +526,15 @@ The inversion response time with only a body contact is ≈ 2·τ_g·N_A/n_i ≈
   - `test_every_non_gate_contact_sourced`: on the same device, `CVResult.cgx` has exactly the non-gate contact names.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
-- [ ] **Step 3: submodule bump 2 of 3.** Open a gf180-tcad PR that does three things:
+- [x] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
+- [x] **Step 3: submodule bump 2 of 3.** Open a gf180-tcad PR that does three things:
   - bumps `third_party/gplugins` to the fork main containing Tasks 4–8;
   - runs the Task 2 tests;
   - fills in the "Re-verified on latest" section of `docs/limitations/plugin-history.md` with the Task 4 and 5 numbers and tolerances.
 
 ### Task 9a: process data files and loader (gf180-tcad)
+
+> **Done** in PR #21 (merged 2026-10-18).
 
 **Context.** These values are taken from the image's card: `/foss/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice`, sha256 `69a7ab87…de8bc8`, as in `docker/base/versions.json`. nfet values are from `.model nfet_06v0.0` and pfet values from `.model pfet_06v0.0` (l.38091). All are tagged `spice-card` and serve as starting points and bounds, never as fixed truths, except where marked *fixed* below.
 
@@ -591,7 +610,7 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
 
   `ProcessDescription.with_values(mapping) -> ProcessDescription` returns a copy with tunables replaced. It raises if a value is outside the bounds or names a fixed parameter.
 
-- [ ] **Step 1:** Write the tests first:
+- [x] **Step 1:** Write the tests first:
   - `test_card_values_and_lines`: every card-line citation, re-read from the card in the base image (sandbox-marked), holds the stated value once evaluated with the TT `.param` values;
   - `test_card_expression_evaluator`: hand cases (`'1.52e-008+nfet_06v0_tox'` with tox=0 gives 1.52e-8; an unknown operator raises);
   - `test_tunables_present`: both files hold exactly `t_ox_eff_nm`, `n_ch_cm3` and `dv_fb_v` as non-fixed parameters, with numeric bounds;
@@ -602,9 +621,11 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
   - `test_no_calibrated_values_in_data`.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
+- [x] **Step 2:** Implement. Run the tests: they PASS. Then commit, open the PR, get it reviewed and merge.
 
 ### Task 9b: 1D MOSCAP and `MeshSpec` (gf180-tcad)
+
+> **Done** in PR #24 (merged 2026-10-19).
 
 **Context.**
 - **SPICE targets, W10/L10 TT:**
@@ -649,7 +670,7 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
 
   Per-geometry values are derived from `per_area.csv` by `area_scaled`; they are not separate simulations. The job `moscap1d/<device>/start` holds the spice-card start values and `moscap1d/<device>/calibrated` the Task 12 values, so start results are never mistaken for calibrated ones.
 
-- [ ] **Step 1:** Write the tests first:
+- [x] **Step 1:** Write the tests first:
   - `test_units`: Cox(15.2 nm) = 2.2718 fF/µm² and W10/L10 = 224.73 fF, both within 1e-4 relative, with the Global Constraints constants. Also check the F/cm² → fF/µm² conversion.
   - `test_matches_exact_poisson_boltzmann`: for uniform doping, the TCAD QS curve matches `analytic.lf_cv_uniform` within 0.1 % at every bias, including flat band and the LF minimum. The depletion approximation is **not** a reference, because its Cmin is an HF quantity and is off by several percent.
   - `test_flatband_exact`: at flat band, C = series(Cox, ε_s/L_D) within 0.1 %.
@@ -661,9 +682,11 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
   - `tests/tcad/test_tcad_provenance.py` (see Interfaces).
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS. Commit the `moscap1d/<device>/start` results, run `make manifest`, then open the PR, get it reviewed and merge.
+- [x] **Step 2:** Implement. Run the tests: they PASS. Commit the `moscap1d/<device>/start` results, run `make manifest`, then open the PR, get it reviewed and merge.
 
 ### Task 10: mesh-convergence tooling
+
+> **Done** in PR #26 (merged 2026-10-19).
 
 **Context.** In the spike, depletion C moved by 2 % between meshes a and b. Spec §5.2 requires that uniform refinement changes every metric by less than 1 %.
 
@@ -686,18 +709,20 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
 
   It also holds the selected level, which is the coarsest with < 1 % at every bias. Solver tolerance, `dv_qs` and the constants are fixed across levels. Runtimes are kept out of the JSON.
 
-- [ ] **Step 1:** Write the tests first:
+- [x] **Step 1:** Write the tests first:
   - `test_converges_to_exact`: on a uniform-doping 1D case, the finest level matches `analytic.lf_cv_uniform` within 0.05 %, and the median observed order is between 1.5 and 2.5;
   - `test_selected_level_criterion`: the selected level is < 1 % against the next finer one;
   - `test_report_deterministic`: the report JSON is deterministic.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS.
-- [ ] **Step 3:** Run `meshconv --dim 1` for both devices. Commit `results/tcad/meshconv/moscap1d/**`. If the selected spec differs from `MeshSpec.DEFAULT_1D`, regenerate `results/tcad/moscap1d/<device>/start` with it. Then run `make manifest`.
-- [ ] **Step 4: 1D C/Cox check.** Show that 1D C/Cox < 1 at |Vg| = 5 V. Classical accumulation and inversion add a series capacitance, so C/Cox > 1 is impossible in 1D. This isolates the spike's artefact to 2D. The artefact itself is diagnosed in Task 11.
-- [ ] **Step 5:** Commit, open the PR, get it reviewed and merge.
+- [x] **Step 2:** Implement. Run the tests: they PASS.
+- [x] **Step 3:** Run `meshconv --dim 1` for both devices. Commit `results/tcad/meshconv/moscap1d/**`. If the selected spec differs from `MeshSpec.DEFAULT_1D`, regenerate `results/tcad/moscap1d/<device>/start` with it. Then run `make manifest`.
+- [x] **Step 4: 1D C/Cox check.** Show that 1D C/Cox < 1 at |Vg| = 5 V. Classical accumulation and inversion add a series capacitance, so C/Cox > 1 is impossible in 1D. This isolates the spike's artefact to 2D. The artefact itself is diagnosed in Task 11.
+- [x] **Step 5:** Commit, open the PR, get it reviewed and merge.
 
 ### Task 11: 2D MOSCAP from gdsfactory geometry, and the C/Cox > 1 artefact
+
+> **Done** in PR #30 (merged 2026-10-24; supersedes #29), with two recorded deviations from Step 3: the L = 10 µm cell is not run in 2D (its equilibrium solve fails in UMFPACK) and the L = 2 µm cell has no AC result (QS only); see docs/limitations/moscap2d.md.
 
 **Context.**
 - `gf180mcu.cells` `nfet(volt="5.0V")` and `pfet(volt="5.0V")` build under gdsfactory 9.51 and contain Dualgate `(55,0)`. These are the devices the SPICE reference describes. `cap_mos` is a different device with its own SPICE model, and is not used.
@@ -725,7 +750,7 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
   - It writes `results/tcad/moscap2d/<device>/<params>/<gid>/cv.csv`, `cgx.csv` and `mesh.msh` (the mesh picture source for Task 13a).
   - It writes `results/tcad/moscap2d/provenance.json` at the tree root.
 
-- [ ] **Step 1:** Write the tests first:
+- [x] **Step 1:** Write the tests first:
   - `test_2d_equals_1d_without_sd`: with S/D removed, a uniform stack, and a gate spanning the full domain with Neumann sides (no gate-edge fringe), 2D Cgg per area equals the 1D result within 0.5 %.
   - `test_ac_1mhz_recovers_inversion`: with S/D, 1 MHz AC recovers to inversion as SPICE does (C_inv/C_acc > 0.9).
   - `test_charge_conservation`: Cgg = Σ_{x ≠ gate} Cxg over **every non-gate contact** (body, source, drain), within 0.1 % (spec §5.2). The set of summed contacts equals the device's non-gate contact list.
@@ -736,10 +761,12 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
   - `test_c_over_cox_le_1`: 2D C/Cox ≤ 1 at |Vg| = 5 V without S/D, after the artefact fix.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Diagnose the C/Cox > 1 artefact from evidence: fix the cause, or document it with numbers if it is below tolerance and explained. Never paper over it.
-- [ ] **Step 3:** Run `meshconv --dim 2` for both devices, then the `start` 2D runs at the calibration geometries with the selected spec. Expect hours at the finest level; the spike's failures to converge at r ≤ 1/4 were at 1e-12, and this study uses 1e-10. Commit the results, run `make manifest`, then open the PR, get it reviewed and merge.
+- [x] **Step 2:** Implement. Diagnose the C/Cox > 1 artefact from evidence: fix the cause, or document it with numbers if it is below tolerance and explained. Never paper over it.
+- [x] **Step 3:** Run `meshconv --dim 2` for both devices, then the `start` 2D runs at the calibration geometries with the selected spec. Expect hours at the finest level; the spike's failures to converge at r ≤ 1/4 were at 1e-12, and this study uses 1e-10. Commit the results, run `make manifest`, then open the PR, get it reviewed and merge.
 
 ### Task 12: calibrate against SPICE Cgg–Vg
+
+> **Partly done** in PR #33 (merged 2026-10-26): Steps 1 to 3, and of Step 4 the calibration, the 1D validation and the calibrated 1D trees. Step 4's calibrated 2D trees and the 2D validation are open: [issue #35](https://github.com/mithro/gf180-tcad/issues/35) (in progress on 2026-10-27).
 
 **Context.**
 - At TOXE 15.2 nm, effective oxide is the dominant knob.
@@ -818,7 +845,7 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
   - It raises unless `frozen` was loaded from the committed `results/tcad/calibration/<device>.json`, and its `param_sha256` matches that file.
   - It records the hash. Results at 1.6/0.7 and Lmin are pre-tagged with the causes `geometry-2d` and `spice-fit`.
 
-- [ ] **Step 1:** Write the tests first, on synthetic data built from the 1D model:
+- [x] **Step 1:** Write the tests first, on synthetic data built from the 1D model:
   - `test_recovers_known_params`: `t_ox_eff` and `n_ch` within 0.5 %, and `dv_fb` within 1 mV absolute;
   - `test_validation_geometry_raises`: passing any `role="validation"` geometry raises `CalibrationLeak`;
   - `test_non_cv_target_raises`;
@@ -833,14 +860,17 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
   - `test_tunables_from_process_file`: `calibrate_cv` takes its bounds and start values only from `process.load`.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS.
-- [ ] **Step 3:** Calibrate both devices at TT, with ngspice as the reference, using the Task 9a bounds as committed. Write `docs/comparison/cv-agreement.md`.
+- [x] **Step 2:** Implement. Run the tests: they PASS.
+- [x] **Step 3:** Calibrate both devices at TT, with ngspice as the reference, using the Task 9a bounds as committed. Write `docs/comparison/cv-agreement.md`.
   - Target: both plateaus ≤ 5 %, and both ΔV crossings ≤ 50 mV.
   - If the target is not reached within budget, publish the best fit with its verdict and the §6 mismatch analysis. Never raise the budget silently.
 - [ ] **Step 4:** Commit `results/tcad/calibration/*.json` in a results-only commit. **Only then** run `validate_cv` and commit `results/tcad/validation/*.json` in a separate later commit. Regenerate the calibrated 1D and 2D result trees (`results/tcad/moscap{1d,2d}/<device>/calibrated/`), and run `make manifest`. Then open the PR, get it reviewed and merge.
+  - *Progress (2026-10-27):* calibration, validation (1D) and the calibrated 1D trees are committed (PR #33). The calibrated 2D trees run under [issue #35](https://github.com/mithro/gf180-tcad/issues/35), one job per PR: nfet `w10p0_l0p60` and `w10p0_l0p70` committed (both Disagree in 2D), validation regenerated; the other cells follow, L = 10 µm does not solve in 2D.
 - [ ] **Budget note (Phase 3 carry-over).** These 3 parameters use 3 of the 8 per device type for all later phases. A Phase 3 channel profile may replace the uniform `n_ch` and must re-justify it.
 
 ### Task 13a: TCAD results and docs pages
+
+> **Done** in PR #38 (merged 2026-10-26).
 
 Requires the docs-links infrastructure on main.
 
@@ -866,16 +896,18 @@ Requires the docs-links infrastructure on main.
 - `docs/conf.py:_TOOLS` gains the new tools; `docs/glossary.md` gains the new terms.
 - `tests/test_docgen.py`.
 
-- [ ] **Step 1:** Write the tests first:
+- [x] **Step 1:** Write the tests first:
   - `test_moscap_page_per_device_geometry`;
   - `test_moscap_pages_deterministic`;
   - `test_docs_build_offline`;
   - `test_doc_links` covers the new pages.
 
   Run them: they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS. Commit, open the PR, get it reviewed (including the dedicated missing-links review), and merge.
+- [x] **Step 2:** Implement. Run the tests: they PASS. Commit, open the PR, get it reviewed (including the dedicated missing-links review), and merge.
 
 ### Task 13b: `make reproduce` and the TCAD cross-host check
+
+> **Partly done** in PR #41 (merged 2026-10-26): the targets, the tests and the `crosscheck-tcad` job (green on a GitHub-hosted runner). Step 2's full `make reproduce` on a clean clone has not been run end to end, and its 2D files are not expected to match until issue #35 regenerates them (docs/reproduce/index.md, "Not yet run end to end").
 
 **Context.**
 - `manifest.load_subset` accepts only 4-part `<engine>/<corner>/<device>/<geometry_id>` jobs, and expands `all` from the SPICE plan (`manifest.py:94-121`).
@@ -908,7 +940,7 @@ Requires the docs-links infrastructure on main.
 
   Add `third_party/**`, `data/process/**`, `docker/TCAD_IMAGE`, `src/gf180tcad/tcad/**` and `results/tcad/**` to its paths.
 
-- [ ] **Step 1:** Write the tests first:
+- [x] **Step 1:** Write the tests first:
   - `test_tcad_subset_parse`: 3-part jobs are accepted, and 2-part or unknown `<tree>`/`<params>` values raise;
   - `test_tcad_all_expands`;
   - `test_tcad_verify_subset_detects_change`;
@@ -918,7 +950,7 @@ Requires the docs-links infrastructure on main.
 
   Run them: they FAIL.
 - [ ] **Step 2:** Implement. `make reproduce` on a clean `--recurse-submodules` clone regenerates SPICE and TCAD and verifies the manifest. The `crosscheck-tcad` job regenerates the committed calibrated 1D MOSCAP jobs on a GitHub-hosted runner, byte-identical.
-- [ ] **Step 3:** Commit, open the PR, get it reviewed and merge.
+- [x] **Step 3:** Commit, open the PR, get it reviewed and merge.
 
 ### Task 14: secondary PDK `d658698` comparison (carried over from Phase 0–1 Task 15)
 
@@ -956,12 +988,142 @@ If that proves impossible without editing a generator module, the PR also regene
 
 ### Task 15 (required, first step of spec §12.1): backend seam in the plugin
 
+> **Status (2026-10-27):** in progress, draft PR #51 (blocked on push access to the fork).
+
 **Files (fork):** split `gplugins/devsim/get_solver.py` into `device_description.py` (mesh, regions, contacts, doping, bias plan) and `backends/devsim.py`.
 
 > **Status (2026-10-27).** In review as [mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13) (fork branch `gf180/backend-seam`); gf180-tcad draft PR #51 pins its earlier head `1eae814` until #13 merges. The fork adds the backend-neutral `device_description.py` (contacts, region classes, `Layer1D`/`Mesh1D`, the 1D node layout, `Stack1D`, `CrossSection2D`, `SolverSettings`, `CVSweep`, and the `Backend`/`Device` protocols) and `results.py` (`CVResult`, `PointInfo`, `RoundoffPoint`, the convergence errors), makes the package `__init__` lazy, moves `get_solver.py` to `backends/devsim.py` (adding `create_1d_device`, `create_2d_device`, `run_cv_sweep`, `DDComponent.from_description`) and adds a `backends/charon/` stub. The old modules re-export the moved names and `gplugins.devsim.get_solver` is a `sys.modules` alias of the backend. Fresh-interpreter tests check that the neutral layer and the Charon stub import with `devsim`, `meshwell` and `gmsh` blocked. `CrossSection2D` mirrors the `DDComponent` constructor only and does not yet express the 2D MOSCAP job (Charon plan Task E). At pin `1eae814` `make reproduce-quick` reproduced the committed 1D jobs byte for byte and `make manifest` left no diff; the bump changes only `generator_sha256` and `gplugins_commit` in the five `results/tcad/*/provenance.json`. Of the 2D code path only `DDComponent`'s file moved; `create_2Duz_simulation` and `sweep_cv`'s solve code are untouched, so the 2D trees are not rerun. Before #51 merges: #13 merged, pin at its merge commit, provenance restamped, `make reproduce-quick` and `make manifest` with no diff.
 
 - [ ] **Step 1:** All existing fork tests pass unchanged through the new seam, verified with the fork-worktree pattern. No Charon code yet.
 - [ ] **Step 2:** Commit, open the PR, get it reviewed and merge. Then do **submodule bump 3 of 3**: the gf180-tcad TCAD results must be byte-identical before and after the bump. `make reproduce-quick` plus `make manifest` give no diff.
+
+### Task 16: corner bounds and spread of the 1D MOS capacitor inputs (spec §5.3, issue #57)
+
+Added 2026-10-27 for the owner directives of that day (spec §16). Sized at 2–3 days of work in
+two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task B0.
+
+**Context.**
+- The SPICE reference already holds the C–V curve of every corner at every geometry
+  (`results/spice/ngspice/<corner>/<device>/<gid>/cv.csv`, five corners). So the corner fits
+  need no new SPICE run; the Monte Carlo does.
+- `calibrate_cv` refuses any target that is not the TT ngspice `cv` sweep (`check_target`,
+  `CalibrationLeak`). That guard stays: the corner fits go through a separate entry point that
+  refuses TT and writes only under `results/tcad/corners/`, never under `calibration/` or
+  `validation/` (anti-goal A1).
+- The tunables are the three of Task 12 (`t_ox_eff_nm`, `n_ch_cm3`, `dv_fb_v`). The fit compares
+  through `MoscapCV.area_scaled` (`calibrate/cv.py`), which uses the process file's bookkeeping
+  values: `moscap1d.cv_geometry_um` (LeffCV = L + XL − 2·DLC, WeffCV = W + XW − 2·DWC) and the
+  overlap and fringe terms (`cgso_f_per_m`, `cgdo_f_per_m`, `cgsl_f_per_m`, `cgdl_f_per_m`,
+  `cf_f_per_m`), all at the typical card today. A corner's SPICE curve carries that corner's XL
+  (−42 / +70 nm), XW (±50 nm) and overlap factor (×0.9 / ×1.1): at L = 1–2 µm several percent of
+  the gate area, comparable to the ±1 nm TOXE shift. So each corner fit applies that corner's
+  card values to `xl_nm`, `xw_nm` and the four overlap terms as **fixed inputs** (not tunables,
+  not part of the budget), through a new method `ProcessDescription.with_corner_card(mapping)`
+  that accepts only parameters with role `reference-bookkeeping` and raises on any other.
+  `with_values` keeps refusing fixed parameters (its guard protects anti-goal A1). Without
+  that, the fit would absorb the shift into the oxide and the doping. VSAT does not enter a C–V
+  curve; it is Phase 3.
+- The ss corner raises TOXE by 1 nm, which puts the oxide outside the TT bounds
+  ([TOXE, TOXP + Δ]); the corners shift VTH0 by ±0.12–0.13 V, while the committed TT flat-band
+  fits are already +0.099 V (nfet) and +0.187 V (pfet) of a ±0.2 V range. So a corner's bounds
+  are the TT bounds shifted by that corner's card offset for the same quantity: the oxide bounds
+  by its TOXE offset, the flat-band bounds shifted by +ΔVTH0 in true-sign gate bias for both
+  devices (the gate bias and the BSIM4 VTH0 are both true-sign, so the pfet ff offset of
+  +0.1245 V moves the curve towards positive Vg, as the nfet's does); the doping bounds stay as at TT. A minimum or maximum across corners that sits on a
+  bound is reported as that bound (`at_bound: true`), not as a measured value.
+- Adding a tree to `gf180tcad.tcad.TREE_GENERATORS` changes a module in every tree's
+  generator closure. After Charon plan Task B0 (registry out of the closures) it does not; so
+  this task starts after B0, or restamps every TCAD tree in the same PR.
+
+**Files:**
+- `data/pdk_corners.json` (new): per device and corner, the offsets of VTH0, TOXE (and TOXP for
+  the nfet), XL, XW and the factors of CGSO, CGDO, CGSL, CGDL and VSAT, each with the line number
+  in the pinned `sm141064.ngspice` and that file's sha256 (`69a7ab87…`, as in
+  `results/spice/provenance.json`). Step 1 writes it from the pinned PDK and corrects the spec §5.3 table if the
+  values differ from the upstream ones it quotes.
+- `src/gf180tcad/calibrate/corners.py` (new, its own entry point
+  `python -m gf180tcad.calibrate.corners run|summary` on the host, `corner-job` in the image):
+  `corner_bounds(device, corner)`, `calibrate_corner(device, corner, *, geometries, params)`
+  (reuses `calibrate_cv`'s residuals and optimiser settings, imported, not copied), and
+  `summary(device)`.
+- `src/gf180tcad/calibrate/montecarlo.py` (new, PR 16b, entry point
+  `python -m gf180tcad.calibrate.montecarlo spice|fit|summary`): the Monte Carlo SPICE runs and
+  their 1D fits. It does not modify `reference.py` or any SPICE generator module (Phase 2
+  Global Constraints), as `pdkdiff` does not.
+- `results/tcad/corners/<device>/<corner>.json` (`ff`, `ss`, `fs`, `sf`; `typical` is the
+  committed Task 12 calibration, read, not refitted), `results/tcad/corners/<device>/summary.json`,
+  `results/tcad/corners/provenance.json`.
+- `results/spice-mc/<device>/<sample>/<gid>/cv.csv` with `provenance.json` (PR 16b), and
+  `results/tcad/corners-mc/<device>/{samples,summary}.json` with `provenance.json`.
+- `src/gf180tcad/docgen.py`: a corner table per device on the TCAD results page and on
+  `docs/comparison/cv-agreement.md`. Columns: input, unit, typical, minimum, corner of the
+  minimum, maximum, corner of the maximum, card shift, Monte Carlo mean, standard deviation,
+  2.5 % and 97.5 % percentiles. One value per cell (spec §10.3).
+- `docs/limitations/corners.md` (new): what the 1D corner fits cannot see (XL, XW, overlap,
+  VSAT), bound hits, and the card cross-check.
+- `tests/test_calibrate_corners.py`, `tests/test_calibrate_montecarlo.py`, `tests/test_docgen.py`.
+
+**Interfaces:**
+- `corner_bounds(device, corner) -> Mapping[str, tuple[float, float]]`: the TT bounds from
+  `process.load(device)`, with the oxide bounds shifted by the corner's TOXE offset and the
+  flat-band bounds by its VTH0 offset, from `data/pdk_corners.json`.
+- `corner_bookkeeping(device, corner) -> Mapping[str, float]`: the corner's `xl_nm`, `xw_nm`,
+  `cgso_f_per_m`, `cgdo_f_per_m`, `cgsl_f_per_m` and `cgdl_f_per_m` (card value plus offset, or
+  times factor), applied through `ProcessDescription.with_corner_card` to the process
+  description of every corner fit.
+- `ProcessDescription.with_corner_card(mapping) -> ProcessDescription` (new, in
+  `src/gf180tcad/tcad/process.py`): replaces the values of `reference-bookkeeping` parameters
+  only; any other name raises `ValueError`. Test: `test_with_corner_card_refuses_tunables`.
+- `calibrate_corner(device, corner, ...) -> CalibrationResult`: raises `CalibrationLeak` for
+  `corner == "typical"`, for a validation geometry, or for an output path outside
+  `results/tcad/corners/`. The result records `reference.corner`.
+- `summary(device) -> dict`: per tunable `typical`, `min`, `min_corner`, `max`, `max_corner`,
+  `card_shift` (for the oxide: the TOXE offset at ss and ff) and `tcad_shift` (fitted value
+  minus typical, at the same corners); per corner the Task 12 verdicts at the calibration and
+  held-out geometries, against that corner's SPICE curve.
+- Monte Carlo (16b): `N = 200` samples per device, seeds `1..200`, global variation on
+  (`sw_stat_global = 1`), mismatch off (`sw_stat_mismatch = 0`), at the three calibration
+  geometries. Experiment S0 fixes the exact include lines and the ngspice seed control, and
+  shows that a seed gives the same curve twice. Each sample's curves are fitted like a corner.
+  Each sample's drawn XL, XW and overlap values are printed by ngspice for that seed (a `.print`
+  or `.measure` of the evaluated model parameters, chosen in S0) and recorded with the sample,
+  and that sample's fit uses them in its bookkeeping, as a corner fit does.
+  `summary` gives the mean, the standard deviation (n − 1) and the 2.5 % and 97.5 %
+  percentiles (linear interpolation) of each tunable, and the number of samples whose fit hit a
+  bound.
+
+- [ ] **Step 1:** Write `data/pdk_corners.json` from the pinned PDK, read inside the base image
+  through `tools/sandbox-run` (`--network none`, a read-only job). Write the tests first:
+  `test_corner_table_matches_pinned_pdk` (each value at its recorded line of the file with the
+  recorded sha256), `test_typical_refused`, `test_corner_cannot_write_calibration_dir`,
+  `test_validation_geometry_refused`, `test_corner_bounds_shift_oxide`,
+  `test_corner_bounds_shift_flatband` (nfet and pfet: ff and ss move the flat-band bounds by
+  +ΔVTH0 in true-sign gate bias, so the pfet ff bounds move towards positive Vg),
+  `test_corner_bookkeeping_uses_corner_card` (the area and
+  overlap bookkeeping of an ss fit uses the ss XL, XW and overlap values, and the TT fit's
+  bookkeeping is unchanged), `test_min_max_on_a_bound_reported_as_bound`,
+  `test_recovers_known_params_at_a_corner` (synthetic, as Task 12's test),
+  `test_summary_min_max_and_corner`, `test_typical_row_is_task12_value` (byte-equal to
+  `results/tcad/calibration/<device>.json`), `test_card_cross_check_reported`,
+  `test_corner_fits_deterministic`, `test_docgen_corner_table_one_value_per_cell`. Run them:
+  they FAIL.
+- [ ] **Step 2:** Implement. Run the tests: they PASS.
+- [ ] **Step 3:** Run the eight corner fits (4 corners × 2 devices), 2 GiB each, up to four at a
+  time, each with a progress log in `tmp/` (spec §8.1); commit the corner tree in a results-only
+  commit, then the summary and the docs. Open PR 16a, get it reviewed and merge.
+- [ ] **Step 4 (PR 16b):** Tests first: `test_mc_seed_reproducible` (one seed, two runs, same
+  bytes), `test_mc_seeds_recorded`, `test_mc_statistics_on_synthetic_samples`,
+  `test_mc_bound_hits_counted`, `test_mc_sample_bookkeeping_recorded`,
+  `test_mc_does_not_touch_spice_generators` (the SPICE
+  `generator_sha256` is unchanged). Experiment S0, then the SPICE samples (400 samples × 3 geometries =
+  1200 ngspice C–V sweeps, 4 GiB each, `JOBS=4` at most) and the 400 1D fits (2 GiB each, several
+  at a time). Run time is measured, not assumed: the first 10 samples are timed and the rest is
+  scheduled from that. The run resumes per sample, retries a failed fit once with the Task 12
+  settings and otherwise records it as failed, and stops if more than 5 % of samples fail.
+  Commit, open PR 16b, get it reviewed and merge.
+
+**Provenance impact.** New trees only; Task 12's `calibration/` and `validation/` trees are
+unchanged (checked by `test_typical_row_is_task12_value` and the manifest).
 
 ---
 
@@ -975,8 +1137,11 @@ If that proves impossible without editing a generator module, the PR also regene
 - **The old stack.**
   - The v0.8.0 run's tidy3d 2.4 may try network access under `--network none`.
   - Old-stack results have no cross-host bit-identity guarantee, so `results/plugin-history` is not cross-checked.
-- **2D cost and convergence.**
+- **2D run time and convergence.**
   - The spike failed to converge at r ≤ 1/4 with 1e-12. At 1e-10 it may converge but take hours.
+  - Run time is a scheduling fact, never a reason to leave a result out (spec §8.1). A solver
+    failure is a correctness problem with an issue: the L = 10 µm equilibrium solve (#58) and
+    the L = 2 µm AC solve (#59).
   - `make reproduce` runtime is stated in the docs.
   - Concurrent jobs go through admission control.
 - **Interpreting Lmin and narrow width.** In 1D, Lmin and 1.6/0.7 results are dominated by the DLC and parasitic bookkeeping and by missing 2D/3D effects. They are pre-tagged `geometry-2d`/`spice-fit` so that a "Disagree" there is not over-read.
@@ -992,4 +1157,17 @@ If that proves impossible without editing a generator module, the PR also regene
 - [ ] 1D and 2D MOSCAPs are mesh-converged (< 1 %). The C/Cox > 1 artefact is resolved or explained with numbers.
 - [ ] At the calibration geometries, nfet and pfet Cgg–Vg reach both plateau maxima ≤ 5 % and both ΔV crossings ≤ 50 mV (the latter a proposal, and a recorded deviation from spec §5.2). Otherwise they carry a published verdict with the §6 analysis. Held-out geometries are validated against the frozen `param_sha256` and reported.
 - [ ] `make reproduce` verifies on a clean `--recurse-submodules` clone. The GitHub cross-check is green for both SPICE and `crosscheck-tcad`. Read the Docs is green, and the docs-links checks pass. `results/spice/provenance.json` is unchanged from the Phase 1 exit, unless a PR regenerated it by the Global Constraints rule.
+- [ ] The corner bounds and the Monte Carlo spread of the three 1D tunables are committed and shown per device (Task 16, spec §5.3).
 - [ ] A whole-branch review of main since the Phase 1 exit is done and its findings fixed. The Phase 3 plan (2D MOSFET) is written.
+
+## Record: history moved out of the docs pages (2026-10-27)
+
+The docs style pass (spec §10.3) states the present only; these facts about how the 2D and mesh-convergence results came about moved here from `docs/limitations/moscap2d.md` and `docs/limitations/mesh-convergence.md`:
+- The Lmin 2D job files (`w10p0_l0p60`, `w10p0_l0p50`) were written by the Task 11 code, which is why their `cv.meta.json` has no `ac` and no `resumed` entry.
+- The 2D mesh convergence and 2D provenance were restamped to the current generator without a rerun twice: in Task 12, and to the per-tree hash of issue #34.
+- The restart counts in the L = 2 µm job files were backfilled from the progress logs, because the runs predate the `resumed` record.
+- A QS sweep of the L = 10 µm cell's 201 biases was estimated at 7–8 hours from the measured rates; under spec §8.1 run time is no longer a reason for not running it (issue #58).
+- `make reproduce` had not been run end to end because the 2D jobs take hours at 16 GiB each (no longer a reason, spec §8.1).
+- The C/Cox > 1 diagnosis was done in the research spike (Task 11), whose plan named four candidate causes, each measured.
+- The 2 % mesh dependence and the 2D prototype's C/Cox = 1.0039 (15.2 nm oxide) come from the research spike, Tasks 10 and 11.
+- Level 3 of the 2D mesh-convergence study was left out partly because it "would take over 8 hours per job"; the time estimates stay as data, and the remaining reason is the L = 10 µm-sized solve failure (#58).

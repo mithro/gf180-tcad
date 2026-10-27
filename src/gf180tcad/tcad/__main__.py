@@ -82,6 +82,7 @@ from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.tcad import (
     IMAGES,
     RESULTS_IMAGE,
+    TCAD_MAIN,
     calibration,
     calibration_file,
     check_same_image,
@@ -380,7 +381,9 @@ def run_host(
     dest.mkdir(parents=True)
     for name in names:
         shutil.copyfile(scratch / name, dest / name)
-    io.write_json(root / PROVENANCE_NAME, tree_provenance(root, {f"moscap{dim}d": image}))
+    io.write_json(
+        root / PROVENANCE_NAME, tree_provenance(root, {f"moscap{dim}d": image}, generator=TCAD_MAIN)
+    )
     shutil.rmtree(scratch)
 
 
@@ -566,7 +569,7 @@ def run_meshconv(
     for name in (meshconv.REPORT_NAME, meshconv.SELECTED_NAME):
         shutil.copyfile(scratch / name, dest / name)
     images = {**recorded_images(root), f"moscap{dim}d": image}
-    io.write_json(root / PROVENANCE_NAME, tree_provenance(root, images))
+    io.write_json(root / PROVENANCE_NAME, tree_provenance(root, images, generator=TCAD_MAIN))
     shutil.rmtree(scratch)
 
 

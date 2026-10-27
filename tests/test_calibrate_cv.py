@@ -244,8 +244,15 @@ def test_validate_requires_frozen_hash(fit, tmp_path):
     frozen = cv.load_frozen(NFET, tmp_path)
     assert frozen.values == res.values and frozen.param_sha256 == res.param_sha256
     targets = synthetic_targets(NFET, TRUTH, DEVICES[NFET].geometries)
+    # no 2D results: the committed calibrated 2D tree belongs to the committed calibration
+    m2d = tmp_path / "moscap2d"
     out = cv.validate_cv(
-        NFET, frozen, simulate=Recorder(), targets=targets, calibration_root=tmp_path
+        NFET,
+        frozen,
+        simulate=Recorder(),
+        targets=targets,
+        calibration_root=tmp_path,
+        moscap2d_root=m2d,
     )
     assert out.param_sha256 == res.param_sha256
     assert set(out.one_d) == {geometry_id(g) for g in val_geometries()}
@@ -254,13 +261,23 @@ def test_validate_requires_frozen_hash(fit, tmp_path):
     edited = dataclasses.replace(frozen, values={**frozen.values, "dv_fb_v": 0.07})
     with pytest.raises(cv.NotFrozen):
         cv.validate_cv(
-            NFET, edited, simulate=Recorder(), targets=targets, calibration_root=tmp_path
+            NFET,
+            edited,
+            simulate=Recorder(),
+            targets=targets,
+            calibration_root=tmp_path,
+            moscap2d_root=m2d,
         )
     # nor does a calibration file edited after the fit
     calibration.write(tmp_path / f"{NFET}.json", NFET, {**frozen.values, "dv_fb_v": 0.07})
     with pytest.raises(cv.NotFrozen):
         cv.validate_cv(
-            NFET, frozen, simulate=Recorder(), targets=targets, calibration_root=tmp_path
+            NFET,
+            frozen,
+            simulate=Recorder(),
+            targets=targets,
+            calibration_root=tmp_path,
+            moscap2d_root=m2d,
         )
     with pytest.raises(cv.NotFrozen):
         cv.load_frozen(NFET, tmp_path)
@@ -540,6 +557,33 @@ def test_cli_requires_known_choices():
             cli.main(argv)
 
 
+@pytest.mark.parametrize("command", ["run", "validate"])
+def test_host_side_writes_the_committed_provenance(tmp_path, monkeypatch, command):
+    """With each sandbox job's output replaced by the committed files, the host side of ``run``
+    and ``validate`` writes the committed tree's provenance.json byte for byte: both trees are
+    stamped by their writer, gf180tcad.calibrate.__main__, and its own hash (issue #34)."""
+    import shutil
+    from pathlib import Path
+
+    from gf180tcad.calibrate import __main__ as cli
+
+    committed = cv.CALIBRATION_ROOT if command == "run" else cv.VALIDATION_ROOT
+
+    def fake_job(cmd, scratch, what):
+        device = cmd[cmd.index("--device") + 1]
+        for f in committed.glob(f"{device}*.json"):
+            shutil.copyfile(f, Path(scratch) / f.name)
+        return ""
+
+    monkeypatch.setattr(cli, "_sandbox_job", fake_job)
+    root = tmp_path / "out"
+    for device in process.DEVICES:
+        assert cli.main([command, "--device", device, "--out", str(root)]) == 0
+    prov = json.loads((root / "provenance.json").read_bytes())
+    assert prov["generator"] == "gf180tcad.calibrate.__main__"
+    assert (root / "provenance.json").read_bytes() == (committed / "provenance.json").read_bytes()
+
+
 # --- the committed results (host) ----------------------------------------------------------------
 
 DOC = cv.REPO_ROOT / "docs" / "comparison" / "cv-agreement.md"
@@ -577,12 +621,18 @@ def test_committed_validation(device):
         assert c["causes"] == cv.causes(device, g)
 
 
-def _doc_row(c: dict) -> str:
+def _doc_rows(c: dict) -> tuple[str, str, str]:
+    """The geometry's rows in the three per-device tables: role and verdict, plateau and
+    depletion errors, crossing shifts."""
     m, g = c["metrics"], c["geometry"]
+    wl = f"| {g['w_um']:g} | {g['l_um']:g} |"
     return (
-        f"| {g['w_um']:g}/{g['l_um']:g} | {g['role']} | {100 * m['plateau_acc_max_rel']:.2f} % | "
-        f"{100 * m['plateau_inv_max_rel']:.2f} % | {1000 * m['dv_dep_v']:+.1f} mV | "
-        f"{1000 * m['dv_inv_v']:+.1f} mV | {100 * m['depletion_max_rel']:.1f} % | {c['verdict']} |"
+        f"{wl} {g['role']} | {c['verdict']} |",
+        (
+            f"{wl} {100 * m['plateau_acc_max_rel']:.2f} | {100 * m['plateau_inv_max_rel']:.2f} | "
+            f"{100 * m['depletion_max_rel']:.1f} |"
+        ),
+        f"{wl} {1000 * m['dv_dep_v']:+.1f} | {1000 * m['dv_inv_v']:+.1f} |",
     )
 
 
@@ -592,16 +642,24 @@ def test_docs_quote_the_committed_results(device):
     text = DOC.read_text(encoding="utf-8")
     res = cv.load_frozen(device)
     val = json.loads((cv.VALIDATION_ROOT / f"{device}.json").read_bytes())
+    other = next(d for d in process.DEVICES if d != device)
+    start = text.index(f"**{device}**\n")
+    end = text.find(f"**{other}**\n", start)
+    section = text[start:] if end < start else text[start:end]
     for c in [*res.per_geometry.values(), *val["one_d"].values()]:
-        assert _doc_row(c) in text, _doc_row(c)
+        for row in _doc_rows(c):
+            assert row in section, row
     v = res.values
-    row = (
-        f"| {{term}}`{device}` | {v['t_ox_eff_nm']:.3f} [{res.bounds['t_ox_eff_nm'][0]:g}, "
-        f"{res.bounds['t_ox_eff_nm'][1]:g}] | {v['n_ch_cm3']:.3e}".replace("e+", "e")
+    lo, hi = res.bounds["t_ox_eff_nm"]
+    rows = (
+        f"| `t_ox_eff_nm` | nm | {v['t_ox_eff_nm']:.3f} | {lo:g} | {hi:g} |",
+        f"| `n_ch_cm3` | cm⁻³ | {v['n_ch_cm3']:.3e} |".replace("e+", "e"),
+        f"| `dv_fb_v` | mV | {1000 * v['dv_fb_v']:+.1f} | −200 | +200 |",
     )
-    assert row in text, row
-    assert f"| {1000 * v['dv_fb_v']:+.1f} mV [±200 mV] |" in text
-    assert f"{res.optimiser['nfev']} evaluations" in text
+    fitted = text.split(f"{{term}}`{device}`:\n\n", 1)[1].split("\n\n", 1)[0]
+    for row in rows:
+        assert row in fitted, row
+    assert f"reached | {res.optimiser['nfev']} |" in text
     cc = res.cox_check
     for x in (cc["c_ox_ff_per_um2"], cc["c_per_area_acc_ff_per_um2"]):
         assert f"{x:.3f}" in text
@@ -614,7 +672,7 @@ def test_docs_quote_the_committed_results(device):
 @pytest.mark.sandbox
 def test_calibration_reproduces_the_committed_files(tmp_path):
     """run (in the sandbox) gives the committed calibration files byte for byte (the claim
-    "two runs give byte-identical files" of docs/comparison/cv-agreement.md)."""
+    "A second run gives byte-identical files" of docs/comparison/cv-agreement.md)."""
     from gf180tcad.calibrate import __main__ as cli
 
     root = tmp_path / "out"
@@ -635,3 +693,38 @@ def test_validation_reproduces_the_committed_files(tmp_path):
         assert cli.main(["validate", "--device", device, "--out", str(root)]) == 0
     for name in (*(f"{d}.json" for d in process.DEVICES), "provenance.json"):
         assert (root / name).read_bytes() == (cv.VALIDATION_ROOT / name).read_bytes(), name
+
+
+def width_scaled_two_d(device: str, source_gid: str, target_gid: str) -> dict:
+    """The 2D comparison of ``target_gid`` derived from the committed calibrated 2D cell
+    ``source_gid`` at the same L: its per-width Cgg (``cgg_per_um``) times the target's W,
+    compared with the target's TT ngspice Cgg by :func:`cv.compare`. The 2D cut has no width
+    dependence (:func:`gf180tcad.tcad.stack.build` keeps W only as ``w_um``), so this is the
+    comparison the target's own 2D job gives."""
+    geometries = {geometry_id(g): g for g in DEVICES[device].geometries}
+    source, target = geometries[source_gid], geometries[target_gid]
+    assert source.l_um == target.l_um
+    cols, _ = io.read_csv(cv.MOSCAP2D_ROOT / device / "calibrated" / source_gid / "cv.csv")
+    vg = tuple(float(v) for v in cols["vg"])
+    total = tuple(float(c) * target.w_um for c in cols["cgg_per_um"])
+    pol = 1 if process.load(device).polarity == "n" else -1
+    comp, _ = cv.compare(
+        cv.load_target(device, target), vg, total, pol,
+        spec_area_um2=target.w_um * target.l_um, parasitic_ff=None, cox=cv.cox_spec(device),
+    )  # fmt: skip
+    return comp
+
+
+def test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell():
+    """The nfet W1.6/L0.7 2D comparison, derived from the committed W10/L0.7 cell
+    (docs/limitations/moscap2d.md, "W1.6/L0.7 adds no 2D information")."""
+    comp = width_scaled_two_d(NFET, "w10p0_l0p70", "w1p6_l0p70")
+    v = comp["verdicts"]
+    assert comp["verdict"] == "Disagree"
+    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.0755, abs=5e-5)
+    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.1385, abs=5e-5)
+    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1938, abs=5e-5)
+    assert v["dv_inv"]["dv_v"] == pytest.approx(-0.0335, abs=5e-5)
+    assert [v[k]["verdict"] for k in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv")] == [
+        "Same process", "Same process", "Disagree", "Agree",
+    ]  # fmt: skip

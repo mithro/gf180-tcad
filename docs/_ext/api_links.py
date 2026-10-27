@@ -166,7 +166,8 @@ class _Linker:
             name = next(t for t in self.tools if t.lower() == m.group(0).lower())
             events.append((m.start(), m.end(), "tool", name, m.group(0)))
         out, pos = [], 0
-        for start, end, kind, key, word in sorted(events):
+        # The longest match at a position wins ("SPICE reference" over "SPICE").
+        for start, end, kind, key, word in sorted(events, key=lambda e: (e[0], -e[1])):
             if start < pos or (kind, key) in self.seen:
                 continue
             before = text[start - 1] if start else prev

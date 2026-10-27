@@ -13,9 +13,13 @@ TCAD_SCRATCH ?= tmp/reproduce-scratch
 # The temporary tree root of reproduce-quick (never results/: tools/crosscheck-tcad-run refuses).
 QUICK_OUT ?= tmp/reproduce-quick
 TCAD_SUBSET = tests/crosscheck_tcad_subset.txt
+# A checkout of the output cache repository (docs/reproduce/output-cache.md) for cache-push:
+# git clone --depth 1 git@github.com:mithro/gf180-tcad-output-cache.git tmp/output-cache
+OUTPUT_CACHE ?= tmp/output-cache
 
 .PHONY: reproduce reproduce-quick manifest spice-reference \
-	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate
+	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate \
+	cache-status cache-push lint pre-push pre-push-docs
 
 # Everything, in dependency order: the SPICE reference, then the TCAD trees (mesh convergence,
 # start values, calibration, calibrated values, validation), then the manifest check. Hours:
@@ -67,11 +71,15 @@ tcad-calibrate:
 	$(CALIBRATE) run --device nfet_05v0 --out results/tcad/calibration
 	$(CALIBRATE) run --device pfet_05v0 --out results/tcad/calibration
 
-# 4. The calibrated values. 1D only: no 2D calibrated results are committed yet
-# (docs/limitations/moscap2d.md).
+# 4. The calibrated values: 1D, and the committed calibrated 2D cells (issue #35; one 16 GiB
+# job at a time, hours each; L = 10 um does not solve in 2D, docs/limitations/moscap2d.md).
 tcad-calibrated:
 	$(TCAD) moscap --device nfet_05v0 --dim 1 --params calibrated --out results/tcad/moscap1d
 	$(TCAD) moscap --device pfet_05v0 --dim 1 --params calibrated --out results/tcad/moscap1d
+	$(TCAD) moscap --device nfet_05v0 --dim 2 --params calibrated --geometry w10p0_l0p60 \
+		--out results/tcad/moscap2d
+	$(TCAD) moscap --device nfet_05v0 --dim 2 --params calibrated --geometry w10p0_l0p70 \
+		--out results/tcad/moscap2d
 
 # 5. The validation of the committed calibration (refuses unless it is committed and unchanged).
 tcad-validate:
@@ -88,3 +96,38 @@ reproduce-quick:
 # Rewrite results/MANIFEST.sha256 from the files under results/.
 manifest:
 	$(PYTHON) -m gf180tcad.manifest update results/
+
+# The output cache: which files the committed metas name (mesh.msh by mesh_sha256) are in it.
+cache-status:
+	$(PYTHON) tools/output-cache status --results results
+
+# Add the cacheable files under results/ to $(OUTPUT_CACHE), commit there and push it (needs
+# write access to the cache repository; run tools/output-cache push --dry-run first).
+cache-push:
+	$(PYTHON) tools/output-cache push --cache $(OUTPUT_CACHE) --results results --publish
+
+# The lint steps of the CI lint-test job, exactly (.github/workflows/ci.yml runs this target).
+# Seconds.
+lint:
+	uv run --locked ruff check
+	uv run --locked ruff format --check
+
+# What the pre-push hook (tools/git-hooks/pre-push, installed by tools/install-hooks) runs before
+# every push: make lint, then the CI tests except the slow docs build and calibration fits
+# (PRE_PUSH_SLOW; CI runs them). About a minute. -rs lists the skips. The tests' scratch files go
+# to PRE_PUSH_TMP, not the system temporary directory; it must be outside the repository (the
+# sandbox and scratch-directory checks refuse workdirs inside it, so not tmp/), and one per
+# checkout, since pytest empties its --basetemp when it starts and worktrees may push at once.
+PRE_PUSH_TMP ?= $(HOME)/.cache/gf180-tcad/pre-push$(subst /,_,$(CURDIR))
+PRE_PUSH_SLOW = tests/test_docgen.py tests/test_doc_links.py tests/test_calibrate_cv.py
+pre-push: lint
+	mkdir -p $(PRE_PUSH_TMP)
+	uv run --locked pytest -m "not sandbox" -q -rs -p no:cacheprovider \
+		--basetemp=$(PRE_PUSH_TMP)/pytest-pre-push tests $(addprefix --ignore=,$(PRE_PUSH_SLOW))
+
+# The docs-links rule (tests/test_doc_links.py, a few minutes: it builds the docs). The hook runs
+# it as well when a pushed commit changes docs/, src/, results/, README.md or CONTRIBUTING.md.
+pre-push-docs:
+	mkdir -p $(PRE_PUSH_TMP)
+	uv run --locked pytest -m "not sandbox" -q -rs -p no:cacheprovider \
+		--basetemp=$(PRE_PUSH_TMP)/pytest-pre-push-docs tests/test_doc_links.py

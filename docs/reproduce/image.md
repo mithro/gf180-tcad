@@ -59,11 +59,12 @@ on pull requests and on pushes to `main` (only when `docker/**` or
 3. rebuild from scratch on a fresh runner (`--no-cache`), and require the
    result to equal the first build and the committed digests.
 
-Pull requests push the tag `pr-<number>`, `main` pushes `latest` and
-`sha-<commit>`, each only after the checks above passed (the build itself pushes only the
-staging tag `unverified`, which can point at an unverified image) ([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions));
-the weekly and manual runs only rebuild and verify. Cross-host byte-identity of the results
-is described in {ref}`cross-host-determinism`.
+Pull requests push the tag `pr-<number>`; `main` pushes `latest` and `sha-<commit>`. Each
+of these is pushed only after the checks above passed
+([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions)).
+The build itself pushes only the staging tag `unverified`, which can point at an image that has
+not passed the checks. The weekly and manual runs only rebuild and verify. Whether the results are the same bytes on
+another computer is described in {ref}`cross-host-determinism`.
 
 (tcad-image)=
 
@@ -73,7 +74,7 @@ is described in {ref}`cross-host-determinism`.
 [`ghcr.io/mithro/gf180-tcad-tcad`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-tcad),
 built from {repo}`docker/tcad/` **on top of the pinned base image**: its `FROM` is the
 reference in {repo}`docker/IMAGE` ({repo}`docker/tcad/build` passes it as `BASE_IMAGE`).
-{term}`SPICE` jobs keep using the base image, so the committed SPICE reference does not depend
+{term}`SPICE` jobs keep using the base image, so the committed {term}`SPICE reference <SPICE reference results>` does not depend
 on it.
 
 This is the {term}`stable TCAD image`, with the latest PyPI releases of the TCAD stack. The
@@ -168,7 +169,7 @@ the base image updates both images in **one** pull request:
 5. Merge only when every check is green.
 
 On the first push of step 1, the TCAD entry can also fail to pull a base that the base entry has
-not pushed yet (the two entries run in parallel). That failure is expected; it goes away on
+not pushed (the two entries run in parallel). That failure is expected; it goes away on
 the next push, or with a re-run of the failed job once the base is pushed. The from-scratch
 rebuild of each entry runs even when the other entry failed.
 
@@ -189,7 +190,7 @@ the venv path, and differ only in where the TCAD stack comes from:
   [PyPI](https://pypi.org/) releases. It is kept as the baseline for "how it used to work" and for debugging: a
   difference between the two images is a change upstream, not in this project.
 
-The 1D TCAD results are generated in the dev-HEAD image and the 2D results, for now, in the
+The 1D TCAD results are generated in the dev-HEAD image and the 2D results in the
 stable image; see {ref}`tcad-results-image`.
 
 **Sources, pinned by commit.** {repo}`docker/tcad-dev/upstream.json` records each project's
@@ -340,7 +341,8 @@ workflows.
   - **Fix.** The test now checks the mesh-independent invariant. Between bias steps only the slab
     moves, so the signed core − slab jump at the rib's right bottom vertex changes by exactly the
     step of the contact potential difference (−0.1 V) and at the left one by 0. Both hold to
-    1e-3 V at mesh ×1 and ×0.5 (measured to about 2e-15 V on both gmsh versions). This is a
+    1e-3 V at mesh ×1 and ×0.5; the fork test records them as measured to 1e-15 V
+    ([`RIB_JUMP_TOL_V`](https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/tests/test_mesh.py#L48)). This is a
     stronger check: it fails for a coupled rib.
   - **Check here.**
     {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained` runs
@@ -355,9 +357,10 @@ workflows.
 
 - the 42 sandbox tests of {repo}`tests/tcad`, {repo}`tests/test_tcad_dev_image.py` and
   {repo}`tests/test_tcad_image.py` pass;
-- the 1D {term}`MOS capacitor <MOSCAP>` and mesh-convergence trees regenerated in the dev image
+- the 1D {term}`MOS capacitor <MOSCAP>` and mesh-convergence results folders regenerated in the dev image
   are byte-identical to the committed {repo}`results/tcad/moscap1d` and
-  {repo}`results/tcad/meshconv` trees, except their `provenance.json`, which names the image;
+  {repo}`results/tcad/meshconv` results folders. Only their `provenance.json`, which names the
+  image, differs;
 - the drift guard, {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`, passes:
   the stable and dev images give the same bytes.
 
@@ -382,30 +385,30 @@ kind is generated with, and it is the default of `python -m gf180tcad.tcad mosca
 |---|---|---|
 | 1D {term}`MOS capacitor <MOSCAP>`, {repo}`results/tcad/moscap1d` | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the stack of the final results |
 | 1D {term}`mesh convergence`, {repo}`results/tcad/meshconv` (`moscap1d/`) | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the same |
-| 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | for now: see below |
+| 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | see below |
 
-Each tree root's `provenance.json` records, under `images`, which image made each result kind
-in it: the image's name, its reference and its `versions.json`. The mesh-convergence tree holds
+The top folder of each set of results holds a `provenance.json`. Under `images`, it records which
+image made each result kind in it: the image's name, its reference and its `versions.json`. The mesh-convergence results folder holds
 1D and 2D results, so it records one entry for each.
 
-- **1D on dev HEAD.** The 1D trees regenerate on the dev image byte-identical to the stable
-  image's, data file for data file; only `provenance.json` differs. Two sandbox tests keep it
+- **1D on dev HEAD.** The 1D results folders regenerate on the dev image byte-identical to the stable
+  image's, data file for data file. Only `provenance.json` differs. Two sandbox tests keep it
   so: {test}`tests/tcad/test_moscap1d.py::test_byte_identical` and
-  {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical` rerun the committed trees in
+  {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical` rerun the committed results folders in
   the dev image, and {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`
   runs both 1D CLIs on both images and requires the same bytes. That last test is the drift
   guard between the two stacks.
-- **2D on stable, for now.** {{ gmsh }} 5 (the dev image) meshes the 2D cells differently
-  from gmsh 4.15.2 (the stable image), so a 2D result on dev needs its own mesh convergence on
-  dev; the stable image's selected 2D mesh does not carry over. The 2D results of
+- **2D on stable.** {{ gmsh }} 5 (the dev image) meshes the 2D cells differently
+  from gmsh 4.15.2 (the stable image). A 2D result on dev therefore needs its own mesh
+  convergence on dev; the stable image's selected 2D mesh does not carry over. The 2D results of
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
   are therefore made on the stable image, explicitly.
-- **Planned.** Before the {term}`Phase 2` exit, the 2D mesh convergence is rerun on the dev image and
-  the 2D results are regenerated there; {py:data}`~gf180tcad.tcad.RESULTS_IMAGE` then names dev for 2D as well.
-- **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, still has the laxer
-  builder check: unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
-  driver and BuildKit image before using it. Tightening it would change that image's build
-  inputs, so it waits for the next re-pin of the stable image.
+- **No 2D mesh convergence on dev.** The 2D mesh convergence has not been rerun on the dev
+  image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
+- **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, has the laxer
+  builder check. Unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
+  driver and BuildKit image before using it
+  ([issue #81](https://github.com/mithro/gf180-tcad/issues/81)).
 
 (tcad-dev-mirror)=
 

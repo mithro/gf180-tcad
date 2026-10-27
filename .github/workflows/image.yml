@@ -34,8 +34,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: image-${{ github.ref }}
-  # never cancel main: every sha-<commit> tag must be pushed
+  # never cancel main: every sha-<commit> tag must be pushed. Outside pull requests each commit is
+  # its own group: GitHub cancels the pending run of a group when a third arrives, even without
+  # cancel-in-progress.
+  group: image-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:

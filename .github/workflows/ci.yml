@@ -9,6 +9,15 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same pull request cancels the run still going for the older commit, so a
+# burst of fix-up pushes ends in one result (one notification), not one failure per superseded
+# commit. Runs on main are never cancelled: each commit is its own group (GitHub keeps one running
+# and one pending run per group and cancels the pending one when a third arrives, whatever
+# cancel-in-progress says), so every merge commit gets its own complete run.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint-test:
     name: lint-test
@@ -25,8 +34,8 @@ jobs:
           version: "0.13.1"
       # --group docs: tests/test_docgen.py renders the plots and builds the docs.
       - run: uv sync --locked --group docs
-      - run: uv run ruff check
-      - run: uv run ruff format --check
+      # The same target as the local pre-push hook (tools/install-hooks): ruff check, ruff format.
+      - run: make lint
       - name: Generate de_DE.UTF-8 locale (so test_csv_bytes_stable_under_locale runs, not skips)
         run: |
           sudo locale-gen de_DE.UTF-8

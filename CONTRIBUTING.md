@@ -30,6 +30,38 @@ Every PR is reviewed by an independent review agent (a separate subagent that di
 write the change). Its findings are fixed before merge. The project owner spot-checks
 PRs but is not a merge blocker.
 
+## PR checklist
+
+- The documentation is updated in the same PR as the change, never later. The author updates
+  every status page the change affects: the Status section of [README.md](README.md), the
+  Status admonition of [docs/index.md](docs/index.md), the task checkboxes of the plan in
+  [docs/superpowers/plans](docs/superpowers/plans) (ticked with the PR number and merge date),
+  the [limitations index](docs/limitations/index.md), and the results and comparison pages
+  whose content it changes. [`tests/test_docs_status.py`](tests/test_docs_status.py) catches
+  only two narrow cases (a top-level results tree the Status does not name, and a few known
+  stale phrases); passing it says nothing about whether the pages are current.
+- Every review checks that those pages were updated correctly at the same time. A PR whose
+  documentation lags behind the change is "needs fixes", like any other finding.
+- Docs pages follow the writing rules of the [design spec, section 10.3](docs/superpowers/specs/2026-10-18-gf180-tcad-design.md):
+  the user's `writing-sourced-docs` and `docs-writing` skills (from the user's
+  [mithro/dot-claude](https://github.com/mithro/dot-claude) repository; `docs-writing` is on its
+  `docs-writing-skill` branch). A reader page states only what a source backs, with the source
+  linked in the sentence. It carries no hedge or unknown word (`not yet`, `unverified`, `not public`,
+  `probably`, `likely`, `about` before a number and the others listed in section 10.3). An
+  unsourced statement is removed and filed as an issue. Before handing a page over, run
+  `uv run --no-project python -I tools/measure_docs.py <page>` ([`tools/measure_docs.py`](tools/measure_docs.py)), `uv run --no-project python -I tools/docs_lint.py --no-front-matter <page>` ([`tools/docs_lint.py`](tools/docs_lint.py)) and the docs tests
+  ([`tests/test_doc_style.py`](tests/test_doc_style.py),
+  [`tests/test_doc_measure.py`](tests/test_doc_measure.py)); a PR that fixes pages lowers
+  [`tests/doc_measure_baseline.json`](tests/doc_measure_baseline.json) with
+  `uv run --locked python tests/test_doc_measure.py --write-baseline`.
+- A change to a table, in a page or in [`src/gf180tcad/docgen.py`](src/gf180tcad/docgen.py), needs a
+  check at 400 px wide, because no test sees the rendered width. Build the docs, then take a
+  screenshot of the page with
+  `google-chrome --headless=new --hide-scrollbars --window-size=400,1800 --screenshot=tmp/shot.png file://$PWD/tmp/docs-html/<page>.html`.
+  The table must not scroll sideways and no number may break across lines
+  ([`docs/_static/narrow.css`](docs/_static/narrow.css) sets the narrow-screen table style).
+  Attach the screenshots to the PR.
+
 ## Forks only
 
 Never interact with upstream or third-party repositories: no PRs, issues, comments or
@@ -56,10 +88,29 @@ with [pytest](https://docs.pytest.org/).
 
 ```
 uv sync --locked
-uv run ruff check
-uv run ruff format --check
+uv run --locked python tools/install-hooks
+make lint
 uv run pytest -m "not sandbox"
 ```
+
+`make lint` (ruff check, ruff format --check) is exactly the lint step of the `lint-test` check of
+[CI](.github/workflows/ci.yml), which then runs the tests. [`tools/install-hooks`](tools/install-hooks) installs, once per
+clone (it covers every git worktree of it), the pre-push hook
+[`tools/git-hooks/pre-push`](tools/git-hooks/pre-push): each `git push` first runs `make pre-push` (`make lint`, then
+every non-sandbox test except the slow docs build and calibration fits, about a minute) and,
+when a pushed commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), README.md or CONTRIBUTING.md,
+`make pre-push-docs` (the docs-links rule, a few minutes). A failure refuses the push. A push
+can therefore take three minutes or more: an agent runs `git push` in the background or with a
+timeout of at least 300 s, and never with `--no-verify`. The hook only checks what most often
+broke CI, so run the full `uv run pytest -m "not sandbox"` before asking for review. CI cancels
+the run of a superseded commit when a newer one is pushed to the same pull request (runs on
+`main` are never cancelled).
+
+By design, the hook also refuses a push of several branches that are not all the checked-out
+one, and, when `push.default` is `matching`, any push of a branch other than the checked-out
+one. That is what a bare `git push` under `push.default=matching` does, and since every worktree
+of a clone shares its branches, it pushes other sessions' unfinished commits (and starts CI on
+them). Push with `git push origin HEAD`, and set `git config push.default simple`.
 
 [`uv.lock`](uv.lock) is committed. Tests that run simulators are marked
 [`sandbox`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-sandbox); they run only through [`tools/sandbox-run`](tools/sandbox-run)
