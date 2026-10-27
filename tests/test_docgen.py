@@ -550,6 +550,19 @@ def test_moscap_summary_2d_sentence_follows_the_statuses(tmp_path):
     path.write_text(json.dumps(val), "utf-8")
     text = summary()
     assert "not run for any geometry" not in text and row(text, gid).endswith("| Disagree |")
+    # only a pfet entry compared: the sentence must follow the pfet too
+    val["two_d"][gid] = {"causes": [], "reason": "none", "status": "not run"}
+    path.unlink()
+    path.write_text(json.dumps(val), "utf-8")
+    ppath = tree / "validation" / "pfet_05v0.json"
+    pval = json.loads(ppath.read_text("utf-8"))
+    pgid = next(iter(pval["two_d"]))
+    pval["two_d"][pgid].update(status="compared", verdict="Disagree")
+    ppath.unlink()
+    ppath.write_text(json.dumps(pval), "utf-8")
+    text = summary()
+    prow = next(ln for ln in text.splitlines() if f"<pfet_05v0/{pgid}>" in ln)
+    assert "not run for any geometry" not in text and prow.endswith("| Disagree |")
 
 
 def test_checks_match_the_committed_verdicts():
