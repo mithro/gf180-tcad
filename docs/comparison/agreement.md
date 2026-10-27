@@ -6,12 +6,13 @@ precise enough to be checked.
 
 ## In plain language
 
-The {term}`TCAD` setup is **credible** for a device type when **one {term}`process description`
-built from public sources** ({ref}`parameter-budget`) reproduces the {term}`PDK`'s {term}`SPICE`
-behaviour. The process description has the same doping, oxide, mobility and contact parameters
-for every gate length and width. It must match the typical corner ({term}`TT`, 25 °C) across
-all checked geometries and biases, within the {ref}`tolerances below <tolerances>`, **including
-on characteristics that were not used to tune it**. Every remaining mismatch is listed with its
+The {term}`TCAD` setup is **credible** for a device type when **one {term}`process description`**
+reproduces the {term}`PDK`'s {term}`SPICE` behaviour. The process description is built from public
+sources ({ref}`parameter-budget`), with the same doping, oxide, mobility and contact parameters
+for every gate length and width. It must match the typical corner
+({term}`TT`, 25 °C) across all checked geometries and biases, within the
+{ref}`tolerances below <tolerances>`. That holds **including on characteristics that were not
+used to tune it**. Every remaining mismatch is listed with its
 physical or modelling cause and the evidence that shows it.
 
 (agreement-verdicts)=
@@ -21,7 +22,7 @@ Each device and each metric gets one of three verdicts:
 - **{term}`Agree`**: within the technical {term}`tolerance`.
 - **{term}`Same process`**: outside the tolerance but inside the
   {term}`"Same process" window`, the {term}`combined range` of the PDK's own min-max
-  {term}`spec window` and the {term}`corner envelope` ({ref}`same-process-window`). Examples of
+  {term}`spec window` and the {term}`corner envelope`. Examples of
   spec windows are ±120 mV in {term}`Vt` and ±20 % in {term}`Idsat` ({doc}`pdk-spec-check`).
   The TCAD device is then inside the range the PDK specifies, not at its typical point.
 - **{term}`Disagree`**: outside the "Same process" window; the TCAD is describing a different
@@ -55,16 +56,20 @@ Each device and each metric gets one of three verdicts:
 ### SPICE reference conditions
 
 The primary {term}`SPICE reference <SPICE reference results>` uses the PDK device as a designer would
-instantiate it from a schematic: the PDK's default instance parameters (the source and drain
-areas and perimeters AS, AD, PS and PD computed by the PDK's standard formulas; the default
-layout distances SA, SB, SCA and SCB used by the stress and well-proximity models; nf = 1,
-m = 1). It is the only reference built.
+instantiate it from a schematic, with the PDK's default instance parameters:
+
+- AS, AD, PS and PD, the source and drain areas and perimeters, computed by the PDK's standard
+  formulas;
+- SA, SB, SCA and SCB, the default layout distances used by the stress and well-proximity models;
+- nf = 1 and m = 1.
+
+It is the only reference built.
 
 (secondary-reference)=
 
 **The layout-extracted secondary reference is not built.** The
 {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
-also asks for a secondary reference with instance parameters extracted from the actual
+also asks for a secondary reference with instance parameters extracted from the
 {{ gdsfactory }} cell layout. The difference between the two is to be reported and attributed to
 `stress`, `rsd` (see the {ref}`mismatch taxonomy <mismatch-taxonomy>`) or well-proximity
 effects. Its absence is a recorded deviation from the spec ({ref}`limitations-spec-deviations`).
@@ -132,9 +137,9 @@ geometry and bias, so the reference dataset includes all five corners. It is pub
 
 ### Tolerances
 
-Tolerances come from the {ref}`ITRS 2007 <lit-itrs>` (International Technology Roadmap for
-Semiconductors) Modeling and Simulation chapter, Table MS3, unless marked *proposal*, which
-means no published standard exists. Each tolerance is the largest allowed difference between
+Tolerances come from Table MS3 of the Modeling and Simulation chapter of the
+{ref}`ITRS 2007 <lit-itrs>` (International Technology Roadmap for Semiconductors). A tolerance
+marked *proposal* has no published standard. Each tolerance is the largest allowed difference between
 the TCAD and the SPICE value; the stretch goal is a tighter one to aim for.
 
 Threshold voltages are extracted by {term}`max-gm extrapolation <max-gm Vt>` and by
@@ -144,21 +149,22 @@ Threshold voltages are extracted by {term}`max-gm extrapolation <max-gm Vt>` and
 | Metric | Tolerance (mV) | Stretch (mV) |
 |---|---|---|
 | Vt_lin | 10 | 7 |
-| Vt roll-off, Vt(Lmin) - Vt(10 µm) | 10 | - |
-| Body effect, ΔVt(Vbs = -2 V) | 10 | - |
+| Vt roll-off, Vt(Lmin) - Vt(10 µm) | 10 | none |
+| Body effect, ΔVt(Vbs = -2 V) | 10 | none |
 
-Currents, conductances and capacitances are compared as a relative error:
+Currents, conductances and capacitances are compared as a relative error. In this table "none"
+means that the design spec sets no bias or no stretch goal for that metric:
 
 | Metric | Vgs (V) | Vds (V) | Tolerance (%) | Stretch (%) |
 |---|---|---|---|---|
 | Idsat | 5 | 5 | 5 | 3 |
-| Linear Id | ≥ Vt + 0.5 | 0.1 | 3 | - |
-| gm, gds, gm/Id | Vt + 0.15 | - | 10 | - |
-| gm, gds, gm/Id | 5 | - | 10 | - |
-| {term}`Ioff` | 0 | 5.5 | 30 | - |
-| Cgg | swept | 0 | 5 | - |
-| Cgd | - | 5 | 5 | - |
-| Effective {term}`Rsd` | - | - | 10 | - |
+| Linear Id | ≥ Vt + 0.5 | 0.1 | 3 | none |
+| gm, gds, gm/Id | Vt + 0.15 | none | 10 | none |
+| gm, gds, gm/Id | 5 | none | 10 | none |
+| {term}`Ioff` | 0 | 5.5 | 30 | none |
+| Cgg | swept | 0 | 5 | none |
+| Cgd | none | 5 | 5 | none |
+| Effective {term}`Rsd` | none | none | 10 | none |
 
 The Cgg-Vg {term}`sweep` covers accumulation, depletion and inversion. The effective Rsd is
 extracted from 1/Id versus L.
@@ -174,27 +180,29 @@ The other metrics:
 (metrics-not-yet-extracted)=
 
 **Not extracted, or defined differently.** The SPICE reference
-({py:mod}`gf180tcad.metrics`, keys of `metrics.json`) does not cover the whole table, a
+({py:mod}`gf180tcad.metrics`, keys of `metrics.json`) does not cover the whole table. That is a
 recorded deviation from the design spec ({ref}`limitations-spec-deviations`). Extracting these
 is a {term}`Phase 3 entry gate`
 ([issue #70](https://github.com/mithro/gf180-tcad/issues/70)):
 
-- *Not extracted:* gm and gds at Vgs = Vt + 0.15 V; gm/Id; Cgd at Vds = 5 V; Cgg in
-  depletion (only inversion, {term}`cgg_inv_ff`, and accumulation, {term}`cgg_acc_ff`, are
-  extracted); effective Rsd; Isub; Vt roll-off, Vt(Lmin) - Vt(10 µm) (each geometry's Vt is
-  published, the difference is not); the RMS error of log10(Id).
+- *Not extracted:* gm and gds at Vgs = Vt + 0.15 V, gm/Id, Cgd at Vds = 5 V, Cgg in
+  depletion and the effective Rsd. Nor are Isub, the Vt roll-off Vt(Lmin) - Vt(10 µm) and the
+  RMS error of log10(Id). Of Cgg only inversion ({term}`cgg_inv_ff`) and accumulation
+  ({term}`cgg_acc_ff`) are extracted. Each geometry's Vt is published, the roll-off difference is
+  not.
 - *Definition differs:* the body effect ({term}`body_effect_v`) uses the
-  {term}`constant-current Vt` only, not also the {term}`max-gm Vt`; {term}`gm_peak_s` is the peak gm on {term}`idvg_lin`, not the
-  gm at Vgs = Vt + 0.15 V or at Vgs = 5 V of the table.
+  {term}`constant-current Vt` only, not also the {term}`max-gm Vt`. The peak gm,
+  {term}`gm_peak_s`, is taken on {term}`idvg_lin`. The table asks for gm at Vgs = Vt + 0.15 V and
+  at Vgs = 5 V.
 
-Metrics are also reported as an error divided by {term}`σ_mismatch`, where
-σ_ΔVt = A_Vt / √(W·L) for the Vt difference of a pair, with the effective W and L
-({ref}`Pelgrom 1989 <lit-pelgrom>`), and the PDK's A_Vt is 11.55 mV·µm, to give a physical
-sense of scale. The value is the `par_vth = 0.01155` (V·µm) of the
+Metrics are also reported as an error divided by {term}`σ_mismatch`, to give a physical sense
+of scale. For the Vt difference of a pair, σ_ΔVt = A_Vt / √(W·L), with the effective W and L
+({ref}`Pelgrom 1989 <lit-pelgrom>`). The PDK's A_Vt is 11.55 mV·µm. The value is the
+`par_vth = 0.01155` (V·µm) of the
 [`nfet_05v0` subcircuit](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L46950-L46963) in the
 PDK's ngspice model card (provenance tag `spice-card`). The card draws each device's Vt shift
-with σ = 0.7071 · par_vth / √(W_eff · L_eff), with W_eff = W + 0.5 µm and L_eff = L − 0.4 µm in
-µm, so par_vth is A_Vt in the Pelgrom convention for the Vt difference of a pair.
+with σ = 0.7071 · par_vth / √(W_eff · L_eff). Here W_eff = W + 0.5 µm and L_eff = L − 0.4 µm,
+in µm. So par_vth is A_Vt in the Pelgrom convention for the Vt difference of a pair.
 
 (numerical-acceptance)=
 
@@ -242,10 +250,16 @@ The tags and the metrics each one is expected to show up in:
 | `thermal` | Idsat at high power |
 | `numerics` | fails the {ref}`numerical acceptance checks <numerical-acceptance>` |
 
-The cause behind each tag:
+The cause behind each tag, in three groups. The process and structure of the device:
 
 - `doping`: the channel, {term}`LDD`, {term}`S/D` and well profiles are unknown, and analytic
   stand-ins replace them.
+- `rsd`: the contact, silicide and LDD resistance (the card has RDSW 2175 Ω·µm).
+- `geometry-2d`: a 2D cross-section ignores {term}`STI` narrow-width and corner effects.
+- `stress`: STI/{term}`LOD` stress is present in the silicon-fitted SPICE and absent in the TCAD.
+
+The physical models of the TCAD:
+
 - `oxide-qm`: TOXE ≠ TOXP, from {term}`poly depletion` and the quantum dark space; classical
   {term}`drift-diffusion` without {term}`density-gradient` ({ref}`Ancona and Iafrate <lit-ancona>`)
   or a poly gate misses both. The size of the expected ΔVt has no source
@@ -253,11 +267,11 @@ The cause behind each tag:
 - `mobility`: the mobility model choice ({ref}`Lombardi <lit-lombardi>`/{ref}`CVT <lit-darwish>`
   versus {ref}`Philips/Klaassen <lit-klaassen>`) and the surface-roughness parameters.
 - `velsat`: the high-field velocity saturation model ({ref}`Caughey-Thomas <lit-caughey>`).
-- `rsd`: the contact, silicide and LDD resistance (the card has RDSW 2175 Ω·µm).
-- `geometry-2d`: a 2D cross-section ignores {term}`STI` narrow-width and corner effects.
-- `stress`: STI/{term}`LOD` stress is present in the silicon-fitted SPICE and absent in the TCAD.
-- `spice-fit`: {term}`BSIM4` is empirical, {term}`binned` (L bin at 0.7 µm) and fitted to
-  silicon, so it may be non-physical between bins.
 - `ii`: the impact-ionisation model and its parameters at 5 V.
 - `thermal`: self-heating absent or present.
+
+The SPICE model and the numerics:
+
+- `spice-fit`: {term}`BSIM4` is empirical, {term}`binned` (L bin at 0.7 µm) and fitted to
+  silicon, so it may be non-physical between bins.
 - `numerics`: the mesh and the solver.
