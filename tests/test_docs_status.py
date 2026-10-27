@@ -2,9 +2,15 @@
 """The status pages keep up with the committed results (CONTRIBUTING.md, PR checklist).
 
 ``docs/index.md`` (its Status admonition) and ``README.md`` (its Status section) are hand
-written, so nothing regenerates them when a result tree is added. These checks catch the
+written, so nothing regenerates them when a result tree is added. These checks catch only the
 coarsest lag: a top-level tree under ``results/tcad`` that a Status does not name, and phrases
 from statuses that are known to have gone stale.
+
+Blind spots: only the top-level directories of ``results/tcad`` are checked (not their
+subtrees, ``results/spice`` or the docs pages besides the two Statuses); a tree counts as
+named when ``results/tcad/<tree>`` appears anywhere in the Status as a substring, whatever
+the sentence says about it; and only the phrases in ``STALE`` are caught. A passing test does
+not mean the status is current; the review does (CONTRIBUTING.md, PR checklist).
 """
 
 import re
@@ -54,7 +60,8 @@ def test_there_are_tcad_trees():
 def test_status_names_every_tcad_tree(page):
     status = STATUSES[page]()
     missing = [t for t in tcad_trees() if f"results/tcad/{t}" not in status]
-    assert not missing, f"the {page} Status does not name results/tcad/{missing}"
+    named = ", ".join(f"results/tcad/{t}" for t in missing)
+    assert not missing, f"the {page} Status does not name {named}"
 
 
 @pytest.mark.parametrize("page", sorted(STATUSES))

@@ -8,12 +8,10 @@ Some generated files are too large to commit but take hours to regenerate: today
 fetch them instead of rerunning the job. It is effectively a shared cache for everyone
 ({repo}`design spec, section 9.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#91-output-cache-for-large-regenerable-artefacts>`).
 
-**Status (2026-10-27).** The cache is initialised and holds one object: the `mesh.msh` of the
-calibrated {term}`Lmin` nfet cell of [issue #35](https://github.com/mithro/gf180-tcad/issues/35)
-(sha256 `8dad0ca787dc…`), checked with `tools/output-cache verify`. The
-meshes of the four committed 2D start jobs are not in it, and are on no disk either: they
-have to be regenerated before they can be pushed, and `tools/output-cache status` reports
-them as absent.
+The cache holds one object: the `mesh.msh` of the calibrated {term}`Lmin` nfet cell of
+[issue #35](https://github.com/mithro/gf180-tcad/issues/35) (sha256 `8dad0ca787dc…`). The
+meshes of the four committed 2D start jobs are not in it and are on no disk: they have to be
+regenerated before they can be pushed ({ref}`first population <output-cache-first-population>`).
 
 ## The contract
 
@@ -51,9 +49,13 @@ A {{ gmsh }} mesh compresses to about a third (27.5 MB to 9.5 MB measured, 10 s)
 
 ```sh
 tools/output-cache status          # which files the committed metas name are in the cache
-tools/output-cache pull results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/mesh.msh
-tools/output-cache pull <sha256> --out mesh.msh
+tools/output-cache pull 8dad0ca787dc3d805661e6262725bb833ba33edf1b46bf7b4a3ce69afbc2ea64 --out mesh.msh
+tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh
 ```
+
+The first `pull` fetches the one cached mesh by its sha256. The second form writes a
+committed job's mesh into place by the `mesh_sha256` its `cv.meta.json` names; the committed
+start meshes are not in the cache yet, so for them it fails.
 
 `status` and `pull` clone the cache shallow and blobless into a temporary directory under `tmp/`
 (`--scratch` elsewhere) and download only `index.json` and the one object; `--cache` takes a

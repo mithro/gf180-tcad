@@ -486,7 +486,7 @@ The CLI is **not** `python -m gf180tcad …`: `__main__` is a SPICE generator mo
 
 ### Task 8 (fork): C–V solver API
 
-> **Done** in mithro/gplugins#6. Submodule bump 2 of 3 (fork main `dddaa07`, commit ce29e02) landed with PR #24 (merged 2026-10-19); the "Re-verified on latest" section had been filled at `400f842` in PR #23. The pin moved on to `1c071d0` (mithro/gplugins#9 to #12) in PR #28 (merged 2026-10-19).
+> **Done** in mithro/gplugins#6. Submodule bump 2 of 3 (fork main `dddaa07`, commit ce29e02) landed with PR #24 (merged 2026-10-19); the "Re-verified on latest" section had been filled at `400f842` in PR #23. The pin moved on to `1c071d0` (mithro/gplugins#9 to #12) in PR #28 (merged 2026-10-24).
 
 **Context.** There are two routes:
 - quasi-static: `C = dQgate/dVg`, a central difference of `get_contact_charge`;
@@ -722,7 +722,7 @@ The pfet NSD of 6e16 (38207) has no clear physical meaning and is **not** used. 
 
 ### Task 11: 2D MOSCAP from gdsfactory geometry, and the C/Cox > 1 artefact
 
-> **Done** in PR #30 (merged 2026-10-24; supersedes #29).
+> **Done** in PR #30 (merged 2026-10-24; supersedes #29), with two recorded deviations from Step 3: the L = 10 µm cell is not run in 2D (its equilibrium solve fails in UMFPACK) and the L = 2 µm cell has no AC result (QS only); see docs/limitations/moscap2d.md.
 
 **Context.**
 - `gf180mcu.cells` `nfet(volt="5.0V")` and `pfet(volt="5.0V")` build under gdsfactory 9.51 and contain Dualgate `(55,0)`. These are the devices the SPICE reference describes. `cap_mos` is a different device with its own SPICE model, and is not used.

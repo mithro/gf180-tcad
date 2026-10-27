@@ -32,13 +32,14 @@ there.
   fresh run differs from them ({ref}`moscap2d-reproduce`). Only the calibrated 1D
   {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
   `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
-- **One TCAD backend so far.** Every TCAD result is from {{ DEVSIM }}. The design spec now asks
+- **One TCAD backend so far.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
   for {{ Charon }} in parallel on every job, with a per-job cross-comparison
-  ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`,
-  amended 2026-10-27). It is planned
+  ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
+  It is planned
   ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
-  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)); its first step, the backend seam
-  in the plugin, is a draft ([PR #51](https://github.com/mithro/gf180-tcad/pull/51)), and no
+  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)); its first step, splitting the
+  plugin so that a second simulator can plug in, is a draft
+  ([PR #51](https://github.com/mithro/gf180-tcad/pull/51)), and no
   Charon job has run ({ref}`numerical-acceptance`).
 - **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;

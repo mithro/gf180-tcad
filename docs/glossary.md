@@ -498,8 +498,8 @@ Phase 3 entry gate
   1D and 2D {term}`MOS capacitor <MOSCAP>`, calibrated against the {term}`SPICE` {term}`Cgg`–Vg
   ({repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md>`).
   Phase 3, not started: the 2D MOSFET, on both backends. Phase 4, planned: {{ Charon }} in
-  parallel with {{ DEVSIM }} and the cross-comparison of the two, which since the 2026-10-27
-  amendment runs alongside Phases 2 and 3 rather than after them
+  parallel with {{ DEVSIM }} and the cross-comparison of the two, which runs alongside Phases 2
+  and 3
   ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`). The
   Phase 3 entry gate is the list of what must exist before any MOSFET {term}`TCAD` result,
   including the deviations from the design spec still open at the end of
