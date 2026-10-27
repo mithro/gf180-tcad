@@ -628,8 +628,10 @@ def _doc_rows(c: dict) -> tuple[str, str, str]:
     wl = f"| {g['w_um']:g} | {g['l_um']:g} |"
     return (
         f"{wl} {g['role']} | {c['verdict']} |",
-        f"{wl} {100 * m['plateau_acc_max_rel']:.2f} | {100 * m['plateau_inv_max_rel']:.2f} | "
-        f"{100 * m['depletion_max_rel']:.1f} |",
+        (
+            f"{wl} {100 * m['plateau_acc_max_rel']:.2f} | {100 * m['plateau_inv_max_rel']:.2f} | "
+            f"{100 * m['depletion_max_rel']:.1f} |"
+        ),
         f"{wl} {1000 * m['dv_dep_v']:+.1f} | {1000 * m['dv_inv_v']:+.1f} |",
     )
 
