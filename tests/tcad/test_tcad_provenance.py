@@ -1,17 +1,22 @@
 # SPDX-License-Identifier: Apache-2.0
-"""TCAD provenance: TCAD_GENERATORS and every committed tree root's provenance.json.
+"""TCAD provenance: the generator registry, TCAD_GENERATORS and every committed tree root's
+provenance.json.
 
 As for the SPICE reference (tests/test_reference.py, tests/test_results_provenance.py), each TCAD
 entry point's hashed module list is tied to its own import graph (issue #34: one list per entry
 point, so a change to code a tree's writer never imports leaves that tree's hash alone), each
 committed tree root is tied to the entry point that writes it (TREE_GENERATORS), and each
 committed ``results/tcad/<tree>/provenance.json`` must equal what that entry point would write
-now. These need the plugin submodule checked out (``git submodule update --init``).
+now. The registry is data, src/gf180tcad/generators.json (Charon plan Task B0), never hashed;
+the tests here make it as strict as code. These need the plugin submodule checked out
+(``git submodule update --init``).
 """
 
 import ast
+import fnmatch
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -25,17 +30,19 @@ from gf180tcad.tcad import calibration
 REPO = Path(__file__).resolve().parents[2]
 RESULTS = REPO / "results"
 TCAD_RESULTS = RESULTS / "tcad"
+REGISTRY = REPO / "src" / "gf180tcad" / "generators.json"
 # The TCAD entry points.
 TCAD_MAIN = "gf180tcad.tcad.__main__"
 CALIBRATE_MAIN = "gf180tcad.calibrate.__main__"
 ROOTS = (TCAD_MAIN, CALIBRATE_MAIN)
-# The entry point that writes each tree root (docs/reproduce/index.md, tcad-provenance).
+# The entry point that writes each tree root, by its path relative to results/
+# (docs/reproduce/index.md, tcad-provenance).
 WRITERS = {
-    "moscap1d": TCAD_MAIN,
-    "moscap2d": TCAD_MAIN,
-    "meshconv": TCAD_MAIN,
-    "calibration": CALIBRATE_MAIN,
-    "validation": CALIBRATE_MAIN,
+    "tcad/moscap1d": TCAD_MAIN,
+    "tcad/moscap2d": TCAD_MAIN,
+    "tcad/meshconv": TCAD_MAIN,
+    "tcad/calibration": CALIBRATE_MAIN,
+    "tcad/validation": CALIBRATE_MAIN,
 }
 # The tree roots of the plan's results layout (Global Constraints, "Result files").
 TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation")
@@ -93,7 +100,7 @@ def _ast_import_closure(roots: tuple[str, ...]) -> set[str]:
 
 
 def test_tcad_generators_are_the_two_entry_points():
-    assert tuple(tcad.TCAD_GENERATORS) == ROOTS
+    assert set(tcad.TCAD_GENERATORS) == set(ROOTS)
     assert (tcad.TCAD_MAIN, tcad.CALIBRATE_MAIN) == ROOTS
     for entry, modules in tcad.TCAD_GENERATORS.items():
         assert entry in modules
@@ -102,11 +109,171 @@ def test_tcad_generators_are_the_two_entry_points():
 
 def test_tree_generators_tie_each_tree_to_its_writer():
     assert tcad.TREE_GENERATORS == WRITERS
-    assert set(tcad.TREE_GENERATORS) == set(TREE_ROOTS)
+    assert {k.removeprefix("tcad/") for k in tcad.TREE_GENERATORS} == set(TREE_ROOTS)
+
+
+# --- the registry (Charon plan Task B0) --------------------------------------------------------
+
+
+def test_registry_is_plain_data():
+    """generators.json: the five keys, plain JSON (strings, lists, dicts), and the module-level
+    dicts of gf180tcad.tcad are exactly its contents."""
+    reg = json.loads(REGISTRY.read_bytes())
+    assert set(reg) == {
+        "calibration_dirs", "entry_points", "images", "plugin_excludes", "schema", "trees",
+    }  # fmt: skip
+    assert reg["schema"] == 1
+    assert tcad.REGISTRY_FILE == REGISTRY
+    assert tcad.TCAD_GENERATORS == {e: tuple(m) for e, m in reg["entry_points"].items()}
+    assert tcad.TREE_GENERATORS == reg["trees"]
+    assert tcad.PLUGIN_EXCLUDES == {e: tuple(p) for e, p in reg["plugin_excludes"].items()}
+    assert tcad.IMAGES == {
+        n: (Path(v["pin"]), Path(v["versions"])) for n, v in reg["images"].items()
+    }
+    assert tcad.CALIBRATION_DIRS == {b: Path(d) for b, d in reg["calibration_dirs"].items()}
+    for entry, modules in reg["entry_points"].items():
+        assert entry in modules and modules == sorted(set(modules)), entry
+    # every tree, exclusion and image is of a known entry point / an existing file
+    assert set(reg["trees"].values()) <= set(reg["entry_points"])
+    assert set(reg["plugin_excludes"]) <= set(reg["entry_points"])
+    for v in reg["images"].values():
+        assert (REPO / v["pin"]).is_file() and (REPO / v["versions"]).is_file(), v
+    for patterns in reg["plugin_excludes"].values():
+        assert all(p.startswith("gplugins/devsim/") and p.endswith("/*") for p in patterns)
+    # the file is written as io.write_json would write it: sorted keys, two-space indent
+    text = json.dumps(reg, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    assert REGISTRY.read_text(encoding="utf-8") == text
+
+
+def test_registry_file_is_not_hashed(monkeypatch):
+    """The registry decides what is hashed and is not itself hashed: no entry point hashes it,
+    and a change to its bytes changes no generator_sha256."""
+    rel = REGISTRY.relative_to(REPO).as_posix()
+    before = {e: tcad.generator_sha256(e) for e in tcad.TCAD_GENERATORS}
+    for entry in tcad.TCAD_GENERATORS:
+        assert rel not in tcad.generator_files(entry), entry
+    real = tcad._sha256
+    monkeypatch.setattr(
+        tcad, "_sha256", lambda p: "0" * 64 if p.as_posix().endswith(rel) else real(p)
+    )
+    assert {e: tcad.generator_sha256(e) for e in tcad.TCAD_GENERATORS} == before
+
+
+def test_excluded_plugin_files_are_left_out_of_the_hash(monkeypatch):
+    """A tracked plugin file under an entry point's plugin_excludes is not hashed for it."""
+    real = tcad._git
+
+    def git(args, cwd):
+        out = real(args, cwd)
+        if args[:2] == ["ls-files", "-z"]:
+            out += "gplugins/devsim/backends/charon/deck.py\0gplugins/devsim/backends/x.py\0"
+        return out
+
+    monkeypatch.setattr(tcad, "_git", git)
+    for entry in (TCAD_MAIN, CALIBRATE_MAIN):
+        files = tcad.generator_files(entry, REPO)
+        assert "third_party/gplugins/gplugins/devsim/backends/x.py" in files, entry
+        assert not any("backends/charon" in f for f in files), entry
+    monkeypatch.setattr(tcad, "PLUGIN_EXCLUDES", {})
+    files = tcad.generator_files(TCAD_MAIN, REPO)
+    assert "third_party/gplugins/gplugins/devsim/backends/charon/deck.py" in files
+
+
+def _excluded_modules() -> set[str]:
+    """The plugin packages the DEVSIM entry points leave out of their hash, as module names."""
+    return {
+        p.removesuffix("/*").replace("/", ".")
+        for patterns in tcad.PLUGIN_EXCLUDES.values()
+        for p in patterns
+    }
+
+
+def _imports_of(rel: str, source: str) -> set[str]:
+    """Every module that the plugin file ``rel`` (relative to the submodule) names in an import,
+    relative imports resolved, ``from a import b`` giving both ``a`` and ``a.b``, plus every
+    string constant that looks like a dotted or slashed module path (importlib by name)."""
+    package = rel.split("/")[:-1]  # of a module and of a package's __init__.py alike
+    out: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            out |= {a.name for a in node.names}
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                base = package[: len(package) - (node.level - 1)]
+                mod = ".".join([*base, *([node.module] if node.module else [])])
+            else:
+                mod = node.module
+            out.add(mod)
+            out |= {f"{mod}.{a.name}" for a in node.names}
+        elif (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and re.fullmatch(r"[\w./]+", node.value)
+        ):
+            out.add(node.value.replace("/", "."))
+    return out
+
+
+def _imports_excluded(rel: str, source: str) -> list[str]:
+    excluded = _excluded_modules()
+    return sorted(m for m in _imports_of(rel, source) if any(x in m for x in excluded))
+
+
+def test_excluded_plugin_files_are_not_imported_by_the_hashed_ones():
+    """No hashed gplugins/devsim module imports the excluded backends/charon/ package, so a DEVSIM
+    tree can never run code its hash leaves out (Charon plan Task B0). The plugin's own pytest
+    files (``tests/`` and ``test_*.py``) may import it: no job runs them, and the check below
+    makes sure no module imports one of them."""
+    assert _excluded_modules() == {"gplugins.devsim.backends.charon"}
+    # positive controls: each way of reaching the excluded package is caught
+    for rel, src in [
+        ("gplugins/devsim/cv.py", "from .backends import charon\n"),
+        ("gplugins/devsim/cv.py", "from .backends.charon import deck\n"),
+        ("gplugins/devsim/backends/__init__.py", "from . import charon\n"),
+        ("gplugins/devsim/backends/devsim.py", "from ..backends.charon.deck import write\n"),
+        ("gplugins/devsim/x.py", "import gplugins.devsim.backends.charon\n"),
+        ("gplugins/devsim/x.py", "importlib.import_module('gplugins.devsim.backends.charon')\n"),
+    ]:
+        assert _imports_excluded(rel, src), (rel, src)
+    assert not _imports_excluded("gplugins/devsim/cv.py", "from .backends import devsim\n")
+    sub = REPO / tcad.GPLUGINS_SUBMODULE
+    tracked = tcad._git(["ls-files", "-z", "--", tcad.GPLUGINS_HASHED_DIR], sub).split("\0")
+    patterns = [p for ps in tcad.PLUGIN_EXCLUDES.values() for p in ps]
+    hashed = [
+        f
+        for f in tracked
+        if f.endswith(".py") and not any(fnmatch.fnmatchcase(f, p) for p in patterns)
+    ]
+    assert "gplugins/devsim/cv.py" in hashed
+
+    def is_test(rel: str) -> bool:
+        return "/tests/" in rel or rel.rsplit("/", 1)[-1].startswith("test_")
+
+    modules = [f for f in hashed if not is_test(f)]
+    assert "gplugins/devsim/cv.py" in modules
+    assert any(is_test(f) for f in hashed)
+    for rel in modules:
+        names = _imports_of(rel, (sub / rel).read_text(encoding="utf-8"))
+        found = _imports_excluded(rel, (sub / rel).read_text(encoding="utf-8"))
+        assert not found, f"{rel} imports the excluded {found}"
+        tests = sorted(
+            n for n in names if n.startswith("gplugins.devsim.") and is_test(n.replace(".", "/"))
+        )
+        assert not tests, f"{rel} imports the plugin's test files {tests}"
+
+
+def test_calibration_file_per_backend():
+    assert tcad.calibration_file("nfet_05v0") == REPO / "results/tcad/calibration/nfet_05v0.json"
+    assert tcad.calibration_file("nfet_05v0", backend="devsim") == tcad.calibration_file(
+        "nfet_05v0"
+    )
+    assert tcad.CALIBRATION_DIR == Path("results/tcad/calibration")
+    with pytest.raises(KeyError):
+        tcad.calibration_file("nfet_05v0", backend="spice")
 
 
 @pytest.mark.parametrize("entry", ROOTS)
-def test_tcad_generator_modules_match_the_import_graph(entry):
+def test_registry_lists_match_the_import_graph(entry):
     graph = _ast_import_closure((entry,))
     listed = set(tcad.TCAD_GENERATORS[entry])
     assert not graph - listed, f"imported by {entry} but not hashed: {sorted(graph - listed)}"
@@ -307,16 +474,82 @@ def test_provenance_refuses_a_dirty_or_unpinned_plugin(monkeypatch, outputs, mat
         tcad.gplugins_commit()
 
 
+def _tree_roots(results: Path) -> list[Path]:
+    """Every TCAD tree root under ``results/tcad*/``, at any depth (the renders plan's
+    ``tcad/meshes/{stable,dev}`` are two levels down): each directory holding a
+    ``provenance.json`` that is not inside another tree root."""
+    found = sorted(p.parent for p in results.glob("tcad*/**/" + PROVENANCE_NAME))
+    return [r for r in found if not any(o != r and o in r.parents for o in found)]
+
+
 def _committed_tree_roots() -> list[Path]:
-    return sorted(p.parent for p in TCAD_RESULTS.glob(f"*/{PROVENANCE_NAME}"))
+    """Every committed TCAD tree root (:func:`_tree_roots` of ``results/``)."""
+    return _tree_roots(RESULTS)
+
+
+def _key(root: Path, results: Path = RESULTS) -> str:
+    return root.relative_to(results).as_posix()
+
+
+def _unregistered_dirs(results: Path, trees) -> list[str]:
+    """The directories under ``results/tcad*/`` that are neither a registered tree nor on the
+    way to one (``tcad/meshes`` is on the way to ``tcad/meshes/stable``), as tree keys."""
+    out = []
+    todo = [p for top in sorted(results.glob("tcad*")) for p in sorted(top.iterdir()) if p.is_dir()]
+    while todo:
+        p = todo.pop()
+        key = _key(p, results)
+        if key in trees:
+            continue
+        if any(t.startswith(key + "/") for t in trees):
+            todo += [c for c in sorted(p.iterdir()) if c.is_dir()]
+            continue
+        out.append(key)
+    return sorted(out)
+
+
+def test_tree_root_helpers_handle_nested_roots(tmp_path):
+    """The helpers find tree roots at any depth (renders plan Task R0: tcad/meshes/stable and
+    tcad/meshes/dev), and flag a directory that is neither a tree nor on the way to one."""
+    results = tmp_path / "results"
+    for rel in ("tcad/moscap1d", "tcad/meshes/stable", "tcad/meshes/dev", "tcad-charon/moscap1d"):
+        (results / rel / "nfet_05v0").mkdir(parents=True)
+        (results / rel / PROVENANCE_NAME).write_text("{}", encoding="utf-8")
+    # a provenance.json inside a tree root is not another root
+    (results / "tcad/moscap1d/nfet_05v0" / PROVENANCE_NAME).write_text("{}", encoding="utf-8")
+    (results / "tcad/stray").mkdir()
+    (results / "tcad/meshes/other").mkdir()
+    assert sorted(_key(r, results) for r in _tree_roots(results)) == [
+        "tcad-charon/moscap1d", "tcad/meshes/dev", "tcad/meshes/stable", "tcad/moscap1d",
+    ]  # fmt: skip
+    trees = {"tcad/moscap1d", "tcad/meshes/stable", "tcad/meshes/dev", "tcad-charon/moscap1d"}
+    assert _unregistered_dirs(results, trees) == ["tcad/meshes/other", "tcad/stray"]
+    assert _unregistered_dirs(results, trees | {"tcad/stray", "tcad/meshes/other"}) == []
+
+
+def test_registry_trees_cover_every_committed_root():
+    """Both directions: every committed TCAD tree root (under results/tcad*/, at any depth) is a
+    tree of the registry and names the registry's writer, and every registry tree is a committed
+    root (a row whose results are not committed yet is added with them). Every directory under
+    results/tcad*/ is a tree or on the way to one. (The renders tree has its own section and
+    tests, renders plan.)"""
+    roots = _committed_tree_roots()
+    assert {_key(r) for r in roots} == set(tcad.TREE_GENERATORS)
+    assert set(tcad.TREE_GENERATORS) == set(WRITERS)
+    assert not _unregistered_dirs(RESULTS, tcad.TREE_GENERATORS), "not registry trees"
+    for root in roots:
+        committed = json.loads((root / PROVENANCE_NAME).read_bytes())
+        assert committed["generator"] == tcad.TREE_GENERATORS[_key(root)], _key(root)
 
 
 def test_committed_tree_roots_are_known():
     roots = _committed_tree_roots()
     assert roots, "no committed TCAD tree root"
-    assert {p.name for p in roots} <= set(TREE_ROOTS)
-    for p in TCAD_RESULTS.iterdir():
-        assert p.name in TREE_ROOTS, f"results/tcad/{p.name} is not a tree root of the layout"
+    layout = {f"tcad/{name}" for name in TREE_ROOTS}
+    assert {_key(p) for p in roots if TCAD_RESULTS in p.parents} <= layout
+    assert not _unregistered_dirs(RESULTS, layout | {k for k in tcad.TREE_GENERATORS}), (
+        "results/tcad* holds a directory that is not a tree root of the layout"
+    )
 
 
 # The calibration and validation trees are computed with the 1D model (Task 12).
@@ -348,14 +581,13 @@ def test_committed_results_come_from_the_results_image():
 def test_committed_tcad_provenance_current():
     for root in _committed_tree_roots():
         committed = json.loads((root / PROVENANCE_NAME).read_bytes())
-        assert committed.get("generator") == WRITERS[root.name], (
+        writer = WRITERS[_key(root)]
+        assert committed.get("generator") == writer, (
             f"{root.relative_to(REPO)}/provenance.json names generator "
-            f"{committed.get('generator')!r}, not its writer {WRITERS[root.name]}; {REGENERATE}"
+            f"{committed.get('generator')!r}, not its writer {writer}; {REGENERATE}"
         )
         current = tcad.tree_provenance(
-            root,
-            {k: tcad.RESULTS_IMAGE[k] for k in _result_kinds(root)},
-            generator=WRITERS[root.name],
+            root, {k: tcad.RESULTS_IMAGE[k] for k in _result_kinds(root)}, generator=writer
         )
         assert committed == current, (
             f"{root.relative_to(REPO)}/provenance.json differs from what the generator would "

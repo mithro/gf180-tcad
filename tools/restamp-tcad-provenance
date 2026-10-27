@@ -10,9 +10,12 @@ entry point's import closure (``generator_sha256``, :func:`gf180tcad.tcad.genera
 issue #34). This rewrites only those two fields, to what the entry point would write now: for a
 tree written under the old scheme (one hash over both entry points, no ``generator``), or after a
 change to the generator's code that cannot have changed the tree's data, when regenerating the
-tree (hours for the 2D jobs) is not worth it. The entry point comes from the tree's name
-(:data:`gf180tcad.tcad.TREE_GENERATORS`); ``--generator`` names it for a tree of another name,
-and is refused if it disagrees with the writer of a known tree.
+tree (hours for the 2D jobs) is not worth it. The entry point comes from the tree's path
+relative to ``results/`` (``tcad/moscap2d``; :data:`gf180tcad.tcad.TREE_GENERATORS`, the
+registry ``src/gf180tcad/generators.json``), never from its base name alone, so
+``results/tcad-charon/moscap1d`` is not taken for ``results/tcad/moscap1d``. ``--generator``
+names the writer of a tree that is not a registered tree root (one outside ``results/``, say),
+and is refused if it disagrees with the writer of a registered one.
 
 Every tree is checked before any is written. It refuses (exit 2, no file written) when, for
 any tree, anything else in the file differs from what the
@@ -32,9 +35,13 @@ from pathlib import Path
 
 from gf180tcad import io, tcad
 from gf180tcad.layout import PROVENANCE_NAME
+from gf180tcad.sandbox import REPO_ROOT
 
 # The fields a restamp may change.
 STAMP = ("generator", "generator_sha256")
+
+# The results root the registry's tree paths are relative to.
+RESULTS_ROOT = REPO_ROOT / "results"
 
 
 def restamp(tree_root: Path, generator: str, *, write: bool = True) -> tuple[str, str]:
@@ -77,24 +84,37 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument(
         "--generator",
         choices=sorted(tcad.TCAD_GENERATORS),
-        help="the entry point that wrote the trees (default: from each tree's name)",
+        help="the entry point that wrote the trees (default: from each tree's path)",
     )
     ap.add_argument("--dry-run", action="store_true", help="print the change, write nothing")
     return ap
 
 
+def tree_key(tree: Path, results_root: Path | None = None) -> str | None:
+    """The registry key of ``tree``: its path relative to ``results_root`` (default
+    :data:`RESULTS_ROOT`) as POSIX (``tcad/moscap2d``), or None for a tree outside it."""
+    results = Path(results_root if results_root is not None else RESULTS_ROOT).resolve()
+    try:
+        return Path(tree).resolve().relative_to(results).as_posix()
+    except ValueError:
+        return None
+
+
 def _writer(tree: Path, override: str | None) -> str:
-    """The entry point that wrote ``tree``: :data:`gf180tcad.tcad.TREE_GENERATORS` for a known
-    tree name (``override`` may only repeat it), else ``override``; ValueError otherwise."""
-    name = Path(tree).resolve().name
-    known = tcad.TREE_GENERATORS.get(name)
+    """The entry point that wrote ``tree``: :data:`gf180tcad.tcad.TREE_GENERATORS` for a
+    registered tree path (``override`` may only repeat it), else ``override``; ValueError
+    otherwise."""
+    key = tree_key(tree)
+    known = tcad.TREE_GENERATORS.get(key) if key is not None else None
     if known is not None and override is not None and override != known:
         raise ValueError(
-            f"{tree}: the {name} tree is written by {known}, not {override} (--generator)"
+            f"{tree}: the results/{key} tree is written by {known}, not {override} (--generator)"
         )
     if known is None and override is None:
+        where = f"results/{key}" if key is not None else "outside results/"
         raise ValueError(
-            f"{tree} is not one of {sorted(tcad.TREE_GENERATORS)}; name its writer with --generator"
+            f"{tree} ({where}) is not one of the registered trees "
+            f"{sorted(tcad.TREE_GENERATORS)}; name its writer with --generator"
         )
     return known or override
 
