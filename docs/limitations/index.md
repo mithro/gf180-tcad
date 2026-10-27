@@ -33,11 +33,11 @@ there.
 - **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
   `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
-- **TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
-  names the current generator, not the one that made them (Task 12), and every TCAD tree was
-  restamped once more to the per-tree {term}`generator_sha256` of [issue #34](https://github.com/mithro/gf180-tcad/issues/34), without a rerun.
-  Only the two calibrated 1D {term}`jobs <job>` are rerun and compared byte for byte by the cross-check; see
-  {ref}`tcad-provenance`.
+- **The TCAD {term}`provenance` names today's code, not the code that wrote every file.** Each
+  TCAD results folder's `provenance.json` records the current per-folder {term}`generator_sha256`
+  ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)); the 2D start-value files were not
+  regenerated with that code. Only the two calibrated 1D {term}`jobs <job>` are rerun and compared
+  byte for byte on another computer; see {ref}`tcad-provenance`.
 - **`make reproduce` does not yet reproduce the 2D TCAD files, and has not been run end to
   end.** The 2D job files lack entries the current job writes and the L = 2 µm {term}`sweeps <sweep>` are resumed ones, so a
   fresh run differs from them ({ref}`moscap2d-reproduce`). Only the calibrated 1D
