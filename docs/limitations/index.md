@@ -182,7 +182,7 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   cell layout. Only the primary, schematic-default reference exists
   ({ref}`secondary reference <secondary-reference>`).
 - **The metric set is narrower than the {term}`tolerance` table.** Not extracted:
-  {term}`gm` and {term}`gds` at Vgs = {term}`Vt` + 150 mV, gm/Id, Cgd at Vds = 5 V,
+  {term}`gm` and {term}`gds` at Vgs = {term}`Vt` + 0.15 V, gm/Id, Cgd at Vds = 5 V,
   {term}`Cgg` in depletion, effective {term}`Rsd`, Isub, {term}`Vt roll-off` and the root-mean-square (RMS) error
   of log10(Id). Defined differently: the {term}`body effect` uses the
   {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
