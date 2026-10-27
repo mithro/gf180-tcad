@@ -19,7 +19,7 @@ OUTPUT_CACHE ?= tmp/output-cache
 
 .PHONY: reproduce reproduce-quick manifest spice-reference \
 	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate \
-	cache-status cache-push
+	cache-status cache-push lint
 
 # Everything, in dependency order: the SPICE reference, then the TCAD trees (mesh convergence,
 # start values, calibration, calibrated values, validation), then the manifest check. Hours:
@@ -101,3 +101,9 @@ cache-status:
 # write access to the cache repository; run tools/output-cache push --dry-run first).
 cache-push:
 	$(PYTHON) tools/output-cache push --cache $(OUTPUT_CACHE) --results results --publish
+
+# The lint steps of the CI lint-test job, exactly (.github/workflows/ci.yml runs this target), and
+# what the pre-push hook of tools/install-hooks runs before every push. Seconds.
+lint:
+	uv run --locked ruff check
+	uv run --locked ruff format --check
