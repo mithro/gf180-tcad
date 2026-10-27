@@ -10,15 +10,22 @@ docs' mesh figure and the 3D renders draw the job's own mesh elements:
   with their nodes bit-equal to the full mesh's;
 - :mod:`gf180tcad.meshcut.npz` writes the arrays as a byte-for-byte reproducible zip.
 
-The node coordinates stay in the mesh file's own unit, centimetres (gplugins writes the mesh
-with ``mesh_scaling_factor = 1e-4``, um to cm), so that every kept coordinate is the full
-mesh's double, unconverted. :data:`UM_PER_MSH_UNIT` converts them to um for the window rule
-and for drawing.
+The node coordinates stay in the mesh file's own unit, centimetres, so that every kept
+coordinate is the full mesh's double, unconverted. The unit comes from gplugins:
+``third_party/gplugins/gplugins/devsim/get_simulation.py`` sets ``um_to_cm = 1e-4`` (line 38),
+makes it the default ``mesh_scaling_factor`` of ``create_2Duz_simulation`` (line 49) and
+passes it to the mesher as ``global_scaling`` (line 138); :mod:`gf180tcad.tcad.moscap2d`
+calls ``create_2Duz_simulation`` without overriding it. :data:`UM_PER_MSH_UNIT` converts the
+coordinates to um for the window rule and for drawing.
 """
 
 ARTEFACT = "mesh-window.npz"
+"""File name of the reduced mesh artefact (an npz under ``results/tcad/meshes/``)."""
 META = "mesh-window.meta.json"
+"""File name of the artefact's metadata (sorted-key JSON) beside it."""
 MAX_BYTES = 2_000_000
+"""Size budget of one artefact in bytes (design spec §10.1: at most 2 MB per job)."""
 FORMAT = 1
+"""Version of the artefact's member set and metadata schema."""
 UM_PER_MSH_UNIT = 1e4
 """Micrometres per mesh-file length unit (cm): the inverse of gplugins' ``mesh_scaling_factor``."""
