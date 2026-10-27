@@ -1,12 +1,10 @@
 {
-  "docs_lint FAIL forbidden phrase": 16,
-  "docs_lint FAIL more than N items in the list starting at line N": 3,
-  "docs_lint FAIL sentence of N words": 432,
+  "docs_lint FAIL sentence of N words": 331,
   "docs_lint warn N links on the page (at most N)": 6,
-  "docs_lint warn paragraph of N sentences (N to N wanted)": 16,
-  "docs_lint warn watch word": 51,
-  "measure_docs first sentence": 5,
-  "measure_docs item": 43,
-  "measure_docs paragraph": 30,
-  "measure_docs sentence": 52
+  "docs_lint warn paragraph of N sentences (N to N wanted)": 4,
+  "docs_lint warn watch word": 50,
+  "measure_docs first sentence": 2,
+  "measure_docs item": 42,
+  "measure_docs paragraph": 16,
+  "measure_docs sentence": 37
 }
