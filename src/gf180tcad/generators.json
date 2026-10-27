@@ -1,0 +1,70 @@
+{
+  "calibration_dirs": {
+    "devsim": "results/tcad/calibration"
+  },
+  "entry_points": {
+    "gf180tcad.calibrate.__main__": [
+      "gf180tcad",
+      "gf180tcad.calibrate",
+      "gf180tcad.calibrate.__main__",
+      "gf180tcad.calibrate.cv",
+      "gf180tcad.devices",
+      "gf180tcad.io",
+      "gf180tcad.layout",
+      "gf180tcad.sandbox",
+      "gf180tcad.specwindow",
+      "gf180tcad.tcad",
+      "gf180tcad.tcad.analytic",
+      "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.mesh",
+      "gf180tcad.tcad.meshconv",
+      "gf180tcad.tcad.moscap1d",
+      "gf180tcad.tcad.moscap2d",
+      "gf180tcad.tcad.process",
+      "gf180tcad.tcad.stack"
+    ],
+    "gf180tcad.tcad.__main__": [
+      "gf180tcad",
+      "gf180tcad.devices",
+      "gf180tcad.io",
+      "gf180tcad.layout",
+      "gf180tcad.sandbox",
+      "gf180tcad.tcad",
+      "gf180tcad.tcad.__main__",
+      "gf180tcad.tcad.analytic",
+      "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.mesh",
+      "gf180tcad.tcad.meshconv",
+      "gf180tcad.tcad.moscap1d",
+      "gf180tcad.tcad.moscap2d",
+      "gf180tcad.tcad.process",
+      "gf180tcad.tcad.stack"
+    ]
+  },
+  "images": {
+    "dev": {
+      "pin": "docker/TCAD_DEV_IMAGE",
+      "versions": "docker/tcad-dev/versions.json"
+    },
+    "stable": {
+      "pin": "docker/TCAD_IMAGE",
+      "versions": "docker/tcad/versions.json"
+    }
+  },
+  "plugin_excludes": {
+    "gf180tcad.calibrate.__main__": [
+      "gplugins/devsim/backends/charon/*"
+    ],
+    "gf180tcad.tcad.__main__": [
+      "gplugins/devsim/backends/charon/*"
+    ]
+  },
+  "schema": 1,
+  "trees": {
+    "tcad/calibration": "gf180tcad.calibrate.__main__",
+    "tcad/meshconv": "gf180tcad.tcad.__main__",
+    "tcad/moscap1d": "gf180tcad.tcad.__main__",
+    "tcad/moscap2d": "gf180tcad.tcad.__main__",
+    "tcad/validation": "gf180tcad.calibrate.__main__"
+  }
+}

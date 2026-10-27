@@ -112,6 +112,15 @@ one. That is what a bare `git push` under `push.default=matching` does, and sinc
 of a clone shares its branches, it pushes other sessions' unfinished commits (and starts CI on
 them). Push with `git push origin HEAD`, and set `git config push.default simple`.
 
+The generator registry is [`src/gf180tcad/generators.json`](src/gf180tcad/generators.json)
+(described in [docs/reproduce/index.md](docs/reproduce/index.md)). A module that a [TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD)
+entry point starts to import goes in it, and so does an added entry point, results folder or
+image. [`tests/tcad/test_tcad_provenance.py`](tests/tcad/test_tcad_provenance.py) names a module
+that is missing from it. A change to a hashed module changes the hash of each results folder
+whose writer imports it. Regenerate those folders, or update their
+[provenance](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-provenance) as that
+page says.
+
 [`uv.lock`](uv.lock) is committed. Tests that run simulators are marked
 [`sandbox`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-sandbox); they run only through [`tools/sandbox-run`](tools/sandbox-run)
 ([sandbox docs](https://gf180-tcad.readthedocs.io/en/latest/reproduce/sandbox.html)) and are excluded from
