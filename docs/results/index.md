@@ -1,10 +1,11 @@
 # Results
 
-The {term}`SPICE reference <SPICE reference results>` dataset ({term}`Phase 1`) is published here as generated pages: one
-per device and geometry (2 devices x 6 geometries), each with Id-Vg (linear and log), Id-Vd and
-{term}`Cgg`-Vg plots and a table of extracted metrics, plus a summary of the {term}`TT`
-(typical corner) values against the {doc}`PDK spec </comparison/pdk-spec-check>` and of the
-{{ ngspice }}-versus-{{ Xyce }} differences ({doc}`/limitations/engine-cross-check`). Pages are
+The {term}`SPICE reference <SPICE reference results>` dataset ({term}`Phase 1`) is published
+here as generated pages, one per device and geometry (2 devices x 6 geometries). Each has Id-Vg
+(linear and log), Id-Vd and {term}`Cgg`-Vg plots and a table of extracted metrics. A summary
+compares the {term}`TT` (typical corner) values with the
+{doc}`PDK spec </comparison/pdk-spec-check>` and lists the {{ ngspice }}-versus-{{ Xyce }}
+differences ({doc}`/limitations/engine-cross-check`). Pages are
 generated into `docs/_generated/` (git-ignored) at documentation build time by
 {py:func}`gf180tcad.docgen.generate`, called from {repo}`docs/conf.py`, from the committed
 {repo}`results/spice` files, so they never show numbers that are not in the dataset.
@@ -32,11 +33,12 @@ The 2D results were made on the {term}`stable TCAD image` for now (see
 - the 2D mesh convergence, in {repo}`results/tcad/meshconv/moscap2d`, discussed in
   {ref}`mesh-convergence-2d`.
 
-The 1D MOS capacitor is also calibrated against the {term}`SPICE` {term}`Cgg`–Vg and validated at the
-{term}`held-out geometries <held-out geometry>`, in 1D only
+The 1D MOS capacitor is also calibrated against the {term}`SPICE` {term}`Cgg`–Vg. It is
+validated at the {term}`held-out geometries <held-out geometry>`, in 1D only
 ({repo}`results/tcad/calibration`, {repo}`results/tcad/validation`,
-{doc}`/comparison/cv-agreement`). The calibrated 2D validation is not committed yet; it is in
-progress in [issue #35](https://github.com/mithro/gf180-tcad/issues/35). They are compared with the PDK in
+{doc}`/comparison/cv-agreement`). In 2D one calibrated cell is committed, the nfet at minimum
+length ({ref}`cv-agreement-validation`); the other cells are on the {doc}`/roadmap`
+([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). They are compared with the PDK in
 {doc}`/comparison/index`, and their caveats are in {doc}`/limitations/index`.
 ```
 
