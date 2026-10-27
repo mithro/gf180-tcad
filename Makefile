@@ -71,11 +71,13 @@ tcad-calibrate:
 	$(CALIBRATE) run --device nfet_05v0 --out results/tcad/calibration
 	$(CALIBRATE) run --device pfet_05v0 --out results/tcad/calibration
 
-# 4. The calibrated values. 1D only: no 2D calibrated results are committed yet
-# (docs/limitations/moscap2d.md).
+# 4. The calibrated values: 1D, and the committed calibrated 2D cells (issue #35; one 16 GiB
+# job at a time, hours each; L = 10 um does not solve in 2D, docs/limitations/moscap2d.md).
 tcad-calibrated:
 	$(TCAD) moscap --device nfet_05v0 --dim 1 --params calibrated --out results/tcad/moscap1d
 	$(TCAD) moscap --device pfet_05v0 --dim 1 --params calibrated --out results/tcad/moscap1d
+	$(TCAD) moscap --device nfet_05v0 --dim 2 --params calibrated --geometry w10p0_l0p60 \
+		--out results/tcad/moscap2d
 
 # 5. The validation of the committed calibration (refuses unless it is committed and unchanged).
 tcad-validate:

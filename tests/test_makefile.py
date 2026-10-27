@@ -93,7 +93,10 @@ def test_reproduce_runs_in_dependency_order(reproduce):
     meshconv = _index(reproduce, lambda m, a: m == "gf180tcad.tcad" and a.command == "meshconv")
     start = _index(reproduce, lambda m, a: _moscap(1, "start")(m, a) or _moscap(2, "start")(m, a))
     cal = _index(reproduce, lambda m, a: m == "gf180tcad.calibrate" and a.command == "run")
-    calibrated = _index(reproduce, _moscap(1, "calibrated"))
+    calibrated = _index(
+        reproduce,
+        lambda m, a: _moscap(1, "calibrated")(m, a) or _moscap(2, "calibrated")(m, a),
+    )
     validate = _index(
         reproduce, lambda m, a: m == "gf180tcad.calibrate" and a.command == "validate"
     )
@@ -145,20 +148,20 @@ def test_reproduce_2d_moscap_jobs_are_the_committed_cells(reproduce):
     runs = [
         a for m, a in reproduce if m == "gf180tcad.tcad" and a.command == "moscap" and a.dim == 2
     ]
-    # no 2D calibrated results are committed; when they are, tcad-calibrated must run them
-    assert not list((TCAD / "moscap2d").glob("*/calibrated"))
-    assert {a.params for a in runs} == {"start"}
+    # every committed 2D cell, start and calibrated (tcad-start, tcad-calibrated), and no other
     cells = {}
     for a in runs:
-        cells.setdefault((a.device, a.geometry), []).append(a)
+        cells.setdefault((a.device, a.params, a.geometry), []).append(a)
     committed = sorted(
-        (p.parents[1].name, p.name) for p in (TCAD / "moscap2d").glob("*/start/*") if p.is_dir()
+        (p.parents[1].name, p.parent.name, p.name)
+        for p in (TCAD / "moscap2d").glob("*/*/*")
+        if p.is_dir()
     )
     assert sorted(cells) == committed
-    for (device, gid), steps in cells.items():
-        meta = json.loads(
-            (TCAD / "moscap2d" / device / "start" / gid / "cv.meta.json").read_bytes()
-        )
+    assert {p for _, p, _ in committed} <= {"start", "calibrated"}
+    assert {(d, p) for d, p, _ in committed} >= {(d, "start") for d in process.DEVICES}
+    for (device, params, gid), steps in cells.items():
+        meta = json.loads((TCAD / "moscap2d" / device / params / gid / "cv.meta.json").read_bytes())
         # older metas (Task 11, AC computed) have no "ac" entry
         if meta.get("ac") == AC_INFEASIBLE:
             # QS alone, then the job files from it, on one scratch directory

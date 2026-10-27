@@ -358,6 +358,13 @@ def test_moscap_page_per_device_geometry(tmp_path):
                 assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page
             else:
                 assert "No 2D result" in page
+            # a committed calibrated 2D cell is named on its page, with its mesh
+            cal_meta = TCAD / "moscap2d" / name / "calibrated" / gid / "cv.meta.json"
+            if cal_meta.is_file():
+                rel = f"results/tcad/moscap2d/{name}/calibrated/{gid}"
+                assert f"{{repo}}`{rel}`" in page
+                assert json.loads(cal_meta.read_text("utf-8"))["mesh_sha256"] in page
+                assert "Calibrated 2D validation: not run" not in page
         index = (root / name / "index.md").read_text(encoding="utf-8")
         cal = json.loads((TCAD / "calibration" / f"{name}.result.json").read_text("utf-8"))
         assert f"{cal['budget_used']} of {cal['budget']}" in index
@@ -371,7 +378,29 @@ def test_moscap_page_per_device_geometry(tmp_path):
     for name, device in DEVICES.items():
         for g in device.geometries:
             assert f"<{name}/{geometry_id(g)}>" in summary
-    assert "not run" in summary  # the calibrated 2D validation (issue #35)
+    # the calibrated 2D validation (issue #35): the summary never says "not run for any
+    # geometry" while a calibrated 2D cell is committed
+    if list((TCAD / "moscap2d").glob("*/calibrated/*/cv.csv")):
+        assert "not run for any geometry" not in summary
+        assert "calibrated 2D cell is committed" in summary
+    else:
+        assert "not run for any geometry" in summary
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="issue #35: the validation files predate the committed calibrated 2D cells; "
+    "regenerated when the host has room for the validation job",
+)
+def test_validation_two_d_matches_committed_calibrated_cells():
+    """A validation ``two_d`` entry is "not run" if and only if no calibrated 2D cv.csv is
+    committed for its geometry."""
+    for name, device in DEVICES.items():
+        val = json.loads((TCAD / "validation" / f"{name}.json").read_text("utf-8"))
+        for g in device.geometries:
+            gid = geometry_id(g)
+            committed = (TCAD / "moscap2d" / name / "calibrated" / gid / "cv.csv").is_file()
+            assert (val["two_d"][gid]["status"] == "not run") == (not committed), (name, gid)
 
 
 _RENDER_TCAD = textwrap.dedent(
@@ -430,19 +459,39 @@ def test_moscap_verdicts_are_read_not_recomputed(tmp_path):
 
 
 def test_moscap_summary_2d_sentence_follows_the_statuses(tmp_path):
-    """The summary's 2D sentence is derived from the two_d statuses, not fixed text."""
+    """The summary's 2D sentence and column are derived from the two_d statuses and the
+    committed calibrated 2D cells, not fixed text."""
     tree = _link_tcad_tree(tmp_path / "tcad_in")
     out = tmp_path / "out"
-    docgen.generate_tcad(out, tcad_root=tree)
-    assert "not run for any geometry" in (out / "tcad" / "index.md").read_text("utf-8")
+
+    def summary() -> str:
+        docgen.generate_tcad(out, tcad_root=tree)
+        return (out / "tcad" / "index.md").read_text("utf-8")
+
+    def row(text: str, gid: str) -> str:
+        return next(ln for ln in text.splitlines() if f"<nfet_05v0/{gid}>" in ln)
+
+    # a committed calibrated 2D cell the validation file does not compare yet
+    cells = sorted(tree.glob("moscap2d/*/calibrated/*/cv.csv"))
+    if cells:
+        text = summary()
+        assert "not run for any geometry" not in text
+        assert row(text, cells[0].parent.name).endswith(f"| {docgen._TWO_D_PENDING} |")
+        for c in cells:
+            for f in c.parent.iterdir():
+                f.unlink()
+    # no calibrated 2D cell: every geometry not run
+    text = summary()
+    assert "not run for any geometry" in text and docgen._TWO_D_PENDING not in text
+    # a compared entry shows its verdict
     path = tree / "validation" / "nfet_05v0.json"
     val = json.loads(path.read_text("utf-8"))
-    val["two_d"][next(iter(val["two_d"]))]["status"] = "compared"
+    gid = next(iter(val["two_d"]))
+    val["two_d"][gid].update(status="compared", verdict="Disagree")
     path.unlink()
     path.write_text(json.dumps(val), "utf-8")
-    docgen.generate_tcad(out, tcad_root=tree)
-    summary = (out / "tcad" / "index.md").read_text("utf-8")
-    assert "not run for any geometry" not in summary and "| compared |" in summary
+    text = summary()
+    assert "not run for any geometry" not in text and row(text, gid).endswith("| Disagree |")
 
 
 def test_checks_match_the_committed_verdicts():
