@@ -9,6 +9,7 @@ outlines), fixed size and dpi, and path simplification off.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from io import BytesIO
 
@@ -84,14 +85,29 @@ def _handle(k: Key):
     )
 
 
-def figure_svg(panels: list[Panel], legend: dict[str, str] | None = None) -> bytes:
+def figure_svg(
+    panels: list[Panel],
+    legend: dict[str, str] | None = None,
+    *,
+    size: tuple[float, float] = (FIG_W, FIG_H),
+    rc: Mapping[str, object] | None = None,
+    text_pt: float | None = None,
+) -> bytes:
     """Render panels side by side to SVG bytes. ``legend`` maps line label to colour.
 
     Without :attr:`Panel.keys` the last panel carries the engine legend (ngspice TT, its corner
     envelope, Xyce TT). If any panel has ``keys``, each such panel carries its own legend instead.
+
+    ``size`` is the figure size in inches, ``rc`` overrides entries of :data:`RC` (a dark
+    palette), and ``text_pt`` sets every text size (titles, labels, ticks, legends) to one value.
+    The defaults draw the results pages' figures, byte for byte as before these parameters.
     """
-    with matplotlib.rc_context(RC):
-        fig = Figure(figsize=(FIG_W, FIG_H), layout="constrained")
+    title_pt, legend_pt = (10, 8) if text_pt is None else (text_pt, text_pt)
+    params = {**RC, **(rc or {})}
+    if text_pt is not None:
+        params["font.size"] = text_pt
+    with matplotlib.rc_context(params):
+        fig = Figure(figsize=size, layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(1, len(panels), squeeze=False)[0]
         for ax, panel in zip(axes, panels, strict=True):
@@ -105,14 +121,14 @@ def figure_svg(panels: list[Panel], legend: dict[str, str] | None = None) -> byt
             ax.set_yscale(panel.yscale)
             if panel.ylim is not None:
                 ax.set_ylim(*panel.ylim)
-            ax.set_title(panel.title, fontsize=10)
+            ax.set_title(panel.title, fontsize=title_pt)
             ax.set_xlabel(panel.xlabel)
             ax.set_ylabel(panel.ylabel)
         if any(p.keys for p in panels):
             for ax, panel in zip(axes, panels, strict=True):
                 if panel.keys:
                     handles = [_handle(k) for k in panel.keys]
-                    ax.legend(handles=handles, fontsize=8, loc="best", framealpha=0.85)
+                    ax.legend(handles=handles, fontsize=legend_pt, loc="best", framealpha=0.85)
             buf = BytesIO()
             fig.savefig(buf, format="svg", metadata=METADATA)
             return buf.getvalue()
@@ -127,7 +143,7 @@ def figure_svg(panels: list[Panel], legend: dict[str, str] | None = None) -> byt
             handles.insert(1, Line2D([], [], color=xkey, linestyle="--", label="Xyce TT"))
         for label, color in (legend or {}).items():
             handles.append(Line2D([], [], color=color, linewidth=3, label=label))
-        axes[-1].legend(handles=handles, fontsize=8, loc="best", framealpha=0.85)
+        axes[-1].legend(handles=handles, fontsize=legend_pt, loc="best", framealpha=0.85)
         buf = BytesIO()
         fig.savefig(buf, format="svg", metadata=METADATA)
         return buf.getvalue()
