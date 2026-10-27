@@ -494,17 +494,16 @@ Phases 0 and 1
 Phase 2
 Phase 3
 Phase 4
-Phase 3 entry gate
   The {term}`TCAD` phases. Phase 2, in progress: the {{ gplugins }} {{ DEVSIM }} plugin fix and the
-  1D and 2D {term}`MOS capacitor <MOSCAP>`, calibrated against the {term}`SPICE` {term}`Cgg`–Vg
-  ({repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md>`).
-  Phase 3, not started: the 2D MOSFET, on both backends. Phase 4, planned: {{ Charon }} in
-  parallel with {{ DEVSIM }} and the cross-comparison of the two, which runs alongside Phases 2
-  and 3
-  ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`). The
-  Phase 3 entry gate is the list of what must exist before any MOSFET {term}`TCAD` result,
-  including the deviations from the design spec still open at the end of
-  {term}`Phases 0 and 1`. See
+  1D and 2D {term}`MOS capacitor <MOSCAP>`, calibrated against the {term}`SPICE` {term}`Cgg`–Vg.
+  Phase 3, not started: the 2D MOSFET. Phase 4, planned, alongside Phases 2
+  and 3: {{ Charon }} beside {{ DEVSIM }}, and their comparison. See the
+  {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md>` and the
+  {repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`.
+
+Phase 3 entry gate
+  The list of what must exist before any MOSFET {term}`TCAD` result, including the deviations
+  from the design spec still open at the end of {term}`Phases 0 and 1`. See
   {ref}`limitations-spec-deviations` and the
   {repo}`design spec, section 13 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#13-phases>`.
 

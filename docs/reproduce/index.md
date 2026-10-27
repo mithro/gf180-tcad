@@ -65,6 +65,7 @@ This target of the {repo}`Makefile` regenerates every committed result in place,
 order, and then runs `python -m gf180tcad.manifest verify results/` ({py:mod}`gf180tcad.manifest`).
 Each step is a target of its own, which can also be run alone:
 
+<!-- table-ok: PR #56 rewrites the tcad-calibrated row; split into target, command and notes once it merges -->
 | target | runs | writes |
 |---|---|---|
 | `spice-reference` | `python -m gf180tcad spice-reference --engine both --jobs $(JOBS)`: the {term}`SPICE` reference for both engines ({{ ngspice }} and {{ Xyce }}), all {term}`corners <corner>`, both devices and every geometry | {repo}`results/spice` |
