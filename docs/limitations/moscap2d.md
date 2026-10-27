@@ -5,7 +5,7 @@
 The 2D {term}`MOSCAP` is the {{ gdsfactory }} cell `nfet(volt="5.0V")` or `pfet(volt="5.0V")`
 of the {{ gf180mcu_gdsfactory }}, cut across its gate ({py:mod}`gf180tcad.tcad.stack`). The vertical stack
 and the doping come from the {term}`process files <process file>`
-({repo}`data/process`), because the {term}`PDK`'s {{ gdsfactory }} layer stack has no gate oxide and no
+({repo}`data/process`), because the {term}`PDK`'s {{ gdsfactory }} layer stack has no {term}`gate oxide` and no
 doping. {py:func}`gf180tcad.tcad.moscap2d.simulate` meshes the cross-section with the
 {{ gplugins_fork }}'s single-threaded {{ meshwell }} path and solves it at every gate bias with {{ DEVSIM }}:
 {term}`QS <C–V>` (the counterpart of the {term}`SPICE` {term}`Cgg` of {term}`BSIM4`

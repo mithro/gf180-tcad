@@ -256,13 +256,13 @@ HF C–V
 high-frequency C–V
   The {term}`C–V` measured with a small signal too fast for the inversion layer to follow: in inversion
   the capacitance stays near its depletion minimum instead of recovering to {term}`Cox`.
-  Technically, minority carriers are generated thermally in a time of order 2τ·N/n_i, so above that rate
+  Technically, {term}`minority carriers <minority carrier>` are generated thermally in a time of order 2τ·N/n_i, so above that rate
   only the depletion edge responds; a 1D {term}`MOSCAP` with only a body contact gives this
   curve at any practical frequency ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`plugin-history-latest`.
 
 Cox
 oxide capacitance
-  The capacitance per area of the gate oxide alone, the ceiling of the {term}`C–V` curve.
+  The capacitance per area of the {term}`gate oxide` alone, the ceiling of the {term}`C–V` curve.
   Technically Cox = ε_ox·ε0/t_ox; for the nfet's 15.2 nm and {term}`EPSROX` 3.9 it is
   2.2718 fF/µm² ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`process-data`.
 
@@ -275,7 +275,7 @@ t_ox_eff
   `t_ox_eff_nm`. See {ref}`process-data-tunables`.
 
 poly depletion
-  The depletion of the poly-silicon gate next to the oxide, which adds a capacitance in series
+  The depletion of the {term}`poly-silicon` gate next to the oxide, which adds a capacitance in series
   with {term}`Cox` and lowers the inversion capacitance. Technically the gate is a second
   semiconductor at {term}`NGATE`, whose space charge follows the same charge function as the
   body ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329); [BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), the poly-depletion model). See
@@ -313,11 +313,11 @@ VFBSDOFF
   unset (default 0) on the pfet card ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
 
 EPSROX
-  The relative permittivity of the gate oxide in the {term}`BSIM4` {term}`card <model card>`, 3.9 for both 5 V
+  The relative permittivity of the {term}`gate oxide` in the {term}`BSIM4` {term}`card <model card>`, 3.9 for both 5 V
   devices; the {term}`TCAD` oxide uses it ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). See {ref}`process-data`.
 
 NGATE
-  The poly-silicon gate doping of the {term}`BSIM4` {term}`card <model card>` (1e20 cm⁻³ n⁺ for the nfet, 3.6e19 p⁺
+  The {term}`poly-silicon` gate doping of the {term}`BSIM4` {term}`card <model card>` (1e20 cm⁻³ n⁺ for the nfet, 3.6e19 p⁺
   for the pfet), the doping of the {term}`TCAD` poly-gate region ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A).
   See {ref}`process-data`.
 
@@ -547,6 +547,61 @@ ohmic contact
   carrier densities at the contact to their equilibrium, charge-neutral values, so the contact
   Potential is the applied bias plus the equilibrium potential of the local doping,
   V_t asinh(N / 2 n_i) ({ref}`Sze and Ng 2006, ch. 3 <lit-sze>`). See {ref}`plugin-history-latest-pn`.
+
+electron
+  A negatively charged particle. In silicon the free ones, released from a broken bond or given
+  by a {term}`donor`, move through the crystal and carry current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-carriers`.
+
+gate oxide
+  The thin insulating layer of silicon dioxide between a transistor's gate and the silicon under
+  it. The gate voltage acts on the silicon through it, as across the plates of a capacitor
+  ({ref}`Taur and Ning, the chapter on MOS capacitors <lit-taur>`). See {ref}`explained-dopants`.
+
+poly-silicon
+  Silicon made of many small crystals instead of one. Heavily doped, it is the gate of the
+  {term}`GF180MCU` transistors; its doping is the {term}`NGATE` of the {term}`model card`
+  ({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). See {ref}`explained-dopants`.
+
+n-well
+  The region of n-type silicon that forms the body of a p-channel transistor, here the
+  {term}`pfet_05v0`. This repo's simulations dope it uniformly
+  ({py:mod}`gf180tcad.tcad.stack`). See {ref}`explained-dopants`.
+
+hole
+  A positive charge carrier in silicon: a bond that is missing its {term}`electron`. A
+  neighbouring bonded electron can move into it, so the hole moves the other way and carries
+  current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-carriers`.
+
+intrinsic carrier density
+  The density of {term}`electrons <electron>`, equal to that of {term}`holes <hole>`, in pure
+  silicon in thermal equilibrium: n_i. Heat frees each electron and its hole as a pair ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-carriers`.
+
+dopant
+  An atom of another element placed in the silicon crystal to set which charge carrier
+  outnumbers the other: a {term}`donor` or an {term}`acceptor` ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-dopants`.
+
+donor
+  A {term}`dopant` with one more outer {term}`electron` than silicon. The spare electron is
+  free to move, so donors make n-type silicon, where electrons are the {term}`majority carriers <majority carrier>`
+  ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-dopants`.
+
+acceptor
+  A {term}`dopant` with one fewer outer {term}`electron` than silicon. It takes an electron
+  from a bond and leaves a {term}`hole`, so acceptors make p-type silicon ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-dopants`.
+
+majority carrier
+  The charge carrier that outnumbers the other in doped silicon: the {term}`electron` in
+  n-type silicon, the {term}`hole` in p-type. Its density equals the doping ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-how-many`.
+
+minority carrier
+  The charge carrier that is outnumbered in doped silicon. In thermal equilibrium its density is
+  the {term}`intrinsic carrier density` squared divided by the doping, the mass-action law
+  ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-how-many`.
 
 Boltzmann statistics
   The non-degenerate approximation of carrier statistics. In detail: the Fermi-Dirac

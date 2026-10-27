@@ -136,7 +136,7 @@ values are not read as more physical than they are.
   {term}`effective oxide thickness` `t_ox_eff_nm`, bounded by TOXE below and by TOXP plus the
   charge-centroid allowance above ({ref}`process-data-tunables`; cause `oxide-qm` of the
   {ref}`mismatch taxonomy <mismatch-taxonomy>`).
-- **The poly gate is simulated, with {term}`Boltzmann statistics`.** The gate is a poly-silicon region
+- **The poly gate is simulated, with {term}`Boltzmann statistics`.** The gate is a {term}`poly-silicon` region
   doped at {term}`NGATE` (n+ 1e20 cm⁻³ for the nfet, p+ 3.6e19 cm⁻³ for the pfet), so
   {term}`poly depletion` is in the model, not in a fitted term. Its carriers follow
   Boltzmann statistics, which place the Fermi level beyond the band edge at these

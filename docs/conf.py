@@ -212,6 +212,15 @@ linkcheck_rate_limit_timeout = 120.0
 # option (no change to the RTD install, and a local editable install resolves to the same code).
 sys.path.insert(0, str(_root / "src"))
 
+# The explainer pages (docs/explained/) print every number by substitution, {{ x_<name> }}, from
+# gf180tcad.explain (committed files, textbook entries and idealised examples), computed here.
+from gf180tcad import explain as _explain  # after the sys.path line above
+
+_explained = _explain.substitutions()
+if _clash := sorted(set(_explained) & set(myst_substitutions)):
+    raise ValueError(f"explainer substitutions clash with docs/conf.py _TOOLS: {_clash}")
+myst_substitutions.update(_explained)
+
 _generated = Path(__file__).parent / "_generated"
 _lock_path = Path(__file__).parent / ".generated.lock"
 _lock_file = None

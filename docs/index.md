@@ -42,11 +42,13 @@ No published {{ DEVSIM }}- or {{ Charon }}-versus-{term}`BSIM` comparison for an
 found, and no gf180mcu TCAD paper was found ({doc}`limitations/literature`), so this work is
 novel and should be read with that in mind.
 
-The documentation has four sections, plus a glossary and the API reference.
+The documentation has five sections, plus a glossary and the API reference. The first,
+{doc}`explained/index`, explains how the parts of a transistor work, with this repo's numbers.
 
 ```{toctree}
 :maxdepth: 2
 
+explained/index
 reproduce/index
 results/index
 comparison/index

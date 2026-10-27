@@ -46,6 +46,31 @@ def test_svg_deterministic():
     assert b"<dc:date>" not in a and b"<text" in a and str(REPO_ROOT).encode() not in a
 
 
+_RENDER_EXPLAINED = textwrap.dedent(
+    """
+    import sys
+    from gf180tcad.explain import figures
+    sys.stdout.buffer.write(figures.FIGURES["silicon-doping"](sys.argv[1]))
+    """
+)
+
+
+@pytest.mark.parametrize("palette", ["light", "dark"])
+def test_explained_svg_deterministic(palette):
+    """An explainer figure, both palettes: two fresh processes give the same bytes."""
+    runs = []
+    for seed in ("1", "2"):
+        env = {**os.environ, "PYTHONHASHSEED": seed}
+        r = subprocess.run(
+            [sys.executable, "-c", _RENDER_EXPLAINED, palette],
+            env=env, capture_output=True, check=True, timeout=300,
+        )  # fmt: skip
+        runs.append(r.stdout)
+    a, b = runs
+    assert a.startswith(b"<?xml") and b"<text" in a and a == b
+    assert b"<dc:date>" not in a and str(REPO_ROOT).encode() not in a
+
+
 def test_pages_cover_all_geometries(tmp_path):
     docgen.generate(tmp_path)
     expected = {f"{name}/{geometry_id(g)}.md" for name, d in DEVICES.items() for g in d.geometries}
