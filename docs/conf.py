@@ -24,6 +24,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "repo_roles",
     "api_links",
+    "table_cells",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
@@ -33,6 +34,8 @@ root_doc = "index"
 exclude_patterns = ["_build", "_ext", "superpowers", "superpowers/**"]
 
 html_theme = "furo"
+# docs/_static/narrow.css: tables at phone width (docs/_ext/table_cells.py adds it).
+html_static_path = ["_static"]
 html_title = "gf180-tcad"
 # Keep build dates out of pages so two builds are identical.
 html_last_updated_fmt = None
