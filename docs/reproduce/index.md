@@ -71,7 +71,7 @@ Each step is a target of its own, which can also be run alone:
 | `tcad-meshconv` | `python -m gf180tcad.tcad meshconv --dim 1` for both devices, then `--dim 2 --jobs 1` (one 16 GiB {term}`job` at a time) | {repo}`results/tcad/meshconv` |
 | `tcad-start` | `python -m gf180tcad.tcad moscap --params start`: `--dim 1` for both devices, and `--dim 2` for each committed 2D cell (L = 2 µm: see below) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
-| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (the nfet at W10/L0.6 and W10/L0.7, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
+| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (the nfet at W10/L0.6, W10/L0.7 and W10/L1, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
 
 In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs`. Both use the
@@ -364,11 +364,13 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 |---|---|---|---|
 | `nfet_05v0` | `w10p0_l0p60` | both | 11338 |
 | `nfet_05v0` | `w10p0_l0p70` | both | 12584 |
+| `nfet_05v0` | `w10p0_l1p00` | both | 15169 |
 
 | Device | Geometry | Peak memory (GiB) | Exit code | Finished (ACDT) |
 |---|---|---|---|---|
 | `nfet_05v0` | `w10p0_l0p60` | 7.82 | 0 | 2026-10-27 11:31 |
 | `nfet_05v0` | `w10p0_l0p70` | 5.93 | 0 | 2026-10-27 15:01 |
+| `nfet_05v0` | `w10p0_l1p00` | 6.09 | 0 | 2026-10-27 19:51 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 
@@ -410,6 +412,41 @@ That test compares the folder's
 ([issue #36](https://github.com/mithro/gf180-tcad/issues/36)). The 2D mesh-convergence results
 had their provenance updated, not rerun, and have no such evidence. With the per-folder hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)) such a
 calibration-only change no longer touches these results folders.
+
+**Provenance updated for the plugin's backend seam ({term}`Phase 2` Task 15), not regenerated.**
+The submodule moved to gplugins [`0715c81`](https://github.com/mithro/gplugins/commit/0715c81c4439533512621a97358d9d779411ebf6),
+the merge of [mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13).
+That merge moves and adds hashed `gplugins/devsim` files without changing what the solver computes.
+Every results folder records `gplugins_commit` `0715c81…` instead of `1c071d0…`.
+{repo}`tools/restamp-tcad-provenance` then set each `generator_sha256`.
+
+| results folder | writer | before | after |
+|---|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `b30e8944…` | `3f1ac6bd…` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `b30e8944…` | `3f1ac6bd…` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `b30e8944…` | `3f1ac6bd…` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `5265e5fe…` | `51a0a009…` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `5265e5fe…` | `51a0a009…` |
+
+The representative rerun came first, as design spec §9 requires.
+On 2026-10-27, at this pin, `make reproduce-quick` printed
+`identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under tcad/`.
+`make manifest` then left {repo}`results/` unchanged; [a comment on PR #51](https://github.com/mithro/gf180-tcad/pull/51#issuecomment-6439110102) quotes the output.
+This reran the two calibrated 1D jobs and compared their files and
+{repo}`results/tcad/moscap1d/provenance.json` byte for byte.
+
+**Restamped without a rerun.** These were not rerun:
+
+- the `start` jobs of {repo}`results/tcad/moscap1d`;
+- the 1D and 2D mesh convergence in {repo}`results/tcad/meshconv`;
+- every job in {repo}`results/tcad/moscap2d`;
+- {repo}`results/tcad/calibration` and {repo}`results/tcad/validation`.
+
+The 1D jobs among them build the device through the same code that the gate reran.
+On the 2D path, only the file holding `DDComponent` moved, verbatim.
+`create_2Duz_simulation` and the solve code of `sweep_cv` did not change.
+The result types moved unchanged to `results.py`.
+The package import became lazy, which changes when modules load, not what they compute.
 
 (cross-host-determinism)=
 
@@ -553,8 +590,8 @@ rerun byte for byte locally by
 ## Output cache
 
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
-content-addressed cache repository: {repo}`tools/output-cache` `pull` fetches one and checks it against
-the sha256 the committed results name. It holds the meshes of the two calibrated nfet cells, W10/L0.6 and W10/L0.7;
+content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
+the sha256 the committed results name. It holds the meshes of the three calibrated nfet cells, W10/L0.6, W10/L0.7 and W10/L1;
 see {doc}`output-cache`.
 
 ```{toctree}

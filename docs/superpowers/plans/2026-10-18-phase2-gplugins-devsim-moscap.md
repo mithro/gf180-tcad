@@ -865,7 +865,7 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
   - Target: both plateaus ≤ 5 %, and both ΔV crossings ≤ 50 mV.
   - If the target is not reached within budget, publish the best fit with its verdict and the §6 mismatch analysis. Never raise the budget silently.
 - [ ] **Step 4:** Commit `results/tcad/calibration/*.json` in a results-only commit. **Only then** run `validate_cv` and commit `results/tcad/validation/*.json` in a separate later commit. Regenerate the calibrated 1D and 2D result trees (`results/tcad/moscap{1d,2d}/<device>/calibrated/`), and run `make manifest`. Then open the PR, get it reviewed and merge.
-  - *Progress (2026-10-27):* calibration, validation (1D) and the calibrated 1D trees are committed (PR #33). The calibrated 2D trees run under [issue #35](https://github.com/mithro/gf180-tcad/issues/35), one job per PR: nfet `w10p0_l0p60` and `w10p0_l0p70` committed (both Disagree in 2D), validation regenerated; the other cells follow, L = 10 µm does not solve in 2D.
+  - *Progress (2026-10-27):* calibration, validation (1D) and the calibrated 1D trees are committed (PR #33). The calibrated 2D trees run under [issue #35](https://github.com/mithro/gf180-tcad/issues/35), one job per PR: nfet `w10p0_l0p60` and `w10p0_l0p70` (both Disagree in 2D) and `w10p0_l1p00` (Same process) committed, validation regenerated; the other cells follow, L = 10 µm does not solve in 2D.
 - [ ] **Budget note (Phase 3 carry-over).** These 3 parameters use 3 of the 8 per device type for all later phases. A Phase 3 channel profile may replace the uniform `n_ch` and must re-justify it.
 
 ### Task 13a: TCAD results and docs pages
@@ -988,12 +988,21 @@ If that proves impossible without editing a generator module, the PR also regene
 
 ### Task 15 (required, first step of spec §12.1): backend seam in the plugin
 
-> **Status (2026-10-27):** in progress, draft PR #51 (blocked on push access to the fork).
-
 **Files (fork):** split `gplugins/devsim/get_solver.py` into `device_description.py` (mesh, regions, contacts, doping, bias plan) and `backends/devsim.py`.
 
-- [ ] **Step 1:** All existing fork tests pass unchanged through the new seam, verified with the fork-worktree pattern. No Charon code yet.
-- [ ] **Step 2:** Commit, open the PR, get it reviewed and merge. Then do **submodule bump 3 of 3**: the gf180-tcad TCAD results must be byte-identical before and after the bump. `make reproduce-quick` plus `make manifest` give no diff.
+> **Status (2026-10-27).** Done, merged as gf180-tcad PR #51 on 2026-10-27. The fork side is [mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13), merge commit `0715c81`.
+>
+> - `device_description.py` holds the neutral description: contacts, region classes, `Layer1D`/`Mesh1D`, `Stack1D`, `CrossSection2D`, `SolverSettings`, `CVSweep`, and the `Backend`/`Device` protocols.
+> - `results.py` holds `CVResult`, `PointInfo`, `RoundoffPoint` and the convergence errors.
+> - `get_solver.py` became `backends/devsim.py`, with `create_1d_device`, `create_2d_device`, `run_cv_sweep` and `DDComponent.from_description`. `gplugins.devsim.get_solver` is an alias of it.
+> - The package `__init__` is lazy. `backends/charon/` is a stub.
+> - The old modules re-export the moved names. Every pre-existing fork test passes unchanged except `test_init.py`. It was adapted: the Python < 3.13 hint now comes on first access of a DEVSIM name.
+> - `CrossSection2D` mirrors the `DDComponent` constructor only. Extending it to the 2D MOS capacitor job is Charon plan Task E.
+> - PR #51 is bump 3 of 3: pin `0715c81`, the five `results/tcad/*/provenance.json` restamped (recorded on `docs/reproduce/index.md`), and the `make reproduce-quick` plus `make manifest` gate at that pin.
+> - The 2D trees were not rerun. Of their code path only `DDComponent`'s file moved.
+
+- [x] **Step 1:** All existing fork tests pass unchanged through the new seam (except `test_init.py`, adapted to the lazy package), verified with the fork-worktree pattern (TCAD image, 156 passed at the #13 head `03ede69`). No Charon code yet beyond the `backends/charon/` stub.
+- [x] **Step 2:** Commit, open the PR, get it reviewed and merge. Then do **submodule bump 3 of 3**: the gf180-tcad TCAD results must be byte-identical before and after the bump. `make reproduce-quick` plus `make manifest` give no diff.
 
 ### Task 16: corner bounds and spread of the 1D MOS capacitor inputs (spec §5.3, issue #57)
 

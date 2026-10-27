@@ -291,10 +291,20 @@ The plugin is fixed in {{ gplugins_fork }} and runs on the latest stack:
 {{ Python }} 3.13, in the {term}`stable TCAD image` ({repo}`docker/TCAD_IMAGE`). The re-verification
 was made with gf180-tcad pinning the fork at [`400f842`](https://github.com/mithro/gplugins/commit/400f8423d7b0d1aac48eea1c0145342d0c1f766a) through the
 {repo}`third_party/gplugins <.gitmodules>` submodule, and all file links below are at that commit.
-The pin is now [`1c071d0`](https://github.com/mithro/gplugins/commit/1c071d0565ef4917b48ff907b9426e879ccca7fc), which
-also includes {repo}`Task 8 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-8-fork-cv-solver-api>`, the {term}`C–V` solver ([mithro/gplugins#6](https://github.com/mithro/gplugins/pull/6)),
+
+The pin is [`0715c81`](https://github.com/mithro/gplugins/commit/0715c81c4439533512621a97358d9d779411ebf6).
+It also includes {repo}`Task 8 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-8-fork-cv-solver-api>`,
+the {term}`C–V` solver ([mithro/gplugins#6](https://github.com/mithro/gplugins/pull/6)),
 and the fork pull requests [mithro/gplugins#9](https://github.com/mithro/gplugins/pull/9) to
 [#12](https://github.com/mithro/gplugins/pull/12).
+
+It ends with the backend seam of
+{repo}`Task 15 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-15-required-first-step-of-spec-121-backend-seam-in-the-plugin>`,
+[mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13), whose merge commit is the pin.
+The seam puts `device_description.py` and `results.py`, which import no simulator, in front of
+the DEVSIM backend `backends/devsim.py` (formerly `get_solver.py`, which stays as an alias).
+It changes no API that gf180-tcad uses and no result ({ref}`tcad-provenance`).
+The file links in this section stay at the commits they name.
 
 **Where the numbers come from.** Every latest-stack value in this section is one that the
 linked fork tests assert or record. They ran in the fork's own continuous integration (CI), in the TCAD image, at the
