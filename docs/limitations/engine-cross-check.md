@@ -44,13 +44,14 @@ BSIM4 4.5.0 in ngspice and BSIM4 4.6.1 in Xyce.
 
 ### Evidence
 
-nfet W = 10 µm, L = 0.6 µm, typical corner, Vbs = 0:
+nfet W = 10 µm, L = 0.6 µm, typical corner, Vbs = 0, Vds = 5 V. The gate voltage at which
+the drain current Id reaches each level:
 
-| Gate voltage at Id | ngspice (4.5) | Xyce | Shift |
+| Id | Vg, ngspice 4.5 (V) | Vg, Xyce (V) | Shift (mV) |
 |---|---|---|---|
-| 1 nA (Vds = 5 V) | 0.281972 V | 0.281743 V | −0.229 mV |
-| 100 nA (Vds = 5 V) | 0.463006 V | 0.462770 V | −0.237 mV |
-| 1 µA (Vds = 5 V) | 0.558662 V | 0.558408 V | −0.254 mV |
+| 1 nA | 0.281972 | 0.281743 | −0.229 |
+| 100 nA | 0.463006 | 0.462770 | −0.237 |
+| 1 µA | 0.558662 | 0.558408 | −0.254 |
 
 In subthreshold, Xyce's current is a nearly constant 0.59 % higher. That is
 a gate-voltage shift of about 0.23 mV, and its effect fades in strong
@@ -104,14 +105,16 @@ subdirectory of the working directory. It asserts three things:
 - Stock against patched ngspice exceeds 0.005, so the patch took effect.
 - Patched ngspice against Xyce stays below 0.005.
 
-| Geometry | `idvg_lin` stock | `idvg_lin` at 4.6 | `idvg_sat` stock | `idvg_sat` at 4.6 |
-|---|---|---|---|---|
-| W10/L0.6 | 5.62e-3 | 1.47e-4 | 6.05e-3 | 3.64e-3 |
-| W10/L0.7 | 5.59e-3 | 2.32e-4 | 5.80e-3 | 1.93e-3 |
-| W10/L1 | 5.57e-3 | 1.29e-4 | 5.71e-3 | 1.87e-3 |
-| W10/L2 | 5.58e-3 | 1.93e-4 | 5.61e-3 | 1.85e-3 |
-| W10/L10 | 5.60e-3 | 1.59e-4 | 5.59e-3 | 2.28e-3 |
-| W1.6/L0.7 | 5.55e-3 | 3.9e-5 | 5.76e-3 | 2.73e-4 |
+The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6:
+
+| W (µm) | L (µm) | `idvg_lin` stock | `idvg_lin` at 4.6 | `idvg_sat` stock | `idvg_sat` at 4.6 |
+|---|---|---|---|---|---|
+| 10 | 0.6 | 5.62e-3 | 1.47e-4 | 6.05e-3 | 3.64e-3 |
+| 10 | 0.7 | 5.59e-3 | 2.32e-4 | 5.80e-3 | 1.93e-3 |
+| 10 | 1 | 5.57e-3 | 1.29e-4 | 5.71e-3 | 1.87e-3 |
+| 10 | 2 | 5.58e-3 | 1.93e-4 | 5.61e-3 | 1.85e-3 |
+| 10 | 10 | 5.60e-3 | 1.59e-4 | 5.59e-3 | 2.28e-3 |
+| 1.6 | 0.7 | 5.55e-3 | 3.9e-5 | 5.76e-3 | 2.73e-4 |
 
 (engine-consequence)=
 
@@ -176,9 +179,8 @@ it.
 
 The PDK libraries pull in their sections through relative
 `.lib 'sm141064.spice' <section>` lines ([ngspice](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice)
-and [Xyce](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/xyce/sm141064.spice) versions). While the scratch libraries above
-were being patched, ngspice resolved those lines to a copy other than the one
-next to the top-level library. A stray [`sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice) in a simulator's
+and [Xyce](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/xyce/sm141064.spice) versions). ngspice can resolve those lines to a copy other than the one next to the
+top-level library, as it does with the patched scratch libraries above. A stray [`sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice) in a simulator's
 working directory could therefore replace the PDK models without any warning.
 
 Both runners therefore refuse to start in a working directory that holds

@@ -137,7 +137,7 @@ CASES = [
     *(
         (
             ENGINE_PAGE,
-            rf"^\| W{re.escape(w)}/L{re.escape(l)} \| {NUM} \| [^|]+ \| {NUM} \| [^|]+ \|$",
+            rf"^\| {re.escape(w)} \| {re.escape(l)} \| {NUM} \| [^|]+ \| {NUM} \| [^|]+ \|$",
             lambda w=w, l=l: [diff(N, "idvg_lin", _gid(w, l)), diff(N, "idvg_sat", _gid(w, l))],
         )
         for w, l in GEOMS
@@ -146,7 +146,7 @@ CASES = [
     *(
         (
             ENGINE_PAGE,
-            rf"^\| {label} \(Vds = 5 V\) \| {NUM} V \| {NUM} V \| \u2212{NUM} mV \|$",
+            rf"^\| {label} \| {NUM} \| {NUM} \| \u2212{NUM} \|$",
             lambda i0=i0: [vg_at("ngspice", i0), vg_at("xyce", i0), shift_mv(i0)],
         )
         for label, i0 in (("1 nA", 1e-9), ("100 nA", 1e-7), ("1 \u00b5A", 1e-6))
