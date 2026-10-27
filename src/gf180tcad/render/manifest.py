@@ -33,6 +33,8 @@ from gf180tcad.quantity import Quantity, Selector, file_sha256, repo_path
 
 FORMAT = 1
 REQUIRED = ("exaggeration", "format", "inputs", "quantities", "render")
+# The one file a committed manifest may read display-only values (role "display") from.
+DISPLAY_SOURCE = "data/render/display.toml"
 OPTIONAL = ("cycles", "device", "frames", "generator", "image", "outputs", "params", "scene")
 
 
@@ -141,6 +143,18 @@ class Manifest:
             for q in self.quantities.values()
             if q.scale is not None and q.scale != 1
         ]
+
+    def display_problems(self) -> list[str]:
+        """Entries that break the display rule of committed manifests: a ``display`` entry read
+        from a file other than :data:`DISPLAY_SOURCE`, or an entry read from that file with
+        another role. :meth:`verify` leaves this out so that a fixture may use its own file."""
+        out = []
+        for name, q in self.quantities.items():
+            if q.role == "display" and q.source != DISPLAY_SOURCE:
+                out.append(f"{name}: role display read from {q.source}, not {DISPLAY_SOURCE}")
+            elif q.source == DISPLAY_SOURCE and q.role != "display":
+                out.append(f"{name}: read from {DISPLAY_SOURCE} with role {q.role}")
+        return out
 
     def values(self, root: Path) -> tuple[dict, list[str]]:
         """Every entry's value as computed now under ``root``: read entries from their sources,

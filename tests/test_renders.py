@@ -50,10 +50,30 @@ def test_every_entry_rereads_its_source():
     """Every committed manifest verifies against the files it names (none before task R3)."""
     problems = {}
     for path in _committed_manifests():
-        found = rm.Manifest.load(path).verify(ROOT)
+        m = rm.Manifest.load(path)
+        found = m.verify(ROOT) + m.display_problems()
         if found:
             problems[path.relative_to(ROOT).as_posix()] = found
     assert not problems, problems
+
+
+def test_display_entries_come_from_the_display_file():
+    """A committed manifest takes its display-only values from data/render/display.toml only,
+    and every entry read from that file has the role display. The fixture's own display file
+    is the negative control."""
+    assert rm.DISPLAY_SOURCE == "data/render/display.toml"
+    assert (ROOT / rm.DISPLAY_SOURCE).is_file()
+    m = rm.Manifest.load(ROOT / FIXTURE_MANIFEST)
+    assert m.display_problems() == [
+        (
+            "e_g: role display read from tests/fixtures/renders/sources/display.toml, "
+            "not data/render/display.toml"
+        )
+    ]
+    m.quantities["e_g"].source = rm.DISPLAY_SOURCE
+    assert m.display_problems() == []
+    m.quantities["e_g"].role = "value"
+    assert m.display_problems() == ["e_g: read from data/render/display.toml with role value"]
 
 
 def test_exaggeration_strings_match_scales():
