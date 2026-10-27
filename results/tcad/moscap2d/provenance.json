@@ -1,4 +1,10 @@
 {
+  "calibration": {
+    "nfet_05v0": {
+      "file_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+      "param_sha256": "791e01ae1b48d92cc287e575324a83aa1cf9b60987a76f06fe57468c0941125c"
+    }
+  },
   "generator": "gf180tcad.tcad.__main__",
   "generator_sha256": "b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7",
   "gplugins_commit": "1c071d0565ef4917b48ff907b9426e879ccca7fc",

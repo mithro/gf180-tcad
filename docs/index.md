@@ -18,7 +18,8 @@ and the {term}`MOS capacitor <MOSCAP>`) is in progress. The committed {term}`TCA
 MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MOSFET TCAD yet:
 
 - the 1D and 2D MOS capacitor {term}`C–V` curves at the start values, in
-  {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`);
+  {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`),
+  and the first calibrated 2D cell (nfet, minimum length) in {repo}`results/tcad/moscap2d`;
 - their {term}`mesh convergence`, 1D and 2D, in {repo}`results/tcad/meshconv`
   ({doc}`limitations/mesh-convergence`);
 - the 1D calibration against the SPICE {term}`Cgg`–Vg, in {repo}`results/tcad/calibration`,
@@ -28,7 +29,8 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
   {term}`Agree` at every geometry and the pfet is published as {term}`Disagree`.
 
 The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation of the
-calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)):
+its first cell, the nfet at minimum length, is {term}`Disagree` ({ref}`cv-agreement-validation`).
 Planned, not built yet: {{ DEVSIM }}-versus-{{ Charon }} cross-comparison on every {term}`job`
 ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
 [issue #44](https://github.com/mithro/gf180-tcad/issues/44); none has run yet), 3D renders

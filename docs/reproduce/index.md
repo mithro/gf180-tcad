@@ -71,7 +71,7 @@ Each step is a target of its own, which can also be run alone:
 | `tcad-meshconv` | `python -m gf180tcad.tcad meshconv --dim 1` for both devices, then `--dim 2 --jobs 1` (one 16 GiB {term}`job` at a time) | {repo}`results/tcad/meshconv` |
 | `tcad-start` | `python -m gf180tcad.tcad moscap --params start`: `--dim 1` for both devices, and `--dim 2` for each committed 2D cell; the L = 2 µm cells run `--method qs`, then `--method combine-qs` on the same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job resumes when the target runs again | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
-| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices (no 2D calibrated results are committed) | {repo}`results/tcad/moscap1d` |
+| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (so far the nfet at {term}`Lmin`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
 
 It exits non-zero if any job fails or if any file differs from, is missing from, or is not
@@ -288,6 +288,29 @@ container budget was taken by another task for hours. The two calibrated 1D jobs
 `crosscheck-tcad` workflow job ({ref}`cross-host-tcad`), which checks that restamp on every
 change to the TCAD code; the other trees have no such check.
 
+**Calibrated 2D runs ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).** Each calibrated 2D cell is one host command,
+`python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID --out
+results/tcad/moscap2d --method M --resume DIR`, alone on the host in a 16 GiB {term}`sandbox`
+job. The wall time is that command's; the peak memory is the container's {term}`cgroup`
+`memory.peak`, sampled every 15 s.
+
+| Device | Geometry | Method | Wall time (s) | Peak memory (GiB) | Exit code | Finished (ACDT) |
+|---|---|---|---|---|---|---|
+| `nfet_05v0` | `w10p0_l0p60` | both | 11338 | 7.82 | 0 | 2026-10-27 11:31 |
+
+All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
+
+**Restamped from the old scheme on a parallel branch ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).** The first calibrated 2D job
+(nfet, `w10p0_l0p60`) was started before the per-tree hash was merged, so its host process
+wrote {repo}`results/tcad/moscap2d/provenance.json <results/tcad/moscap2d/provenance.json>` under
+the old scheme, with the shared hash
+`c1eab26a2b2785341091e0f1f6fde424a387fecb71b82174955f6f11c8f2c666` and no `generator`. After
+merging the per-tree hash, `tools/restamp-tcad-provenance results/tcad/moscap2d` rewrote it to
+`b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7` ({py:mod}`gf180tcad.tcad.__main__`).
+The job's data are what the code at the start of the job computed: the merge changed only
+provenance bookkeeping in the writer's closure, and the job's sandbox process had imported its
+modules before the merge. The `calibration` entry of the file is the writer's own.
+
 **Restamped without regeneration (Task 12).** Under the old scheme the hash covered both entry
 points, so a change to a module that a tree's writer never imports still changed that tree's
 hash. Task 12 added
@@ -450,7 +473,7 @@ rerun byte for byte locally by
 
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
 content-addressed cache repository: {repo}`tools/output-cache` `pull` fetches one and checks it against
-the sha256 the committed results name. It holds one mesh so far, none of a committed job; see
+the sha256 the committed results name. It holds one mesh so far, that of the calibrated nfet Lmin cell; see
 {doc}`output-cache`.
 
 ```{toctree}
