@@ -33,32 +33,36 @@ lines. {test}`tests/tcad/test_process.py::test_card_values_and_lines` re-reads e
 from the card in the image. It checks that each line lies inside the right `.model` block, and
 that the value is right. The `crosscheck` workflow runs it ({repo}`.github/workflows/crosscheck.yml`).
 
-| Parameter | nfet (card line) | pfet (card line) | Role |
-|---|---|---|---|
-| TOXE | 15.2 nm ([37309](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37309)) | 15.6 nm ([38255](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38255)) | start and lower bound of `t_ox_eff_nm` |
-| TOXP | 16.0 nm ([37311](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37311)) | not set, so = TOXE | basis of the `t_ox_eff_nm` upper bound |
-| NDEP | 1.7e17 cm⁻³ ([37202](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37202)) | 1.7e17 cm⁻³ ([38198](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38198)) | start of `n_ch_cm3` |
-| K1 | 0.9 ([37147](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37147)) | 0.9588 ([38162](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38162)) | lower bound of `n_ch_cm3` |
-| K2 | −0.001 ([37148](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37148)) | 8.936e-3 ([38163](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38163)) | why that bound has a 0.5 margin |
-| VTH0 | 0.67314 V ([37337](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37337)) | −0.8978 V ([38274](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38274)) | Δ only |
-| VFB | not set (derived) | −1 V ([38269](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38269)) | Δ only |
-| PHIN | 0 ([37234](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37234)) | 0 ([38227](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38227)) | Δ only |
-| ACDE | 0.3 ([37059](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37059)) | 0.7 ([38095](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38095)) | Δ |
-| MOIN | 15 ([37201](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37201)) | 15 ([38197](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38197)) | not used by Δ (see below) |
-| capMod | 2 ([37080](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37080)) | 2 ([38109](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38109)) | selects the CTM |
-| {term}`NGATE` | 1e20 cm⁻³ ([37204](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37204)) | 3.6e19 cm⁻³ ([38200](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38200)) | poly-gate doping, fixed |
-| {term}`XJ` | 0.15 µm ([37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377)) | 0.15 µm ([38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291)) | source/drain depth, 2D |
-| `sd_peak_cm3` | {term}`NSD` 1e20 cm⁻³ ([37217](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37217)) | 1e20 cm⁻³, `literature` (Plummer, Deal and Griffin, ch. 2, [ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)) | source/drain peak, 2D |
-| {term}`EPSROX` | 3.9 ([37126](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37126)) | 3.9 ([38144](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38144)) | ε_ox |
-| TNOM | 25 °C ([37308](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37308)) | 25 °C ([38254](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38254)) | T = 298.15 K |
-| {term}`DLC` | 54 nm ([37104](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37104)) | 7.4 nm ([38129](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38129)) | 1D bookkeeping, fixed |
-| CGSO = CGDO | 1e-10 F/m ([37089](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37089), [37086](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37086)) | 7.71e-11 F/m ([38117](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38117), [38115](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38115)) | 1D bookkeeping, fixed |
-| CGSL = CGDL | 1.5e-10 F/m ([37088](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37088), [37085](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37085)) | 5.25e-11 F/m ([38116](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38116), [38114](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38114)) | 1D bookkeeping, fixed |
-| CF | not set: 7.271e-11 F/m (derived) | not set: 7.216e-11 F/m (derived) | 1D bookkeeping, fixed |
-| {term}`CKAPPAS` = {term}`CKAPPAD` | 0.6 V ([37099](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37099), [37098](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37098)) | 0.6 V ([38126](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38126), [38125](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38125)) | 1D bookkeeping, fixed |
-| {term}`CGBO` | 1e-13 F/m ([37084](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37084)) | 1e-13 F/m ([38113](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38113)) | 1D bookkeeping, fixed |
-| {term}`DWC` | 0 ([37120](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37120)) | not set, so = WINT 49 nm ([38278](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38278)) | 1D bookkeeping, fixed |
-| {term}`XL`, {term}`XW` | 0 ([37380](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37380), [37392](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37392)) | 0 ([38294](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38294), [38299](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38299)) | 1D bookkeeping, fixed |
+| Parameter | Unit | nfet | nfet card line | pfet | pfet card line | Role |
+|---|---|---|---|---|---|---|
+| TOXE | nm | 15.2 | [37309](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37309) | 15.6 | [38255](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38255) | start and lower bound of `t_ox_eff_nm` |
+| TOXP | nm | 16.0 | [37311](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37311) | not set (= TOXE) | - | basis of the `t_ox_eff_nm` upper bound |
+| NDEP | cm⁻³ | 1.7e17 | [37202](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37202) | 1.7e17 | [38198](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38198) | start of `n_ch_cm3` |
+| K1 | - | 0.9 | [37147](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37147) | 0.9588 | [38162](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38162) | lower bound of `n_ch_cm3` |
+| K2 | - | −0.001 | [37148](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37148) | 8.936e-3 | [38163](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38163) | why that bound has a 0.5 margin |
+| VTH0 | V | 0.67314 | [37337](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37337) | −0.8978 | [38274](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38274) | Δ only |
+| VFB | V | not set (derived) | - | −1 | [38269](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38269) | Δ only |
+| PHIN | V | 0 | [37234](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37234) | 0 | [38227](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38227) | Δ only |
+| ACDE | - | 0.3 | [37059](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37059) | 0.7 | [38095](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38095) | Δ |
+| MOIN | - | 15 | [37201](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37201) | 15 | [38197](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38197) | not used by Δ (see below) |
+| capMod | - | 2 | [37080](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37080) | 2 | [38109](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38109) | selects the charge-thickness model |
+| {term}`NGATE` | cm⁻³ | 1e20 | [37204](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37204) | 3.6e19 | [38200](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38200) | poly-gate doping, fixed |
+| {term}`XJ` | µm | 0.15 | [37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377) | 0.15 | [38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291) | source/drain depth, 2D |
+| `sd_peak_cm3` ({term}`NSD`) | cm⁻³ | 1e20 | [37217](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37217) | 1e20 | `literature` (below) | source/drain peak, 2D |
+| {term}`EPSROX` | - | 3.9 | [37126](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37126) | 3.9 | [38144](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38144) | ε_ox |
+| TNOM | °C | 25 | [37308](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37308) | 25 | [38254](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38254) | T = 298.15 K |
+| {term}`DLC` | nm | 54 | [37104](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37104) | 7.4 | [38129](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38129) | 1D bookkeeping, fixed |
+| CGSO | F/m | 1e-10 | [37089](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37089) | 7.71e-11 | [38117](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38117) | 1D bookkeeping, fixed |
+| CGDO | F/m | 1e-10 | [37086](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37086) | 7.71e-11 | [38115](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38115) | 1D bookkeeping, fixed |
+| CGSL | F/m | 1.5e-10 | [37088](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37088) | 5.25e-11 | [38116](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38116) | 1D bookkeeping, fixed |
+| CGDL | F/m | 1.5e-10 | [37085](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37085) | 5.25e-11 | [38114](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38114) | 1D bookkeeping, fixed |
+| CF | F/m | 7.271e-11 | not set (derived) | 7.216e-11 | not set (derived) | 1D bookkeeping, fixed |
+| {term}`CKAPPAS` | V | 0.6 | [37099](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37099) | 0.6 | [38126](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38126) | 1D bookkeeping, fixed |
+| {term}`CKAPPAD` | V | 0.6 | [37098](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37098) | 0.6 | [38125](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38125) | 1D bookkeeping, fixed |
+| {term}`CGBO` | F/m | 1e-13 | [37084](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37084) | 1e-13 | [38113](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38113) | 1D bookkeeping, fixed |
+| {term}`DWC` | nm | 0 | [37120](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37120) | 49 (not set, = WINT) | [38278](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38278) | 1D bookkeeping, fixed |
+| {term}`XL` | µm | 0 | [37380](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37380) | 0 | [38294](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38294) | 1D bookkeeping, fixed |
+| {term}`XW` | µm | 0 | [37392](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37392) | 0 | [38299](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38299) | 1D bookkeeping, fixed |
 
 CF is not on either card, so {term}`BSIM4` uses its default, 2·EPSROX·ε0/π·ln(1 + 4e-7/TOXE)
 ([BSIM4.5.0 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), `doc/BSIM450_Manu.tar`, eq. 7.5.1).
@@ -68,7 +72,7 @@ belongs to the next bin, `.model nfet_06v0.1`.
 
 The pfet card's {term}`NSD` of 6e16 (line [38207](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38207)) has no clear physical meaning and is not
 used. The pfet source/drain peak of the 2D {term}`MOSCAP` is therefore a `literature` value, 1e20 cm⁻³, the
-p⁺ source/drain implant of the CMOS process flow in Plummer, Deal and Griffin, *Silicon VLSI
+p⁺ source/drain implant of the complementary MOS (CMOS) process flow in Plummer, Deal and Griffin, *Silicon VLSI
 Technology* (Prentice Hall, 2000), chapter 2; it is not load-bearing for the {term}`C–V`
 ({test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive`, {ref}`moscap2d`).
 
@@ -81,11 +85,17 @@ a length inside a bin or within 1e-9 m of either bound (`in_range` in
 [`inpgmod.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/parser/inpgmod.c)), so L = 0.7 µm lies in both nfet bins and ngspice takes the
 first in its model table ({py:func}`gf180tcad.tcad.process.card_bins`):
 
-| {term}`SPICE` geometry (W/L µm) | nfet bin | pfet bin |
-|---|---|---|
-| 10/{term}`Lmin` (0.6 nfet, 0.5 pfet) | `nfet_06v0.1` | `pfet_06v0.0` |
-| 10/0.7 and 1.6/0.7 | `nfet_06v0.0` and `nfet_06v0.1` (boundary) | `pfet_06v0.0` |
-| 10/1, 10/2, 10/10 | `nfet_06v0.0` | `pfet_06v0.0` |
+| {term}`SPICE` geometry W (µm) | L (µm) | nfet bin | pfet bin |
+|---|---|---|---|
+| 10 | 0.5 (pfet {term}`Lmin`) | - | `pfet_06v0.0` |
+| 10 | 0.6 (nfet Lmin) | `nfet_06v0.1` | - |
+| 10 | 0.7 | `nfet_06v0.0` and `nfet_06v0.1` (boundary) | `pfet_06v0.0` |
+| 1.6 | 0.7 | `nfet_06v0.0` and `nfet_06v0.1` (boundary) | `pfet_06v0.0` |
+| 10 | 1 | `nfet_06v0.0` | `pfet_06v0.0` |
+| 10 | 2 | `nfet_06v0.0` | `pfet_06v0.0` |
+| 10 | 10 | `nfet_06v0.0` | `pfet_06v0.0` |
+
+A dash marks a gate length the device is not simulated at.
 
 Every card key the nfet file uses has the same {term}`TT` value in both nfet bins, so the
 process data does not depend on the bin
@@ -108,18 +118,28 @@ physically. They are fixed and are not part of the {term}`parameter budget`.
 
 ## The three tunables
 
-These are 3 of the 8 calibrated parameters per device type. They will be fitted, so they are
+These are 3 of the 8 calibrated parameters per device type. The calibration fits them, so they are
 tagged `calibrated`, never `spice-card`. Instead of a `source`, each has a `start_source` and a
 `bounds_source`, and a structured `start_kind` and `bounds_kind` (one kind per bound). A kind is
 `card`, `derived` or `project-choice`
 ({py:data}`gf180tcad.tcad.process.KINDS`). Their starts and bounds are written into the files
 before any fit.
 
-| Name | Start (n / p) | Bounds, nfet | Bounds, pfet | Kinds (start; lower, upper) |
-|---|---|---|---|---|
-| `t_ox_eff_nm` | TOXE: 15.2 / 15.6 | 15.2 … 16.95 | 15.6 … 16.39 | card; card, derived (TOXP + Δ, below) |
-| `n_ch_cm3` | NDEP: 1.7e17 | 6.297e16 … 3.4e17 | 6.785e16 … 3.4e17 | card; project choice, project choice |
-| `dv_fb_v` | 0 | −0.2 … +0.2 | −0.2 … +0.2 | project choice; project choice, project choice |
+The start values and bounds:
+
+| Name | Unit | nfet start | nfet min | nfet max | pfet start | pfet min | pfet max |
+|---|---|---|---|---|---|---|---|
+| `t_ox_eff_nm` | nm | 15.2 | 15.2 | 16.95 | 15.6 | 15.6 | 16.39 |
+| `n_ch_cm3` | cm⁻³ | 1.7e17 | 6.297e16 | 3.4e17 | 1.7e17 | 6.785e16 | 3.4e17 |
+| `dv_fb_v` | V | 0 | −0.2 | +0.2 | 0 | −0.2 | +0.2 |
+
+Where each comes from (the same for both devices):
+
+| Name | Start kind | Lower bound kind | Upper bound kind |
+|---|---|---|---|
+| `t_ox_eff_nm` | card (TOXE) | card (TOXE) | derived (TOXP + Δ, below) |
+| `n_ch_cm3` | card (NDEP) | project choice | project choice |
+| `dv_fb_v` | project choice | project choice | project choice |
 
 - **The `n_ch_cm3` lower bound** is 0.5 × the doping that K1 implies,
   N = (K1·{term}`Cox`(TOXE))²/(2·q·ε_si·ε0) ({py:func}`gf180tcad.tcad.process.k1_doping_cm3`), with the
@@ -177,16 +197,21 @@ BSIM4.5.0 release](https://web.archive.org/web/20260420023056/https://bsim.berke
 The gate bias is used in place of Vgse, so the poly-depletion drop is ignored. That only makes
 Δ larger.
 
-| | nfet | pfet |
-|---|---|---|
-| Ldebye/3 | 3.295 nm | 3.295 nm |
-| Vfbzb | −0.965 V | −0.794 V (NMOS-equivalent sign) |
-| X_DC, accumulation plateau edge (polarity·Vg = −2 V) | **2.841 nm** | **2.361 nm** |
-| X_DC, accumulation end (polarity·Vg = −5 V) | 2.088 nm | 1.083 nm |
-| X_DC, inversion supremum | 0.943 nm | 0.844 nm |
-| Δ | **0.95 nm** | **0.79 nm** |
-| `t_ox_eff_nm` upper bound | 16.0 + 0.95 = **16.95 nm** | 15.6 + 0.79 = **16.39 nm** |
-| (not used) X_DC over the whole sweep, depletion end | 3.278 nm (Δ would be 1.10 nm) | 3.291 nm (Δ would be 1.10 nm) |
+| Quantity | Unit | nfet | pfet |
+|---|---|---|---|
+| Ldebye/3 | nm | 3.295 | 3.295 |
+| Vfbzb | V | −0.965 | −0.794 |
+| X_DC, accumulation plateau edge (polarity·Vg = −2 V) | nm | **2.841** | **2.361** |
+| X_DC, accumulation end (polarity·Vg = −5 V) | nm | 2.088 | 1.083 |
+| X_DC, inversion supremum | nm | 0.943 | 0.844 |
+| Δ | nm | **0.95** | **0.79** |
+| TOXP (pfet: not set, = TOXE) | nm | 16.0 | 15.6 |
+| `t_ox_eff_nm` upper bound, TOXP + Δ | nm | **16.95** | **16.39** |
+| X_DC at the depletion end (not used) | nm | 3.278 | 3.291 |
+| Δ if the whole sweep counted (not used) | nm | 1.10 | 1.10 |
+
+The pfet Vfbzb is given with the NMOS-equivalent sign. The last two rows show what Δ would be if
+the whole sweep, depletion included, counted; it does not.
 
 The pfet card is BSIM4 version 4.6 (line [38268](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38268)). Its CTM equations are those of
 4.5.0. §7.3 of the BSIM4.6.0 manual, and the X_DC code of its `b4ld.c`, have the same form
@@ -201,12 +226,14 @@ term, evaluated at Vbs = 0, with the short-channel terms of Vfbzb dropped. The t
 
 Here is the rough effect of each on Δ, estimated through Vfbzb (and Φs for LPHIN):
 
-| Term | L = 10 µm | L = 2 µm | L = {term}`Lmin` |
+| Term | At L = 10 µm (nm) | At L = 2 µm (nm) | At L = {term}`Lmin` (nm) |
 |---|---|---|---|
-| pfet LPHIN | +0.004 nm | +0.021 nm | +0.086 nm (L = 0.5 µm) |
-| pfet LPE0 | +0.0004 nm | +0.002 nm | +0.008 nm (L = 0.5 µm) |
-| nfet LPE0 | −0.0006 nm | −0.003 nm | −0.009 nm (L = 0.6 µm) |
-| K3 (both) | ≤ 0.0002 nm | ≤ 0.0002 nm | ≤ 0.0002 nm |
+| pfet LPHIN | +0.004 | +0.021 | +0.086 |
+| pfet LPE0 | +0.0004 | +0.002 | +0.008 |
+| nfet LPE0 | −0.0006 | −0.003 | −0.009 |
+| K3 (both) | ≤ 0.0002 | ≤ 0.0002 | ≤ 0.0002 |
+
+Lmin is 0.5 µm for the pfet and 0.6 µm for the nfet.
 
 With LPHIN the pfet Δ would round up to 0.80 nm at L = 10 µm and to about 0.88 nm at Lmin. The
 nfet Lmin of 0.6 µm lies in the other bin, `nfet_06v0.1`, which these files do not use. Δ is one
@@ -226,7 +253,7 @@ That is a result to report, not a failure.
 
 The files hold only starts and bounds. {py:func}`gf180tcad.tcad.process.load` requires the
 `calibrated` tag on exactly the tunables, each with its start and bounds sources and kinds, and
-rejects it on every fixed parameter. The calibration (Task 12) will write the fitted values to
-its own result files under {repo}`results/tcad/`, not to these files.
+rejects it on every fixed parameter. The calibration writes the fitted values to its own result
+files under {repo}`results/tcad/`, not to these files.
 {py:meth}`gf180tcad.tcad.process.ProcessDescription.with_values` applies such values to a loaded
 description. It refuses fixed parameters, non-numbers and values outside the bounds.
