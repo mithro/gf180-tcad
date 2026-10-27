@@ -53,5 +53,5 @@ markers = [
 [tool.ruff]
 line-length = 100
 # third_party/gplugins is the mithro/gplugins fork (a git submodule), linted by its own CI.
-# tools/measure_docs.py is vendored unchanged from mithro/dot-claude (see its header).
-extend-exclude = ["third_party", "tools/measure_docs.py"]
+# tools/measure_docs.py and tools/docs_lint.py are vendored unchanged (see their headers).
+extend-exclude = ["third_party", "tools/measure_docs.py", "tools/docs_lint.py"]

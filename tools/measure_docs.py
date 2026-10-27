@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-# Vendored unchanged (below this header) from github.com/mithro/dot-claude, commit
-# 30b9fbac55f7fe2b8ba82fcead649c26b6a95e94,
-# marketplace/writing-sourced-docs/skills/writing-sourced-documentation/scripts/measure_docs.py
+# Vendored unchanged (below this header) from the user's mithro/dot-claude repository,
+# marketplace/writing-sourced-docs/skills/writing-sourced-documentation/scripts/measure_docs.py.
+# Unpublished at the time of vendoring: local commit 30b9fbac55f7fe2b8ba82fcead649c26b6a95e94 of
+# that repository (Apache-2.0); obtainable from it once pushed.
 # (sha256 26ea5586ed154e2cad84c12ffd55a541979248c157c707ab2d32172f13471012 of the original file).
 # Copyright Tim Ansell; licensed under the Apache License 2.0, as the rest of this repository.
 # Update by copying the new upstream file below this header and changing the commit and sha256.

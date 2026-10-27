@@ -9,9 +9,11 @@ from pathlib import Path
 
 import pytest
 from doc_style import (
+    HEDGE_EXEMPT,
     MAX_WORDS,
     ROOT,
     check_cell,
+    hedge_lines,
     history_allowed,
     history_lines,
     numbers,
@@ -209,3 +211,39 @@ def test_positive_control_history():
     assert history_lines("The 2D files were previously restamped.\n")
     assert not history_lines("The run is resumed. <!-- history-ok: needed here -->\n")
     assert not history_lines("```\npreviously\n```\n")
+
+
+def test_no_hedge_words():
+    """Reader pages carry no hedge or unknown words (spec §10.3, owner decision of 14:40)."""
+    found = []
+    for p in source_pages():
+        rel = p.relative_to(ROOT).as_posix()
+        if rel.startswith(HEDGE_EXEMPT):
+            continue
+        found += [f"{rel}:{n}: {w!r}" for n, w in hedge_lines(p.read_text(encoding="utf-8"))]
+    assert not found, "hedge words on reader pages:\n" + "\n".join(found)
+
+
+def test_generated_pages_have_no_hedge_words(generated):
+    found = []
+    for p in sorted(generated.rglob("*.md")):
+        found += [f"{p.name}:{n}: {w!r}" for n, w in hedge_lines(p.read_text(encoding="utf-8"))]
+    assert not found, "\n".join(found)
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["The cause is probably the oxide.", "It takes about 10 min.", "This is not yet run.",
+     "The value is not public.", "a plausible process description"],
+)  # fmt: skip
+def test_positive_control_hedges(line):
+    assert hedge_lines(line)
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["What to note about them.", "The `unverified` tag.", 'The words "not yet" are banned.',
+     "The cause: the oxide, shown by the 1D fit."],
+)  # fmt: skip
+def test_positive_control_not_hedges(line):
+    assert not hedge_lines(line)
