@@ -125,3 +125,16 @@ def test_repo_path():
     for bad in ["/abs", "..", "a/../b", "a\\b", "", "./a", "a//b"]:
         with pytest.raises(ValueError, match="repo-relative"):
             quantity.repo_path(bad)
+
+
+def test_csv_reader_converts_only_the_selected_columns(tmp_path):
+    p = tmp_path / "a.csv"
+    p.write_text("vg,corner,c\n0.0,typical,1.0\n1.0,ff,2.0\n", encoding="utf-8")
+    got = quantity.read(quantity.Selector.from_dict({"csv": {"columns": ["c"], "rows": "all"}}), p)
+    assert got.tolist() == [1.0, 2.0]
+    where = {"csv": {"columns": ["c"], "where": {"vg": 1.0}}}
+    assert quantity.read(quantity.Selector.from_dict(where), p) == 2.0
+    with pytest.raises(ValueError):
+        quantity.read(
+            quantity.Selector.from_dict({"csv": {"columns": ["corner"], "rows": "all"}}), p
+        )

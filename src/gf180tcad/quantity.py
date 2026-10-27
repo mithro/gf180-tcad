@@ -34,6 +34,7 @@ import gzip
 import hashlib
 import json
 import tomllib
+import zipfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -139,8 +140,10 @@ def read_text(path: Path) -> str:
     return data.decode("utf-8")
 
 
-def read_csv_columns(path: Path) -> dict[str, np.ndarray]:
-    """Every column of a CSV file as float64 arrays, skipping ``#`` lines before the header."""
+def read_csv_columns(path: Path, wanted: Sequence[str]) -> dict[str, np.ndarray]:
+    """The columns ``wanted`` of a CSV file as float64 arrays, skipping ``#`` lines before the
+    header. Only those columns are converted, so a text column elsewhere does no harm. KeyError
+    names a column the file does not have."""
     lines = [ln for ln in read_text(path).splitlines() if ln and not ln.startswith("#")]
     if not lines:
         raise ValueError(f"{path}: no CSV header")
@@ -148,14 +151,16 @@ def read_csv_columns(path: Path) -> dict[str, np.ndarray]:
     rows = [ln.split(",") for ln in lines[1:]]
     if any(len(r) != len(names) for r in rows):
         raise ValueError(f"{path}: ragged CSV row")
-    return {n: np.array([float(r[i]) for r in rows], dtype=np.float64) for i, n in enumerate(names)}
+    for c in wanted:
+        if c not in names:
+            raise KeyError(f"{path}: no column {c!r} (has {names})")
+    index = {n: i for i, n in enumerate(names)}
+    return {c: np.array([float(r[index[c]]) for r in rows], dtype=np.float64) for c in wanted}
 
 
 def _read_csv(spec: Mapping, path: Path):
-    cols = read_csv_columns(path)
-    for c in spec["columns"]:
-        if c not in cols:
-            raise KeyError(f"{path}: no column {c!r} (has {list(cols)})")
+    wanted = list(dict.fromkeys([*spec["columns"], *spec.get("where", {})]))
+    cols = read_csv_columns(path, wanted)
     picked = [cols[c] for c in spec["columns"]]
     if "rows" in spec:
         return picked[0] if len(picked) == 1 else tuple(picked)
@@ -167,8 +172,6 @@ def _read_csv(spec: Mapping, path: Path):
         row = tuple(float(a[i]) for a in picked)
     else:
         ((col, want),) = spec["where"].items()
-        if col not in cols:
-            raise KeyError(f"{path}: no column {col!r} (has {list(cols)})")
         hits = np.flatnonzero(cols[col] == want)
         if len(hits) != 1:
             what = "no row" if not len(hits) else f"{len(hits)} rows"
@@ -185,6 +188,8 @@ def read(selector: Selector, path: Path):
     if selector.kind == "toml":
         return _walk(tomllib.loads(read_text(path)), selector.spec, path)
     if selector.kind == "npz":
+        if not zipfile.is_zipfile(path):
+            raise ValueError(f"{path}: not an npz (zip) archive")
         with np.load(path, allow_pickle=False) as z:
             if selector.spec not in z.files:
                 raise KeyError(f"{path}: no member {selector.spec!r} (has {sorted(z.files)})")
