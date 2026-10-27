@@ -170,9 +170,18 @@ def test_tcad_dev_gf180mcu_pdk(tmp_path):
 def test_tcad_dev_gplugins_from_the_submodule(tmp_path):
     if not (REPO_ROOT / "third_party" / "gplugins" / "gplugins").is_dir():
         pytest.skip("third_party/gplugins is not checked out")
-    code = "import gplugins, gplugins.devsim; print(gplugins.__file__)"
+    # gplugins.devsim is lazy (the backend seam), so import the DEVSIM backend itself; it must
+    # come from the submodule too.
+    code = (
+        "import gplugins, gplugins.devsim.backends.devsim as b; "
+        "print(gplugins.__file__); print(b.__file__); print(b.DDComponent.__module__)"
+    )
     res = _run(["python3", "-c", code], tmp_path)
-    assert res.stdout.splitlines()[-1] == "/work/src/third_party/gplugins/gplugins/__init__.py"
+    assert res.stdout.splitlines()[-3:] == [
+        "/work/src/third_party/gplugins/gplugins/__init__.py",
+        "/work/src/third_party/gplugins/gplugins/devsim/backends/devsim.py",
+        "gplugins.devsim.backends.devsim",
+    ]
 
 
 @pytest.mark.sandbox
