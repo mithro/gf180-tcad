@@ -23,7 +23,7 @@ there.
   both plateaus lie below SPICE, and the depletion crossing is off by more than 200 mV
   ({ref}`cv-agreement-validation`, [issue #77](https://github.com/mithro/gf180-tcad/issues/77)). The other geometries are "not run"
   ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)); the L = 10 µm cell does not solve in 2D ({doc}`moscap2d`).
-- **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
+- **`make tcad-start` cannot run its split 2D {term}`jobs <job>` as written.** Their `--resume` directory,
   `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
 - **TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
