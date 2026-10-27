@@ -6,23 +6,26 @@ precise enough to be checked.
 
 ## In plain language
 
-The {term}`TCAD` setup is **credible** for a device type when **one physically
-plausible {term}`process description`** (the same doping, oxide, mobility and contact
-parameters for every gate length and width) reproduces the {term}`PDK`'s typical-corner
-({term}`TT`, 25 °C) {term}`SPICE` behaviour across all checked geometries and biases, within
-the {ref}`tolerances below <tolerances>`, **including on characteristics that were not used to tune
-it**. Every remaining mismatch is listed with a probable physical or modelling
-cause.
+The {term}`TCAD` setup is **credible** for a device type when **one {term}`process description`
+built from public sources** ({ref}`parameter-budget`) reproduces the {term}`PDK`'s {term}`SPICE`
+behaviour. The process description has the same doping, oxide, mobility and contact parameters
+for every gate length and width. It must match the typical corner ({term}`TT`, 25 °C) across
+all checked geometries and biases, within the {ref}`tolerances below <tolerances>`, **including
+on characteristics that were not used to tune it**. Every remaining mismatch is listed with its
+physical or modelling cause and the evidence that shows it.
 
 (agreement-verdicts)=
 
 Each device and each metric gets one of three verdicts:
 
 - **{term}`Agree`**: within the technical {term}`tolerance`.
-- **{term}`Same process`**: outside the tolerance but inside the PDK's own min-max
-  {term}`spec window` (for example ±120 mV in {term}`Vt`, ±20 % in {term}`Idsat`; see
-  {doc}`pdk-spec-check`). The TCAD device is plausibly *a* GF180 device, not *the* typical one.
-- **{term}`Disagree`**: outside the spec window: the TCAD is describing a different process.
+- **{term}`Same process`**: outside the tolerance but inside the
+  {term}`"Same process" window`, the {term}`combined range` of the PDK's own min-max
+  {term}`spec window` and the {term}`corner envelope` ({ref}`same-process-window`). Examples of
+  spec windows are ±120 mV in {term}`Vt` and ±20 % in {term}`Idsat` ({doc}`pdk-spec-check`).
+  The TCAD device is then inside the range the PDK specifies, not at its typical point.
+- **{term}`Disagree`**: outside the "Same process" window; the TCAD is describing a different
+  process.
 
 ## Technical definition
 
@@ -40,8 +43,8 @@ Each device and each metric gets one of three verdicts:
   `pfet_06v0` test devices ({doc}`../limitations/silicon-validation`). The {term}`bin`
   boundary at L = 0.7 µm is deliberately included.
 - **Bias**: Vgs and Vds from 0 to 5 V (mirrored for p); Vbs of 0, -1 and -2 V
-  (mirrored for p). Temperature is 25 °C; -40 °C and 125 °C are a later
-  extension.
+  (mirrored for p). Temperature is 25 °C; −40 °C and 125 °C are on the
+  {doc}`roadmap </roadmap>` ([issue #71](https://github.com/mithro/gf180-tcad/issues/71)).
 - **SPICE**: TT {term}`corner`, {{ ngspice }} primary and {{ Xyce }} secondary. A disagreement
   between the two SPICE engines of more than 0.5 % flags a problem with the
   reference, not with the TCAD (the {term}`engine cross-check`; current status in
@@ -55,18 +58,19 @@ The primary {term}`SPICE reference <SPICE reference results>` uses the PDK devic
 instantiate it from a schematic: the PDK's default instance parameters (the source and drain
 areas and perimeters AS, AD, PS and PD computed by the PDK's standard formulas; the default
 layout distances SA, SB, SCA and SCB used by the stress and well-proximity models; nf = 1,
-m = 1). It is the only reference built so far.
+m = 1). It is the only reference built.
 
 (secondary-reference)=
 
-**Planned: a layout-extracted secondary reference.** The
+**The layout-extracted secondary reference is not built.** The
 {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
 also asks for a secondary reference with instance parameters extracted from the actual
-{{ gdsfactory }} cell layout, the difference between the two reported and attributed to
+{{ gdsfactory }} cell layout. The difference between the two is to be reported and attributed to
 `stress`, `rsd` (see the {ref}`mismatch taxonomy <mismatch-taxonomy>`) or well-proximity
-effects. It is not built yet, a recorded deviation from the spec
-({ref}`limitations-spec-deviations`). It is a {term}`Phase 3 entry gate`: it must exist, fixed,
-before any MOSFET TCAD result is generated.
+effects. Its absence is a recorded deviation from the spec ({ref}`limitations-spec-deviations`).
+It is a {term}`Phase 3 entry gate`: it must exist, fixed, before any MOSFET TCAD result is
+generated. It is on the {doc}`roadmap </roadmap>`
+([issue #69](https://github.com/mithro/gf180-tcad/issues/69)).
 
 (calibration-validation)=
 
@@ -169,22 +173,23 @@ The other metrics:
 
 (metrics-not-yet-extracted)=
 
-**Not yet extracted, or defined differently.** The SPICE reference
-({py:mod}`gf180tcad.metrics`, keys of `metrics.json`) does not yet cover the whole table, a
+**Not extracted, or defined differently.** The SPICE reference
+({py:mod}`gf180tcad.metrics`, keys of `metrics.json`) does not cover the whole table, a
 recorded deviation from the design spec ({ref}`limitations-spec-deviations`). Extracting these
-is a {term}`Phase 3 entry gate`:
+is a {term}`Phase 3 entry gate`
+([issue #70](https://github.com/mithro/gf180-tcad/issues/70)):
 
-- *Not yet extracted:* gm and gds at Vgs = Vt + 150 mV; gm/Id; Cgd at Vds = 5 V; Cgg in
+- *Not extracted:* gm and gds at Vgs = Vt + 0.15 V; gm/Id; Cgd at Vds = 5 V; Cgg in
   depletion (only inversion, {term}`cgg_inv_ff`, and accumulation, {term}`cgg_acc_ff`, are
   extracted); effective Rsd; Isub; Vt roll-off, Vt(Lmin) - Vt(10 µm) (each geometry's Vt is
   published, the difference is not); the RMS error of log10(Id).
 - *Definition differs:* the body effect ({term}`body_effect_v`) uses the
   {term}`constant-current Vt` only, not also the {term}`max-gm Vt`; {term}`gm_peak_s` is the peak gm on {term}`idvg_lin`, not the
-  gm at Vgs = Vt + 150 mV or at Vgs = 5 V of the table.
+  gm at Vgs = Vt + 0.15 V or at Vgs = 5 V of the table.
 
 Metrics are also reported as an error divided by {term}`σ_mismatch`, where
 σ_ΔVt = A_Vt / √(W·L) for the Vt difference of a pair, with the effective W and L
-({ref}`Pelgrom 1989 <lit-pelgrom>`), and the PDK's A_Vt is about 11.6 mV·µm, to give a physical
+({ref}`Pelgrom 1989 <lit-pelgrom>`), and the PDK's A_Vt is 11.55 mV·µm, to give a physical
 sense of scale. The value is the `par_vth = 0.01155` (V·µm) of the
 [`nfet_05v0` subcircuit](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L46950-L46963) in the
 PDK's ngspice model card (provenance tag `spice-card`). The card draws each device's Vt shift
@@ -207,10 +212,10 @@ These are prerequisites: no comparison counts unless they pass.
 - **{{ DEVSIM }} versus {{ Charon }}** on the identical mesh and identical models: at most
   1 % on Id and 2 mV on Vt. Every other metric is held by kind: 1 % for relative quantities
   (the same value as the {term}`mesh convergence` criterion) and 2 mV for voltages. A larger difference is a
-  simulator problem and blocks process conclusions. The two backends are to run in parallel on every
-  {term}`TCAD` {term}`job`
-  ({repo}`design spec, section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`,
-  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)); no {{ Charon }} job has run yet.
+  simulator problem and blocks process conclusions. No {{ Charon }} job has run, so this check
+  has no result. Running both backends on every {term}`TCAD` {term}`job`
+  ({repo}`design spec, section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`)
+  is on the {doc}`roadmap </roadmap>` ([issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
 
 (mismatch-taxonomy)=
 
@@ -243,7 +248,8 @@ The cause behind each tag:
   stand-ins replace them.
 - `oxide-qm`: TOXE ≠ TOXP, from {term}`poly depletion` and the quantum dark space; classical
   {term}`drift-diffusion` without {term}`density-gradient` ({ref}`Ancona and Iafrate <lit-ancona>`)
-  or a poly gate misses both. The expected ΔVt is about 10-30 mV.
+  or a poly gate misses both. The size of the expected ΔVt has no source
+  ([issue #73](https://github.com/mithro/gf180-tcad/issues/73)).
 - `mobility`: the mobility model choice ({ref}`Lombardi <lit-lombardi>`/{ref}`CVT <lit-darwish>`
   versus {ref}`Philips/Klaassen <lit-klaassen>`) and the surface-roughness parameters.
 - `velsat`: the high-field velocity saturation model ({ref}`Caughey-Thomas <lit-caughey>`).
@@ -253,5 +259,5 @@ The cause behind each tag:
 - `spice-fit`: {term}`BSIM4` is empirical, {term}`binned` (L bin at 0.7 µm) and fitted to
   silicon, so it may be non-physical between bins.
 - `ii`: the impact-ionisation model and its parameters at 5 V.
-- `thermal`: self-heating absent in one and present in the other.
+- `thermal`: self-heating absent or present.
 - `numerics`: the mesh and the solver.
