@@ -1007,21 +1007,33 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   `CalibrationLeak`). That guard stays: the corner fits go through a separate entry point that
   refuses TT and writes only under `results/tcad/corners/`, never under `calibration/` or
   `validation/` (anti-goal A1).
-- The tunables are the three of Task 12 (`t_ox_eff_nm`, `n_ch_cm3`, `dv_fb_v`). A 1D C–V curve
-  cannot see the length and width offsets (XL, XW), the overlap (CGSO, CGDO) or VSAT; those are
-  Phase 3.
-- The ss corner raises TOXE and TOXP by 1 nm, which puts the oxide outside the TT bounds
-  ([TOXE, TOXP + Δ]). So a corner's bounds are the TT bounds shifted by that corner's card
-  offset for the same quantity: the oxide bounds by the corner's TOXE offset; the doping and
-  flat-band bounds unchanged (the card shifts VTH0, which the fit splits between them).
+- The tunables are the three of Task 12 (`t_ox_eff_nm`, `n_ch_cm3`, `dv_fb_v`). The fit compares
+  through `MoscapCV.area_scaled` (`calibrate/cv.py`), which uses the process file's bookkeeping
+  values: `moscap1d.cv_geometry_um` (LeffCV = L + XL − 2·DLC, WeffCV = W + XW − 2·DWC) and the
+  overlap and fringe terms (`cgso_f_per_m`, `cgdo_f_per_m`, `cgsl_f_per_m`, `cgdl_f_per_m`,
+  `cf_f_per_m`), all at the typical card today. A corner's SPICE curve carries that corner's XL
+  (−42 / +70 nm), XW (±50 nm) and overlap factor (×0.9 / ×1.1): at L = 1–2 µm several percent of
+  the gate area, comparable to the ±1 nm TOXE shift. So each corner fit applies that corner's
+  card values to `xl_nm`, `xw_nm` and the four overlap terms as **fixed inputs** (not tunables,
+  not part of the budget), through `process.with_values` on the bookkeeping parameters; without
+  that, the fit would absorb the shift into the oxide and the doping. VSAT does not enter a C–V
+  curve; it is Phase 3.
+- The ss corner raises TOXE by 1 nm, which puts the oxide outside the TT bounds
+  ([TOXE, TOXP + Δ]); the corners shift VTH0 by ±0.12–0.13 V, while the committed TT flat-band
+  fits are already +0.099 V (nfet) and +0.187 V (pfet) of a ±0.2 V range. So a corner's bounds
+  are the TT bounds shifted by that corner's card offset for the same quantity: the oxide bounds
+  by its TOXE offset, the flat-band bounds by its VTH0 offset (with the sign of the device's
+  polarity); the doping bounds stay as at TT. A minimum or maximum across corners that sits on a
+  bound is reported as that bound (`at_bound: true`), not as a measured value.
 - Adding a tree to `gf180tcad.tcad.TREE_GENERATORS` changes a module in every tree's
   generator closure. After Charon plan Task B0 (registry out of the closures) it does not; so
   this task starts after B0, or restamps every TCAD tree in the same PR.
 
 **Files:**
-- `data/pdk_corners.json` (new): per device and corner, the offsets of VTH0, TOXE/TOXP, XL, XW,
-  CGSO/CGDO and VSAT, each with the line number in the pinned `sm141064.ngspice` and that
-  file's sha256. Step 1 writes it from the pinned PDK and corrects the spec §5.3 table if the
+- `data/pdk_corners.json` (new): per device and corner, the offsets of VTH0, TOXE (and TOXP for
+  the nfet), XL, XW and the factors of CGSO, CGDO, CGSL, CGDL and VSAT, each with the line number
+  in the pinned `sm141064.ngspice` and that file's sha256 (`69a7ab87…`, as in
+  `results/spice/provenance.json`). Step 1 writes it from the pinned PDK and corrects the spec §5.3 table if the
   values differ from the upstream ones it quotes.
 - `src/gf180tcad/calibrate/corners.py` (new, its own entry point
   `python -m gf180tcad.calibrate.corners run|summary` on the host, `corner-job` in the image):
@@ -1047,8 +1059,11 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
 
 **Interfaces:**
 - `corner_bounds(device, corner) -> Mapping[str, tuple[float, float]]`: the TT bounds from
-  `process.load(device)`, with the oxide bounds shifted by the corner's TOXE offset from
-  `data/pdk_corners.json`.
+  `process.load(device)`, with the oxide bounds shifted by the corner's TOXE offset and the
+  flat-band bounds by its VTH0 offset, from `data/pdk_corners.json`.
+- `corner_bookkeeping(device, corner) -> Mapping[str, float]`: the corner's `xl_nm`, `xw_nm`,
+  `cgso_f_per_m`, `cgdo_f_per_m`, `cgsl_f_per_m` and `cgdl_f_per_m` (card value plus offset, or
+  times factor), applied as fixed values to the process description of every corner fit.
 - `calibrate_corner(device, corner, ...) -> CalibrationResult`: raises `CalibrationLeak` for
   `corner == "typical"`, for a validation geometry, or for an output path outside
   `results/tcad/corners/`. The result records `reference.corner`.
@@ -1060,6 +1075,9 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   (`sw_stat_global = 1`), mismatch off (`sw_stat_mismatch = 0`), at the three calibration
   geometries. Experiment S0 fixes the exact include lines and the ngspice seed control, and
   shows that a seed gives the same curve twice. Each sample's curves are fitted like a corner.
+  Each sample's drawn XL, XW and overlap values are printed by ngspice for that seed (a `.print`
+  or `.measure` of the evaluated model parameters, chosen in S0) and recorded with the sample,
+  and that sample's fit uses them in its bookkeeping, as a corner fit does.
   `summary` gives the mean, the standard deviation (n − 1) and the 2.5 % and 97.5 %
   percentiles (linear interpolation) of each tunable, and the number of samples whose fit hit a
   bound.
@@ -1069,6 +1087,9 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   `test_corner_table_matches_pinned_pdk` (each value at its recorded line of the file with the
   recorded sha256), `test_typical_refused`, `test_corner_cannot_write_calibration_dir`,
   `test_validation_geometry_refused`, `test_corner_bounds_shift_oxide`,
+  `test_corner_bounds_shift_flatband`, `test_corner_bookkeeping_uses_corner_card` (the area and
+  overlap bookkeeping of an ss fit uses the ss XL, XW and overlap values, and the TT fit's
+  bookkeeping is unchanged), `test_min_max_on_a_bound_reported_as_bound`,
   `test_recovers_known_params_at_a_corner` (synthetic, as Task 12's test),
   `test_summary_min_max_and_corner`, `test_typical_row_is_task12_value` (byte-equal to
   `results/tcad/calibration/<device>.json`), `test_card_cross_check_reported`,
@@ -1080,9 +1101,10 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   commit, then the summary and the docs. Open PR 16a, get it reviewed and merge.
 - [ ] **Step 4 (PR 16b):** Tests first: `test_mc_seed_reproducible` (one seed, two runs, same
   bytes), `test_mc_seeds_recorded`, `test_mc_statistics_on_synthetic_samples`,
-  `test_mc_bound_hits_counted`, `test_mc_does_not_touch_spice_generators` (the SPICE
-  `generator_sha256` is unchanged). Experiment S0, then the SPICE samples (400 ngspice C–V runs
-  at three geometries, 4 GiB each, `JOBS=4` at most) and the 400 1D fits (2 GiB each, several
+  `test_mc_bound_hits_counted`, `test_mc_sample_bookkeeping_recorded`,
+  `test_mc_does_not_touch_spice_generators` (the SPICE
+  `generator_sha256` is unchanged). Experiment S0, then the SPICE samples (400 samples × 3 geometries =
+  1200 ngspice C–V sweeps, 4 GiB each, `JOBS=4` at most) and the 400 1D fits (2 GiB each, several
   at a time). Run time is measured, not assumed: the first 10 samples are timed and the rest is
   scheduled from that. The run resumes per sample, retries a failed fit once with the Task 12
   settings and otherwise records it as failed, and stops if more than 5 % of samples fail.

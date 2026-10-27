@@ -211,8 +211,8 @@ a TOXE term of 0.4 nm plus 0.13 nm, each at one standard deviation with `mc_skew
   sample's own drawn XL, XW and overlap values in the bookkeeping (printed by ngspice for each
   seed and recorded with the sample). The number of
   samples and the seeds are fixed in the plan and recorded with the results.
-- *Cross-check against the card.* Where the card states the shift of a physical quantity
-  directly (TOXE ±1 nm, XL, XW), the spread of the TCAD-fitted quantity is compared with it
+- *Cross-check against the card.* Where the card states the shift of a tuned physical quantity
+  directly (TOXE ±1 nm), the spread of the TCAD-fitted quantity is compared with it
   and the difference is reported. A TCAD oxide spread far from ±1 nm says the fit is
   absorbing the corner shift into another tunable.
 - *Where it is shown.* A table per device on the results pages and on the agreement pages
@@ -267,8 +267,8 @@ Source pointers: the per-design summaries of the wafer.space run 1 and run 2 des
 
 ### 8.1 Long runs: justified by what they tell us, managed so they cannot waste a day
 
-Added 2026-10-27 at the user's request (§16). Machine time is cheap; a wrong number or a lost
-day is not. So:
+Added 2026-10-27 at the user's request (§16); the job runners' part is tracked in issue #63.
+Machine time is cheap; a wrong number or a lost day is not. So:
 - **A run is justified by what it tells us**, never ruled out by its length alone. A 24-hour
   job is fine; a quick job whose answer nobody needs is not. Run time is a scheduling fact (it
   decides the order, and that 16 GiB jobs run one at a time on this host, §8), not a reason to
@@ -296,6 +296,12 @@ day is not. So:
     memory is a reported failure of that job, never a host event, and the limit is never raised
     just to make a run pass.
 - **Decisions taken on run time alone are revisited** (the list and their status are in §16).
+- **What exists and what is missing.** Every job already runs under its sandbox memory cap; the 2D
+  sweeps already resume per bias point (and record `resumed`), write a progress log, and retry a
+  failed point once in extended precision (`precision_fallback`). Missing, and the work of issue
+  #63: checks first in every runner, time and peak memory in every progress log (the SPICE
+  reference writes none), bounded retries outside the 2D sweep, loud output checks, and resume
+  for the mesh-convergence levels and the calibration.
 
 ## 9. Reproducibility ("bit-identical")
 
@@ -510,12 +516,13 @@ docs style pass that follows this amendment):
   `test_glossary_definitions_short` (each glossary definition's first paragraph is at most 60
   words; the detail goes below it or on a linked page) and `test_every_term_is_defined` (every
   `{term}` role in the sources names a glossary entry; this repeats the Sphinx check without a
-  build, so it runs in under a second).
+  build, so it runs in under a second; `test_generated_terms_are_defined` does the same for the
+  generated pages).
 - **Tables hold data.** One value per cell, units in the column header, numbers in columns of
   their own; no sentences and no multi-number cells. A table that mixes kinds is split. Long
   explanations go in the text below the table, or in a definition list or subsections with a
-  short table of the bare facts. Test: `test_table_cells`, over the Markdown sources and the
-  generated pages, fails on a cell of more than 8 words or with two or more numbers that carry
+  short table of the bare facts. Tests: `test_table_cells` (the Markdown sources) and
+  `test_generated_table_cells` (the generated pages) fail on a cell of more than 8 words or with two or more numbers that carry
   units, with an explicit per-table opt-out marker that gives the reason.
 
 ## 11. Literature (initial; [verify] items to be checked before citing)
