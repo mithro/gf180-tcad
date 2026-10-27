@@ -333,11 +333,13 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 |---|---|---|---|---|
 | nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 |
 | nfet `w10p0_l0p70` | 245515 | 112 | 97 | 210 |
+| nfet `w10p0_l1p00` | 306136 | 133 | 120 | 253 |
 
 | Cell | Peak memory (GiB) | Attempts |
 |---|---|---|
 | nfet `w10p0_l0p60` | 7.8 | 1 |
 | nfet `w10p0_l0p70` | 5.9 | 1 |
+| nfet `w10p0_l1p00` | 6.1 | 1 |
 
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
@@ -415,5 +417,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   agreement criterion ({ref}`mesh-convergence-2d`).
 - **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
   ({ref}`moscap2d-l2`).
-- **Calibrated 2D results only at the nfet W10/L0.6 and W10/L0.7** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+- **Calibrated 2D results only at the nfet W10/L0.6, W10/L0.7 and W10/L1** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).
