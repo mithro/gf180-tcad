@@ -1045,8 +1045,8 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
             lines += [
                 (
                     f"Level {ex['level']} is not run: it is as large as the 2D cell at L = 10 µm, "
-                    "whose equilibrium solve fails, and is expected to fail the same way (not yet "
-                    "attempted; [issue #58](https://github.com/mithro/gf180-tcad/issues/58)). "
+                    "whose equilibrium solve fails, and is expected to fail the same way (it has not "
+                    "been attempted; [issue #58](https://github.com/mithro/gf180-tcad/issues/58)). "
                     "Its node counts and estimated run times are on "
                     "{ref}`the mesh-convergence page <mesh-convergence-2d>`."
                 ),

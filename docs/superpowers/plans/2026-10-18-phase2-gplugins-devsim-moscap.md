@@ -1016,15 +1016,18 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   (−42 / +70 nm), XW (±50 nm) and overlap factor (×0.9 / ×1.1): at L = 1–2 µm several percent of
   the gate area, comparable to the ±1 nm TOXE shift. So each corner fit applies that corner's
   card values to `xl_nm`, `xw_nm` and the four overlap terms as **fixed inputs** (not tunables,
-  not part of the budget), through `process.with_values` on the bookkeeping parameters; without
+  not part of the budget), through a new method `ProcessDescription.with_corner_card(mapping)`
+  that accepts only parameters with role `reference-bookkeeping` and raises on any other.
+  `with_values` keeps refusing fixed parameters (its guard protects anti-goal A1). Without
   that, the fit would absorb the shift into the oxide and the doping. VSAT does not enter a C–V
   curve; it is Phase 3.
 - The ss corner raises TOXE by 1 nm, which puts the oxide outside the TT bounds
   ([TOXE, TOXP + Δ]); the corners shift VTH0 by ±0.12–0.13 V, while the committed TT flat-band
   fits are already +0.099 V (nfet) and +0.187 V (pfet) of a ±0.2 V range. So a corner's bounds
   are the TT bounds shifted by that corner's card offset for the same quantity: the oxide bounds
-  by its TOXE offset, the flat-band bounds by its VTH0 offset (with the sign of the device's
-  polarity); the doping bounds stay as at TT. A minimum or maximum across corners that sits on a
+  by its TOXE offset, the flat-band bounds shifted by +ΔVTH0 in true-sign gate bias for both
+  devices (the gate bias and the BSIM4 VTH0 are both true-sign, so the pfet ff offset of
+  +0.1245 V moves the curve towards positive Vg, as the nfet's does); the doping bounds stay as at TT. A minimum or maximum across corners that sits on a
   bound is reported as that bound (`at_bound: true`), not as a measured value.
 - Adding a tree to `gf180tcad.tcad.TREE_GENERATORS` changes a module in every tree's
   generator closure. After Charon plan Task B0 (registry out of the closures) it does not; so
@@ -1064,7 +1067,11 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   flat-band bounds by its VTH0 offset, from `data/pdk_corners.json`.
 - `corner_bookkeeping(device, corner) -> Mapping[str, float]`: the corner's `xl_nm`, `xw_nm`,
   `cgso_f_per_m`, `cgdo_f_per_m`, `cgsl_f_per_m` and `cgdl_f_per_m` (card value plus offset, or
-  times factor), applied as fixed values to the process description of every corner fit.
+  times factor), applied through `ProcessDescription.with_corner_card` to the process
+  description of every corner fit.
+- `ProcessDescription.with_corner_card(mapping) -> ProcessDescription` (new, in
+  `src/gf180tcad/tcad/process.py`): replaces the values of `reference-bookkeeping` parameters
+  only; any other name raises `ValueError`. Test: `test_with_corner_card_refuses_tunables`.
 - `calibrate_corner(device, corner, ...) -> CalibrationResult`: raises `CalibrationLeak` for
   `corner == "typical"`, for a validation geometry, or for an output path outside
   `results/tcad/corners/`. The result records `reference.corner`.
@@ -1088,7 +1095,9 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   `test_corner_table_matches_pinned_pdk` (each value at its recorded line of the file with the
   recorded sha256), `test_typical_refused`, `test_corner_cannot_write_calibration_dir`,
   `test_validation_geometry_refused`, `test_corner_bounds_shift_oxide`,
-  `test_corner_bounds_shift_flatband`, `test_corner_bookkeeping_uses_corner_card` (the area and
+  `test_corner_bounds_shift_flatband` (nfet and pfet: ff and ss move the flat-band bounds by
+  +ΔVTH0 in true-sign gate bias, so the pfet ff bounds move towards positive Vg),
+  `test_corner_bookkeeping_uses_corner_card` (the area and
   overlap bookkeeping of an ss fit uses the ss XL, XW and overlap values, and the TT fit's
   bookkeeping is unchanged), `test_min_max_on_a_bound_reported_as_bound`,
   `test_recovers_known_params_at_a_corner` (synthetic, as Task 12's test),
