@@ -295,7 +295,9 @@ def band_flat(dev: model.Device, parts: tuple[str, ...], palette: str) -> bytes:
             ax.set_xlim(0, 1)
             ax.set_ylim(bottom, top)
             ax.set_xticks([])
-            ax.axhspan(lv["conduction"], top, color=pal["electron"], alpha=STYLE["fill_alpha"], lw=0)
+            ax.axhspan(
+                lv["conduction"], top, color=pal["electron"], alpha=STYLE["fill_alpha"], lw=0
+            )
             ax.axhspan(bottom, lv["valence"], color=pal["hole"], alpha=STYLE["fill_alpha"], lw=0)
             ax.axhline(lv["conduction"], color=pal["electron"], lw=lw)
             ax.axhline(lv["valence"], color=pal["hole"], lw=lw)
