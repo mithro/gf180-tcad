@@ -110,13 +110,15 @@ lint:
 
 # What the pre-push hook (tools/git-hooks/pre-push, installed by tools/install-hooks) runs before
 # every push: make lint, then the CI tests except the slow docs build and calibration fits
-# (PRE_PUSH_SLOW; CI runs them). About a minute.
+# (PRE_PUSH_SLOW; CI runs them). About a minute. -rs lists the skips; the tests' scratch files go
+# to tmp/ (gitignored), not the system temporary directory.
 PRE_PUSH_SLOW = tests/test_docgen.py tests/test_doc_links.py tests/test_calibrate_cv.py
 pre-push: lint
-	uv run --locked pytest -m "not sandbox" -q -p no:cacheprovider tests \
-		$(addprefix --ignore=,$(PRE_PUSH_SLOW))
+	uv run --locked pytest -m "not sandbox" -q -rs -p no:cacheprovider \
+		--basetemp=tmp/pytest-pre-push tests $(addprefix --ignore=,$(PRE_PUSH_SLOW))
 
 # The docs-links rule (tests/test_doc_links.py, a few minutes: it builds the docs). The hook runs
 # it as well when a pushed commit changes docs/, src/, results/, README.md or CONTRIBUTING.md.
 pre-push-docs:
-	uv run --locked pytest -m "not sandbox" -q -p no:cacheprovider tests/test_doc_links.py
+	uv run --locked pytest -m "not sandbox" -q -rs -p no:cacheprovider \
+		--basetemp=tmp/pytest-pre-push-docs tests/test_doc_links.py

@@ -67,14 +67,18 @@ clone (it covers every git worktree of it), the pre-push hook
 [`tools/git-hooks/pre-push`](tools/git-hooks/pre-push): each `git push` first runs `make pre-push` (`make lint`, then
 every non-sandbox test except the slow docs build and calibration fits, about a minute) and,
 when a pushed commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), README.md or CONTRIBUTING.md,
-`make pre-push-docs` (the docs-links rule, a few minutes). A failure refuses the push. Do not
-bypass it with `--no-verify`: the hook only checks what most often broke CI, so run the full
-`uv run pytest -m "not sandbox"` before asking for review. CI cancels the run of a superseded
-commit when a newer one is pushed to the same pull request (runs on `main` are never cancelled).
-The hook also refuses a push of several branches that are not all the checked-out one: that is
-what `push.default=matching` does, and since every worktree of a clone shares its branches, it
-pushes other sessions' unfinished commits (and starts CI on them). Push with
-`git push origin HEAD`, and set `git config push.default simple`.
+`make pre-push-docs` (the docs-links rule, a few minutes). A failure refuses the push. A push
+can therefore take three minutes or more: an agent runs `git push` in the background or with a
+timeout of at least 300 s, and never with `--no-verify`. The hook only checks what most often
+broke CI, so run the full `uv run pytest -m "not sandbox"` before asking for review. CI cancels
+the run of a superseded commit when a newer one is pushed to the same pull request (runs on
+`main` are never cancelled).
+
+By design, the hook also refuses a push of several branches that are not all the checked-out
+one, and, when `push.default` is `matching`, any push of a branch other than the checked-out
+one. That is what a bare `git push` under `push.default=matching` does, and since every worktree
+of a clone shares its branches, it pushes other sessions' unfinished commits (and starts CI on
+them). Push with `git push origin HEAD`, and set `git config push.default simple`.
 
 [`uv.lock`](uv.lock) is committed. Tests that run simulators are marked
 [`sandbox`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-sandbox); they run only through [`tools/sandbox-run`](tools/sandbox-run)
