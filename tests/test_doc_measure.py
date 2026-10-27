@@ -24,14 +24,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-import pytest
 from doc_style import ROOT, source_pages
 
 TOOL = ROOT / "tools" / "measure_docs.py"
 LINT = ROOT / "tools" / "docs_lint.py"
 BASELINE = Path(__file__).with_name("doc_measure_baseline.json")
 NOT_COUNTED = ("inline URL not in any footnote definition", "number with no marker")
-
 
 
 def _measure() -> Counter:

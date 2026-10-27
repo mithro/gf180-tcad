@@ -32,7 +32,6 @@ GLOSSARY_WORDS = 80
 _TERM = re.compile(r"\{term\}`([^`]*)`")
 
 
-
 def _table_problems(text: str, rel: str) -> list[str]:
     out = []
     for t in tables(text, rel):
