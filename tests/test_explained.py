@@ -726,3 +726,13 @@ def test_oxide_page_prints_its_numbers():
     for key in ("toxe_nfet", "toxp_nfet", "t_ox_nfet_cal", "cox_nfet_cal", "cox_check_nfet"):
         assert "{{ x_" + key + " }}" in text, key
     assert "/_generated/explained/oxide-stack-light.svg" in text
+
+
+def test_gate_voltage_shift_is_printed_from_the_calibration_file():
+    """PR #95 re-review: the silicon page states the calibrated gate-voltage shift as a value."""
+    numbers = _numbers()
+    cal = json.loads((ROOT / "results/tcad/calibration/nfet_05v0.json").read_text("utf-8"))
+    assert numbers.value("dv_fb_nfet_cal") == cal["values"]["dv_fb_v"]
+    text = (EXPLAINED / "silicon-and-carriers.md").read_text(encoding="utf-8")
+    assert "{{ x_dv_fb_nfet_cal }}" in text
+    assert "small shift" not in text
