@@ -4,8 +4,9 @@
 
 The {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
 requires that {term}`uniform refinement` of the mesh changes every metric by less than 1 %. The
-mesh does matter: in an early prototype the depletion capacitance moved by 2 % between two meshes
-(see the {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-10-mesh-convergence-tooling>`), so convergence is checked, not assumed.
+mesh does matter. In an early prototype the depletion capacitance moved by 2 % between two meshes
+(see the {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-10-mesh-convergence-tooling>`).
+Convergence is therefore checked, not assumed.
 This page shows how much the simulated capacitance changes as the mesh is made finer, and which
 mesh the results use.
 
@@ -27,7 +28,7 @@ against the next finer level at every bias. Per triple of neighbouring levels it
 {term}`Richardson extrapolation` of the three finest levels. The **selected level** is the
 coarsest whose change against the next finer one is below 1 %
 ({py:data}`gf180tcad.tcad.meshconv.CRITERION`) at every bias. Every 1D result uses
-it: the `moscap` command ({py:mod}`gf180tcad.tcad.__main__`) reads its mesh from the device's
+it. The `moscap` command ({py:mod}`gf180tcad.tcad.__main__`) reads its mesh from the device's
 `selected.json` ({py:data}`~gf180tcad.tcad.meshconv.SELECTED_NAME`) in
 {repo}`results/tcad/meshconv/moscap1d`
 ({py:func}`gf180tcad.tcad.meshconv.selected_spec`).
@@ -107,9 +108,10 @@ Classical accumulation and inversion layers add a capacitance in series with the
 | {term}`nfet_05v0` (15.2 nm) | 2.2718 | 0.98099 (accumulation) | 0.97302 (inversion) |
 | {term}`pfet_05v0` (15.6 nm) | 2.2135 | 0.95135 (inversion) | 0.97915 (accumulation) |
 
-So a C/Cox above 1 at −5 V, such as the 1.0039 of an early 2D prototype (see the
-{repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`),
-is not physics of the stack. It comes from the 2D structure ({ref}`moscap2d-artefact`).
+An early 2D prototype gave a C/Cox of 1.0039 at −5 V (see the
+{repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
+A C/Cox above 1 at −5 V is therefore not physics of the stack. It comes from the 2D structure
+({ref}`moscap2d-artefact`).
 
 (mesh-convergence-2d)=
 
@@ -128,12 +130,13 @@ matters in 2D, unlike in 1D, and starts at 1 nm ({ref}`moscap2d-artefact`).
 **Level 3 is left out** ({py:data}`gf180tcad.tcad.meshconv.LEVELS_BY_DIM`,
 {py:data}`gf180tcad.tcad.meshconv.EXCLUDED_2D`; the report records it as `excluded_levels`).
 Meshing every level without solving gives its node count. With the refined grading, the node
-count doubles per level:
+count doubles per level. Both Lmin cells have W = 10 µm; L is 0.6 µm for the nfet and 0.5 µm for
+the pfet. Nodes per level:
 
-| Lmin cell | W (µm) | L (µm) | Level 0 | Level 1 | Level 2 | Level 3 |
-|---|---|---|---|---|---|---|
-| nfet | 10 | 0.6 | 115,689 | 224,640 | 437,039 | 861,897 |
-| pfet | 10 | 0.5 | 105,701 | 205,327 | 399,554 | 788,074 |
+| Lmin cell | Level 0 | Level 1 | Level 2 | Level 3 |
+|---|---|---|---|---|
+| nfet | 115,689 | 224,640 | 437,039 | 861,897 |
+| pfet | 105,701 | 205,327 | 399,554 | 788,074 |
 
 The estimated time of one QS sweep ({term}`job`) at each level:
 
@@ -142,8 +145,8 @@ The estimated time of one QS sweep ({term}`job`) at each level:
 | nfet | 0.75 | 1.75 | 4.1 | 9.7 |
 | pfet | 0.67 | 1.56 | 3.65 | 8.7 |
 
-The times come from the measured cost of the first 2D study: s per bias = 3.25e-6 · nodes^1.278,
-times the 201 biases, times 1.4 for the equilibrium set-up and the retried points. Level 3 has
+The times come from the measured cost of the first 2D study. The cost per bias is
+3.25e-6 · nodes^1.278 s. A sweep takes that times the 201 biases, times 1.4 for the equilibrium set-up and the retried points. Level 3 has
 not been attempted. Its mesh is as large as the 2D cell at L = 10 µm. That cell's equilibrium
 {term}`drift-diffusion` solve fails in {{ DEVSIM }}'s direct solver ({ref}`moscap2d-l10`), an
 open correctness problem ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)). So
