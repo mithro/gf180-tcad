@@ -607,9 +607,9 @@ def test_committed_validation(device):
 def _doc_row(c: dict) -> str:
     m, g = c["metrics"], c["geometry"]
     return (
-        f"| {g['w_um']:g}/{g['l_um']:g} | {g['role']} | {100 * m['plateau_acc_max_rel']:.2f} % | "
-        f"{100 * m['plateau_inv_max_rel']:.2f} % | {1000 * m['dv_dep_v']:+.1f} mV | "
-        f"{1000 * m['dv_inv_v']:+.1f} mV | {100 * m['depletion_max_rel']:.1f} % | {c['verdict']} |"
+        f"| {g['w_um']:g} | {g['l_um']:g} | {g['role']} | {100 * m['plateau_acc_max_rel']:.2f} | "
+        f"{100 * m['plateau_inv_max_rel']:.2f} | {1000 * m['dv_dep_v']:+.1f} | "
+        f"{1000 * m['dv_inv_v']:+.1f} | {100 * m['depletion_max_rel']:.1f} | {c['verdict']} |"
     )
 
 
@@ -622,13 +622,15 @@ def test_docs_quote_the_committed_results(device):
     for c in [*res.per_geometry.values(), *val["one_d"].values()]:
         assert _doc_row(c) in text, _doc_row(c)
     v = res.values
-    row = (
-        f"| {{term}}`{device}` | {v['t_ox_eff_nm']:.3f} [{res.bounds['t_ox_eff_nm'][0]:g}, "
-        f"{res.bounds['t_ox_eff_nm'][1]:g}] | {v['n_ch_cm3']:.3e}".replace("e+", "e")
+    lo, hi = res.bounds["t_ox_eff_nm"]
+    rows = (
+        f"| {{term}}`{device}` | `t_ox_eff_nm` | nm | {v['t_ox_eff_nm']:.3f} | {lo:g} | {hi:g} |",
+        f"| {{term}}`{device}` | `n_ch_cm3` | cm⁻³ | {v['n_ch_cm3']:.3e} |".replace("e+", "e"),
+        f"| {{term}}`{device}` | `dv_fb_v` | mV | {1000 * v['dv_fb_v']:+.1f} | −200 | +200 |",
     )
-    assert row in text, row
-    assert f"| {1000 * v['dv_fb_v']:+.1f} mV [±200 mV] |" in text
-    assert f"{res.optimiser['nfev']} evaluations" in text
+    for row in rows:
+        assert row in text, row
+    assert f"reached | {res.optimiser['nfev']} |" in text
     cc = res.cox_check
     for x in (cc["c_ox_ff_per_um2"], cc["c_per_area_acc_ff_per_um2"]):
         assert f"{x:.3f}" in text
