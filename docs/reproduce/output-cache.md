@@ -40,7 +40,7 @@ regenerated before they can be pushed ({ref}`first population <output-cache-firs
   be recreated from nothing.
 
 The cacheable files, the repository URLs and the size cap are in {repo}`data/output-cache.json`.
-A {{ gmsh }} mesh compresses to about a third (27.5 MB to 9.5 MB measured, 10 s).
+A {{ gmsh }} mesh compresses from 27.5 MB to 9.5 MB (measured, 10 s).
 
 ## Commands
 
@@ -55,7 +55,7 @@ tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.
 
 The first `pull` fetches the one cached mesh by its sha256. The second form writes a
 committed job's mesh into place by the `mesh_sha256` its `cv.meta.json` names; the committed
-start meshes are not in the cache yet, so for them it fails.
+start meshes are not in the cache, so for them it fails.
 
 `status` and `pull` clone the cache shallow and blobless into a temporary directory under `tmp/`
 (`--scratch` elsewhere) and download only `index.json` and the one object; `--cache` takes a
