@@ -503,7 +503,7 @@ def test_landing_lists_every_page():
     names = [p.stem for p in explanation_pages()]
     assert sorted(entries) == sorted(names)
     for name in names:
-        assert re.search(rf"^- \[[^\]]+\]\({re.escape(name)}\.md\): ", text, re.MULTILINE), name
+        assert re.search(rf"^- \{{doc\}}`[^`<]+<{re.escape(name)}>`: ", text, re.MULTILINE), name
     prose = [
         ln for ln in text[: toc.start()].splitlines()
         if ln.strip() and not ln.startswith(("# ", "- ", "(")) and not ln.startswith("  ")

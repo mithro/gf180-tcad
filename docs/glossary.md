@@ -256,7 +256,7 @@ HF C–V
 high-frequency C–V
   The {term}`C–V` measured with a small signal too fast for the inversion layer to follow: in inversion
   the capacitance stays near its depletion minimum instead of recovering to {term}`Cox`.
-  Technically, minority carriers are generated thermally in a time of order 2τ·N/n_i, so above that rate
+  Technically, {term}`minority carriers <minority carrier>` are generated thermally in a time of order 2τ·N/n_i, so above that rate
   only the depletion edge responds; a 1D {term}`MOSCAP` with only a body contact gives this
   curve at any practical frequency ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`plugin-history-latest`.
 
@@ -558,8 +558,8 @@ hole
   current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-carriers`.
 
 intrinsic carrier density
-  The density of electrons, equal to that of holes, in pure silicon in thermal equilibrium:
-  n_i. Heat frees each {term}`electron` and its {term}`hole` as a pair ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  The density of {term}`electrons <electron>`, equal to that of {term}`holes <hole>`, in pure
+  silicon in thermal equilibrium: n_i. Heat frees each electron and its hole as a pair ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
   {ref}`explained-carriers`.
 
 dopant
@@ -569,7 +569,7 @@ dopant
 
 donor
   A {term}`dopant` with one more outer {term}`electron` than silicon. The spare electron is
-  free to move, so donors make n-type silicon, where electrons are the majority carriers
+  free to move, so donors make n-type silicon, where electrons are the {term}`majority carriers <majority carrier>`
   ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-dopants`.
 
 acceptor

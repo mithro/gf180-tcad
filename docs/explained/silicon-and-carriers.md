@@ -24,7 +24,7 @@ shaded body. {{ x_fig_silicon_doping_scale }}
 
 ## Atoms and bonds
 
-Silicon is a crystal in which each atom shares its four outer electrons with four neighbours
+Silicon is a crystal in which each atom shares its four outer {term}`electrons <electron>` with four neighbours
 ({ref}`Sze and Ng, ch. 1 <lit-sze>`). Each shared pair is a bond that holds the atoms together.
 An electron held in a bond cannot move through the crystal. A perfect crystal with every
 electron in a bond carries no current.
@@ -33,7 +33,7 @@ electron in a bond carries no current.
 
 ## Electrons and holes
 
-Heat breaks a few bonds. Each break frees an {term}`electron`, which moves through the crystal
+Heat breaks a few bonds. Each break frees an electron, which moves through the crystal
 and carries a current. The broken bond is a {term}`hole`. A neighbouring bonded electron can
 jump into it, so the hole moves too and acts as a positive charge. In pure silicon, electrons
 and holes come in pairs, so their densities are equal: the {term}`intrinsic carrier density`
