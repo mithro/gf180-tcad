@@ -9,8 +9,8 @@ precise enough to be checked.
 The {term}`TCAD` setup is **credible** for a device type when **one {term}`process description`**
 reproduces the {term}`PDK`'s {term}`SPICE` behaviour. The process description is built from public
 sources ({ref}`parameter-budget`), with the same doping, oxide, mobility and contact parameters
-for every gate length and width. It must match the typical corner
-({term}`TT`, 25 °C) across all checked geometries and biases, within the
+for every gate length and width. It must match the {term}`typical corner <TT>`
+(TT, 25 °C) across all checked geometries and biases, within the
 {ref}`tolerances below <tolerances>`. That holds **including on characteristics that were not
 used to tune it**. Every remaining mismatch is listed with its
 physical or modelling cause and the evidence that shows it.
@@ -220,8 +220,8 @@ These are prerequisites: no comparison counts unless they pass.
 - **{{ DEVSIM }} versus {{ Charon }}** on the identical mesh and identical models: at most
   1 % on Id and 2 mV on Vt. Every other metric is held by kind: 1 % for relative quantities
   (the same value as the {term}`mesh convergence` criterion) and 2 mV for voltages. A larger difference is a
-  simulator problem and blocks process conclusions. No {{ Charon }} job has run, so this check
-  has no result. Running both backends on every {term}`TCAD` {term}`job`
+  simulator problem and blocks process conclusions. No {{ Charon }} {term}`job` has run, so this check
+  has no result. Running both backends on every {term}`TCAD` job
   ({repo}`design spec, section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`)
   is on the {doc}`roadmap </roadmap>` ([issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
 

@@ -26,9 +26,9 @@ the issue says what is open and what settles it. The phases are those of the
 
 - **The 2D MOSFET**, on both backends
   ([issue #68](https://github.com/mithro/gf180-tcad/issues/68)).
-- **Entry gate: a layout-extracted secondary {term}`SPICE` reference** ({ref}`secondary-reference`,
+- **Entry gate: a layout-extracted secondary {term}`SPICE` reference** ({ref}`secondary reference <secondary-reference>`,
   [issue #69](https://github.com/mithro/gf180-tcad/issues/69)).
-- **Entry gate: the remaining metrics of the {term}`tolerance` table** ({ref}`metrics-not-yet-extracted`,
+- **Entry gate: the remaining metrics of the {term}`tolerance` table** ({ref}`metrics list <metrics-not-yet-extracted>`,
   [issue #70](https://github.com/mithro/gf180-tcad/issues/70)).
 
 ## Phase 4: DEVSIM and Charon
