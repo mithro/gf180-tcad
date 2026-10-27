@@ -251,7 +251,8 @@ def test_positive_control_hedges(line):
 @pytest.mark.parametrize(
     "line",
     ["What to note about them.", "The `unverified` tag.", 'The words "not yet" are banned.',
-     "The cause: the oxide, shown by the 1D fit."],
+     "The cause: the oxide, shown by the 1D fit.", "(metrics-not-yet-extracted)=",
+     "See {ref}`the list <metrics-not-yet-extracted>`."],
 )  # fmt: skip
 def test_positive_control_not_hedges(line):
     assert not hedge_lines(line)

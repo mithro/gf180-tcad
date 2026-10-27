@@ -224,18 +224,21 @@ HEDGES = re.compile(
     r"probable|plausible|plausibly|likely|roughly|approximately)\b|\babout(?= [~≈]?[−+-]?\d)",
     re.IGNORECASE,
 )
+# A MyST target label line, "(name)=": an identifier, not prose.
+_LABEL = re.compile(r"^\s*\([\w.:-]+\)=\s*$")
 # Pages that are not reader pages for the hedge rule.
 HEDGE_EXEMPT = ("docs/superpowers/", "docs/api/")
 
 
 def hedge_lines(text: str) -> list[tuple[int, str]]:
-    """(line, word) of each hedge word outside code, fences, quotations and HTML comments."""
+    """(line, word) of each hedge word outside code, fences, quotations, HTML comments, roles
+    and target label lines."""
     out, fence = [], False
     for n, line in enumerate(text.splitlines(), 1):
         if re.match(r"^\s*(`{3,}|~{3,})", line):
             fence = not fence
             continue
-        if fence:
+        if fence or _LABEL.match(line):
             continue
         s = re.sub(r"`[^`]*`", " ", line)
         s = re.sub(r"<!--.*?-->", " ", s)
