@@ -88,6 +88,29 @@ All Phase 2 and Phase 4 Global Constraints apply unchanged (licences, git rules,
 
   Run them: they FAIL.
 - [ ] **Step 2: Implement** reader, window, npz writer, job and CLI; host tests PASS. Commit per module.
+  - [x] **Step 2, part 1: the reader, the window and the npz writer** with their host tests
+    (`tests/test_meshcut.py`, fixture `tests/fixtures/meshcut/grid30.msh`), branch
+    `task/p5-renders-next` (2026-10-28). As built: `gf180tcad.meshcut.msh.read` (strict MSH 2.2
+    ASCII, element types 1 and 2 only, z = 0 enforced, every node and physical tag checked),
+    `window.rule_bounds` (the window rule, `kx` and `depth_um` passed in until M1 fixes
+    `WINDOW_KX` and `WINDOW_DEPTH_UM`), `window.cut` (whole elements by centroid, nodes in
+    ascending original-id order), `npz.write_npz`/`read_npz`. Two changes to the format decision:
+    the gplugins meshes are written in **cm** (`mesh_scaling_factor = 1e-4`), so the coordinate
+    member is `nodes_cm` (bit-equal to the file; `meshcut.UM_PER_MSH_UNIT = 1e4` converts), not
+    `nodes_um`, which could not be both in µm and bit-equal; and `boundary_lines` comes with a
+    `boundary` member (uint8 index into the mesh's 1D physical names, such as `gate_poly___oxide`),
+    so a figure can label each interface. The lines kept are the mesh's own line elements that
+    are an edge of a kept triangle. `net_doping_cm3` and the meta file belong to the job (part 2).
+    No entry point, tree or `generators.json` row yet, so no hash moves. Informational host
+    probe, not Experiment M1 (`tmp/meshcut-probe.log` of that branch): on the #35 calibrated nfet
+    `w10p0_l0p60` mesh (225,964 nodes, 451,341 triangles) the reader takes 2.6 s and 244 MiB; a
+    window around a gate guessed at the cell centre (L = 0.6 µm), with `kx = 0.25`, from 0.1 µm
+    below the surface to the top of the mesh, keeps 123,309 nodes and writes 3,714,488 bytes.
+    So M1 should expect the two-window fallback of the window decision, or a narrower rule, even
+    for the L = 0.6 µm cell.
+  - [ ] **Step 2, part 2:** `meshcut.read(job_dir)`, the meta file and its schema test, the
+    in-image `job.py` (sha check, `net_doping_cm3`, write), the CLI, the `generators.json` rows
+    and the provenance and outcache tests.
 - [ ] **Step 3: Experiment M1, the window.** M1 waits until #35's current 2D job has finished: no 4 GiB cut job runs beside a 16 GiB job. On the #35 calibrated nfet `w10p0_l0p60` mesh (on disk; copy it into the worktree's `tmp/meshcut/`, never read from the scratch dir in place), run `cut-job` in the sandbox (`--mem 4g`) for a grid of `WINDOW_KX ∈ {0.25, 0.5, 1.0}` and `WINDOW_DEPTH_UM ∈ {0.1, 0.25, 0.5}`; log node count, triangle count and npz bytes to `tmp/meshcut-m1.log`; extrapolate to the 503 k-node L = 2 µm cell by its node density in the window (its nodes concentrate along the same interfaces). Fix the constants; record the table on the limitations page. Peak RSS of the cut job (from `/usr/bin/time -v` in the job log) sets the `--mem` value.
 - [ ] **Step 4: Experiment M0, the four start meshes.** `uv run --locked python -m gf180tcad.meshcut regenerate --job results/tcad/moscap2d/<device>/start/<gid>` for each of the four, **one at a time**, nothing else heavy running; logs `tmp/meshcut-m0-<device>-<gid>.log`; record wall time, peak RSS and the regenerated sha against the committed one. Commit the record (docs only) whatever the outcome.
 - [ ] **Step 5: Cut and commit** the artefacts that are tied: matching regenerated start meshes (outcome 1) and every #35 calibrated job whose `cv.meta.json` is on `main` by then (pulled from the cache, or regenerated if #35 did not push). `make manifest`; results-only commits per job. Update the docs pages and the limitations bullet. Open the PR, get it reviewed, merge.
@@ -116,7 +139,7 @@ Three PRs: R1a (the manifest format and its test, no new data), R1b (1D profiles
 | | oxide band edges | `D`, per oxide node: `E_c,ox(x) = −ψ(x) + E_g/2 + ΔE_c`, `E_v,ox(x) = −ψ(x) − E_g/2 − ΔE_v`, with ψ at the oxide nodes of the R1b profiles (the oxide potential is linear, so the edges slope with the oxide field; never a flat value taken at the interface); offsets from `data/render/display.toml` `sio2.conduction_offset_ev`, `sio2.valence_offset_ev` (display only, cited) | D |
 | | Fermi levels, carrier densities | `D`: body `E_F = 0`; gate `E_F = −vg_held` (eV), with `vg_held = vg − dv_fb_v + dv_qs` from the R1b file (`dv_fb_v` from `per_area.meta.json` `tunables.dv_fb_v.value`, the rule `dv_fb_shift`, `sweep.dv_qs_v`); QS is Poisson–Boltzmann, so `n = n_i·exp((ψ − φ)/V_t)` and `p = n_i·exp((φ − ψ)/V_t)` exactly, with φ the region's contact Fermi potential (0 in the body, `vg_held` in the poly), `constants.vt_v`, `constants.n_i_cm3` | D |
 | | depletion edge, sheet charges | `D`: depletion edge = first depth where the majority density reaches half the body doping; sheet charges = trapezoid integrals of `q(p − n + N_net)` per region | D |
-| R2 2D cross-section | regions, mesh, net doping in the window | `results/tcad/meshes/<image>/<device>/<params>/<gid>/mesh-window.npz` `nodes_um`, `triangles`, `region`, `net_doping_cm3`, `boundary_lines` (R0) | N (R0) |
+| R2 2D cross-section | regions, mesh, net doping in the window | `results/tcad/meshes/<image>/<device>/<params>/<gid>/mesh-window.npz` `nodes_cm` (cm, as the mesh file; `meshcut.UM_PER_MSH_UNIT` to µm), `triangles`, `region`, `net_doping_cm3`, `boundary_lines` (R0) | N (R0) |
 | | gate length, width, oxide, S/D peak | the source job's `cv.meta.json` `l_um`, `geometry.w_um`, `meshed_t_ox_nm`, `sd_peak_cm3`, `node_count`, `mesh_sha256` | C |
 | | colour bar range | `D`: `log10_abs` of `net_doping_cm3`, signed, min/max over the window | D |
 | R3 calibration loop | bounds, start, final | `calibration/<device>.result.json` `bounds.*`, `optimiser.x0`, `optimiser.x_scale`, `params`; `calibration/<device>.json` (final values, `param_sha256`) | C |
