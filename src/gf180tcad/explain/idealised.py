@@ -98,4 +98,62 @@ def degenerate_offset(n_cm3, nc_cm3, vt_v):
     return vt_v * (_inverse_fermi_dirac_half(r) - math.log(r))
 
 
+@_formula("V_bi = V_t·ln(N_A·N_D / n_i²)", f"{_SZE}, ch. 2 (the built-in potential)")
+def built_in_potential(n_a_cm3, n_d_cm3, n_i_cm3, vt_v):
+    """The built-in potential of an abrupt p-n junction, V_bi = V_t·ln(N_A·N_D / n_i²) (V), with
+    N_A the acceptor density of the p side and N_D the donor density of the n side, under
+    Boltzmann statistics with every dopant ionised.
+
+    Reference: Sze and Ng 2006 (lit-sze), ch. 2 (the built-in potential).
+    """
+    return vt_v * math.log(n_a_cm3 * n_d_cm3 / n_i_cm3**2)
+
+
+@_formula(
+    "W = √(2·ε_r·ε_0·V_bi·(1/N_A + 1/N_D) / q)",
+    f"{_SZE}, ch. 2 (the depletion approximation, abrupt junction)",
+)
+def depletion_width(n_a_cm3, n_d_cm3, vbi_v, eps_r, eps0_f_per_cm, q_c):
+    """The zero-bias width of the depletion region of an abrupt p-n junction in the depletion
+    approximation, W = √(2·ε_r·ε_0·V_bi·(1/N_A + 1/N_D) / q) (cm).
+
+    Reference: Sze and Ng 2006 (lit-sze), ch. 2 (the depletion approximation, abrupt junction).
+    """
+    return math.sqrt(2 * eps_r * eps0_f_per_cm * vbi_v * (1 / n_a_cm3 + 1 / n_d_cm3) / q_c)
+
+
+@_formula(
+    "ρ = q·N_D on −x_n < x < 0, −q·N_A on 0 < x < x_p; dE/dx = ρ/ε; dψ/dx = −E",
+    f"{_SZE}, ch. 2 (the depletion approximation, abrupt junction)",
+)
+def abrupt_junction(x_cm, n_a_cm3, n_d_cm3, vbi_v, eps_r, eps0_f_per_cm, q_c):
+    """The charge, field and potential of an abrupt p-n junction at zero bias in the depletion
+    approximation, at the positions ``x_cm`` (cm; the n side at x < 0, the p side at x > 0):
+    ρ = q·N_D on −x_n < x < 0, −q·N_A on 0 < x < x_p; dE/dx = ρ/ε; dψ/dx = −E, with
+    x_n = W·N_A/(N_A + N_D), x_p = W·N_D/(N_A + N_D) and W from :func:`depletion_width`.
+    Returns ``charge_cm3`` (ρ/q, cm⁻³), ``field_v_per_cm`` and ``potential_v`` (zero at the
+    p-side edge, V_bi at the n-side edge).
+
+    Reference: Sze and Ng 2006 (lit-sze), ch. 2 (the depletion approximation, abrupt junction).
+    """
+    x = np.asarray(x_cm, dtype=float)
+    w = depletion_width(n_a_cm3, n_d_cm3, vbi_v, eps_r, eps0_f_per_cm, q_c)
+    x_n = w * n_a_cm3 / (n_a_cm3 + n_d_cm3)
+    x_p = w * n_d_cm3 / (n_a_cm3 + n_d_cm3)
+    eps = eps_r * eps0_f_per_cm
+    e_max = q_c * n_a_cm3 * x_p / eps
+    on_n = (x > -x_n) & (x <= 0)
+    on_p = (x > 0) & (x < x_p)
+    charge = np.where(on_n, n_d_cm3, 0.0) - np.where(on_p, n_a_cm3, 0.0)
+    field = np.where(on_n, e_max * (x + x_n) / x_n, 0.0) + np.where(
+        on_p, e_max * (x_p - x) / x_p, 0.0
+    )
+    # ψ(x_p) = 0 and dψ/dx = −E: integrate the two triangles in closed form.
+    psi_p = np.where(on_p, e_max * (x_p - x) ** 2 / (2 * x_p), 0.0)
+    v_n_edge = e_max * (x_n + x_p) / 2
+    psi_n = np.where(on_n, v_n_edge - e_max * (x + x_n) ** 2 / (2 * x_n), 0.0)
+    psi = np.where(x <= -x_n, v_n_edge, psi_n + psi_p)
+    return {"charge_cm3": charge, "field_v_per_cm": field, "potential_v": psi}
+
+
 FORMULAS: Mapping[str, Formula] = MappingProxyType(dict(sorted(_TABLE.items())))

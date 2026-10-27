@@ -787,7 +787,8 @@ def test_abrupt_junction_profile_is_consistent():
     w = idealised.depletion_width(n_a, n_d, vbi, eps, e0, q)
     x = np.linspace(-w, w, 200001)
     p = idealised.abrupt_junction(x, n_a, n_d, vbi, eps, e0, q)
-    assert np.trapezoid(p["charge_cm3"], x) == pytest.approx(0, abs=1e-6 * n_d * w)
+    # neutral to the grid step (1e-5 W) at each of the four edges
+    assert np.trapezoid(p["charge_cm3"], x) == pytest.approx(0, abs=1e-4 * n_d * w)
     assert np.argmax(np.abs(p["field_v_per_cm"])) == np.argmin(np.abs(x))
     assert p["field_v_per_cm"][0] == pytest.approx(0, abs=1) and p["field_v_per_cm"][-1] == pytest.approx(0, abs=1)
     assert p["potential_v"][0] - p["potential_v"][-1] == pytest.approx(vbi, rel=1e-9)
