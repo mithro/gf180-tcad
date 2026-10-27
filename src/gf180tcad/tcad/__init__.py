@@ -25,7 +25,7 @@ image (:repo:`docker/TCAD_IMAGE`) for now. ``python -m gf180tcad.tcad`` takes ``
 pick the other one, for testing and debugging.
 
 The plugin is the submodule `third_party/gplugins
-<https://github.com/mithro/gplugins/tree/1eae814f8584f9cb111493c32496f8e7f6c82503>`_, a checkout
+<https://github.com/mithro/gplugins/tree/0715c81c4439533512621a97358d9d779411ebf6>`_, a checkout
 of the gplugins fork. Its commit is read on the host with
 ``git -C third_party/gplugins rev-parse HEAD``
 (inside the sandbox the repo is a read-only mount without git). It raises unless the
