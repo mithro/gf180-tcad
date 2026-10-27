@@ -528,12 +528,16 @@ asks for one descriptive inline link in the sentence that needs it and no footno
 `Sources:` lines. This repo keeps its existing form: an inline descriptive link, or a MyST role
 (`{repo}`, `{ref}`, `{term}`, `{py:…}`, `{test}`) that the build checks. No footnotes.
 
-*Owner decision (unknowns and hedges, 14:40, §16).* A reader page never says "not public",
-"not stated", "unverified" or "not yet", and carries no hedge ("typical", "we infer", "our
-reading", "probably", "about"): this overrides the five hedged kinds of statement of
-writing-sourced-docs. A fact without a source is left out and filed as an issue; planned or
-unfinished work goes to an issue and to one roadmap page tied to issues, not onto the page.
-In a table, a value no source gives is "none" or "not applicable", never a guess.
+*Owner decision (unknowns and hedges, 14:40, §16).* This overrides the five hedged kinds of
+statement of writing-sourced-docs. An unsourced statement is removed from the page and an issue
+is filed saying what would settle it. A reader page (everything under `docs/` except
+`docs/superpowers/` and the API stubs, and `README.md`) carries none of these words: not yet,
+yet, unverified, not public, not stated, not published, presumably, probably, probable,
+plausible, plausibly, likely, roughly, approximately, and "about" before a number. A cause is
+stated with its evidence ("cause: X, shown by Y"); a value is given as recorded, or as a bound
+("under 1 min", "≤ 1.52 %"). Planned or unfinished work goes to an issue and to one roadmap
+page tied to issues, not onto the page. In a table, a value no source gives is "none" or "not
+applicable", never a guess.
 
 **Present state only.** A page says what is true now and what the reader needs to know now.
 What used to be true, what was changed and when, and how a result came about belong in the
