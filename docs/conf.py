@@ -200,7 +200,10 @@ user_agent = "gf180-tcad-linkcheck (Sphinx; https://github.com/mithro/gf180-tcad
 # GitHub renders line and heading anchors with JavaScript, so linkcheck cannot see them.
 linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
 linkcheck_retries = 3
-linkcheck_timeout = 30
+linkcheck_timeout = 45
+# Sphinx 9 already reports a timeout as "timeout", not "broken" (linkcheck_report_timeouts_as_broken
+# defaults to False), but still exits 1 for it. The linkcheck workflow therefore reads
+# output.json and fails only on "broken" links (issue #93).
 linkcheck_rate_limit_timeout = 120.0
 
 # docs/_generated/ is git-ignored and rebuilt from the committed SPICE reference at the start of

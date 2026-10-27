@@ -36,7 +36,32 @@ jobs:
         with:
           version: "0.13.1"
       - name: Sphinx linkcheck
-        run: uv run --locked --group docs sphinx-build -b linkcheck docs docs/_build/linkcheck
+        # Sphinx exits 1 for a timeout as well as for a dead link. A slow external site is not a
+        # defect of the change (issue #93), so the exit code is replaced by a count of the
+        # "broken" entries in output.json; timeouts are shown as warnings.
+        run: |
+          set +e
+          uv run --locked --group docs sphinx-build -b linkcheck docs docs/_build/linkcheck
+          status=$?
+          set -e
+          json=docs/_build/linkcheck/output.json
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          if [ ! -f "$json" ]; then
+            echo "sphinx-build failed (exit $status) before writing $json"
+            exit "$status"
+          fi
+          jq -r 'select(.status == "timeout") | "::warning::linkcheck timeout: \(.uri) (\(.filename):\(.lineno))"' "$json"
+          broken=$(jq -s '[.[] | select(.status == "broken")] | length' "$json")
+          echo "sphinx-build exit $status; broken links: $broken"
+          if [ "$broken" -gt 0 ]; then
+            exit 1
+          fi
+          if ! jq -e 'select(.status == "timeout")' "$json" > /dev/null; then
+            echo "sphinx-build failed (exit $status) with no broken link and no timeout"
+            exit "$status"
+          fi
       - name: Show the linkcheck report
         if: always()
         run: |
