@@ -51,7 +51,8 @@ the issue says what is open and what settles it. The phases are those of the
 
 - **3D renders** of the simulated processes
   ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
-  [issue #43](https://github.com/mithro/gf180-tcad/issues/43)).
+  [issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The format of their
+  {doc}`render manifest <reproduce/render-manifest>` is defined and tested.
 - **Explainer pages** on how the parts of a semiconductor work
   ({repo}`explainer plan <docs/superpowers/plans/2026-10-27-explainer-docs.md>`,
   [issue #46](https://github.com/mithro/gf180-tcad/issues/46)).
