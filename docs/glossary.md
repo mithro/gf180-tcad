@@ -494,8 +494,8 @@ Phase 2
 Phase 3
 Phase 4
 Phase 3 entry gate
-  The TCAD phases. Phase 2, in progress: the {{ gplugins }} {{ DEVSIM }} plugin fix and the
-  1D and 2D {term}`MOS capacitor <MOSCAP>`, calibrated against the SPICE {term}`Cgg`–Vg
+  The {term}`TCAD` phases. Phase 2, in progress: the {{ gplugins }} {{ DEVSIM }} plugin fix and the
+  1D and 2D {term}`MOS capacitor <MOSCAP>`, calibrated against the {term}`SPICE` {term}`Cgg`–Vg
   ({repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md>`).
   Phase 3, not started: the 2D MOSFET, on both backends. Phase 4, planned: {{ Charon }} in
   parallel with {{ DEVSIM }} and the cross-comparison of the two, which since the 2026-10-27

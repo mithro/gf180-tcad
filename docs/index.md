@@ -31,7 +31,7 @@ The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation of
 calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 Planned, not built yet: {{ DEVSIM }}-versus-{{ Charon }} cross-comparison on every {term}`job`
 ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
-[issue #44](https://github.com/mithro/gf180-tcad/issues/44); no Charon job has run), 3D renders
+[issue #44](https://github.com/mithro/gf180-tcad/issues/44); none has run yet), 3D renders
 of the simulated processes
 ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
 [issue #43](https://github.com/mithro/gf180-tcad/issues/43)) and explainer pages
