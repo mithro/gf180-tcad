@@ -3,7 +3,8 @@
 
 It reads the four sections ``$MeshFormat``, ``$PhysicalNames``, ``$Nodes`` and ``$Elements``
 and refuses anything else it would have to interpret: another format version, the binary
-file type, element types other than 1 (two-node line) and 2 (three-node triangle), a node
+file type, element types other than 1 (two-node line) and 2 (three-node triangle), an element
+that repeats a node, a non-numeric field, a coordinate that is not finite, a node
 with a non-zero z, a node or physical tag that is not declared, a count that disagrees with
 its block. Gmsh's file format is described in the gmsh reference manual, section "MSH file
 format version 2 (Legacy)" (https://gmsh.info/doc/texinfo/gmsh.html).
@@ -14,6 +15,7 @@ coordinate is the exact double the file names.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -99,7 +101,10 @@ def _names(lines: list[str]) -> dict[tuple[int, int], str]:
         parts = row.split(maxsplit=2)
         if len(parts) != 3 or not (parts[2].startswith('"') and parts[2].endswith('"')):
             raise MshError(f"$PhysicalNames: bad line {row!r}")
-        key = (int(parts[0]), int(parts[1]))
+        try:
+            key = (int(parts[0]), int(parts[1]))
+        except ValueError:
+            raise MshError(f"$PhysicalNames: bad line {row!r}") from None
         if key in names:
             raise MshError(f"$PhysicalNames: duplicate {key}")
         names[key] = parts[2][1:-1]
@@ -114,12 +119,17 @@ def _nodes(lines: list[str]) -> tuple[np.ndarray, np.ndarray]:
         parts = row.split()
         if len(parts) != 4:
             raise MshError(f"$Nodes: bad line {row!r}")
-        z = float(parts[3])
+        try:
+            node, x, y, z = int(parts[0]), float(parts[1]), float(parts[2]), float(parts[3])
+        except ValueError:
+            raise MshError(f"$Nodes: bad line {row!r}") from None
+        if not (math.isfinite(x) and math.isfinite(y)):
+            raise MshError(f"$Nodes: node {node} has a coordinate that is not finite: {row!r}")
         if z != 0.0:
-            raise MshError(f"$Nodes: node {parts[0]} has z = {parts[3]}, a 2D mesh has z = 0")
-        ids[k] = int(parts[0])
-        xy[k, 0] = float(parts[1])
-        xy[k, 1] = float(parts[2])
+            raise MshError(f"$Nodes: node {node} has z = {parts[3]}, a 2D mesh has z = 0")
+        ids[k] = node
+        xy[k, 0] = x
+        xy[k, 1] = y
     order = np.argsort(ids, kind="stable")
     ids, xy = ids[order], xy[order]
     if len(ids) > 1 and np.any(ids[1:] == ids[:-1]):
@@ -132,7 +142,10 @@ def _elements(
 ) -> dict[int, tuple[list[list[int]], list[int]]]:
     out: dict[int, tuple[list[list[int]], list[int]]] = {LINE: ([], []), TRIANGLE: ([], [])}
     for row in _counted(_section(lines, "Elements"), "Elements"):
-        parts = [int(p) for p in row.split()]
+        try:
+            parts = [int(p) for p in row.split()]
+        except ValueError:
+            raise MshError(f"$Elements: bad line {row!r}") from None
         if len(parts) < 3:
             raise MshError(f"$Elements: bad line {row!r}")
         typ, ntags = parts[1], parts[2]
@@ -153,6 +166,8 @@ def _elements(
             raise MshError(
                 f"$Elements: element {parts[0]} has physical tag {tag}, not in $PhysicalNames"
             )
+        if len(set(nodes)) != len(nodes):
+            raise MshError(f"$Elements: element {parts[0]} repeats a node: {row!r}")
         out[typ][0].append(nodes)
         out[typ][1].append(tag)
     return out
