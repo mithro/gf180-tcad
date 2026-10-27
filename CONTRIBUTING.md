@@ -106,6 +106,10 @@ broke CI, so run the full `uv run pytest -m "not sandbox"` before asking for rev
 the run of a superseded commit when a newer one is pushed to the same pull request (runs on
 `main` are never cancelled).
 
+The [linkcheck workflow](.github/workflows/linkcheck.yml) fails a pull request when an external link answers with an error
+such as 404. It also fails when an issue or pull request number in the docs does not exist. A site that
+only times out shows as a warning annotation and in the report, and does not fail the check.
+
 By design, the hook also refuses a push of several branches that are not all the checked-out
 one, and, when `push.default` is `matching`, any push of a branch other than the checked-out
 one. That is what a bare `git push` under `push.default=matching` does, and since every worktree
