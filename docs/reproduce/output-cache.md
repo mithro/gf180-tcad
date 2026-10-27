@@ -5,7 +5,13 @@
 Some generated files are too large to commit but take hours to regenerate: today the 25–62 MB
 `mesh.msh` of each 2D {term}`job` ({ref}`moscap2d-meshes`). The output cache,
 {{ output_cache }}, is a separate plain git repository that holds such files so that anyone can
-fetch them instead of rerunning the job. It is effectively a shared cache for everyone.
+fetch them instead of rerunning the job. It is effectively a shared cache for everyone
+({repo}`design spec, section 9.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#91-output-cache-for-large-regenerable-artefacts>`).
+
+**Status (2026-10-27).** The tooling is merged, but the cache repository is still empty: it
+has not been initialised, and none of the committed 2D jobs' meshes is in it (they are on no
+disk either; they have to be regenerated first). Until the {ref}`first population
+<output-cache-first-population>` below, `status` and `pull` report the cache as not initialised.
 
 ## The contract
 
@@ -60,6 +66,8 @@ tools/output-cache push --cache tmp/output-cache --dry-run
 tools/output-cache push --cache tmp/output-cache --publish   # or: make cache-push
 tools/output-cache verify --cache tmp/output-cache
 ```
+
+(output-cache-first-population)=
 
 **First population.** While the cache repository is still empty, a clone of it has no
 `index.json`, and `push`, `status` and `pull` say the cache is not initialised. Create the
