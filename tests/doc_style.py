@@ -34,7 +34,7 @@ HISTORY_ALLOWED = (
 )
 
 HISTORY_PHRASES = re.compile(
-    r"\b(previously|no longer|used to be|used to\b|before PR|until PR|was changed|initially|predates?|backfilled|"
+    r"\b(previously|no longer|used to be|before PR|until PR|was changed|initially|predates?|backfilled|"
     r"were changed|formerly|in the past|at the time of writing|originally)\b",
     re.IGNORECASE,
 )
@@ -82,8 +82,7 @@ def numbers(cell: str) -> list[str]:
 
 def split_row(line: str) -> list[str]:
     s = line.strip()
-    if s.startswith("|"):
-        s = s[1:]
+    s = s.removeprefix("|")
     if s.endswith("|") and not s.endswith("\\|"):
         s = s[:-1]
     cells, cur, i = [], "", 0
@@ -152,8 +151,11 @@ def tables(text: str, path: str) -> list[Table]:
                 fence = None
             i += 1
             continue
-        if fence is None and line.lstrip().startswith("|") and i + 1 < len(lines) and _SEP.match(
-            lines[i + 1]
+        if (
+            fence is None
+            and line.lstrip().startswith("|")
+            and i + 1 < len(lines)
+            and _SEP.match(lines[i + 1])
         ):
             header = split_row(line)
             before = "\n".join(lines[max(0, i - 3) : i])

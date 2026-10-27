@@ -341,7 +341,7 @@ WWLC
 
 uniform refinement
 mesh convergence
-  Refining every spacing of a mesh by the same factor, with the grading fixed, to show that the
+  Refining every spacing of a mesh by the same factor, grading fixed, to show that the
   results do not depend on the mesh. Here each {term}`TCAD` {term}`MOSCAP` is solved at four
   levels a factor √2 apart ({py:data}`gf180tcad.tcad.meshconv.LEVELS`), and a level is converged
   when the next finer one changes its {term}`C–V` by less than 1 % at every bias
