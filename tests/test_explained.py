@@ -185,6 +185,49 @@ def test_conf_merges_the_substitutions():
     assert not set(subs) & set(conf._TOOLS)
 
 
+def _sentences(text: str) -> list[str]:
+    """The prose sentences of a page, wrapped lines joined (display math and directives kept
+    whole, so a sentence never spans them)."""
+    paras = re.split(r"\n\s*\n", re.sub(r"\$\$.*?\$\$", "\n\n", text, flags=re.DOTALL))
+    out = []
+    for para in paras:
+        flat = " ".join(para.split())
+        out += re.split(r"(?<=[.?!])\s+(?=[A-Z{])", flat)
+    return out
+
+
+def unlabelled(text: str) -> list[str]:
+    """Sentences carrying a textbook value without a literature link, or an idealised value
+    without the word "idealised"."""
+    reg = _numbers().REGISTRY
+    bad = []
+    for sent in _sentences(text):
+        for key in _SUBST.findall(sent):
+            n = reg.get(key.removeprefix("x_"))
+            if n is None:
+                continue
+            if n.kind == "textbook" and not re.search(r"<lit-[\w-]+>`", sent):
+                bad.append(sent)
+            if n.kind == "idealised" and "idealised" not in sent:
+                bad.append(sent)
+    return bad
+
+
+def test_non_committed_values_are_labelled():
+    bad = [f"{p.name}: {s}" for p in pages() for s in unlabelled(p.read_text("utf-8"))]
+    assert not bad, "\n".join(bad)
+
+
+def test_positive_control_unlabelled():
+    text = "Electrons number {{ x_n_minority_nfet }} here. The gap uses {{ x_nc_si }} as well.\n"
+    assert len(unlabelled(text)) == 2
+    ok = (
+        "In an idealised example electrons number {{ x_n_minority_nfet }}. It uses"
+        " {{ x_nc_si }} ({ref}`Sze and Ng <lit-sze>`).\n"
+    )
+    assert unlabelled(ok) == []
+
+
 # --- the idealised formulas ------------------------------------------------------------------
 
 
