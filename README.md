@@ -8,7 +8,8 @@ validated against the [PDK](https://gf180-tcad.readthedocs.io/en/latest/glossary
 
 This project builds a scriptable TCAD flow (structures from
 [gdsfactory](https://gdsfactory.github.io/gdsfactory/) layouts, simulated with
-[DEVSIM](https://devsim.org/) and cross-checked with [Charon](https://charon.sandia.gov/)) for
+[DEVSIM](https://devsim.org/), with [Charon](https://charon.sandia.gov/) planned in parallel for
+cross-comparison) for
 GF180MCU transistors, and measures, quantitatively, reproducibly and in public,
 how closely it agrees with the PDK SPICE models.
 
@@ -53,10 +54,27 @@ three tunables, 3 of the 8-parameter budget. In 1D the nfet agrees with SPICE at
 fitted and held out. The pfet is published as a disagreement: the SPICE pfet's depletion edge
 moves by 0.57 V between L = 10 µm and the minimum length, which one length-independent 1D stack
 cannot follow. The calibrated 1D curves are in
-[`results/tcad/moscap1d`](results/tcad/moscap1d); the 2D validation is under way: its first
-calibrated 2D cell (nfet, minimum length) is committed and disagrees with SPICE
-([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Next are the TCAD results and comparison pages
-([Task 13a](docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-13a-tcad-results-and-docs-pages)).
+[`results/tcad/moscap1d`](results/tcad/moscap1d). Every committed TCAD result has generated
+pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
+[results page](https://gf180-tcad.readthedocs.io/en/latest/results/index.html), and
+`make reproduce` includes the TCAD trees. It has not been run end to end, and its 2D files are
+not expected to match yet
+([Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#one-command)); the
+calibrated 1D [jobs](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-job) are cross-checked byte for byte on a
+[GitHub-hosted runner](https://docs.github.com/en/actions/concepts/runners/github-hosted-runners)
+([TCAD cross-check](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-tcad)).
+The 2D validation of the calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): its first
+calibrated 2D cell, the nfet at the minimum length, is committed and disagrees with SPICE.
+
+Planned, not built yet:
+[DEVSIM](https://devsim.org/) and [Charon](https://charon.sandia.gov/) run in parallel on every
+job and cross-compared
+([Phase 4 plan](docs/superpowers/plans/2026-10-27-phase4-charon-backend.md),
+[issue #44](https://github.com/mithro/gf180-tcad/issues/44); no Charon job has run yet), 3D
+renders of the simulated processes
+([renders plan](docs/superpowers/plans/2026-10-27-renders-pipeline.md),
+[issue #43](https://github.com/mithro/gf180-tcad/issues/43)) and explainer pages on how the parts
+of a semiconductor work ([issue #46](https://github.com/mithro/gf180-tcad/issues/46)).
 The current limitations, including the deviations from the design spec, are listed on the
 [limitations page](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html).
 
@@ -65,7 +83,7 @@ The current limitations, including the deviations from the design spec, are list
 [![Documentation Status](https://readthedocs.org/projects/gf180-tcad/badge/?version=latest)](https://gf180-tcad.readthedocs.io/en/latest/)
 
 The documentation is at [gf180-tcad.readthedocs.io](https://gf180-tcad.readthedocs.io/en/latest/). To regenerate the
-SPICE reference yourself, see [Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html); its
+SPICE reference and the TCAD results yourself, see [Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html); its
 [cross-host determinism](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-determinism) section says on which
 hosts the results are byte-identical.
 

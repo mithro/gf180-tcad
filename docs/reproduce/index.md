@@ -7,9 +7,9 @@ regenerated on another machine and compared byte for byte.
 
 Results are produced as files with fixed formatting (shortest round-trip
 floats, `\n` line endings, `.` decimal separator, sorted JSON keys, UTF-8, no
-timestamps, hostnames or absolute host paths), and the documentation will
-be generated from those files, so the pages will never show numbers that cannot
-be reproduced.
+timestamps, hostnames or absolute host paths), and the results pages are
+generated from those files at documentation build time ({doc}`/results/index`), so they
+never show numbers that cannot be reproduced.
 
 (getting-the-source)=
 
@@ -470,9 +470,10 @@ rerun byte for byte locally by
 
 ## Output cache
 
-Large regenerable files that are not committed, such as the 2D meshes, are kept in a shared,
+Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
 content-addressed cache repository: {repo}`tools/output-cache` `pull` fetches one and checks it against
-the sha256 the committed results name. See {doc}`output-cache`.
+the sha256 the committed results name. It holds one mesh so far, none of a committed job; see
+{doc}`output-cache`.
 
 ```{toctree}
 :maxdepth: 1
