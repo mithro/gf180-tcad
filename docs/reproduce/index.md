@@ -242,8 +242,10 @@ requires every results folder to name its writer and to carry that writer's curr
 the module lists, each results folder's writer, the images and the calibration folder. At
 import, {py:mod}`gf180tcad.tcad` reads it once into the dicts named above.
 
-The file is not hashed: it decides what is hashed. A change to it adds or removes a hashed file, which
-changes the hash, or renames a results folder, which changes the manifest. Its keys:
+The file is not hashed: it decides what is hashed. A change to its module lists or plugin
+exclusions adds or removes a hashed file, which changes the hash. A renamed results folder
+changes the manifest. A changed image or calibration folder changes the image digest or the
+calibration that `provenance.json` records. Its keys:
 
 | key | holds |
 |---|---|
@@ -293,37 +295,13 @@ make manifest
 
 {repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`. It takes
 the writer from the folder's path under {repo}`results/` (the `trees` of the registry). It refuses
-(exit 2, file unchanged) if anything else in the file
-differs from what the writer would write now: the plugin commit, an image, the calibration
-applied, or a `generator` naming the other entry point. Then the folder has to be regenerated.
+(exit 2, file unchanged) if anything else in the file differs from what the writer would write
+now. That covers the plugin commit, an image, the calibration applied, or a `generator` naming
+the other entry point. Then the folder has to be regenerated.
 
 Such an update claims that the data did not change; it does not show it. So every one is
-recorded below, with the hash the folder had before. The records below predate the design spec
-§9 rule that a representative job is rerun first.
-
-**Registry move ({{ Charon }} plan Task B0), provenance updated.** Moving the registry into
-{repo}`src/gf180tcad/generators.json` changed two hashed modules. They are
-{py:mod}`gf180tcad.tcad` and {py:mod}`gf180tcad.calibrate.cv`, which gained the `simulate_2d`
-parameter. Nothing that computes a result changed.
-
-{repo}`tools/restamp-tcad-provenance` updated all five results folders. The folders
-{repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` and {repo}`results/tcad/meshconv`
-went from `b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7` to
-`b8cb95b521b8e721a68f0203e65d93447dc8cdb3ac7932cb712204ad54616629`
-({py:mod}`gf180tcad.tcad.__main__`). The folders {repo}`results/tcad/calibration` and
-{repo}`results/tcad/validation` went from
-`5265e5fe223580d9efd878b9ebe33648b21f36dcdbf41ac8c7092f3ce9925950` to
-`bb701026b9d7efabf1453c6554907f9254eea359edc2cb8cbb941e8dd0b880d0`
-({py:mod}`gf180tcad.calibrate.__main__`).
-
-The evidence that the data did not change is a rerun, as design spec §9 requires. At the
-restamped commit, `make reproduce-quick` reran the two calibrated 1D jobs
-({repo}`tests/crosscheck_tcad_subset.txt`) in the {term}`dev-HEAD TCAD image` on 2026-10-27.
-It printed `identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under
-tcad/ (sha256; partial subset; provenance moscap1d/provenance.json)`. The rerun's
-`provenance.json` carries the updated hash, so it matches the restamped file. The 2D,
-mesh-convergence, calibration and validation folders were not rerun: their writers ran no
-changed code that computes a result.
+recorded below, with the hash the folder had before. The records before the
+backend-seam record predate the design spec §9 rule that a representative job is rerun first.
 
 **Results folders written under the old scheme.** Before [issue #34](https://github.com/mithro/gf180-tcad/issues/34) one hash covered both entry points, and
 `provenance.json` had no `generator`. A results folder produced that way, for example on a branch that
@@ -447,6 +425,33 @@ On the 2D path, only the file holding `DDComponent` moved, verbatim.
 `create_2Duz_simulation` and the solve code of `sweep_cv` did not change.
 The result types moved unchanged to `results.py`.
 The package import became lazy, which changes when modules load, not what they compute.
+
+**Generator registry, not regenerated.** The registry moved into a data file.
+It moved from {py:mod}`gf180tcad.tcad` into {repo}`src/gf180tcad/generators.json`.
+{py:mod}`gf180tcad.calibrate.cv` gained the `simulate_2d` parameter. Both are hashed modules.
+The plugin exclusion also takes the
+tracked file `gplugins/devsim/backends/charon/__init__.py` out of both hashes. Nothing that
+computes a result changed.
+
+{repo}`tools/restamp-tcad-provenance` then set each `generator_sha256`, starting from the
+backend-seam record above.
+
+| results folder | writer | before | after |
+|---|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `3f1ac6bd…` | `bf8f2dcc…` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `3f1ac6bd…` | `bf8f2dcc…` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `3f1ac6bd…` | `bf8f2dcc…` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `51a0a009…` | `c8cf20b5…` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `51a0a009…` | `c8cf20b5…` |
+
+The full hashes are `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` and
+`c8cf20b562088612489bf71c2f0ea2270c2489c337da4cb0bda3aaad4595daea`.
+The `crosscheck-tcad` job on a {{ GitHub_hosted_runner }}
+([run 40493834668](https://github.com/mithro/gf180-tcad/actions/runs/40493834668)) reran the
+two calibrated 1D jobs at these stamps. It printed
+`identical: 5 files of 2 jobs … match results/MANIFEST.sha256 under tcad/`, with
+{repo}`results/tcad/moscap1d/provenance.json` among the files. The other folders were not
+rerun, for the reasons listed under the backend-seam record.
 
 (cross-host-determinism)=
 

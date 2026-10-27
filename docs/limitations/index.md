@@ -46,12 +46,11 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
 - **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
   `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
-- **TCAD {term}`provenance` updated without a rerun.** It happened twice, to all five TCAD results
-  folders. The first update was for the per-folder {term}`generator_sha256`
-  ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)), the second for the generator
-  registry (Charon plan Task B0). Only the two calibrated 1D {term}`jobs <job>` were rerun and compared
-  byte for byte. The 2D
-  mesh-convergence results have no byte-for-byte evidence; see {ref}`tcad-provenance`.
+- **TCAD {term}`provenance` updated without a rerun.** A code change that leaves the results
+  alone still changes the {term}`generator_sha256`. Each time, the provenance of the TCAD
+  results folders was updated without a full rerun; {ref}`tcad-provenance` records every update.
+  Only the two calibrated 1D {term}`jobs <job>` were rerun and compared byte for byte. The 2D
+  mesh-convergence results have no byte-for-byte evidence.
 - **`make reproduce` does not reproduce the 2D TCAD files.** It has not been run end to end.
   The 2D job files lack entries the current job writes. The L = 2 µm
   {term}`sweeps <sweep>` are resumed ones. A fresh run therefore differs from them
