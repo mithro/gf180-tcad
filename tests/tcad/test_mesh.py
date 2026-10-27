@@ -124,7 +124,8 @@ print(json.dumps(out, default=str))
 """
     res = sandbox.run(["python3", "-c", code], out_dir=tmp_path, image=TCAD_IMAGE, mem="2g", cpus=1)
     out = json.loads(res.stdout.strip().splitlines()[-1])
-    assert out["type"] == "gplugins.devsim.stack1d.Mesh1D"
+    # Mesh1D moved to the neutral device description (backend seam); stack1d re-exports it.
+    assert out["type"] == "gplugins.devsim.device_description.Mesh1D"
     assert out["max_ratio"] == 1.2
     assert out["spacing"] == {
         k: list(v) for k, v in SPEC.spacing_um("gate_poly", "oxide", "body").items()
