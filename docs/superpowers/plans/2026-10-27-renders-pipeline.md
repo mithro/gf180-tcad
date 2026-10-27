@@ -88,29 +88,30 @@ All Phase 2 and Phase 4 Global Constraints apply unchanged (licences, git rules,
 
   Run them: they FAIL.
 - [ ] **Step 2: Implement** reader, window, npz writer, job and CLI; host tests PASS. Commit per module.
-  - [x] **Step 2, part 1: the reader, the window and the npz writer** with their host tests
-    (`tests/test_meshcut.py`, fixture `tests/fixtures/meshcut/grid30.msh`), branch
-    `task/p5-renders-next` (2026-10-28). As built: `gf180tcad.meshcut.msh.read` (strict MSH 2.2
-    ASCII, element types 1 and 2 only, z = 0 enforced, every node and physical tag checked),
-    `window.rule_bounds` (the window rule, `kx` and `depth_um` passed in until M1 fixes
-    `WINDOW_KX` and `WINDOW_DEPTH_UM`), `window.cut` (whole elements by centroid, nodes in
-    ascending original-id order), `npz.write_npz`/`read_npz`. Two changes to the format decision:
-    the gplugins meshes are written in **cm** (`mesh_scaling_factor = 1e-4`), so the coordinate
-    member is `nodes_cm` (bit-equal to the file; `meshcut.UM_PER_MSH_UNIT = 1e4` converts), not
-    `nodes_um`, which could not be both in µm and bit-equal; and `boundary_lines` comes with a
-    `boundary` member (uint8 index into the mesh's 1D physical names, such as `gate_poly___oxide`),
-    so a figure can label each interface. The lines kept are the mesh's own line elements that
-    are an edge of a kept triangle. `net_doping_cm3` and the meta file belong to the job (part 2).
-    No entry point, tree or `generators.json` row yet, so no hash moves. Informational host
-    probe, not Experiment M1 (`tmp/meshcut-probe.log` of that branch): on the #35 calibrated nfet
-    `w10p0_l0p60` mesh (225,964 nodes, 451,341 triangles) the reader takes 2.6 s and 244 MiB; a
-    window around a gate guessed at the cell centre (L = 0.6 µm), with `kx = 0.25`, from 0.1 µm
-    below the surface to the top of the mesh, keeps 123,309 nodes and writes 3,714,488 bytes.
-    So M1 should expect the two-window fallback of the window decision, or a narrower rule, even
-    for the L = 0.6 µm cell.
-  - [ ] **Step 2, part 2:** `meshcut.read(job_dir)`, the meta file and its schema test, the
-    in-image `job.py` (sha check, `net_doping_cm3`, write), the CLI, the `generators.json` rows
-    and the provenance and outcache tests.
+  - [x] **Step 2, part 1: the reader, the window and the npz writer.** Branch
+    `task/p5-renders-next`, 2026-10-28. Tests in `tests/test_meshcut.py`, fixture
+    `tests/fixtures/meshcut/grid30.msh`. As built:
+    - `msh.read` reads MSH 2.2 ASCII only. It accepts element types 1 and 2, requires z = 0
+      and checks every node and physical tag.
+    - `window.rule_bounds` is the window rule. It takes `kx` and `depth_um` as arguments until
+      M1 fixes `WINDOW_KX` and `WINDOW_DEPTH_UM`.
+    - `window.cut` keeps whole elements by centroid. Its nodes are in ascending original-id order.
+    - `npz.write_npz` writes the deterministic zip; `npz.read_npz` reads it with pickles refused.
+    - The gplugins meshes are in cm (`mesh_scaling_factor = 1e-4`). So the coordinate member is
+      `nodes_cm`, bit-equal to the file, and `meshcut.UM_PER_MSH_UNIT = 1e4` converts to µm.
+    - A `boundary` member (uint8) names each kept line by the mesh's 1D physical name, such as
+      `gate_poly___oxide`. The kept lines are the mesh's line elements on a kept triangle's edge.
+    - There is no entry point, tree or `generators.json` row yet, so no hash moves.
+
+    Informational host probe, not Experiment M1 (`tmp/meshcut-probe.log` of that branch). The
+    #35 calibrated nfet `w10p0_l0p60` mesh has 225,964 nodes and 451,341 triangles. The reader
+    takes 2.6 s and 244 MiB on it. The test window puts the gate at the cell centre
+    (L = 0.6 µm), a guess, with `kx = 0.25`. It runs from 0.1 µm below the surface to the top. It keeps
+    123,309 nodes in 3,714,488 bytes. So M1 should expect the two-window fallback, or a narrower
+    rule, even for this cell.
+  - [ ] **Step 2, part 2: the job.** `meshcut.read(job_dir)`, the meta file and its schema test,
+    the in-image `job.py` (sha check, `net_doping_cm3`, write) and the CLI. Also the
+    `generators.json` rows and the provenance and outcache tests.
 - [ ] **Step 3: Experiment M1, the window.** M1 waits until #35's current 2D job has finished: no 4 GiB cut job runs beside a 16 GiB job. On the #35 calibrated nfet `w10p0_l0p60` mesh (on disk; copy it into the worktree's `tmp/meshcut/`, never read from the scratch dir in place), run `cut-job` in the sandbox (`--mem 4g`) for a grid of `WINDOW_KX ∈ {0.25, 0.5, 1.0}` and `WINDOW_DEPTH_UM ∈ {0.1, 0.25, 0.5}`; log node count, triangle count and npz bytes to `tmp/meshcut-m1.log`; extrapolate to the 503 k-node L = 2 µm cell by its node density in the window (its nodes concentrate along the same interfaces). Fix the constants; record the table on the limitations page. Peak RSS of the cut job (from `/usr/bin/time -v` in the job log) sets the `--mem` value.
 - [ ] **Step 4: Experiment M0, the four start meshes.** `uv run --locked python -m gf180tcad.meshcut regenerate --job results/tcad/moscap2d/<device>/start/<gid>` for each of the four, **one at a time**, nothing else heavy running; logs `tmp/meshcut-m0-<device>-<gid>.log`; record wall time, peak RSS and the regenerated sha against the committed one. Commit the record (docs only) whatever the outcome.
 - [ ] **Step 5: Cut and commit** the artefacts that are tied: matching regenerated start meshes (outcome 1) and every #35 calibrated job whose `cv.meta.json` is on `main` by then (pulled from the cache, or regenerated if #35 did not push). `make manifest`; results-only commits per job. Update the docs pages and the limitations bullet. Open the PR, get it reviewed, merge.
