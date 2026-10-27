@@ -165,6 +165,7 @@ A second independent review checked the revised plan against the code on main, t
 
 ## Review Focus
 
+- **Docs updated in the same PR (2026-10-27).** Every review checks that the PR updated the status pages it affects (README Status, the `docs/index.md` Status, this plan's checkboxes, the limitations index, the affected results and comparison pages) at the same time; a PR whose docs lag is "needs fixes" (CONTRIBUTING.md, PR checklist).
 - **Quasi-static vs high-frequency C–V.** SPICE Cgg (BSIM4 capmod=2) is quasi-static and recovers to about Cox in inversion. A MOSCAP solved with AC at 1 MHz and only a body contact gives the high-frequency curve instead. A comparison must use matching physics: quasi-static/equilibrium in 1D, or, in 2D, S/D contacts held at the body potential by their own sources (Task 8). A reviewer should reject any mismatched pairing.
 - **Units.** DEVSIM works in cm (charge in C/cm², capacitance in F/cm²). gdsfactory, the SPICE data and the docs use µm and fF. Every conversion needs a unit test with a hand-computed value, for example Cox(15.2 nm) = 2.272 fF/µm², or 224.7 fF for W10/L10 with DLC = 54 nm.
 - **pfet MOSCAP.** The pfet MOSCAP has:

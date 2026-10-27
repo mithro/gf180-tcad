@@ -45,6 +45,7 @@ All Phase 2 and Phase 4 Global Constraints apply unchanged (licences, git rules,
 
 ## Review Focus
 
+- **Docs updated in the same PR (2026-10-27).** Every review checks that the PR updated the status pages it affects (README Status, the `docs/index.md` Status, this plan's checkboxes, the limitations index, the affected results and comparison pages) at the same time; a PR whose docs lag is "needs fixes" (CONTRIBUTING.md, PR checklist).
 - **Can a reader trace any pixel's number?** Pick three labels or geometric features in each render and find, in `<render>.render.json`, the source file, key, value and scale; then open the source and confirm. A reviewer who cannot do this in five minutes rejects the render.
 - **Is anything invented?** No literal number in `src/gf180tcad/render/scenes/*.py` or `render/blender/*.py` other than styling keys (test `test_scene_builders_have_no_numeric_literals` allows 0, 1, 2, -1 and indices); display-only constants only from `data/render/display.toml` with sources.
 - **Does the image say what the page says?** The exaggeration strings and scale bar values in the image are the manifest's; the docs page text is generated from the same manifest.
