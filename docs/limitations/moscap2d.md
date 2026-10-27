@@ -359,7 +359,8 @@ solve that sets up every 2D device fails. It fails inside {{ DEVSIM }}'s direct 
 
 This is an open correctness
 problem, tracked in [issue #58](https://github.com/mithro/gf180-tcad/issues/58). Its long-channel
-C per area is covered by the 2D-equals-1D check and by the 1D MOS capacitor.
+C per area is covered by the 2D-equals-1D check and by the 1D MOS capacitor. The directions to
+test (another direct or an iterative solver, a symmetric half domain) are on the issue.
 
 ## C/Cox > 1 that is physics: the fringe
 
