@@ -44,7 +44,7 @@ def _formula(equation: str, reference: str):
 @_formula("n·p = n_i²", f"{_SZE}, ch. 1 (the mass-action law)")
 def mass_action(n_i_cm3, majority_cm3):
     """The minority density from the mass-action law n·p = n_i², as n_i²/N (cm⁻³), with N the
-    majority density (the doping, when every dopant is ionised).
+    majority density (the doping, when every :term:`dopant` is ionised).
 
     Reference: Sze and Ng 2006 (lit-sze), ch. 1 (the mass-action law).
     """
@@ -114,8 +114,8 @@ def built_in_potential(n_a_cm3, n_d_cm3, n_i_cm3, vt_v):
     f"{_SZE}, ch. 2 (the depletion approximation, abrupt junction)",
 )
 def depletion_width(n_a_cm3, n_d_cm3, vbi_v, eps_r, eps0_f_per_cm, q_c):
-    """The zero-bias width of the depletion region of an abrupt p-n junction in the depletion
-    approximation, W = √(2·ε_r·ε_0·V_bi·(1/N_A + 1/N_D) / q) (cm).
+    """The zero-bias width of the depletion region of an abrupt p-n junction in the
+    :term:`depletion approximation`, W = √(2·ε_r·ε_0·V_bi·(1/N_A + 1/N_D) / q) (cm).
 
     Reference: Sze and Ng 2006 (lit-sze), ch. 2 (the depletion approximation, abrupt junction).
     """
@@ -127,8 +127,8 @@ def depletion_width(n_a_cm3, n_d_cm3, vbi_v, eps_r, eps0_f_per_cm, q_c):
     f"{_SZE}, ch. 2 (the depletion approximation, abrupt junction)",
 )
 def abrupt_junction(x_cm, n_a_cm3, n_d_cm3, vbi_v, eps_r, eps0_f_per_cm, q_c):
-    """The charge, field and potential of an abrupt p-n junction at zero bias in the depletion
-    approximation, at the positions ``x_cm`` (cm; the n side at x < 0, the p side at x > 0):
+    """The charge, field and potential of an abrupt p-n junction at zero bias in the
+    :term:`depletion approximation`, at the positions ``x_cm`` (cm; the n side at x < 0, the p side at x > 0):
     ρ = q·N_D on −x_n < x < 0, −q·N_A on 0 < x < x_p; dE/dx = ρ/ε; dψ/dx = −E, with
     x_n = W·N_A/(N_A + N_D), x_p = W·N_D/(N_A + N_D) and W from :func:`depletion_width`.
     Returns ``charge_cm3`` (ρ/q, cm⁻³), ``field_v_per_cm`` and ``potential_v`` (zero at the

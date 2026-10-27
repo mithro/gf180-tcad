@@ -2,8 +2,8 @@
 
 # The parts of a transistor
 
-What are the gate, the source, the drain and the body of a GF180MCU 5 V transistor, and which of
-them does this repo simulate? This page answers that for a reader who knows basic circuits and has
+What are the gate, the source, the drain and the body of a {term}`GF180MCU` 5 V transistor,
+and which does this repo simulate? This page answers that for a reader who knows basic circuits and has
 read {doc}`silicon-and-carriers`. It names each part and leaves out how the transistor switches.
 
 ```{figure} /_generated/explained/parts-cell-light.svg
@@ -34,7 +34,7 @@ body doping are fitted to the {term}`SPICE` model. The junction depth is the
 
 The gate is the electrode on top, which takes the control voltage. It is a strip of
 {term}`poly-silicon` that crosses the active area, the stretch of silicon that holds the
-transistor. The PDK draws the gate on its `Poly2` layer
+transistor. The {term}`PDK` draws the gate on its `Poly2` layer
 ([gate layer rules](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_07_08.rst))
 and the active area on its `COMP` layer ({py:mod}`gf180tcad.tcad.stack`).
 
@@ -67,7 +67,7 @@ thickness and its capacitance.
 The source and the drain ({term}`S/D`) are the regions either side of the gate. Carriers
 enter the channel at the source and leave at the drain
 ({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). In the nfet both are n-type, with up
-to {{ x_sd_peak_nfet }} of donors ({term}`NSD`). They reach {{ x_xj_nfet }} below the surface
+to {{ x_sd_peak_nfet }} of {term}`donors <donor>` ({term}`NSD`). They reach {{ x_xj_nfet }} below the surface
 ({term}`XJ`), where they meet the body in a {term}`pn junction`
 ({doc}`pn-junction`).
 

@@ -46,7 +46,7 @@ Carriers spread from where they are crowded to where they are scarce. Electrons 
 cross the boundary and fill holes on the p side, and holes cross the other way
 ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
 
-Each carrier that leaves uncovers the dopant atom it came from. That atom becomes an ion, an atom
+Each carrier that leaves uncovers the {term}`dopant` atom it came from. That atom becomes an ion, an atom
 with a net charge: positive on the n side, negative on the p side. The ions cannot move, so a
 layer of fixed charge forms on each side, with no free carriers in it. That layer is the
 depletion region.
@@ -113,6 +113,6 @@ body's at the junction depth, as a Gaussian. It also spreads sideways under the 
 The textbook treats such a profile as a graded junction ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
 
 The {term}`TCAD` solves for the carrier densities everywhere and assumes no depletion
-approximation. It sweeps only the gate and holds the source, the drain and the body at ground,
-so its junctions stay at rest ({py:mod}`gf180tcad.tcad.moscap2d`). The 2D cell and its other differences are on
+approximation. It varies only the gate voltage. The source, the drain and the body stay at
+ground, so the junctions stay at rest ({py:mod}`gf180tcad.tcad.moscap2d`). The 2D cell and its other differences are on
 {doc}`/limitations/moscap2d`, and every known gap is on {doc}`/limitations/index`.

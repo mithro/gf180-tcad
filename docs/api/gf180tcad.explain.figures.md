@@ -9,6 +9,8 @@ Source: {repo}`src/gf180tcad/explain/figures.py`.
 
 .. autodata:: gf180tcad.explain.figures.PALETTES
 
+.. autodata:: gf180tcad.explain.figures.UNITS
+
 .. autodata:: gf180tcad.explain.figures.FIGURES
    :no-value:
 ```

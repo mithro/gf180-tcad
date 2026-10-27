@@ -68,6 +68,7 @@ STYLE = {
     "junction_points": 20001,
 }
 
+#: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
 UNITS = {"um_per_cm": 1e4, "kv_per_v": 1e-3}
 
 # Okabe-Ito colours for the carriers and the highlight; greys for the muted parts.
