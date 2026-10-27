@@ -214,7 +214,8 @@ _STACK_NAME = {"gate": "gate", "oxide": "gate oxide", "body": "body"}
 
 def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
     """The 1D stack as layers, gate on top, each labelled with its material, its thickness and
-    its doping from the model. The parts in ``highlight`` are shaded, the rest muted. Drawn at
+    its doping from the model. The parts in ``highlight`` are shaded (a silicon layer in its
+    majority carrier's colour), the rest muted. Drawn at
     the model's scale factors, stated in the title; there is no distance axis, because the
     drawing is stretched, so each layer carries its own thickness."""
     pal = PALETTES[palette]
@@ -231,11 +232,16 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
         ax.set_ylim(bottom + pad, top - pad)  # depth grows downwards
         for layer, a, b in edges:
             role = "highlight" if layer.part in highlight else "muted"
+            # A highlighted silicon layer takes its majority carrier's colour (n-type: electrons,
+            # p-type: holes), as in the band diagram; the oxide its own.
+            colour = pal.get(f"{role}_{layer.part}", pal[role])
+            if role == "highlight" and layer.dopant is not None:
+                colour = pal[_MAJORITY[layer.dopant]]
             ax.fill_between(
                 [0, width],
                 a,
                 b,
-                color=pal.get(f"{role}_{layer.part}", pal[role]),
+                color=colour,
                 alpha=STYLE["band_alpha"][role],
                 linewidth=0,
             )
