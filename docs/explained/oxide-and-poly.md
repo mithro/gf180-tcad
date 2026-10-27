@@ -110,10 +110,11 @@ because the simulated gate is poly-silicon and shows it directly
 ({doc}`/comparison/process-data`).
 
 In the simple picture the capacitance tops out at Cox, but the simulated stack stays below it.
-Its capacitance per area is {{ x_c_acc_nfet_cal }} and {{ x_c_inv_nfet_cal }} at the two ends of
-the gate-voltage range. The oxide alone gives {{ x_cox_check_nfet }}, in the same calibration
-result. The charge in the silicon sits a little below the oxide face, and poly depletion adds
-its series capacitance. The {term}`effective oxide thickness` lumps both in with the oxide.
+Its capacitance is {{ x_c_acc_nfet_cal }} at the most negative gate voltage
+and {{ x_c_inv_nfet_cal }} at the most positive. At both ends the charge in the body sits a
+little below the oxide face, which the {term}`effective oxide thickness` counts as extra oxide.
+At the positive end the gate voltage also pushes electrons away from the gate's lower face. So
+poly depletion adds its series capacitance at that end only.
 
 The 2D cell and its other differences are on {doc}`/limitations/moscap2d`, and every known gap
 is on {doc}`/limitations/index`.
