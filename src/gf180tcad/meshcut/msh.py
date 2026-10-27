@@ -20,7 +20,9 @@ from pathlib import Path
 import numpy as np
 
 LINE = 1
+"""Gmsh element type of a two-node line (an interface or outer boundary segment)."""
 TRIANGLE = 2
+"""Gmsh element type of a three-node triangle (a region element)."""
 _NODES_PER_TYPE = {LINE: 2, TRIANGLE: 3}
 
 
