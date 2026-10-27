@@ -286,7 +286,7 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
         "### Values",
         "",
         "The {term}`TT` value of each metric from both engines. Xyce has no C-V sweep, so its "
-        "Cgg cells are not applicable.",
+        "{term}`Cgg` cells are not applicable.",
         "",
         *_table(["Metric", "Unit", "TT ngspice", "TT Xyce"], values),
         "",
