@@ -339,6 +339,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | nfet `w10p0_l1p00` | 306136 | 133 | 120 | 253 |
 | nfet `w10p0_l2p00` | 506292 | 244 | none | 246 |
 | pfet `w10p0_l0p50` | 205520 | 85 | 76 | 162 |
+| pfet `w10p0_l0p70` | 244880 | 105 | 93 | 198 |
 
 | Cell | Peak memory (GiB) | Attempts |
 |---|---|---|
@@ -347,6 +348,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | nfet `w10p0_l1p00` | 6.1 | 1 |
 | nfet `w10p0_l2p00` | 16.0 | 3 |
 | pfet `w10p0_l0p50` | 7.4 | 1 |
+| pfet `w10p0_l0p70` | 5.4 | 1 |
 
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
@@ -357,8 +359,11 @@ Its first two attempts reached the 16 GiB cap and were killed.
 The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
 The run record, with the exit code and the image, is on {ref}`tcad-provenance`.
 
-No job had a
-round-off acceptance or an extended-precision fallback. Each meshed oxide is the calibrated value:
+No job had an extended-precision fallback. One QS point had a round-off acceptance: pfet
+`w10p0_l0p70` at 4.487 V, in the body, with an absolute update of 2.6e-16 V. Its job file records it
+in `qs_roundoff_accepted`, under the conditions of {ref}`mesh-convergence-2d`.
+
+Each meshed oxide is the calibrated value:
 16.05 nm for the nfet and 15.721 nm for the pfet. The meshes are not committed ({ref}`moscap2d-meshes`); the output cache
 ({doc}`/reproduce/output-cache`) holds them under their `mesh_sha256`. The `--resume` scratch
 directory of these jobs is outside the checkout, because the {term}`sandbox` refuses one
@@ -429,5 +434,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
 - **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
   ({ref}`moscap2d-l2`).
 - **Few calibrated 2D cells** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
-  They are the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2, and the pfet W10/L0.5.
+  They are the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2, and the pfet W10/L0.5 and W10/L0.7.
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).
