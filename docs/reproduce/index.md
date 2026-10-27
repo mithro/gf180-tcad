@@ -74,9 +74,9 @@ Each step is a target of its own, which can also be run alone:
 | `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (so far the nfet at {term}`Lmin`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
 
-In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs` on the same
-`--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job resumes
-when the target runs again.
+In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs`. Both use the
+same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job
+resumes when the target runs again.
 
 It exits non-zero if any job fails or if any file differs from, is missing from, or is not
 listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Docker }}, the sandbox
@@ -88,9 +88,9 @@ listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Doc
 parser of the command line it calls, and compare the jobs with the committed job directories.
 
 **The expected runtime is hours.** The 120 {term}`SPICE` jobs take about a minute with 8 jobs, the
-default (a host with less than 32 GiB of memory should pass `make reproduce JOBS=4`, because each job is
-admitted at 4 GiB; `make reproduce JOBS=16` runs more at once, up to the
-{ref}`memory admission <reproduce-how-it-works>` limit of 32). The 1D {term}`TCAD` jobs take
+default. A host with less than 32 GiB of memory should pass `make reproduce JOBS=4`, because
+each job is admitted at 4 GiB. With `make reproduce JOBS=16` more run at once, up to the
+{ref}`memory admission <reproduce-how-it-works>` limit of 32. The 1D {term}`TCAD` jobs take
 minutes. The 2D ones take hours: the 2D {term}`mesh convergence` and every 2D
 {term}`MOS capacitor` job run one 16 GiB job at a time, hours each ({doc}`../limitations/moscap2d`),
 so the host needs 16 GiB of memory free for the sandbox.
@@ -150,10 +150,8 @@ uv run --locked python -m gf180tcad spice-reference --engine ngspice \
 `--out` is *replaced* by the jobs that were run, so write a partial run to a
 directory of its own, not to {repo}`results/spice`: a filtered run whose `--out` resolves to
 the committed {repo}`results/spice` is refused before any job starts
-({py:func}`gf180tcad.reference.check_committed_out`). `--out` must not exist, be empty, or
-be an earlier reference results folder (one with a {repo}`provenance.json <results/spice/provenance.json>`, see {ref}`results-layout`); any
-other
-directory is refused.
+({py:func}`gf180tcad.reference.check_committed_out`). The `--out` directory must not exist, be empty, or
+be an earlier reference results folder (one with a {repo}`provenance.json <results/spice/provenance.json>`, see {ref}`results-layout`). Any other directory is refused.
 
 (reproduce-how-it-works)=
 
@@ -226,20 +224,20 @@ published as they are; the ngspice/Xyce cross-check is a separate test
 ## Provenance of the TCAD results
 
 The top folder of each set of TCAD results holds one `provenance.json`
-({py:func}`gf180tcad.tcad.tree_provenance`): the images that made it, the plugin commit, the
-calibration applied (if any), the entry point that wrote the folder (`generator`) and a
-{term}`generator_sha256`. The hash is **per results folder**
-([issue #34](https://github.com/mithro/gf180-tcad/issues/34)): it covers the import closure of the entry point that writes the folder, one module list
-per entry point in {py:data}`gf180tcad.tcad.TCAD_GENERATORS`, plus the inputs both entry points
-share: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
+({py:func}`gf180tcad.tcad.tree_provenance`). It records the images that made it, the plugin
+commit and the calibration applied (if any). It also records the entry point that wrote the
+folder (`generator`) and a {term}`generator_sha256`. The hash is **per results folder**
+([issue #34](https://github.com/mithro/gf180-tcad/issues/34)). It covers the import closure of
+the entry point that writes the folder, one module list per entry point in
+{py:data}`gf180tcad.tcad.TCAD_GENERATORS`. It also covers the inputs both entry points share: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
 {repo}`tools/sandbox-run`. The closure is the static one, so an import inside a function counts
 too ({test}`tests/tcad/test_tcad_provenance.py::test_tcad_generator_modules_match_the_import_graph`
 runs once per entry point). {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties each results folder
 to its writer, and {test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current`
 requires every results folder to name its writer and to carry that writer's current hash. A
-change to a module that a folder's writer never imports therefore leaves the folder's hash alone: the
-calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in the
-closure of {py:mod}`gf180tcad.tcad.__main__`, and the job command line
+change to a module that a folder's writer never imports therefore leaves the folder's hash alone.
+The calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in
+the closure of {py:mod}`gf180tcad.tcad.__main__`. The job command line
 ({py:mod}`gf180tcad.tcad.__main__`) is not in the closure of
 {py:mod}`gf180tcad.calibrate.__main__`. A change to a shared module (for example
 {py:mod}`gf180tcad.tcad`, {py:mod}`gf180tcad.tcad.moscap1d`) or a shared input still changes
@@ -257,10 +255,10 @@ every hash. The results folders, their writers and the commands that regenerate 
 The 2D jobs run one 16 GiB job at a time, hours each; the L = 2 µm cells run `--method qs`,
 then `--method combine-qs`. The validation is regenerated after the calibration is committed.
 
-**Updating the provenance without a rerun.** When a change to a writer's closure cannot have
-changed a results folder's data, and a rerun of a representative job is shown to give the same
-bytes (design spec §9), its provenance can be updated to the current hash instead of rerunning
-every job:
+**Updating the provenance without a rerun.** This applies when a change to a writer's closure
+cannot have changed a results folder's data. A rerun of a representative job must give the same
+bytes (design spec §9). Then the folder's provenance can be updated to the current hash instead
+of rerunning every job:
 
 ```sh
 uv run --locked python tools/restamp-tcad-provenance results/tcad/<tree>   # --dry-run first
@@ -282,12 +280,12 @@ Bring it to the new scheme by rerunning its writer at the merged code, or by upd
 provenance as above (after rebasing onto the per-folder hash) and adding it to the record below.
 
 **Provenance updated to the per-folder hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)), not regenerated.** Every results folder's provenance was updated with
-{repo}`tools/restamp-tcad-provenance` from the shared hash
+{repo}`tools/restamp-tcad-provenance`. It went from the shared hash
 `deecaa58fe64357d90ebc9aacf86e2607ece0fb65a1b2ceecf6f209eb4a0afde` to its writer's hash at that
-change: {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` and
-{repo}`results/tcad/meshconv` to `b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7`
-({py:mod}`gf180tcad.tcad.__main__`), {repo}`results/tcad/calibration` and
-{repo}`results/tcad/validation` to `5265e5fe223580d9efd878b9ebe33648b21f36dcdbf41ac8c7092f3ce9925950`
+change. The folders {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` and
+{repo}`results/tcad/meshconv` got `b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7`
+({py:mod}`gf180tcad.tcad.__main__`). The folders {repo}`results/tcad/calibration` and
+{repo}`results/tcad/validation` got `5265e5fe223580d9efd878b9ebe33648b21f36dcdbf41ac8c7092f3ce9925950`
 ({py:mod}`gf180tcad.calibrate.__main__`). No data file changed. The code that change touched in
 the closures is provenance bookkeeping only (the per-entry-point module lists and the
 `generator` field in {py:mod}`gf180tcad.tcad`, and the `generator=` argument in both entry
@@ -303,9 +301,13 @@ results/tcad/moscap2d --method M --resume DIR`, alone on the host in a 16 GiB {t
 job. The wall time is that command's; the peak memory is the container's {term}`cgroup`
 `memory.peak`, sampled every 15 s.
 
-| Device | Geometry | Method | Wall time (s) | Peak memory (GiB) | Exit code | Finished (ACDT) |
-|---|---|---|---|---|---|---|
-| `nfet_05v0` | `w10p0_l0p60` | both | 11338 | 7.82 | 0 | 2026-10-27 11:31 |
+| Device | Geometry | Method | Exit code |
+|---|---|---|---|
+| `nfet_05v0` | `w10p0_l0p60` | both | 0 |
+
+| Device | Wall time (s) | Peak memory (GiB) | Finished (ACDT) |
+|---|---|---|---|
+| `nfet_05v0` | 11338 | 7.82 | 2026-10-27 11:31 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 
@@ -339,7 +341,7 @@ mesh-convergence data were rerun in the sandbox on 2026-10-26 and compared byte 
 the committed files by {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical`
 (passed; the sandbox session of two tests took 3 min 54 s). That test compares the folder's
 `provenance.json` without its `moscap2d` image, which a 1D rerun cannot know
-([issue #36](https://github.com/mithro/gf180-tcad/issues/36)); the 2D mesh-convergence results
+([issue #36](https://github.com/mithro/gf180-tcad/issues/36)). The 2D mesh-convergence results
 had their provenance updated, not rerun, and have no such evidence. With the per-folder hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)) such a
 calibration-only change no longer touches these results folders.
 
@@ -359,9 +361,9 @@ pass on an AMD EPYC 9V45 was an earlier 8-job subset, before the numpy fix below
 fails it.
 
 **The whole {term}`SPICE reference <SPICE reference results>` is cross-checked on GitHub-hosted runners.** The
-{repo}`subset file <tests/crosscheck_subset.txt>` holds the single line `all`, which stands
-for every job of the reference: both engines, all five corners, both devices and all six
-geometries of each, 120 jobs. Each job includes every sweep its engine runs
+{repo}`subset file <tests/crosscheck_subset.txt>` holds the single line `all`. That line stands
+for every job of the reference, 120 jobs. They cover both engines, all five corners, both
+devices and all six geometries of each. Each job includes every sweep its engine runs
 ({term}`idvg_lin`, {term}`idvg_sat`, {term}`idvd`, `ioff` and, for ngspice only, {term}`cv`).
 The check covers all 660 CSV and metrics files, the {term}`provenance` file
 ({repo}`results/spice/provenance.json`) and the {term}`corner envelope`
