@@ -37,7 +37,10 @@ def test_table_is_closed_and_documented():
     for name, f in derive.FORMULAS.items():
         assert f.name == name
         assert f.equation and f.reference, name
-        assert f.fn.__doc__ and f.equation in f.fn.__doc__, name
+        doc = " ".join((f.fn.__doc__ or "").split())
+        assert f.equation in doc, name
+        # The rendered API page shows the docstring, so the reference must be in it too.
+        assert f"Reference: {f.reference}." in doc, name
         assert f.inputs, name
 
 

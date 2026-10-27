@@ -33,7 +33,7 @@ FB_FRACTION = 0.9
 PLATEAU_OFFSET_V = 1.0
 U_END_V = 5.0
 
-_SZE = "Sze and Ng, Physics of Semiconductor Devices, 3rd ed., 2006 (lit-sze)"
+_SZE = "Sze and Ng 2006"
 
 
 @dataclass(frozen=True)
@@ -53,8 +53,11 @@ _TABLE: dict[str, Formula] = {}
 
 def _formula(equation: str, reference: str):
     def register(fn: Callable) -> Callable:
-        if equation not in (fn.__doc__ or ""):
+        doc = " ".join((fn.__doc__ or "").split())
+        if equation not in doc:
             raise AssertionError(f"{fn.__name__}: the docstring must state {equation!r}")
+        if f"Reference: {reference}." not in doc:
+            raise AssertionError(f"{fn.__name__}: the docstring must end 'Reference: {reference}.'")
         inputs = tuple(inspect.signature(fn).parameters)
         _TABLE[fn.__name__] = Formula(fn.__name__, fn, inputs, equation, reference)
         return fn
@@ -69,26 +72,38 @@ def _scalar_or_array(x):
 
 @_formula("E_i = −ψ", "DEVSIM's potential reference: ψ = 0 at the intrinsic level")
 def intrinsic_level(psi_v):
-    """The intrinsic level E_i = −ψ (eV) at the potential ψ (V)."""
+    """The intrinsic level E_i = −ψ (eV) at the potential ψ (V).
+
+    Reference: DEVSIM's potential reference: ψ = 0 at the intrinsic level.
+    """
     return _scalar_or_array(-np.asarray(psi_v, dtype=np.float64))
 
 
 @_formula("E_c = −ψ + E_g/2", f"{_SZE}, ch. 1 (E_i at midgap; error stated by midgap_offset)")
 def band_edge_ec(psi_v, e_g_ev):
-    """The conduction-band edge in silicon, E_c = −ψ + E_g/2 (eV), midgap approximation."""
+    """The conduction-band edge in silicon, E_c = −ψ + E_g/2 (eV), midgap approximation.
+
+    Reference: Sze and Ng 2006, ch. 1 (E_i at midgap; error stated by midgap_offset).
+    """
     return _scalar_or_array(-np.asarray(psi_v, dtype=np.float64) + e_g_ev / 2)
 
 
 @_formula("E_v = −ψ − E_g/2", f"{_SZE}, ch. 1 (E_i at midgap; error stated by midgap_offset)")
 def band_edge_ev(psi_v, e_g_ev):
-    """The valence-band edge in silicon, E_v = −ψ − E_g/2 (eV), midgap approximation."""
+    """The valence-band edge in silicon, E_v = −ψ − E_g/2 (eV), midgap approximation.
+
+    Reference: Sze and Ng 2006, ch. 1 (E_i at midgap; error stated by midgap_offset).
+    """
     return _scalar_or_array(-np.asarray(psi_v, dtype=np.float64) - e_g_ev / 2)
 
 
 @_formula("E_c,ox = −ψ + E_g/2 + ΔE_c", f"{_SZE}, ch. 4 (the Si–SiO2 band diagram)")
 def oxide_band_edge_ec(psi_v, e_g_ev, conduction_offset_ev):
     """The oxide conduction-band edge at each oxide node, E_c,ox = −ψ + E_g/2 + ΔE_c (eV), with
-    ψ the node's own potential, so the edge slopes with the oxide field."""
+    ψ the node's own potential, so the edge slopes with the oxide field.
+
+    Reference: Sze and Ng 2006, ch. 4 (the Si–SiO2 band diagram).
+    """
     return _scalar_or_array(
         -np.asarray(psi_v, dtype=np.float64) + e_g_ev / 2 + conduction_offset_ev
     )
@@ -96,42 +111,60 @@ def oxide_band_edge_ec(psi_v, e_g_ev, conduction_offset_ev):
 
 @_formula("E_v,ox = −ψ − E_g/2 − ΔE_v", f"{_SZE}, ch. 4 (the Si–SiO2 band diagram)")
 def oxide_band_edge_ev(psi_v, e_g_ev, valence_offset_ev):
-    """The oxide valence-band edge at each oxide node, E_v,ox = −ψ − E_g/2 − ΔE_v (eV)."""
+    """The oxide valence-band edge at each oxide node, E_v,ox = −ψ − E_g/2 − ΔE_v (eV).
+
+    Reference: Sze and Ng 2006, ch. 4 (the Si–SiO2 band diagram).
+    """
     return _scalar_or_array(-np.asarray(psi_v, dtype=np.float64) - e_g_ev / 2 - valence_offset_ev)
 
 
 @_formula("ΔE_i = (kT/2)·ln(N_v/N_c)", f"{_SZE}, ch. 1 (the intrinsic Fermi level)")
 def midgap_offset(vt_v, nc_cm3, nv_cm3):
     """How far the intrinsic level sits above midgap, ΔE_i = (kT/2)·ln(N_v/N_c) (eV): the error
-    of the midgap approximation of :func:`band_edge_ec` and :func:`band_edge_ev`."""
+    of the midgap approximation of :func:`band_edge_ec` and :func:`band_edge_ev`.
+
+    Reference: Sze and Ng 2006, ch. 1 (the intrinsic Fermi level).
+    """
     return vt_v / 2 * math.log(nv_cm3 / nc_cm3)
 
 
 @_formula("n = n_i·exp((ψ − φ)/V_t)", f"{_SZE}, ch. 1 (Boltzmann statistics)")
 def boltzmann_n(psi_v, phi_v, n_i_cm3, vt_v):
     """The electron density n = n_i·exp((ψ − φ)/V_t) (cm⁻³), with φ the region's contact Fermi
-    potential (V): exact for the quasi-static Poisson–Boltzmann solve."""
+    potential (V): exact for the quasi-static Poisson–Boltzmann solve.
+
+    Reference: Sze and Ng 2006, ch. 1 (Boltzmann statistics).
+    """
     psi = np.asarray(psi_v, dtype=np.float64)
     return _scalar_or_array(n_i_cm3 * np.exp((psi - phi_v) / vt_v))
 
 
 @_formula("p = n_i·exp((φ − ψ)/V_t)", f"{_SZE}, ch. 1 (Boltzmann statistics)")
 def boltzmann_p(psi_v, phi_v, n_i_cm3, vt_v):
-    """The hole density p = n_i·exp((φ − ψ)/V_t) (cm⁻³)."""
+    """The hole density p = n_i·exp((φ − ψ)/V_t) (cm⁻³).
+
+    Reference: Sze and Ng 2006, ch. 1 (Boltzmann statistics).
+    """
     psi = np.asarray(psi_v, dtype=np.float64)
     return _scalar_or_array(n_i_cm3 * np.exp((phi_v - psi) / vt_v))
 
 
 @_formula("E_F,gate = −V_g,held", "the body Fermi level is 0 eV; the gate is held at V_g,held")
 def gate_fermi_level(vg_held_v):
-    """The gate Fermi level E_F,gate = −V_g,held (eV) at the bias the device holds (V)."""
+    """The gate Fermi level E_F,gate = −V_g,held (eV) at the bias the device holds (V).
+
+    Reference: the body Fermi level is 0 eV; the gate is held at V_g,held.
+    """
     return -vg_held_v
 
 
 @_formula("C_ox = ε_ox·ε_0/t_ox", f"{_SZE}, ch. 4 (the MIS capacitor)")
 def oxide_capacitance(eps_ox, eps0_f_per_cm, t_ox_nm):
     """The oxide capacitance per area C_ox = ε_ox·ε_0/t_ox, in fF/µm² (ε_0 in F/cm, t_ox in nm;
-    1 F/cm² = 1e7 fF/µm²)."""
+    1 F/cm² = 1e7 fF/µm²).
+
+    Reference: Sze and Ng 2006, ch. 4 (the MIS capacitor).
+    """
     return eps_ox * eps0_f_per_cm / (t_ox_nm * 1e-7) * 1e7
 
 
@@ -142,7 +175,11 @@ def oxide_capacitance(eps_ox, eps0_f_per_cm, t_ox_nm):
 def depletion_edge(x_um, majority_cm3, body_doping_cm3):
     """The depletion edge x_d = first x where the majority density reaches N/2 (µm), walking
     from the first node, linearly interpolated; the first node when it already holds N/2.
-    Raises ValueError if the density never reaches it."""
+    Raises ValueError if the density never reaches it.
+
+    Reference: this repo's rule, renders plan Task R1 (linear between the two nodes either
+    side).
+    """
     x = np.asarray(x_um, dtype=np.float64)
     m = np.asarray(majority_cm3, dtype=np.float64)
     half = body_doping_cm3 / 2
@@ -159,7 +196,10 @@ def depletion_edge(x_um, majority_cm3, body_doping_cm3):
 @_formula("Q = q·∫(p − n + N_net) dx", "the trapezoid rule over the node values")
 def sheet_charge(x_um, p_cm3, n_cm3, net_doping_cm3, q_c):
     """The sheet charge Q = q·∫(p − n + N_net) dx (C/cm²) over the nodes ``x_um`` (µm), by the
-    trapezoid rule; ``net_doping_cm3`` is positive for donors."""
+    trapezoid rule; ``net_doping_cm3`` is positive for donors.
+
+    Reference: the trapezoid rule over the node values.
+    """
     rho = np.asarray(p_cm3) - np.asarray(n_cm3) + np.asarray(net_doping_cm3)
     return float(q_c * np.trapezoid(rho, np.asarray(x_um, dtype=np.float64) * 1e-4))
 
@@ -167,7 +207,10 @@ def sheet_charge(x_um, p_cm3, n_cm3, net_doping_cm3, q_c):
 @_formula("y = sign(x)·log10(max(|x|, 1))", "a display transform for signed doping")
 def log10_abs(x):
     """The signed logarithm y = sign(x)·log10(max(|x|, 1)), so that −1e17 maps to −17 and
-    magnitudes below 1 map to 0."""
+    magnitudes below 1 map to 0.
+
+    Reference: a display transform for signed doping.
+    """
     a = np.asarray(x, dtype=np.float64)
     return _scalar_or_array(np.sign(a) * np.log10(np.maximum(np.abs(a), 1.0)))
 
@@ -175,14 +218,20 @@ def log10_abs(x):
 @_formula("[min_k c_k, max_k c_k] at each point", "design spec §5.3 (the five-corner bounds)")
 def envelope_minmax(curves):
     """The envelope [min_k c_k, max_k c_k] at each point over the curves (rows) of ``curves``:
-    an array of shape (2, points)."""
+    an array of shape (2, points).
+
+    Reference: design spec §5.3 (the five-corner bounds).
+    """
     a = np.asarray(curves, dtype=np.float64)
     return np.stack([a.min(axis=0), a.max(axis=0)])
 
 
 @_formula("C = (C/A)·A", "the area scaling of gf180tcad.tcad.moscap1d")
 def area_scale(c_per_area, area_um2):
-    """A per-area value times an area, C = (C/A)·A."""
+    """A per-area value times an area, C = (C/A)·A.
+
+    Reference: the area scaling of gf180tcad.tcad.moscap1d.
+    """
     return _scalar_or_array(np.asarray(c_per_area, dtype=np.float64) * area_um2)
 
 
@@ -212,7 +261,10 @@ def region_boundaries(vg_v, c, polarity):
     the crossings are where C passes (C_min + C_acc)/2 either side of the minimum, linearly
     interpolated between grid points.
     ``polarity`` is ``"n"`` or ``"p"``. The same arithmetic as the calibration, so the result
-    is bit-equal to it (tested on the committed calibrated curves)."""
+    is bit-equal to it (tested on the committed calibrated curves).
+
+    Reference: the calibration's region rule, gf180tcad.calibrate.cv.regions.
+    """
     if polarity not in ("n", "p"):
         raise ValueError(f"polarity must be 'n' or 'p', got {polarity!r}")
     sign = 1 if polarity == "n" else -1
