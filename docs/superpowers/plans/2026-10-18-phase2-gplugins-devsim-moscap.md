@@ -961,6 +961,103 @@ If that proves impossible without editing a generator module, the PR also regene
 - [ ] **Step 1:** All existing fork tests pass unchanged through the new seam, verified with the fork-worktree pattern. No Charon code yet.
 - [ ] **Step 2:** Commit, open the PR, get it reviewed and merge. Then do **submodule bump 3 of 3**: the gf180-tcad TCAD results must be byte-identical before and after the bump. `make reproduce-quick` plus `make manifest` give no diff.
 
+### Task 16: corner bounds and spread of the 1D MOS capacitor inputs (spec §5.3, issue #57)
+
+Added 2026-10-27 for the owner directives of that day (spec §16). Sized at 2–3 days of work in
+two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task B0.
+
+**Context.**
+- The SPICE reference already holds the C–V curve of every corner at every geometry
+  (`results/spice/ngspice/<corner>/<device>/<gid>/cv.csv`, five corners). So the corner fits
+  need no new SPICE run; the Monte Carlo does.
+- `calibrate_cv` refuses any target that is not the TT ngspice `cv` sweep (`check_target`,
+  `CalibrationLeak`). That guard stays: the corner fits go through a separate entry point that
+  refuses TT and writes only under `results/tcad/corners/`, never under `calibration/` or
+  `validation/` (anti-goal A1).
+- The tunables are the three of Task 12 (`t_ox_eff_nm`, `n_ch_cm3`, `dv_fb_v`). A 1D C–V curve
+  cannot see the length and width offsets (XL, XW), the overlap (CGSO, CGDO) or VSAT; those are
+  Phase 3.
+- The ss corner raises TOXE and TOXP by 1 nm, which puts the oxide outside the TT bounds
+  ([TOXE, TOXP + Δ]). So a corner's bounds are the TT bounds shifted by that corner's card
+  offset for the same quantity: the oxide bounds by the corner's TOXE offset; the doping and
+  flat-band bounds unchanged (the card shifts VTH0, which the fit splits between them).
+- Adding a tree to `gf180tcad.tcad.TREE_GENERATORS` changes a module in every tree's
+  generator closure. After Charon plan Task B0 (registry out of the closures) it does not; so
+  this task starts after B0, or restamps every TCAD tree in the same PR.
+
+**Files:**
+- `data/pdk_corners.json` (new): per device and corner, the offsets of VTH0, TOXE/TOXP, XL, XW,
+  CGSO/CGDO and VSAT, each with the line number in the pinned `sm141064.ngspice` and that
+  file's sha256. Step 1 writes it from the pinned PDK and corrects the spec §5.3 table if the
+  values differ from the upstream ones it quotes.
+- `src/gf180tcad/calibrate/corners.py` (new, its own entry point
+  `python -m gf180tcad.calibrate.corners run|summary` on the host, `corner-job` in the image):
+  `corner_bounds(device, corner)`, `calibrate_corner(device, corner, *, geometries, params)`
+  (reuses `calibrate_cv`'s residuals and optimiser settings, imported, not copied), and
+  `summary(device)`.
+- `src/gf180tcad/calibrate/montecarlo.py` (new, PR 16b, entry point
+  `python -m gf180tcad.calibrate.montecarlo spice|fit|summary`): the Monte Carlo SPICE runs and
+  their 1D fits. It does not modify `reference.py` or any SPICE generator module (Phase 2
+  Global Constraints), as `pdkdiff` does not.
+- `results/tcad/corners/<device>/<corner>.json` (`ff`, `ss`, `fs`, `sf`; `typical` is the
+  committed Task 12 calibration, read, not refitted), `results/tcad/corners/<device>/summary.json`,
+  `results/tcad/corners/provenance.json`.
+- `results/spice-mc/<device>/<sample>/<gid>/cv.csv` with `provenance.json` (PR 16b), and
+  `results/tcad/corners-mc/<device>/{samples,summary}.json` with `provenance.json`.
+- `src/gf180tcad/docgen.py`: a corner table per device on the TCAD results page and on
+  `docs/comparison/cv-agreement.md`. Columns: input, unit, typical, minimum, corner of the
+  minimum, maximum, corner of the maximum, card shift, Monte Carlo mean, standard deviation,
+  2.5 % and 97.5 % percentiles. One value per cell (spec §10.3).
+- `docs/limitations/corners.md` (new): what the 1D corner fits cannot see (XL, XW, overlap,
+  VSAT), bound hits, and the card cross-check.
+- `tests/test_calibrate_corners.py`, `tests/test_calibrate_montecarlo.py`, `tests/test_docgen.py`.
+
+**Interfaces:**
+- `corner_bounds(device, corner) -> Mapping[str, tuple[float, float]]`: the TT bounds from
+  `process.load(device)`, with the oxide bounds shifted by the corner's TOXE offset from
+  `data/pdk_corners.json`.
+- `calibrate_corner(device, corner, ...) -> CalibrationResult`: raises `CalibrationLeak` for
+  `corner == "typical"`, for a validation geometry, or for an output path outside
+  `results/tcad/corners/`. The result records `reference.corner`.
+- `summary(device) -> dict`: per tunable `typical`, `min`, `min_corner`, `max`, `max_corner`,
+  `card_shift` (for the oxide: the TOXE offset at ss and ff) and `tcad_shift` (fitted value
+  minus typical, at the same corners); per corner the Task 12 verdicts at the calibration and
+  held-out geometries, against that corner's SPICE curve.
+- Monte Carlo (16b): `N = 200` samples per device, seeds `1..200`, global variation on
+  (`sw_stat_global = 1`), mismatch off (`sw_stat_mismatch = 0`), at the three calibration
+  geometries. Experiment S0 fixes the exact include lines and the ngspice seed control, and
+  shows that a seed gives the same curve twice. Each sample's curves are fitted like a corner.
+  `summary` gives the mean, the standard deviation (n − 1) and the 2.5 % and 97.5 %
+  percentiles (linear interpolation) of each tunable, and the number of samples whose fit hit a
+  bound.
+
+- [ ] **Step 1:** Write `data/pdk_corners.json` from the pinned PDK, read inside the base image
+  through `tools/sandbox-run` (`--network none`, a read-only job). Write the tests first:
+  `test_corner_table_matches_pinned_pdk` (each value at its recorded line of the file with the
+  recorded sha256), `test_typical_refused`, `test_corner_cannot_write_calibration_dir`,
+  `test_validation_geometry_refused`, `test_corner_bounds_shift_oxide`,
+  `test_recovers_known_params_at_a_corner` (synthetic, as Task 12's test),
+  `test_summary_min_max_and_corner`, `test_typical_row_is_task12_value` (byte-equal to
+  `results/tcad/calibration/<device>.json`), `test_card_cross_check_reported`,
+  `test_corner_fits_deterministic`, `test_docgen_corner_table_one_value_per_cell`. Run them:
+  they FAIL.
+- [ ] **Step 2:** Implement. Run the tests: they PASS.
+- [ ] **Step 3:** Run the eight corner fits (4 corners × 2 devices), 2 GiB each, up to four at a
+  time, each with a progress log in `tmp/` (spec §8.1); commit the corner tree in a results-only
+  commit, then the summary and the docs. Open PR 16a, get it reviewed and merge.
+- [ ] **Step 4 (PR 16b):** Tests first: `test_mc_seed_reproducible` (one seed, two runs, same
+  bytes), `test_mc_seeds_recorded`, `test_mc_statistics_on_synthetic_samples`,
+  `test_mc_bound_hits_counted`, `test_mc_does_not_touch_spice_generators` (the SPICE
+  `generator_sha256` is unchanged). Experiment S0, then the SPICE samples (400 ngspice C–V runs
+  at three geometries, 4 GiB each, `JOBS=4` at most) and the 400 1D fits (2 GiB each, several
+  at a time). Run time is measured, not assumed: the first 10 samples are timed and the rest is
+  scheduled from that. The run resumes per sample, retries a failed fit once with the Task 12
+  settings and otherwise records it as failed, and stops if more than 5 % of samples fail.
+  Commit, open PR 16b, get it reviewed and merge.
+
+**Provenance impact.** New trees only; Task 12's `calibration/` and `validation/` trees are
+unchanged (checked by `test_typical_row_is_task12_value` and the manifest).
+
 ---
 
 ## Risks
@@ -973,8 +1070,11 @@ If that proves impossible without editing a generator module, the PR also regene
 - **The old stack.**
   - The v0.8.0 run's tidy3d 2.4 may try network access under `--network none`.
   - Old-stack results have no cross-host bit-identity guarantee, so `results/plugin-history` is not cross-checked.
-- **2D cost and convergence.**
+- **2D run time and convergence.**
   - The spike failed to converge at r ≤ 1/4 with 1e-12. At 1e-10 it may converge but take hours.
+  - Run time is a scheduling fact, never a reason to leave a result out (spec §8.1). A solver
+    failure is a correctness problem with an issue: the L = 10 µm equilibrium solve (#58) and
+    the L = 2 µm AC solve (#59).
   - `make reproduce` runtime is stated in the docs.
   - Concurrent jobs go through admission control.
 - **Interpreting Lmin and narrow width.** In 1D, Lmin and 1.6/0.7 results are dominated by the DLC and parasitic bookkeeping and by missing 2D/3D effects. They are pre-tagged `geometry-2d`/`spice-fit` so that a "Disagree" there is not over-read.
@@ -990,4 +1090,5 @@ If that proves impossible without editing a generator module, the PR also regene
 - [ ] 1D and 2D MOSCAPs are mesh-converged (< 1 %). The C/Cox > 1 artefact is resolved or explained with numbers.
 - [ ] At the calibration geometries, nfet and pfet Cgg–Vg reach both plateau maxima ≤ 5 % and both ΔV crossings ≤ 50 mV (the latter a proposal, and a recorded deviation from spec §5.2). Otherwise they carry a published verdict with the §6 analysis. Held-out geometries are validated against the frozen `param_sha256` and reported.
 - [ ] `make reproduce` verifies on a clean `--recurse-submodules` clone. The GitHub cross-check is green for both SPICE and `crosscheck-tcad`. Read the Docs is green, and the docs-links checks pass. `results/spice/provenance.json` is unchanged from the Phase 1 exit, unless a PR regenerated it by the Global Constraints rule.
+- [ ] The corner bounds and the Monte Carlo spread of the three 1D tunables are committed and shown per device (Task 16, spec §5.3).
 - [ ] A whole-branch review of main since the Phase 1 exit is done and its findings fixed. The Phase 3 plan (2D MOSFET) is written.
