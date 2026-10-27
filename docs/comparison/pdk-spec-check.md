@@ -1,6 +1,6 @@
 # PDK spec check
 
-This page checks the {term}`SPICE reference` against the {term}`PDK`'s own public electrical
+This page checks the {term}`SPICE reference <SPICE reference results>` against the {term}`PDK`'s own public electrical
 specification, and defines the {term}`"Same process" window` used in {doc}`agreement`
 ({ref}`same-process-window`).
 

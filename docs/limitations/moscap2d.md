@@ -253,7 +253,7 @@ committed 2D {term}`job` files cannot come out byte for byte:
 - **Resumed sweeps.** The L = 2 µm cells are resumed sweeps, four restarts each
   ({ref}`moscap2d-l2`): `resumed` records
   `{"qs": 4}`, and a resumed sweep is not byte-identical to an uninterrupted one.
-- **Provenance updated without a rerun.** The {term}`provenance` of the 2D mesh convergence and of
+- **Updated without a rerun.** The {term}`provenance` of the 2D mesh convergence and of
   the 2D jobs records the current generator hash, one hash per results folder
   ({ref}`tcad-provenance`, [issue #34](https://github.com/mithro/gf180-tcad/issues/34)), but the
   files were not regenerated with that code. So nothing shows that today's code gives their bytes.

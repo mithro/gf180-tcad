@@ -7,7 +7,7 @@ The first {term}`TCAD` comparison is the {term}`C–V` calibration of the 1D
 geometry → {term}`Agree` / {term}`Same process` / {term}`Disagree` in 1D, is generated from the
 committed results on {doc}`/_generated/tcad/index`, with one page per device and geometry. There
 is no matrix for the full transistor (MOSFET) yet. What exists besides is the
-{term}`SPICE` reference checked against the PDK spec ({doc}`pdk-spec-check`) and
+{term}`SPICE reference <SPICE reference results>` checked against the PDK spec ({doc}`pdk-spec-check`) and
 {{ ngspice }} checked against {{ Xyce }} ({doc}`../limitations/engine-cross-check`); both are
 summarised, with the current numbers, on the generated
 {doc}`SPICE reference results </_generated/results/index>` page.

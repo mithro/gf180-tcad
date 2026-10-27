@@ -19,14 +19,14 @@ stable TCAD image
 TCAD
   Technology computer-aided design: physics-based device simulation, here with {{ DEVSIM }}
   cross-checked with {{ Charon }}. In this project it is what is being tested: its results are
-  compared with the {term}`SPICE reference`. See {doc}`index`.
+  compared with the {term}`SPICE reference <SPICE reference results>`. See {doc}`index`.
 
 SPICE
   Circuit simulation with compact models. Here the {term}`PDK`'s {term}`BSIM4`
   {term}`model cards <model card>`, evaluated by {{ ngspice }} (primary) and {{ Xyce }}
   (secondary). See {ref}`comparison-space`.
 
-SPICE reference
+SPICE reference results
   The results of the {term}`PDK`'s {term}`SPICE` models, simulated by {{ ngspice }} and {{ Xyce }}
   and committed under {repo}`results/spice`: the yardstick the {term}`TCAD` is compared with.
   See {doc}`index`.
@@ -415,7 +415,7 @@ gmin
   about 5 pA flow with the device off, a leakage floor. See {doc}`limitations/engine-cross-check`.
 
 engine cross-check
-  The ngspice-versus-Xyce comparison of the {term}`SPICE` reference. A difference above 0.5 % flags a
+  The ngspice-versus-Xyce comparison of the {term}`SPICE reference <SPICE reference results>`. A difference above 0.5 % flags a
   problem with the reference, not with the {term}`TCAD`. See {ref}`comparison-space` and
   {doc}`limitations/engine-cross-check`.
 
@@ -431,7 +431,7 @@ xfail
   {doc}`limitations/engine-cross-check`.
 
 job
-  One simulation run in its own {term}`sandbox` container: for the {term}`SPICE` reference one
+  One simulation run in its own {term}`sandbox` container: for the {term}`SPICE reference <SPICE reference results>` one
   engine, {term}`corner`, device and geometry; for the {term}`TCAD` one device, geometry and
   set of parameter values. See {ref}`how the reference runs <reproduce-how-it-works>`.
 

@@ -1,6 +1,6 @@
 # Results
 
-The {term}`SPICE` reference dataset ({term}`Phase 1`) is published here as generated pages: one
+The {term}`SPICE reference <SPICE reference results>` dataset ({term}`Phase 1`) is published here as generated pages: one
 per device and geometry (2 devices x 6 geometries), each with Id-Vg (linear and log), Id-Vd and
 {term}`Cgg`-Vg plots and a table of extracted metrics, plus a summary of the {term}`TT`
 (typical corner) values against the {doc}`PDK spec </comparison/pdk-spec-check>` and of the
@@ -13,7 +13,7 @@ folder in atomically, so two docs builds can run at the same time without corrup
 
 ```{admonition} What exists so far
 :class: warning
-The generated pages below are the {term}`SPICE reference` that {term}`TCAD` is
+The generated pages below are the {term}`SPICE reference <SPICE reference results>` that {term}`TCAD` is
 compared against. The TCAD results that exist so far are {term}`MOS capacitors <MOSCAP>` of
 both devices at the start values (`--params start`, the uncalibrated parameters) and, in 1D
 only, at the calibrated values (`--params calibrated`). The 1D results were made on the
@@ -32,7 +32,7 @@ The 2D results were made on the {term}`stable TCAD image` for now (see
 - the 2D mesh convergence, in {repo}`results/tcad/meshconv/moscap2d`, discussed in
   {ref}`mesh-convergence-2d`.
 
-The 1D MOS capacitor is also calibrated against the SPICE {term}`Cgg`–Vg and validated at the
+The 1D MOS capacitor is also calibrated against the {term}`SPICE` {term}`Cgg`–Vg and validated at the
 {term}`held-out geometries <held-out geometry>`, in 1D only
 ({repo}`results/tcad/calibration`, {repo}`results/tcad/validation`,
 {doc}`/comparison/cv-agreement`). The calibrated 2D validation is not committed yet; it is in

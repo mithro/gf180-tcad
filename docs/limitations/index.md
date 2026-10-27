@@ -7,13 +7,13 @@ there.
   {{ wafer_space }} {term}`run 1 or run 2 <wafer.space run>` design. See
   {doc}`silicon-validation`.
 - **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD yet.** The
-  {term}`SPICE` reference dataset of {term}`Phases 0 and 1` is complete. On the TCAD side the 1D
+  {term}`SPICE reference <SPICE reference results>` dataset of {term}`Phases 0 and 1` is complete. On the TCAD side the 1D
   and 2D MOS capacitors exist, with the start values and mesh-converged meshes
   ({doc}`mesh-convergence`, {doc}`moscap2d`), and the 1D one also with the calibrated values.
   The generated pages are {doc}`/_generated/tcad/index`; the limits of the model are
   {ref}`below <limitations-moscap>`.
 - **The {term}`C–V` calibration is 1D only, and the pfet disagrees.** The 1D MOS capacitor is calibrated
-  against the SPICE {term}`Cgg`–Vg
+  against the {term}`SPICE` {term}`Cgg`–Vg
   ({repo}`calibration plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
   {doc}`/comparison/cv-agreement`). In 1D the nfet is {term}`Agree` at every geometry,
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
@@ -158,7 +158,7 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
 {term}`Phase 2`. Each is a
 {term}`Phase 3 entry gate`: it must be closed before any MOSFET {term}`TCAD` result.
 
-- **No layout-extracted secondary {term}`SPICE reference`.** The
+- **No layout-extracted secondary {term}`SPICE reference <SPICE reference results>`.** The
   {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
   asks for a second reference with instance parameters extracted from the {{ gdsfactory }}
   cell layout. Only the primary, schematic-default reference exists

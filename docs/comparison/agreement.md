@@ -51,7 +51,7 @@ Each device and each metric gets one of three verdicts:
 
 ### SPICE reference conditions
 
-The primary {term}`SPICE reference` uses the PDK device as a designer would
+The primary {term}`SPICE reference <SPICE reference results>` uses the PDK device as a designer would
 instantiate it from a schematic: the PDK's default instance parameters (the source and drain
 areas and perimeters AS, AD, PS and PD computed by the PDK's standard formulas; the default
 layout distances SA, SB, SCA and SCB used by the stress and well-proximity models; nf = 1,

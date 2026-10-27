@@ -269,7 +269,7 @@ def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict
         "",
         (
             f"{{term}}`{device.name}`, {{term}}`geometry <geometry id>` `{gid}` "
-            f"({{ref}}`{g.role} <calibration-validation>`). {{term}}`SPICE` reference at 25 C "
+            f"({{ref}}`{g.role} <calibration-validation>`). {{term}}`SPICE reference <SPICE reference results>` at 25 C "
             "from {repo}`results/spice`. Axes are {term}`sign-flipped` (|Vgs|, |Vds|, |Id|), "
             "so the nfet and the pfet look alike. The shaded band is the {term}`corner envelope`, "
             "the min-max over the {term}`TT`, {term}`FF`, {term}`SS <SS corner>`, {term}`FS` and "
@@ -375,7 +375,7 @@ def _summary_page(root, spec: dict, out: Path):
         "",
         (
             "Pages generated at documentation build time from the committed {term}`SPICE` "
-            "reference dataset ({repo}`results/spice`): the {term}`SPICE reference` that "
+            "reference dataset ({repo}`results/spice`): the {term}`SPICE reference <SPICE reference results>` that "
             "{term}`TCAD` is compared against ({doc}`/comparison/agreement`). The TCAD results so "
             "far, the {term}`C–V` calibration of the {term}`MOS capacitors <MOSCAP>` against these "
             "{term}`Cgg`-Vg curves, are on {doc}`/_generated/tcad/index` "
@@ -396,7 +396,7 @@ def _summary_page(root, spec: dict, out: Path):
         "",
         (
             "Per-area specs with no geometry, for a metric the SPICE reference does not extract. "
-            "They are compared with the 1D TCAD plateau C per area, not with SPICE "
+            "They are compared with the 1D TCAD plateau C per area, not with {term}`SPICE` "
             "({doc}`/comparison/cv-agreement`)."
         ),
         "",

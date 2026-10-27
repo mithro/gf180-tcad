@@ -5,7 +5,7 @@
 The design spec ({repo}`docs/superpowers/specs/2026-10-18-gf180-tcad-design.md`, §4) names
 {{ open_pdks }} commit [`d658698bd8bc`](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c) ([1.0.604](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c)) as the {term}`GF180MCU`
 {term}`PDK` of {{ wafer_space }} runs 1 and 2, and asks for it to be compared with the latest.
-The {term}`SPICE reference` ({repo}`results/spice`) uses the latest PDK, the one
+The {term}`SPICE reference <SPICE reference results>` ({repo}`results/spice`) uses the latest PDK, the one
 in the pinned base image ({repo}`docker/IMAGE`, open_pdks [`1689ac3f2dc7`](https://github.com/fossi-foundation/open-pdks/commit/1689ac3f2dc763876eaf967227c7dfe831b031ae), recorded
 in {repo}`docker/base/versions.json`). This page answers whether the {term}`model card` of
 {term}`nfet_05v0` and {term}`pfet_05v0` differs between the two. It does not settle which PDK

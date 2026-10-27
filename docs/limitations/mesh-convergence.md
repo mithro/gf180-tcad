@@ -36,7 +36,7 @@ The command is `python -m gf180tcad.tcad meshconv --device D --dim 1 --out resul
 ({py:mod}`gf180tcad.tcad.__main__`). It runs each level as a separate {term}`sandbox` container in the
 {term}`dev-HEAD TCAD image` ({repo}`docker/TCAD_DEV_IMAGE`; `--image stable` for the
 {term}`stable TCAD image`, see {ref}`tcad-results-image`), under the same memory admission check as the
-{term}`SPICE` reference (concurrent containers × memory ≤ 128 GiB). The report is computed in the same image.
+{term}`SPICE reference <SPICE reference results>` (concurrent containers × memory ≤ 128 GiB). The report is computed in the same image.
 `--dim 2` runs the 2D MOS capacitor ({ref}`mesh-convergence-2d`).
 
 **Oscillation and noise.** Per triple and bias the report also flags oscillatory convergence (the
@@ -50,7 +50,7 @@ monotone biases. In 1D no bias oscillates or falls below the floor.
 
 ## 1D result
 
-The {term}`C–V` is the quasi-static curve on the 201 gate biases of the SPICE {term}`cv` sweep,
+The {term}`C–V` is the quasi-static curve on the 201 gate biases of the {term}`SPICE` {term}`cv` sweep,
 with the start values of the {term}`process files <process file>`. The start spec is
 {py:attr}`~gf180tcad.tcad.mesh.MeshSpec.DEFAULT_1D` (0.05 nm at both oxide interfaces, 20 nm
 in the bulk, grading 1.1). "Max change" is the largest relative change against the next finer

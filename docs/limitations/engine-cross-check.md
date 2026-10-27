@@ -1,6 +1,6 @@
 # SPICE engine cross-check (ngspice vs Xyce)
 
-The {term}`SPICE` reference is computed with {{ ngspice }} and cross-checked with {{ Xyce }}
+The {term}`SPICE reference <SPICE reference results>` is computed with {{ ngspice }} and cross-checked with {{ Xyce }}
 on the same {term}`PDK` {term}`model cards <model card>`, bias grid and instance parameters.
 The {ref}`definition of agreement <comparison-space>` says a difference of more than 0.5 %
 between the two engines flags a problem with the reference itself. The check is

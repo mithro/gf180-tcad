@@ -13,7 +13,7 @@ cross-comparison) for
 GF180MCU transistors, and measures, quantitatively, reproducibly and in public,
 how closely it agrees with the PDK SPICE models.
 
-The SPICE models are the [SPICE reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE-reference); the TCAD is the
+The SPICE models are the [SPICE reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE-reference-results); the TCAD is the
 suspect. Mismatches are documented with their probable cause rather than hidden. Only once the
 TCAD has earned confidence will it be used to extend or create SPICE models.
 
