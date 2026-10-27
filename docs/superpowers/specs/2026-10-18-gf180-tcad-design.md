@@ -496,34 +496,80 @@ numbers.
 ### 10.3 How the documentation is written
 
 Added 2026-10-27 at the user's request (§16). Work that is not documented and explained does
-not count as done: if it cannot be explained in plain English, it is not understood yet. The
-rules, with the tests that enforce the testable ones (`tests/test_doc_style.py`, added by the
-docs style pass that follows this amendment):
-- **Present state only.** A page says what is true now and what the reader needs to know now.
-  What used to be true, what was changed and when, and how a result came about belong in the
-  change log of this spec (§16), in the plans (`docs/superpowers/plans/`), in the reproduction
-  record (`docs/reproduce/`) and on the plugin-history page, nowhere else. Test:
-  `test_no_history_phrases` fails on narrative phrases ("previously", "no longer", "used to",
-  "before PR", "until PR", "was changed") in pages outside those places, with an explicit
-  per-line opt-out that gives the reason.
-- **Plain English; no expert needed.** Each page starts with what it shows in plain words; an
-  equation or a technical term comes after the plain statement and links to its definition.
-  Every acronym is spelled out on its first use on each page (or links to the glossary there).
-- **No invented terms.** Each glossary term is either standard in the field, with a reference
-  (a textbook, a standard or the tool's manual), or a short plain-words description of a thing
-  this repo does, named in ordinary words. A coined label is replaced by plain words. Code
-  identifiers keep their names; the prose around them uses plain words. Tests:
-  `test_glossary_definitions_short` (each glossary definition's first paragraph is at most 60
-  words; the detail goes below it or on a linked page) and `test_every_term_is_defined` (every
-  `{term}` role in the sources names a glossary entry; this repeats the Sphinx check without a
-  build, so it runs in under a second; `test_generated_terms_are_defined` does the same for the
-  generated pages).
-- **Tables hold data.** One value per cell, units in the column header, numbers in columns of
-  their own; no sentences and no multi-number cells. A table that mixes kinds is split. Long
-  explanations go in the text below the table, or in a definition list or subsections with a
-  short table of the bare facts. Tests: `test_table_cells` (the Markdown sources) and
-  `test_generated_table_cells` (the generated pages) fail on a cell of more than 8 words or with two or more numbers that carry
-  units, with an explicit per-table opt-out marker that gives the reason.
+not count as done: if it cannot be explained in plain English, it is not understood yet.
+
+**Source of the rules.** The user's `writing-sourced-docs` skill (plugin
+`writing-sourced-docs@mithro-personal`, skill `writing-sourced-documentation`, version 1.0.0,
+from `github.com/mithro/dot-claude`, Apache-2.0) is the rule book for every docs page. Its
+`SKILL.md` and `references/` (readability rules, page templates, citations, review and tooling)
+are normative; this section records how they apply here and what enforces them. Where this
+section and the skill differ, the skill wins and this section is corrected.
+
+**Evidence.** Every asserting sentence is one of the skill's five kinds of statement, worded
+with its fixed hedge:
+- *public fact* ("the PDK documentation gives …", the source's words in quotation marks),
+  cited directly after the claim;
+- *typical value* ("typical", "industry-typical"), with a textbook, paper or standard citation,
+  never presented as this PDK's own number;
+- *inference* ("we infer … because …"), with the reasoning on the page and its evidence cited;
+- *reading* ("our reading of …", "(our arithmetic)"), with the source read cited;
+- *not public* ("not public", "not stated", "—" in a table), with an Open-questions bullet
+  saying what evidence would settle it.
+
+A number always carries a citation, or a "typical" label with its own citation. A number
+computed by this repo cites the committed result file it comes from. Citations are Markdown
+footnotes (`[^label]` after the claim, definitions at the page foot), per the skill's
+`references/citations.md`; quotations are verbatim.
+
+**Present state only.** A page says what is true now and what the reader needs to know now.
+What used to be true, what was changed and when, and how a result came about belong in the
+change log of this spec (§16), the plans (`docs/superpowers/plans/`), the reproduction record
+(`docs/reproduce/`) and the plugin-history page, nowhere else.
+
+**Plain English; no invented terms.** No expert is needed: each page opens with what it shows in
+plain words, and every acronym is spelled out on first use per page. Each glossary term is
+either standard in the field, with a reference, or a short plain-words description of a thing
+this repo does, named in ordinary words. Code identifiers keep their names; the prose around
+them uses plain words.
+
+**Limits** (the skill's caps; a quotation or code span counts as one word):
+
+| Element | Hard cap |
+|---|---|
+| Prose paragraph | 100 words |
+| List item | 60 words |
+| Sentence | 45 words (target 30) |
+| Table cell | 25 words, one value |
+| Columns of a table with prose | 3 |
+| Glossary entry | 80 words |
+| Page width | no sideways scroll at 400 px |
+
+Tables hold data: one value per cell, units in the header, numbers in columns of their own;
+no cell joins two numbers. A table that mixes kinds is split.
+
+**Presentation passes change no content.** A readability or formatting pass follows the
+skill's Never list: no fact, number, unit, significant figure, quotation, hedge or citation
+changes, and no hedge moves away from its claim. `measure_docs.py --preserve BEFORE AFTER`
+proves it for each restructured page. Content fixes are separate commits, labelled as such.
+
+**Review.** Every docs PR is reviewed by an agent that did not write it, by the skill's review
+protocol: at least three claims per page checked against the cited source, the diff read as a
+fact diff, the rendered page read at desktop and 400 px width, and findings returned as
+`file:line — severity — what is wrong — what the source says`.
+
+**What enforces it.** The docs style pass that follows this amendment adds:
+- `tools/measure_docs.py`, the skill's measurement script vendored with an origin header (its
+  licence allows it), and a test that runs it over `docs/` and `README.md` with the caps above;
+- `tests/test_doc_style.py`: `test_table_cells` (Markdown sources) and
+  `test_generated_table_cells` (generated pages) for the one-value-per-cell and 25-word rules,
+  with an explicit per-table opt-out `<!-- table-ok: reason -->`;
+  `test_glossary_definitions_short` (80 words); `test_every_term_is_defined` and
+  `test_generated_terms_are_defined`; `test_no_history_phrases`, which fails on narrative
+  phrases ("previously", "no longer", "before PR", "was changed") outside the places listed
+  above, with a per-line opt-out `<!-- history-ok: reason -->`.
+
+The evidence rules, the 400 px check and the review protocol are checked by review, not by a
+test.
 
 ## 11. Literature (initial; [verify] items to be checked before citing)
 
@@ -736,7 +782,9 @@ that the intent survives later rewording of the sections it changed.
   What changed: directive 1 is new §8.1; §9 (what runs on GitHub-hosted runners), §10.1
   (phasing) and §12.1 (the open question on 2D run time) lost their cost reasoning. Directives
   2 and 3 are new §5.3, with Task 16 in the Phase 2 plan and a Phase 3 item (§13); issue #57.
-  Directives 4 to 6 are new §10.3, enforced by `tests/test_doc_style.py`.
+  Directives 4 to 6 are new §10.3, whose rules are those of the user's `writing-sourced-docs`
+  skill (named there by the user at 13:50 the same day), enforced by `tests/test_doc_style.py`
+  and the vendored `tools/measure_docs.py`.
 
   Decisions that had been taken on run time, and their status under §8.1:
   - *Renders plan: no 2D rerun only to get mesh pictures.* Already changed before these
