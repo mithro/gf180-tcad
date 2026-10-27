@@ -2,12 +2,12 @@
 
 # C–V calibration of the TCAD MOS capacitor
 
-This page shows how the simulated {term}`MOS capacitor <MOSCAP>` is fitted to the gate capacitance of the {term}`PDK`'s
-{term}`SPICE` model, and how well the fitted values then match at gate lengths not used in the fit.
-It is the first use of the {term}`calibrated parameter budget`: the 1D {term}`TCAD`
-{term}`MOS capacitor <MOSCAP>` fitted to the {term}`SPICE` {term}`Cgg`–Vg of the
-{term}`calibration targets <calibration target>`, then fixed and checked at the
-{term}`held-out geometries <held-out geometry>`
+This page shows how the simulated {term}`MOS capacitor <MOSCAP>` is fitted to the gate
+capacitance of the {term}`PDK`'s {term}`SPICE` model. It then shows how well the fitted values
+match at gate lengths not used in the fit. It is the first use of the
+{term}`calibrated parameter budget`. The 1D {term}`TCAD` MOS capacitor is fitted to the
+{term}`Cgg`–Vg of the {term}`calibration targets <calibration target>`. It is then fixed and
+checked at the {term}`held-out geometries <held-out geometry>`
 ({repo}`plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`).
 The code is {py:mod}`gf180tcad.calibrate.cv`; the results are
 {repo}`results/tcad/calibration` and {repo}`results/tcad/validation`.
@@ -19,7 +19,12 @@ heavily the silicon under it is doped, and a small offset of the voltage at whic
 turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are fixed, and the TCAD is compared with SPICE at gate lengths it never
-saw. For the nfet the result is good: in 1D the fixed stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check has its first result, a {term}`Disagree` at {term}`Lmin`, below). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
+saw. For the nfet the result is good. In 1D the fixed stack agrees with SPICE at every
+geometry, the three it was fitted to and the three it never saw. The 2D check has its first
+result, a {term}`Disagree` at {term}`Lmin` (below). For the pfet it is not. One stack cannot
+follow the SPICE model's pfet curves. Their accumulation-to-depletion edge moves by more than
+half a volt between the longest and the shortest gate. So the pfet is published as
+{term}`Disagree` with the reasons below.
 
 ## What is fitted
 
@@ -44,8 +49,8 @@ fixed {term}`BSIM4` bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area
 capacitance area LeffCV × WeffCV ({term}`DLC`, {term}`DWC`) plus the overlap, fringe and
 gate-bulk terms. That bookkeeping is reference-model data, fixed, and not part of the budget.
 At {term}`Lmin` it is a large part of Cgg, so Lmin mostly tests the bookkeeping. For the
-calibrated nfet at u = −5 V (accumulation) it is 3.97 of 14.36 fF
-({py:meth}`~gf180tcad.tcad.moscap1d.MoscapCV.area_scaled` of the committed calibrated 1D curve).
+calibrated nfet in accumulation (u = −5 V) it is 3.97 of 14.36 fF. These values come from
+{py:meth}`~gf180tcad.tcad.moscap1d.MoscapCV.area_scaled` on the committed calibrated 1D curve.
 
 The targets are the {term}`TT` {{ ngspice }} {term}`cv` sweeps (1 MHz, Vds = 0) of the three
 calibration geometries, W = 10 µm at L = 10 µm, 2 µm and Lmin. {{ Xyce }} has no {term}`C–V` analysis,
@@ -104,11 +109,11 @@ sets Cgg ≤ 5 % in accumulation, depletion and inversion. Here the depletion-re
 replaced by the two ΔV crossings, deliberately. In the transition a relative-C metric measures
 the slope of the curve, not whether TCAD and SPICE agree. For the nfet W10/L10 at TT,
 SPICE Cgg rises from 81.84 fF at u = 0.5 V to 143.75 fF at 0.7 V, and its slope reaches
-0.513 fF/mV at 0.675 V. There C is 130.9 fF (interpolated between the 0.65 V and 0.7 V points), so a curve shifted by
-only 13 mV (5 % of 130.9 fF over 0.513 fF/mV) already fails 5 %; on the 50 mV grid, with linear interpolation, the
-smallest whole-millivolt rigid shift that fails 5 % at some bias is 15 mV. A 15 mV shift is a
-small fraction of the {term}`corner` spread of the crossings: 252 mV (u_dep) and 249 mV (u_inv)
-wide for the nfet W10/L10 (below). The deviation is
+0.513 fF/mV at 0.675 V. There C is 130.9 fF, interpolated between the 0.65 V and 0.7 V points.
+So a curve shifted by only 13 mV (5 % of 130.9 fF over 0.513 fF/mV) already fails 5 %. On the
+50 mV grid, with linear interpolation, the smallest whole-millivolt rigid shift that fails 5 %
+at some bias is 15 mV. A 15 mV shift is a small fraction of the {term}`corner` spread of the
+crossings. For the nfet W10/L10 that spread is 252 mV (u_dep) and 249 mV (u_inv) wide (below). The deviation is
 also listed on {ref}`the limitations page <limitations-spec-deviations>`.
 
 (cv-agreement-windows)=
@@ -119,13 +124,14 @@ Each plateau and each crossing gets a {ref}`verdict <agreement-verdicts>`: {term
 the tolerance, else {term}`Same process` inside its window, else {term}`Disagree`; a geometry's
 verdict is the worst of its four ({py:func}`~gf180tcad.calibrate.cv.verdicts`).
 
-- A **plateau**'s window, at each plateau bias, is the {term}`combined range` of the five-corner
-  {term}`corner envelope` of Cgg ({py:func}`~gf180tcad.calibrate.cv.envelope_cv`, pure min/max
-  of the committed cv.csv files) and the public 6 V {term}`Cox` spec, 1.8 / 2.3 / 2.8 fF/µm²
-  ([GF180MCU PDK electrical specs, 5.3 Gate oxide capacitance](https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_3.html),
-  rows "COX (Poly) 6V", entered in {repo}`data/pdk_elec_spec.json`), mapped to Cgg by the same
-  bookkeeping as the model: Cox_min/max × LeffCV × WeffCV plus the parasitic term (in 2D: × the
-  drawn W × L). {py:func}`gf180tcad.specwindow.window` forms the combined range and says which
+- A **plateau**'s window, at each plateau bias, is the {term}`combined range` of two intervals.
+  One is the five-corner {term}`corner envelope` of Cgg
+  ({py:func}`~gf180tcad.calibrate.cv.envelope_cv`, pure min/max of the committed cv.csv files).
+  The other is the public 6 V {term}`Cox` spec, 1.8 / 2.3 / 2.8 fF/µm². Its source is the
+  [GF180MCU PDK electrical specs, 5.3 Gate oxide capacitance](https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_3.html),
+  rows "COX (Poly) 6V", entered in {repo}`data/pdk_elec_spec.json`. The spec is mapped to Cgg
+  by the same bookkeeping as the model: Cox_min/max × LeffCV × WeffCV plus the parasitic term.
+  In 2D the factor is the drawn W × L. {py:func}`gf180tcad.specwindow.window` forms the combined range and says which
   side sets it.
   The plateau is "Same process" when the TCAD Cgg is inside the window at every plateau bias.
 - A **crossing**'s window is the min–max of that crossing voltage over the five corners at the
@@ -147,14 +153,21 @@ and {repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json
 is the nearest: 13 mV inside the +200 mV bound (93.6 % of the way from 0 to it), not a bound hit by the
 1e-3 rule but close to one.
 
-| Device | Parameter | Unit | Fitted | Lower bound | Upper bound |
-|---|---|---|---|---|---|
-| {term}`nfet_05v0` | `t_ox_eff_nm` | nm | 16.050 | 15.2 | 16.95 |
-| {term}`nfet_05v0` | `n_ch_cm3` | cm⁻³ | 8.813e16 | 6.30e16 | 3.4e17 |
-| {term}`nfet_05v0` | `dv_fb_v` | mV | +98.7 | −200 | +200 |
-| {term}`pfet_05v0` | `t_ox_eff_nm` | nm | 15.721 | 15.6 | 16.39 |
-| {term}`pfet_05v0` | `n_ch_cm3` | cm⁻³ | 2.147e17 | 6.78e16 | 3.4e17 |
-| {term}`pfet_05v0` | `dv_fb_v` | mV | +187.2 | −200 | +200 |
+{term}`nfet_05v0`:
+
+| Parameter | Unit | Fitted | Lower bound | Upper bound |
+|---|---|---|---|---|
+| `t_ox_eff_nm` | nm | 16.050 | 15.2 | 16.95 |
+| `n_ch_cm3` | cm⁻³ | 8.813e16 | 6.30e16 | 3.4e17 |
+| `dv_fb_v` | mV | +98.7 | −200 | +200 |
+
+{term}`pfet_05v0`:
+
+| Parameter | Unit | Fitted | Lower bound | Upper bound |
+|---|---|---|---|---|
+| `t_ox_eff_nm` | nm | 15.721 | 15.6 | 16.39 |
+| `n_ch_cm3` | cm⁻³ | 2.147e17 | 6.78e16 | 3.4e17 |
+| `dv_fb_v` | mV | +187.2 | −200 | +200 |
 
 How the optimiser stopped:
 
@@ -185,28 +198,76 @@ inversion are the largest plateau errors and Depletion the depletion error, all 
 
 **nfet_05v0**
 
-| W (µm) | L (µm) | Role | Accumulation (%) | Inversion (%) | ΔV_dep (mV) | ΔV_inv (mV) | Depletion (%) | Verdict |
-|---|---|---|---|---|---|---|---|---|
-| 10 | 10 | calibration | 0.67 | 0.63 | +27.9 | +20.2 | 12.9 | Agree |
-| 10 | 2 | calibration | 0.59 | 0.57 | +0.7 | -6.5 | 6.7 | Agree |
-| 10 | 1 | validation | 0.83 | 0.50 | -27.3 | -31.7 | 7.8 | Agree |
-| 10 | 0.7 | validation | 0.75 | 0.44 | -31.5 | -30.5 | 6.4 | Agree |
-| 10 | 0.6 | calibration | 0.85 | 0.41 | -22.0 | -18.0 | 5.4 | Agree |
-| 1.6 | 0.7 | validation | 0.75 | 0.44 | -22.9 | -22.9 | 5.9 | Agree |
+Role and verdict:
+
+| W (µm) | L (µm) | Role | Verdict |
+|---|---|---|---|
+| 10 | 10 | calibration | Agree |
+| 10 | 2 | calibration | Agree |
+| 10 | 1 | validation | Agree |
+| 10 | 0.7 | validation | Agree |
+| 10 | 0.6 | calibration | Agree |
+| 1.6 | 0.7 | validation | Agree |
+
+Plateau and depletion errors:
+
+| W (µm) | L (µm) | Accumulation (%) | Inversion (%) | Depletion (%) |
+|---|---|---|---|---|
+| 10 | 10 | 0.67 | 0.63 | 12.9 |
+| 10 | 2 | 0.59 | 0.57 | 6.7 |
+| 10 | 1 | 0.83 | 0.50 | 7.8 |
+| 10 | 0.7 | 0.75 | 0.44 | 6.4 |
+| 10 | 0.6 | 0.85 | 0.41 | 5.4 |
+| 1.6 | 0.7 | 0.75 | 0.44 | 5.9 |
+
+Crossing shifts:
+
+| W (µm) | L (µm) | ΔV_dep (mV) | ΔV_inv (mV) |
+|---|---|---|---|
+| 10 | 10 | +27.9 | +20.2 |
+| 10 | 2 | +0.7 | -6.5 |
+| 10 | 1 | -27.3 | -31.7 |
+| 10 | 0.7 | -31.5 | -30.5 |
+| 10 | 0.6 | -22.0 | -18.0 |
+| 1.6 | 0.7 | -22.9 | -22.9 |
 
 **pfet_05v0**
 
-| W (µm) | L (µm) | Role | Accumulation (%) | Inversion (%) | ΔV_dep (mV) | ΔV_inv (mV) | Depletion (%) | Verdict |
-|---|---|---|---|---|---|---|---|---|
-| 10 | 10 | calibration | 4.22 | 0.27 | -218.1 | -11.5 | 29.6 | Disagree |
-| 10 | 2 | calibration | 3.73 | 0.57 | -128.3 | -4.2 | 24.4 | Same process |
-| 10 | 1 | validation | 3.76 | 1.38 | -0.2 | +8.0 | 17.9 | Agree |
-| 10 | 0.7 | validation | 4.31 | 2.30 | +123.8 | +19.9 | 15.0 | Same process |
-| 10 | 0.5 | calibration | 5.64 | 3.81 | +308.6 | +40.7 | 18.1 | Disagree |
-| 1.6 | 0.7 | validation | 6.12 | 4.12 | +131.8 | +31.8 | 12.9 | Same process |
+Role and verdict:
+
+| W (µm) | L (µm) | Role | Verdict |
+|---|---|---|---|
+| 10 | 10 | calibration | Disagree |
+| 10 | 2 | calibration | Same process |
+| 10 | 1 | validation | Agree |
+| 10 | 0.7 | validation | Same process |
+| 10 | 0.5 | calibration | Disagree |
+| 1.6 | 0.7 | validation | Same process |
+
+Plateau and depletion errors:
+
+| W (µm) | L (µm) | Accumulation (%) | Inversion (%) | Depletion (%) |
+|---|---|---|---|---|
+| 10 | 10 | 4.22 | 0.27 | 29.6 |
+| 10 | 2 | 3.73 | 0.57 | 24.4 |
+| 10 | 1 | 3.76 | 1.38 | 17.9 |
+| 10 | 0.7 | 4.31 | 2.30 | 15.0 |
+| 10 | 0.5 | 5.64 | 3.81 | 18.1 |
+| 1.6 | 0.7 | 6.12 | 4.12 | 12.9 |
+
+Crossing shifts:
+
+| W (µm) | L (µm) | ΔV_dep (mV) | ΔV_inv (mV) |
+|---|---|---|---|
+| 10 | 10 | -218.1 | -11.5 |
+| 10 | 2 | -128.3 | -4.2 |
+| 10 | 1 | -0.2 | +8.0 |
+| 10 | 0.7 | +123.8 | +19.9 |
+| 10 | 0.5 | +308.6 | +40.7 |
+| 1.6 | 0.7 | +131.8 | +31.8 |
 
 Every plateau window is set by the Cox spec side of the combined range (`source` "spec" at every
-plateau bias): the 1.8–2.8 fF/µm² spec is far wider than the corner envelope, so on the plateaus
+plateau bias). The 1.8–2.8 fF/µm² spec is far wider than the corner envelope. So on the plateaus
 "Same process" says only that the C per area is inside the PDK's 6 V oxide-capacitance spec. The crossing windows are
 the corners' own; for the nfet W10/L10 they are −0.870 to −0.618 V (u_dep) and +0.576 to
 +0.825 V (u_inv).
@@ -270,26 +331,37 @@ Lmin with `spice-fit`.
   ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The fixed stack in 2D, with its
   own overlap and fringe, does **not** agree:
 
-  | Check | Calibrated 2D | Calibrated verdict | Start 2D | Start verdict |
-  |---|---|---|---|---|
-  | Accumulation plateau, worst point below SPICE (%) | 8.8 | {term}`Same process` | 4.2 | {term}`Agree` |
-  | Inversion plateau, worst point below SPICE (%) | 15.6 | Same process | 11.4 | Same process |
-  | Depletion crossing shift (mV) | −240 | Disagree | −268 | Disagree |
-  | Inversion crossing shift (mV) | −49 | Agree | +127 | Disagree |
+A plateau row is its worst point below SPICE. At the calibrated values:
 
-  So the calibration moves the 2D inversion crossing onto SPICE but the plateaus away from it.
-  The calibrated oxide (16.05 nm against the card's 15.2 nm) was fitted in 1D, where the BSIM4
-  overlap, fringe and gate-bulk terms are added to the intrinsic C. How the 2D cell's own
-  overlap and fringe compare with those terms is not measured
-  ([issue #74](https://github.com/mithro/gf180-tcad/issues/74)). The 2D Cgg is
-  13.88 fF at −5 V and 14.12 fF at +5 V, 1.7 % apart, while the SPICE plateau levels are 14.33
-  and 16.70 fF, 16.5 % apart: most of the gap is on the inversion side. This is one geometry.
-  The other 2D cells (L = 0.7, 1 and 2 µm, W1.6/L0.7) are on the {doc}`roadmap </roadmap>`
-  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`) and stays "not run".
-  This deviates from the plan in one respect: the plan has
-  {py:func}`~gf180tcad.calibrate.cv.validate_cv` call `moscap2d.simulate` itself; it reads the
-  committed calibrated 2D results instead, so the multi-hour 2D sweeps run once, through the
-  resumable 2D job, and serve both the results folder and the validation.
+| Check | 2D | Verdict |
+|---|---|---|
+| Accumulation plateau (%) | 8.8 | {term}`Same process` |
+| Inversion plateau (%) | 15.6 | Same process |
+| Depletion crossing shift (mV) | −240 | Disagree |
+| Inversion crossing shift (mV) | −49 | Agree |
+
+At the start values:
+
+| Check | 2D | Verdict |
+|---|---|---|
+| Accumulation plateau (%) | 4.2 | {term}`Agree` |
+| Inversion plateau (%) | 11.4 | Same process |
+| Depletion crossing shift (mV) | −268 | Disagree |
+| Inversion crossing shift (mV) | +127 | Disagree |
+
+So the calibration moves the 2D inversion crossing onto SPICE but the plateaus away from it.
+The calibrated oxide (16.05 nm against the card's 15.2 nm) was fitted in 1D. There the BSIM4
+overlap, fringe and gate-bulk terms are added to the intrinsic C. How the 2D cell's own
+overlap and fringe compare with those terms is not measured
+([issue #74](https://github.com/mithro/gf180-tcad/issues/74)). The 2D Cgg is
+13.88 fF at −5 V and 14.12 fF at +5 V, 1.7 % apart, while the SPICE plateau levels are 14.33
+and 16.70 fF, 16.5 % apart: most of the gap is on the inversion side. This is one geometry.
+The other 2D cells (L = 0.7, 1 and 2 µm, W1.6/L0.7) are on the {doc}`roadmap </roadmap>`
+([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`) and stays "not run".
+This deviates from the plan in one respect: the plan has
+{py:func}`~gf180tcad.calibrate.cv.validate_cv` call `moscap2d.simulate` itself; it reads the
+committed calibrated 2D results instead, so the multi-hour 2D sweeps run once, through the
+resumable 2D job, and serve both the results folder and the validation.
 
 ## Reproduce
 
