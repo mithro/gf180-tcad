@@ -19,6 +19,7 @@ import sys
 import textwrap
 import tomllib
 from collections import Counter
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -714,7 +715,7 @@ def test_stack_figure_draws_the_model():
     assert [layer.part for layer, _a, _b in drawn] == ["gate", "oxide", "body"]
     for layer, a, b in drawn:
         assert b - a == pytest.approx(layer.thickness_um * dev.scales.get(layer.part, 1)), layer
-    for (_l, _a, b), (_m, c, _d) in zip(drawn, drawn[1:], strict=False):
+    for (_l, _a, b), (_m, c, _d) in pairwise(drawn):
         assert b == pytest.approx(c)
     assert "oxide-stack" in figures.FIGURES
     light = figures.FIGURES["oxide-stack"]("light")
