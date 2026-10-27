@@ -248,7 +248,7 @@ changes the hash, or renames a results folder, which changes the manifest. Its k
 | key | holds |
 |---|---|
 | `entry_points` | each entry point's sorted module list |
-| `trees` | each results folder, by its path under `results/`, and its writer |
+| `trees` | each results folder, by its path under {repo}`results/`, and its writer |
 | `images` | each image's pin file and `versions.json` |
 | `plugin_excludes` | each entry point's plugin files left out of its hash |
 | `calibration_dirs` | each backend's calibration folder |
@@ -292,7 +292,7 @@ make manifest
 ```
 
 {repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`. It takes
-the writer from the folder's path under `results/` (the `trees` of the registry). It refuses
+the writer from the folder's path under {repo}`results/` (the `trees` of the registry). It refuses
 (exit 2, file unchanged) if anything else in the file
 differs from what the writer would write now: the plugin commit, an image, the calibration
 applied, or a `generator` naming the other entry point. Then the folder has to be regenerated.
@@ -301,7 +301,7 @@ Such an update claims that the data did not change; it does not show it. So ever
 recorded below, with the hash the folder had before. The records below predate the design spec
 §9 rule that a representative job is rerun first.
 
-**Registry move (Charon plan Task B0), provenance updated.** Moving the registry into
+**Registry move ({{ Charon }} plan Task B0), provenance updated.** Moving the registry into
 {repo}`src/gf180tcad/generators.json` changed two hashed modules. They are
 {py:mod}`gf180tcad.tcad` and {py:mod}`gf180tcad.calibrate.cv`, which gained the `simulate_2d`
 parameter. Nothing that computes a result changed.
@@ -313,7 +313,7 @@ went from `b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7` to
 ({py:mod}`gf180tcad.tcad.__main__`). The folders {repo}`results/tcad/calibration` and
 {repo}`results/tcad/validation` went from
 `5265e5fe223580d9efd878b9ebe33648b21f36dcdbf41ac8c7092f3ce9925950` to
-`d680b07526eeead964af8ddb51cb093339f1aa9e12d549d8a1b292339e3a5c1e`
+`bb701026b9d7efabf1453c6554907f9254eea359edc2cb8cbb941e8dd0b880d0`
 ({py:mod}`gf180tcad.calibrate.__main__`).
 
 The evidence that the data did not change is a rerun, as design spec §9 requires. At the

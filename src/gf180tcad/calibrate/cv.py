@@ -935,7 +935,7 @@ Simulate2D = Callable[[str, Geometry], Cv2D]
 
 
 def devsim_2d_results(root: Path | None = None) -> Simulate2D:
-    """The committed calibrated DEVSIM 2D results under ``root`` (default
+    """The committed calibrated 2D results under ``root`` (default
     :repo:`results/tcad/moscap2d`): ``<device>/calibrated/<gid>/cv.csv`` and its ``cv.meta.json``,
     as ``python -m gf180tcad.tcad moscap --dim 2 --params calibrated`` writes them."""
     root = Path(root) if root is not None else MOSCAP2D_ROOT
