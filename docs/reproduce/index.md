@@ -472,7 +472,7 @@ rerun byte for byte locally by
 
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
 content-addressed cache repository: {repo}`tools/output-cache` `pull` fetches one and checks it against
-the sha256 the committed results name. It holds one mesh so far, none of a committed job; see
+the sha256 the committed results name. It holds one mesh so far, that of the calibrated nfet Lmin cell; see
 {doc}`output-cache`.
 
 ```{toctree}

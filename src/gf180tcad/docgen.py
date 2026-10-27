@@ -824,7 +824,7 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
     job = d.two_d(gid)
     status = _two_d_status(d, gid)
     pending = (
-        ": the calibrated 2D cell is committed, but the validation file "
+        "; the calibrated 2D cell is committed, but the validation file "
         f"({{repo}}`results/tcad/validation/{name}.json`) does not compare it yet; its comparison "
         "is in {ref}`the validation section <cv-agreement-validation>`"
         if status == _TWO_D_PENDING

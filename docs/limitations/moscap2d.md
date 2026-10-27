@@ -284,7 +284,7 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 
 **Output cache.** Instead of regenerating it, a mesh is to be fetched from the shared
 {ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
-None of the four committed 2D jobs' meshes is in the cache (nor on any disk), so none can be
+None of the four committed start-value 2D jobs' meshes is in the cache (nor on any disk), so none can be
 fetched yet: `tools/output-cache status` reports all four as absent. The first cached mesh
 belongs to the calibrated {term}`Lmin` nfet cell of
 [issue #35](https://github.com/mithro/gf180-tcad/issues/35). Once a mesh is in the cache,
