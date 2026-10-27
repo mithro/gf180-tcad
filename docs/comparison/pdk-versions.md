@@ -41,7 +41,7 @@ uv run --locked python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698
    the commit and the three hashes that {py:func}`gf180tcad.pdk.check_against` reads.
 3. **Run.** One sandbox {term}`job` per geometry, with no network, runs
    {py:func}`gf180tcad.reference.run_job`, the generator's own job, with only its PDK lookup
-   pointed at the pinned copy ({py:func}`gf180tcad.pdkdiff.run_pdk_job`). The SPICE generator
+   pointed at the pinned copy ({py:func}`gf180tcad.pdkdiff.run_pdk_job`). The {term}`SPICE` generator
    modules are not edited, so the {term}`provenance` of {repo}`results/spice` does not change
    ({test}`tests/test_pdkdiff.py::test_reference_py_untouched`).
 4. **Cards and compare.** {py:func}`gf180tcad.pdkdiff.cards` compares the two PDKs' files,
@@ -182,7 +182,7 @@ for the parameters it quotes (a dash: none for that device; *set*: the spec says
 | VTH0 | 0.673 | — | V |
 | {term}`XJ` | 0.15 | — | µm |
 
-For the nfet L limits the spec gives one value per bin: LMIN 0.6 µm and 0.7 µm, LMAX 0.7 µm
+For the nfet L limits the spec gives one value per {term}`bin`: LMIN 0.6 µm and 0.7 µm, LMAX 0.7 µm
 and 50 µm.
 
 Every spec §4 value is confirmed on both cards. Two of them are rounded in the spec: VTH0 is

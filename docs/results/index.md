@@ -13,7 +13,7 @@ folder in atomically, so two docs builds can run at the same time without corrup
 
 ```{admonition} What exists so far
 :class: warning
-The generated pages below are the {term}`SPICE` {term}`golden reference` that {term}`TCAD` is
+The generated pages below are the {term}`SPICE reference` that {term}`TCAD` is
 compared against. The TCAD results that exist so far are for both devices at the
 start values (`--params start`, the uncalibrated parameters). The 1D results were made on the
 {term}`dev-HEAD TCAD image` ({repo}`docker/TCAD_DEV_IMAGE`,

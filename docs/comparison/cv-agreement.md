@@ -2,8 +2,8 @@
 
 # C–V calibration of the TCAD MOS capacitor
 
-This page shows how the simulated MOS capacitor is fitted to the gate capacitance of the PDK's
-SPICE model, and how well the fitted values then match at gate lengths not used in the fit.
+This page shows how the simulated {term}`MOS capacitor <MOSCAP>` is fitted to the gate capacitance of the {term}`PDK`'s
+{term}`SPICE` model, and how well the fitted values then match at gate lengths not used in the fit.
 It is the first use of the {term}`calibrated parameter budget`: the 1D {term}`TCAD`
 {term}`MOS capacitor <MOSCAP>` fitted to the {term}`SPICE` {term}`Cgg`–Vg of the
 {term}`calibration targets <calibration target>`, then fixed and checked at the

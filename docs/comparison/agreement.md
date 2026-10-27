@@ -1,6 +1,6 @@
 # Definition of agreement
 
-This page says when the simulated devices count as matching the PDK's SPICE models. The
+This page says when the simulated devices count as matching the {term}`PDK`'s {term}`SPICE` models. The
 comparison is defined at two levels: a plain-language one for anyone, and a technical one
 precise enough to be checked.
 
@@ -156,7 +156,7 @@ Currents, conductances and capacitances are compared as a relative error:
 | Cgd | - | 5 | 5 | - |
 | Effective {term}`Rsd` | - | - | 10 | - |
 
-The Cgg-Vg sweep covers accumulation, depletion and inversion. The effective Rsd is
+The Cgg-Vg {term}`sweep` covers accumulation, depletion and inversion. The effective Rsd is
 extracted from 1/Id versus L.
 
 The other metrics:
