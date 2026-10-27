@@ -55,7 +55,7 @@ def test_pages_cover_all_geometries(tmp_path):
     assert len(expected) == 12
     assert pages == expected
     page = (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60.md").read_text(encoding="utf-8")
-    for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Envelope", '"Same process" window'):
+    for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Corner min", '"Same process" window'):
         assert needle in page
     assert (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60_idvd.svg").is_file()
 
@@ -288,7 +288,7 @@ def test_window_column_shows_the_envelope_where_there_is_no_spec():
         lo, hi = env["ngspice"][NFET.name][GID][name]
         assert cells[-1] != "-"
         if name not in with_spec:
-            assert cells[-1] == f"[{docgen.fmt(lo)}, {docgen.fmt(hi)}] (envelope)"
+            assert cells[-3:] == [docgen.fmt(lo), docgen.fmt(hi), "corner envelope"]
         # Xyce has no cv sweep, so only its Cgg cells are "n/a"
         assert (cells[3] == "n/a") == name.startswith("cgg_")
 
@@ -347,8 +347,8 @@ def test_moscap_page_per_device_geometry(tmp_path):
             for key in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv"):
                 assert f"| {r['verdicts'][key]['verdict']} |" in page
             m = r["metrics"]
-            assert f"{1e3 * m['dv_dep_v']:+.1f} mV" in page
-            assert f"{1e3 * m['dv_inv_v']:+.1f} mV" in page
+            assert f"| {1e3 * m['dv_dep_v']:+.1f} |" in page  # mV, the unit in the header
+            assert f"| {1e3 * m['dv_inv_v']:+.1f} |" in page
             assert f"{100 * m['depletion_max_rel']:.2f} %" in page
             assert g.role in page
             # mesh pictures: no mesh file is committed, and the page says so
