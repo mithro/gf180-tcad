@@ -37,10 +37,10 @@ there.
   ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
   No Charon job has run ({ref}`numerical-acceptance`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
-- **Some design-spec requirements are not built.** See
-  {ref}`limitations-spec-deviations` below.
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
   open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
+
+The design-spec requirements that are not built are listed under {ref}`limitations-spec-deviations`.
 
 ## Reproducing the results
 
