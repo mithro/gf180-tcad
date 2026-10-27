@@ -205,8 +205,7 @@ What the quantities are:
 The PN slab's mesh is unstructured and has no row at mid-height. Its bottom edge is the only
 mesh row through the junction, which lies under the rib, so both silicon regions are used there.
 The PN-slab depletion width is limited by the mesh. At full mesh it rests on 2 depleted nodes,
-and at mesh × 0.5 on 8. The × 0.5 value is above an ideal abrupt-junction estimate of about
-0.048 µm. So the re-verification compared it at mesh × 0.5, within about one element
+and at mesh × 0.5 on 8. So the re-verification compared it at mesh × 0.5
 ({ref}`plugin-history-latest-pn`).
 
 The record's **junction probe** holds the mesh physical groups, the junction drop, ψ(x_j) and the
@@ -245,14 +244,13 @@ The anode − cathode contact potential still falls by exactly the 0.1 V step ea
 equilibrium it matches the ideal built-in potential of the ±1.1e18 cm⁻³ contacts (≈ 0.957 V),
 because it is set by the doping of the {term}`ohmic contacts <ohmic contact>` alone.
 
-Why the old mesher dropped the boundary is plausible but not proven. v0.8.0's mesher tags an
-interface only for line segments that two polygons share exactly, and the trapezoidal rib
-(10° sidewall) and the slab cut evidently share none.
+The record shows that v0.8.0's mesh has no rib/slab boundary; why its mesher drops it is
+[issue #79](https://github.com/mithro/gf180-tcad/issues/79).
 
 **All recorded currents are below the solver's current floor.**
 - **PN slab:** below 1e-26 A/cm. The anode current is the same at both biases, and at half mesh
   size the cathode current changes sign.
-- **PIN waveguide:** about 1e-15 A/cm, and nonzero at 0 V. Left + right is not 0 at either bias.
+- **PIN waveguide:** 1.0e-15 to 4.9e-15 A/cm in magnitude, and nonzero at 0 V. Left + right is not 0 at either bias.
 
 The record keeps these values as v0.8.0 computed them. They are evidence that the solver ran,
 not that its answer is right.
