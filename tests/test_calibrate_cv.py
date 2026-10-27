@@ -693,3 +693,38 @@ def test_validation_reproduces_the_committed_files(tmp_path):
         assert cli.main(["validate", "--device", device, "--out", str(root)]) == 0
     for name in (*(f"{d}.json" for d in process.DEVICES), "provenance.json"):
         assert (root / name).read_bytes() == (cv.VALIDATION_ROOT / name).read_bytes(), name
+
+
+def width_scaled_two_d(device: str, source_gid: str, target_gid: str) -> dict:
+    """The 2D comparison of ``target_gid`` derived from the committed calibrated 2D cell
+    ``source_gid`` at the same L: its per-width Cgg (``cgg_per_um``) times the target's W,
+    compared with the target's TT ngspice Cgg by :func:`cv.compare`. The 2D cut has no width
+    dependence (:func:`gf180tcad.tcad.stack.build` keeps W only as ``w_um``), so this is the
+    comparison the target's own 2D job gives."""
+    geometries = {geometry_id(g): g for g in DEVICES[device].geometries}
+    source, target = geometries[source_gid], geometries[target_gid]
+    assert source.l_um == target.l_um
+    cols, _ = io.read_csv(cv.MOSCAP2D_ROOT / device / "calibrated" / source_gid / "cv.csv")
+    vg = tuple(float(v) for v in cols["vg"])
+    total = tuple(float(c) * target.w_um for c in cols["cgg_per_um"])
+    pol = 1 if process.load(device).polarity == "n" else -1
+    comp, _ = cv.compare(
+        cv.load_target(device, target), vg, total, pol,
+        spec_area_um2=target.w_um * target.l_um, parasitic_ff=None, cox=cv.cox_spec(device),
+    )  # fmt: skip
+    return comp
+
+
+def test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell():
+    """The nfet W1.6/L0.7 2D comparison, derived from the committed W10/L0.7 cell
+    (docs/limitations/moscap2d.md, "W1.6/L0.7 adds no 2D information")."""
+    comp = width_scaled_two_d(NFET, "w10p0_l0p70", "w1p6_l0p70")
+    v = comp["verdicts"]
+    assert comp["verdict"] == "Disagree"
+    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.0755, abs=5e-5)
+    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.1385, abs=5e-5)
+    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1938, abs=5e-5)
+    assert v["dv_inv"]["dv_v"] == pytest.approx(-0.0335, abs=5e-5)
+    assert [v[k]["verdict"] for k in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv")] == [
+        "Same process", "Same process", "Disagree", "Agree",
+    ]  # fmt: skip

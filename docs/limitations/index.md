@@ -20,11 +20,12 @@ there.
   {doc}`/comparison/cv-agreement`). In 1D the nfet is {term}`Agree` at every geometry,
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
-  ({ref}`mismatch analysis <cv-agreement-mismatch>`). In 2D one calibrated cell has run, the nfet
-  at {term}`Lmin`. It is {term}`Disagree`: plateaus 8.8 % and 15.6 % below SPICE, depletion
-  crossing −240 mV ({ref}`cv-agreement-validation`). The validation file does not list the 2D result, and
-  the other 2D cells have not run ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and
-  are open correctness problems. One is the L = 2 µm cell's AC solve
+  ({ref}`mismatch analysis <cv-agreement-mismatch>`).
+- **2D validation: {term}`Disagree` at both calibrated nfet cells.** Both plateaus lie below
+  SPICE ({ref}`cv-agreement-validation`, [issue #77](https://github.com/mithro/gf180-tcad/issues/77)). The
+  depletion crossing is off by more than 200 mV. The other geometries are "not run"
+  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and are open
+  correctness problems. One is the L = 2 µm cell's AC solve
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)); the other is the L = 10 µm
   cell's equilibrium solve ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)). See
   {doc}`moscap2d`.
