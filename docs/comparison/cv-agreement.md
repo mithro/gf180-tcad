@@ -378,7 +378,15 @@ Its plateau gap belongs to [issue #77](https://github.com/mithro/gf180-tcad/issu
 | Depletion crossing shift (mV) | −45 | Agree |
 | Inversion crossing shift (mV) | +1 | Agree |
 
-For the pfet at W10/L0.5, a calibration geometry of the 1D fit, every check is Same process:
+The 2D Cgg lies below SPICE on both plateaus, by more on the inversion side. At W10/L0.6 it
+is 14.12 fF at +5 V
+({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.csv>`). The
+SPICE inversion level there is 16.70 fF (`spice_regions` in the validation file). The gap
+shrinks as the gate gets longer. Why the 2D Cgg is low is open ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+
+**The pfet cell, W10/L0.5.** It is a calibration geometry, and the 1D fit is {term}`Disagree` there,
+on the depletion crossing ({repo}`pfet calibration file <results/tcad/calibration/pfet_05v0.result.json>`).
+So the 2D cell is no held-out evidence. Every 2D check is Same process:
 
 | Check | 2D | Verdict |
 |---|---|---|
@@ -387,11 +395,14 @@ For the pfet at W10/L0.5, a calibration geometry of the 1D fit, every check is S
 | Depletion crossing shift (mV) | −105 | Same process |
 | Inversion crossing shift (mV) | −58 | Same process |
 
-The 2D Cgg lies below SPICE on both plateaus, by more on the inversion side. At W10/L0.6 it
-is 14.12 fF at +5 V
-({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.csv>`). The
-SPICE inversion level there is 16.70 fF (`spice_regions` in the validation file). The gap
-shrinks as the gate gets longer. Why the 2D Cgg is low is open ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+The plateaus are Same process because the window takes in the public 1.8–2.8 fF/µm² Cox spec.
+Over the 5 µm² gate it starts at 9.0 fF, below the SPICE corners. It ends at 14.76 fF on the
+accumulation side and 15.38 fF on the inversion side (`window` in the validation file).
+
+The cell gives 11.93 fF at +5 V and 11.94 fF at −5 V
+({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p50/cv.csv>`). SPICE gives 14.26 and 14.53 fF.
+The start-value 2D cell already gives 12.03 fF
+({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/start/w10p0_l0p50/cv.csv>`), so the gap comes before the calibration.
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
 in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call
