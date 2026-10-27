@@ -56,10 +56,21 @@ with [pytest](https://docs.pytest.org/).
 
 ```
 uv sync --locked
-uv run ruff check
-uv run ruff format --check
+uv run --locked python tools/install-hooks
+make lint
 uv run pytest -m "not sandbox"
 ```
+
+`make lint` (ruff check, ruff format --check) is exactly the lint step of the `lint-test` check of
+[CI](.github/workflows/ci.yml), which then runs the tests. [`tools/install-hooks`](tools/install-hooks) installs, once per
+clone (it covers every git worktree of it), the pre-push hook
+[`tools/git-hooks/pre-push`](tools/git-hooks/pre-push): each `git push` first runs `make pre-push` (`make lint`, then
+every non-sandbox test except the slow docs build and calibration fits, about a minute) and,
+when a pushed commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), README.md or CONTRIBUTING.md,
+`make pre-push-docs` (the docs-links rule, a few minutes). A failure refuses the push. Do not
+bypass it with `--no-verify`: the hook only checks what most often broke CI, so run the full
+`uv run pytest -m "not sandbox"` before asking for review. CI cancels the run of a superseded
+commit when a newer one is pushed to the same pull request (runs on `main` are never cancelled).
 
 [`uv.lock`](uv.lock) is committed. Tests that run simulators are marked
 [`sandbox`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-sandbox); they run only through [`tools/sandbox-run`](tools/sandbox-run)
