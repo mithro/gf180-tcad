@@ -52,7 +52,9 @@ Before starting the container, {repo}`tools/sandbox-run` refuses to run (exit 2)
   `MemoryMax=137438953472` (128 GiB), `MemorySwapMax=0` and `TasksMax=32768`. Without
   {repo}`tools/sandbox-setup`, Docker would create the slice on the fly with no limits at all.
 
-Other properties of the container:
+Other properties of the container, by kind.
+
+**Privileges and filesystem:**
 
 - all Linux [capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) are
   dropped ([`--cap-drop ALL`](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities))
@@ -61,6 +63,10 @@ Other properties of the container:
 - the root filesystem is [read-only](https://docs.docker.com/reference/cli/docker/container/run/#read-only),
   with a 1 GiB [`tmpfs`](https://docs.docker.com/reference/cli/docker/container/run/#tmpfs) at
   `/tmp`;
+- the process runs as the host user's user and group IDs (UID and GID), with `HOME=/tmp/home`.
+
+**Mounts:**
+
 - the repository checkout is mounted read-only at `/work/src`
   ({py:data}`gf180tcad.sandbox.SOURCE_MOUNT`), and project
   code is run from it with `PYTHONPATH=/work/src/src`; it is not baked into the
@@ -75,8 +81,10 @@ Other properties of the container:
   repository is a git checkout and git cannot locate those directories, nothing runs.
   Unrelated directories are fine: scratch directories under `$TMPDIR`, or sibling checkouts
   next to the repository. An allowed sibling git checkout used as a working directory is
-  writable, its own `.git` included, so use a scratch directory instead;
-- the process runs as the host user's user and group IDs (UID and GID), with `HOME=/tmp/home`;
+  writable, its own `.git` included, so use a scratch directory instead.
+
+**Environment and image:**
+
 - `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS` are set to
   `1` for determinism;
 - [`NPY_DISABLE_CPU_FEATURES`](https://numpy.org/doc/stable/reference/simd/build-options.html#runtime-dispatch)

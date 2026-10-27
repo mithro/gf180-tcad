@@ -3,10 +3,12 @@
 Known shortcomings of this project, so that nobody reads more into it than is
 there.
 
+## What is simulated
+
 - **No silicon data.** No measured device I-V or C-V data exists for any
   {{ wafer_space }} {term}`run 1 or run 2 <wafer.space run>` design. See
   {doc}`silicon-validation`.
-- **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD yet.** The
+- **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD.** The
   {term}`SPICE reference <SPICE reference results>` dataset of {term}`Phases 0 and 1` is complete. On the TCAD side the 1D
   and 2D MOS capacitors exist, with the start values and mesh-converged meshes
   ({doc}`mesh-convergence`, {doc}`moscap2d`), and the 1D one also with the calibrated values.
@@ -18,40 +20,52 @@ there.
   {doc}`/comparison/cv-agreement`). In 1D the nfet is {term}`Agree` at every geometry,
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
-  ({ref}`mismatch analysis <cv-agreement-mismatch>`). The 2D validation of the calibrated stack
-  is under way: the first calibrated 2D cell, the nfet at {term}`Lmin`, is {term}`Disagree` (plateaus 8.8 % and
-  15.6 % below SPICE, depletion crossing −240 mV; {ref}`cv-agreement-validation`), and the other
-  cells follow one 16 GiB {term}`job` at a time; the validation file does not yet list the 2D
-  result ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and
-  are open correctness problems: the L = 2 µm cell's AC solve
-  ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)) and the L = 10 µm cell's
-  equilibrium solve ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)); see
+  ({ref}`mismatch analysis <cv-agreement-mismatch>`). In 2D one calibrated cell has run, the nfet
+  at {term}`Lmin`. It is {term}`Disagree`: plateaus 8.8 % and 15.6 % below SPICE, depletion
+  crossing −240 mV ({ref}`cv-agreement-validation`). The validation file does not list the 2D result, and
+  the other 2D cells have not run ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and
+  are open correctness problems. One is the L = 2 µm cell's AC solve
+  ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)); the other is the L = 10 µm
+  cell's equilibrium solve ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)). See
   {doc}`moscap2d`.
-- **No {term}`corner` bounds yet.** The design spec asks for the typical value, the lower and upper
-  bound across the {term}`PDK`'s SPICE corners, and a Monte Carlo spread of every physical input
-  ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)); none is computed yet.
+- **No {term}`corner` bounds.** The spec asks for a typical value of each physical input.
+  It also asks for its bounds across the {term}`PDK`'s SPICE corners and a Monte Carlo spread.
+  These are not computed ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
+- **One TCAD backend.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
+  for {{ Charon }} in parallel on every {term}`job`, with a per-job cross-comparison
+  ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
+  No Charon job has run ({ref}`numerical-acceptance`,
+  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
+- **Some design-spec requirements are not built.** See
+  {ref}`limitations-spec-deviations` below.
+- **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
+  open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
+
+## Reproducing the results
+
 - **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
   `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
-- **The TCAD {term}`provenance` names today's code, not the code that wrote every file.** Each
-  TCAD results folder's `provenance.json` records the current per-folder {term}`generator_sha256`
-  ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)); the 2D start-value files were not
-  regenerated with that code. Only the two calibrated 1D {term}`jobs <job>` are rerun and compared
-  byte for byte on another computer; see {ref}`tcad-provenance`.
-- **`make reproduce` does not yet reproduce the 2D TCAD files, and has not been run end to
-  end.** The 2D job files lack entries the current job writes and the L = 2 µm {term}`sweeps <sweep>` are resumed ones, so a
-  fresh run differs from them ({ref}`moscap2d-reproduce`). Only the calibrated 1D
+- **TCAD {term}`provenance` updated without a rerun.** Every TCAD results folder's provenance
+  was updated to the per-folder {term}`generator_sha256` without a rerun
+  ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)). That covers all five folders:
+  `moscap1d`, `moscap2d`, `meshconv`, `calibration` and `validation`. Only the two calibrated 1D
+  {term}`jobs <job>` are rerun and compared byte for byte on another computer. The 2D
+  mesh-convergence results have no byte-for-byte evidence; see {ref}`tcad-provenance`.
+- **`make reproduce` does not reproduce the 2D TCAD files.** It has not been run end to end.
+  The 2D job files lack entries the current job writes. The L = 2 µm
+  {term}`sweeps <sweep>` are resumed ones. A fresh run therefore differs from them
+  ({ref}`moscap2d-reproduce`). Only the calibrated 1D
   {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
   `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
-- **One TCAD backend so far.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
-  for {{ Charon }} in parallel on every job, with a per-job cross-comparison
-  ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
-  It is planned
-  ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
-  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)); its first step, splitting the
-  plugin so that a second simulator can plug in, is a draft
-  ([PR #51](https://github.com/mithro/gf180-tcad/pull/51)), and no
-  Charon job has run ({ref}`numerical-acceptance`).
+- **The same bytes on another computer: only on some processors.** Byte-identical results are
+  guaranteed only on {term}`x86-64-v2` or newer hosts. The full reference is verified on an
+  Intel Xeon Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
+  ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
+  and that run did not have the {{ numpy }} fix described there.
+
+## Software stacks
+
 - **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
   it is now fixed in {{ gplugins_fork }} and re-verified on the latest stack. See
@@ -61,23 +75,25 @@ there.
   {term}`stable TCAD image` (PyPI releases) is the release baseline and is used for
   debugging. A dev HEAD can break what the release did; such drift is reported, never hidden
   by a looser {term}`tolerance`. See {ref}`tcad-dev-image`.
-- **2D results are on the stable image for now.** The 1D results are made on the dev-HEAD
-  image, byte-identical to the stable image's. The 2D MOS capacitor stays on the stable image
-  until its {term}`mesh convergence` is rerun on the dev image, because {{ gmsh }} 5 meshes the 2D
-  cells differently. That rerun is planned before the {term}`Phase 2` exit. See {ref}`tcad-results-image`.
+- **2D results are on the stable image.** The 1D results are made on the dev-HEAD
+  image, byte-identical to the stable image's. The 2D MOS capacitor is on the stable image,
+  because {{ gmsh }} 5 meshes the 2D cells differently. Its {term}`mesh convergence` has not been
+  rerun on the dev image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)). See
+  {ref}`tcad-results-image`.
 - **Two dev-HEAD packages are forks.** The dev-HEAD image runs the full flow. To get there,
   {{ meshwell }} and the {{ gf180mcu_gdsfactory }} come from mithro forks of their upstream
   HEADs ({{ meshwell_fork }}, {{ gf180mcu_fork }}), and one test of {{ gplugins_fork }} is
   replaced by a mesh-independent check
   ([mithro/gplugins#10](https://github.com/mithro/gplugins/pull/10)). Each fork adds a small fix for {{ gmsh }} 5 or {{ gdsfactory }} 10
-  that upstream does not have yet. These fixes are not upstream, and nothing is sent upstream.
+  that upstream does not have. These fixes are not upstream, and nothing is sent upstream.
   The forks, and what each fixes, are listed in {ref}`tcad-dev-forks`.
 - **Build inputs are mirrored.** Every file the dev-HEAD image build fetches is also on
   {{ input_mirror }}. The build checks each file's sha256, from the mirror or from the original
   URL. A file that disappears from both stops the build; it cannot change it silently. See
   {ref}`tcad-dev-mirror`.
-- **Unverified citations.** Several literature items have not been checked yet
-  and are marked "unverified". See {doc}`literature`.
+
+## The SPICE reference and the numerics
+
 - **The SPICE models are a reference, not the truth.** {term}`BSIM4` is empirical,
   {term}`binned` in L (the {term}`bin` boundary is at 0.7 µm) and fitted to silicon, so it can
   be non-physical between bins (the `spice-fit` cause in the
@@ -86,20 +102,11 @@ there.
 - **{{ ngspice }} and {{ Xyce }} disagree by 0.6 % on the nfet in subthreshold.** The
   nfet {term}`card <model card>` declares BSIM4 `version=4.5`; ngspice runs it with BSIM4 4.5.0,
   Xyce's oldest BSIM4 is 4.6.1. See {doc}`engine-cross-check`.
-- **The same bytes on another computer: only on some processors.** Byte-identical results are
-  guaranteed only on {term}`x86-64-v2` or newer hosts, and the full reference is verified on an
-  Intel Xeon Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
-  ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
-  and that run did not have the {{ numpy }} fix described there.
 - **{term}`Mesh convergence <mesh convergence>` of the triangle mesh is looser in 2D.** The 1D
   {term}`MOSCAP` mesh changes by less than 1e-4 under {term}`uniform refinement`; the 2D mesh is
   selected at the 1 % criterion and carries a discretisation bias of a few 0.1 %. See
-  {doc}`mesh-convergence` and {doc}`moscap2d`, which also explains the C/Cox > 1 artefact of the
-  {{ meshwell }} default mesh (it rounds the oxide to 1 nm).
-- **Not everything the design spec asks for is built yet.** See
-  {ref}`limitations-spec-deviations` below.
-- **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
-  open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
+  {doc}`mesh-convergence` and {doc}`moscap2d`. The moscap2d page also explains the C/Cox > 1
+  artefact of the {{ meshwell }} default mesh, which rounds the oxide to 1 nm.
 
 (limitations-moscap)=
 
@@ -149,9 +156,9 @@ values are not read as more physical than they are.
   geometry through fixed BSIM4 values of the {term}`card <model card>`: the capacitance area
   (L − 2·DLC)·(W − 2·{term}`DWC`) and the overlap, fringe and {term}`CGBO` terms
   ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). They are not fitted and not part of
-  the {term}`parameter budget`. At Lmin they are a large part of Cgg (about 4 of 14 fF
-  in accumulation), so Lmin tests the bookkeeping as much as the TCAD. The split is plotted on
-  each generated geometry page ({doc}`/_generated/tcad/index`).
+  the {term}`parameter budget`. At Lmin they are a large part of Cgg: 3.97 of 14.36 fF for the
+  calibrated nfet at Vg = −5 V, in accumulation. So Lmin tests the bookkeeping as much as the
+  TCAD. The split is plotted on each generated geometry page ({doc}`/_generated/tcad/index`).
 - **{{ Xyce }} has no C–V analysis.** Cgg has one SPICE engine, ngspice, and the 0.5 %
   {term}`engine cross-check` cannot apply to it ({ref}`results-layout`).
 - **The ΔV ≤ 50 mV crossing {term}`tolerance` is a proposal.** No published standard exists for
@@ -173,27 +180,24 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
   asks for a second reference with instance parameters extracted from the {{ gdsfactory }}
   cell layout. Only the primary, schematic-default reference exists
-  ({ref}`planned secondary reference <secondary-reference>`).
-- **The metric set is narrower than the {term}`tolerance` table.** Not yet extracted:
+  ({ref}`secondary reference <secondary-reference>`).
+- **The metric set is narrower than the {term}`tolerance` table.** Not extracted:
   {term}`gm` and {term}`gds` at Vgs = {term}`Vt` + 150 mV, gm/Id, Cgd at Vds = 5 V,
   {term}`Cgg` in depletion, effective {term}`Rsd`, Isub, {term}`Vt roll-off` and the root-mean-square (RMS) error
   of log10(Id). Defined differently: the {term}`body effect` uses the
   {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
-  in {ref}`not yet extracted, or defined differently <metrics-not-yet-extracted>`.
+  in {ref}`metrics not extracted, or defined differently <metrics-not-yet-extracted>`.
 - **No mesh pictures on the TCAD results pages.** The
   {repo}`design spec, section 10(b) <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#10-documentation-sphinx--read-the-docs>`
   asks for mesh pictures on the generated device and geometry pages. The 2D meshes are not
   committed ({ref}`moscap2d-meshes`), and the pages render only committed files, so
   {doc}`/_generated/tcad/index` shows each 2D job's mesh sha256 instead
-  ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)). The spec now settles how:
+  ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)). The spec's
   {repo}`section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`
-  (amended 2026-10-27) draws the mesh pictures as part of the 3D renders of the simulated
-  processes, from a committed reduced mesh artefact with provenance that is tied to each job's
-  mesh sha256. That requirement has a plan
-  ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
-  [issue #43](https://github.com/mithro/gf180-tcad/issues/43)) but is not implemented yet, so
-  no render and no mesh picture exists. The {ref}`output cache <output-cache>` that is to hold
-  the full meshes holds none of the committed 2D jobs' meshes yet.
+  draws the mesh pictures as part of the 3D renders of the simulated processes. They come from a
+  committed reduced mesh artefact, with provenance tied to each job's mesh sha256. No render and
+  no mesh picture exists ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The
+  {ref}`output cache <output-cache>` holds none of the committed 2D jobs' meshes.
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two

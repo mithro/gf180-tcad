@@ -325,45 +325,56 @@ def test_io_is_the_writer():
     assert history.write_json is io.write_json
 
 
-def _quantity_rows(page: str) -> dict[str, list[tuple[str, str, str]]]:
-    """The rows of the plugin-history quantity table: label -> [(bias, v0.8.0, mesh x 0.5)]."""
-    rows: dict[str, list[tuple[str, str, str]]] = {}
-    for line in page.splitlines():
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if line.startswith("| P") and len(cells) == 4:
-            rows.setdefault(cells[0], []).append((cells[1], cells[2], cells[3]))
-    return rows
+def _table_after(page: str, heading: str) -> list[list[str]]:
+    """The body rows (cells) of the first table after the line ``heading`` of the page."""
+    lines = page.splitlines()
+    start = lines.index(heading)
+    rows: list[list[str]] = []
+    for line in lines[start + 1 :]:
+        if not line.startswith("|"):
+            if rows:
+                break
+            continue
+        rows.append([c.strip() for c in line.strip().strip("|").split("|")])
+    return rows[2:]  # without the header and the separator
 
 
 def test_doc_quotes_the_record():
     page = (REPO / "docs" / "limitations" / "plugin-history.md").read_text(encoding="utf-8")
-    rows = _quantity_rows(page)
     full, half = _load("v0.8.0.json"), _load("v0.8.0-mesh0p5.json")
 
-    def column(label: str, i: int) -> set[str]:
-        assert label in rows, label
-        return {r[i] for r in rows[label]}
+    def column(rows: list[list[str]], i: int, label: str | None = None) -> set[str]:
+        """Column ``i`` of ``rows``, or, with ``label``, of the rows whose first cell it is."""
+        sel = [r for r in rows if label is None or r[0] == label]
+        assert sel, label
+        return {r[i] for r in sel}
 
+    pin = _table_after(page, "**PIN waveguide**, depletion width (µm):")
     w = [f"{b['depletion_width_um']:.3g}" for b in full["pin"]["bias"]]
-    assert set(w) <= column("PIN depletion width (µm)", 1)
-    for i, d in ((1, full), (2, half)):
+    assert set(w) <= column(pin, 1)
+    static = _table_after(page, "**PN slab, mesh and equilibrium:**")
+    for i, d, ramp_heading in (
+        (1, full, "**PN slab during the ramp, v0.8.0:**"),
+        (2, half, "**PN slab during the ramp, v0.8.0 × 0.5:**"),
+    ):
         dd = d["ddcomponent"]
         eq, steps = dd["equilibrium"], [dd["equilibrium"], *dd["bias"]]
         expect = {
-            "PN-slab Potential span over the silicon (V)": {
+            "Potential span over the silicon (V)": {
                 f"{eq['builtin_potential_v']:.4f}",
-                *(f"{s['potential_span_v']:.4f}" for s in steps),
+                f"{eq['potential_span_v']:.4f}",
             },
-            "PN-slab depletion width (µm)": {f"{eq['depletion_width_um']:.3g}"},
-            "PN-slab mesh nodes": {str(dd["node_count"])},
-            "PN-slab anode − cathode contact potential (V)": {
-                f"{s['anode_minus_cathode_v']:.4f}" for s in steps
-            },
-            "PN-slab junction drop (V)": {f"{s['junction']['drop_v']:.5f}" for s in steps},
-            "PN-slab rib/slab Potential jump (V)": {f"{eq['junction']['boundary_jump_v']:.2f}"},
-            "PN-slab Potential at the junction, ψ(x_j) (V)": {
+            "depletion width (µm)": {f"{eq['depletion_width_um']:.3g}"},
+            "mesh nodes": {str(dd["node_count"])},
+            "rib/slab Potential jump (V)": {f"{eq['junction']['boundary_jump_v']:.2f}"},
+            "Potential at the junction, ψ(x_j) (V)": {
                 f"{eq['junction']['junction_v']:.5f}".replace("-", "−")
             },
         }
         for label, values in expect.items():
-            assert values <= column(label, i), (label, values, column(label, i))
+            assert values <= column(static, i, label), (label, values, column(static, i, label))
+        # the ramp table of this mesh: bias, span, anode − cathode, junction drop
+        ramp = _table_after(page, ramp_heading)
+        assert {f"{s['potential_span_v']:.4f}" for s in steps} <= column(ramp, 1)
+        assert {f"{s['anode_minus_cathode_v']:.4f}" for s in steps} <= column(ramp, 2)
+        assert {f"{s['junction']['drop_v']:.5f}" for s in steps} <= column(ramp, 3)

@@ -133,13 +133,15 @@ CASES = [
         (ENGINE_PAGE, rf"^ *\| `{s}` \| {NUM} \| [^|]+ \|$", lambda s=s: [diff(N, s, NLMIN)])
         for s in ("idvg_lin", "idvg_sat", "idvd")
     ),
-    # the per-geometry stock columns
+    # the per-geometry stock column of the idvg_lin and the idvg_sat table (one table per sweep,
+    # each introduced by "The `<sweep>` sweep:"; the row is the one after that line)
     *(
         (
             ENGINE_PAGE,
-            rf"^\| {re.escape(w)} \| {re.escape(l)} \| {NUM} \| [^|]+ \| {NUM} \| [^|]+ \|$",
-            lambda w=w, l=l: [diff(N, "idvg_lin", _gid(w, l)), diff(N, "idvg_sat", _gid(w, l))],
+            rf"^The `{s}` sweep:\n\n(?:\|.*\n)*?\| {re.escape(w)} \| {re.escape(l)} \| {NUM} \| [^|]+ \|$",
+            lambda w=w, l=l, s=s: [diff(N, s, _gid(w, l))],
         )
+        for s in ("idvg_lin", "idvg_sat")
         for w, l in GEOMS
     ),
     # the subthreshold evidence table (nfet 10/0.6, typical, Vds = 5 V, Vbs = 0)
@@ -155,18 +157,19 @@ CASES = [
         ENGINE_PAGE,
         (
             rf"current is a nearly constant {NUM} % higher\. That is\na gate-voltage shift of "
-            rf"about {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
+            rf"{NUM} to {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
         ),
         lambda: [
             100 * subthreshold_excess(),
             shift_mv(1e-9),
+            shift_mv(1e-6),
             _at5(),
         ],
     ),
     (
         ENGINE_PAGE,
-        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\): about {NUM} mV of",
-        lambda: [shift_mv(1e-9)],
+        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\): {NUM} to {NUM} mV of",
+        lambda: [shift_mv(1e-9), shift_mv(1e-6)],
     ),
     # pdk-spec-check.md: the TT column
     *(
