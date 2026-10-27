@@ -333,11 +333,11 @@ Lmin with `spice-fit`.
 **2D: {term}`Disagree` at the two shortest nfet cells.** The
 {repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each calibrated 2D
 cell with the TT ngspice Cgg. W10/L1 and W10/L2 are {term}`Same process`. The
-{repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>` does the same for the pfet cell.
+{repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>` does the same for the pfet cells.
 
 A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh and the SPICE
-grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6, W10/L0.7,
-W10/L1 and W10/L2, and the pfet at W10/L0.5. The other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+grid ({ref}`moscap2d-calibrated`). The committed nfet cells are W10/L0.6, W10/L0.7,
+W10/L1 and W10/L2. The pfet cells are W10/L0.5 and W10/L0.7. The other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
 A plateau row is its worst difference from SPICE. At W10/L0.6, a calibration geometry of the 1D fit:
 
@@ -403,6 +403,28 @@ The cell gives 11.93 fF at +5 V and 11.94 fF at −5 V
 ({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p50/cv.csv>`). SPICE gives 14.26 and 14.53 fF.
 The start-value 2D cell already gives 12.03 fF
 ({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/start/w10p0_l0p50/cv.csv>`), so the gap comes before the calibration.
+
+**The pfet cell, W10/L0.7.** It is a {term}`held-out geometry`; the 1D validation there is {term}`Same process`,
+on the depletion crossing. The 2D cell is Same process:
+
+| Check | 2D | Verdict |
+|---|---|---|
+| Accumulation plateau (%) | 13.7 | Same process |
+| Inversion plateau (%) | 13.0 | Same process |
+| Depletion crossing shift (mV) | −117 | Same process |
+| Inversion crossing shift (mV) | −6 | Agree |
+
+The plateau window combines the Cox spec over the 7 µm² gate with the corner envelope.
+Here the envelope lies inside the spec at every plateau point, so the window is 12.6 to 19.6 fF.
+
+The cell gives 16.23 fF at +5 V and 16.12 fF at −5 V
+({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p70/cv.csv>`). SPICE gives 18.51 and 18.52 fF.
+The gap is smaller than at W10/L0.5, as it is for the nfet.
+No start-value pfet cell exists at L = 0.7 µm, so the start-value comparison is the W10/L0.5 one.
+
+The 1D validation here has plateaus of 4.3 % and 2.3 % and a depletion shift of +124 mV.
+In 2D they are 13.7 %, 13.0 % and −117 mV, with every plateau point below SPICE.
+Only the inversion crossing agrees in both. Why the 2D Cgg is low is [issue #77](https://github.com/mithro/gf180-tcad/issues/77).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
 in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call

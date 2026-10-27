@@ -69,7 +69,7 @@ The 2D validation of the calibrated stack is in progress ([issue #35](https://gi
 The calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1 and W10/L2 are committed. They disagree with SPICE at the
 two shorter gates and are
 [Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) at W10/L1 and W10/L2.
-The calibrated 2D pfet cell at W10/L0.5 is committed and is Same process.
+The calibrated 2D pfet cells at W10/L0.5 and W10/L0.7 are committed and are Same process.
 
 Planned work, each item with its issue, is on the
 [roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html), among it a
