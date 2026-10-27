@@ -57,7 +57,9 @@ def test_there_are_pages():
 
 
 def test_substitutions_defined():
-    subs = _numbers().substitutions()
+    from gf180tcad import explain
+
+    subs = explain.substitutions()
     for page in pages():
         for name in _SUBST.findall(page.read_text(encoding="utf-8")):
             assert name in subs, f"{page.relative_to(ROOT)}: {{{{ {name} }}}} is not registered"
@@ -105,7 +107,7 @@ def test_sources_exist():
 
 
 def test_textbook_entries_cite_literature():
-    anchors = set(re.findall(r"^\((lit-[\w-]+)\)=$", LITERATURE.read_text("utf-8"), re.M))
+    anchors = set(re.findall(r"^\((lit-[\w-]+)\)=$", LITERATURE.read_text("utf-8"), re.MULTILINE))
     numbers = _numbers()
     textbook = [n for n in numbers.REGISTRY.values() if n.kind == "textbook"]
     for n in textbook:
@@ -175,7 +177,9 @@ def test_conf_merges_the_substitutions():
         conf = importlib.import_module("conf")
     finally:
         sys.path.remove(str(ROOT / "docs"))
-    subs = _numbers().substitutions()
+    from gf180tcad import explain
+
+    subs = explain.substitutions()
     for key, val in subs.items():
         assert conf.myst_substitutions[key] == val
     assert not set(subs) & set(conf._TOOLS)
@@ -247,9 +251,9 @@ PROPER_NAMES = (
 )
 _GEOMETRY_ID = re.compile(r"\bw\d+p\d+_l\d+p\d+\b")
 _STRIP = (
-    re.compile(r"\$\$.*?\$\$", re.S),  # display math
+    re.compile(r"\$\$.*?\$\$", re.DOTALL),  # display math
     re.compile(r"\$[^$\n]+\$"),  # inline math
-    re.compile(r"<!--.*?-->", re.S),  # comments
+    re.compile(r"<!--.*?-->", re.DOTALL),  # comments
     re.compile(r"\{[\w:.-]+\}`[^`]*`"),  # roles and their targets
     re.compile(r"`[^`]*`"),  # code spans
     _SUBST,  # substitutions
@@ -279,8 +283,8 @@ def bare_numbers(text: str) -> list[tuple[int, str]]:
 
 def _strip_blocks(text: str) -> str:
     """Blank the display-math blocks (keeping line numbers) and the directive option lines."""
-    text = re.sub(r"\$\$.*?\$\$", lambda m: "\n" * m.group(0).count("\n"), text, flags=re.S)
-    return re.sub(r"^:[\w-]+:.*$", "", text, flags=re.M)
+    text = re.sub(r"\$\$.*?\$\$", lambda m: "\n" * m.group(0).count("\n"), text, flags=re.DOTALL)
+    return re.sub(r"^:[\w-]+:.*$", "", text, flags=re.MULTILINE)
 
 
 def test_no_bare_numbers():
@@ -309,20 +313,25 @@ def test_positive_control_bare_numbers():
 # --- the figure module -----------------------------------------------------------------------
 
 
-def _style_node(tree: ast.Module) -> ast.AST | None:
+# The two tables a figure module may hold numbers in: STYLE (sizes, colours, line widths, label
+# offsets, scale factors) and UNITS (unit conversions).
+TABLES = ("STYLE", "UNITS")
+
+
+def _table_nodes(tree: ast.Module) -> list[ast.AST]:
+    out = []
     for node in tree.body:
         if isinstance(node, ast.Assign | ast.AnnAssign):
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            if any(isinstance(t, ast.Name) and t.id == "STYLE" for t in targets):
-                return node
-    return None
+            if any(isinstance(t, ast.Name) and t.id in TABLES for t in targets):
+                out.append(node)
+    return out
 
 
 def numeric_literals(source: str) -> list[tuple[int, object]]:
-    """(line, value) of each number literal outside the STYLE table, other than 0, 1, 2."""
+    """(line, value) of each number literal outside the tables, other than 0, 1, 2."""
     tree = ast.parse(source)
-    style = _style_node(tree)
-    allowed = set(ast.walk(style)) if style is not None else set()
+    allowed = {n for t in _table_nodes(tree) for n in ast.walk(t)}
     doc_nodes = {
         n.body[0].value
         for n in ast.walk(tree)
@@ -344,12 +353,12 @@ def numeric_literals(source: str) -> list[tuple[int, object]]:
 @pytest.mark.parametrize("module", ["figures.py", "model.py"])
 def test_figure_code_has_no_numeric_literals(module):
     found = numeric_literals((EXPLAIN_SRC / module).read_text(encoding="utf-8"))
-    assert not found, f"{module}: number literals outside STYLE: {found}"
+    assert not found, f"{module}: number literals outside {TABLES}: {found}"
 
 
 def test_positive_control_numeric_literals():
-    src = "STYLE = {'w': 6.4}\ndef f(x):\n    return x * 40 + 1\n"
-    assert numeric_literals(src) == [(3, 40)]
+    src = "STYLE = {'w': 6.4}\nUNITS = {'nm_per_um': 1e3}\ndef f(x):\n    return x * 40 + 1\n"
+    assert numeric_literals(src) == [(4, 40)]
 
 
 def test_figures_have_dark_twins(tmp_path):
@@ -425,31 +434,33 @@ def test_explained_pages_meet_every_cap():
         [sys.executable, "-I", str(ROOT / "tools" / "docs_lint.py"), "--no-front-matter", *files],
         capture_output=True, text=True, check=False,
     )  # fmt: skip
-    found += [ln for ln in (lint.stdout + lint.stderr).splitlines() if re.search(r": (FAIL|warn) ", ln)]
+    found += [
+        ln for ln in (lint.stdout + lint.stderr).splitlines() if re.search(r": (FAIL|warn) ", ln)
+    ]
     assert not found, "\n".join(found)
 
 
 @pytest.mark.parametrize("page", explanation_pages(), ids=lambda p: p.name)
 def test_explained_pages_are_explanations(page):
     text = page.read_text(encoding="utf-8")
-    heads = re.findall(r"^## (.+)$", text, re.M)
+    heads = re.findall(r"^## (.+)$", text, re.MULTILINE)
     assert 1 <= len(heads) <= 7, heads
     assert "Where this repo's results differ" in heads
-    assert not re.search(r"^\s*\d+\. ", text, re.M), "numbered steps on an explanation page"
+    assert not re.search(r"^\s*\d+\. ", text, re.MULTILINE), "numbered steps on an explanation page"
     first_head = text.index("\n## ")
     assert "```{figure} /_generated/explained/" in text[:first_head], "no opening figure"
-    assert len(re.findall(r"^# ", text, re.M)) == 1
+    assert len(re.findall(r"^# ", text, re.MULTILINE)) == 1
 
 
 def test_landing_lists_every_page():
     text = (EXPLAINED / "index.md").read_text(encoding="utf-8")
-    toc = re.search(r"```\{toctree\}\n(.*?)```", text, re.S)
+    toc = re.search(r"```\{toctree\}\n(.*?)```", text, re.DOTALL)
     assert toc, "docs/explained/index.md has no toctree"
     entries = [ln.strip() for ln in toc.group(1).splitlines() if ln.strip() and ":" not in ln]
     names = [p.stem for p in explanation_pages()]
     assert sorted(entries) == sorted(names)
     for name in names:
-        assert re.search(rf"^- \[[^\]]+\]\({re.escape(name)}\.md\): ", text, re.M), name
+        assert re.search(rf"^- \[[^\]]+\]\({re.escape(name)}\.md\): ", text, re.MULTILINE), name
     prose = [
         ln for ln in text[: toc.start()].splitlines()
         if ln.strip() and not ln.startswith(("# ", "- ", "(")) and not ln.startswith("  ")
@@ -459,7 +470,7 @@ def test_landing_lists_every_page():
 
 def test_explained_is_first_in_the_top_toctree():
     text = (ROOT / "docs" / "index.md").read_text(encoding="utf-8")
-    toc = re.search(r"```\{toctree\}\n(.*?)```", text, re.S).group(1)
+    toc = re.search(r"```\{toctree\}\n(.*?)```", text, re.DOTALL).group(1)
     entries = [ln.strip() for ln in toc.splitlines() if ln.strip() and not ln.startswith(":")]
     assert entries[0] == "explained/index"
     assert "five sections" in text
@@ -557,7 +568,7 @@ def test_explain_runs_with_the_docs_group_only(tmp_path):
 
 def test_glossary_terms_of_the_section():
     text = (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
-    terms = Counter(re.findall(r"^(\S[^\n]*)\n  ", text, re.M))
+    terms = Counter(re.findall(r"^(\S[^\n]*)\n  ", text, re.MULTILINE))
     for t in (
         "electron",
         "hole",
