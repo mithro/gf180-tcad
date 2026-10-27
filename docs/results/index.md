@@ -25,7 +25,7 @@ only, at the calibrated values (`--params calibrated`). The 1D results were made
 - the 1D {term}`mesh convergence`, in {repo}`results/tcad/meshconv`, discussed in
   {doc}`/limitations/mesh-convergence`.
 
-The 2D results were made on the {term}`stable TCAD image` for now (see
+The 2D results were made on the {term}`stable TCAD image` (see
 {ref}`tcad-results-image`):
 
 - the 2D MOS capacitor C-V curves, cut from the {term}`PDK`'s transistor cells, in

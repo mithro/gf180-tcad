@@ -38,7 +38,7 @@ uncalibrated start values:
   transistor cells ([`results/tcad/moscap2d`](results/tcad/moscap2d)), at the minimum gate length
   (0.60 µm nfet, 0.50 µm pfet) and at L = 2 µm, with its own mesh convergence
   ([`results/tcad/meshconv/moscap2d`](results/tcad/meshconv/moscap2d)), made on the
-  [stable TCAD image](#images) for now. The L = 2 µm cell has no small-signal (AC) result: the
+  [stable TCAD image](#images). The L = 2 µm cell has no small-signal (AC) result: the
   AC solve fails in the direct solver at that size. The L = 10 µm cell is not run in 2D, because
   its equilibrium solve fails there too; see the
   [2D MOS capacitor page](https://gf180-tcad.readthedocs.io/en/latest/limitations/moscap2d.html).

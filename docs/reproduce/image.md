@@ -190,7 +190,7 @@ the venv path, and differ only in where the TCAD stack comes from:
   [PyPI](https://pypi.org/) releases. It is kept as the baseline for "how it used to work" and for debugging: a
   difference between the two images is a change upstream, not in this project.
 
-The 1D TCAD results are generated in the dev-HEAD image and the 2D results, for now, in the
+The 1D TCAD results are generated in the dev-HEAD image and the 2D results in the
 stable image; see {ref}`tcad-results-image`.
 
 **Sources, pinned by commit.** {repo}`docker/tcad-dev/upstream.json` records each project's
