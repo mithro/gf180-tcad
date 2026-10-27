@@ -7,12 +7,34 @@ Since the `05v0` and `06v0` models are the same {term}`BSIM4` {term}`cards <mode
 taped-out `06v0` devices are directly relevant. This page is the inventory. For each structure
 the repository will carry pre-computed {term}`TCAD` and {term}`SPICE` predictions at the exact
 drawn geometry, so measured data can be dropped in later. The narrow 1.6/0.7 geometry of the
-priority-1 devices is part of the {ref}`comparison space <comparison-space>`.
+priority-1 devices is part of the {ref}`comparison space <comparison-space>`. A blank licence
+cell means that no licence is recorded here.
 
-| Priority | Design (run) | Structures | Notes |
+| Priority | Design | Run | Licence |
 |---|---|---|---|
-| 1 | [TRID](https://github.com/Scafir/gf180mcu-project-trident-gf180-teststructure) ({term}`ws-run1`), [CERN-OHL-W](https://spdx.org/licenses/CERN-OHL-W-2.0.html) | single {term}`nfet_06v0` and {term}`pfet_06v0`, W = 1.6, L = 0.7, with their own G/D/S pads (bulk to rail); MIM equal-area/different-perimeter pair; 6 V diodes; charge-pumping pair | The datasheet says W = 0.75; the PCell and silicon say 1.6. |
-| 2 | 0000 / [ASHES](https://github.com/GTIceLab/ASHES-GF180nm) ({term}`ws-run2`) | 2/1 µm `06v0` n and p FETs (×5 each), `03v3` FETs | **No licence**: reference only, do not redistribute; pad map undocumented. |
-| 3 | T0P3 (ws-run2, [Tiny Tapeout GF0.3](https://github.com/TinyTapeout/tinytapeout-gf-0p3)) | `tt_asw_5v0` analog switches (`05v0`, Ron versus V), 5 V mirror with Kelvin sense | Indirect `05v0` check. |
-| 4 | [CAB1](https://github.com/ZeduloTech/Cabrera) / [CLON](https://github.com/ThorbenMoos/Cloneless2) / [DCO0](https://github.com/asinghani/ws-dco-tdc) (ws-run2) / [2975](https://github.com/ThorbenMoos/Cloneless1) (ws-run1) | ring oscillators from 5 V 7-track cells (`05v0` inverter 0.82/0.60 n, 1.22/0.50 p) | Frequency versus SPICE/SDF: a circuit-level check. |
-| 5 | ISHI (runs [1](https://github.com/ishi-kai/ISHI-KAI_Multiple_Projects_WaferSapce-GF180-1) and [2](https://github.com/ishi-kai/ISHI-KAI_Multiple_Projects_WaferSapce-GF180-2)) | probe-padded inverters (`05v0` and `06v0`) | Verify that {term}`Dualgate` is over each device: some "5 V" devices were built thin-oxide. |
+| 1 | [TRID](https://github.com/Scafir/gf180mcu-project-trident-gf180-teststructure) | {term}`ws-run1` | [CERN-OHL-W](https://spdx.org/licenses/CERN-OHL-W-2.0.html) |
+| 2 | 0000 / [ASHES](https://github.com/GTIceLab/ASHES-GF180nm) | {term}`ws-run2` | **none** |
+| 3 | T0P3 ([Tiny Tapeout GF0.3](https://github.com/TinyTapeout/tinytapeout-gf-0p3)) | ws-run2 | |
+| 4 | [CAB1](https://github.com/ZeduloTech/Cabrera), [CLON](https://github.com/ThorbenMoos/Cloneless2), [DCO0](https://github.com/asinghani/ws-dco-tdc) | ws-run2 | |
+| 4 | [2975](https://github.com/ThorbenMoos/Cloneless1) | ws-run1 | |
+| 5 | ISHI ([run 1](https://github.com/ishi-kai/ISHI-KAI_Multiple_Projects_WaferSapce-GF180-1)) | ws-run1 | |
+| 5 | ISHI ([run 2](https://github.com/ishi-kai/ISHI-KAI_Multiple_Projects_WaferSapce-GF180-2)) | ws-run2 | |
+
+The structures of each design, and what to note about them:
+
+- **Priority 1, TRID.** Single {term}`nfet_06v0` and {term}`pfet_06v0` devices, W = 1.6 µm,
+  L = 0.7 µm, each with its own gate, drain and source pads (bulk to the rail); a pair of
+  metal-insulator-metal (MIM) capacitors of equal area and different perimeter; 6 V diodes; a
+  charge-pumping pair. The datasheet says W = 0.75 µm; the layout cell (PCell) and the silicon
+  say 1.6 µm.
+- **Priority 2, 0000 / ASHES.** `06v0` n and p FETs of W = 2 µm, L = 1 µm (five of each), and
+  `03v3` FETs. **No licence**: reference only, do not redistribute. The pad map is not
+  documented.
+- **Priority 3, T0P3.** `tt_asw_5v0` analog switches (`05v0`, on-resistance versus voltage) and
+  a 5 V current mirror with Kelvin sense. An indirect `05v0` check.
+- **Priority 4, CAB1, CLON, DCO0 and 2975.** Ring oscillators from 5 V 7-track cells; the
+  `05v0` inverter is W = 0.82 µm, L = 0.60 µm (n) and W = 1.22 µm, L = 0.50 µm (p). Their
+  frequency is compared with SPICE and with the Standard Delay Format (SDF) timing: a
+  circuit-level check.
+- **Priority 5, ISHI.** Probe-padded inverters (`05v0` and `06v0`). Check that
+  {term}`Dualgate` is over each device: some "5 V" devices are built thin-oxide.
