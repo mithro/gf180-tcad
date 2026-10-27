@@ -33,7 +33,7 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
 
 The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation
 ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)) is {term}`Disagree` at the two shortest nfet cells
-and {term}`Same process` elsewhere ({ref}`cv-agreement-validation`).
+and {term}`Same process` at the other committed cells ({ref}`cv-agreement-validation`).
 Planned work, each item with its issue, is on the {doc}`roadmap`. No measured silicon data
 exists ({doc}`limitations/silicon-validation`). See {doc}`limitations/index`.
 ```
