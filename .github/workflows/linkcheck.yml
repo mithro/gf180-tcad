@@ -44,6 +44,27 @@ jobs:
             cat docs/_build/linkcheck/output.txt
             cat docs/_build/linkcheck/output.txt >> "$GITHUB_STEP_SUMMARY"
           fi
+      # Sphinx ignores links to this repository's issues and pull requests because github.com
+      # answers them with HTTP 429 (issue #87). This step checks the numbers through the API.
+      - name: Issue and pull request links exist
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          numbers=$(grep -rhoE 'github\.com/mithro/gf180-tcad/(issues|pull)/[0-9]+' \
+            docs src README.md CONTRIBUTING.md --exclude-dir=_build --exclude-dir=_generated \
+            | sed -E 's#.*/##' | sort -un)
+          bad=0
+          for n in $numbers; do
+            if gh api "repos/${GITHUB_REPOSITORY}/issues/$n" --jq '.number' > /dev/null; then
+              echo "OK #$n"
+            else
+              echo "BROKEN #$n"
+              bad=1
+            fi
+          done
+          exit $bad
       - name: README.md and CONTRIBUTING.md links
         if: always()
         run: |
