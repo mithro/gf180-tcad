@@ -757,7 +757,7 @@ def test_junction_formulas_against_hand_values():
     - depletion_width: N_A = N_D = 1e16 cm⁻³, V_bi = 0.7 V, ε_r = 11.7,
       ε_0 = 8.8541878128e-14 F/cm, q = 1.602176634e-19 C give
       W = √(2 × 11.7 × 8.8541878128e-14 × 0.7 × (2e-16) / 1.602176634e-19)
-        = √(1.810504e-9) = 4.255001e-5 cm = 0.4255 µm.
+        = √(1.810429e-9) = 4.254917e-5 cm = 0.4255 µm.
     - The committed nfet values (calibrated n_ch = 8.813323306821749e16 cm⁻³, NSD peak 1e20 cm⁻³,
       n_i = 8.265841554853887e9 cm⁻³, V_t = 0.02569257912108585 V): V_bi = V_t·ln(8.8133e36 /
       6.8324e19) = 0.02569258 × 39.39857 = 1.012250 V, and W = 0.121925 µm.
@@ -766,7 +766,7 @@ def test_junction_formulas_against_hand_values():
 
     assert idealised.built_in_potential(1e17, 1e17, 1e10, 0.025) == pytest.approx(0.8059048, rel=1e-6)
     w = idealised.depletion_width(1e16, 1e16, 0.7, 11.7, 8.8541878128e-14, 1.602176634e-19)
-    assert w == pytest.approx(4.255001e-5, rel=1e-6)
+    assert w == pytest.approx(4.254917e-5, rel=1e-6)
     numbers = _numbers()
     assert numbers.value("vbi_nfet") == pytest.approx(1.012250, abs=1e-6)
     assert numbers.value("w_dep_nfet") * numbers.REGISTRY["w_dep_nfet"].factor == pytest.approx(
