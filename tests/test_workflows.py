@@ -141,3 +141,19 @@ def test_crosscheck_tcad_job():
             "src/gf180tcad/tcad/**", "results/tcad/**", "tests/crosscheck_tcad_subset.txt",
         )
     } <= paths  # fmt: skip
+
+
+def test_lint_test_lints_with_make_lint():
+    """CI and the local pre-push hook (tools/git-hooks/pre-push) run the same `make lint`."""
+    body = _jobs(_lines("ci.yml"))["lint-test"]
+    assert "      - run: make lint" in body
+    assert not [ln for ln in body if "ruff" in ln and "run:" in ln], "ruff outside make lint"
+
+
+def test_ci_cancels_superseded_pull_request_runs_only():
+    lines = _lines("ci.yml")
+    i = lines.index("concurrency:")
+    assert lines[i + 1 : i + 3] == [
+        "  group: ci-${{ github.ref }}",
+        "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+    ]
