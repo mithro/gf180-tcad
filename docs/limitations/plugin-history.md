@@ -245,7 +245,7 @@ equilibrium it matches the ideal built-in potential of the ±1.1e18 cm⁻³ cont
 because it is set by the doping of the {term}`ohmic contacts <ohmic contact>` alone.
 
 The record shows that v0.8.0's mesh has no rib/slab boundary; why its mesher drops it is
-[issue #79](https://github.com/mithro/gf180-tcad/issues/79).
+open ([issue #79](https://github.com/mithro/gf180-tcad/issues/79)).
 
 **All recorded currents are below the solver's current floor.**
 - **PN slab:** below 1e-26 A/cm. The anode current is the same at both biases, and at half mesh
