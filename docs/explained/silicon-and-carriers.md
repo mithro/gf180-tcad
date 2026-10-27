@@ -11,8 +11,7 @@ semiconductor physics. It leaves out energy bands.
 :alt: Log-scale densities against depth through gate, oxide and body; the body is shaded, with a high hole line and a low electron line.
 
 Densities through the layers of the {term}`nfet_05v0`, with the values this repo fits to the
-{term}`SPICE` model: the gate on top, the
-{term}`gate oxide` and the shaded body below. {{ x_fig_silicon_doping_scale }}
+{term}`SPICE` model: the gate on top, the {term}`gate oxide` and the shaded body below. {{ x_fig_silicon_doping_scale }}
 ```
 
 ```{figure} /_generated/explained/silicon-doping-dark.svg
@@ -20,8 +19,7 @@ Densities through the layers of the {term}`nfet_05v0`, with the values this repo
 :alt: Log-scale densities against depth through gate, oxide and body; the body is shaded, with a high hole line and a low electron line.
 
 Densities through the layers of the {term}`nfet_05v0`, with the values this repo fits to the
-{term}`SPICE` model: the gate on top, the
-{term}`gate oxide` and the shaded body below. {{ x_fig_silicon_doping_scale }}
+{term}`SPICE` model: the gate on top, the {term}`gate oxide` and the shaded body below. {{ x_fig_silicon_doping_scale }}
 ```
 
 ## Atoms and bonds

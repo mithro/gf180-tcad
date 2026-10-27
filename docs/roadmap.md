@@ -58,4 +58,4 @@ the issue says what is open and what settles it. The phases are those of the
   ({repo}`explainer plan <docs/superpowers/plans/2026-10-27-explainer-docs.md>`,
   [issue #46](https://github.com/mithro/gf180-tcad/issues/46)). The section
   {doc}`explained/index` holds its pages on silicon, doping and carriers, and on the gate
-  oxide and poly-silicon.
+  oxide and {term}`poly-silicon`.
