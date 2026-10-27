@@ -17,7 +17,7 @@ the issue says what is open and what settles it. The phases are those of the
   ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)).
 - **2D results on the {term}`dev-HEAD TCAD image`**, with the 2D {term}`mesh convergence` rerun there
   ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
-- **Corner bounds and spread** of the {term}`TCAD` physical inputs
+- **{term}`Corner <corner>` bounds and spread** of the {term}`TCAD` physical inputs
   ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
 - **Mesh pictures** on the TCAD results pages
   ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
