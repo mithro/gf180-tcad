@@ -316,6 +316,29 @@ calibrated value. The meshes are not committed ({ref}`moscap2d-meshes`); the out
 directory of these jobs is outside the checkout, because the {term}`sandbox` refuses one
 inside it ([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
 
+**W1.6/L0.7 adds no 2D information.** The 2D cut runs along L through the middle of the gate
+width, so it has no width dependence. The W1.6/L0.7 job meshes the same cross-section as
+W10/L0.7: both meshes have sha256 `e0437cde0b288e4a5eeeb52ba9ae52db3fd816027200a032f43da53a89129a32`
+(the `mesh_sha256` of
+{repo}`the W10/L0.7 cell <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`).
+The deterministic solve is then identical, and only `cgg_total` scales with W. A W-series at
+fixed L tests the area scaling and the parasitic model, not the 2D solve.
+
+The W1.6/L0.7 comparison follows from the W10/L0.7 solve (our arithmetic): `cgg_per_um` of its
+{repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.csv>` times 1.6 µm,
+compared with the TT ngspice target of W1.6/L0.7 by {py:func}`~gf180tcad.calibrate.cv.compare`.
+The result is {term}`Disagree`:
+
+| Check | Value | Verdict |
+|---|---|---|
+| Accumulation plateau, worst difference (%) | 7.6 | {term}`Same process` |
+| Inversion plateau, worst difference (%) | 13.9 | Same process |
+| Depletion crossing shift (mV) | −194 | Disagree |
+| Inversion crossing shift (mV) | −34 | {term}`Agree` |
+
+The W1.6/L0.7 2D job itself is "not run"
+([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+
 (moscap2d-l10)=
 
 ## Not run: the 2D cell at L = 10 µm
