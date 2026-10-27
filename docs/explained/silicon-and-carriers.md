@@ -10,16 +10,20 @@ semiconductor physics. It leaves out energy bands.
 :figclass: only-light
 :alt: Log-scale densities against depth through gate, oxide and body; the body is shaded, with a high hole line and a low electron line.
 
-Densities through the layers of the {term}`nfet_05v0`, with the values this repo fits to the
-{term}`SPICE` model: the gate on top, the {term}`gate oxide` and the shaded body below. {{ x_fig_silicon_doping_scale }}
+Densities through the layers of the {term}`nfet_05v0`: the gate on top, the {term}`gate oxide`
+and the shaded body below. The body doping and the oxide thickness are fitted to the
+{term}`SPICE` model. The gate doping is the {term}`model card`'s value, and the layer depths
+are project choices. {{ x_fig_silicon_doping_scale }}
 ```
 
 ```{figure} /_generated/explained/silicon-doping-dark.svg
 :figclass: only-dark
 :alt: Log-scale densities against depth through gate, oxide and body; the body is shaded, with a high hole line and a low electron line.
 
-Densities through the layers of the {term}`nfet_05v0`, with the values this repo fits to the
-{term}`SPICE` model: the gate on top, the {term}`gate oxide` and the shaded body below. {{ x_fig_silicon_doping_scale }}
+Densities through the layers of the {term}`nfet_05v0`: the gate on top, the {term}`gate oxide`
+and the shaded body below. The body doping and the oxide thickness are fitted to the
+{term}`SPICE` model. The gate doping is the {term}`model card`'s value, and the layer depths
+are project choices. {{ x_fig_silicon_doping_scale }}
 ```
 
 ## Atoms and bonds

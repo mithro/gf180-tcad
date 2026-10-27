@@ -11,16 +11,20 @@ does as the gate voltage changes.
 :figclass: only-light
 :alt: Three stacked layers: a shaded gate on top, a thin shaded oxide below it and a tall muted body at the bottom, each labelled with its material, thickness and doping.
 
-The layers of the {term}`nfet_05v0`, with the values this repo fits to the {term}`SPICE` model:
-the gate and the {term}`gate oxide` shaded, the body muted. {{ x_fig_oxide_stack_scale }}
+The layers of the {term}`nfet_05v0`: the gate and the {term}`gate oxide` shaded, the body
+muted. The oxide thickness and the body doping are fitted to the {term}`SPICE` model. The gate
+doping is the {term}`model card`'s value, and the gate and body depths are project choices.
+{{ x_fig_oxide_stack_scale }}
 ```
 
 ```{figure} /_generated/explained/oxide-stack-dark.svg
 :figclass: only-dark
 :alt: Three stacked layers: a shaded gate on top, a thin shaded oxide below it and a tall muted body at the bottom, each labelled with its material, thickness and doping.
 
-The layers of the {term}`nfet_05v0`, with the values this repo fits to the {term}`SPICE` model:
-the gate and the {term}`gate oxide` shaded, the body muted. {{ x_fig_oxide_stack_scale }}
+The layers of the {term}`nfet_05v0`: the gate and the {term}`gate oxide` shaded, the body
+muted. The oxide thickness and the body doping are fitted to the {term}`SPICE` model. The gate
+doping is the {term}`model card`'s value, and the gate and body depths are project choices.
+{{ x_fig_oxide_stack_scale }}
 ```
 
 (explained-oxide-capacitor)=
