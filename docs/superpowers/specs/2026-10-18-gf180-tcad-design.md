@@ -499,10 +499,15 @@ Added 2026-10-27 at the user's request (§16). Work that is not documented and e
 not count as done: if it cannot be explained in plain English, it is not understood yet.
 
 **Source of the rules.** Two of the user's skills are the rule book for every docs page:
-- `writing-sourced-docs` (skill `writing-sourced-documentation`, version 1.0.0, from
-  `github.com/mithro/dot-claude`, Apache-2.0): evidence, limits, presentation passes, review;
-- `docs-writing` (skill `writing-docs`, version 1.0.0, the user's local marketplace
-  `mithro-local`): page types, the copy rules and the review by use.
+- `writing-sourced-docs` (skill `writing-sourced-documentation`, version 1.0.0): evidence,
+  limits, presentation passes, review. It lives in the user's `mithro/dot-claude` repository
+  (Apache-2.0); it was unpublished when this section was written (local commit `30b9fbac`), and
+  can be obtained from that repository once pushed;
+- `docs-writing` (skill `writing-docs`, version 1.0.0): page types, the copy rules and the review
+  by use. It is public on the `docs-writing-skill` branch of `mithro/dot-claude` (commit
+  `e0dde9e9`, Apache-2.0).
+
+Both are installed for this project from the user's local marketplace `mithro-local`.
 
 Their `SKILL.md` files and `references/` are normative; this section records how they apply
 here and what enforces them. Where this section and a skill differ, the skill wins and this
@@ -512,30 +517,27 @@ section is corrected. Where the two skills conflict, the house decisions below s
 landing page; a page that would be two types becomes two pages that link each other. Status
 pages (`docs/index.md`, the limitations index) are reference or landing pages.
 
-**Evidence.** Every asserting sentence is one of the skill's five kinds of statement, worded
-with its fixed hedge:
-- *public fact* ("the PDK documentation gives …", the source's words in quotation marks),
-  cited directly after the claim;
-- *typical value* ("typical", "industry-typical"), with a textbook, paper or standard citation,
-  never presented as this PDK's own number;
-- *inference* ("we infer … because …"), with the reasoning on the page and its evidence cited;
-- *reading* ("our reading of …", "(our arithmetic)"), with the source read cited;
-- *not public* ("not public", "not stated", "—" in a table), with an Open-questions bullet
-  saying what evidence would settle it.
-
-A number always carries a citation, or a "typical" label with its own citation. A number
-computed by this repo cites the committed result file it comes from. Quotations are verbatim.
+**Evidence.** Prose states only what a source backs, and each fact carries its source in the
+sentence: the PDK documentation, a paper or standard, the model card, or the committed result
+file this repo computed it in. A value from the literature is given as that source's value. A
+quotation is the source's words, verbatim, in quotation marks. A fact without a source is left
+out and filed as an issue saying what would settle it.
 
 *House decision (citations).* writing-sourced-docs asks for Markdown footnotes; docs-writing
 asks for one descriptive inline link in the sentence that needs it and no footnotes or
 `Sources:` lines. This repo keeps its existing form: an inline descriptive link, or a MyST role
 (`{repo}`, `{ref}`, `{term}`, `{py:…}`, `{test}`) that the build checks. No footnotes.
 
-*House decision (unknowns).* writing-sourced-docs words an unknown as "not public" with an
-Open-questions bullet; docs-writing keeps "not yet", "unverified" and promises off reader
-pages. Here a reader page may say "not public" or "not stated" for a fact no public source
-gives; work that is planned or unfinished goes to an issue and to one roadmap page tied to
-issues, not onto the page.
+*Owner decision (unknowns and hedges, 14:40, §16).* This overrides the five hedged kinds of
+statement of writing-sourced-docs. An unsourced statement is removed from the page and an issue
+is filed saying what would settle it. A reader page (everything under `docs/` except
+`docs/superpowers/` and the API stubs, and `README.md`) carries none of these words: not yet,
+yet, unverified, not public, not stated, not published, presumably, probably, probable,
+plausible, plausibly, likely, roughly, approximately, and "about" before a number. A cause is
+stated with its evidence ("cause: X, shown by Y"); a value is given as recorded, or as a bound
+("under 1 min", "≤ 1.52 %"). Planned or unfinished work goes to an issue and to one roadmap
+page tied to issues, not onto the page. In a table, a value no source gives is "none" or "not
+applicable", never a guess.
 
 **Present state only.** A page says what is true now and what the reader needs to know now.
 What used to be true, what was changed and when, and how a result came about belong in the
@@ -563,18 +565,19 @@ them uses plain words.
 | Callouts per page | 2 |
 | Table cell | 25 words, one value |
 | Columns of a table with prose | 3 |
+| Columns of a table of numbers, code or cells of at most 3 words | 5 |
 | Glossary entry | 80 words |
 | Page width | no sideways scroll at 400 px |
 
 The sentence cap is docs-writing's 25 words, stricter than writing-sourced-docs' 45. A
 callout never carries a step or a prerequisite. Tables hold data: one value per cell, units in
 the header, numbers in columns of their own; no cell joins two numbers and no cell is blank
-("none" or "not applicable"; "—" only for a value no source gives). A table that mixes kinds is
+("none" or "not applicable"). A table that mixes kinds is
 split.
 
 **Presentation passes change no content.** A readability or formatting pass follows the
-skill's Never list: no fact, number, unit, significant figure, quotation, hedge or citation
-changes, and no hedge moves away from its claim. `measure_docs.py --preserve BEFORE AFTER`
+skill's Never list: no fact, number, unit, significant figure, quotation or citation
+changes, and no citation moves away from its claim. `measure_docs.py --preserve BEFORE AFTER`
 proves it for each restructured page. Content fixes are separate commits, labelled as such.
 
 **Review.** Every docs PR is reviewed by an agent that did not write it, by both skills' review
@@ -584,11 +587,10 @@ fact diff, the rendered page read at desktop and 400 px width, and findings retu
 `file:line — severity — what is wrong — what the source says`.
 
 **What enforces it.** The docs style pass that follows this amendment adds:
-- `tools/measure_docs.py`, writing-sourced-docs' measurement script vendored with an origin
-  header (Apache-2.0 allows it), and a test that runs it over `docs/` and `README.md`;
-- a repo test implementing docs-writing's `docs_lint.py` checks (banned words, sentence, list
-  and link limits), since that script has no stated licence and is not vendored; both tests
-  hold the current counts as a ceiling that may only fall, until the pages meet the caps;
+- `tools/measure_docs.py` and `tools/docs_lint.py`, the two skills' scripts, vendored unchanged
+  with origin headers (both Apache-2.0), and a test that runs them over `docs/` and `README.md`,
+  holding the current counts of findings as a ceiling that may only fall until the pages meet
+  the caps;
 - `tests/test_doc_style.py`: `test_table_cells` (Markdown sources) and
   `test_generated_table_cells` (generated pages) for the one-value-per-cell and 25-word rules,
   with an explicit per-table opt-out `<!-- table-ok: reason -->`;
@@ -850,3 +852,7 @@ that the intent survives later rewording of the sections it changed.
 
   followed by pasted install instructions for `docs-writing@mithro-personal`. The paste gave the
   command-line installation steps, not rules; the rules are those of the installed skill.
+- **2026-10-27 14:40 ACDT: no "not public", no hedges.** §10.3's house decision that allowed
+  "not public" on a reader page is replaced: reader pages carry neither that wording nor hedges,
+  and a fact without a source is left out and filed as an issue. The user's words:
+  > "Both not public and hedges are banned."
