@@ -41,8 +41,8 @@ doping. {py:func}`gf180tcad.tcad.moscap2d.simulate` meshes the cross-section wit
 ## The C/Cox > 1 artefact
 
 **The symptom.** A 2D MOS capacitor meshed with the {{ meshwell }} defaults gives C/{term}`Cox` above 1
-in accumulation. An early {term}`Phase 2` prototype gave 1.0039 at −5 V with a 15.2 nm oxide, and
-0.9909 with the same structure at 16 nm (see the
+in accumulation. An early {term}`Phase 2` prototype gave 1.0039 at −5 V with a 15.2 nm oxide.
+With the same structure at 16 nm it gave 0.9909 (see the
 {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
 In 1D, C/Cox > 1 is impossible and does not occur ({ref}`mesh-convergence`). The diagnosis below
 uses the simplest 2D structure that must equal 1D: the nfet stack extruded over 1 µm, with a gate
@@ -52,27 +52,35 @@ over the whole domain, no source or drain and zero-flux sides
 the 1D reference is the converged 1D stack, C/Cox = 0.98099. Interfaces at 0.5 nm, grading 1.2.
 Each mesh change below adds to the ones above it; the last row is the mesh in use.
 
-| Mesh | Oxide (nm) | C/Cox | Worst 2D/1D − 1 (%) |
-|---|---|---|---|
-| {{ meshwell }} defaults, oxide spacing 2 nm | 15.2 | **1.00126** | +2.07 |
-| {{ meshwell }} defaults, oxide spacing 2 nm | 16 | 0.98765 | +0.66 |
-| distance-field sampling cap lifted | 15.2 | 0.99989 | +1.93 |
-| distance-field sampling cap lifted | 16 | 0.98623 | +0.55 |
-| vertex grid 1e-6 µm (the fix) | 15.2 | 0.98666 | +0.58 |
-| vertex grid 1e-6 µm (the fix) | 16 | 0.98623 | +0.55 |
+Oxide 15.2 nm:
+
+| Mesh | C/Cox | Worst 2D/1D − 1 (%) |
+|---|---|---|
+| {{ meshwell }} defaults, oxide spacing 2 nm | **1.00126** | +2.07 |
+| distance-field sampling cap lifted | 0.99989 | +1.93 |
+| vertex grid 1e-6 µm (the fix) | 0.98666 | +0.58 |
+
+Oxide 16 nm:
+
+| Mesh | C/Cox | Worst 2D/1D − 1 (%) |
+|---|---|---|
+| {{ meshwell }} defaults, oxide spacing 2 nm | 0.98765 | +0.66 |
+| distance-field sampling cap lifted | 0.98623 | +0.55 |
+| vertex grid 1e-6 µm (the fix) | 0.98623 | +0.55 |
 
 The 16 nm oxide is unchanged by the vertex-grid fix because it lies on the 1 nm grid.
 
 **The cause: meshwell rounds every vertex to 1 nm.** {{ meshwell }}'s `PolySurface` snaps each
 vertex to its `point_tolerance`, which defaults to 1e-3 µm, and the plugin's cross-section path
 leaves it at the default unless it is passed in. At the default, a 15.2 nm oxide is meshed
-**15.0 nm** thick (its nodes span y = 0 to 0.015 µm): {term}`Cox` 1.3 % too large, which turns
-the 1D C/Cox of 0.981 into 1.0013 (and, in the prototype, into 1.0039). A 16 nm oxide lies on
-the 1 nm grid, so it is meshed exactly, which is why the two thicknesses disagree by about 1.3 %. The fix passes a `point_tolerance` through
+**15.0 nm** thick (its nodes span y = 0 to 0.015 µm). That makes {term}`Cox` 1.3 % too large.
+It turns the 1D C/Cox of 0.981 into 1.0013 (and, in the prototype, into 1.0039). A 16 nm
+oxide lies on the 1 nm grid, so it is meshed exactly. That is why the two thicknesses disagree
+by about 1.3 %. The fix passes a `point_tolerance` through
 the plugin's 2D path ({{ gplugins_fork }} [PR #8](https://github.com/mithro/gplugins/pull/8)); the 2D MOS capacitor
 uses 1e-6 µm ({py:data}`gf180tcad.tcad.stack.POINT_TOLERANCE_UM`), so a 15.2 nm oxide is
 meshed 15.2 nm thick, and any calibrated thickness within 1e-4 relative. Every 2D run checks
-the meshed geometry against the stack, the oxide, the poly, the body and every electrode, and
+the meshed geometry against the stack: the oxide, the poly, the body and every electrode. It
 raises {py:class}`~gf180tcad.tcad.moscap2d.GeometryError` if it differs
 ({py:func}`~gf180tcad.tcad.moscap2d.check_geometry`). The source/drain profile is an analytic
 function of the node position, and the lateral positions come from the layout (on its own 1 nm
@@ -152,16 +160,18 @@ so with the grading held fixed, beyond a few nm (the depletion region) every lev
 same size. Only the interfaces are refined. The 2D/1D agreement then converges on the
 plateaus but not at the C–V minimum, and at the finest level it gets worse. Here is the
 uniform nfet stack with the grading held fixed, 2D/1D − 1 by level (these results are not
-committed):
+committed). Levels 0 to 3 have 101k, 154k, 239k and 381k nodes. In the gate-bias column,
+−5 V is accumulation, +0.5 V the C–V minimum, +1 V the onset of inversion and +5 V inversion.
+The last row is the worst of 21 biases.
 
-| Gate bias | Level 0 (101k nodes) | Level 1 (154k) | Level 2 (239k) | Level 3 (381k) |
+| Gate bias | Level 0 | Level 1 | Level 2 | Level 3 |
 |---|---|---|---|---|
-| −5 V (accumulation) | +0.38 % | +0.25 % | +0.18 % | +0.09 % |
+| −5 V | +0.38 % | +0.25 % | +0.18 % | +0.09 % |
 | 0 V | +0.52 % | +0.45 % | +0.40 % | +0.46 % |
-| +0.5 V (C–V minimum) | +0.55 % | +0.44 % | +0.40 % | +0.48 % |
-| +1 V (onset of inversion) | −0.05 % | −0.22 % | −0.21 % | −0.41 % |
-| +5 V (inversion) | +0.25 % | +0.18 % | +0.15 % | +0.08 % |
-| worst of 21 biases | 0.553 % | 0.463 % | 0.398 % | 0.483 % |
+| +0.5 V | +0.55 % | +0.44 % | +0.40 % | +0.48 % |
+| +1 V | −0.05 % | −0.22 % | −0.21 % | −0.41 % |
+| +5 V | +0.25 % | +0.18 % | +0.15 % | +0.08 % |
+| worst | 0.553 % | 0.463 % | 0.398 % | 0.483 % |
 
 The pfet's worst values are 0.546, 0.518, 0.446 and 0.734 %. A uniform refinement scales the
 size at every point, size_r(d) = r·size(d), so the slope scales as well:
@@ -227,10 +237,10 @@ of the Phase 2 plan).
   {py:data}`~gf180tcad.tcad.moscap2d.AC_INFEASIBLE`, `ac_points` is 0). This is an open
   correctness problem, tracked in [issue #59](https://github.com/mithro/gf180-tcad/issues/59).
 - **Resumed after out-of-memory restarts.** The committed L = 2 µm QS sweeps run under a memory
-  cap; the service manager restarts a sweep after it is killed, and each restart resumes from the
-  last saved point ({py:func}`~gf180tcad.tcad.moscap2d.resume_count`; `resumed` in the job files:
-  4 restarts for each device, after points 57, 97, 136 and 173 for the nfet and 34, 73, 113 and
-  162 for the pfet). The hand-off between points is the saved state, so a resumed sweep agrees
+  cap. The service manager restarts a sweep after it is killed, and each restart resumes from the
+  last saved point ({py:func}`~gf180tcad.tcad.moscap2d.resume_count`). The job files record
+  4 restarts for each device in `resumed`. The nfet restarts after points 57, 97, 136 and 173,
+  the pfet after points 34, 73, 113 and 162. The hand-off between points is the saved state, so a resumed sweep agrees
   with an uninterrupted one within 1e-12 (the solver tolerance) but is not byte-identical to it.
   The restart counts in these job files are taken from the progress logs.
 - **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep grows by about 180 MB per
@@ -248,14 +258,14 @@ of the Phase 2 plan).
 committed 2D {term}`job` files cannot come out byte for byte:
 
 - **Job files without `ac` and `resumed`.** The `cv.meta.json` of the Lmin cells (`w10p0_l0p60`,
-  `w10p0_l0p50`) has no `ac` and no `resumed` entry; the current job writes both
+  `w10p0_l0p50`) has no `ac` and no `resumed` entry. The current job writes both
   (`"ac": "computed"`, `"resumed": {}`).
 - **Resumed sweeps.** The L = 2 µm cells are resumed sweeps, four restarts each
   ({ref}`moscap2d-l2`): `resumed` records
-  `{"qs": 4}`, and a resumed sweep is not byte-identical to an uninterrupted one.
+  `{"qs": 4}`. A resumed sweep is not byte-identical to an uninterrupted one.
 - **Updated without a rerun.** The {term}`provenance` of the 2D mesh convergence and of
-  the 2D jobs records the current generator hash, one hash per results folder
-  ({ref}`tcad-provenance`, [issue #34](https://github.com/mithro/gf180-tcad/issues/34)), but the
+  the 2D jobs records the current generator hash. There is one hash per results folder
+  ({ref}`tcad-provenance`, [issue #34](https://github.com/mithro/gf180-tcad/issues/34)). The
   files were not regenerated with that code. So nothing shows that today's code gives their bytes.
 
 So a full `make reproduce` is expected to report at least the four 2D `cv.meta.json` files in
@@ -312,9 +322,13 @@ committed `cv.meta.json` stays the truth.
 The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed
 cells with `--params calibrated`, one 16 GiB {term}`job` at a time. Done so far:
 
-| Cell | Nodes | QS sweep (min) | AC sweep (min) | Job total (min) | Peak memory (GiB) | Attempts |
-|---|---|---|---|---|---|---|
-| nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 | 7.8 | 1 |
+| Cell | Nodes | Peak memory (GiB) | Attempts |
+|---|---|---|---|
+| nfet `w10p0_l0p60` | 225964 | 7.8 | 1 |
+
+| Cell | QS sweep (min) | AC sweep (min) | Job total (min) |
+|---|---|---|---|
+| nfet `w10p0_l0p60` | 102 | 86 | 189 |
 
 The sweep times are the last `elapsed` of each sweep's progress log (QS 201 points, AC 21
 points, each including its own meshing); the job total is the wall time of the host command.
