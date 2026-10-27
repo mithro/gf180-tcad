@@ -561,6 +561,7 @@ them uses plain words.
 | Callouts per page | 2 |
 | Table cell | 25 words, one value |
 | Columns of a table with prose | 3 |
+| Columns of a table of numbers, code or cells of at most 3 words | 5 |
 | Glossary entry | 80 words |
 | Page width | no sideways scroll at 400 px |
 
