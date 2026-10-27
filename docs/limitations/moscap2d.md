@@ -288,6 +288,22 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
 committed `cv.meta.json` stays the truth.
 
+(moscap2d-calibrated)=
+
+## The calibrated 2D cells
+
+The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed cells
+with `--params calibrated`, one 16 GiB {term}`job` at a time. Done so far:
+
+| Cell | Nodes | Wall time | Peak memory (cgroup) | Notes |
+|---|---|---|---|---|
+| nfet `w10p0_l0p60` | 225 964 | 3 h 09 min (QS 1 h 42 min, AC 21 points) | 7.8 GiB | one attempt; no round-off acceptance, no extended fallback; meshed t_ox 16.05 nm |
+
+Its `mesh.msh` is not committed ({ref}`moscap2d-meshes`); it is in the output cache
+({doc}`/reproduce/output-cache`) under its `mesh_sha256`. The `--resume` scratch directory of
+these jobs is outside the checkout, because the sandbox refuses one inside it
+([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
+
 (moscap2d-l10)=
 
 ## Not run: the 2D cell at L = 10 µm
@@ -322,4 +338,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   agreement criterion ({ref}`mesh-convergence-2d`).
 - **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
   ({ref}`moscap2d-l2`).
+- **Calibrated 2D results so far only at the nfet Lmin** ({ref}`moscap2d-calibrated`).
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).

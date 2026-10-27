@@ -12,8 +12,10 @@ the documentation separates what was calibrated from what was predicted.
 
 ```{admonition} Status
 :class: warning
-{term}`Phases 0 and 1` (foundations and the SPICE reference dataset) are in progress.
-**No TCAD simulation has been run yet, and there are no results yet.** No
+{term}`Phases 0 and 1` (foundations and the SPICE reference dataset) are complete, and
+{term}`Phase 2` (the first TCAD work) is in progress: the 1D MOS capacitor is calibrated, and its
+2D validation is under way, with the first calibrated 2D cell committed
+({ref}`cv-agreement-validation`). No
 measured silicon data exists ({doc}`limitations/silicon-validation`). See
 {doc}`limitations/index`.
 ```

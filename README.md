@@ -53,7 +53,8 @@ three tunables, 3 of the 8-parameter budget. In 1D the nfet agrees with SPICE at
 fitted and held out. The pfet is published as a disagreement: the SPICE pfet's depletion edge
 moves by 0.57 V between L = 10 µm and the minimum length, which one length-independent 1D stack
 cannot follow. The calibrated 1D curves are in
-[`results/tcad/moscap1d`](results/tcad/moscap1d); the 2D validation is not run yet. Next are the
+[`results/tcad/moscap1d`](results/tcad/moscap1d); the 2D validation is under way: its first calibrated 2D cell (nfet, minimum length) is committed
+and disagrees with SPICE ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Next are the
 TCAD results and comparison pages
 ([Task 13a](docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-13a-tcad-results-and-docs-pages)).
 The current limitations, including the deviations from the design spec, are listed on the

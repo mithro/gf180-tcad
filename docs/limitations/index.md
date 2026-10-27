@@ -19,9 +19,14 @@ there.
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`). The 2D validation of the calibrated stack
-  is not run: no calibrated 2D results exist, since each 2D {term}`job` takes hours at 16 GiB, one at a
-  time, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
-  ({doc}`moscap2d`); [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
+  is under way: the first calibrated 2D cell, the nfet at Lmin, is {term}`Disagree` (plateaus 8.8 % and
+  15.6 % below SPICE, depletion crossing −240 mV; {ref}`cv-agreement-validation`), and the other
+  cells follow one 16 GiB {term}`job` at a time, hours each. The L = 10 µm cell does not solve in 2D
+  ({doc}`moscap2d`), and the validation file does not yet list the 2D result;
+  [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
+- **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
+  `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the sandbox refuses as a
+  read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
 - **TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
   names the current generator, not the one that made them (Task 12), and every TCAD tree was
   restamped once more to the per-tree {term}`generator_sha256` of [issue #34](https://github.com/mithro/gf180-tcad/issues/34), without a rerun.

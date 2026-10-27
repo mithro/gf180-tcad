@@ -71,7 +71,7 @@ Each step is a target of its own, which can also be run alone:
 | `tcad-meshconv` | `python -m gf180tcad.tcad meshconv --dim 1` for both devices, then `--dim 2 --jobs 1` (one 16 GiB {term}`job` at a time) | {repo}`results/tcad/meshconv` |
 | `tcad-start` | `python -m gf180tcad.tcad moscap --params start`: `--dim 1` for both devices, and `--dim 2` for each committed 2D cell; the L = 2 µm cells run `--method qs`, then `--method combine-qs` on the same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job resumes when the target runs again | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
-| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices (no 2D calibrated results are committed) | {repo}`results/tcad/moscap1d` |
+| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (so far the nfet at Lmin, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
 
 It exits non-zero if any job fails or if any file differs from, is missing from, or is not
@@ -286,6 +286,17 @@ container budget was taken by another task for hours. The two calibrated 1D jobs
 {repo}`results/tcad/moscap1d/provenance.json`, are rerun and compared byte for byte by the
 `crosscheck-tcad` workflow job ({ref}`cross-host-tcad`), which checks that restamp on every
 change to the TCAD code; the other trees have no such check.
+
+**Restamped from the old scheme on a parallel branch ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).** The first calibrated 2D job
+(nfet, `w10p0_l0p60`) was started before the per-tree hash was merged, so its host process
+wrote {repo}`results/tcad/moscap2d/provenance.json <results/tcad/moscap2d/provenance.json>` under
+the old scheme, with the shared hash
+`c1eab26a2b2785341091e0f1f6fde424a387fecb71b82174955f6f11c8f2c666` and no `generator`. After
+merging the per-tree hash, `tools/restamp-tcad-provenance results/tcad/moscap2d` rewrote it to
+`b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7` ({py:mod}`gf180tcad.tcad.__main__`).
+The job's data are what the code at the start of the job computed: the merge changed only
+provenance bookkeeping in the writer's closure, and the job's sandbox process had imported its
+modules before the merge. The `calibration` entry of the file is the writer's own.
 
 **Restamped without regeneration (Task 12).** Under the old scheme the hash covered both entry
 points, so a change to a module that a tree's writer never imports still changed that tree's
