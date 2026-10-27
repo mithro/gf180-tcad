@@ -1,13 +1,12 @@
-# Physical validation (future silicon)
+# Physical validation (silicon test structures)
 
-There is **no measured data yet**, and no single-device `05v0` structure exists
+There is **no measured data**, and no single-device `05v0` structure exists
 on {{ wafer_space }} {term}`runs 1 and 2 <wafer.space run>` (design lists:
 [run 1](https://github.com/wafer-space/ws-run1), [run 2](https://github.com/wafer-space/ws-run2)).
 Since the `05v0` and `06v0` models are the same {term}`BSIM4` {term}`cards <model card>`, the
-taped-out `06v0` devices are directly relevant. This page is the inventory. For each structure
-the repository will carry pre-computed {term}`TCAD` and {term}`SPICE` predictions at the exact
-drawn geometry, so measured data can be dropped in later. The narrow 1.6/0.7 geometry of the
-priority-1 devices is part of the {ref}`comparison space <comparison-space>`.
+taped-out `06v0` devices are directly relevant. This page is the inventory of those structures.
+The narrow 1.6/0.7 geometry of the priority-1 devices is part of the
+{ref}`comparison space <comparison-space>`.
 
 | Priority | Design | Run | Licence |
 |---|---|---|---|
