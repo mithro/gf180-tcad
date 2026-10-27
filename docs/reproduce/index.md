@@ -240,8 +240,9 @@ requires every results folder to name its writer and to carry that writer's curr
 
 **The generator registry.** It is a data file, {repo}`src/gf180tcad/generators.json`. It holds
 the module lists, each results folder's writer, the images and the calibration folder. At
-import, {py:mod}`gf180tcad.tcad` reads it once into the dicts named above. The file is
-not hashed: it decides what is hashed. A change to it adds or removes a hashed file, which
+import, {py:mod}`gf180tcad.tcad` reads it once into the dicts named above.
+
+The file is not hashed: it decides what is hashed. A change to it adds or removes a hashed file, which
 changes the hash, or renames a results folder, which changes the manifest. Its keys:
 
 | key | holds |
@@ -295,6 +296,7 @@ the writer from the folder's path under `results/` (the `trees` of the registry)
 (exit 2, file unchanged) if anything else in the file
 differs from what the writer would write now: the plugin commit, an image, the calibration
 applied, or a `generator` naming the other entry point. Then the folder has to be regenerated.
+
 Such an update claims that the data did not change; it does not show it. So every one is
 recorded below, with the hash the folder had before. The records below predate the design spec
 §9 rule that a representative job is rerun first.
@@ -303,6 +305,7 @@ recorded below, with the hash the folder had before. The records below predate t
 {repo}`src/gf180tcad/generators.json` changed two hashed modules. They are
 {py:mod}`gf180tcad.tcad` and {py:mod}`gf180tcad.calibrate.cv`, which gained the `simulate_2d`
 parameter. Nothing that computes a result changed.
+
 {repo}`tools/restamp-tcad-provenance` updated all five results folders. The folders
 {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` and {repo}`results/tcad/meshconv`
 went from `b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7` to
@@ -318,7 +321,7 @@ restamped commit, `make reproduce-quick` reran the two calibrated 1D jobs
 ({repo}`tests/crosscheck_tcad_subset.txt`) in the {term}`dev-HEAD TCAD image` on 2026-10-27.
 It printed `identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under
 tcad/ (sha256; partial subset; provenance moscap1d/provenance.json)`. The rerun's
-`provenance.json` carries the new hash, so it matches the restamped file. The 2D,
+`provenance.json` carries the updated hash, so it matches the restamped file. The 2D,
 mesh-convergence, calibration and validation folders were not rerun: their writers ran no
 changed code that computes a result.
 
