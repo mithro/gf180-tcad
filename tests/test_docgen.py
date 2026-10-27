@@ -50,19 +50,20 @@ _RENDER_EXPLAINED = textwrap.dedent(
     """
     import sys
     from gf180tcad.explain import figures
-    sys.stdout.buffer.write(figures.FIGURES["silicon-doping"](sys.argv[1]))
+    sys.stdout.buffer.write(figures.FIGURES[sys.argv[1]](sys.argv[2]))
     """
 )
 
 
+@pytest.mark.parametrize("figure", ["silicon-doping", "oxide-stack"])
 @pytest.mark.parametrize("palette", ["light", "dark"])
-def test_explained_svg_deterministic(palette):
+def test_explained_svg_deterministic(figure, palette):
     """An explainer figure, both palettes: two fresh processes give the same bytes."""
     runs = []
     for seed in ("1", "2"):
         env = {**os.environ, "PYTHONHASHSEED": seed}
         r = subprocess.run(
-            [sys.executable, "-c", _RENDER_EXPLAINED, palette],
+            [sys.executable, "-c", _RENDER_EXPLAINED, figure, palette],
             env=env, capture_output=True, check=True, timeout=300,
         )  # fmt: skip
         runs.append(r.stdout)

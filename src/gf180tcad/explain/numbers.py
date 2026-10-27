@@ -62,6 +62,8 @@ def _proc(device: str) -> str:
 
 
 _CM3 = "cm⁻³"
+_CAP = "fF/µm²"
+_RESULT = "results/tcad/calibration/nfet_05v0.result.json"
 _ENTRIES = (
     Number("n_i_tcad", "committed", _CM3, 3, _meta("nfet_05v0"), {"json": ["constants", "n_i_cm3"]}),
     Number("t_tcad", "committed", "K", 5, _meta("nfet_05v0"), {"json": ["constants", "t_k"]}),
@@ -74,6 +76,31 @@ _ENTRIES = (
         "n_minority_nfet", "idealised", _CM3, 3,
         formula="mass_action", inputs=("n_i_tcad", "n_ch_nfet_cal"),
     ),
+    Number("dv_fb_nfet_cal", "committed", "V", 3, "results/tcad/calibration/nfet_05v0.json", {"json": ["values", "dv_fb_v"]}),
+    # The gate oxide and the poly-silicon gate (oxide-and-poly.md).
+    Number("ngate_pfet", "committed", _CM3, 2, _proc("pfet_05v0"), {"toml": ["param", "ngate_cm3", "value"]}),
+    Number("toxe_nfet", "committed", "nm", 3, _proc("nfet_05v0"), {"toml": ["param", "toxe_nm", "value"]}),
+    Number("toxp_nfet", "committed", "nm", 3, _proc("nfet_05v0"), {"toml": ["param", "toxp_nm", "value"]}),
+    Number("epsrox_nfet", "committed", "", 2, _proc("nfet_05v0"), {"toml": ["param", "epsrox", "value"]}),
+    Number("delta_nfet", "committed", "nm", 2, _proc("nfet_05v0"), {"toml": ["centroid_allowance", "delta_nm"]}),
+    Number("t_ox_upper_nfet", "committed", "nm", 4, _RESULT, {"json": ["bounds", "t_ox_eff_nm", 1]}),
+    Number("t_ox_nfet_cal", "committed", "nm", 4, _meta("nfet_05v0"), {"json": ["stack", "t_ox_nm"]}),
+    Number("eps_ox_nfet_cal", "committed", "", 2, _meta("nfet_05v0"), {"json": ["stack", "eps_ox"]}),
+    Number("eps0_tcad", "committed", "F/cm", 5, _meta("nfet_05v0"), {"json": ["constants", "eps0_f_per_cm"]}),
+    Number("poly_nfet", "committed", "µm", 1, _meta("nfet_05v0"), {"json": ["stack", "poly_um"]}),
+    Number(
+        "cox_toxe_nfet", "idealised", _CAP, 3,
+        formula="oxide_capacitance", inputs=("epsrox_nfet", "eps0_tcad", "toxe_nfet"),
+    ),
+    Number(
+        "cox_nfet_cal", "idealised", _CAP, 3,
+        formula="oxide_capacitance", inputs=("eps_ox_nfet_cal", "eps0_tcad", "t_ox_nfet_cal"),
+    ),
+    Number("cox_check_nfet", "committed", _CAP, 3, _RESULT, {"json": ["cox_check", "c_ox_ff_per_um2"]}),
+    Number("cox_spec_min", "committed", _CAP, 2, _RESULT, {"json": ["cox_check", "spec", "min"]}),
+    Number("cox_spec_max", "committed", _CAP, 2, _RESULT, {"json": ["cox_check", "spec", "max"]}),
+    Number("c_acc_nfet_cal", "committed", _CAP, 3, _RESULT, {"json": ["cox_check", "c_per_area_acc_ff_per_um2"]}),
+    Number("c_inv_nfet_cal", "committed", _CAP, 3, _RESULT, {"json": ["cox_check", "c_per_area_inv_ff_per_um2"]}),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
 
@@ -110,7 +137,8 @@ _SUP = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 
 def format_value(v: float, digits: int, unit: str) -> str:
     """``v`` to ``digits`` significant digits with its unit: plain from 0.001 to 9999, else as
-    a mantissa times a power of ten; a typographic minus sign."""
+    a mantissa times a power of ten; a typographic minus sign; no space when ``unit`` is
+    empty (a pure number)."""
     if not math.isfinite(v):
         raise ValueError(f"{v!r} is not a finite number")
     sign = "−" if v < 0 else ""
@@ -120,7 +148,7 @@ def format_value(v: float, digits: int, unit: str) -> str:
         body = f"{abs(v):.{max(digits - 1 - e, 0)}f}"
     else:
         body = f"{mant} × 10{str(e).translate(_SUP)}"
-    return f"{sign}{body} {unit}"
+    return f"{sign}{body} {unit}" if unit else f"{sign}{body}"
 
 
 def text(name: str) -> str:

@@ -556,12 +556,12 @@ electron
 gate oxide
   The thin insulating layer of silicon dioxide between a transistor's gate and the silicon under
   it. The gate voltage acts on the silicon through it, as across the plates of a capacitor
-  ({ref}`Taur and Ning, the chapter on MOS capacitors <lit-taur>`). See {ref}`explained-dopants`.
+  ({ref}`Taur and Ning, the chapter on MOS capacitors <lit-taur>`). See {ref}`explained-oxide-layer`.
 
 poly-silicon
   Silicon made of many small crystals instead of one. Heavily doped, it is the gate of the
   {term}`GF180MCU` transistors; its doping is the {term}`NGATE` of the {term}`model card`
-  ({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). See {ref}`explained-dopants`.
+  ({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). See {ref}`explained-poly`.
 
 n-well
   The region of n-type silicon that forms the body of a p-channel transistor, here the

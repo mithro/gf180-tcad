@@ -203,6 +203,32 @@ These pages are grounded in the committed SPICE reference, which exists for ever
 - [ ] **Step 3:** the four pages, each with its highlighted view of the one model; lint, measure, build, screenshots as in E0.
 - [ ] **Step 4:** PR (one PR, or two if the review is long: bands and junction, then parts and oxide); review by use, audit; merge.
 
+E1 ships in two PRs. E1a (branch `task/p5-e1-explainer-oxide`) is `oxide-and-poly.md` with
+the PR #95 re-review nits; E1b is the other three pages, with Steps 1–4 above for them.
+
+- [x] **E1a Step 1:** tests first (red commits `1df9d80`, `31a16ca`), then the registry entries
+  and `figures.stack_1d`, committed per unit.
+- [x] **E1a Step 2:** `docs/explained/oxide-and-poly.md`, opening with the stack view (gate and
+  oxide highlighted, body muted); lint, measure, build, screenshots as in E0.
+- [ ] **E1a Step 3:** PR #101; review by use, audit; merge.
+
+**As built (E1a).**
+
+- C_ox is `gf180tcad.derive.oxide_capacitance`, registered as two `idealised` entries (TOXE and
+  the calibrated thickness). A test holds the calibrated one equal to the calibration result's
+  `cox_check.c_ox_ff_per_um2`, which the page also prints, with the PDK range from the same file.
+- `explain.idealised` is unchanged: the oxide page needs no formula of its own.
+- `figures.stack_1d(model, highlight, palette)` draws the stack as labelled layers with no
+  distance axis, because the oxide is stretched (×5, `STYLE["scales"]`); each layer prints its
+  true thickness. `figures._edges` became the public `stack_extents`, which the test checks
+  against the model's thicknesses and scales.
+- No glossary entry is added. TOXE, TOXP and the charge centroid get a plain clause on the page:
+  as glossary terms the link checker would demand a link on the six other pages that name them.
+  The gate oxide and poly-silicon entries now point to the new page.
+- `format_value` prints a pure number (EPSROX) with no trailing space.
+- The silicon page's nits: five parts; the gate-voltage shift printed as `x_dv_fb_nfet_cal`; the
+  captions say the values are fitted to the SPICE model.
+
 **Exit criteria.** The four pages are on `main` and in the landing page and toctree; every number on them is a substitution (`test_no_bare_numbers` green); each opens with its highlighted view of the one model, in both themes; the eight new glossary terms are defined and linked on first use; the docs tools report nothing for `docs/explained/**`; the photo search result (used, or filed as a wanted photo with its issue number) is in the PR body; the review by use has no open stop.
 
 **Provenance impact.** None (as E0). **Calendar:** 2–3 days.
