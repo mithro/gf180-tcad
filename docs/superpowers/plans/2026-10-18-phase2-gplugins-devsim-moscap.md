@@ -990,10 +990,19 @@ If that proves impossible without editing a generator module, the PR also regene
 
 **Files (fork):** split `gplugins/devsim/get_solver.py` into `device_description.py` (mesh, regions, contacts, doping, bias plan) and `backends/devsim.py`.
 
-> **Status (2026-10-27).** Fork side done: [mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13), merge commit `0715c81`. It adds the backend-neutral `device_description.py` (contacts, region classes, `Layer1D`/`Mesh1D`, `Stack1D`, `CrossSection2D`, `SolverSettings`, `CVSweep`, the `Backend`/`Device` protocols) and `results.py` (`CVResult`, `PointInfo`, `RoundoffPoint`, the convergence errors); `get_solver.py` is now `backends/devsim.py` (adding `create_1d_device`, `create_2d_device`, `run_cv_sweep`, `DDComponent.from_description`; `gplugins.devsim.get_solver` is a `sys.modules` alias); the package `__init__` is lazy; `backends/charon/` is a stub. The old modules re-export the moved names. Every pre-existing fork test passes unchanged except `test_init.py`, which was adapted: with the lazy package the Python < 3.13 hint comes on first access of a DEVSIM name, not on `import gplugins.devsim`. `CrossSection2D` mirrors the `DDComponent` constructor only and does not yet express the 2D MOSCAP job (Charon plan Task E). gf180-tcad PR #51 does bump 3 of 3: pin `0715c81`, the five `results/tcad/*/provenance.json` restamped (`gplugins_commit`, `generator_sha256`; recorded on `docs/reproduce/index.md`), and the `make reproduce-quick` + `make manifest` gate at that pin. Of the 2D code path only `DDComponent`'s file moved; `create_2Duz_simulation` and `sweep_cv`'s solve code are untouched, so the 2D trees are not rerun.
+> **Status (2026-10-27).** Done, merged as gf180-tcad PR #51 on 2026-10-27. The fork side is [mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13), merge commit `0715c81`.
+>
+> - `device_description.py` holds the neutral description: contacts, region classes, `Layer1D`/`Mesh1D`, `Stack1D`, `CrossSection2D`, `SolverSettings`, `CVSweep`, and the `Backend`/`Device` protocols.
+> - `results.py` holds `CVResult`, `PointInfo`, `RoundoffPoint` and the convergence errors.
+> - `get_solver.py` became `backends/devsim.py`, with `create_1d_device`, `create_2d_device`, `run_cv_sweep` and `DDComponent.from_description`. `gplugins.devsim.get_solver` is an alias of it.
+> - The package `__init__` is lazy. `backends/charon/` is a stub.
+> - The old modules re-export the moved names. Every pre-existing fork test passes unchanged except `test_init.py`. It was adapted: the Python < 3.13 hint now comes on first access of a DEVSIM name.
+> - `CrossSection2D` mirrors the `DDComponent` constructor only. Extending it to the 2D MOS capacitor job is Charon plan Task E.
+> - PR #51 is bump 3 of 3: pin `0715c81`, the five `results/tcad/*/provenance.json` restamped (recorded on `docs/reproduce/index.md`), and the `make reproduce-quick` plus `make manifest` gate at that pin.
+> - The 2D trees were not rerun. Of their code path only `DDComponent`'s file moved.
 
 - [x] **Step 1:** All existing fork tests pass unchanged through the new seam (except `test_init.py`, adapted to the lazy package), verified with the fork-worktree pattern (TCAD image, 156 passed at the #13 head `03ede69`). No Charon code yet beyond the `backends/charon/` stub.
-- [ ] **Step 2:** Commit, open the PR, get it reviewed and merge. Then do **submodule bump 3 of 3**: the gf180-tcad TCAD results must be byte-identical before and after the bump. `make reproduce-quick` plus `make manifest` give no diff.
+- [x] **Step 2:** Commit, open the PR, get it reviewed and merge. Then do **submodule bump 3 of 3**: the gf180-tcad TCAD results must be byte-identical before and after the bump. `make reproduce-quick` plus `make manifest` give no diff.
 
 ### Task 16: corner bounds and spread of the 1D MOS capacitor inputs (spec §5.3, issue #57)
 

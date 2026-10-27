@@ -369,19 +369,33 @@ That merge moves and adds hashed `gplugins/devsim` files without changing what t
 Every results folder records `gplugins_commit` `0715c81…` instead of `1c071d0…`.
 {repo}`tools/restamp-tcad-provenance` then set each `generator_sha256`.
 
-| results folders | writer | before | after |
+| results folder | writer | before | after |
 |---|---|---|---|
-| `moscap1d`, `moscap2d`, `meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `b30e8944…` | `3f1ac6bd…` |
-| `calibration`, `validation` | {py:mod}`gf180tcad.calibrate.__main__` | `5265e5fe…` | `51a0a009…` |
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `b30e8944…` | `3f1ac6bd…` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `b30e8944…` | `3f1ac6bd…` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `b30e8944…` | `3f1ac6bd…` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `5265e5fe…` | `51a0a009…` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `5265e5fe…` | `51a0a009…` |
 
 The representative rerun came first, as design spec §9 requires.
 On 2026-10-27, at this pin, `make reproduce-quick` printed
 `identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under tcad/`.
-`make manifest` then left {repo}`results/` unchanged; PR #51 links the log.
-This covers the two calibrated 1D jobs and their `provenance.json`.
+`make manifest` then left {repo}`results/` unchanged; [a comment on PR #51](https://github.com/mithro/gf180-tcad/pull/51#issuecomment-6439110102) quotes the output.
+This reran the two calibrated 1D jobs and compared their files and
+{repo}`results/tcad/moscap1d/provenance.json` byte for byte.
 
-The 2D folders were not rerun. Only the file holding `DDComponent` moved, verbatim.
+**Restamped without a rerun.** These were not rerun:
+
+- the `start` jobs of {repo}`results/tcad/moscap1d`;
+- the 1D and 2D mesh convergence in {repo}`results/tcad/meshconv`;
+- every job in {repo}`results/tcad/moscap2d`;
+- {repo}`results/tcad/calibration` and {repo}`results/tcad/validation`.
+
+The 1D jobs among them build the device through the same code that the gate reran.
+On the 2D path, only the file holding `DDComponent` moved, verbatim.
 `create_2Duz_simulation` and the solve code of `sweep_cv` did not change.
+The result types moved unchanged to `results.py`.
+The package import became lazy, which changes when modules load, not what they compute.
 
 (cross-host-determinism)=
 
