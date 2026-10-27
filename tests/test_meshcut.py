@@ -113,14 +113,20 @@ def test_rule_bounds():
     assert x_um == pytest.approx((0.7, 1.9))
     assert y_um == (-0.25, 0.2)
     with pytest.raises(ValueError):
-        window.rule_bounds(gate_x_um=(1.6, 1.0), poly_top_um=0.2, surface_um=0.0, kx=0.5, depth_um=0.25)
+        window.rule_bounds(
+            gate_x_um=(1.6, 1.0), poly_top_um=0.2, surface_um=0.0, kx=0.5, depth_um=0.25
+        )
     with pytest.raises(ValueError):
-        window.rule_bounds(gate_x_um=(1.0, 1.6), poly_top_um=0.2, surface_um=0.0, kx=-1.0, depth_um=0.25)
+        window.rule_bounds(
+            gate_x_um=(1.0, 1.6), poly_top_um=0.2, surface_um=0.0, kx=-1.0, depth_um=0.25
+        )
 
 
 def _brute_force_kept(mesh, x_um, y_um):
     c = mesh.nodes[mesh.triangles].mean(axis=1) * meshcut.UM_PER_MSH_UNIT
-    inside = (c[:, 0] >= x_um[0]) & (c[:, 0] <= x_um[1]) & (c[:, 1] >= y_um[0]) & (c[:, 1] <= y_um[1])
+    inside = (
+        (c[:, 0] >= x_um[0]) & (c[:, 0] <= x_um[1]) & (c[:, 1] >= y_um[0]) & (c[:, 1] <= y_um[1])
+    )
     return np.flatnonzero(inside)
 
 
