@@ -76,6 +76,7 @@ _ENTRIES = (
         "n_minority_nfet", "idealised", _CM3, 3,
         formula="mass_action", inputs=("n_i_tcad", "n_ch_nfet_cal"),
     ),
+    Number("dv_fb_nfet_cal", "committed", "V", 3, "results/tcad/calibration/nfet_05v0.json", {"json": ["values", "dv_fb_v"]}),
     # The gate oxide and the poly-silicon gate (oxide-and-poly.md).
     Number("ngate_pfet", "committed", _CM3, 2, _proc("pfet_05v0"), {"toml": ["param", "ngate_cm3", "value"]}),
     Number("toxe_nfet", "committed", "nm", 3, _proc("nfet_05v0"), {"toml": ["param", "toxe_nm", "value"]}),

@@ -11,7 +11,8 @@ voltage changes.
 :figclass: only-light
 :alt: Three stacked layers: a shaded gate on top, a thin shaded oxide below it and a tall muted body at the bottom, each labelled with its material, thickness and doping.
 
-The layers of the {term}`nfet_05v0`, with this repo's calibrated values: the gate and the
+The layers of the {term}`nfet_05v0`, with the values this repo fits to the {term}`SPICE` model:
+the gate and the
 {term}`gate oxide` shaded, the body muted. {{ x_fig_oxide_stack_scale }}
 ```
 
@@ -19,7 +20,8 @@ The layers of the {term}`nfet_05v0`, with this repo's calibrated values: the gat
 :figclass: only-dark
 :alt: Three stacked layers: a shaded gate on top, a thin shaded oxide below it and a tall muted body at the bottom, each labelled with its material, thickness and doping.
 
-The layers of the {term}`nfet_05v0`, with this repo's calibrated values: the gate and the
+The layers of the {term}`nfet_05v0`, with the values this repo fits to the {term}`SPICE` model:
+the gate and the
 {term}`gate oxide` shaded, the body muted. {{ x_fig_oxide_stack_scale }}
 ```
 
