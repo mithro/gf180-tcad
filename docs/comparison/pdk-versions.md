@@ -50,8 +50,9 @@ uv run --locked python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698
 The results are in {repo}`results/spice-pdk-d658698`: the job results
 ({repo}`results/spice-pdk-d658698/ngspice/typical`, the same layout as {repo}`results/spice`),
 {repo}`results/spice-pdk-d658698/cards.json`, {repo}`results/spice-pdk-d658698/comparison.json`,
-the two unified diffs and {repo}`results/spice-pdk-d658698/provenance.json`. Two runs give
-byte-identical results folders. The folder is listed in {repo}`results/MANIFEST.sha256`. The
+the two unified diffs and {repo}`results/spice-pdk-d658698/provenance.json`. Two runs gave
+byte-identical results folders
+([commit bede2d2](https://github.com/mithro/gf180-tcad/commit/bede2d2672b0bea57adedf12d5cdfc0efda8b6c3)). The folder is listed in {repo}`results/MANIFEST.sha256`. The
 check of the SPICE results on another computer ({ref}`cross-host-determinism`) and
 {py:func}`gf180tcad.manifest.verify_subset` select only entries under `spice/`, so they do not
 include it.
@@ -159,28 +160,29 @@ TT value is the leading number.
 | {term}`XJ` | `1.5e-007` | [37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377) | `1.5e-007` | [37715](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37715) | `1.5e-7` | [38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291) | yes |
 
 The values the {repo}`design spec, §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>` quotes,
-for the parameters it quotes (a dash: none for that device; *set*: the spec says only that it is set):
+for the parameters it quotes (*none*: no value for that device; *set*: the spec says only that
+it is set; the unit is *not applicable* where no value is quoted):
 
 | Parameter | Spec §4, nfet | Spec §4, pfet | Unit |
 |---|---|---|---|
-| ALPHA0 | set | — | - |
-| BETA0 | set | — | - |
-| IGBMOD | 0 | — | - |
-| IGCMOD | 0 | — | - |
-| K1 | 0.9 | — | - |
-| LMAX | below | — | µm |
+| ALPHA0 | set | none | not applicable |
+| BETA0 | set | none | not applicable |
+| IGBMOD | 0 | none | 1 |
+| IGCMOD | 0 | none | 1 |
+| K1 | 0.9 | none | V^0.5 |
+| LMAX | below | none | µm |
 | LMIN | below | 0.5 | µm |
-| LPE0 | 163 | — | nm |
+| LPE0 | 163 | none | nm |
 | NDEP | 1.7e17 | 1.7e17 | cm⁻³ |
 | {term}`NGATE` | 1e20 | 3.6e19 | cm⁻³ |
-| {term}`NSD` | 1e20 | — | cm⁻³ |
-| RDSW | 2175 | — | Ω·µm |
-| TOXE | 15.2 | — | nm |
-| TOXP | 16 | — | nm |
+| {term}`NSD` | 1e20 | none | cm⁻³ |
+| RDSW | 2175 | none | Ω·µm |
+| TOXE | 15.2 | none | nm |
+| TOXP | 16 | none | nm |
 | U0 | 0.0525 | 0.0151 | m²/(V·s) |
-| VSAT | 1.04e5 | — | m/s |
-| VTH0 | 0.673 | — | V |
-| {term}`XJ` | 0.15 | — | µm |
+| VSAT | 1.04e5 | none | m/s |
+| VTH0 | 0.673 | none | V |
+| {term}`XJ` | 0.15 | none | µm |
 
 For the nfet L limits the spec gives one value per {term}`bin`: LMIN 0.6 µm and 0.7 µm, LMAX 0.7 µm
 and 50 µm.
@@ -199,12 +201,13 @@ its build record: open_pdks [`40cee970`](https://github.com/fossi-foundation/ope
 library of sha256 `6edba54d23b38a2c60f8ffdbaa3eb75a7568c615e4820808969bd1121b77b1aa`. That is
 neither d658698 (`f6f4a96e…`) nor the latest (`69a7ab87…`), so not every run-2 project used
 d658698. This page compares only d658698, the PDK the design spec names. A separate comparison
-against 40cee970 is needed before any run-2 silicon is used for validation.
+against 40cee970 is needed before any run-2 silicon is used for validation; it is on the
+{doc}`roadmap </roadmap>` ([issue #72](https://github.com/mithro/gf180-tcad/issues/72)).
 
 ## What this means
 
 The TT reference, and every {term}`TCAD` comparison made against it, also holds for the d658698
-PDK, for these two devices. Whether it holds for the 40cee970 build of the run-2 checkout above
-is not known yet. Only TT was rerun. The other corners load the same
+PDK, for these two devices. The 40cee970 build of the run-2 checkout above is not compared
+([issue #72](https://github.com/mithro/gf180-tcad/issues/72)). Only TT was rerun. The other corners load the same
 `nfet_06v0_t`/`pfet_06v0_t` sections, with their own corner `.param` values, which were not
 compared here.
