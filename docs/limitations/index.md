@@ -180,7 +180,7 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
   [issue #43](https://github.com/mithro/gf180-tcad/issues/43)) but is not implemented yet, so
   no render and no mesh picture exists. The {ref}`output cache <output-cache>` that is to hold
-  the full meshes exists as tooling but holds no file yet.
+  the full meshes holds none of the committed 2D jobs' meshes yet.
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two

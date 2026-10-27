@@ -537,7 +537,9 @@ that the intent survives later rewording of the sections it changed.
   > references / assets from the repo to ground things in the real world."
 - **2026-10-27: docs updated with every PR.** §3 (the Review constraint) and `CONTRIBUTING.md` (PR
   checklist) changed: the author updates the affected status pages in the same PR, and every
-  review checks it. The user's words, as relayed by the campaign coordinator (not verbatim):
-  > the documentation is out of date and must be kept updated as work is done; every review
-  > of a PR checks that those docs were correctly updated at the same time, and a PR whose
-  > docs lag is "needs fixes".
+  review checks it. The user's words (11:45 and 11:50 ACDT):
+  > "Make sure that the documentatoin is getting updated as work is done. It is currently out
+  > of date."
+  >
+  > "Make sure that as part of every review it also checks if the docs have been correctly
+  > updated at the same time."
