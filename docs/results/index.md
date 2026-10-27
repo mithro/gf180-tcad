@@ -9,11 +9,11 @@ generated into `docs/_generated/` (git-ignored) at documentation build time by
 {py:func}`gf180tcad.docgen.generate`, called from {repo}`docs/conf.py`, from the committed
 {repo}`results/spice` files, so they never show numbers that are not in the dataset.
 Builds of one checkout serialise on a lock file (`docs/.generated.lock`) and swap the finished
-tree in atomically, so two docs builds can run at the same time without corrupting each other.
+folder in atomically, so two docs builds can run at the same time without corrupting each other.
 
 ```{admonition} What exists so far
 :class: warning
-The generated pages below are the {term}`SPICE` {term}`golden reference` that {term}`TCAD` is
+The generated pages below are the {term}`SPICE reference` that {term}`TCAD` is
 compared against. The TCAD results that exist so far are for both devices at the
 start values (`--params start`, the uncalibrated parameters). The 1D results were made on the
 {term}`dev-HEAD TCAD image` ({repo}`docker/TCAD_DEV_IMAGE`,

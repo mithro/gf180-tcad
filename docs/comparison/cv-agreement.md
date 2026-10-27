@@ -2,9 +2,11 @@
 
 # C–V calibration of the TCAD MOS capacitor
 
-The first {term}`calibrated parameter budget` spent: the 1D {term}`TCAD`
+This page shows how the simulated {term}`MOS capacitor <MOSCAP>` is fitted to the gate capacitance of the {term}`PDK`'s
+{term}`SPICE` model, and how well the fitted values then match at gate lengths not used in the fit.
+It is the first use of the {term}`calibrated parameter budget`: the 1D {term}`TCAD`
 {term}`MOS capacitor <MOSCAP>` fitted to the {term}`SPICE` {term}`Cgg`–Vg of the
-{term}`calibration targets <calibration target>`, then frozen and checked at the
+{term}`calibration targets <calibration target>`, then fixed and checked at the
 {term}`held-out geometries <held-out geometry>`
 ({repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`).
 The code is {py:mod}`gf180tcad.calibrate.cv`; the results are
@@ -115,13 +117,14 @@ Each plateau and each crossing gets a {ref}`verdict <agreement-verdicts>`: {term
 the tolerance, else {term}`Same process` inside its window, else {term}`Disagree`; a geometry's
 verdict is the worst of its four ({py:func}`~gf180tcad.calibrate.cv.verdicts`).
 
-- A **plateau**'s window, at each plateau bias, is the {term}`hull` of the five-corner
+- A **plateau**'s window, at each plateau bias, is the {term}`combined range` of the five-corner
   {term}`corner envelope` of Cgg ({py:func}`~gf180tcad.calibrate.cv.envelope_cv`, pure min/max
   of the committed cv.csv files) and the public 6 V {term}`Cox` spec, 1.8 / 2.3 / 2.8 fF/µm²
   ([GF180MCU PDK electrical specs, 5.3 Gate oxide capacitance](https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_3.html),
   rows "COX (Poly) 6V", entered in {repo}`data/pdk_elec_spec.json`), mapped to Cgg by the same
   bookkeeping as the model: Cox_min/max × LeffCV × WeffCV plus the parasitic term (in 2D: × the
-  drawn W × L). {py:func}`gf180tcad.specwindow.window` forms the hull and says which side sets it.
+  drawn W × L). {py:func}`gf180tcad.specwindow.window` forms the combined range and says which
+  side sets it.
   The plateau is "Same process" when the TCAD Cgg is inside the window at every plateau bias.
 - A **crossing**'s window is the min–max of that crossing voltage over the five corners at the
   same geometry ({py:func}`~gf180tcad.calibrate.cv.crossing_window`); no spec publishes one.
@@ -142,10 +145,21 @@ and {repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json
 is the nearest: 13 mV inside the +200 mV bound (93.6 % of the way from 0 to it), not a bound hit by the
 1e-3 rule but close to one.
 
-| Device | `t_ox_eff_nm` [bounds] | `n_ch_cm3` [bounds] | `dv_fb_v` [bounds] | Optimiser |
-|---|---|---|---|---|
-| {term}`nfet_05v0` | 16.050 [15.2, 16.95] | 8.813e16 [6.30e16, 3.4e17] | +98.7 mV [±200 mV] | xtol reached, 15 evaluations |
-| {term}`pfet_05v0` | 15.721 [15.6, 16.39] | 2.147e17 [6.78e16, 3.4e17] | +187.2 mV [±200 mV] | ftol reached, 11 evaluations |
+| Device | Parameter | Unit | Fitted | Lower bound | Upper bound |
+|---|---|---|---|---|---|
+| {term}`nfet_05v0` | `t_ox_eff_nm` | nm | 16.050 | 15.2 | 16.95 |
+| {term}`nfet_05v0` | `n_ch_cm3` | cm⁻³ | 8.813e16 | 6.30e16 | 3.4e17 |
+| {term}`nfet_05v0` | `dv_fb_v` | mV | +98.7 | −200 | +200 |
+| {term}`pfet_05v0` | `t_ox_eff_nm` | nm | 15.721 | 15.6 | 16.39 |
+| {term}`pfet_05v0` | `n_ch_cm3` | cm⁻³ | 2.147e17 | 6.78e16 | 3.4e17 |
+| {term}`pfet_05v0` | `dv_fb_v` | mV | +187.2 | −200 | +200 |
+
+How the optimiser stopped:
+
+| Device | Stop criterion | Evaluations |
+|---|---|---|
+| {term}`nfet_05v0` | xtol reached | 15 |
+| {term}`pfet_05v0` | ftol reached | 11 |
 
 "Evaluations" is scipy's `nfev`, the residual evaluations of the optimiser's steps. It leaves
 out the finite-difference Jacobians (`njev`: 8 for the nfet and 11 for the pfet, each 3
@@ -163,31 +177,33 @@ Cox is 2.151 and 2.197 fF/µm², and the 1D C per area at u = −5 / +5 V is 2.1
 Per geometry, calibration and validation (held-out) together, the plateau errors, the
 crossing shifts ΔV_dep and ΔV_inv, the depletion error (reported only) and the geometry's
 verdict. The validation rows are {repo}`results/tcad/validation/nfet_05v0.json` and
-{repo}`results/tcad/validation/pfet_05v0.json` (1D, frozen values).
+{repo}`results/tcad/validation/pfet_05v0.json` (1D, fixed calibrated values). Accumulation and
+inversion are the largest plateau errors and Depletion the depletion error, all as
+|ΔCgg|/Cgg_SPICE.
 
 **nfet_05v0**
 
-| W/L (µm) | Role | Accumulation | Inversion | ΔV_dep | ΔV_inv | Depletion | Verdict |
-|---|---|---|---|---|---|---|---|
-| 10/10 | calibration | 0.67 % | 0.63 % | +27.9 mV | +20.2 mV | 12.9 % | Agree |
-| 10/2 | calibration | 0.59 % | 0.57 % | +0.7 mV | -6.5 mV | 6.7 % | Agree |
-| 10/1 | validation | 0.83 % | 0.50 % | -27.3 mV | -31.7 mV | 7.8 % | Agree |
-| 10/0.7 | validation | 0.75 % | 0.44 % | -31.5 mV | -30.5 mV | 6.4 % | Agree |
-| 10/0.6 | calibration | 0.85 % | 0.41 % | -22.0 mV | -18.0 mV | 5.4 % | Agree |
-| 1.6/0.7 | validation | 0.75 % | 0.44 % | -22.9 mV | -22.9 mV | 5.9 % | Agree |
+| W (µm) | L (µm) | Role | Accumulation (%) | Inversion (%) | ΔV_dep (mV) | ΔV_inv (mV) | Depletion (%) | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| 10 | 10 | calibration | 0.67 | 0.63 | +27.9 | +20.2 | 12.9 | Agree |
+| 10 | 2 | calibration | 0.59 | 0.57 | +0.7 | -6.5 | 6.7 | Agree |
+| 10 | 1 | validation | 0.83 | 0.50 | -27.3 | -31.7 | 7.8 | Agree |
+| 10 | 0.7 | validation | 0.75 | 0.44 | -31.5 | -30.5 | 6.4 | Agree |
+| 10 | 0.6 | calibration | 0.85 | 0.41 | -22.0 | -18.0 | 5.4 | Agree |
+| 1.6 | 0.7 | validation | 0.75 | 0.44 | -22.9 | -22.9 | 5.9 | Agree |
 
 **pfet_05v0**
 
-| W/L (µm) | Role | Accumulation | Inversion | ΔV_dep | ΔV_inv | Depletion | Verdict |
-|---|---|---|---|---|---|---|---|
-| 10/10 | calibration | 4.22 % | 0.27 % | -218.1 mV | -11.5 mV | 29.6 % | Disagree |
-| 10/2 | calibration | 3.73 % | 0.57 % | -128.3 mV | -4.2 mV | 24.4 % | Same process |
-| 10/1 | validation | 3.76 % | 1.38 % | -0.2 mV | +8.0 mV | 17.9 % | Agree |
-| 10/0.7 | validation | 4.31 % | 2.30 % | +123.8 mV | +19.9 mV | 15.0 % | Same process |
-| 10/0.5 | calibration | 5.64 % | 3.81 % | +308.6 mV | +40.7 mV | 18.1 % | Disagree |
-| 1.6/0.7 | validation | 6.12 % | 4.12 % | +131.8 mV | +31.8 mV | 12.9 % | Same process |
+| W (µm) | L (µm) | Role | Accumulation (%) | Inversion (%) | ΔV_dep (mV) | ΔV_inv (mV) | Depletion (%) | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| 10 | 10 | calibration | 4.22 | 0.27 | -218.1 | -11.5 | 29.6 | Disagree |
+| 10 | 2 | calibration | 3.73 | 0.57 | -128.3 | -4.2 | 24.4 | Same process |
+| 10 | 1 | validation | 3.76 | 1.38 | -0.2 | +8.0 | 17.9 | Agree |
+| 10 | 0.7 | validation | 4.31 | 2.30 | +123.8 | +19.9 | 15.0 | Same process |
+| 10 | 0.5 | calibration | 5.64 | 3.81 | +308.6 | +40.7 | 18.1 | Disagree |
+| 1.6 | 0.7 | validation | 6.12 | 4.12 | +131.8 | +31.8 | 12.9 | Same process |
 
-Every plateau window is set by the Cox spec side of the hull (`source` "spec" at every
+Every plateau window is set by the Cox spec side of the combined range (`source` "spec" at every
 plateau bias): the 1.8–2.8 fF/µm² spec is far wider than the corner envelope, so on the plateaus
 "Same process" says only that the oxide is a plausible GF180 6 V oxide. The crossing windows are
 the corners' own; for the nfet W10/L10 they are −0.870 to −0.618 V (u_dep) and +0.576 to
@@ -229,8 +245,8 @@ as ΔV/50 mV): Lmin (+309 mV) and L = 10 µm (−218 mV), pulling in opposite di
 
 ## Validation
 
-The validation ({py:func}`~gf180tcad.calibrate.cv.validate_cv`) ran after the calibration was
-committed, on the committed file; it records the calibration file's sha256 and `param_sha256`.
+The validation ({py:func}`~gf180tcad.calibrate.cv.validate_cv`) runs only on the committed
+calibration file; it records that file's sha256 and `param_sha256`.
 Results at 1.6/0.7 are tagged in advance with the causes `geometry-2d` and `spice-fit`, and at
 Lmin with `spice-fit`.
 

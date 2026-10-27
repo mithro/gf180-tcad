@@ -176,8 +176,8 @@ CASES = [
             lambda dev=dev, gid=gid, name=name: [metric(dev, gid, name)],
         )
         for dev, gid, dev_label in (
-            (N, NLMIN, r"NE2 `nfet_05v0` 10/0\.6"),
-            (P, PLMIN, r"PE2 `pfet_05v0` 10/0\.5"),
+            (N, NLMIN, r"NE2 `nfet_05v0`"),
+            (P, PLMIN, r"PE2 `pfet_05v0`"),
         )
         for param, name in (
             (r"VT0 \(V\)", "vt_lin_maxgm"),

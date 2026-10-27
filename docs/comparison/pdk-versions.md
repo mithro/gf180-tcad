@@ -5,7 +5,7 @@
 The design spec ({repo}`docs/superpowers/specs/2026-10-18-gf180-tcad-design.md`, §4) names
 {{ open_pdks }} commit [`d658698bd8bc`](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c) ([1.0.604](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c)) as the {term}`GF180MCU`
 {term}`PDK` of {{ wafer_space }} runs 1 and 2, and asks for it to be compared with the latest.
-The {term}`SPICE` {term}`golden reference` ({repo}`results/spice`) uses the latest PDK, the one
+The {term}`SPICE reference` ({repo}`results/spice`) uses the latest PDK, the one
 in the pinned base image ({repo}`docker/IMAGE`, open_pdks [`1689ac3f2dc7`](https://github.com/fossi-foundation/open-pdks/commit/1689ac3f2dc763876eaf967227c7dfe831b031ae), recorded
 in {repo}`docker/base/versions.json`). This page answers whether the {term}`model card` of
 {term}`nfet_05v0` and {term}`pfet_05v0` differs between the two. It does not settle which PDK
@@ -14,7 +14,8 @@ every run-2 project used ({ref}`pdk-versions-run2`).
 **Answer: no, between d658698 and the latest.** For these two devices the models are the
 same. Rerun with the d658698 models,
 every {{ ngspice }} result file at the {term}`TT` {term}`corner` is byte-identical to the
-committed reference: 72 files (12 geometries × 5 {term}`sweep` CSVs and `metrics.json`), so every
+committed reference: 72 files (12 geometries × 5 {term}`sweep` comma-separated value (CSV) files
+and `metrics.json`), so every
 metric delta is exactly 0. The two PDKs' model libraries differ in one `.lib` section only,
 [`res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571), which the transistors never load.
 
@@ -40,29 +41,32 @@ uv run --locked python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698
    the commit and the three hashes that {py:func}`gf180tcad.pdk.check_against` reads.
 3. **Run.** One sandbox {term}`job` per geometry, with no network, runs
    {py:func}`gf180tcad.reference.run_job`, the generator's own job, with only its PDK lookup
-   pointed at the pinned copy ({py:func}`gf180tcad.pdkdiff.run_pdk_job`). The SPICE generator
+   pointed at the pinned copy ({py:func}`gf180tcad.pdkdiff.run_pdk_job`). The {term}`SPICE` generator
    modules are not edited, so the {term}`provenance` of {repo}`results/spice` does not change
    ({test}`tests/test_pdkdiff.py::test_reference_py_untouched`).
 4. **Cards and compare.** {py:func}`gf180tcad.pdkdiff.cards` compares the two PDKs' files,
    `.lib` sections and card values, and {py:func}`gf180tcad.pdkdiff.compare` the metrics.
 
-The results are in {repo}`results/spice-pdk-d658698`: the job tree
+The results are in {repo}`results/spice-pdk-d658698`: the job results
 ({repo}`results/spice-pdk-d658698/ngspice/typical`, the same layout as {repo}`results/spice`),
 {repo}`results/spice-pdk-d658698/cards.json`, {repo}`results/spice-pdk-d658698/comparison.json`,
-the two unified diffs and {repo}`results/spice-pdk-d658698/provenance.json`. Two runs gave
-byte-identical trees. The tree is in {repo}`results/MANIFEST.sha256`. The SPICE cross-check
-({ref}`cross-host-determinism`) and {py:func}`gf180tcad.manifest.verify_subset` select only
-entries under `spice/`, so they do not include it.
+the two unified diffs and {repo}`results/spice-pdk-d658698/provenance.json`. Two runs give
+byte-identical results folders. The folder is listed in {repo}`results/MANIFEST.sha256`. The
+check of the SPICE results on another computer ({ref}`cross-host-determinism`) and
+{py:func}`gf180tcad.manifest.verify_subset` select only entries under `spice/`, so they do not
+include it.
 
 ## Which model files differ
 
-| File | d658698 vs latest |
-|---|---|
-| The ngspice main library ([latest](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice), and its `.spice` copy) | differ: [`.lib res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571) only ({repo}`diff <results/spice-pdk-d658698/sm141064.ngspice.diff>`) |
-| The Xyce main library (and its `.spice` copy) | differ: `.lib res` only ({repo}`diff <results/spice-pdk-d658698/sm141064.xyce.diff>`) |
-| The design files (ngspice, Xyce) | identical |
-| The MIM-capacitor and BJT libraries (ngspice, Xyce) | identical |
-| The build record (listed in {repo}`data/pdk-d658698.sha256`) | differs (versions and commits) |
+| File | d658698 vs latest | What differs | Diff |
+|---|---|---|---|
+| ngspice main library ([latest](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice), and `.spice` copy) | differ | [`.lib res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571) only | {repo}`diff <results/spice-pdk-d658698/sm141064.ngspice.diff>` |
+| Xyce main library (and `.spice` copy) | differ | `.lib res` only | {repo}`diff <results/spice-pdk-d658698/sm141064.xyce.diff>` |
+| Design files (ngspice, Xyce) | identical | - | - |
+| Metal-insulator-metal capacitor and bipolar transistor libraries | identical | - | - |
+| Build record (listed in {repo}`data/pdk-d658698.sha256`) | differs | versions and commits | - |
+
+The capacitor and bipolar transistor libraries are compared for both ngspice and Xyce.
 
 Each library has 50 `.lib` sections. 49 are identical, among them [`typical`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L105) (the
 TT `.param` values), [`nfet_06v0_t`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37038) and [`pfet_06v0_t`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38074) (the
@@ -77,41 +81,41 @@ section never loads `res`.
 ## Metric deltas at TT
 
 The delta is latest − d658698, for every metric and geometry ({term}`geometry id`). Source:
-{repo}`results/spice-pdk-d658698/comparison.json`, checked against the trees by
+{repo}`results/spice-pdk-d658698/comparison.json`, checked against the results folders by
 {test}`tests/test_pdkdiff.py::test_committed_comparison_is_current`.
 
-| Device | Geometry | Metrics compared | Largest \|Δ\| | Largest \|Δ\|/\|a\| | Files byte-identical |
+| Device | Geometry | Metrics compared | Largest \|Δ\| | Largest \|Δ\|/\|a\| | Files byte-identical (of 6) |
 |---|---|---|---|---|---|
-| {term}`nfet_05v0` | `w10p0_l0p60` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`nfet_05v0` | `w10p0_l0p70` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`nfet_05v0` | `w10p0_l10p00` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`nfet_05v0` | `w10p0_l1p00` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`nfet_05v0` | `w10p0_l2p00` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`nfet_05v0` | `w1p6_l0p70` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`pfet_05v0` | `w10p0_l0p50` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`pfet_05v0` | `w10p0_l0p70` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`pfet_05v0` | `w10p0_l10p00` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`pfet_05v0` | `w10p0_l1p00` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`pfet_05v0` | `w10p0_l2p00` | 13 | 0.0 | 0.0 | 6 of 6 |
-| {term}`pfet_05v0` | `w1p6_l0p70` | 13 | 0.0 | 0.0 | 6 of 6 |
+| {term}`nfet_05v0` | `w10p0_l0p60` | 13 | 0.0 | 0.0 | 6 |
+| {term}`nfet_05v0` | `w10p0_l0p70` | 13 | 0.0 | 0.0 | 6 |
+| {term}`nfet_05v0` | `w10p0_l10p00` | 13 | 0.0 | 0.0 | 6 |
+| {term}`nfet_05v0` | `w10p0_l1p00` | 13 | 0.0 | 0.0 | 6 |
+| {term}`nfet_05v0` | `w10p0_l2p00` | 13 | 0.0 | 0.0 | 6 |
+| {term}`nfet_05v0` | `w1p6_l0p70` | 13 | 0.0 | 0.0 | 6 |
+| {term}`pfet_05v0` | `w10p0_l0p50` | 13 | 0.0 | 0.0 | 6 |
+| {term}`pfet_05v0` | `w10p0_l0p70` | 13 | 0.0 | 0.0 | 6 |
+| {term}`pfet_05v0` | `w10p0_l10p00` | 13 | 0.0 | 0.0 | 6 |
+| {term}`pfet_05v0` | `w10p0_l1p00` | 13 | 0.0 | 0.0 | 6 |
+| {term}`pfet_05v0` | `w10p0_l2p00` | 13 | 0.0 | 0.0 | 6 |
+| {term}`pfet_05v0` | `w1p6_l0p70` | 13 | 0.0 | 0.0 | 6 |
 
 Per metric, over the 12 geometries:
 
-| Metric | Largest \|Δ\| | Largest \|Δ\|/\|a\| | Geometries with Δ = 0 |
+| Metric | Largest \|Δ\| | Largest \|Δ\|/\|a\| | Geometries with Δ = 0 (of 12) |
 |---|---|---|---|
-| {term}`body_effect_v` | 0.0 | 0.0 | 12 of 12 |
-| {term}`cgg_acc_ff` | 0.0 | 0.0 | 12 of 12 |
-| {term}`cgg_inv_ff` | 0.0 | 0.0 | 12 of 12 |
-| {term}`dibl_mv_per_v` | 0.0 | 0.0 | 12 of 12 |
-| {term}`gds_at_5v_s` | 0.0 | 0.0 | 12 of 12 |
-| {term}`gm_peak_s` | 0.0 | 0.0 | 12 of 12 |
-| {term}`id_lin_a` | 0.0 | 0.0 | 12 of 12 |
-| {term}`idsat_ua_per_um` | 0.0 | 0.0 | 12 of 12 |
-| {term}`ioff_pa_per_um` | 0.0 | 0.0 | 12 of 12 |
-| {term}`ss_mv_per_dec` | 0.0 | 0.0 | 12 of 12 |
-| {term}`vt_lin_cc` | 0.0 | 0.0 | 12 of 12 |
-| {term}`vt_lin_maxgm` | 0.0 | 0.0 | 12 of 12 |
-| {term}`vt_sat_cc` | 0.0 | 0.0 | 12 of 12 |
+| {term}`body_effect_v` | 0.0 | 0.0 | 12 |
+| {term}`cgg_acc_ff` | 0.0 | 0.0 | 12 |
+| {term}`cgg_inv_ff` | 0.0 | 0.0 | 12 |
+| {term}`dibl_mv_per_v` | 0.0 | 0.0 | 12 |
+| {term}`gds_at_5v_s` | 0.0 | 0.0 | 12 |
+| {term}`gm_peak_s` | 0.0 | 0.0 | 12 |
+| {term}`id_lin_a` | 0.0 | 0.0 | 12 |
+| {term}`idsat_ua_per_um` | 0.0 | 0.0 | 12 |
+| {term}`ioff_pa_per_um` | 0.0 | 0.0 | 12 |
+| {term}`ss_mv_per_dec` | 0.0 | 0.0 | 12 |
+| {term}`vt_lin_cc` | 0.0 | 0.0 | 12 |
+| {term}`vt_lin_maxgm` | 0.0 | 0.0 | 12 |
+| {term}`vt_sat_cc` | 0.0 | 0.0 | 12 |
 
 ## Card values re-checked
 
@@ -122,37 +126,64 @@ same line with the same expression. The links go to the latest card's source in 
 Expressions in {term}`corner` parameters (such as `nfet_06v0_tox`) are 0 or 1 at TT, so the
 TT value is the leading number.
 
-| Parameter | `nfet_06v0.0` (L 0.7–50 µm) | `nfet_06v0.1` (L 0.6–0.7 µm) | `pfet_06v0.0` | {repo}`Spec §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>`, n / p | Same in both cards |
-|---|---|---|---|---|---|
-| ACDE | `0.3` ([37059](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37059)) | `0.3` ([37397](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37397)) | `0.7` ([38095](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38095)) | — / — | yes |
-| ALPHA0 | `-1.88e-007` ([37067](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37067)) | `-1.88e-007` ([37405](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37405)) | `9.6e-7` ([38099](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38099)) | set / — | yes |
-| BETA0 | `36.6` ([37072](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37072)) | `36.6` ([37410](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37410)) | `50.8` ([38104](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38104)) | set / — | yes |
-| CAPMOD | `2` ([37080](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37080)) | `2` ([37418](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37418)) | `2` ([38109](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38109)) | — / — | yes |
-| CGDL | `1.5e-010*nfet_06v0_cgdo` ([37085](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37085)) | `1.5e-010*nfet_06v0_cgdo` ([37423](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37423)) | `5.25e-11*pfet_06v0_dcgdo` ([38114](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38114)) | — / — | yes |
-| CGDO | `1e-010*nfet_06v0_cgdo` ([37086](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37086)) | `1e-010*nfet_06v0_cgdo` ([37424](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37424)) | `7.71e-11*pfet_06v0_dcgdo` ([38115](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38115)) | — / — | yes |
-| CGSL | `1.5e-010*nfet_06v0_cgso` ([37088](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37088)) | `1.5e-010*nfet_06v0_cgso` ([37426](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37426)) | `5.25e-11*pfet_06v0_dcgso` ([38116](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38116)) | — / — | yes |
-| CGSO | `1e-010*nfet_06v0_cgso` ([37089](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37089)) | `1e-010*nfet_06v0_cgso` ([37427](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37427)) | `7.71e-11*pfet_06v0_dcgso` ([38117](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38117)) | — / — | yes |
-| {term}`DLC` | `5.4e-8` ([37104](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37104)) | `5.4e-8` ([37442](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37442)) | `7.4e-9` ([38129](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38129)) | — / — | yes |
-| {term}`EPSROX` | `3.9` ([37126](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37126)) | `3.9` ([37464](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37464)) | `3.9` ([38144](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38144)) | — / — | yes |
-| IGBMOD | `0` ([37134](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37134)) | `0` ([37472](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37472)) | `0` ([38150](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38150)) | 0 / — | yes |
-| IGCMOD | `0` ([37135](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37135)) | `0` ([37473](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37473)) | `0` ([38151](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38151)) | 0 / — | yes |
-| K1 | `0.9` ([37147](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37147)) | `0.9` ([37485](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37485)) | `0.9588` ([38162](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38162)) | 0.9 / — | yes |
-| K2 | `-0.001` ([37148](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37148)) | `-0.001` ([37486](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37486)) | `8.936e-3` ([38163](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38163)) | — / — | yes |
-| LMAX | `5.0001e-005` ([37176](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37176)) | `7e-007` ([37514](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37514)) | `50.01e-6` ([38176](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38176)) | 0.7 µm and 50 µm / — | yes |
-| LMIN | `7e-007` ([37177](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37177)) | `6e-007` ([37515](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37515)) | `0.5e-6` ([38177](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38177)) | 0.6 µm and 0.7 µm / 0.5 µm | yes |
-| LPE0 | `1.63e-007` ([37182](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37182)) | `1.63e-007` ([37520](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37520)) | `-4.4e-8` ([38178](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38178)) | 163 nm / — | yes |
-| MOIN | `15` ([37201](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37201)) | `15` ([37539](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37539)) | `15` ([38197](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38197)) | — / — | yes |
-| NDEP | `1.7e+017` ([37202](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37202)) | `1.7e+017` ([37540](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37540)) | `1.7e17` ([38198](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38198)) | 1.7e17 cm⁻³ / 1.7e17 cm⁻³ | yes |
-| {term}`NGATE` | `1e+020` ([37204](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37204)) | `1e+020` ([37542](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37542)) | `3.6e19` ([38200](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38200)) | 1e20 cm⁻³ / 3.6e19 cm⁻³ | yes |
-| {term}`NSD` | `1e+020` ([37217](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37217)) | `1e+020` ([37555](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37555)) | `6e16` ([38207](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38207)) | 1e20 cm⁻³ / — | yes |
-| RDSW | `2175` ([37284](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37284)) | `2175` ([37622](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37622)) | `1.426e3` ([38245](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38245)) | 2175 Ω·µm / — | yes |
-| TNOM | `25` ([37308](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37308)) | `25` ([37646](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37646)) | `25` ([38254](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38254)) | — / — | yes |
-| TOXE | `1.52e-008+nfet_06v0_tox` ([37309](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37309)) | `1.52e-008+nfet_06v0_tox` ([37647](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37647)) | `1.56e-8+pfet_06v0_dtox` ([38255](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38255)) | 15.2 nm / — | yes |
-| TOXP | `1.6e-008+nfet_06v0_tox` ([37311](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37311)) | `1.6e-008+nfet_06v0_tox` ([37649](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37649)) | not set | 16 nm / — | yes |
-| U0 | `0.052500014` ([37319](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37319)) | `0.052500361` ([37657](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37657)) | `0.0151` ([38260](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38260)) | 0.0525 m²/(V·s) / 0.0151 m²/(V·s) | yes |
-| VSAT | `103999.98*nfet_06v0_vsat` ([37336](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37336)) | `64848.09*nfet_06v0_vsat` ([37674](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37674)) | `8.55e4` ([38273](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38273)) | 1.04e5 m/s / — | yes |
-| VTH0 | `0.67314+nfet_06v0_vth0` ([37337](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37337)) | `0.67314+nfet_06v0_vth0` ([37675](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37675)) | `-0.8978+pfet_06v0_dvth0` ([38274](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38274)) | 0.673 V / — | yes |
-| {term}`XJ` | `1.5e-007` ([37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377)) | `1.5e-007` ([37715](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37715)) | `1.5e-7` ([38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291)) | 0.15 µm / — | yes |
+| Parameter | `nfet_06v0.0` | Card line | `nfet_06v0.1` | Card line | `pfet_06v0.0` | Card line | Same in both cards |
+|---|---|---|---|---|---|---|---|
+| ACDE | `0.3` | [37059](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37059) | `0.3` | [37397](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37397) | `0.7` | [38095](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38095) | yes |
+| ALPHA0 | `-1.88e-007` | [37067](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37067) | `-1.88e-007` | [37405](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37405) | `9.6e-7` | [38099](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38099) | yes |
+| BETA0 | `36.6` | [37072](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37072) | `36.6` | [37410](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37410) | `50.8` | [38104](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38104) | yes |
+| CAPMOD | `2` | [37080](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37080) | `2` | [37418](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37418) | `2` | [38109](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38109) | yes |
+| CGDL | `1.5e-010*nfet_06v0_cgdo` | [37085](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37085) | `1.5e-010*nfet_06v0_cgdo` | [37423](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37423) | `5.25e-11*pfet_06v0_dcgdo` | [38114](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38114) | yes |
+| CGDO | `1e-010*nfet_06v0_cgdo` | [37086](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37086) | `1e-010*nfet_06v0_cgdo` | [37424](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37424) | `7.71e-11*pfet_06v0_dcgdo` | [38115](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38115) | yes |
+| CGSL | `1.5e-010*nfet_06v0_cgso` | [37088](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37088) | `1.5e-010*nfet_06v0_cgso` | [37426](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37426) | `5.25e-11*pfet_06v0_dcgso` | [38116](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38116) | yes |
+| CGSO | `1e-010*nfet_06v0_cgso` | [37089](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37089) | `1e-010*nfet_06v0_cgso` | [37427](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37427) | `7.71e-11*pfet_06v0_dcgso` | [38117](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38117) | yes |
+| {term}`DLC` | `5.4e-8` | [37104](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37104) | `5.4e-8` | [37442](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37442) | `7.4e-9` | [38129](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38129) | yes |
+| {term}`EPSROX` | `3.9` | [37126](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37126) | `3.9` | [37464](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37464) | `3.9` | [38144](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38144) | yes |
+| IGBMOD | `0` | [37134](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37134) | `0` | [37472](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37472) | `0` | [38150](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38150) | yes |
+| IGCMOD | `0` | [37135](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37135) | `0` | [37473](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37473) | `0` | [38151](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38151) | yes |
+| K1 | `0.9` | [37147](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37147) | `0.9` | [37485](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37485) | `0.9588` | [38162](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38162) | yes |
+| K2 | `-0.001` | [37148](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37148) | `-0.001` | [37486](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37486) | `8.936e-3` | [38163](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38163) | yes |
+| LMAX | `5.0001e-005` | [37176](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37176) | `7e-007` | [37514](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37514) | `50.01e-6` | [38176](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38176) | yes |
+| LMIN | `7e-007` | [37177](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37177) | `6e-007` | [37515](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37515) | `0.5e-6` | [38177](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38177) | yes |
+| LPE0 | `1.63e-007` | [37182](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37182) | `1.63e-007` | [37520](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37520) | `-4.4e-8` | [38178](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38178) | yes |
+| MOIN | `15` | [37201](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37201) | `15` | [37539](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37539) | `15` | [38197](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38197) | yes |
+| NDEP | `1.7e+017` | [37202](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37202) | `1.7e+017` | [37540](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37540) | `1.7e17` | [38198](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38198) | yes |
+| {term}`NGATE` | `1e+020` | [37204](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37204) | `1e+020` | [37542](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37542) | `3.6e19` | [38200](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38200) | yes |
+| {term}`NSD` | `1e+020` | [37217](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37217) | `1e+020` | [37555](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37555) | `6e16` | [38207](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38207) | yes |
+| RDSW | `2175` | [37284](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37284) | `2175` | [37622](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37622) | `1.426e3` | [38245](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38245) | yes |
+| TNOM | `25` | [37308](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37308) | `25` | [37646](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37646) | `25` | [38254](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38254) | yes |
+| TOXE | `1.52e-008+nfet_06v0_tox` | [37309](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37309) | `1.52e-008+nfet_06v0_tox` | [37647](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37647) | `1.56e-8+pfet_06v0_dtox` | [38255](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38255) | yes |
+| TOXP | `1.6e-008+nfet_06v0_tox` | [37311](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37311) | `1.6e-008+nfet_06v0_tox` | [37649](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37649) | not set | - | yes |
+| U0 | `0.052500014` | [37319](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37319) | `0.052500361` | [37657](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37657) | `0.0151` | [38260](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38260) | yes |
+| VSAT | `103999.98*nfet_06v0_vsat` | [37336](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37336) | `64848.09*nfet_06v0_vsat` | [37674](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37674) | `8.55e4` | [38273](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38273) | yes |
+| VTH0 | `0.67314+nfet_06v0_vth0` | [37337](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37337) | `0.67314+nfet_06v0_vth0` | [37675](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37675) | `-0.8978+pfet_06v0_dvth0` | [38274](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38274) | yes |
+| {term}`XJ` | `1.5e-007` | [37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377) | `1.5e-007` | [37715](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37715) | `1.5e-7` | [38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291) | yes |
+
+The values the {repo}`design spec, §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>` quotes,
+for the parameters it quotes (a dash: none for that device; *set*: the spec says only that it is set):
+
+| Parameter | Spec §4, nfet | Spec §4, pfet | Unit |
+|---|---|---|---|
+| ALPHA0 | set | — | - |
+| BETA0 | set | — | - |
+| IGBMOD | 0 | — | - |
+| IGCMOD | 0 | — | - |
+| K1 | 0.9 | — | - |
+| LMAX | below | — | µm |
+| LMIN | below | 0.5 | µm |
+| LPE0 | 163 | — | nm |
+| NDEP | 1.7e17 | 1.7e17 | cm⁻³ |
+| {term}`NGATE` | 1e20 | 3.6e19 | cm⁻³ |
+| {term}`NSD` | 1e20 | — | cm⁻³ |
+| RDSW | 2175 | — | Ω·µm |
+| TOXE | 15.2 | — | nm |
+| TOXP | 16 | — | nm |
+| U0 | 0.0525 | 0.0151 | m²/(V·s) |
+| VSAT | 1.04e5 | — | m/s |
+| VTH0 | 0.673 | — | V |
+| {term}`XJ` | 0.15 | — | µm |
+
+For the nfet L limits the spec gives one value per {term}`bin`: LMIN 0.6 µm and 0.7 µm, LMAX 0.7 µm
+and 50 µm.
 
 Every spec §4 value is confirmed on both cards. Two of them are rounded in the spec: VTH0 is
 0.67314 V, and VSAT is 103999.98 m/s. The nfet has two {term}`L bins <L bin>`, 0.6–0.7 µm and
