@@ -538,7 +538,8 @@ them uses plain words.
 |---|---|
 | Prose paragraph | 100 words |
 | List item | 60 words |
-| Sentence | 45 words (target 30) |
+| Sentence | 45 words |
+| Sentence, target | 30 words |
 | Table cell | 25 words, one value |
 | Columns of a table with prose | 3 |
 | Glossary entry | 80 words |
