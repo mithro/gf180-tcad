@@ -107,8 +107,6 @@ there.
   selected at the 1 % criterion and carries a discretisation bias of a few 0.1 %. See
   {doc}`mesh-convergence` and {doc}`moscap2d`. The moscap2d page also explains the C/Cox > 1
   artefact of the {{ meshwell }} default mesh, which rounds the oxide to 1 nm.
-- **Unverified citations.** Several literature items have not been checked yet
-  and are marked "unverified". See {doc}`literature`.
 
 (limitations-moscap)=
 
