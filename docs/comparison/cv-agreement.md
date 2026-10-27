@@ -404,7 +404,7 @@ The cell gives 11.93 fF at +5 V and 11.94 fF at −5 V
 The start-value 2D cell already gives 12.03 fF
 ({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/start/w10p0_l0p50/cv.csv>`), so the gap comes before the calibration.
 
-**The pfet cell, W10/L0.7.** It is a held-out geometry; the 1D validation there is {term}`Same process`,
+**The pfet cell, W10/L0.7.** It is a {term}`held-out geometry`; the 1D validation there is {term}`Same process`,
 on the depletion crossing. The 2D cell is Same process:
 
 | Check | 2D | Verdict |
