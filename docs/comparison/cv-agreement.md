@@ -330,13 +330,13 @@ Lmin with `spice-fit`.
   L = 0.7 µm and 1.6/0.7, both from the depletion-side crossing (+124 and +132 mV, inside the
   corner window) and, at 1.6/0.7, the accumulation plateau (6.12 %).
 
-**2D: {term}`Disagree` at both calibrated nfet cells.** The `two_d` part of
-{repo}`the nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each committed calibrated 2D cell
-with the TT ngspice Cgg.
+**2D: {term}`Disagree` at the two shortest nfet cells.** The
+{repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each calibrated 2D
+cell with the TT ngspice Cgg. W10/L1 is {term}`Same process`.
 
 A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh and the SPICE
-grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6 and W10/L0.7;
-the other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6, W10/L0.7 and
+W10/L1; the other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
 A plateau row is its worst difference from SPICE. At W10/L0.6:
 
@@ -356,11 +356,20 @@ At W10/L0.7:
 | Depletion crossing shift (mV) | −202 | Disagree |
 | Inversion crossing shift (mV) | −41 | Agree |
 
+At W10/L1:
+
+| Check | 2D | Verdict |
+|---|---|---|
+| Accumulation plateau (%) | 5.7 | Same process |
+| Inversion plateau (%) | 10.3 | Same process |
+| Depletion crossing shift (mV) | −131 | Same process |
+| Inversion crossing shift (mV) | −27 | Agree |
+
 The 2D Cgg lies below SPICE on both plateaus, by more on the inversion side. At W10/L0.6 it
 is 14.12 fF at +5 V
 ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.csv>`). The
 SPICE inversion level there is 16.70 fF (`spice_regions` in the validation file). The gap
-is smaller at the longer gate. Why the 2D Cgg is low is open ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+shrinks as the gate gets longer. Why the 2D Cgg is low is open ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
 in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call
