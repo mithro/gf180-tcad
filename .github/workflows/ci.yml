@@ -11,9 +11,11 @@ permissions:
 
 # A newer push to the same pull request cancels the run still going for the older commit, so a
 # burst of fix-up pushes ends in one result (one notification), not one failure per superseded
-# commit. Pushes to main are never cancelled: every merge commit gets its own complete run.
+# commit. Runs on main are never cancelled: each commit is its own group (GitHub keeps one running
+# and one pending run per group and cancels the pending one when a third arrives, whatever
+# cancel-in-progress says), so every merge commit gets its own complete run.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

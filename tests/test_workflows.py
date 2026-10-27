@@ -150,10 +150,13 @@ def test_lint_test_lints_with_make_lint():
     assert not [ln for ln in body if "ruff" in ln and "run:" in ln], "ruff outside make lint"
 
 
-def test_ci_cancels_superseded_pull_request_runs_only():
-    lines = _lines("ci.yml")
+@pytest.mark.parametrize("name", ["ci.yml", "linkcheck.yml", "image.yml"])
+def test_superseded_pull_request_runs_are_cancelled_and_others_never(name):
+    """Per-ref groups on pull requests; per-commit groups otherwise (no pending run is dropped)."""
+    lines = [ln for ln in _lines(name) if not ln.lstrip().startswith("#")]
     i = lines.index("concurrency:")
+    prefix = name.removesuffix(".yml")
     assert lines[i + 1 : i + 3] == [
-        "  group: ci-${{ github.ref }}",
+        f"  group: {prefix}-${{{{ github.event_name == 'pull_request' && github.ref || github.sha }}}}",
         "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
     ]
