@@ -498,12 +498,19 @@ numbers.
 Added 2026-10-27 at the user's request (§16). Work that is not documented and explained does
 not count as done: if it cannot be explained in plain English, it is not understood yet.
 
-**Source of the rules.** The user's `writing-sourced-docs` skill (plugin
-`writing-sourced-docs@mithro-personal`, skill `writing-sourced-documentation`, version 1.0.0,
-from `github.com/mithro/dot-claude`, Apache-2.0) is the rule book for every docs page. Its
-`SKILL.md` and `references/` (readability rules, page templates, citations, review and tooling)
-are normative; this section records how they apply here and what enforces them. Where this
-section and the skill differ, the skill wins and this section is corrected.
+**Source of the rules.** Two of the user's skills are the rule book for every docs page:
+- `writing-sourced-docs` (skill `writing-sourced-documentation`, version 1.0.0, from
+  `github.com/mithro/dot-claude`, Apache-2.0): evidence, limits, presentation passes, review;
+- `docs-writing` (skill `writing-docs`, version 1.0.0, the user's local marketplace
+  `mithro-local`): page types, the copy rules and the review by use.
+
+Their `SKILL.md` files and `references/` are normative; this section records how they apply
+here and what enforces them. Where this section and a skill differ, the skill wins and this
+section is corrected. Where the two skills conflict, the house decisions below settle it.
+
+**One page type per page.** Each page is a tutorial, a how-to, a reference, an explanation or a
+landing page; a page that would be two types becomes two pages that link each other. Status
+pages (`docs/index.md`, the limitations index) are reference or landing pages.
 
 **Evidence.** Every asserting sentence is one of the skill's five kinds of statement, worded
 with its fixed hedge:
@@ -517,9 +524,18 @@ with its fixed hedge:
   saying what evidence would settle it.
 
 A number always carries a citation, or a "typical" label with its own citation. A number
-computed by this repo cites the committed result file it comes from. Citations are Markdown
-footnotes (`[^label]` after the claim, definitions at the page foot), per the skill's
-`references/citations.md`; quotations are verbatim.
+computed by this repo cites the committed result file it comes from. Quotations are verbatim.
+
+*House decision (citations).* writing-sourced-docs asks for Markdown footnotes; docs-writing
+asks for one descriptive inline link in the sentence that needs it and no footnotes or
+`Sources:` lines. This repo keeps its existing form: an inline descriptive link, or a MyST role
+(`{repo}`, `{ref}`, `{term}`, `{py:…}`, `{test}`) that the build checks. No footnotes.
+
+*House decision (unknowns).* writing-sourced-docs words an unknown as "not public" with an
+Open-questions bullet; docs-writing keeps "not yet", "unverified" and promises off reader
+pages. Here a reader page may say "not public" or "not stated" for a fact no public source
+gives; work that is planned or unfinished goes to an issue and to one roadmap page tied to
+issues, not onto the page.
 
 **Present state only.** A page says what is true now and what the reader needs to know now.
 What used to be true, what was changed and when, and how a result came about belong in the
@@ -527,7 +543,10 @@ change log of this spec (§16), the plans (`docs/superpowers/plans/`), the repro
 (`docs/reproduce/`) and the plugin-history page, nowhere else.
 
 **Plain English; no invented terms.** No expert is needed: each page opens with what it shows in
-plain words, and every acronym is spelled out on first use per page. Each glossary term is
+plain words, and every acronym is spelled out on first use per page. Banned words (docs-writing):
+just, simply, easy, easily, straightforward, please note, click here, currently, soon, e.g.,
+i.e., etc., in order to, as of this writing; and on a reader page: Future:, Sources:,
+unverified, TODO, not yet. No count or date that drifts, except on a fact that is itself dated. Each glossary term is
 either standard in the field, with a reference, or a short plain-words description of a thing
 this repo does, named in ordinary words. Code identifiers keep their names; the prose around
 them uses plain words.
@@ -538,29 +557,38 @@ them uses plain words.
 |---|---|
 | Prose paragraph | 100 words |
 | List item | 60 words |
-| Sentence | 45 words |
-| Sentence, target | 30 words |
+| Sentence | 25 words |
+| List | 7 items |
+| Links per page | 15 |
+| Callouts per page | 2 |
 | Table cell | 25 words, one value |
 | Columns of a table with prose | 3 |
 | Glossary entry | 80 words |
 | Page width | no sideways scroll at 400 px |
 
-Tables hold data: one value per cell, units in the header, numbers in columns of their own;
-no cell joins two numbers. A table that mixes kinds is split.
+The sentence cap is docs-writing's 25 words, stricter than writing-sourced-docs' 45. A
+callout never carries a step or a prerequisite. Tables hold data: one value per cell, units in
+the header, numbers in columns of their own; no cell joins two numbers and no cell is blank
+("none" or "not applicable"; "—" only for a value no source gives). A table that mixes kinds is
+split.
 
 **Presentation passes change no content.** A readability or formatting pass follows the
 skill's Never list: no fact, number, unit, significant figure, quotation, hedge or citation
 changes, and no hedge moves away from its claim. `measure_docs.py --preserve BEFORE AFTER`
 proves it for each restructured page. Content fixes are separate commits, labelled as such.
 
-**Review.** Every docs PR is reviewed by an agent that did not write it, by the skill's review
-protocol: at least three claims per page checked against the cited source, the diff read as a
+**Review.** Every docs PR is reviewed by an agent that did not write it, by both skills' review
+protocols: docs-writing's review by use (the reviewer follows the page as its named reader), then
+writing-sourced-docs': at least three claims per page checked against the cited source, the diff read as a
 fact diff, the rendered page read at desktop and 400 px width, and findings returned as
 `file:line — severity — what is wrong — what the source says`.
 
 **What enforces it.** The docs style pass that follows this amendment adds:
-- `tools/measure_docs.py`, the skill's measurement script vendored with an origin header (its
-  licence allows it), and a test that runs it over `docs/` and `README.md` with the caps above;
+- `tools/measure_docs.py`, writing-sourced-docs' measurement script vendored with an origin
+  header (Apache-2.0 allows it), and a test that runs it over `docs/` and `README.md`;
+- a repo test implementing docs-writing's `docs_lint.py` checks (banned words, sentence, list
+  and link limits), since that script has no stated licence and is not vendored; both tests
+  hold the current counts as a ceiling that may only fall, until the pages meet the caps;
 - `tests/test_doc_style.py`: `test_table_cells` (Markdown sources) and
   `test_generated_table_cells` (generated pages) for the one-value-per-cell and 25-word rules,
   with an explicit per-table opt-out `<!-- table-ok: reason -->`;
