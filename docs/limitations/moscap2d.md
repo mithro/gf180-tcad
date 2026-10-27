@@ -352,8 +352,9 @@ inside it ([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
 
 ## The 2D cell at L = 10 µm: the equilibrium solve fails
 
-The L = 10 µm cell has no 2D result. At `DEFAULT_2D` the equilibrium {term}`drift-diffusion`
-solve that sets up every 2D device fails. It fails inside {{ DEVSIM }}'s direct solver
+The L = 10 µm cell has no 2D result. At `DEFAULT_2D` it has 2.0 million {term}`drift-diffusion`
+unknowns ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)). The equilibrium
+drift-diffusion solve that sets up every 2D device fails on it. It fails inside {{ DEVSIM }}'s direct solver
 ({term}`UMFPACK` 5.1: "umfpack numeric failed"). The first, Poisson-only step of the solve,
 0.86 million unknowns, still solves.
 
