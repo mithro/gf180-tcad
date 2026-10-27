@@ -209,7 +209,12 @@ One small PR per render, opened by the renders plan's Task R3 PR that commits it
 
 ### Task E5: the Phase 3 hook
 
-**Files:** `tests/test_explained.py::test_mosfet_pages_name_every_mosfet_tree`: when a MOSFET TCAD tree exists under `results/tcad*/` (the tree names come from `RESULTS_IMAGE`, or from `generators.json` once Charon B0 lands), each Tier 3 page must reference it with a `{repo}` link, so the Phase 3 PR that commits the first MOSFET result fails CI until it updates the explainer (overlay figure and gap section). The test has a positive control with a fake tree (as `tests/test_docs_status.py` does). A comment on #68 names the test and the four pages.
+**Files:** `tests/test_explained.py`:
+- `NOT_MOSFET`, an explicit allowlist of the directory names under the TCAD result roots that hold no MOSFET result, each with its reason: `calibration`, `meshconv`, `moscap1d`, `moscap2d`, `validation` (on `main`: MOS capacitor trees); `corners`, `corners-mc` (Phase 2 Task 16, the bounds and spread of §5.3, MOS capacitor inputs); `meshes`, `profiles1d`, `calibration-history` (renders plan Tasks R0, R1b, R1c). The roots are `results/tcad/` and the Charon plan's `results/tcad-charon/` and `results/tcad-compare/` (Task C), whose subdirectories carry the same job-kind names and are checked against the same list.
+- `::test_mosfet_pages_name_every_mosfet_tree`: for every directory directly under each existing root (`results/tcad*/`, glob), a name in `NOT_MOSFET` passes; any other name passes only if every Tier 3 page (`channel-and-threshold.md`, `body-effect.md`, `short-channel-effects.md`, `saturation.md`) contains a `{repo}` link to that directory or a path under it. Otherwise it fails with the message "results/<root>/<name> is not in NOT_MOSFET and is not linked from <pages>: add the TCAD overlay and gap section to the explainer pages (plan E5), or add the name to NOT_MOSFET with its reason". So the Phase 3 PR that commits the first MOSFET tree fails CI until it updates the explainer, and a new non-MOSFET tree needs one reasoned line.
+- `::test_positive_control_fake_mosfet_tree_fails`: the check function run against a temporary root holding `results/tcad/mosfet2d/` and the real pages must fail, naming `mosfet2d`; run against the same root plus a page copy linking `results/tcad/mosfet2d` from all four pages, it must pass.
+
+A comment on #68 names the test and the four pages.
 
 - [ ] **Step 1:** test with positive control; comment on #68; PR inside E3's PR or on its own; merge.
 
