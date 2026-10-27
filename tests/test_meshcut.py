@@ -87,11 +87,39 @@ def _rewrite(tmp_path, old, new):
         ("2 1e-05 -2e-05 0\n", "1 1e-05 -2e-05 0\n", "duplicate"),
         ("1 1 2 1 1 13 14\n", "1 1 0 13 14\n", "physical"),
         ("1 1 2 1 1 13 14\n", "1 1 2 1 1 13\n", "nodes"),
+        ("11 2 2 1 11 1 2 8\n", "11 2 2 1 11 1 2 2\n", "repeats a node"),
+        ("1 1 2 1 1 13 14\n", "1 1 2 1 1 13 13\n", "repeats a node"),
     ],
 )
 def test_reader_refuses_other_versions_and_elements(tmp_path, old, new, match):
     with pytest.raises(msh.MshError, match=match):
         msh.read(_rewrite(tmp_path, old, new))
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "match"),
+    [
+        ('2 1 "body"\n', '2 one "body"\n', r"\$PhysicalNames: bad line '2 one"),
+        ("30 5e-05 2e-05 0\n", "30 abc 2e-05 0\n", r"\$Nodes: bad line '30 abc"),
+        ("30 5e-05 2e-05 0\n", "30 5e-05 2e-05 zero\n", r"\$Nodes: bad line '30 5e-05 2e-05 zero"),
+        ("30 5e-05 2e-05 0\n", "30.5 5e-05 2e-05 0\n", r"\$Nodes: bad line '30.5"),
+        ("1 1 2 1 1 13 14\n", "1 1 2 1 1 13 x14\n", r"\$Elements: bad line '1 1 2 1 1 13 x14"),
+        ("$Nodes\n30\n", "$Nodes\nthirty\n", r"\$Nodes: bad count line"),
+    ],
+)
+def test_reader_names_the_section_and_line_of_a_non_numeric_field(tmp_path, old, new, match):
+    with pytest.raises(msh.MshError, match=match):
+        msh.read(_rewrite(tmp_path, old, new))
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf", "NaN", "Infinity"])
+@pytest.mark.parametrize("column", [1, 2])
+def test_reader_refuses_non_finite_coordinates(tmp_path, value, column):
+    fields = ["30", "5e-05", "2e-05", "0"]
+    fields[column] = value
+    path = _rewrite(tmp_path, "30 5e-05 2e-05 0\n", " ".join(fields) + "\n")
+    with pytest.raises(msh.MshError, match="not finite"):
+        msh.read(path)
 
 
 @pytest.mark.parametrize("section", ["$MeshFormat", "$PhysicalNames", "$Nodes", "$Elements"])
@@ -288,7 +316,7 @@ def test_meshcut_never_imports_outcache():
     """Only the host command will read the output cache, as a tools/output-cache subprocess;
     no meshcut module imports gf180tcad.outcache (spec §9.1)."""
     pkg = REPO / "src" / "gf180tcad" / "meshcut"
-    files = sorted(pkg.glob("*.py"))
+    files = sorted(pkg.rglob("*.py"))
     assert files
     for f in files:
         names = _imports(f)
