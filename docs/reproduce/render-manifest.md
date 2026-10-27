@@ -8,7 +8,7 @@ The {repo}`design spec, section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tc
 sets this rule.
 
 This page lists the manifest's keys, the selector kinds and what the check rejects.
-The module {py:mod}`gf180tcad.render.manifest` reads and checks the file. The test {test}`tests/test_renders.py`
+The module {py:mod}`gf180tcad.render.manifest` reads and checks the file. The test {test}`tests/test_renders.py::test_every_entry_rereads_its_source`
 re-reads every entry of every committed manifest from its source.
 The synthetic manifest {repo}`tests/fixtures/renders/r-test.render.json` shows each kind of entry.
 
