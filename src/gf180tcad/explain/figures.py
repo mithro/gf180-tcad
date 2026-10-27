@@ -259,8 +259,8 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
 
 def band_levels(dev: model.Device, part: str) -> dict[str, float]:
     """The flat-band energy levels of the silicon layer ``part`` (eV, from the middle of the gap,
-    taken as the intrinsic level): the band edges half the band gap above and below it
-    (``band_gap_si``, a textbook value), and the Fermi level of Boltzmann statistics
+    taken as the intrinsic level): the band edges half the :term:`band gap` above and below it
+    (``band_gap_si``, a textbook value), and the :term:`Fermi level` of Boltzmann statistics
     (:func:`gf180tcad.explain.idealised.boltzmann_fermi`) from the layer's electron density,
     the doping for donors or the mass-action minority density for acceptors."""
     layer = dev.layer(part)
@@ -279,8 +279,8 @@ _DOPED = {"donor": "n-type", "acceptor": "p-type"}
 
 def band_flat(dev: model.Device, parts: tuple[str, ...], palette: str) -> bytes:
     """One flat band diagram per silicon layer in ``parts``, side by side on one energy axis:
-    the conduction band (shaded above its edge), the valence band (shaded below its edge), the
-    middle of the gap (dotted) and the Fermi level (:func:`band_levels`)."""
+    the :term:`conduction band` (shaded above its edge), the :term:`valence band` (shaded below
+    its edge), the middle of the gap (dotted) and the Fermi level (:func:`band_levels`)."""
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     gap = numbers.value("band_gap_si")
