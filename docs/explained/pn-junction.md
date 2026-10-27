@@ -68,8 +68,8 @@ $$
 
 Here $N_A$ and $N_D$ are the acceptor and donor densities and $n_i$ is the
 {term}`intrinsic carrier density`. The thermal voltage $V_t$ is {{ x_vt_tcad }}. For an
-idealised abrupt junction between this repo's source peak and calibrated body doping, $V_{bi}$
-is {{ x_vbi_nfet }}.
+idealised abrupt junction between the card's source peak and the calibrated body doping,
+$V_{bi}$ is {{ x_vbi_nfet }}.
 
 (explained-junction-width)=
 
@@ -91,16 +91,18 @@ one ({ref}`Sze and Ng, ch. 2 <lit-sze>`). Here it lies almost all in the body.
 :figclass: only-light
 :alt: Three panels against distance into the body: a tall thin donor spike at the junction and a low acceptor step, a triangular field and a potential that falls to zero at the depletion edge.
 
-The charge, the field and the potential of the idealised abrupt junction, from this repo's
-source peak and calibrated body doping.
+The charge, the field and the potential of the idealised abrupt junction. The source doping is
+the model card's peak value, and the body doping is fitted to the {term}`SPICE` model. The curves
+are an idealised example computed from them in the depletion approximation.
 ```
 
 ```{figure} /_generated/explained/junction-panels-dark.svg
 :figclass: only-dark
 :alt: Three panels against distance into the body: a tall thin donor spike at the junction and a low acceptor step, a triangular field and a potential that falls to zero at the depletion edge.
 
-The charge, the field and the potential of the idealised abrupt junction, from this repo's
-source peak and calibrated body doping.
+The charge, the field and the potential of the idealised abrupt junction. The source doping is
+the model card's peak value, and the body doping is fitted to the {term}`SPICE` model. The curves
+are an idealised example computed from them in the depletion approximation.
 ```
 
 (explained-junction-differs)=
