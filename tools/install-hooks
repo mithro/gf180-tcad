@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Install the repository's git hooks (tools/git-hooks/) in this clone and all its worktrees.
+
+    uv run --locked python tools/install-hooks          # install (idempotent)
+    uv run --locked python tools/install-hooks --check  # exit 1 unless installed
+
+Sets ``core.hooksPath`` to ``tools/git-hooks``. Git resolves a relative ``core.hooksPath``
+against the top of the working tree the hook runs in, so the one setting (in the clone's shared
+config) covers the primary checkout and every ``git worktree``, each running the hooks of its own
+checked-out commit. A branch older than tools/git-hooks/ simply has no hook. The only hook is
+``pre-push``: it runs ``make pre-push`` (``make lint`` and the fast tests that broke CI most
+often) and refuses the push if that fails. Refuses (exit 2) to replace a different
+``core.hooksPath`` that is already set.
+"""
+
+import argparse
+import subprocess
+import sys
+
+HOOKS_PATH = "tools/git-hooks"
+
+
+def _git(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=False)
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("--check", action="store_true", help="only report; exit 1 if not installed")
+    args = p.parse_args(argv)
+    current = _git("config", "--get", "core.hooksPath").stdout.strip()
+    if current == HOOKS_PATH:
+        print(f"install-hooks: installed (core.hooksPath = {HOOKS_PATH})")
+        return 0
+    if args.check:
+        print(f"install-hooks: not installed (core.hooksPath = {current or '(unset)'})")
+        return 1
+    if current:
+        print(
+            f"install-hooks: refused: core.hooksPath is already {current!r}; "
+            f"unset it first (git config --unset core.hooksPath)",
+            file=sys.stderr,
+        )
+        return 2
+    r = _git("config", "core.hooksPath", HOOKS_PATH)
+    if r.returncode != 0:
+        print(f"install-hooks: git config failed:\n{r.stderr}", file=sys.stderr)
+        return r.returncode
+    print(f"install-hooks: installed (core.hooksPath = {HOOKS_PATH})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
