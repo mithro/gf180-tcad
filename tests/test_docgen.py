@@ -465,8 +465,18 @@ def test_moscap_summary_2d_sentence_follows_the_statuses(tmp_path):
     def row(text: str, gid: str) -> str:
         return next(ln for ln in text.splitlines() if f"<nfet_05v0/{gid}>" in ln)
 
+    # a committed calibrated 2D cell the validation file does not compare: pending
+    first = min(tree.glob("moscap2d/*/calibrated/*/cv.csv"), default=None)
+    if first is not None:
+        vpath = tree / "validation" / f"{first.parents[2].name}.json"
+        val = json.loads(vpath.read_text("utf-8"))
+        val["two_d"][first.parent.name] = {"causes": [], "reason": "none", "status": "not run"}
+        vpath.unlink()
+        vpath.write_text(json.dumps(val), "utf-8")
     # each committed calibrated 2D cell: its verdict once compared, else pending
     text = summary()
+    if first is not None:
+        assert docgen._TWO_D_PENDING in text
     for csv in sorted(tree.glob("moscap2d/*/calibrated/*/cv.csv")):
         device, gid = csv.parents[2].name, csv.parent.name
         entry = json.loads((tree / "validation" / f"{device}.json").read_text("utf-8"))
