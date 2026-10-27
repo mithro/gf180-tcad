@@ -83,7 +83,7 @@ def unit_text(unit: str) -> str:
 
 
 # How to read a geometry id, said once on each page whose tables are keyed by it.
-GEOMETRY_ID_TEXT = (
+_GEOMETRY_ID_TEXT = (
     "A {term}`geometry id` gives W and L in µm, with p for the decimal point: "
     "`w10p0_l0p60` is W = 10 µm, L = 0.6 µm."
 )
@@ -454,7 +454,7 @@ def _summary_page(root, spec: dict, out: Path):
             f"sources and caveats are on {{doc}}`{SPEC_DOC}`."
         ),
         "",
-        GEOMETRY_ID_TEXT,
+        _GEOMETRY_ID_TEXT,
         "",
         *_spec_status(root, spec),
         "",
@@ -1131,7 +1131,7 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         "## Geometries",
         "",
-        GEOMETRY_ID_TEXT,
+        _GEOMETRY_ID_TEXT,
         "",
     ]
     verdicts, errors, shifts = [], [], []
@@ -1232,7 +1232,7 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
         "",
         "## Verdicts (1D)",
         "",
-        GEOMETRY_ID_TEXT,
+        _GEOMETRY_ID_TEXT,
         "",
     ]
     rows = []

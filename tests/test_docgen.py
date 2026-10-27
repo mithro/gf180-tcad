@@ -100,7 +100,7 @@ def test_geometry_links_name_the_geometry(tmp_path):
         if p.name == "index.md" and any(
             re.fullmatch(r"w\d+p\d+_l\d+p\d+", label) for label, _ in links
         ):
-            assert docgen.GEOMETRY_ID_TEXT in text, p
+            assert docgen._GEOMETRY_ID_TEXT in text, p
         assert " um" not in text and "um^2" not in text, p
 
 
