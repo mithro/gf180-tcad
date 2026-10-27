@@ -78,12 +78,12 @@ The median {term}`observed order of convergence` of each triple of neighbouring 
 | pfet_05v0 | 1 | 3 | 2.08 |
 
 - **The selected level is level 0, `DEFAULT_1D` itself, for both devices.** Its largest change
-  is about 4e-5, 250 times below the 1 % criterion.
+  is 3.7e-5 (nfet) and 3.8e-5 (pfet). That is over 250 times below the 1 % criterion.
 - **The three finest levels are second order.** Their observed order is 2.01 to 2.13 at every
-  bias. The coarsest triple gives a median of about 1.25, because level 0 is not quite a uniform
+  bias. The coarsest triple's median is 1.24 (nfet) and 1.26 (pfet), because level 0 is not quite a uniform
   refinement of the others. Each layer is graded geometrically and then rescaled to fill its
   thickness exactly. At level 0, the 0.2 µm poly hits the grading cap of 1.1: the fewest
-  intervals that grade from 20 nm to 0.05 nm overfill it, so its spacings are rescaled to about
+  intervals that grade from 20 nm to 0.05 nm overfill it, so its spacings are rescaled to
   0.91 of nominal (0.0455 nm at the oxide instead of 0.05 nm). From level 1 on, every layer is
   limited by its length instead, and its spacings are within 1 % of nominal.
 - **Against the exact reference.** {test}`tests/tcad/test_meshconv.py::test_converges_to_exact`
