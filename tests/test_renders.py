@@ -14,6 +14,7 @@ import shutil
 import tomllib
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from gf180tcad.render import manifest as rm
@@ -291,3 +292,31 @@ def test_paths_must_be_repo_relative(bad):
     d["inputs"][bad] = "0" * 64
     with pytest.raises(ValueError, match="repo-relative"):
         rm.Manifest.from_dict(d)
+
+
+def test_corrupt_npz_is_reported(tmp_path):
+    np.savez(tmp_path / "a.npz", nodes_um=np.array([1.0, 2.0]))
+    b = rm.Builder(tmp_path, "r-npz")
+    b.source("nodes", "a.npz", {"npz": "nodes_um"}, "um", role="geometry", scale=1.0)
+    m = b.build()
+    assert m.verify(tmp_path) == []
+    good = (tmp_path / "a.npz").read_bytes()
+    for bad in (b"not a zip file", good[: len(good) // 2], good[:-30]):
+        (tmp_path / "a.npz").write_bytes(bad)
+        problems = m.verify(tmp_path)
+        assert "input a.npz: sha256 changed" in problems
+        assert any(p.startswith("nodes: ") and "a.npz" in p for p in problems), problems
+
+
+def test_exaggeration_text_never_uses_an_exponent():
+    assert rm.exaggeration_text("depth", 1e6) == "depth ×1000000, not to scale"
+    assert rm.exaggeration_text("depth", 2.5e-7) == "depth ×2.5e-07, not to scale"
+
+
+def test_stale_exaggeration_statement_fails():
+    """After a scale change, the old statement is flagged as well as the missing new one."""
+    m = rm.Manifest.load(ROOT / FIXTURE_MANIFEST)
+    m.quantities["t_ox"].scale = 20.0
+    problems = m.verify(ROOT)
+    assert "t_ox: no exaggeration string 'oxide thickness ×20, not to scale'" in problems
+    assert "stale exaggeration string 'oxide thickness ×40, not to scale'" in problems

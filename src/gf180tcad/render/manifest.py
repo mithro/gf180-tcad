@@ -24,6 +24,7 @@ number.
 from __future__ import annotations
 
 import json
+import zipfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,11 +38,15 @@ REQUIRED = ("exaggeration", "format", "inputs", "quantities", "render")
 DISPLAY_SOURCE = "data/render/display.toml"
 OPTIONAL = ("cycles", "device", "frames", "generator", "image", "outputs", "params", "scene")
 
+NOT_TO_SCALE = "not to scale"
+
 
 def exaggeration_text(label: str, scale: float) -> str:
     """The exaggeration statement of an entry drawn at ``scale`` times its size, for example
-    ``"oxide thickness ×40, not to scale"``."""
-    return f"{label} ×{scale:g}, not to scale"
+    ``"oxide thickness ×40, not to scale"``. A whole factor is written without a decimal point
+    or an exponent (×1000000), any other by its shortest round-trip form (×0.25)."""
+    factor = str(int(scale)) if float(scale).is_integer() and abs(scale) < 1e16 else repr(scale)
+    return f"{label} ×{factor}, {NOT_TO_SCALE}"
 
 
 def _derived_order(quantities: Mapping[str, Quantity]) -> list[str]:
@@ -172,6 +177,8 @@ class Manifest:
                 got[name] = q.read(root)
             except (KeyError, IndexError, ValueError) as e:
                 problems.append(f"{name}: {e}")
+            except (OSError, zipfile.BadZipFile, EOFError) as e:
+                problems.append(f"{name}: cannot read {q.source}: {e}")
         for name in _derived_order(self.quantities):
             q = self.quantities[name]
             if not all(i in got for i in q.inputs):
@@ -210,6 +217,10 @@ class Manifest:
                 text = exaggeration_text(q.label, q.scale)
                 if text not in self.exaggeration:
                     problems.append(f"{name}: no exaggeration string {text!r}")
+        required = set(self.required_exaggeration())
+        for text in self.exaggeration:
+            if text.endswith(f", {NOT_TO_SCALE}") and text not in required:
+                problems.append(f"stale exaggeration string {text!r}")
         return problems
 
 
