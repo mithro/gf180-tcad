@@ -326,7 +326,7 @@ fixed L tests the area scaling and the parasitic model, not the 2D solve.
 
 The W1.6/L0.7 comparison follows from the W10/L0.7 solve (our arithmetic): `cgg_per_um` of its
 {repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.csv>` times 1.6 µm,
-compared with the TT ngspice target of W1.6/L0.7 by {py:func}`~gf180tcad.calibrate.cv.compare`.
+compared with the {term}`TT` {{ ngspice }} target of W1.6/L0.7 by {py:func}`~gf180tcad.calibrate.cv.compare`.
 The result is {term}`Disagree`:
 
 | Check | Value | Verdict |
