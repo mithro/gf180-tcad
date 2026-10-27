@@ -82,6 +82,12 @@ tcad-calibrated:
 		--out results/tcad/moscap2d
 	$(TCAD) moscap --device nfet_05v0 --dim 2 --params calibrated --geometry w10p0_l1p00 \
 		--out results/tcad/moscap2d
+	$(TCAD) moscap --device nfet_05v0 --dim 2 --params calibrated --geometry w10p0_l2p00 \
+		--method qs --resume $(TCAD_SCRATCH)/moscap2d-nfet_05v0-calibrated-w10p0_l2p00 \
+		--out results/tcad/moscap2d
+	$(TCAD) moscap --device nfet_05v0 --dim 2 --params calibrated --geometry w10p0_l2p00 \
+		--method combine-qs --resume $(TCAD_SCRATCH)/moscap2d-nfet_05v0-calibrated-w10p0_l2p00 \
+		--out results/tcad/moscap2d
 
 # 5. The validation of the committed calibration (refuses unless it is committed and unchanged).
 tcad-validate:

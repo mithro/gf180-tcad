@@ -71,12 +71,17 @@ Each step is a target of its own, which can also be run alone:
 | `tcad-meshconv` | `python -m gf180tcad.tcad meshconv --dim 1` for both devices, then `--dim 2 --jobs 1` (one 16 GiB {term}`job` at a time) | {repo}`results/tcad/meshconv` |
 | `tcad-start` | `python -m gf180tcad.tcad moscap --params start`: `--dim 1` for both devices, and `--dim 2` for each committed 2D cell (L = 2 µm: see below) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
-| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (the nfet at W10/L0.6, W10/L0.7 and W10/L1, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
+| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (the nfet at W10/L0.6, W10/L0.7, W10/L1 and W10/L2, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
 
 In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs`. Both use the
 same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job
 resumes when the target runs again.
+
+In `tcad-calibrated`, the nfet L = 2 µm cell runs the same two steps. Its {term}`QS <C–V>` step outgrows the
+16 GiB cap before the {term}`sweep` ends ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)).
+Rerun that `--method qs` line alone, on the same `--resume`, until it exits 0.
+Then run its `--method combine-qs` line.
 
 It exits non-zero if any job fails or if any file differs from, is missing from, or is not
 listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Docker }}, the sandbox
@@ -233,10 +238,35 @@ The hash is **per results folder**
 the entry point that writes the folder, one module list per entry point in
 {py:data}`gf180tcad.tcad.TCAD_GENERATORS`. It also covers the inputs both entry points share: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
 {repo}`tools/sandbox-run`. The closure is the static one, so an import inside a function counts
-too ({test}`tests/tcad/test_tcad_provenance.py::test_tcad_generator_modules_match_the_import_graph`
+too ({test}`tests/tcad/test_tcad_provenance.py::test_registry_lists_match_the_import_graph`
 runs once per entry point). {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties each results folder
 to its writer, and {test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current`
 requires every results folder to name its writer and to carry that writer's current hash.
+
+**The generator registry.** It is a data file, {repo}`src/gf180tcad/generators.json`. It holds
+the module lists, each results folder's writer, the images and the calibration folder. At
+import, {py:mod}`gf180tcad.tcad` reads it once into the dicts named above.
+
+The file is not hashed: it decides what is hashed. A change to its module lists or plugin
+exclusions adds or removes a hashed file, which changes the hash. A renamed results folder
+changes the manifest. A changed image or calibration folder changes the image digest or the
+calibration that `provenance.json` records. Its keys:
+
+| key | holds |
+|---|---|
+| `entry_points` | each entry point's sorted module list |
+| `trees` | each results folder, by its path under {repo}`results/`, and its writer |
+| `images` | each image's pin file and `versions.json` |
+| `plugin_excludes` | each entry point's plugin files left out of its hash |
+| `calibration_dirs` | each backend's calibration folder |
+
+Both entry points leave the plugin's `gplugins/devsim/backends/charon/` out of their hash
+({py:data}`gf180tcad.tcad.PLUGIN_EXCLUDES`), and
+{test}`tests/tcad/test_tcad_provenance.py::test_excluded_plugin_files_are_not_imported_by_the_hashed_ones`
+checks that no hashed plugin file imports it. An entry point, a results folder or an image for
+another simulator is a row in the file. Adding one leaves every committed hash as it is.
+{test}`tests/tcad/test_tcad_provenance.py::test_registry_trees_cover_every_committed_root`
+requires every results folder under `results/tcad*/` to be a row of `trees`.
 
 A change to a module that a folder's writer never imports therefore leaves the folder's hash alone.
 The calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in
@@ -268,13 +298,15 @@ uv run --locked python tools/restamp-tcad-provenance results/tcad/<tree>   # --d
 make manifest
 ```
 
-{repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`, the writer
-taken from the folder's name, and refuses (exit 2, file unchanged) if anything else in the file
-differs from what the writer would write now: the plugin commit, an image, the calibration
-applied, or a `generator` naming the other entry point. Then the folder has to be regenerated.
+{repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`. It takes
+the writer from the folder's path under {repo}`results/` (the `trees` of the registry). It refuses
+(exit 2, file unchanged) if anything else in the file differs from what the writer would write
+now. That covers the plugin commit, an image, the calibration applied, or a `generator` naming
+the other entry point. Then the folder has to be regenerated.
+
 Such an update claims that the data did not change; it does not show it. So every one is
-recorded below, with the hash the folder had before. The records below predate the design spec
-§9 rule that a representative job is rerun first.
+recorded below, with the hash the folder had before. The records before the
+backend-seam record predate the design spec §9 rule that a representative job is rerun first.
 
 **Results folders written under the old scheme.** Before [issue #34](https://github.com/mithro/gf180-tcad/issues/34) one hash covered both entry points, and
 `provenance.json` had no `generator`. A results folder produced that way, for example on a branch that
@@ -316,14 +348,25 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `nfet_05v0` | `w10p0_l0p60` | both | 11338 |
 | `nfet_05v0` | `w10p0_l0p70` | both | 12584 |
 | `nfet_05v0` | `w10p0_l1p00` | both | 15169 |
+| `nfet_05v0` | `w10p0_l2p00` | qs | 14755 |
+| `nfet_05v0` | `w10p0_l2p00` | combine-qs | 3 |
 
 | Device | Geometry | Peak memory (GiB) | Exit code | Finished (ACDT) |
 |---|---|---|---|---|
 | `nfet_05v0` | `w10p0_l0p60` | 7.82 | 0 | 2026-10-27 11:31 |
 | `nfet_05v0` | `w10p0_l0p70` | 5.93 | 0 | 2026-10-27 15:01 |
 | `nfet_05v0` | `w10p0_l1p00` | 6.09 | 0 | 2026-10-27 19:51 |
+| `nfet_05v0` | `w10p0_l2p00` | 16.00 | 0 | 2026-10-28 00:32 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
+
+They ran at gplugins `1c071d0`. The folder's `provenance.json` names the later pin, `0715c81`.
+The W10/L2 job was committed after the "Restamped without a rerun" list below, so that list does not name it.
+The 2D code path is the same at both pins. `DDComponent` moved verbatim, and `sweep_cv` differs only in its docstring.
+
+The `w10p0_l2p00` {term}`QS <C–V>` command ran three times on one `--resume`. The first two attempts reached
+the 16 GiB cap after points 67 and 147 and were killed; the third finished ({ref}`moscap2d-l2`).
+Its wall time covers all three. The `combine-qs` step took 3 s, less than one memory sample, so it has no memory row.
 
 **Old-scheme provenance from a parallel branch ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).** The first calibrated 2D job
 (nfet, `w10p0_l0p60`) was started before the per-folder hash was merged. Its host process
@@ -398,6 +441,34 @@ On the 2D path, only the file holding `DDComponent` moved, verbatim.
 `create_2Duz_simulation` and the solve code of `sweep_cv` did not change.
 The result types moved unchanged to `results.py`.
 The package import became lazy, which changes when modules load, not what they compute.
+
+**Generator registry, not regenerated.** The registry moved into a data file.
+It moved from {py:mod}`gf180tcad.tcad` into {repo}`src/gf180tcad/generators.json`.
+{py:mod}`gf180tcad.calibrate.cv` gained the `simulate_2d` parameter. Both are hashed modules.
+The plugin exclusion also takes the
+tracked file `gplugins/devsim/backends/charon/__init__.py` out of both hashes. Nothing that
+computes a result changed.
+
+{repo}`tools/restamp-tcad-provenance` then set each `generator_sha256`, starting from the
+backend-seam record above.
+
+| results folder | writer | before | after |
+|---|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `3f1ac6bd…` | `bf8f2dcc…` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `3f1ac6bd…` | `bf8f2dcc…` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `3f1ac6bd…` | `bf8f2dcc…` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `51a0a009…` | `c8cf20b5…` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `51a0a009…` | `c8cf20b5…` |
+
+The full hashes are `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` and
+`c8cf20b562088612489bf71c2f0ea2270c2489c337da4cb0bda3aaad4595daea`.
+The `crosscheck-tcad` job on a {{ GitHub_hosted_runner }}
+([run 40493834668](https://github.com/mithro/gf180-tcad/actions/runs/40493834668)) reran the
+two calibrated 1D jobs at these stamps. It printed
+`identical: 5 files of 2 jobs … match results/MANIFEST.sha256 under tcad/`, with
+{repo}`results/tcad/moscap1d/provenance.json` among the files. On 2026-10-28, at the same
+stamps, `make reproduce-quick` reran them on this host and printed the same `identical` line.
+The other folders were not rerun, for the reasons listed under the backend-seam record.
 
 (cross-host-determinism)=
 
@@ -542,7 +613,7 @@ rerun byte for byte locally by
 
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
 content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
-the sha256 the committed results name. It holds the meshes of the three calibrated nfet cells, W10/L0.6, W10/L0.7 and W10/L1;
+the sha256 the committed results name. It holds the meshes of the four calibrated nfet cells, W10/L0.6, W10/L0.7, W10/L1 and W10/L2;
 see {doc}`output-cache`.
 
 ## Render manifest

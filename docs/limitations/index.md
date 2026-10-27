@@ -43,15 +43,14 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
 
 ## Reproducing the results
 
-- **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
-  `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
+- **Two targets cannot run their split 2D jobs as written:** `make tcad-start` and `make tcad-calibrated`.
+  Their `--resume` directory, `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
-- **TCAD {term}`provenance` updated without a rerun.** Every TCAD results folder's provenance
-  was updated to the per-folder {term}`generator_sha256` without a rerun
-  ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)). That covers all five folders:
-  `moscap1d`, `moscap2d`, `meshconv`, `calibration` and `validation`. Only the two calibrated 1D
-  {term}`jobs <job>` are rerun and compared byte for byte on another computer. The 2D
-  mesh-convergence results have no byte-for-byte evidence; see {ref}`tcad-provenance`.
+- **TCAD {term}`provenance` updated without a rerun.** A code change that leaves the results
+  alone still changes the {term}`generator_sha256`. Each time, the provenance of the TCAD
+  results folders was updated without a full rerun; {ref}`tcad-provenance` records every update.
+  Only the two calibrated 1D {term}`jobs <job>` were rerun and compared byte for byte. The 2D
+  mesh-convergence results have no byte-for-byte evidence.
 - **`make reproduce` does not reproduce the 2D TCAD files.** It has not been run end to end.
   The 2D job files lack entries the current job writes. The L = 2 µm
   {term}`sweeps <sweep>` are resumed ones. A fresh run therefore differs from them

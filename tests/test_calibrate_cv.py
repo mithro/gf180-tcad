@@ -728,3 +728,69 @@ def test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell():
     assert [v[k]["verdict"] for k in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv")] == [
         "Same process", "Same process", "Disagree", "Agree",
     ]  # fmt: skip
+
+
+def test_simulate_is_injectable_and_defaults_to_devsim(fit, tmp_path, monkeypatch):
+    """Charon plan Task B0: both simulators are parameters, so another backend calibrates and
+    validates without editing calibrate.cv; omitted, they are the DEVSIM ones."""
+    import inspect
+
+    for fn in (cv.calibrate_cv, cv.validate_cv):
+        assert inspect.signature(fn).parameters["simulate"].default is None, fn
+    assert inspect.signature(cv.validate_cv).parameters["simulate_2d"].default is None
+    res, _, _ = fit
+    res.write(tmp_path / "cal")
+    frozen = cv.load_frozen(NFET, tmp_path / "cal")
+    targets = synthetic_targets(NFET, TRUTH, DEVICES[NFET].geometries, grid=GRID[::10])
+    made = []
+
+    def fake_devsim(device, log=None):
+        made.append(("1d", device))
+        return Recorder()
+
+    real_2d = cv.devsim_2d_results
+
+    def fake_devsim_2d(root=None):
+        made.append(("2d", root))
+        return real_2d(root)
+
+    monkeypatch.setattr(cv, "devsim_simulator", fake_devsim)
+    monkeypatch.setattr(cv, "devsim_2d_results", fake_devsim_2d)
+    m2d = tmp_path / "moscap2d"
+    out = cv.validate_cv(
+        NFET, frozen, targets=targets, calibration_root=tmp_path / "cal", moscap2d_root=m2d
+    )
+    assert made == [("1d", NFET), ("2d", m2d)]
+    assert {e["status"] for e in out.two_d.values()} == {"not run"}
+    # an injected 2D source is used for every geometry, and the defaults are not built
+    made.clear()
+    asked = []
+
+    def simulate_2d(device, g):
+        asked.append(geometry_id(g))
+        t = targets[geometry_id(g)]
+        return cv.Cv2D(t.tt.vg, t.tt.cgg_ff, frozen.param_sha256, "injected")
+
+    out = cv.validate_cv(
+        NFET, frozen, simulate=Recorder(), simulate_2d=simulate_2d, targets=targets,
+        calibration_root=tmp_path / "cal",
+    )  # fmt: skip
+    assert made == []
+    assert asked == [geometry_id(g) for g in DEVICES[NFET].geometries]
+    assert {e["status"] for e in out.two_d.values()} == {"compared"}
+    assert {e["verdict"] for e in out.two_d.values()} == {"Agree"}
+
+    def stale(device, g):
+        t = targets[geometry_id(g)]
+        return cv.Cv2D(t.tt.vg, t.tt.cgg_ff, "0" * 64, "injected")
+
+    with pytest.raises(cv.NotFrozen, match="injected: not computed"):
+        cv.validate_cv(
+            NFET, frozen, simulate=Recorder(), simulate_2d=stale, targets=targets,
+            calibration_root=tmp_path / "cal",
+        )  # fmt: skip
+    with pytest.raises(ValueError, match="not both"):
+        cv.validate_cv(
+            NFET, frozen, simulate=Recorder(), simulate_2d=stale, targets=targets,
+            calibration_root=tmp_path / "cal", moscap2d_root=tmp_path,
+        )  # fmt: skip
