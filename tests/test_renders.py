@@ -256,3 +256,18 @@ def test_display_mismatch_statement_matches_the_simulation():
     assert f"{implied:.2f}" == "1.16"
     assert "E_g = 1.16 eV" in d["mismatch"] and "1.12 eV" in d["mismatch"]
     assert f"T = {c.t_k} K" in d["mismatch"]
+
+
+@pytest.mark.parametrize(
+    "bad", ["/etc/passwd", "../outside.json", "results/../../x.csv", "a\\b.csv", ""]
+)
+def test_paths_must_be_repo_relative(bad):
+    """A source or an input outside the repo is refused, so every number traces to a repo file."""
+    d = json.loads((ROOT / FIXTURE_MANIFEST).read_text(encoding="utf-8"))
+    d["quantities"]["t_ox"]["source"] = bad
+    with pytest.raises(ValueError, match="t_ox: .*repo-relative"):
+        rm.Manifest.from_dict(d)
+    d = json.loads((ROOT / FIXTURE_MANIFEST).read_text(encoding="utf-8"))
+    d["inputs"][bad] = "0" * 64
+    with pytest.raises(ValueError, match="repo-relative"):
+        rm.Manifest.from_dict(d)

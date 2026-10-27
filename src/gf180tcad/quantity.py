@@ -36,7 +36,7 @@ import json
 import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import numpy as np
@@ -225,6 +225,22 @@ def is_array(value) -> bool:
     return not isinstance(value, str | int | float | bool | np.generic | type(None))
 
 
+def repo_path(p) -> str:
+    """``p`` if it is a normalised repo-relative POSIX path, else ValueError: never absolute,
+    never ``..``, ``.`` or an empty part, never a backslash, so a read stays inside the repo."""
+    ok = (
+        isinstance(p, str)
+        and p not in ("", ".")
+        and "\\" not in p
+        and str(PurePosixPath(p)) == p
+        and not PurePosixPath(p).is_absolute()
+        and ".." not in PurePosixPath(p).parts
+    )
+    if not ok:
+        raise ValueError(f"{p!r} is not a normalised repo-relative path")
+    return p
+
+
 def file_sha256(path: Path) -> str:
     """The sha256 (hex) of the bytes of ``path``."""
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -289,8 +305,12 @@ class Quantity:
             fail("an entry has either source and selector, or derived and inputs")
         selector = None
         if sourced:
-            if not (isinstance(d.get("source"), str) and d["source"]) or "selector" not in d:
+            if "source" not in d or "selector" not in d:
                 fail("a read entry needs a source path and a selector")
+            try:
+                repo_path(d["source"])
+            except ValueError as e:
+                fail(f"source {e}")
             try:
                 selector = Selector.from_dict(d["selector"])
             except ValueError as e:

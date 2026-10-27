@@ -118,3 +118,10 @@ def test_canonical_sha256():
 def test_is_array():
     assert quantity.is_array(np.zeros(2)) and quantity.is_array((np.zeros(2), np.zeros(2)))
     assert not quantity.is_array(1.0) and not quantity.is_array("n") and not quantity.is_array(3)
+
+
+def test_repo_path():
+    assert quantity.repo_path("results/tcad/a.json") == "results/tcad/a.json"
+    for bad in ["/abs", "..", "a/../b", "a\\b", "", "./a", "a//b"]:
+        with pytest.raises(ValueError, match="repo-relative"):
+            quantity.repo_path(bad)

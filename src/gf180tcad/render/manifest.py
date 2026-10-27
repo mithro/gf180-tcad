@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from gf180tcad import derive, io
-from gf180tcad.quantity import Quantity, Selector, file_sha256
+from gf180tcad.quantity import Quantity, Selector, file_sha256, repo_path
 
 FORMAT = 1
 REQUIRED = ("exaggeration", "format", "inputs", "quantities", "render")
@@ -91,6 +91,8 @@ class Manifest:
             isinstance(k, str) and isinstance(v, str) and len(v) == 64 for k, v in inputs.items()
         ):
             raise ValueError("inputs maps each repo-relative path to its sha256")
+        for k in inputs:
+            repo_path(k)
         ex = d["exaggeration"]
         if not isinstance(ex, list) or not all(isinstance(s, str) and s for s in ex):
             raise ValueError("exaggeration is a list of statements")
@@ -230,6 +232,7 @@ class Builder:
         label: str | None = None,
     ):
         """Read entry ``name`` from the repo-relative ``source``; returns its value."""
+        repo_path(source)
         q = Quantity(name, unit, role, scale, label, source, Selector.from_dict(selector))
         value = q.read(self.root)
         self.inputs[source] = file_sha256(self.root / source)
