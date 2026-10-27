@@ -92,7 +92,8 @@ Each annotation names what the project uses the item for.
 
 ## Textbooks for the explainer pages
 
-The chapter titles below come from the Crossref record of the edition cited.
+Each chapter below is named from the Crossref record of the edition cited. Sze and Ng's chapters
+carry their titles, and Taur and Ning's are named by topic.
 
 - {ref}`Sze and Ng, 3rd ed. <lit-sze>`: ch. 4, "Metal-Insulator-Semiconductor Capacitors", and
   ch. 6, "MOSFETs".
@@ -100,8 +101,8 @@ The chapter titles below come from the Crossref record of the edition cited.
 (lit-taur)=
 
 - Taur and Ning, *Fundamentals of Modern VLSI Devices*, 3rd ed., Cambridge University Press,
-  2021, {doi}`10.1017/9781108847087`: its chapters on basic device physics, the
-  {term}`MOS capacitor <MOSCAP>` and the MOSFET.
+  2021, {doi}`10.1017/9781108847087`. The explainer pages use its chapters on basic device
+  physics, the {term}`MOS capacitor <MOSCAP>` and the MOSFET.
 
 ## Mismatch
 
