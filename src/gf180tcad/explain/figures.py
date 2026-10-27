@@ -462,13 +462,22 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
 }
 
 
+# The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
+# computed curves (not drawings of the device) carry no statement.
+_CELL_FIGURES = ("parts-cell", "junction-cell")
+_PLOTS = ("junction-panels",)
+
+
 def substitutions() -> dict[str, str]:
-    """``{"x_fig_<name>_scale": statement}``: the exaggeration statement of each figure, for its
-    caption, from the same scale factors the drawing uses."""
-    return {
-        f"x_fig_{name.replace('-', '_')}_scale": model.exaggeration(STYLE["scales"])
-        for name in FIGURES
-    }
+    """``{"x_fig_<name>_scale": statement}``: the exaggeration statement of each drawing of the
+    device, for its caption, from the same scale factors (and drawn extents) the drawing uses."""
+    out = {}
+    for name in FIGURES:
+        if name in _PLOTS:
+            continue
+        drawn = STYLE["drawn_um"] if name in _CELL_FIGURES else None
+        out[f"x_fig_{name.replace('-', '_')}_scale"] = model.exaggeration(STYLE["scales"], drawn)
+    return out
 
 
 def write_all(out_dir: Path) -> None:

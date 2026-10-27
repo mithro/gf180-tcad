@@ -55,7 +55,9 @@ _RENDER_EXPLAINED = textwrap.dedent(
 )
 
 
-@pytest.mark.parametrize("figure", ["silicon-doping", "oxide-stack"])
+@pytest.mark.parametrize(
+    "figure", ["silicon-doping", "oxide-stack", "parts-cell", "junction-cell", "junction-panels"]
+)
 @pytest.mark.parametrize("palette", ["light", "dark"])
 def test_explained_svg_deterministic(figure, palette):
     """An explainer figure, both palettes: two fresh processes give the same bytes."""

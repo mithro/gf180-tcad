@@ -764,7 +764,9 @@ def test_junction_formulas_against_hand_values():
     """
     from gf180tcad.explain import idealised
 
-    assert idealised.built_in_potential(1e17, 1e17, 1e10, 0.025) == pytest.approx(0.8059048, rel=1e-6)
+    assert idealised.built_in_potential(1e17, 1e17, 1e10, 0.025) == pytest.approx(
+        0.8059048, rel=1e-6
+    )
     w = idealised.depletion_width(1e16, 1e16, 0.7, 11.7, 8.8541878128e-14, 1.602176634e-19)
     assert w == pytest.approx(4.254917e-5, rel=1e-6)
     numbers = _numbers()
@@ -790,7 +792,9 @@ def test_abrupt_junction_profile_is_consistent():
     # neutral to the grid step (1e-5 W) at each of the four edges
     assert np.trapezoid(p["charge_cm3"], x) == pytest.approx(0, abs=1e-4 * n_d * w)
     assert np.argmax(np.abs(p["field_v_per_cm"])) == np.argmin(np.abs(x))
-    assert p["field_v_per_cm"][0] == pytest.approx(0, abs=1) and p["field_v_per_cm"][-1] == pytest.approx(0, abs=1)
+    assert p["field_v_per_cm"][0] == pytest.approx(0, abs=1) and p["field_v_per_cm"][
+        -1
+    ] == pytest.approx(0, abs=1)
     assert p["potential_v"][0] - p["potential_v"][-1] == pytest.approx(vbi, rel=1e-9)
 
 
@@ -829,7 +833,9 @@ def test_cross_section_matches_cell():
     assert gx1 - gx0 == pytest.approx(c.l_um)
     assert gy1 - gy0 == pytest.approx(c.poly_um)
     ox = ext["oxide"]
-    assert ox[1] - ox[0] == pytest.approx(c.l_um) and ox[3] - ox[2] == pytest.approx(c.t_ox_um * s_ox)
+    assert ox[1] - ox[0] == pytest.approx(c.l_um) and ox[3] - ox[2] == pytest.approx(
+        c.t_ox_um * s_ox
+    )
     assert ox[2] == pytest.approx(gy1) and ox[3] == pytest.approx(0)
     for side in ("source", "drain"):
         x0, x1, y0, y1 = ext[side]
@@ -841,6 +847,9 @@ def test_cross_section_matches_cell():
     assert by1 - by0 == pytest.approx(c.body_um)
     statement = model.exaggeration(c.scales, c.drawn)
     assert "Oxide thickness ×5" in statement and "source and drain width" in statement.lower()
+    subs = figures.substitutions()
+    assert subs["x_fig_parts_cell_scale"] == subs["x_fig_junction_cell_scale"] == statement
+    assert "x_fig_junction_panels_scale" not in subs  # a plot of curves, not a drawing
     for name in ("parts-cell", "junction-cell", "junction-panels"):
         light = figures.FIGURES[name]("light")
         assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark"), name
