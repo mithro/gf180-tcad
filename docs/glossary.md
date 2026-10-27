@@ -553,6 +553,12 @@ electron
   by a {term}`donor`, move through the crystal and carry current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
   {ref}`explained-carriers`.
 
+pn junction
+  The boundary inside silicon where n-type material meets p-type material. Carriers cross it and
+  leave a layer of fixed charge with no free carriers on each side, held by the
+  {term}`built-in potential` ({ref}`Sze and Ng 2006, ch. 2 <lit-sze>`). See
+  {ref}`explained-junction`.
+
 gate oxide
   The thin insulating layer of silicon dioxide between a transistor's gate and the silicon under
   it. The gate voltage acts on the silicon through it, as across the plates of a capacitor
