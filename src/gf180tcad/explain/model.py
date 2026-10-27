@@ -9,8 +9,15 @@ scale factors in :attr:`Device.scales`, and :func:`exaggeration` writes the stat
 them; the factors are the same for every device (passed in by
 :data:`gf180tcad.explain.figures.STYLE`).
 
+:func:`cell` builds the 2D cell of one committed geometry from its
+``results/tcad/moscap2d/<device>/<params>/<geometry>/cv.meta.json`` (gate length and width,
+meshed oxide thickness, source/drain peak doping, body doping, contacts), the process file
+(the junction depth ``param.xj_um`` and the gate doping ``param.ngate_cm3``) and the 1D stack
+of the same device and parameters (the gate and body depths, which the 2D cell shares). A
+drawn extent with no committed source, the lateral width of the source and drain, is passed in
+as ``drawn`` and named in the exaggeration statement.
+
 It reads no simulator module and imports nothing outside the docs dependency group (tested).
-The 2D cell joins in a later task of the explainer plan (E1).
 """
 
 from __future__ import annotations
@@ -94,10 +101,79 @@ def device(
     )
 
 
-def exaggeration(scales: Mapping[str, float]) -> str:
-    """The statement a figure and its caption carry: which parts are stretched, and by what."""
+def exaggeration(scales: Mapping[str, float], drawn: Mapping[str, float] | None = None) -> str:
+    """The statement a figure and its caption carry: which parts are stretched, and by what, and
+    which extents (``drawn``: their names) are drawn at a chosen size with no committed source."""
     parts = [f"{_SCALED[p]} ×{f:g}" for p, f in sorted(scales.items()) if f != 1]
-    if not parts:
-        return "Drawn to scale."
-    first = parts[0][0].upper() + parts[0][1:]
-    return " and ".join([first, *parts[1:]]) + ", not to scale."
+    out = []
+    if parts:
+        first = parts[0][0].upper() + parts[0][1:]
+        out.append(" and ".join([first, *parts[1:]]) + ", not to scale.")
+    for name in sorted(drawn or {}):
+        out.append(f"{name[0].upper()}{name[1:]} drawn, not to scale.")
+    return " ".join(out) if out else "Drawn to scale."
+
+
+@dataclass(frozen=True)
+class Cell:
+    """The 2D cell of one committed geometry: the gate across the channel, the oxide under it,
+    the source and drain either side, the body below; lengths in µm, densities in cm⁻³."""
+
+    name: str
+    params: str
+    geometry: str
+    polarity: str
+    l_um: float
+    w_um: float
+    t_ox_um: float
+    poly_um: float
+    body_um: float
+    xj_um: float
+    n_sd_cm3: float
+    n_body_cm3: float
+    n_gate_cm3: float
+    contacts: tuple[str, ...]
+    scales: Mapping[str, float] = field(default_factory=dict)
+    drawn: Mapping[str, float] = field(default_factory=dict)
+
+    @property
+    def sd_dopant(self) -> str:
+        """The dopant of the source, the drain and the gate (the opposite of the body's)."""
+        return _DOPANTS[self.polarity][0]
+
+    @property
+    def body_dopant(self) -> str:
+        return _DOPANTS[self.polarity][1]
+
+
+def cell_meta_path(device: str, params: str, geometry: str) -> str:
+    """The committed 2D metadata file of ``device`` at ``params`` and ``geometry``."""
+    return f"results/tcad/moscap2d/{device}/{params}/{geometry}/cv.meta.json"
+
+
+def cell(device: str, params: str, geometry: str, *, scales: Mapping, drawn: Mapping) -> Cell:
+    """The 2D cell of ``device`` at ``params`` and ``geometry`` from committed files only."""
+    meta_file = ROOT / cell_meta_path(device, params, geometry)
+    meta = quantity.read(quantity.Selector("json", []), meta_file)
+    stack = quantity.read(quantity.Selector("json", ["stack"]), ROOT / meta_path(device, params))
+    proc = ROOT / f"data/process/{device}.toml"
+    xj = quantity.read(quantity.Selector("toml", ["param", "xj_um", "value"]), proc)
+    ngate = quantity.read(quantity.Selector("toml", ["param", "ngate_cm3", "value"]), proc)
+    return Cell(
+        device,
+        params,
+        geometry,
+        stack["polarity"],
+        meta["geometry"]["l_um"],
+        meta["geometry"]["w_um"],
+        meta["meshed_t_ox_nm"] / UNITS["nm_per_um"],
+        stack["poly_um"],
+        stack["body_um"],
+        xj,
+        meta["sd_peak_cm3"],
+        meta["tunables"]["n_ch_cm3"]["value"],
+        ngate,
+        tuple(meta["contacts"]),
+        dict(scales),
+        dict(drawn),
+    )
