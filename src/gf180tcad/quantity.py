@@ -102,7 +102,7 @@ def _check_npz(spec) -> None:
 
 def _check_csv(spec) -> None:
     if not isinstance(spec, Mapping):
-        raise ValueError(f"a csv selector is a mapping, got {spec!r}")
+        raise ValueError(f"a csv selector is a mapping, got {spec!r}")  # noqa: TRY004 (a schema error)
     cols = spec.get("columns")
     if not isinstance(cols, list) or not cols or not all(isinstance(c, str) and c for c in cols):
         raise ValueError(f"a csv selector needs a non-empty list of column names, got {cols!r}")
