@@ -292,17 +292,22 @@ committed `cv.meta.json` stays the truth.
 
 ## The calibrated 2D cells
 
-The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed cells
-with `--params calibrated`, one 16 GiB {term}`job` at a time. Done so far:
+The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed
+cells with `--params calibrated`, one 16 GiB {term}`job` at a time. Done so far:
 
-| Cell | Nodes | Wall time | Peak memory ({term}`cgroup`) | Notes |
-|---|---|---|---|---|
-| nfet `w10p0_l0p60` | 225 964 | 3 h 09 min (QS 1 h 42 min, AC 21 points) | 7.8 GiB | one attempt; no round-off acceptance, no extended fallback; meshed t_ox 16.05 nm |
+| Cell | Nodes | QS sweep (min) | AC sweep (min) | Job total (min) | Peak memory (GiB) | Attempts |
+|---|---|---|---|---|---|---|
+| nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 | 7.8 | 1 |
 
-Its `mesh.msh` is not committed ({ref}`moscap2d-meshes`); it is in the output cache
-({doc}`/reproduce/output-cache`) under its `mesh_sha256`. The `--resume` scratch directory of
-these jobs is outside the checkout, because the {term}`sandbox` refuses one inside it
-([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
+The sweep times are the last `elapsed` of each sweep's progress log (QS 201 points, AC 21
+points, each including its own meshing); the job total is the wall time of the host command.
+The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
+The run record, with the exit code and the image, is on {ref}`tcad-provenance`. The job had no
+round-off acceptance and no extended-precision fallback; its meshed oxide is 16.05 nm, the
+calibrated value. Its `mesh.msh` is not committed ({ref}`moscap2d-meshes`); it is in the
+output cache ({doc}`/reproduce/output-cache`) under its `mesh_sha256`. The `--resume` scratch
+directory of these jobs is outside the checkout, because the {term}`sandbox` refuses one
+inside it ([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
 
 (moscap2d-l10)=
 
