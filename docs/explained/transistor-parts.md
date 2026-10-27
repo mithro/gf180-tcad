@@ -89,10 +89,10 @@ This repo dopes each body uniformly, at its calibrated value
 
 ## The contacts
 
-Each part takes its voltage through a contact, drawn as a dark bar. The gate's sits on top, the
+Each part takes its voltage through a contact, drawn as a solid bar. The gate's sits on top, the
 source's and the drain's at the surface, and the body's underneath. The simulated cell has four contacts, gate,
 body, drain and source ({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`).
-The simulator solves for the cell on a mesh of {{ x_node_count_cell }} points.
+The simulator solves for the cell on a mesh, a grid of {{ x_node_count_cell }} points.
 
 (explained-parts-ldd)=
 
@@ -108,8 +108,9 @@ model card sets that capacitance, CGDL, to {{ x_cgdl_nfet }} of gate width
 
 ## Where this repo's results differ
 
-The simulated cell has no spacers and no LDD ({py:mod}`gf180tcad.tcad.stack`). The overlap
-capacitance of the LDD enters the 1D result from the model card instead
+The simulated cell has no spacers, the insulating walls either side of the gate, and no LDD
+({py:mod}`gf180tcad.tcad.stack`). The overlap capacitance of the LDD enters the 1D result, the
+stack of layers on its own, from the model card instead
 ({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`). The cell also has no shallow trench isolation
 ({term}`STI`): its sides are boundaries that no current crosses.
 
