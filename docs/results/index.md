@@ -14,12 +14,13 @@ folder in atomically, so two docs builds can run at the same time without corrup
 ```{admonition} What exists so far
 :class: warning
 The generated pages below are the {term}`SPICE reference` that {term}`TCAD` is
-compared against. The TCAD results that exist so far are for both devices at the
-start values (`--params start`, the uncalibrated parameters). The 1D results were made on the
+compared against. The TCAD results that exist so far are {term}`MOS capacitors <MOSCAP>` of
+both devices at the start values (`--params start`, the uncalibrated parameters) and, in 1D
+only, at the calibrated values (`--params calibrated`). The 1D results were made on the
 {term}`dev-HEAD TCAD image` ({repo}`docker/TCAD_DEV_IMAGE`,
 {ref}`which image makes which results <tcad-results-image>`):
 
-- the 1D {term}`MOS capacitor <MOSCAP>` {term}`C–V` curves, in {repo}`results/tcad/moscap1d`;
+- the 1D MOS capacitor {term}`C–V` curves, start and calibrated, in {repo}`results/tcad/moscap1d`;
 - the 1D {term}`mesh convergence`, in {repo}`results/tcad/meshconv`, discussed in
   {doc}`/limitations/mesh-convergence`.
 
@@ -34,8 +35,8 @@ The 2D results were made on the {term}`stable TCAD image` for now (see
 The 1D MOS capacitor is also calibrated against the SPICE {term}`Cgg`–Vg and validated at the
 {term}`held-out geometries <held-out geometry>`, in 1D only
 ({repo}`results/tcad/calibration`, {repo}`results/tcad/validation`,
-{doc}`/comparison/cv-agreement`). The calibrated 2D validation is not run
-([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). They are compared with the PDK in
+{doc}`/comparison/cv-agreement`). The calibrated 2D validation is not committed yet; it is in
+progress in [issue #35](https://github.com/mithro/gf180-tcad/issues/35). They are compared with the PDK in
 {doc}`/comparison/index`, and their caveats are in {doc}`/limitations/index`.
 ```
 

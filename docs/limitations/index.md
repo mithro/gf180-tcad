@@ -19,8 +19,8 @@ there.
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`). The 2D validation of the calibrated stack
-  is not run: no calibrated 2D results exist, since each 2D {term}`job` takes hours at 16 GiB, one at a
-  time, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
+  is in progress but not committed: no calibrated 2D results are committed yet, since each 2D
+  {term}`job` takes hours at 16 GiB, one at a time, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
   ({doc}`moscap2d`); [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
 - **TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
   names the current generator, not the one that made them (Task 12), and every TCAD tree was
@@ -32,6 +32,15 @@ there.
   fresh run differs from them ({ref}`moscap2d-reproduce`). Only the calibrated 1D
   {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
   `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
+- **One TCAD backend so far.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
+  for {{ Charon }} in parallel on every job, with a per-job cross-comparison
+  ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
+  It is planned
+  ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
+  [issue #44](https://github.com/mithro/gf180-tcad/issues/44)); its first step, splitting the
+  plugin so that a second simulator can plug in, is a draft
+  ([PR #51](https://github.com/mithro/gf180-tcad/pull/51)), and no
+  Charon job has run ({ref}`numerical-acceptance`).
 - **The {{ gplugins }} {{ DEVSIM }} plugin is broken upstream.** It worked at gplugins v0.8.0 on
   its Sept-2023 stack and its import has failed since v0.8.1. A re-runnable record proves both;
   it is now fixed in {{ gplugins_fork }} and re-verified on the latest stack. See
@@ -145,7 +154,8 @@ values are not read as more physical than they are.
 
 ## Deviations from the design spec
 
-Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
+Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the others during
+{term}`Phase 2`. Each is a
 {term}`Phase 3 entry gate`: it must be closed before any MOSFET {term}`TCAD` result.
 
 - **No layout-extracted secondary SPICE reference.** The
@@ -168,9 +178,11 @@ Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
   {repo}`section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`
   (amended 2026-10-27) draws the mesh pictures as part of the 3D renders of the simulated
   processes, from a committed reduced mesh artefact with provenance that is tied to each job's
-  mesh sha256. That requirement has a plan of sub-tasks
-  ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)) but is not implemented yet, so
-  no render and no mesh picture exists.
+  mesh sha256. That requirement has a plan
+  ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
+  [issue #43](https://github.com/mithro/gf180-tcad/issues/43)) but is not implemented yet, so
+  no render and no mesh picture exists. The {ref}`output cache <output-cache>` that is to hold
+  the full meshes holds none of the committed 2D jobs' meshes yet.
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two

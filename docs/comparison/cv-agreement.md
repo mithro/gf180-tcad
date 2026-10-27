@@ -19,7 +19,8 @@ heavily the silicon under it is doped, and a small offset of the voltage at whic
 turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are frozen, and the TCAD is compared with SPICE at gate lengths it never
-saw. For the nfet the result is good: in 1D the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check is not run yet). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
+saw. For the nfet the result is good: in 1D the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check is in progress and not
+committed yet, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
 
 ## What is fitted
 
@@ -254,10 +255,10 @@ Lmin with `spice-fit`.
   nfet: {term}`Agree` at all three. pfet: {term}`Agree` at L = 1 µm and {term}`Same process` at
   L = 0.7 µm and 1.6/0.7, both from the depletion-side crossing (+124 and +132 mV, inside the
   corner window) and, at 1.6/0.7, the accumulation plateau (6.12 %).
-- **2D: not run yet.** The 2D check uses the calibrated 2D results,
+- **2D: not committed yet** (in progress, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The 2D check uses the calibrated 2D results,
   `python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID
   --out results/tcad/moscap2d` (the same `moscap2d.simulate` with source and drain, QS, on the
-  selected 2D mesh and the SPICE grid; one {term}`job` at a time, 16 GiB each). None exists: the
+  selected 2D mesh and the SPICE grid; one {term}`job` at a time, 16 GiB each). None is committed: the
   {repo}`results/tcad/moscap2d` tree holds only start-parameter results, and a 2D job takes
   hours, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
   ({doc}`/limitations/moscap2d`). The validation files list every geometry under `two_d` with
