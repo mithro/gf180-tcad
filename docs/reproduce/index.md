@@ -478,7 +478,7 @@ That write added the pfet calibration to {repo}`results/tcad/moscap2d/provenance
 {repo}`tools/restamp-tcad-provenance` then set the hash to `bf8f2dcc…`; nothing else in the file changed.
 
 Between the two hashes, two entries of the hashed file list differ.
-`src/gf180tcad/tcad/__init__.py` changed, and `gplugins/devsim/backends/charon/__init__.py` left the list.
+{repo}`src/gf180tcad/tcad/__init__.py` changed, and `gplugins/devsim/backends/charon/__init__.py` left the list.
 Every file on the 2D compute path is byte-identical, including all of `gplugins/devsim`.
 The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `make reproduce-quick` run above.
 
