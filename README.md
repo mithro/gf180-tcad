@@ -55,7 +55,9 @@ three tunables, 3 of the 8-parameter budget. In 1D the nfet agrees with SPICE at
 fitted and held out. The pfet is published as a disagreement: the SPICE pfet's depletion edge
 moves by 0.57 V between L = 10 µm and the minimum length, which one length-independent 1D stack
 cannot follow. The calibrated 1D curves are in
-[`results/tcad/moscap1d`](results/tcad/moscap1d). Every committed TCAD result has generated
+[`results/tcad/moscap1d`](results/tcad/moscap1d).
+
+Every committed TCAD result has generated
 pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
 [results page](https://gf180-tcad.readthedocs.io/en/latest/results/index.html), and
 `make reproduce` includes the TCAD results folders. It has not been run end to end, and its 2D
@@ -64,6 +66,7 @@ files are not expected to match
 calibrated 1D [jobs](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-job) are cross-checked byte for byte on a
 [GitHub-hosted runner](https://docs.github.com/en/actions/concepts/runners/github-hosted-runners)
 ([TCAD cross-check](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-tcad)).
+
 The 2D validation of the calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): its first
 calibrated 2D cell, the nfet at the minimum length, is committed and disagrees with SPICE.
 

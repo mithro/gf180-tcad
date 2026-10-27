@@ -191,7 +191,9 @@ CGBO and CF describe how BSIM4 splits the {term}`SPICE` {term}`Cgg` into an intr
 extrinsic parts: the intrinsic part scales with the capacitance area (L + XL − 2·DLC)·(W + XW −
 2·DWC), as {{ ngspice }} computes LeffCV and WeffCV ([`b4temp.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c)), and the
 overlap, fringe and gate-bulk parts are added to it
-({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`). The pfet card sets no DWC, so its DWC is
+({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`).
+
+The pfet card sets no DWC, so its DWC is
 the {term}`BSIM4` default, WINT ([`b4set.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4set.c): `BSIM4dwc = BSIM4Wint` when DWC
 is not given; [BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). They are not process
 data, so they carry the role `reference-bookkeeping`. They are used only in the 1D comparison,

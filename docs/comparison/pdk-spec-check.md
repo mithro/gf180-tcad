@@ -93,7 +93,9 @@ For each metric the "Same process" window covers both
 
 The window is their {term}`combined range`: the lowest lower bound and the highest upper bound.
 When one interval contains the other, this is the wider one. Otherwise (partial overlap or
-disjoint) it keeps both the TT value and the published typical inside the window. The function
+disjoint) it keeps both the TT value and the published typical inside the window.
+
+The function
 {py:func}`gf180tcad.specwindow.window` returns the window with a flag saying which one sets it
 (what the page shows). The flag is `"spec"`, `"envelope"` or `"hull"` (the combined range of
 both). An open side of a one-sided spec stays

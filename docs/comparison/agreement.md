@@ -197,7 +197,9 @@ is a {term}`Phase 3 entry gate`
 
 Metrics are also reported as an error divided by {term}`σ_mismatch`, to give a physical sense
 of scale. For the Vt difference of a pair, σ_ΔVt = A_Vt / √(W·L), with the effective W and L
-({ref}`Pelgrom 1989 <lit-pelgrom>`). The PDK's A_Vt is 11.55 mV·µm. The value is the
+({ref}`Pelgrom 1989 <lit-pelgrom>`). The PDK's A_Vt is 11.55 mV·µm.
+
+The value is the
 `par_vth = 0.01155` (V·µm) of the
 [`nfet_05v0` subcircuit](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L46950-L46963) in the
 PDK's ngspice model card (provenance tag `spice-card`). The card draws each device's Vt shift

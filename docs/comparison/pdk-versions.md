@@ -50,7 +50,9 @@ The results are in {repo}`results/spice-pdk-d658698`. The job results are in
 {repo}`results/spice-pdk-d658698/ngspice/typical`, with the same layout as {repo}`results/spice`.
 Beside them are {repo}`results/spice-pdk-d658698/cards.json`,
 {repo}`results/spice-pdk-d658698/comparison.json`, the two unified diffs and
-{repo}`results/spice-pdk-d658698/provenance.json`. Two runs gave
+{repo}`results/spice-pdk-d658698/provenance.json`.
+
+Two runs gave
 byte-identical results folders
 ([commit bede2d2](https://github.com/mithro/gf180-tcad/commit/bede2d2672b0bea57adedf12d5cdfc0efda8b6c3)). The folder is listed in {repo}`results/MANIFEST.sha256`. Two checks select only entries under
 `spice/`, so they do not include it. They are the check of the SPICE results on another

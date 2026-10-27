@@ -4,7 +4,9 @@
 
 This page shows how the simulated {term}`MOS capacitor <MOSCAP>` is fitted to the gate
 capacitance of the {term}`PDK`'s {term}`SPICE` model. It then shows how well the fitted values
-match at gate lengths not used in the fit. It is the first use of the
+match at gate lengths not used in the fit.
+
+It is the first use of the
 {term}`calibrated parameter budget`. The 1D {term}`TCAD` MOS capacitor is fitted to the
 {term}`Cgg`–Vg of the {term}`calibration targets <calibration target>`. It is then fixed and
 checked at the {term}`held-out geometries <held-out geometry>`
@@ -19,9 +21,13 @@ heavily the silicon under it is doped, and a small offset of the voltage at whic
 turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are fixed, and the TCAD is compared with SPICE at gate lengths it never
-saw. For the nfet the result is good. In 1D the fixed stack agrees with SPICE at every
+saw.
+
+For the nfet the result is good. In 1D the fixed stack agrees with SPICE at every
 geometry, the three it was fitted to and the three it never saw. The 2D check has its first
-result, a {term}`Disagree` at {term}`Lmin` (below). For the pfet it is not. One stack cannot
+result, a {term}`Disagree` at {term}`Lmin` (below).
+
+For the pfet it is not. One stack cannot
 follow the SPICE model's pfet curves. Their accumulation-to-depletion edge moves by more than
 half a volt between the longest and the shortest gate. So the pfet is published as
 {term}`Disagree` with the reasons below.
@@ -48,6 +54,7 @@ fixed {term}`NGATE`. Its C per area is turned into a gate capacitance of each ge
 fixed {term}`BSIM4` bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`): the
 capacitance area LeffCV × WeffCV ({term}`DLC`, {term}`DWC`) plus the overlap, fringe and
 gate-bulk terms. That bookkeeping is reference-model data, fixed, and not part of the budget.
+
 At {term}`Lmin` it is a large part of Cgg, so Lmin mostly tests the bookkeeping. For the
 calibrated nfet in accumulation (u = −5 V) it is 3.97 of 14.36 fF. These values come from
 {py:meth}`~gf180tcad.tcad.moscap1d.MoscapCV.area_scaled` on the committed calibrated 1D curve.
@@ -107,12 +114,16 @@ SPICE TT curve of each geometry ({py:func}`~gf180tcad.calibrate.cv.regions`):
 The {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
 sets Cgg ≤ 5 % in accumulation, depletion and inversion. Here the depletion-region 5 % is
 replaced by the two ΔV crossings, deliberately. In the transition a relative-C metric measures
-the slope of the curve, not whether TCAD and SPICE agree. For the nfet W10/L10 at TT,
+the slope of the curve, not whether TCAD and SPICE agree.
+
+For the nfet W10/L10 at TT,
 SPICE Cgg rises from 81.84 fF at u = 0.5 V to 143.75 fF at 0.7 V, and its slope reaches
 0.513 fF/mV at 0.675 V. There C is 130.9 fF, interpolated between the 0.65 V and 0.7 V points.
 So a curve shifted by only 13 mV (5 % of 130.9 fF over 0.513 fF/mV) already fails 5 %. On the
 50 mV grid, with linear interpolation, the smallest whole-millivolt rigid shift that fails 5 %
-at some bias is 15 mV. A 15 mV shift is a small fraction of the {term}`corner` spread of the
+at some bias is 15 mV.
+
+A 15 mV shift is a small fraction of the {term}`corner` spread of the
 crossings. For the nfet W10/L10 that spread is 252 mV (u_dep) and 249 mV (u_inv) wide (below). The deviation is
 also listed on {ref}`the limitations page <limitations-spec-deviations>`.
 
@@ -327,8 +338,9 @@ Lmin with `spice-fit`.
 
   That is the same `moscap2d.simulate` with source
   and drain, QS, on the selected 2D mesh and the SPICE grid. It runs one {term}`job` at a time,
-  16 GiB each, hours each. The
-  first one is committed,
+  16 GiB each, hours each.
+
+  The first one is committed,
   {repo}`results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60 <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`
   (its run: {ref}`moscap2d-calibrated`). It is compared with the TT ngspice Cgg by the
   function {py:func}`~gf180tcad.calibrate.cv.validate_cv` uses (its 2D part, run on the host).
@@ -359,7 +371,9 @@ So the calibration moves the 2D inversion crossing onto SPICE but the plateaus a
 The calibrated oxide (16.05 nm against the card's 15.2 nm) was fitted in 1D. There the BSIM4
 overlap, fringe and gate-bulk terms are added to the intrinsic C. How the 2D cell's own
 overlap and fringe compare with those terms is not measured
-([issue #74](https://github.com/mithro/gf180-tcad/issues/74)). The 2D Cgg is
+([issue #74](https://github.com/mithro/gf180-tcad/issues/74)).
+
+The 2D Cgg is
 13.88 fF at −5 V and 14.12 fF at +5 V, 1.7 % apart, while the SPICE plateau levels are 14.33
 and 16.70 fF, 16.5 % apart: most of the gap is on the inversion side. This is one geometry.
 The other 2D cells (L = 0.7, 1 and 2 µm, W1.6/L0.7) are on the {doc}`roadmap </roadmap>`
