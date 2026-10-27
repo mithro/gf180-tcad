@@ -44,7 +44,7 @@ own, without a source or drain, as a {term}`MOS capacitor <MOSCAP>`.
 
 The gate oxide is silicon dioxide, an insulator, and the model card gives its thickness in two
 forms ({repo}`data/process/nfet_05v0.toml`). TOXE, the electrical thickness, is {{ x_toxe_nfet }}.
-Most of the model's equations use it, the threshold voltage among them
+Most of the model's equations use it, the {term}`threshold voltage <Vt>` among them
 ({ref}`BSIM4 manual, §1.1 <lit-bsim4>`). TOXP, the physical thickness of the layer, is
 {{ x_toxp_nfet }}. The model adds the depth of the charge to it when it computes the gate
 capacitance ({ref}`BSIM4 manual, §1.1 <lit-bsim4>`).
@@ -113,8 +113,8 @@ In the simple picture the capacitance tops out at Cox, but the simulated stack s
 Its capacitance is {{ x_c_acc_nfet_cal }} at the most negative gate voltage
 and {{ x_c_inv_nfet_cal }} at the most positive. At both ends the charge in the body sits a
 little below the oxide face, which the {term}`effective oxide thickness` counts as extra oxide.
-At the positive end the gate voltage also pushes electrons away from the gate's lower face. So
-poly depletion adds its series capacitance at that end only.
+At the positive end the gate voltage also pushes {term}`electrons <electron>` away
+from the gate's lower face. So poly depletion adds its series capacitance at that end only.
 
 The 2D cell and its other differences are on {doc}`/limitations/moscap2d`, and every known gap
 is on {doc}`/limitations/index`.
