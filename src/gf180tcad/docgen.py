@@ -709,7 +709,7 @@ def _check_rows(rec: dict) -> list[str]:
         raise ValueError(f"checks {sorted(rec['verdicts'])} are not docgen.CHECKS")
     plateau = [
         (
-            "| Plateau | max \\|ΔCgg\\|/Cgg (%) | Points | Tolerance (%) | Window set by "
+            "| Plateau | max \\|ΔCgg\\|/Cgg (%) | Points | {term}`Tolerance <tolerance>` (%) | Window set by "
             "| TCAD inside the window at every bias | Tightest u (V) | TCAD C there (fF) "
             "| Window min (fF) | Window max (fF) | Verdict |"
         ),
@@ -717,7 +717,7 @@ def _check_rows(rec: dict) -> list[str]:
     ]
     crossing = [
         (
-            "| Crossing | ΔV (mV) | TCAD u (V) | SPICE u (V) | Tolerance (mV) | Window min (V) "
+            "| Crossing | ΔV (mV) | TCAD u (V) | SPICE u (V) | {term}`Tolerance <tolerance>` (mV) | Window min (V) "
             "| Window max (V) | Window set by | Verdict |"
         ),
         "|---|---|---|---|---|---|---|---|---|",
