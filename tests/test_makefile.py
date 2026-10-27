@@ -161,9 +161,7 @@ def test_reproduce_2d_moscap_jobs_are_the_committed_cells(reproduce):
     assert {p for _, p, _ in committed} <= {"start", "calibrated"}
     assert {(d, p) for d, p, _ in committed} >= {(d, "start") for d in process.DEVICES}
     for (device, params, gid), steps in cells.items():
-        meta = json.loads(
-            (TCAD / "moscap2d" / device / params / gid / "cv.meta.json").read_bytes()
-        )
+        meta = json.loads((TCAD / "moscap2d" / device / params / gid / "cv.meta.json").read_bytes())
         # older metas (Task 11, AC computed) have no "ac" entry
         if meta.get("ac") == AC_INFEASIBLE:
             # QS alone, then the job files from it, on one scratch directory
