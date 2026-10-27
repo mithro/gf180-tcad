@@ -423,7 +423,7 @@ The gap is smaller than at W10/L0.5, as it is for the nfet.
 No start-value pfet cell exists at L = 0.7 µm, so the start-value comparison is the W10/L0.5 one.
 
 The 1D validation here has plateaus of 4.3 % and 2.3 % and a depletion shift of +124 mV.
-The 2D cell moves both plateaus about 10 points further below SPICE, and the depletion shift to −117 mV.
+In 2D they are 13.7 %, 13.0 % and −117 mV, with every plateau point below SPICE.
 Only the inversion crossing agrees in both. Why the 2D Cgg is low is [issue #77](https://github.com/mithro/gf180-tcad/issues/77).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
