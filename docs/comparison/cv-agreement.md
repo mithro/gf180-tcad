@@ -17,7 +17,7 @@ heavily the silicon under it is doped, and a small offset of the voltage at whic
 turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are frozen, and the TCAD is compared with SPICE at gate lengths it never
-saw. For the nfet the result is good: in 1D the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check has its first result, a Disagree at Lmin, below). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
+saw. For the nfet the result is good: in 1D the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check has its first result, a {term}`Disagree` at {term}`Lmin`, below). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
 
 ## What is fitted
 

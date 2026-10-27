@@ -295,13 +295,13 @@ committed `cv.meta.json` stays the truth.
 The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed cells
 with `--params calibrated`, one 16 GiB {term}`job` at a time. Done so far:
 
-| Cell | Nodes | Wall time | Peak memory (cgroup) | Notes |
+| Cell | Nodes | Wall time | Peak memory ({term}`cgroup`) | Notes |
 |---|---|---|---|---|
 | nfet `w10p0_l0p60` | 225 964 | 3 h 09 min (QS 1 h 42 min, AC 21 points) | 7.8 GiB | one attempt; no round-off acceptance, no extended fallback; meshed t_ox 16.05 nm |
 
 Its `mesh.msh` is not committed ({ref}`moscap2d-meshes`); it is in the output cache
 ({doc}`/reproduce/output-cache`) under its `mesh_sha256`. The `--resume` scratch directory of
-these jobs is outside the checkout, because the sandbox refuses one inside it
+these jobs is outside the checkout, because the {term}`sandbox` refuses one inside it
 ([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
 
 (moscap2d-l10)=
