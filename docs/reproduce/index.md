@@ -78,8 +78,8 @@ In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-q
 same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job
 resumes when the target runs again.
 
-In `tcad-calibrated`, the nfet L = 2 µm cell runs the same two steps. Its QS step outgrows the
-16 GiB cap before the sweep ends ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)).
+In `tcad-calibrated`, the nfet L = 2 µm cell runs the same two steps. Its {term}`QS <C–V>` step outgrows the
+16 GiB cap before the {term}`sweep` ends ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)).
 Rerun that `--method qs` line alone, on the same `--resume`, until it exits 0.
 Then run its `--method combine-qs` line.
 
