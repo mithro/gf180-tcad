@@ -218,7 +218,28 @@ def test_non_committed_values_are_labelled():
     assert not bad, "\n".join(bad)
 
 
-def test_positive_control_unlabelled():
+# A textbook entry for the controls (no page prints a textbook value while #88 is open).
+_NC = {"name": "nc_si", "kind": "textbook", "unit": "cm⁻³", "digits": 2,
+       "source": "data/render/display.toml", "key": {"toml": ["silicon", "nc_cm3"]}}  # fmt: skip
+
+
+@pytest.fixture
+def textbook_entry(monkeypatch):
+    numbers = _numbers()
+    monkeypatch.setitem(numbers.REGISTRY, "nc_si", numbers.Number(**_NC))
+    numbers.value.cache_clear()
+    yield numbers
+    numbers.value.cache_clear()
+
+
+def test_citation_reads_the_sources_table(textbook_entry):
+    cite = textbook_entry.citation("nc_si")
+    assert "(lit-sze)" in cite and "Appendix G" in cite
+    with pytest.raises(ValueError, match="not a textbook value"):
+        textbook_entry.citation("n_i_tcad")
+
+
+def test_positive_control_unlabelled(textbook_entry):
     text = "Electrons number {{ x_n_minority_nfet }} here. The gap uses {{ x_nc_si }} as well.\n"
     assert len(unlabelled(text)) == 2
     ok = (
@@ -325,8 +346,10 @@ def bare_numbers(text: str) -> list[tuple[int, str]]:
 
 
 def _strip_blocks(text: str) -> str:
-    """Blank the display-math blocks (keeping line numbers) and the directive option lines."""
+    """Blank the display-math blocks (keeping line numbers) and the directive option lines,
+    except the text of an ``:alt:`` line, which the reader sees and the scan reads."""
     text = re.sub(r"\$\$.*?\$\$", lambda m: "\n" * m.group(0).count("\n"), text, flags=re.DOTALL)
+    text = re.sub(r"^:alt:", "", text, flags=re.MULTILINE)
     return re.sub(r"^:[\w-]+:.*$", "", text, flags=re.MULTILINE)
 
 
@@ -338,8 +361,11 @@ def test_no_bare_numbers():
 
 
 def test_positive_control_bare_numbers():
-    bad = "The body holds 1.7e17 acceptors per cubic centimetre.\nAt 300 K it is intrinsic.\n"
-    assert [i for i, _ in bare_numbers(bad)] == [1, 2]
+    bad = (
+        "The body holds 1.7e17 acceptors per cubic centimetre.\nAt 300 K it is intrinsic.\n"
+        ":alt: A curve that peaks at 1e17.\n:figclass: only-light\n"
+    )
+    assert [i for i, _ in bare_numbers(bad)] == [1, 2, 3]
     good = textwrap.dedent(
         """\
         The body holds {{ x_n_ch_nfet_cal }} of acceptors ({ref}`Sze and Ng, ch. 1 <lit-sze>`).
