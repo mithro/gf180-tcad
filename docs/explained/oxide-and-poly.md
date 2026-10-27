@@ -42,14 +42,16 @@ own, without a source or drain, as a {term}`MOS capacitor <MOSCAP>`.
 
 ## The oxide
 
-The gate oxide is silicon dioxide, an insulator. The {term}`model card` gives its thickness in
-two forms ({ref}`BSIM4 manual <lit-bsim4>`). TOXE, the electrical thickness, is
-{{ x_toxe_nfet }}. TOXP, the physical thickness, is {{ x_toxp_nfet }}
-({repo}`data/process/nfet_05v0.toml`).
+The gate oxide is silicon dioxide, an insulator, and the model card gives its thickness in two
+forms ({repo}`data/process/nfet_05v0.toml`). TOXE, the electrical thickness, is {{ x_toxe_nfet }}.
+Most of the model's equations use it, the threshold voltage among them
+({ref}`BSIM4 manual, §1.1 <lit-bsim4>`). TOXP, the physical thickness of the layer, is
+{{ x_toxp_nfet }}. The model adds the depth of the charge to it when it computes the gate
+capacitance ({ref}`BSIM4 manual, §1.1 <lit-bsim4>`).
 
-The oxide's relative permittivity, {term}`EPSROX`, is {{ x_epsrox_nfet }}. A capacitor with
-this oxide between its plates holds that many times the charge of a vacuum gap of the same
-thickness.
+The oxide's relative permittivity, {term}`EPSROX`, is {{ x_epsrox_nfet }}. At the same voltage,
+a capacitor with this oxide holds that many times the charge of a vacuum gap as thick
+({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
 (explained-oxide-cox)=
 
