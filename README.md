@@ -60,7 +60,8 @@ pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
 `make reproduce` includes the TCAD trees. It has not been run end to end, and its 2D files are
 not expected to match yet
 ([Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#one-command)); the
-calibrated 1D jobs are cross-checked byte for byte on a GitHub-hosted runner
+calibrated 1D [jobs](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-job) are cross-checked byte for byte on a
+[GitHub-hosted runner](https://docs.github.com/en/actions/concepts/runners/github-hosted-runners)
 ([TCAD cross-check](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-tcad)).
 The 2D validation of the calibrated stack is in progress
 ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
