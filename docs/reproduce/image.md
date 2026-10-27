@@ -357,7 +357,8 @@ workflows.
   {repo}`tests/test_tcad_image.py` pass;
 - the 1D {term}`MOS capacitor <MOSCAP>` and mesh-convergence results folders regenerated in the dev image
   are byte-identical to the committed {repo}`results/tcad/moscap1d` and
-  {repo}`results/tcad/meshconv` results folders, except their `provenance.json`, which names the image;
+  {repo}`results/tcad/meshconv` results folders. Only their `provenance.json`, which names the
+  image, differs;
 - the drift guard, {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`, passes:
   the stable and dev images give the same bytes.
 
@@ -384,12 +385,12 @@ kind is generated with, and it is the default of `python -m gf180tcad.tcad mosca
 | 1D {term}`mesh convergence`, {repo}`results/tcad/meshconv` (`moscap1d/`) | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the same |
 | 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | for now: see below |
 
-The top folder of each set of results holds a `provenance.json` that records, under `images`, which image made each result kind
-in it: the image's name, its reference and its `versions.json`. The mesh-convergence results folder holds
+The top folder of each set of results holds a `provenance.json`. Under `images`, it records which
+image made each result kind in it: the image's name, its reference and its `versions.json`. The mesh-convergence results folder holds
 1D and 2D results, so it records one entry for each.
 
 - **1D on dev HEAD.** The 1D results folders regenerate on the dev image byte-identical to the stable
-  image's, data file for data file; only `provenance.json` differs. Two sandbox tests keep it
+  image's, data file for data file. Only `provenance.json` differs. Two sandbox tests keep it
   so: {test}`tests/tcad/test_moscap1d.py::test_byte_identical` and
   {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical` rerun the committed results folders in
   the dev image, and {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`
