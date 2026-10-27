@@ -105,16 +105,28 @@ subdirectory of the working directory. It asserts three things:
 - Stock against patched ngspice exceeds 0.005, so the patch took effect.
 - Patched ngspice against Xyce stays below 0.005.
 
-The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6:
+The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6.
+The `idvg_lin` sweep:
 
-| W (µm) | L (µm) | `idvg_lin` stock | `idvg_lin` at 4.6 | `idvg_sat` stock | `idvg_sat` at 4.6 |
-|---|---|---|---|---|---|
-| 10 | 0.6 | 5.62e-3 | 1.47e-4 | 6.05e-3 | 3.64e-3 |
-| 10 | 0.7 | 5.59e-3 | 2.32e-4 | 5.80e-3 | 1.93e-3 |
-| 10 | 1 | 5.57e-3 | 1.29e-4 | 5.71e-3 | 1.87e-3 |
-| 10 | 2 | 5.58e-3 | 1.93e-4 | 5.61e-3 | 1.85e-3 |
-| 10 | 10 | 5.60e-3 | 1.59e-4 | 5.59e-3 | 2.28e-3 |
-| 1.6 | 0.7 | 5.55e-3 | 3.9e-5 | 5.76e-3 | 2.73e-4 |
+| W (µm) | L (µm) | Stock | At 4.6 |
+|---|---|---|---|
+| 10 | 0.6 | 5.62e-3 | 1.47e-4 |
+| 10 | 0.7 | 5.59e-3 | 2.32e-4 |
+| 10 | 1 | 5.57e-3 | 1.29e-4 |
+| 10 | 2 | 5.58e-3 | 1.93e-4 |
+| 10 | 10 | 5.60e-3 | 1.59e-4 |
+| 1.6 | 0.7 | 5.55e-3 | 3.9e-5 |
+
+The `idvg_sat` sweep:
+
+| W (µm) | L (µm) | Stock | At 4.6 |
+|---|---|---|---|
+| 10 | 0.6 | 6.05e-3 | 3.64e-3 |
+| 10 | 0.7 | 5.80e-3 | 1.93e-3 |
+| 10 | 1 | 5.71e-3 | 1.87e-3 |
+| 10 | 2 | 5.61e-3 | 1.85e-3 |
+| 10 | 10 | 5.59e-3 | 2.28e-3 |
+| 1.6 | 0.7 | 5.76e-3 | 2.73e-4 |
 
 (engine-consequence)=
 
