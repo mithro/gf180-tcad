@@ -358,6 +358,13 @@ def test_moscap_page_per_device_geometry(tmp_path):
                 assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page
             else:
                 assert "No 2D result" in page
+            # a committed calibrated 2D cell is named on its page, with its mesh
+            cal_meta = TCAD / "moscap2d" / name / "calibrated" / gid / "cv.meta.json"
+            if cal_meta.is_file():
+                rel = f"results/tcad/moscap2d/{name}/calibrated/{gid}"
+                assert f"{{repo}}`{rel}`" in page
+                assert json.loads(cal_meta.read_text("utf-8"))["mesh_sha256"] in page
+                assert "Calibrated 2D validation: not run" not in page
         index = (root / name / "index.md").read_text(encoding="utf-8")
         cal = json.loads((TCAD / "calibration" / f"{name}.result.json").read_text("utf-8"))
         assert f"{cal['budget_used']} of {cal['budget']}" in index
@@ -371,7 +378,29 @@ def test_moscap_page_per_device_geometry(tmp_path):
     for name, device in DEVICES.items():
         for g in device.geometries:
             assert f"<{name}/{geometry_id(g)}>" in summary
-    assert "not run" in summary  # the calibrated 2D validation (issue #35)
+    # the calibrated 2D validation (issue #35): the summary never says "not run for any
+    # geometry" while a calibrated 2D cell is committed
+    if list((TCAD / "moscap2d").glob("*/calibrated/*/cv.csv")):
+        assert "not run for any geometry" not in summary
+        assert "calibrated 2D cell is committed" in summary
+    else:
+        assert "not run for any geometry" in summary
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="issue #35: the validation files predate the committed calibrated 2D cells; "
+    "regenerated when the host has room for the validation job",
+)
+def test_validation_two_d_matches_committed_calibrated_cells():
+    """A validation ``two_d`` entry is "not run" if and only if no calibrated 2D cv.csv is
+    committed for its geometry."""
+    for name, device in DEVICES.items():
+        val = json.loads((TCAD / "validation" / f"{name}.json").read_text("utf-8"))
+        for g in device.geometries:
+            gid = geometry_id(g)
+            committed = (TCAD / "moscap2d" / name / "calibrated" / gid / "cv.csv").is_file()
+            assert (val["two_d"][gid]["status"] == "not run") == (not committed), (name, gid)
 
 
 _RENDER_TCAD = textwrap.dedent(
