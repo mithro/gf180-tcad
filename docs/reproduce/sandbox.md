@@ -13,11 +13,11 @@ wrapper {py:func}`gf180tcad.sandbox.run`). Nothing is run directly on the host.
 **aggregate** resources of all sandbox containers together
 ([resource control](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html)):
 
-| Setting | Value | Meaning |
+| Setting | Value | Limits |
 |---|---|---|
-| [`MemoryMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#MemoryMax=bytes) | `128G` | all sandbox containers together, never more than 128 GiB |
-| [`MemorySwapMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#MemorySwapMax=bytes) | `0` | the slice itself never swaps |
-| [`TasksMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#TasksMax=N) | `32768` | all sandbox containers together, at most 32768 tasks |
+| [`MemoryMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#MemoryMax=bytes) | `128G` | total memory: 128 GiB |
+| [`MemorySwapMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#MemorySwapMax=bytes) | `0` | swap: none |
+| [`TasksMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#TasksMax=N) | `32768` | total tasks: 32768 |
 
 (sandbox-per-run-limits)=
 
@@ -33,11 +33,16 @@ and starts `CMD` in a {{ Docker }} container ({{ docker_run }}) with these defau
 
 | Limit | Default | Option |
 |---|---|---|
-| Memory | 16 GiB, no swap ([`--memory-swap`](https://docs.docker.com/reference/cli/docker/container/run/#memory) set equal to `--memory`) | `--mem` |
+| Memory | 16 GiB | `--mem` |
+| Swap | none | fixed |
 | CPUs | 8 | `--cpus` |
 | Processes | 4096 | `--pids` |
 | Network | [`--network=none`](https://docs.docker.com/reference/cli/docker/container/run/#network) (no network at all) | `--network bridge` to opt in |
 | {term}`Cgroup <cgroup>` parent | [`gf180-tcad.slice`](https://docs.docker.com/reference/cli/docker/container/run/#cgroup-parent) | fixed |
+
+There is no swap because
+[`--memory-swap`](https://docs.docker.com/reference/cli/docker/container/run/#memory) is set
+equal to `--memory`.
 
 Before starting the container, {repo}`tools/sandbox-run` refuses to run (exit 2) when
 
@@ -47,7 +52,9 @@ Before starting the container, {repo}`tools/sandbox-run` refuses to run (exit 2)
   `MemoryMax=137438953472` (128 GiB), `MemorySwapMax=0` and `TasksMax=32768`. Without
   {repo}`tools/sandbox-setup`, Docker would create the slice on the fly with no limits at all.
 
-Other properties of the container:
+Other properties of the container, by kind.
+
+**Privileges and filesystem:**
 
 - all Linux [capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) are
   dropped ([`--cap-drop ALL`](https://docs.docker.com/engine/containers/run/#runtime-privilege-and-linux-capabilities))
@@ -56,6 +63,10 @@ Other properties of the container:
 - the root filesystem is [read-only](https://docs.docker.com/reference/cli/docker/container/run/#read-only),
   with a 1 GiB [`tmpfs`](https://docs.docker.com/reference/cli/docker/container/run/#tmpfs) at
   `/tmp`;
+- the process runs as the host user's user and group IDs (UID and GID), with `HOME=/tmp/home`.
+
+**Mounts:**
+
 - the repository checkout is mounted read-only at `/work/src`
   ({py:data}`gf180tcad.sandbox.SOURCE_MOUNT`), and project
   code is run from it with `PYTHONPATH=/work/src/src`; it is not baked into the
@@ -70,8 +81,10 @@ Other properties of the container:
   repository is a git checkout and git cannot locate those directories, nothing runs.
   Unrelated directories are fine: scratch directories under `$TMPDIR`, or sibling checkouts
   next to the repository. An allowed sibling git checkout used as a working directory is
-  writable, its own `.git` included, so use a scratch directory instead;
-- the process runs as the host user's UID and GID, with `HOME=/tmp/home`;
+  writable, its own `.git` included, so use a scratch directory instead.
+
+**Environment and image:**
+
 - `OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS` are set to
   `1` for determinism;
 - [`NPY_DISABLE_CPU_FEATURES`](https://numpy.org/doc/stable/reference/simd/build-options.html#runtime-dispatch)

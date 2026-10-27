@@ -1,19 +1,16 @@
 # Literature
 
-The initial reference list. Items marked **unverified** have not yet been
-checked and must be checked before they are cited as support for any claim.
-Only the items the spec flags `[verify]`
-({repo}`design spec, section 11 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#11-literature-initial-verify-items-to-be-checked-before-citing>`)
-are marked unverified, but no citation on this page has been checked against its source yet,
-and the annotations are summaries, not claims taken from the papers. The DOI or URL of each
-entry resolves to a record whose title, authors and year match the entry; that identifies the
-item, it does not check what the annotation says about it.
+The papers, books and manuals the design and these pages cite, grouped by what they are used
+for ({repo}`design spec, section 11 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#11-literature-initial-verify-items-to-be-checked-before-citing>`).
+Each DOI resolves to a record whose title, authors, volume, issue and year match the entry.
+Each annotation names what the project uses the item for.
 
 ## Tolerances
 
 (lit-itrs)=
 
-- [ITRS 2007](https://www.semiconductors.org/resources/2007-international-technology-roadmap-for-semiconductors-itrs/),
+- [ITRS 2007](https://www.semiconductors.org/resources/2007-international-technology-roadmap-for-semiconductors-itrs/)
+  (International Technology Roadmap for Semiconductors),
   Modeling and Simulation chapter, Table MS3:
   the {term}`tolerance` numbers in {ref}`tolerances`.
 
@@ -22,13 +19,13 @@ item, it does not check what the annotation says about it.
 (lit-tsividis)=
 
 - Tsividis and Suyama, "MOSFET modeling for analog circuit CAD: problems and prospects", IEEE
-  JSSC 29(3), 1994, {doi}`10.1109/4.278342` (**unverified**).
+  JSSC 29(3), 1994, {doi}`10.1109/4.278342`: a set of benchmark tests for MOSFET models.
 
 (lit-mcandrew)=
 
 - McAndrew, "Validation of MOSFET model source-drain symmetry", IEEE Trans. Electron Devices
-  53(9), 2006, {doi}`10.1109/TED.2006.881005`: the {term}`Gummel symmetry test`
-  (**unverified**).
+  53(9), 2006, {doi}`10.1109/TED.2006.881005`. Its dc and ac tests check a model's symmetry under
+  a source-drain reversal, the property the {term}`Gummel symmetry test` checks.
 
 ## Compact model
 
@@ -75,13 +72,13 @@ item, it does not check what the annotation says about it.
 
 (lit-darwish)=
 
-- Darwish et al. (CVT), IEEE Trans. Electron Devices 44(9), 1997, {doi}`10.1109/16.622611`
-  (**unverified**): surface mobility.
+- Darwish et al. (CVT), IEEE Trans. Electron Devices 44(9), 1997, {doi}`10.1109/16.622611`:
+  surface mobility, a transverse-field dependent mobility model for MOS transistors.
 
 (lit-klaassen)=
 
-- Klaassen (Philips unified mobility), Solid-State Electronics 35(7), 1992,
-  {doi}`10.1016/0038-1101(92)90325-7` (**unverified**): mobility, the alternative named in the
+- Klaassen, "A unified mobility model for device simulation—I", Solid-State Electronics 35(7),
+  1992, {doi}`10.1016/0038-1101(92)90325-7`: mobility, the alternative named in the
   {ref}`mismatch taxonomy <mismatch-taxonomy>`.
 
 (lit-ancona)=
@@ -94,20 +91,22 @@ item, it does not check what the annotation says about it.
 (lit-pelgrom)=
 
 - Pelgrom, Duinmaijer and Welbers, "Matching properties of MOS transistors", IEEE JSSC 24(5),
-  1989, {doi}`10.1109/JSSC.1989.572629` (**unverified**): the mismatch scale
-  ({term}`σ_mismatch`).
+  1989, {doi}`10.1109/JSSC.1989.572629`: the mismatch scale ({term}`σ_mismatch`). It covers the
+  matching of {term}`threshold voltage`, substrate factor and current factor.
 
 ## Inverse modelling of doping from I-V and C-V (the calibration method)
 
 (lit-khalil)=
 
 - Khalil, Faricelli, Bell and Selberherr, IEEE Electron Device Letters 16(1), 1995,
-  {doi}`10.1109/55.363213` (**unverified**).
+  {doi}`10.1109/55.363213`: the 2D doping of a MOSFET by inverse modelling. Its data are
+  source/drain diode and gate capacitance.
 
 (lit-lee)=
 
 - Lee, McIlrath and Antoniadis, IEEE Trans. Electron Devices 46(8), 1999,
-  {doi}`10.1109/16.777152` (**unverified**).
+  {doi}`10.1109/16.777152`: the 2D doping of a MOSFET by inverse modelling of its subthreshold
+  I-V characteristics.
 
 ## Simulators
 
@@ -119,15 +118,11 @@ item, it does not check what the annotation says about it.
 
 - {{ Charon }} User Manual v2.2 (SAND 2022), {doi}`10.2172/1871374`.
 
-(lit-hoekstra)=
-
-- Hoekstra et al., SAND2007-7157. No public record for this report number was found yet, so it
-  has no link.
-
 (lit-bochev)=
 
-- Bochev et al., 2013, probably Bochev, Peterson and Gao, Comput. Methods Appl. Mech. Eng.
-  254, 2013, {doi}`10.1016/j.cma.2012.10.009` (**unverified**).
+- Bochev, Peterson and Gao, Comput. Methods Appl. Mech. Eng. 254, 2013,
+  {doi}`10.1016/j.cma.2012.10.009`: a control-volume finite-element method for the
+  drift–diffusion equations on unstructured grids.
 
 ## Tooling
 

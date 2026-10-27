@@ -4,18 +4,20 @@ Open-source {term}`TCAD` for the GlobalFoundries {term}`GF180MCU` 5 V transistor
 ({{ gf180mcu_pdk }}), compared quantitatively, reproducibly and in public against the
 {term}`PDK`'s own {term}`SPICE` models.
 
-**The SPICE models are the {term}`golden reference`; the TCAD is the suspect.** The
-aim is to earn (or fail to earn) confidence in the TCAD setup. Only once that
-confidence exists would TCAD be used, in later work, to improve or create SPICE
-models. Every mismatch is listed with a probable cause rather than hidden, and
-the documentation separates what was calibrated from what was predicted.
+**The PDK's SPICE models are the {term}`reference <SPICE reference results>`; the TCAD is what is
+being tested.**
+
+The aim is to earn (or fail to earn) confidence in the TCAD setup. Only once
+that confidence exists would TCAD be used, in later work, to improve or create SPICE models.
+Every mismatch is listed with its cause and the evidence for it, not hidden. The documentation
+separates what was calibrated from what was predicted.
 
 ```{admonition} Status
 :class: warning
 {term}`Phases 0 and 1` (foundations and the SPICE reference dataset) are complete
 ({doc}`/_generated/results/index`). {term}`Phase 2` (the {{ gplugins }} {{ DEVSIM }} plugin fix
 and the {term}`MOS capacitor <MOSCAP>`) is in progress. The committed {term}`TCAD` results are
-MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MOSFET TCAD yet:
+MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MOSFET TCAD result:
 
 - the 1D and 2D MOS capacitor {term}`C–V` curves at the start values, in
   {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`);
@@ -31,14 +33,8 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
 The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation of the
 calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)):
 both calibrated nfet cells are {term}`Disagree` ({ref}`cv-agreement-validation`).
-Planned, not built yet: {{ DEVSIM }}-versus-{{ Charon }} cross-comparison on every {term}`job`
-({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
-[issue #44](https://github.com/mithro/gf180-tcad/issues/44); none has run yet), 3D renders
-of the simulated processes
-({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
-[issue #43](https://github.com/mithro/gf180-tcad/issues/43)) and explainer pages
-([issue #46](https://github.com/mithro/gf180-tcad/issues/46)). No measured silicon data exists
-({doc}`limitations/silicon-validation`). See {doc}`limitations/index`.
+Planned work, each item with its issue, is on the {doc}`roadmap`. No measured silicon data
+exists ({doc}`limitations/silicon-validation`). See {doc}`limitations/index`.
 ```
 
 No published {{ DEVSIM }}- or {{ Charon }}-versus-{term}`BSIM` comparison for any open PDK was
@@ -54,6 +50,7 @@ reproduce/index
 results/index
 comparison/index
 limitations/index
+roadmap
 glossary
 api/index
 ```

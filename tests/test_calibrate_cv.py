@@ -621,12 +621,18 @@ def test_committed_validation(device):
         assert c["causes"] == cv.causes(device, g)
 
 
-def _doc_row(c: dict) -> str:
+def _doc_rows(c: dict) -> tuple[str, str, str]:
+    """The geometry's rows in the three per-device tables: role and verdict, plateau and
+    depletion errors, crossing shifts."""
     m, g = c["metrics"], c["geometry"]
+    wl = f"| {g['w_um']:g} | {g['l_um']:g} |"
     return (
-        f"| {g['w_um']:g}/{g['l_um']:g} | {g['role']} | {100 * m['plateau_acc_max_rel']:.2f} % | "
-        f"{100 * m['plateau_inv_max_rel']:.2f} % | {1000 * m['dv_dep_v']:+.1f} mV | "
-        f"{1000 * m['dv_inv_v']:+.1f} mV | {100 * m['depletion_max_rel']:.1f} % | {c['verdict']} |"
+        f"{wl} {g['role']} | {c['verdict']} |",
+        (
+            f"{wl} {100 * m['plateau_acc_max_rel']:.2f} | {100 * m['plateau_inv_max_rel']:.2f} | "
+            f"{100 * m['depletion_max_rel']:.1f} |"
+        ),
+        f"{wl} {1000 * m['dv_dep_v']:+.1f} | {1000 * m['dv_inv_v']:+.1f} |",
     )
 
 
@@ -636,16 +642,24 @@ def test_docs_quote_the_committed_results(device):
     text = DOC.read_text(encoding="utf-8")
     res = cv.load_frozen(device)
     val = json.loads((cv.VALIDATION_ROOT / f"{device}.json").read_bytes())
+    other = next(d for d in process.DEVICES if d != device)
+    start = text.index(f"**{device}**\n")
+    end = text.find(f"**{other}**\n", start)
+    section = text[start:] if end < start else text[start:end]
     for c in [*res.per_geometry.values(), *val["one_d"].values()]:
-        assert _doc_row(c) in text, _doc_row(c)
+        for row in _doc_rows(c):
+            assert row in section, row
     v = res.values
-    row = (
-        f"| {{term}}`{device}` | {v['t_ox_eff_nm']:.3f} [{res.bounds['t_ox_eff_nm'][0]:g}, "
-        f"{res.bounds['t_ox_eff_nm'][1]:g}] | {v['n_ch_cm3']:.3e}".replace("e+", "e")
+    lo, hi = res.bounds["t_ox_eff_nm"]
+    rows = (
+        f"| `t_ox_eff_nm` | nm | {v['t_ox_eff_nm']:.3f} | {lo:g} | {hi:g} |",
+        f"| `n_ch_cm3` | cm⁻³ | {v['n_ch_cm3']:.3e} |".replace("e+", "e"),
+        f"| `dv_fb_v` | mV | {1000 * v['dv_fb_v']:+.1f} | −200 | +200 |",
     )
-    assert row in text, row
-    assert f"| {1000 * v['dv_fb_v']:+.1f} mV [±200 mV] |" in text
-    assert f"{res.optimiser['nfev']} evaluations" in text
+    fitted = text.split(f"{{term}}`{device}`:\n\n", 1)[1].split("\n\n", 1)[0]
+    for row in rows:
+        assert row in fitted, row
+    assert f"reached | {res.optimiser['nfev']} |" in text
     cc = res.cox_check
     for x in (cc["c_ox_ff_per_um2"], cc["c_per_area_acc_ff_per_um2"]):
         assert f"{x:.3f}" in text
@@ -658,7 +672,7 @@ def test_docs_quote_the_committed_results(device):
 @pytest.mark.sandbox
 def test_calibration_reproduces_the_committed_files(tmp_path):
     """run (in the sandbox) gives the committed calibration files byte for byte (the claim
-    "two runs give byte-identical files" of docs/comparison/cv-agreement.md)."""
+    "A second run gives byte-identical files" of docs/comparison/cv-agreement.md)."""
     from gf180tcad.calibrate import __main__ as cli
 
     root = tmp_path / "out"

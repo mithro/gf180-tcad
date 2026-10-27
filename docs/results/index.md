@@ -1,19 +1,20 @@
 # Results
 
-The {term}`SPICE` reference dataset ({term}`Phase 1`) is published here as generated pages: one
-per device and geometry (2 devices x 6 geometries), each with Id-Vg (linear and log), Id-Vd and
-{term}`Cgg`-Vg plots and a table of extracted metrics, plus a summary of the {term}`TT`
-(typical corner) values against the {doc}`PDK spec </comparison/pdk-spec-check>` and of the
-{{ ngspice }}-versus-{{ Xyce }} differences ({doc}`/limitations/engine-cross-check`). Pages are
+The {term}`SPICE reference <SPICE reference results>` dataset ({term}`Phase 1`) is published
+here as generated pages, one per device and geometry (2 devices x 6 geometries). Each has Id-Vg
+(linear and log), Id-Vd and {term}`Cgg`-Vg plots and a table of extracted metrics. A summary
+compares the {term}`TT` (typical corner) values with the
+{doc}`PDK spec </comparison/pdk-spec-check>` and lists the {{ ngspice }}-versus-{{ Xyce }}
+differences ({doc}`/limitations/engine-cross-check`). Pages are
 generated into `docs/_generated/` (git-ignored) at documentation build time by
 {py:func}`gf180tcad.docgen.generate`, called from {repo}`docs/conf.py`, from the committed
 {repo}`results/spice` files, so they never show numbers that are not in the dataset.
 Builds of one checkout serialise on a lock file (`docs/.generated.lock`) and swap the finished
-tree in atomically, so two docs builds can run at the same time without corrupting each other.
+folder in atomically, so two docs builds can run at the same time without corrupting each other.
 
 ```{admonition} What exists so far
 :class: warning
-The generated pages below are the {term}`SPICE` {term}`golden reference` that {term}`TCAD` is
+The generated pages below are the {term}`SPICE reference <SPICE reference results>` that {term}`TCAD` is
 compared against. The TCAD results that exist so far are {term}`MOS capacitors <MOSCAP>` of
 both devices at the start values (`--params start`, the uncalibrated parameters) and, in 1D
 only, at the calibrated values (`--params calibrated`). The 1D results were made on the
@@ -24,7 +25,7 @@ only, at the calibrated values (`--params calibrated`). The 1D results were made
 - the 1D {term}`mesh convergence`, in {repo}`results/tcad/meshconv`, discussed in
   {doc}`/limitations/mesh-convergence`.
 
-The 2D results were made on the {term}`stable TCAD image` for now (see
+The 2D results were made on the {term}`stable TCAD image` (see
 {ref}`tcad-results-image`):
 
 - the 2D MOS capacitor C-V curves, cut from the {term}`PDK`'s transistor cells, in
@@ -32,11 +33,12 @@ The 2D results were made on the {term}`stable TCAD image` for now (see
 - the 2D mesh convergence, in {repo}`results/tcad/meshconv/moscap2d`, discussed in
   {ref}`mesh-convergence-2d`.
 
-The 1D MOS capacitor is also calibrated against the SPICE {term}`Cgg`–Vg and validated at the
-{term}`held-out geometries <held-out geometry>`, in 1D only
+The 1D MOS capacitor is also calibrated against the {term}`SPICE` {term}`Cgg`–Vg. It is
+validated at the {term}`held-out geometries <held-out geometry>`, in 1D only
 ({repo}`results/tcad/calibration`, {repo}`results/tcad/validation`,
-{doc}`/comparison/cv-agreement`). The calibrated 2D validation is not committed yet; it is in
-progress in [issue #35](https://github.com/mithro/gf180-tcad/issues/35). They are compared with the PDK in
+{doc}`/comparison/cv-agreement`). In 2D one calibrated cell is committed, the nfet at minimum
+length ({ref}`cv-agreement-validation`); the other cells are on the {doc}`/roadmap`
+([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). They are compared with the PDK in
 {doc}`/comparison/index`, and their caveats are in {doc}`/limitations/index`.
 ```
 

@@ -27,7 +27,7 @@ regenerated before they can be pushed ({ref}`first population <output-cache-firs
   so it is not part of any {term}`generator_sha256`.
 - **The documentation build never fetches from it.** The build stays offline and uses only
   committed files.
-- No git-LFS (it has bandwidth quotas). Each object is a plain git blob under 95 MB after
+- No Git Large File Storage (git-LFS): it has bandwidth quotas. Each object is a plain git blob under 95 MB after
   compression; a file that does not fit is reported and left out.
 
 ## Layout
@@ -35,13 +35,13 @@ regenerated before they can be pushed ({ref}`first population <output-cache-firs
 - `objects/sha256/<first 2 hex>/<sha256>.<ext>.gz`: the file, gzip-compressed deterministically
   (level 9, no file name, mtime 0), keyed by the sha256 of the uncompressed content.
 - `index.json`: sorted JSON mapping each sha256 to its object path, sizes, the results paths it
-  was found at, the `generator_sha256` of its tree root, the commit of this repository it was
+  was found at, the `generator_sha256` of its results folder, the commit of this repository it was
   pushed from, the date and the job (device, dimension, parameter set, directory).
 - a README: the contract, written by `tools/output-cache init`, so the whole repository can
   be recreated from nothing.
 
 The cacheable files, the repository URLs and the size cap are in {repo}`data/output-cache.json`.
-A {{ gmsh }} mesh compresses to about a third (27.5 MB to 9.5 MB measured, 10 s).
+A {{ gmsh }} mesh compresses from 27.5 MB to 9.5 MB (measured, 10 s).
 
 ## Commands
 
@@ -56,7 +56,7 @@ tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.
 
 The first `pull` fetches the one cached mesh by its sha256. The second form writes a
 committed job's mesh into place by the `mesh_sha256` its `cv.meta.json` names; the committed
-start meshes are not in the cache yet, so for them it fails.
+start meshes are not in the cache, so for them it fails.
 
 `status` and `pull` clone the cache shallow and blobless into a temporary directory under `tmp/`
 (`--scratch` elsewhere) and download only `index.json` and the one object; `--cache` takes a

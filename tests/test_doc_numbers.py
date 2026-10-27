@@ -133,20 +133,22 @@ CASES = [
         (ENGINE_PAGE, rf"^ *\| `{s}` \| {NUM} \| [^|]+ \|$", lambda s=s: [diff(N, s, NLMIN)])
         for s in ("idvg_lin", "idvg_sat", "idvd")
     ),
-    # the per-geometry stock columns
+    # the per-geometry stock column of the idvg_lin and the idvg_sat table (one table per sweep,
+    # each introduced by "The `<sweep>` sweep:"; the row is the one after that line)
     *(
         (
             ENGINE_PAGE,
-            rf"^\| W{re.escape(w)}/L{re.escape(l)} \| {NUM} \| [^|]+ \| {NUM} \| [^|]+ \|$",
-            lambda w=w, l=l: [diff(N, "idvg_lin", _gid(w, l)), diff(N, "idvg_sat", _gid(w, l))],
+            rf"^The `{s}` sweep:\n\n(?:\|.*\n)*?\| {re.escape(w)} \| {re.escape(l)} \| {NUM} \| [^|]+ \|$",
+            lambda w=w, l=l, s=s: [diff(N, s, _gid(w, l))],
         )
+        for s in ("idvg_lin", "idvg_sat")
         for w, l in GEOMS
     ),
     # the subthreshold evidence table (nfet 10/0.6, typical, Vds = 5 V, Vbs = 0)
     *(
         (
             ENGINE_PAGE,
-            rf"^\| {label} \(Vds = 5 V\) \| {NUM} V \| {NUM} V \| \u2212{NUM} mV \|$",
+            rf"^\| {label} \| {NUM} \| {NUM} \| \u2212{NUM} \|$",
             lambda i0=i0: [vg_at("ngspice", i0), vg_at("xyce", i0), shift_mv(i0)],
         )
         for label, i0 in (("1 nA", 1e-9), ("100 nA", 1e-7), ("1 \u00b5A", 1e-6))
@@ -155,18 +157,19 @@ CASES = [
         ENGINE_PAGE,
         (
             rf"current is a nearly constant {NUM} % higher\. That is\na gate-voltage shift of "
-            rf"about {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
+            rf"{NUM} to {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
         ),
         lambda: [
             100 * subthreshold_excess(),
             shift_mv(1e-9),
+            shift_mv(1e-6),
             _at5(),
         ],
     ),
     (
         ENGINE_PAGE,
-        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\): about {NUM} mV of",
-        lambda: [shift_mv(1e-9)],
+        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\): {NUM} to {NUM} mV of",
+        lambda: [shift_mv(1e-9), shift_mv(1e-6)],
     ),
     # pdk-spec-check.md: the TT column
     *(
@@ -176,8 +179,8 @@ CASES = [
             lambda dev=dev, gid=gid, name=name: [metric(dev, gid, name)],
         )
         for dev, gid, dev_label in (
-            (N, NLMIN, r"NE2 `nfet_05v0` 10/0\.6"),
-            (P, PLMIN, r"PE2 `pfet_05v0` 10/0\.5"),
+            (N, NLMIN, r"NE2 `nfet_05v0`"),
+            (P, PLMIN, r"PE2 `pfet_05v0`"),
         )
         for param, name in (
             (r"VT0 \(V\)", "vt_lin_maxgm"),

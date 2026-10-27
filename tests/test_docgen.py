@@ -55,7 +55,7 @@ def test_pages_cover_all_geometries(tmp_path):
     assert len(expected) == 12
     assert pages == expected
     page = (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60.md").read_text(encoding="utf-8")
-    for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Envelope", '"Same process" window'):
+    for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Corner min", '"Same process" window'):
         assert needle in page
     assert (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60_idvd.svg").is_file()
 
@@ -77,6 +77,31 @@ def test_number_format_is_locale_independent():
     assert docgen.fmt(1234.56789) == "1235"
     assert docgen.fmt(0.000123456) == "0.0001235"
     assert docgen.fmt(float("inf")) == "inf" and docgen.fmt(-float("inf")) == "-inf"
+
+
+def test_table_numbers_do_not_break_at_the_exponent():
+    """A table cell's exponent sign is U+2212, which a browser never breaks a line at."""
+    assert docgen.num(2.63e-05, 3) == "2.63e\u221205"
+    assert docgen.num(-0.2) == "-0.2" and docgen.num(1.7e17) == "1.7e+17"
+    assert docgen.unit_text("fF/um^2") == "fF/µm²" and docgen.unit_text("um") == "µm"
+
+
+def test_geometry_links_name_the_geometry(tmp_path):
+    """S7: a link to a geometry page shows the geometry id, never a bare W that links to
+    different pages; each page with such links says how to read the id."""
+    import re
+
+    docgen.generate(tmp_path)
+    for p in tmp_path.rglob("*.md"):
+        text = p.read_text(encoding="utf-8")
+        links = re.findall(r"\{doc\}`([^`<]*?)\s*<([^`>]*)>`", text)
+        for label, target in links:
+            assert not re.fullmatch(r"[\d.]+", label), (p.name, label, target)
+        if p.name == "index.md" and any(
+            re.fullmatch(r"w\d+p\d+_l\d+p\d+", label) for label, _ in links
+        ):
+            assert docgen._GEOMETRY_ID_TEXT in text, p
+        assert " um" not in text and "um^2" not in text, p
 
 
 _NO_NETWORK = textwrap.dedent(
@@ -276,21 +301,38 @@ def test_xyce_metric_missing_raises(tmp_path):
         docgen._metrics_table(root, NFET, GID, spec, env)
 
 
+def _md_tables(lines: list[str]) -> list[tuple[list[str], list[list[str]]]]:
+    """``(header, rows)`` of each pipe table in ``lines``, cells stripped."""
+    out, block = [], []
+    for line in [*lines, ""]:
+        if line.startswith("|"):
+            block.append([c.strip() for c in line.strip().strip("|").split("|")])
+        elif block:
+            out.append((block[0], block[2:]))
+            block = []
+    return out
+
+
 def test_window_column_shows_the_envelope_where_there_is_no_spec():
     spec = docgen.specwindow.load_spec()
     env = json.loads((docgen.RESULTS / "envelope.json").read_text(encoding="utf-8"))
-    rows = docgen._metrics_table(docgen.RESULTS, NFET, GID, spec, env)[2:]
+    tables = _md_tables(docgen._metrics_table(docgen.RESULTS, NFET, GID, spec, env))
+    (vh, values), (ch, corners), (wh, windows) = tables
+    assert vh == ["Metric", "Unit", "TT ngspice", "TT Xyce"]
+    assert ch == ["Metric", "Corner min", "Corner max"]
+    assert wh == ["Metric", "Window min", "Window max", "Set by"]
     with_spec = set(docgen._spec_entries(spec, NFET.name, GID))
-    assert with_spec and len(rows) > len(with_spec)
-    for row in rows:
-        cells = [c.strip() for c in row.strip("|").split("|")]
-        name = cells[0].split("`")[1]
+    assert with_spec and len(windows) > len(with_spec)
+    assert [r[0] for r in values] == [r[0] for r in corners] == [r[0] for r in windows]
+    for v, c, w in zip(values, corners, windows, strict=True):
+        name = v[0].split("`")[1]
         lo, hi = env["ngspice"][NFET.name][GID][name]
-        assert cells[-1] != "-"
+        assert c[1:] == [docgen.num(lo), docgen.num(hi)]
+        assert w[-1] not in ("", "-")
         if name not in with_spec:
-            assert cells[-1] == f"[{docgen.fmt(lo)}, {docgen.fmt(hi)}] (envelope)"
-        # Xyce has no cv sweep, so only its Cgg cells are "n/a"
-        assert (cells[3] == "n/a") == name.startswith("cgg_")
+            assert w[1:] == [docgen.num(lo), docgen.num(hi), "corner envelope"]
+        # Xyce has no cv sweep, so only its Cgg cells are "not applicable"
+        assert (v[3] == "not applicable") == name.startswith("cgg_")
 
 
 def test_per_area_spec_entries_are_tcad_only(tmp_path):
@@ -305,12 +347,15 @@ def test_per_area_spec_entries_are_tcad_only(tmp_path):
             assert "cox_ff_per_um2" not in docgen._spec_entries(spec, device.name, geometry_id(g))
     rows = docgen._spec_status(docgen.RESULTS, spec)
     assert not any("cox_ff_per_um2" in r for r in rows)
-    tcad = docgen._tcad_only_rows(spec)[2:]
-    assert len(tcad) == 2 and all(r.endswith("| TCAD only |") for r in tcad)
-    assert all("[1.8, 2.8] fF/um^2" in r for r in tcad)
+    ((header, tcad),) = _md_tables(docgen._tcad_only_rows(spec))
+    assert header[-2:] == ["Spec min (fF/µm²)", "Spec max (fF/µm²)"]
+    assert len(tcad) == 2 and all(r[-3:] == ["`cox_ff_per_um2`", "1.8", "2.8"] for r in tcad)
     docgen.generate(tmp_path)
     s = (tmp_path / "results" / "index.md").read_text(encoding="utf-8")
-    assert "### TCAD only" in s and s.count("| TCAD only |") == 2
+    # the two rows sit under "TCAD only", whose lead-in gives their one status
+    section = s.split("### TCAD only", 1)[1].split("\n## ", 1)[0]
+    assert 'The status of every row is "TCAD only"' in section
+    assert section.count("| `cox_ff_per_um2` |") == 2
 
 
 # --- TCAD MOS capacitor pages (Task 13a) ---------------------------------------------------------
@@ -347,8 +392,8 @@ def test_moscap_page_per_device_geometry(tmp_path):
             for key in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv"):
                 assert f"| {r['verdicts'][key]['verdict']} |" in page
             m = r["metrics"]
-            assert f"{1e3 * m['dv_dep_v']:+.1f} mV" in page
-            assert f"{1e3 * m['dv_inv_v']:+.1f} mV" in page
+            assert f"| {1e3 * m['dv_dep_v']:+.1f} |" in page  # mV, the unit in the header
+            assert f"| {1e3 * m['dv_inv_v']:+.1f} |" in page
             assert f"{100 * m['depletion_max_rel']:.2f} %" in page
             assert g.role in page
             # mesh pictures: no mesh file is committed, and the page says so

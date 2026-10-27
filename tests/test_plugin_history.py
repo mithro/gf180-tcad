@@ -325,27 +325,56 @@ def test_io_is_the_writer():
     assert history.write_json is io.write_json
 
 
+def _table_after(page: str, heading: str) -> list[list[str]]:
+    """The body rows (cells) of the first table after the line ``heading`` of the page."""
+    lines = page.splitlines()
+    start = lines.index(heading)
+    rows: list[list[str]] = []
+    for line in lines[start + 1 :]:
+        if not line.startswith("|"):
+            if rows:
+                break
+            continue
+        rows.append([c.strip() for c in line.strip().strip("|").split("|")])
+    return rows[2:]  # without the header and the separator
+
+
 def test_doc_quotes_the_record():
     page = (REPO / "docs" / "limitations" / "plugin-history.md").read_text(encoding="utf-8")
     full, half = _load("v0.8.0.json"), _load("v0.8.0-mesh0p5.json")
-    w0, w1 = (b["depletion_width_um"] for b in full["pin"]["bias"])
-    assert f"| {w0:.3g} / {w1:.3g} µm |" in page
-    cells = []
-    for d in (full, half):
+
+    def column(rows: list[list[str]], i: int, label: str | None = None) -> set[str]:
+        """Column ``i`` of ``rows``, or, with ``label``, of the rows whose first cell it is."""
+        sel = [r for r in rows if label is None or r[0] == label]
+        assert sel, label
+        return {r[i] for r in sel}
+
+    pin = _table_after(page, "**PIN waveguide**, depletion width (µm):")
+    w = [f"{b['depletion_width_um']:.3g}" for b in full["pin"]["bias"]]
+    assert set(w) <= column(pin, 1)
+    static = _table_after(page, "**PN slab, mesh and equilibrium:**")
+    for i, d, ramp_heading in (
+        (1, full, "**PN slab during the ramp, v0.8.0:**"),
+        (2, half, "**PN slab during the ramp, v0.8.0 × 0.5:**"),
+    ):
         dd = d["ddcomponent"]
         eq, steps = dd["equilibrium"], [dd["equilibrium"], *dd["bias"]]
-        cells += [
-            f"{eq['builtin_potential_v']:.4f} V",
-            f"{eq['depletion_width_um']:.3g} µm",
-            f"| {dd['node_count']} |" if d is full else f"| {dd['node_count']} |\n",
-            " / ".join(f"{s['anode_minus_cathode_v']:.4f}" for s in steps) + " V",
-            " / ".join(f"{s['potential_span_v']:.4f}" for s in steps) + " V",
-        ]
-    for d in (full, half):
-        dd = d["ddcomponent"]
-        steps = [dd["equilibrium"], *dd["bias"]]
-        cells.append(" / ".join(f"{s['junction']['drop_v']:.5f}" for s in steps) + " V")
-        cells.append(f"{dd['equilibrium']['junction']['boundary_jump_v']:.2f} V")
-        cells.append(f"{dd['equilibrium']['junction']['junction_v']:.5f} V".replace("-", "−"))
-    for cell in cells:
-        assert cell in page, cell
+        expect = {
+            "Potential span over the silicon (V)": {
+                f"{eq['builtin_potential_v']:.4f}",
+                f"{eq['potential_span_v']:.4f}",
+            },
+            "depletion width (µm)": {f"{eq['depletion_width_um']:.3g}"},
+            "mesh nodes": {str(dd["node_count"])},
+            "rib/slab Potential jump (V)": {f"{eq['junction']['boundary_jump_v']:.2f}"},
+            "Potential at the junction, ψ(x_j) (V)": {
+                f"{eq['junction']['junction_v']:.5f}".replace("-", "−")
+            },
+        }
+        for label, values in expect.items():
+            assert values <= column(static, i, label), (label, values, column(static, i, label))
+        # the ramp table of this mesh: bias, span, anode − cathode, junction drop
+        ramp = _table_after(page, ramp_heading)
+        assert {f"{s['potential_span_v']:.4f}" for s in steps} <= column(ramp, 1)
+        assert {f"{s['anode_minus_cathode_v']:.4f}" for s in steps} <= column(ramp, 2)
+        assert {f"{s['junction']['drop_v']:.5f}" for s in steps} <= column(ramp, 3)

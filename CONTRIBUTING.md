@@ -42,6 +42,25 @@ PRs but is not a merge blocker.
   stale phrases); passing it says nothing about whether the pages are current.
 - Every review checks that those pages were updated correctly at the same time. A PR whose
   documentation lags behind the change is "needs fixes", like any other finding.
+- Docs pages follow the writing rules of the [design spec, section 10.3](docs/superpowers/specs/2026-10-18-gf180-tcad-design.md):
+  the user's `writing-sourced-docs` and `docs-writing` skills (from the user's
+  [mithro/dot-claude](https://github.com/mithro/dot-claude) repository; `docs-writing` is on its
+  `docs-writing-skill` branch). A reader page states only what a source backs, with the source
+  linked in the sentence. It carries no hedge or unknown word (`not yet`, `unverified`, `not public`,
+  `probably`, `likely`, `about` before a number and the others listed in section 10.3). An
+  unsourced statement is removed and filed as an issue. Before handing a page over, run
+  `uv run --no-project python -I tools/measure_docs.py <page>` ([`tools/measure_docs.py`](tools/measure_docs.py)), `uv run --no-project python -I tools/docs_lint.py --no-front-matter <page>` ([`tools/docs_lint.py`](tools/docs_lint.py)) and the docs tests
+  ([`tests/test_doc_style.py`](tests/test_doc_style.py),
+  [`tests/test_doc_measure.py`](tests/test_doc_measure.py)); a PR that fixes pages lowers
+  [`tests/doc_measure_baseline.json`](tests/doc_measure_baseline.json) with
+  `uv run --locked python tests/test_doc_measure.py --write-baseline`.
+- A change to a table, in a page or in [`src/gf180tcad/docgen.py`](src/gf180tcad/docgen.py), needs a
+  check at 400 px wide, because no test sees the rendered width. Build the docs, then take a
+  screenshot of the page with
+  `google-chrome --headless=new --hide-scrollbars --window-size=400,1800 --screenshot=tmp/shot.png file://$PWD/tmp/docs-html/<page>.html`.
+  The table must not scroll sideways and no number may break across lines
+  ([`docs/_static/narrow.css`](docs/_static/narrow.css) sets the narrow-screen table style).
+  Attach the screenshots to the PR.
 
 ## Forks only
 
