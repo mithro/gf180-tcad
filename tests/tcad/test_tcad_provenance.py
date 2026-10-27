@@ -220,8 +220,10 @@ def _imports_excluded(rel: str, source: str) -> list[str]:
 
 
 def test_excluded_plugin_files_are_not_imported_by_the_hashed_ones():
-    """No hashed gplugins/devsim file imports the excluded backends/charon/ package, so a DEVSIM
-    tree can never run code its hash leaves out (Charon plan Task B0)."""
+    """No hashed gplugins/devsim module imports the excluded backends/charon/ package, so a DEVSIM
+    tree can never run code its hash leaves out (Charon plan Task B0). The plugin's own pytest
+    files (``tests/`` and ``test_*.py``) may import it: no job runs them, and the check below
+    makes sure no module imports one of them."""
     assert _excluded_modules() == {"gplugins.devsim.backends.charon"}
     # positive controls: each way of reaching the excluded package is caught
     for rel, src in [
@@ -243,9 +245,21 @@ def test_excluded_plugin_files_are_not_imported_by_the_hashed_ones():
         if f.endswith(".py") and not any(fnmatch.fnmatchcase(f, p) for p in patterns)
     ]
     assert "gplugins/devsim/cv.py" in hashed
-    for rel in hashed:
+
+    def is_test(rel: str) -> bool:
+        return "/tests/" in rel or rel.rsplit("/", 1)[-1].startswith("test_")
+
+    modules = [f for f in hashed if not is_test(f)]
+    assert "gplugins/devsim/cv.py" in modules
+    assert any(is_test(f) for f in hashed)
+    for rel in modules:
+        names = _imports_of(rel, (sub / rel).read_text(encoding="utf-8"))
         found = _imports_excluded(rel, (sub / rel).read_text(encoding="utf-8"))
         assert not found, f"{rel} imports the excluded {found}"
+        tests = sorted(
+            n for n in names if n.startswith("gplugins.devsim.") and is_test(n.replace(".", "/"))
+        )
+        assert not tests, f"{rel} imports the plugin's test files {tests}"
 
 
 def test_calibration_file_per_backend():
