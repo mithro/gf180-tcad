@@ -282,8 +282,12 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 --geometry w10p0_l0p60 --out <tree root>` writes the mesh too, and the
 {py:func}`~gf180tcad.tcad.moscap2d.simulate` it runs takes hours.
 
-**Output cache.** Instead of regenerating it, a mesh can be fetched from the shared
-{ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`:
+**Output cache.** Instead of regenerating it, a mesh is to be fetched from the shared
+{ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
+None of the four committed 2D jobs' meshes is in the cache (nor on any disk), so none can be
+fetched yet: `tools/output-cache status` reports all four as absent. The first cached mesh
+belongs to the calibrated {term}`Lmin` nfet cell of
+[issue #35](https://github.com/mithro/gf180-tcad/issues/35). Once a mesh is in the cache,
 `tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh` writes it
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
 committed `cv.meta.json` stays the truth.
