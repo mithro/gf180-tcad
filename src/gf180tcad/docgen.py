@@ -742,11 +742,11 @@ def _regions_line(rec: dict) -> str:
 
 # The 2D status of a geometry whose calibrated 2D cell is committed but which the validation
 # file does not compare yet (it was written before the cell; issue #35).
-TWO_D_PENDING = "committed, not yet compared"
+_TWO_D_PENDING = "committed, not yet compared"
 
 
 def _two_d_status(d: _Device, gid: str) -> str:
-    """The calibrated 2D validation of ``gid``: the verdict, :data:`TWO_D_PENDING` or the
+    """The calibrated 2D validation of ``gid``: the verdict, ``_TWO_D_PENDING`` or the
     validation file's status ("not run")."""
     entry = d.val["two_d"].get(gid)
     if entry is None:
@@ -754,7 +754,7 @@ def _two_d_status(d: _Device, gid: str) -> str:
     if entry["status"] == "compared":
         return entry["verdict"]
     if d.two_d(gid, "calibrated") is not None:
-        return TWO_D_PENDING
+        return _TWO_D_PENDING
     return entry["status"]
 
 
@@ -827,7 +827,7 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
         ": the calibrated 2D cell is committed, but the validation file "
         f"({{repo}}`results/tcad/validation/{name}.json`) does not compare it yet; its comparison "
         "is in {ref}`the validation section <cv-agreement-validation>`"
-        if status == TWO_D_PENDING
+        if status == _TWO_D_PENDING
         else ""
     )
     lines.append(
@@ -1098,11 +1098,11 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
                 f"{g.role} | {rec['verdict']} | {_two_d_status(d, gid)} |"
             )
     statuses = {_two_d_status(d, geometry_id(g)) for d in devices for g in d.device.geometries}
-    if TWO_D_PENDING in statuses:
+    if _TWO_D_PENDING in statuses:
         two_d_text = (
             "The 2D column is the calibrated 2D validation of each geometry, read from "
             "{repo}`results/tcad/validation`, or "
-            f'"{TWO_D_PENDING}" where a calibrated 2D cell is committed under '
+            f'"{_TWO_D_PENDING}" where a calibrated 2D cell is committed under '
             "{repo}`results/tcad/moscap2d` but the validation file does not compare it yet; "
             "its comparison is in {ref}`the validation section <cv-agreement-validation>` "
             "([issue #35](https://github.com/mithro/gf180-tcad/issues/35))."
