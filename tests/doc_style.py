@@ -43,11 +43,11 @@ _TABLE_OK = re.compile(r"<!--\s*table-ok:\s*\S.*-->")
 _HISTORY_OK = re.compile(r"<!--\s*history-ok:\s*\S.*-->")
 _SEP = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$")
 
-# A number: optional sign, digits with optional thousands separators and decimals, optional
-# exponent (1e-10, 1.6e-16, 10⁻³ style is not used in tables).
-_NUMBER = re.compile(
-    r"(?<![\w.])[−+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][−+-]?\d+)?(?![\w])"
-)
+# A number: digits with optional thousands separators and decimals, optional exponent. A cell's
+# visible text is split into tokens at spaces and separators (including "/", so "10/0.6" is two
+# numbers); a token counts when it is a whole number after a leading sign and a trailing "%".
+_NUMBER = re.compile(r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][−+-]?\d+)?")
+_TOKEN_SPLIT = re.compile(r"[\s;()\[\]/=<>≤≥:|]+")
 
 
 def visible_text(cell: str) -> str:
@@ -72,11 +72,12 @@ def words(cell: str) -> int:
 
 def numbers(cell: str) -> list[str]:
     """The numbers in a cell's visible text (code spans, role targets and URLs excluded)."""
-    text = visible_text(cell)
-    # identifiers such as nfet_05v0, w10p0_l0p60, Table MS3, R1, #35, sha prefixes
-    text = re.sub(r"\b\w*[A-Za-z_]\w*\d\w*\b|\b\d+\w*[A-Za-z_]\w*\b", "ID", text)
-    text = re.sub(r"#\d+", "ID", text)
-    return _NUMBER.findall(text)
+    out = []
+    for tok in _TOKEN_SPLIT.split(visible_text(cell)):
+        tok = tok.strip(",.").lstrip("−+-±~≈×").rstrip("%")
+        if tok and _NUMBER.fullmatch(tok):
+            out.append(tok)
+    return out
 
 
 def split_row(line: str) -> list[str]:
