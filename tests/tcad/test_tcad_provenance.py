@@ -474,24 +474,69 @@ def test_provenance_refuses_a_dirty_or_unpinned_plugin(monkeypatch, outputs, mat
         tcad.gplugins_commit()
 
 
+def _tree_roots(results: Path) -> list[Path]:
+    """Every TCAD tree root under ``results/tcad*/``, at any depth (the renders plan's
+    ``tcad/meshes/{stable,dev}`` are two levels down): each directory holding a
+    ``provenance.json`` that is not inside another tree root."""
+    found = sorted(p.parent for p in results.glob("tcad*/**/" + PROVENANCE_NAME))
+    return [r for r in found if not any(o != r and o in r.parents for o in found)]
+
+
 def _committed_tree_roots() -> list[Path]:
-    """Every committed TCAD tree root: a ``provenance.json`` under ``results/tcad*/``."""
-    return sorted(p.parent for p in RESULTS.glob(f"tcad*/*/{PROVENANCE_NAME}"))
+    """Every committed TCAD tree root (:func:`_tree_roots` of ``results/``)."""
+    return _tree_roots(RESULTS)
 
 
-def _key(root: Path) -> str:
-    return root.relative_to(RESULTS).as_posix()
+def _key(root: Path, results: Path = RESULTS) -> str:
+    return root.relative_to(results).as_posix()
+
+
+def _unregistered_dirs(results: Path, trees) -> list[str]:
+    """The directories under ``results/tcad*/`` that are neither a registered tree nor on the
+    way to one (``tcad/meshes`` is on the way to ``tcad/meshes/stable``), as tree keys."""
+    out = []
+    todo = [p for top in sorted(results.glob("tcad*")) for p in sorted(top.iterdir()) if p.is_dir()]
+    while todo:
+        p = todo.pop()
+        key = _key(p, results)
+        if key in trees:
+            continue
+        if any(t.startswith(key + "/") for t in trees):
+            todo += [c for c in sorted(p.iterdir()) if c.is_dir()]
+            continue
+        out.append(key)
+    return sorted(out)
+
+
+def test_tree_root_helpers_handle_nested_roots(tmp_path):
+    """The helpers find tree roots at any depth (renders plan Task R0: tcad/meshes/stable and
+    tcad/meshes/dev), and flag a directory that is neither a tree nor on the way to one."""
+    results = tmp_path / "results"
+    for rel in ("tcad/moscap1d", "tcad/meshes/stable", "tcad/meshes/dev", "tcad-charon/moscap1d"):
+        (results / rel / "nfet_05v0").mkdir(parents=True)
+        (results / rel / PROVENANCE_NAME).write_text("{}", encoding="utf-8")
+    # a provenance.json inside a tree root is not another root
+    (results / "tcad/moscap1d/nfet_05v0" / PROVENANCE_NAME).write_text("{}", encoding="utf-8")
+    (results / "tcad/stray").mkdir()
+    (results / "tcad/meshes/other").mkdir()
+    assert sorted(_key(r, results) for r in _tree_roots(results)) == [
+        "tcad-charon/moscap1d", "tcad/meshes/dev", "tcad/meshes/stable", "tcad/moscap1d",
+    ]  # fmt: skip
+    trees = {"tcad/moscap1d", "tcad/meshes/stable", "tcad/meshes/dev", "tcad-charon/moscap1d"}
+    assert _unregistered_dirs(results, trees) == ["tcad/meshes/other", "tcad/stray"]
+    assert _unregistered_dirs(results, trees | {"tcad/stray", "tcad/meshes/other"}) == []
 
 
 def test_registry_trees_cover_every_committed_root():
-    """Every committed TCAD tree root (under results/tcad*/), and every directory there, is a
-    tree of the registry, and its provenance names the registry's writer. (The renders tree has
-    its own section and tests, renders plan.)"""
+    """Both directions: every committed TCAD tree root (under results/tcad*/, at any depth) is a
+    tree of the registry and names the registry's writer, and every registry tree is a committed
+    root (a row whose results are not committed yet is added with them). Every directory under
+    results/tcad*/ is a tree or on the way to one. (The renders tree has its own section and
+    tests, renders plan.)"""
     roots = _committed_tree_roots()
-    assert {_key(r) for r in roots} == set(WRITERS)
-    for top in RESULTS.glob("tcad*"):
-        for p in top.iterdir():
-            assert _key(p) in tcad.TREE_GENERATORS, f"results/{_key(p)} is not a registry tree"
+    assert {_key(r) for r in roots} == set(tcad.TREE_GENERATORS)
+    assert set(tcad.TREE_GENERATORS) == set(WRITERS)
+    assert not _unregistered_dirs(RESULTS, tcad.TREE_GENERATORS), "not registry trees"
     for root in roots:
         committed = json.loads((root / PROVENANCE_NAME).read_bytes())
         assert committed["generator"] == tcad.TREE_GENERATORS[_key(root)], _key(root)
@@ -500,9 +545,11 @@ def test_registry_trees_cover_every_committed_root():
 def test_committed_tree_roots_are_known():
     roots = _committed_tree_roots()
     assert roots, "no committed TCAD tree root"
-    assert {p.name for p in roots if p.parent == TCAD_RESULTS} <= set(TREE_ROOTS)
-    for p in TCAD_RESULTS.iterdir():
-        assert p.name in TREE_ROOTS, f"results/tcad/{p.name} is not a tree root of the layout"
+    layout = {f"tcad/{name}" for name in TREE_ROOTS}
+    assert {_key(p) for p in roots if TCAD_RESULTS in p.parents} <= layout
+    assert not _unregistered_dirs(RESULTS, layout | {k for k in tcad.TREE_GENERATORS}), (
+        "results/tcad* holds a directory that is not a tree root of the layout"
+    )
 
 
 # The calibration and validation trees are computed with the 1D model (Task 12).
