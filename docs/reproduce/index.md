@@ -362,6 +362,28 @@ That test compares the folder's
 had their provenance updated, not rerun, and have no such evidence. With the per-folder hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)) such a
 calibration-only change no longer touches these results folders.
 
+**Provenance updated for the plugin's backend seam (Phase 2 Task 15, not regenerated).** The
+submodule bump to gplugins [`0715c81`](https://github.com/mithro/gplugins/commit/0715c81c4439533512621a97358d9d779411ebf6)
+([mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13)) changes the hashed
+`gplugins/devsim` files: `get_solver.py` moved to `backends/devsim.py`, and the backend-neutral
+`device_description.py` and `results.py` were added, with no change to what the solver computes.
+Every results folder got `gplugins_commit` `0715c81…` (was `1c071d0…`) and a new
+`generator_sha256` from {repo}`tools/restamp-tcad-provenance`.
+{repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` and {repo}`results/tcad/meshconv`
+went from `b30e8944b257734e1b6e481e987d441fda3cef7c0010ec97a53e428aa0b7f4d7` to
+`3f1ac6bd72ba0b35b87d62764165146ceb0f6d9f6663258d8c289df5754a73f9`
+({py:mod}`gf180tcad.tcad.__main__`). {repo}`results/tcad/calibration` and
+{repo}`results/tcad/validation` went from
+`5265e5fe223580d9efd878b9ebe33648b21f36dcdbf41ac8c7092f3ce9925950` to
+`51a0a0094b60fd6d80a5e6eb5ec63e1cc9007f3259cc0642969bc1586d9871ee`
+({py:mod}`gf180tcad.calibrate.__main__`). The representative rerun came first, as design spec §9
+requires: on 2026-10-27, at this pin and with the restamped provenance, `make reproduce-quick`
+printed `identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under tcad/`,
+and `make manifest` then left `results/` unchanged (PR #51 records the log). That covers the two calibrated 1D jobs
+and {repo}`results/tcad/moscap1d/provenance.json`. The 2D results folders were not rerun: of their
+code path only the file holding `DDComponent` moved, verbatim, and `create_2Duz_simulation` and
+`sweep_cv`'s solve code are unchanged.
+
 (cross-host-determinism)=
 
 ## The same bytes on another computer
