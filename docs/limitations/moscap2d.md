@@ -299,13 +299,18 @@ committed `cv.meta.json` stays the truth.
 The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed
 cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committed cells:
 
-| Cell | Nodes | QS sweep (min) | AC sweep (min) | Job total (min) | Peak memory (GiB) | Attempts |
-|---|---|---|---|---|---|---|
-| nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 | 7.8 | 1 |
-| nfet `w10p0_l0p70` | 245515 | 112 | 97 | 210 | 5.9 | 1 |
+| Cell | Nodes | QS sweep (min) | AC sweep (min) | Job total (min) |
+|---|---|---|---|---|
+| nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 |
+| nfet `w10p0_l0p70` | 245515 | 112 | 97 | 210 |
 
-The sweep times are the last `elapsed` of each sweep's progress log (QS 201 points, AC 21
-points, each including its own meshing); the job total is the wall time of the host command.
+| Cell | Peak memory (GiB) | Attempts |
+|---|---|---|
+| nfet `w10p0_l0p60` | 7.8 | 1 |
+| nfet `w10p0_l0p70` | 5.9 | 1 |
+
+The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
+201 points and AC 21. The job total is the wall time of the host command.
 The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
 The run record, with the exit code and the image, is on {ref}`tcad-provenance`.
 
@@ -316,28 +321,29 @@ calibrated value. The meshes are not committed ({ref}`moscap2d-meshes`); the out
 directory of these jobs is outside the checkout, because the {term}`sandbox` refuses one
 inside it ([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
 
-**W1.6/L0.7 adds no 2D information.** The 2D cut runs along L through the middle of the gate
-width, so it has no width dependence. The W1.6/L0.7 job meshes the same cross-section as
-W10/L0.7: both meshes have sha256 `e0437cde0b288e4a5eeeb52ba9ae52db3fd816027200a032f43da53a89129a32`
-(the `mesh_sha256` of
-{repo}`the W10/L0.7 cell <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`).
-The deterministic solve is then identical, and only `cgg_total` scales with W. A W-series at
-fixed L tests the area scaling and the parasitic model, not the 2D solve.
+**W1.6/L0.7 adds no 2D information.** The 2D cut has no width dependence.
+The function {py:func}`~gf180tcad.tcad.stack.build` cuts the cell along L, through the middle of the gate
+width. It keeps only the intervals of the active area, the gate and the contacts
+on that line. The width enters only as `w_um`, which scales `cgg_total`.
 
-The W1.6/L0.7 comparison follows from the W10/L0.7 solve (our arithmetic): `cgg_per_um` of its
-{repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.csv>` times 1.6 µm,
-compared with the {term}`TT` {{ ngspice }} target of W1.6/L0.7 by {py:func}`~gf180tcad.calibrate.cv.compare`.
-The result is {term}`Disagree`:
+W1.6/L0.7 therefore gives the per-width solve of W10/L0.7 when the PDK cell has the same
+intervals on that line. The observed mesh identity is in [issue #77](https://github.com/mithro/gf180-tcad/issues/77). A W-series at fixed L then
+tests the area scaling and the parasitic model, not the 2D solve.
+
+The W1.6/L0.7 comparison follows from the committed W10/L0.7 cell. Its `cgg_per_um`
+({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.csv>`) times 1.6 µm
+is compared with the {term}`TT` {{ ngspice }} target of W1.6/L0.7 by
+{py:func}`~gf180tcad.calibrate.cv.compare`. The result is {term}`Disagree`
+({test}`tests/test_calibrate_cv.py::test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell`):
 
 | Check | Value | Verdict |
 |---|---|---|
 | Accumulation plateau, worst difference (%) | 7.6 | {term}`Same process` |
-| Inversion plateau, worst difference (%) | 13.9 | Same process |
+| Inversion plateau, worst difference (%) | 13.8 | Same process |
 | Depletion crossing shift (mV) | −194 | Disagree |
-| Inversion crossing shift (mV) | −34 | {term}`Agree` |
+| Inversion crossing shift (mV) | −33 | {term}`Agree` |
 
-The W1.6/L0.7 2D job itself is "not run"
-([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+The W1.6/L0.7 2D job itself is "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
 (moscap2d-l10)=
 

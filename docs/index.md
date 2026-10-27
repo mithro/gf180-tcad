@@ -18,8 +18,8 @@ and the {term}`MOS capacitor <MOSCAP>`) is in progress. The committed {term}`TCA
 MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MOSFET TCAD yet:
 
 - the 1D and 2D MOS capacitor {term}`C–V` curves at the start values, in
-  {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`),
-  and the calibrated 2D nfet cells at W10/L0.6 and W10/L0.7 in {repo}`results/tcad/moscap2d`;
+  {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`);
+- the calibrated 2D nfet cells at W10/L0.6 and W10/L0.7, in {repo}`results/tcad/moscap2d`;
 - their {term}`mesh convergence`, 1D and 2D, in {repo}`results/tcad/meshconv`
   ({doc}`limitations/mesh-convergence`);
 - the 1D calibration against the SPICE {term}`Cgg`–Vg, in {repo}`results/tcad/calibration`,

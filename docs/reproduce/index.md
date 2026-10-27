@@ -287,16 +287,25 @@ container budget was taken by another task for hours. The two calibrated 1D jobs
 `crosscheck-tcad` workflow job ({ref}`cross-host-tcad`), which checks that restamp on every
 change to the TCAD code; the other trees have no such check.
 
-**Calibrated 2D runs ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).** Each calibrated 2D cell is one host command,
-`python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID --out
-results/tcad/moscap2d --method M --resume DIR`, alone on the host in a 16 GiB {term}`sandbox`
-job. The wall time is that command's; the peak memory is the container's {term}`cgroup`
+**Calibrated 2D runs ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).** Each calibrated 2D cell is one host command:
+
+```
+python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID \
+    --out results/tcad/moscap2d --method M --resume DIR
+```
+
+It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that command's; the peak memory is the container's {term}`cgroup`
 `memory.peak`, sampled every 15 s.
 
-| Device | Geometry | Method | Wall time (s) | Peak memory (GiB) | Exit code | Finished (ACDT) |
-|---|---|---|---|---|---|---|
-| `nfet_05v0` | `w10p0_l0p60` | both | 11338 | 7.82 | 0 | 2026-10-27 11:31 |
-| `nfet_05v0` | `w10p0_l0p70` | both | 12584 | 5.93 | 0 | 2026-10-27 15:01 |
+| Device | Geometry | Method | Wall time (s) |
+|---|---|---|---|
+| `nfet_05v0` | `w10p0_l0p60` | both | 11338 |
+| `nfet_05v0` | `w10p0_l0p70` | both | 12584 |
+
+| Device | Geometry | Peak memory (GiB) | Exit code | Finished (ACDT) |
+|---|---|---|---|---|
+| `nfet_05v0` | `w10p0_l0p60` | 7.82 | 0 | 2026-10-27 11:31 |
+| `nfet_05v0` | `w10p0_l0p70` | 5.93 | 0 | 2026-10-27 15:01 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 

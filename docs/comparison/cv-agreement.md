@@ -238,33 +238,32 @@ Lmin with `spice-fit`.
   nfet: {term}`Agree` at all three. pfet: {term}`Agree` at L = 1 µm and {term}`Same process` at
   L = 0.7 µm and 1.6/0.7, both from the depletion-side crossing (+124 and +132 mV, inside the
   corner window) and, at 1.6/0.7, the accumulation plateau (6.12 %).
-- **2D: {term}`Disagree` at both calibrated nfet cells.** The `two_d` part of
-  {repo}`the nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each committed calibrated 2D cell
-  with the TT ngspice Cgg.
 
-  A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh and the SPICE
-  grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6 and W10/L0.7;
-  the other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+**2D: {term}`Disagree` at both calibrated nfet cells.** The `two_d` part of
+{repo}`the nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each committed calibrated 2D cell
+with the TT ngspice Cgg.
 
-  | Check | W10/L0.6 value | W10/L0.6 verdict | W10/L0.7 value | W10/L0.7 verdict |
-  |---|---|---|---|---|
-  | Accumulation plateau, worst difference (%) | 8.8 | {term}`Same process` | 7.6 | Same process |
-  | Inversion plateau, worst difference (%) | 15.6 | Same process | 13.8 | Same process |
-  | Depletion crossing shift (mV) | −240 | Disagree | −202 | Disagree |
-  | Inversion crossing shift (mV) | −49 | {term}`Agree` | −41 | Agree |
+A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh and the SPICE
+grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6 and W10/L0.7;
+the other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
-  The 2D Cgg lies below SPICE on both plateaus. At W10/L0.6 it is 14.12 fF at +5 V
-  ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.csv>`), against
-  a SPICE inversion level of 16.70 fF (`spice_regions` in the validation file). The gap is
-  larger on the inversion side and smaller at the longer gate.
+| Check | W10/L0.6 value | W10/L0.6 verdict | W10/L0.7 value | W10/L0.7 verdict |
+|---|---|---|---|---|
+| Accumulation plateau, worst difference (%) | 8.8 | {term}`Same process` | 7.6 | Same process |
+| Inversion plateau, worst difference (%) | 15.6 | Same process | 13.8 | Same process |
+| Depletion crossing shift (mV) | −240 | Disagree | −202 | Disagree |
+| Inversion crossing shift (mV) | −49 | {term}`Agree` | −41 | Agree |
 
-  We infer that the 2D cell's edge capacitance is smaller than the BSIM4 overlap, fringe and
-  gate-bulk terms, because the 1D fit adds those terms to the intrinsic C and so sets the
-  calibrated oxide (16.05 nm) with them. That inference is unmeasured; [issue #77](https://github.com/mithro/gf180-tcad/issues/77) holds the check.
-  L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan in
-  one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call
-  `moscap2d.simulate` itself; it reads the committed calibrated 2D results instead, so each
-  multi-hour 2D sweep runs once and serves both the result tree and the validation.
+The 2D Cgg lies below SPICE on both plateaus, by more on the inversion side. At W10/L0.6 it
+is 14.12 fF at +5 V
+({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.csv>`). The
+SPICE inversion level there is 16.70 fF (`spice_regions` in the validation file). The gap
+is smaller at the longer gate. Why the 2D Cgg is low is open ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+
+L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
+in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call
+`moscap2d.simulate` itself. It reads the committed calibrated 2D results instead, so each
+multi-hour 2D sweep runs once and serves both the result tree and the validation.
 
 ## Reproduce
 
