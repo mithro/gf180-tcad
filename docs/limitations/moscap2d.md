@@ -243,13 +243,16 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
   {py:data}`~gf180tcad.tcad.moscap2d.AC_INFEASIBLE`, `ac_points` is 0). This is an open
   correctness problem, tracked in [issue #59](https://github.com/mithro/gf180-tcad/issues/59).
-- **Resumed after out-of-memory restarts.** The committed L = 2 µm QS sweeps run under a memory
+- **Resumed after out-of-memory restarts.** The committed start-value L = 2 µm QS sweeps run under a memory
   cap. The service manager restarts a sweep after it is killed, and each restart resumes from the
   last saved point ({py:func}`~gf180tcad.tcad.moscap2d.resume_count`). The job files record
   4 restarts for each device in `resumed`. The nfet restarts after points 57, 97, 136 and 173,
   the pfet after points 34, 73, 113 and 162. The hand-off between points is the saved state, so a resumed sweep agrees
   with an uninterrupted one within 1e-12 (the solver tolerance) but is not byte-identical to it.
   The restart counts in these job files were written after the runs, from the progress logs.
+- **The calibrated nfet cell is resumed too.** Its job file records 2 restarts, after points 67
+  and 147 ({ref}`moscap2d-calibrated`). The same command was rerun on the same `--resume`,
+  three attempts in all ({ref}`tcad-provenance`).
 - **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
   every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
   sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
@@ -316,7 +319,7 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 {ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
 None of the four committed start-value 2D jobs' meshes is in the cache, nor on any disk:
 `tools/output-cache status` reports all four as absent. The cache holds the meshes of the
-calibrated nfet cells W10/L0.6, W10/L0.7 and W10/L1 of
+calibrated nfet cells W10/L0.6, W10/L0.7, W10/L1 and W10/L2 of
 [issue #35](https://github.com/mithro/gf180-tcad/issues/35). Once a mesh is in the cache,
 `tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh` writes it
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
@@ -334,15 +337,21 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 |
 | nfet `w10p0_l0p70` | 245515 | 112 | 97 | 210 |
 | nfet `w10p0_l1p00` | 306136 | 133 | 120 | 253 |
+| nfet `w10p0_l2p00` | 506292 | 244 | none | 246 |
 
 | Cell | Peak memory (GiB) | Attempts |
 |---|---|---|
 | nfet `w10p0_l0p60` | 7.8 | 1 |
 | nfet `w10p0_l0p70` | 5.9 | 1 |
 | nfet `w10p0_l1p00` | 6.1 | 1 |
+| nfet `w10p0_l2p00` | 16.0 | 3 |
 
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
+
+The L = 2 µm cell has no AC sweep ({ref}`moscap2d-l2`). Its QS time is the sum over its three attempts.
+Its first two attempts reached the 16 GiB cap and were killed.
+
 The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
 The run record, with the exit code and the image, is on {ref}`tcad-provenance`.
 
@@ -417,5 +426,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   agreement criterion ({ref}`mesh-convergence-2d`).
 - **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
   ({ref}`moscap2d-l2`).
-- **Calibrated 2D results only at the nfet W10/L0.6, W10/L0.7 and W10/L1** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+- **Calibrated 2D results only at the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).

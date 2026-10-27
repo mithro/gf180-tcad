@@ -43,8 +43,8 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
 
 ## Reproducing the results
 
-- **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
-  `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
+- **Two targets cannot run their split 2D jobs as written:** `make tcad-start` and `make tcad-calibrated`.
+  Their `--resume` directory, `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
 - **TCAD {term}`provenance` updated without a rerun.** A code change that leaves the results
   alone still changes the {term}`generator_sha256`. Each time, the provenance of the TCAD
