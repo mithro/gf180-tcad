@@ -127,13 +127,14 @@ Agree
   {ref}`the verdicts <agreement-verdicts>`.
 
 Same process
-  Verdict for a device and metric: outside the {term}`tolerance` but inside the {term}`PDK`'s own
-  min-max {term}`spec window`. The {term}`TCAD` device is plausibly *a* GF180 device, not *the* typical
-  one. See {ref}`the verdicts <agreement-verdicts>`.
+  Verdict for a device and metric: outside the {term}`tolerance` but inside the
+  {term}`"Same process" window`, which combines the {term}`PDK`'s own min-max {term}`spec window`
+  and the {term}`corner envelope`. The {term}`TCAD` device is then inside the range the PDK
+  specifies, not at its typical point. See {ref}`the verdicts <agreement-verdicts>`.
 
 Disagree
-  Verdict for a device and metric: outside the {term}`spec window`; the {term}`TCAD` is describing a
-  different process. See {ref}`the verdicts <agreement-verdicts>`.
+  Verdict for a device and metric: outside the "Same process" window; the {term}`TCAD` is
+  describing a different process. See {ref}`the verdicts <agreement-verdicts>`.
 
 tolerance
   The allowed {term}`TCAD`-versus-SPICE error of a metric, from the {ref}`ITRS 2007 <lit-itrs>` Modeling and Simulation
@@ -151,9 +152,10 @@ validation target
 
 held-out geometry
   A geometry fixed before calibration and used for validation only: W = 10 µm at L = 0.7 and
-  1 µm, and the narrow W = 1.6 µm, L = 0.7 µm. "Held-out" is the usual statistics term for data
-  kept out of a fit to test it (Hastie, Tibshirani and Friedman, *The Elements of Statistical
-  Learning*, 2nd ed., 2009, section 7.2). See {ref}`calibration-validation`.
+  1 µm, and the narrow W = 1.6 µm, L = 0.7 µm. It plays the part of the test set of statistics,
+  which "should be kept in a “vault,” and be brought out only at the end of the data analysis"
+  ([Hastie, Tibshirani and Friedman, *The Elements of Statistical Learning*, 2nd ed., section 7.2](https://hastie.su.domains/ElemStatLearn/)).
+  See {ref}`calibration-validation`.
 
 calibrated parameter budget
 parameter budget
@@ -246,7 +248,7 @@ C–V
 quasi-static
 QS
   Capacitance–voltage: the gate capacitance {term}`Cgg` against the gate bias. The quasi-static
-  (QS, low-frequency) curve is the equilibrium one and recovers to about the {term}`oxide capacitance <Cox>` in
+  (QS, low-frequency) curve is the equilibrium one and rises back towards the {term}`oxide capacitance <Cox>` in
   inversion; {term}`BSIM4` [`capMod=2`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) gives it. A {term}`MOSCAP` solved by small-signal AC with only
   a body contact gives the high-frequency curve instead. See {ref}`plugin-history-latest`.
 
@@ -254,7 +256,7 @@ HF C–V
 high-frequency C–V
   The {term}`C–V` measured with a small signal too fast for the inversion layer to follow: in inversion
   the capacitance stays near its depletion minimum instead of recovering to {term}`Cox`.
-  Technically, minority carriers are generated thermally in about 2τ·N/n_i, so above that rate
+  Technically, minority carriers are generated thermally in a time of order 2τ·N/n_i, so above that rate
   only the depletion edge responds; a 1D {term}`MOSCAP` with only a body contact gives this
   curve at any practical frequency ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`plugin-history-latest`.
 
@@ -412,7 +414,7 @@ cv
 
 gmin
   The small conductance (1e-12 S) that {term}`SPICE` puts across every junction. At Vds = 5 V it lets
-  about 5 pA flow with the device off, a leakage floor. See {doc}`limitations/engine-cross-check`.
+  5 pA flow (1e-12 S × 5 V) with the device off, a leakage floor. See {doc}`limitations/engine-cross-check`.
 
 engine cross-check
   The ngspice-versus-Xyce comparison of the {term}`SPICE reference <SPICE reference results>`. A difference above 0.5 % flags a
@@ -479,7 +481,7 @@ provenance
 generator_sha256
   The sha256 over the sorted (path, sha256) pairs of the source files of
   {py:data}`gf180tcad.reference.GENERATOR_MODULES` plus {repo}`tools/sandbox-run`. See
-  {py:func}`gf180tcad.reference.generator_sha256` and {ref}`results-layout`. Each {term}`TCAD` tree has
+  {py:func}`gf180tcad.reference.generator_sha256` and {ref}`results-layout`. Each {term}`TCAD` results folder has
   its own, over the import closure of the entry point that writes it
   ({py:data}`gf180tcad.tcad.TCAD_GENERATORS`, {py:func}`gf180tcad.tcad.generator_sha256`) and
   the shared inputs; see {ref}`tcad-provenance`.
@@ -496,7 +498,7 @@ Phase 3
 Phase 4
   The {term}`TCAD` phases. Phase 2, in progress: the {{ gplugins }} {{ DEVSIM }} plugin fix and the
   1D and 2D {term}`MOS capacitor <MOSCAP>`, calibrated against the {term}`SPICE` {term}`Cgg`–Vg.
-  Phase 3, not started: the 2D MOSFET. Phase 4, planned, alongside Phases 2
+  Phase 3, not started: the 2D MOSFET, on both backends. Phase 4, planned, alongside Phases 2
   and 3: {{ Charon }} beside {{ DEVSIM }}, and their comparison. See the
   {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md>` and the
   {repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`.
