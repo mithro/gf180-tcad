@@ -257,7 +257,7 @@ Two local runs give byte-identical records. The record holds no timings and no h
 sandbox (`pytest -m sandbox`, {{ pytest }}) and compare it with the committed one. The record is
 listed in the {term}`manifest`.
 
-**It is not part of the check on another computer (a GitHub-hosted runner)**
+**It is not part of the check on another computer (a {{ GitHub_hosted_runner }})**
 ({ref}`cross-host-determinism`). That check covers only {repo}`results/spice`. The 2023 stack
 has {{ numpy }} 1.26 with its own {term}`SIMD dispatch` and no guarantee of the same bytes on
 another computer, so the record is reproducible on one host only.
@@ -376,7 +376,7 @@ The numbers, at mesh × 1 and × 0.5 ("–": not applicable):
 | anode − cathode at 0 V (V) | 0.9586540658880733 | …742 | within 8.9e-16 of v0.8.0 | the same as × 1 | 8.9e-16 | match |
 | anode − cathode at 0.1 V (V) | 0.85865 | the same | within the allowed difference | the same | 8.9e-16 | match |
 | anode − cathode at 0.2 V (V) | 0.75865 | the same | within the allowed difference | the same | 8.9e-16 | match |
-| step per 0.1 V of bias (V) | 0.1 | 0.1 | 0.1 | 0.1 | 8.9e-16 plus two ulp | match |
+| step per 0.1 V of bias (V) | 0.1 | 0.1 | 0.1 | 0.1 | 8.9e-16 plus two {term}`ulp` | match |
 | NetDoping range (cm⁻³) | ±1.1e18 | ±1.1e18 | ±1.1e18 | ±1.1e18 | exact | match |
 | depletion width, bottom edge (µm) | 0.03863 | 0.06883 | 0.06000 | 0.06000 | 0.0302 | match |
 | depletion width against the {term}`depletion approximation` (µm) | – | – | – | 0.06000 | 0.0100 | match |

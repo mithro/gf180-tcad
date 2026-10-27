@@ -331,7 +331,7 @@ varies from run to run. The full reference has passed on an AMD EPYC 7763; the o
 pass on an AMD EPYC 9V45 was an earlier 8-job subset, before the numpy fix below. There is no {term}`tolerance`: a difference in the last digit of one float
 fails it.
 
-**The whole SPICE reference is cross-checked on GitHub-hosted runners.** The
+**The whole {term}`SPICE reference` is cross-checked on GitHub-hosted runners.** The
 {repo}`subset file <tests/crosscheck_subset.txt>` holds the single line `all`, which stands
 for every job of the reference: both engines, all five corners, both devices and all six
 geometries of each, 120 jobs. Each job includes every sweep its engine runs

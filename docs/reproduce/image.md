@@ -73,7 +73,7 @@ is described in {ref}`cross-host-determinism`.
 [`ghcr.io/mithro/gf180-tcad-tcad`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-tcad),
 built from {repo}`docker/tcad/` **on top of the pinned base image**: its `FROM` is the
 reference in {repo}`docker/IMAGE` ({repo}`docker/tcad/build` passes it as `BASE_IMAGE`).
-{term}`SPICE` jobs keep using the base image, so the committed SPICE reference does not depend
+{term}`SPICE` jobs keep using the base image, so the committed {term}`SPICE reference` does not depend
 on it.
 
 This is the {term}`stable TCAD image`, with the latest PyPI releases of the TCAD stack. The

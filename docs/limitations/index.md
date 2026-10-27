@@ -141,7 +141,7 @@ values are not read as more physical than they are.
   the {term}`parameter budget`. At Lmin they are a large part of Cgg (about 4 of 14 fF
   in accumulation), so Lmin tests the bookkeeping as much as the TCAD. The split is plotted on
   each generated geometry page ({doc}`/_generated/tcad/index`).
-- **{{ Xyce }} has no C–V analysis.** Cgg has one SPICE reference, ngspice, and the 0.5 %
+- **{{ Xyce }} has no C–V analysis.** Cgg has one SPICE engine, ngspice, and the 0.5 %
   {term}`engine cross-check` cannot apply to it ({ref}`results-layout`).
 - **The ΔV ≤ 50 mV crossing {term}`tolerance` is a proposal.** No published standard exists for
   it ({ref}`cv-agreement-metric`).
@@ -158,7 +158,7 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
 {term}`Phase 2`. Each is a
 {term}`Phase 3 entry gate`: it must be closed before any MOSFET {term}`TCAD` result.
 
-- **No layout-extracted secondary SPICE reference.** The
+- **No layout-extracted secondary {term}`SPICE reference`.** The
   {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
   asks for a second reference with instance parameters extracted from the {{ gdsfactory }}
   cell layout. Only the primary, schematic-default reference exists
