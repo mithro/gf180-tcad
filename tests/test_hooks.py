@@ -128,6 +128,29 @@ def test_hook_unsets_the_git_variables_git_gives_it(tmp_path):
     assert r.returncode == 0, r.stderr
 
 
+def test_hook_refuses_a_matching_push_of_other_branches(tmp_path):
+    """push.default=matching pushes every branch the remote has, other worktrees' ones too."""
+    repo = _repo(tmp_path, "true")
+    head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    cur = _git(repo, "symbolic-ref", "HEAD").stdout.strip()
+    lines = f"{cur} {head} {cur} {ZERO}\nrefs/heads/other {head} refs/heads/other {ZERO}\n"
+    r = _hook(repo, lines)
+    assert r.returncode == 1
+    assert "other" in r.stderr and "push.default simple" in r.stderr
+
+
+def test_hook_allows_one_explicit_other_branch_and_tags(tmp_path):
+    repo = _repo(tmp_path, "true")
+    head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    cur = _git(repo, "symbolic-ref", "HEAD").stdout.strip()
+    for lines in (
+        f"refs/heads/other {head} refs/heads/other {ZERO}\n",
+        f"{cur} {head} {cur} {ZERO}\nrefs/tags/v1 {head} refs/tags/v1 {ZERO}\n",
+    ):
+        r = _hook(repo, lines)
+        assert r.returncode == 0, r.stderr
+
+
 def test_hook_skips_a_deletion_only_push(tmp_path):
     repo = _repo(tmp_path, "false")
     r = _hook(repo, f"(delete) {ZERO} refs/heads/b {'1' * 40}\n")

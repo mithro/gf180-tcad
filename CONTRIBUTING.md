@@ -71,6 +71,10 @@ when a pushed commit changes [`docs/`](docs), [`src/`](src), [`results/`](result
 bypass it with `--no-verify`: the hook only checks what most often broke CI, so run the full
 `uv run pytest -m "not sandbox"` before asking for review. CI cancels the run of a superseded
 commit when a newer one is pushed to the same pull request (runs on `main` are never cancelled).
+The hook also refuses a push of several branches that are not all the checked-out one: that is
+what `push.default=matching` does, and since every worktree of a clone shares its branches, it
+pushes other sessions' unfinished commits (and starts CI on them). Push with
+`git push origin HEAD`, and set `git config push.default simple`.
 
 [`uv.lock`](uv.lock) is committed. Tests that run simulators are marked
 [`sandbox`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-sandbox); they run only through [`tools/sandbox-run`](tools/sandbox-run)
