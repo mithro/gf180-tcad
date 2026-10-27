@@ -73,8 +73,11 @@ capacitance matches the SPICE model's. It sets the oxide to {{ x_t_ox_nfet_cal }
 That thickness gives a Cox of {{ x_cox_nfet_cal }}, an idealised example from the calibrated
 value. The calibration result
 ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`) records the
-same {{ x_cox_check_nfet }}. It also records the range the {term}`PDK` specifies, with its
-source. That range is {{ x_cox_spec_min }} to {{ x_cox_spec_max }}, and the value lies inside it.
+same {{ x_cox_check_nfet }}. The {term}`PDK` gives {{ x_cox_spec_min }} to {{ x_cox_spec_max }} in
+the row `COX (Poly) 6V` of its
+[gate oxide capacitance table](https://github.com/fossi-foundation/gf180mcu-pdk/blob/25ed9c64b64b8e1b93cc4d2d5cade4cd82383a9a/docs/analog/spice/elec_specs/tables_clear/5_General_Specification3.csv).
+That row applies because the nfet_05v0 uses the {term}`nfet_06v0` model card and its oxide
+({repo}`data/pdk_elec_spec.json`). The value lies inside the range.
 
 (explained-poly)=
 
