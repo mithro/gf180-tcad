@@ -78,6 +78,11 @@ In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-q
 same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job
 resumes when the target runs again.
 
+In `tcad-calibrated`, the nfet L = 2 µm cell runs the same two steps. Its QS step outgrows the
+16 GiB cap before the sweep ends ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)).
+Rerun that `--method qs` line alone, on the same `--resume`, until it exits 0.
+Then run its `--method combine-qs` line.
+
 It exits non-zero if any job fails or if any file differs from, is missing from, or is not
 listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Docker }}, the sandbox
 (see {doc}`sandbox`), the pinned images (see {doc}`image`) and the plugin submodule
@@ -354,7 +359,10 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `nfet_05v0` | `w10p0_l2p00` | 16.00 | 0 | 2026-10-28 00:32 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
-They ran at gplugins `1c071d0`, before the backend seam below.
+
+They ran at gplugins `1c071d0`. The folder's `provenance.json` names the later pin, `0715c81`.
+The W10/L2 job was committed after the "Restamped without a rerun" list below, so that list does not name it.
+The 2D code path is the same at both pins. `DDComponent` moved verbatim, and `sweep_cv` differs only in its docstring.
 
 The `w10p0_l2p00` {term}`QS <C–V>` command ran three times on one `--resume`. The first two attempts reached
 the 16 GiB cap after points 67 and 147 and were killed; the third finished ({ref}`moscap2d-l2`).
@@ -605,7 +613,7 @@ rerun byte for byte locally by
 
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
 content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
-the sha256 the committed results name. It holds the meshes of the three calibrated nfet cells, W10/L0.6, W10/L0.7 and W10/L1;
+the sha256 the committed results name. It holds the meshes of the four calibrated nfet cells, W10/L0.6, W10/L0.7, W10/L1 and W10/L2;
 see {doc}`output-cache`.
 
 ```{toctree}

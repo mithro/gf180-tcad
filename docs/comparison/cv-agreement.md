@@ -338,7 +338,7 @@ A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh 
 grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6, W10/L0.7,
 W10/L1 and W10/L2; the other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
-A plateau row is its worst difference from SPICE. At W10/L0.6:
+A plateau row is its worst difference from SPICE. At W10/L0.6, a calibration geometry of the 1D fit:
 
 | Check | 2D | Verdict |
 |---|---|---|
@@ -365,7 +365,10 @@ At W10/L1:
 | Depletion crossing shift (mV) | −131 | Same process |
 | Inversion crossing shift (mV) | −27 | Agree |
 
-At W10/L2, a calibration geometry of the 1D fit, with QS only ({ref}`moscap2d-l2`):
+W10/L2 is a calibration geometry of the 1D fit, run with QS only ({ref}`moscap2d-l2`).
+The 1D fit is {term}`Agree` on all four checks there, so this cell is no held-out evidence.
+It tests the 2D cross-section's own edge, overlap and fringe capacitance at a fitted geometry.
+Its plateau gap belongs to [issue #77](https://github.com/mithro/gf180-tcad/issues/77), not to the fit. At W10/L2:
 
 | Check | 2D | Verdict |
 |---|---|---|

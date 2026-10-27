@@ -243,7 +243,7 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
   {py:data}`~gf180tcad.tcad.moscap2d.AC_INFEASIBLE`, `ac_points` is 0). This is an open
   correctness problem, tracked in [issue #59](https://github.com/mithro/gf180-tcad/issues/59).
-- **Resumed after out-of-memory restarts.** The committed L = 2 µm QS sweeps run under a memory
+- **Resumed after out-of-memory restarts.** The committed start-value L = 2 µm QS sweeps run under a memory
   cap. The service manager restarts a sweep after it is killed, and each restart resumes from the
   last saved point ({py:func}`~gf180tcad.tcad.moscap2d.resume_count`). The job files record
   4 restarts for each device in `resumed`. The nfet restarts after points 57, 97, 136 and 173,
@@ -251,7 +251,8 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
   with an uninterrupted one within 1e-12 (the solver tolerance) but is not byte-identical to it.
   The restart counts in these job files were written after the runs, from the progress logs.
 - **The calibrated nfet cell is resumed too.** Its job file records 2 restarts, after points 67
-  and 147 ({ref}`moscap2d-calibrated`). Its job driver reran the command on the same `--resume`.
+  and 147 ({ref}`moscap2d-calibrated`). The same command was rerun on the same `--resume`,
+  three attempts in all ({ref}`tcad-provenance`).
 - **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
   every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
   sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
@@ -318,7 +319,7 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 {ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
 None of the four committed start-value 2D jobs' meshes is in the cache, nor on any disk:
 `tools/output-cache status` reports all four as absent. The cache holds the meshes of the
-calibrated nfet cells W10/L0.6, W10/L0.7 and W10/L1 of
+calibrated nfet cells W10/L0.6, W10/L0.7, W10/L1 and W10/L2 of
 [issue #35](https://github.com/mithro/gf180-tcad/issues/35). Once a mesh is in the cache,
 `tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh` writes it
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
