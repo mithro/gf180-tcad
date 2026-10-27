@@ -152,14 +152,37 @@ These pages are grounded in the committed SPICE reference, which exists for ever
 - `tests/test_explained.py`: `::test_substitutions_defined` (every `{{ x_* }}` on a page is in the registry), `::test_every_registered_number_is_used`, `::test_sources_exist`, `::test_textbook_entries_cite_literature` (every `source` names an anchor that exists in `literature.md`), `::test_no_textbook_value_twice`, `::test_derive_against_hand_values` (each formula against a value worked by hand in the test's docstring), `::test_no_bare_numbers` (with a positive control), `::test_figure_code_has_no_numeric_literals`, `::test_figures_have_dark_twins` (every `-light.svg` has a `-dark.svg` and every page embeds both), `::test_figures_legible_at_400px`, `::test_explained_pages_meet_every_cap` (`tools/measure_docs.py` and `tools/docs_lint.py --no-front-matter` report nothing for `docs/explained/**`, apart from the two finding kinds the house decision on citations does not count), `::test_explained_pages_are_explanations` (each page has at most seven `##` headings, no numbered list at line start, a "Where this repo's results differ" heading, and opens with a figure), `::test_explain_in_no_generator_closure` (no module in any hashed closure imports `gf180tcad.explain`: the TCAD entry points of `gf180tcad.tcad` (and `generators.json` once Charon B0 lands), the SPICE reference's `gf180tcad.reference.GENERATOR_MODULES` (`reference.py` lines 77–94: `gf180tcad`, `io`, `metrics`, `devices`, `layout`, `sandbox`, `specwindow`, `pdk`, `reference`, `spice.*`), and the render closure (`the `shared_modules` key of the `renders` section of `generators.json`` and the scene modules, once R2b lands)), `::test_no_formula_twice`, `::test_landing_lists_every_page` (the landing page and the toctree name every file in `docs/explained/`), `::test_explain_runs_with_the_docs_group_only` (in a fresh subprocess, `sys.modules` entries for `gdsfactory`, `gplugins`, `shapely`, `gf180mcu` and `devsim` set to `None` before the import, so any import of them raises; then `import gf180tcad.explain` and `explain.figures.write_all(tmp_path)` must succeed);
 - `tests/test_docgen.py::test_svg_deterministic` (extended to one explainer figure, both palettes), `::test_docs_build_offline` (unchanged; covers the new section).
 
-- [ ] **Step 1: Verify the sources.** Fetch the Sze and Ng table of contents for the 3rd edition and record the chapter numbers and titles the pages cite (ch. 1, 2, 4, 6); fetch each candidate MOS textbook's publisher or Crossref record and table of contents; add the verified ones to `literature.md` with descriptive inline links (no footnotes). Log every fetch (URL, HTTP status, date) in the PR body.
-- [ ] **Step 2: Write the tests first.** Run `uv run --locked pytest -rs -v -m "not sandbox" -p no:cacheprovider tests/test_explained.py > tmp/e0-tests-red.log 2>&1`; they FAIL. Commit.
-- [ ] **Step 3: Implement** `quantity`, `numbers`, `idealised`, `model`, `figures`; the `plots.figure_svg` size parameter with its byte-identity proof (`tmp/e0-generated-before/`, `tmp/e0-generated-after/`, `diff -r` logged to `tmp/e0-generated-diff.log`, empty). Commit per module; push after each few.
-- [ ] **Step 4: Write the page** from `assets/templates/explanation.md`: the scope sentences (question, reader, what it leaves out: bands, which the next page covers), the stack figure with the body highlighted, sections "Atoms and bonds" (no numbers), "Electrons and holes", "Dopants", "How many carriers", "Where this repo's results differ". Every number by substitution. Run `uv run --no-project python -I tools/measure_docs.py docs/explained/*.md` and `uv run --no-project python -I tools/docs_lint.py --no-front-matter docs/explained/*.md`, logs in `tmp/`; fix every finding.
-- [ ] **Step 5: Build and look.** `uv run --locked --group docs sphinx-build -W -b html docs tmp/docs-html > tmp/e0-sphinx.log 2>&1`; screenshots at 400 px and 1280 px, light and dark (Furo's theme switch, or `prefers-color-scheme` by Chrome's `--force-dark-mode`), under `tmp/shots/`; attach to the PR.
-- [ ] **Step 6: Full test run** (`uv run --locked pytest -rs -v -m "not sandbox" -p no:cacheprovider > tmp/e0-tests.log 2>&1`), lower `tests/doc_measure_baseline.json` if counts fell. PR; review by use, then audit; fix; merge.
+- [x] **Step 1: Verify the sources.** Fetch the Sze and Ng table of contents for the 3rd edition and record the chapter numbers and titles the pages cite (ch. 1, 2, 4, 6); fetch each candidate MOS textbook's publisher or Crossref record and table of contents; add the verified ones to `literature.md` with descriptive inline links (no footnotes). Log every fetch (URL, HTTP status, date) in the PR body.
+- [x] **Step 2: Write the tests first.** Run `uv run --locked pytest -rs -v -m "not sandbox" -p no:cacheprovider tests/test_explained.py > tmp/e0-tests-red.log 2>&1`; they FAIL. Commit.
+- [x] **Step 3: Implement** `quantity`, `numbers`, `idealised`, `model`, `figures`; the `plots.figure_svg` size parameter with its byte-identity proof (`tmp/e0-generated-before/`, `tmp/e0-generated-after/`, `diff -r` logged to `tmp/e0-generated-diff.log`, empty). Commit per module; push after each few.
+- [x] **Step 4: Write the page** from `assets/templates/explanation.md`: the scope sentences (question, reader, what it leaves out: bands, which the next page covers), the stack figure with the body highlighted, sections "Atoms and bonds" (no numbers), "Electrons and holes", "Dopants", "How many carriers", "Where this repo's results differ". Every number by substitution. Run `uv run --no-project python -I tools/measure_docs.py docs/explained/*.md` and `uv run --no-project python -I tools/docs_lint.py --no-front-matter docs/explained/*.md`, logs in `tmp/`; fix every finding.
+- [x] **Step 5: Build and look.** `uv run --locked --group docs sphinx-build -W -b html docs tmp/docs-html > tmp/e0-sphinx.log 2>&1`; screenshots at 400 px and 1280 px, light and dark (Furo's theme switch, or `prefers-color-scheme` by Chrome's `--force-dark-mode`), under `tmp/shots/`; attach to the PR.
+- [x] **Step 6: Full test run** (`uv run --locked pytest -rs -v -m "not sandbox" -p no:cacheprovider > tmp/e0-tests.log 2>&1`), lower `tests/doc_measure_baseline.json` if counts fell. PR; review by use, then audit; fix; merge.
 
 **Provenance impact.** None: no file under `results/` or `src/gf180tcad/tcad/` changes; `gf180tcad.explain` and `gf180tcad.quantity` are in no closure (tested). **Host:** host only, no Docker. **Calendar:** 1.5–2 days.
+
+**As built (E0, PR for branch `task/p5-e0-explainer-base`).**
+
+- Sources: Sze and Ng's chapter titles (ch. 1, 2, 4, 6, appendices G and H) and Taur and Ning's
+  3rd edition (doi:10.1017/9781108847087, its chapter titles) were read from Crossref and added
+  to `literature.md` (anchor `lit-taur`). Tsividis and McAndrew and Pierret returned no Crossref
+  record and are not cited.
+- `gf180tcad.quantity` is used as merged in PR #89 (the TOML and JSON selectors); E0 needed no
+  new reader, so the module is unchanged.
+- `plots.figure_svg` is unchanged: the figure labels its regions on the plot, which
+  `plots.Panel` cannot draw, so `explain.figures` draws with `plots.RC` and `plots.METADATA`
+  directly. The before/after `docs/_generated` diff is empty (`tmp/e0-generated-diff.log`).
+- `data/explain/textbook.toml` is not created: the one textbook value E0 prints, N_c, is in
+  `data/render/display.toml`. `numbers.citation` reads either file's `sources` table.
+- `idealised.degenerate_offset` lands in E0, because the first page's gap section prints it.
+  It measures both Fermi levels from the conduction-band edge with N_c only, so it gives 31 mV
+  at 10²⁰ cm⁻³ and V_t at 298.15 K (the "≈ 37 mV" above came from a band-gap based estimate).
+- Unit conversions in `explain/model.py` sit in a `UNITS` table, which the number-literal scan
+  exempts beside `STYLE`. The oxide is drawn ×5 (`STYLE["scales"]`).
+- The link checkers match the glossary term "electron" in lower case only (the journal name
+  "IEEE Trans. Electron Devices" is not the term).
+- Decisions left open by the plan took its defaults: the section is first in the toctree, the
+  reader is the newcomer, and Tier 3 is to be written from SPICE.
 
 ### Task E1: the rest of Tier 1
 
