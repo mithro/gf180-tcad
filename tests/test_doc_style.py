@@ -214,7 +214,7 @@ def test_positive_control_history():
 
 
 def test_no_hedge_words():
-    """Reader pages carry no hedge or unknown words (spec §10.3, owner decision of 14:40)."""
+    """Reader pages carry no hedge or unknown words (spec §10.3, owner decision of 14:42)."""
     found = []
     for p in source_pages():
         rel = p.relative_to(ROOT).as_posix()

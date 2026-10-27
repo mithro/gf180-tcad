@@ -217,7 +217,7 @@ def history_lines(text: str) -> list[tuple[int, str]]:
     return out
 
 
-# Hedge and unknown words banned on reader pages (spec §10.3, owner decision of 14:40). "about"
+# Hedge and unknown words banned on reader pages (spec §10.3, owner decision of 14:42). "about"
 # counts only before a number. Whole words; a word in `code` or in "double quotes" is a mention.
 HEDGES = re.compile(
     r"\b(not yet|yet|unverified|not public|not stated|not published|presumably|probably|"
