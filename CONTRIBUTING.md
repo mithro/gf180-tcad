@@ -42,6 +42,13 @@ PRs but is not a merge blocker.
   stale phrases); passing it says nothing about whether the pages are current.
 - Every review checks that those pages were updated correctly at the same time. A PR whose
   documentation lags behind the change is "needs fixes", like any other finding.
+- Docs pages follow the writing rules of the [design spec, section 10.3](docs/superpowers/specs/2026-10-18-gf180-tcad-design.md):
+  the user's `writing-sourced-docs` and `docs-writing` skills. Before handing a page over, run
+  `uv run --no-project python -I tools/measure_docs.py <page>` and the docs tests
+  ([`tests/test_doc_style.py`](tests/test_doc_style.py),
+  [`tests/test_doc_measure.py`](tests/test_doc_measure.py)); a PR that fixes pages lowers
+  [`tests/doc_measure_baseline.json`](tests/doc_measure_baseline.json) with
+  `uv run --locked python tests/test_doc_measure.py --write-baseline`.
 
 ## Forks only
 

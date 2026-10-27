@@ -22,8 +22,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 
-# A cell holds at most this many words (after markup is reduced to its visible text).
-MAX_WORDS = 8
+# A cell holds at most this many words (after markup is reduced to its visible text): the
+# table-cell cap of the writing-sourced-docs skill (spec §10.3).
+MAX_WORDS = 25
 
 # Pages that may narrate what used to be true (spec §10.3).
 HISTORY_ALLOWED = (
@@ -194,6 +195,85 @@ def history_lines(text: str) -> list[tuple[int, str]]:
         if HISTORY_PHRASES.search(line):
             out.append((n, line.strip()))
     return out
+
+
+# The docs-writing skill's copy rules (spec §10.3), as its scripts/docs_lint.py checks them; that
+# script has no stated licence, so this repo implements the same checks.
+BANNED = re.compile(
+    r"\b(just|simply|easy|easily|straightforward|please note|click here|currently|soon|"
+    r"in order to|as of this writing)\b|(?<!\w)(e\.g\.|i\.e\.|etc\.)|"
+    r"\b(Future:|Sources:|unverified|TODO|not yet)",
+    re.IGNORECASE,
+)
+SENTENCE_WORDS = 25
+LIST_ITEMS = 7
+PAGE_LINKS = 15
+
+
+def _prose_blocks(text: str) -> list[tuple[int, str]]:
+    """(first line, text) of each prose paragraph or list item: no fences, tables, headings,
+    directives or HTML comments; inline code and quoted mentions removed."""
+    out: list[tuple[int, str]] = []
+    cur: list[str] = []
+    start = 0
+    fence = False
+    for n, line in enumerate(text.splitlines() + [""], 1):
+        s = line.strip()
+        if re.match(r"^(`{3,}|~{3,}|:{3,})", s):
+            fence = not fence
+            if cur:
+                out.append((start, " ".join(cur)))
+                cur = []
+            continue
+        if fence:
+            continue
+        new_item = bool(re.match(r"^([-*+]|\d+\.)\s", s))
+        if (
+            not s
+            or s.startswith(("|", "#", "<!--", "("))
+            and (s.startswith(("|", "#", "<!--")) or s.endswith(")="))
+            or new_item
+        ):
+            if cur:
+                out.append((start, " ".join(cur)))
+                cur = []
+            if not new_item:
+                continue
+        if not cur:
+            start = n
+        cur.append(s)
+    cleaned = []
+    for n, b in out:
+        b = re.sub(r"`[^`]*`", "CODE", b)
+        b = re.sub(r'"[^"]*"', "QUOTE", b)
+        b = re.sub(r"\]\([^)]*\)", "]", b)
+        cleaned.append((n, b))
+    return cleaned
+
+
+def lint_findings(text: str) -> dict[str, list[str]]:
+    """docs-writing findings of one page, by kind: banned, sentence, list, links."""
+    found: dict[str, list[str]] = {"banned": [], "sentence": [], "list": [], "links": []}
+    for n, block in _prose_blocks(text):
+        for m in BANNED.finditer(block):
+            found["banned"].append(f"{n}: {m.group(0)!r}")
+        body = re.sub(r"^([-*+]|\d+\.)\s+", "", block)
+        for sent in re.split(r"(?<=[.!?])\s+(?=[A-Z{*(\[`])", body):
+            k = len([w for w in sent.split() if re.search(r"\w", w)])
+            if k > SENTENCE_WORDS:
+                found["sentence"].append(f"{n}: {k} words")
+    run = 0
+    for n, line in enumerate(text.splitlines() + [""], 1):
+        if re.match(r"^([-*+]|\d+\.)\s", line):
+            run += 1
+        elif line.strip() and not line.startswith((" ", "\t")):
+            if run > LIST_ITEMS:
+                found["list"].append(f"{n}: {run} items")
+            run = 0
+    links = len(re.findall(r"\]\((?!#)[^)]+\)", text)) + len(re.findall(r"\{(?:doc|ref)\}`", text))
+    if links > PAGE_LINKS:
+        found["links"].append(f"{links} links")
+    return found
 
 
 def source_pages() -> list[Path]:

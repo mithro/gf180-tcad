@@ -65,15 +65,18 @@ This target of the {repo}`Makefile` regenerates every committed result in place,
 order, and then runs `python -m gf180tcad.manifest verify results/` ({py:mod}`gf180tcad.manifest`).
 Each step is a target of its own, which can also be run alone:
 
-<!-- table-ok: PR #56 rewrites the tcad-calibrated row; split into target, command and notes once it merges -->
 | target | runs | writes |
 |---|---|---|
 | `spice-reference` | `python -m gf180tcad spice-reference --engine both --jobs $(JOBS)`: the {term}`SPICE reference <SPICE reference results>` for both engines ({{ ngspice }} and {{ Xyce }}), all {term}`corners <corner>`, both devices and every geometry | {repo}`results/spice` |
 | `tcad-meshconv` | `python -m gf180tcad.tcad meshconv --dim 1` for both devices, then `--dim 2 --jobs 1` (one 16 GiB {term}`job` at a time) | {repo}`results/tcad/meshconv` |
-| `tcad-start` | `python -m gf180tcad.tcad moscap --params start`: `--dim 1` for both devices, and `--dim 2` for each committed 2D cell; the L = 2 µm cells run `--method qs`, then `--method combine-qs` on the same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job resumes when the target runs again | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
+| `tcad-start` | `python -m gf180tcad.tcad moscap --params start`: `--dim 1` for both devices, and `--dim 2` for each committed 2D cell (L = 2 µm: see below) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
 | `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices (no 2D calibrated results are committed) | {repo}`results/tcad/moscap1d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
+
+In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs` on the same
+`--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job resumes
+when the target runs again.
 
 It exits non-zero if any job fails or if any file differs from, is missing from, or is not
 listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Docker }}, the sandbox

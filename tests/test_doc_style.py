@@ -24,10 +24,8 @@ from optional import importorskip
 GLOSSARY = ROOT / "docs" / "glossary.md"
 DOCGEN = ROOT / "src" / "gf180tcad" / "docgen.py"
 
-# The plain part of a glossary definition (before "Technically" / "In detail", without the
-# closing "See ..." pointer) is at most this many words; the detail goes after it or on the
-# linked page (spec §10.3: short plain descriptions, linked to the detail).
-GLOSSARY_PLAIN_WORDS = 60
+# A glossary entry is at most this many words (the writing-sourced-docs cap, spec §10.3).
+GLOSSARY_WORDS = 80
 
 _TERM = re.compile(r"\{term\}`([^`]*)`")
 
@@ -110,19 +108,13 @@ def _glossary_entries() -> list[tuple[tuple[str, ...], str]]:
     return [(tuple(n), " ".join(d).strip()) for n, d in entries]
 
 
-def _plain_part(definition: str) -> str:
-    first = definition.split("  ")[0]
-    first = re.split(r"\b(?:Technically|In detail)\b", first, maxsplit=1)[0]
-    return re.sub(r"\s*See\b[^.]*\.?\s*$", "", first).strip()
-
-
 def test_glossary_definitions_short():
     long = []
     for names, definition in _glossary_entries():
-        n = words(_plain_part(definition))
-        if n > GLOSSARY_PLAIN_WORDS:
+        n = words(definition)
+        if n > GLOSSARY_WORDS:
             long.append(f"{names[0]}: {n} words")
-    assert not long, f"glossary definitions over {GLOSSARY_PLAIN_WORDS} plain words: {long}"
+    assert not long, f"glossary definitions over {GLOSSARY_WORDS} plain words: {long}"
 
 
 def _term_target(role_text: str) -> str:
@@ -170,7 +162,7 @@ def test_generated_terms_are_defined(generated):
         "≤ 10 mV (stretch 7 mV)",
         "10/0.6",
         "[0.58, 0.82]",
-        "Outside the tolerance but inside the PDK's own min-max spec window",
+        " ".join(["word"] * 26),
         "15.2 nm ([37309](https://example.org/x#L37309))",
     ],
 )
@@ -199,7 +191,7 @@ def test_positive_control_good_cells(cell):
 def test_positive_control_counts():
     assert numbers("[6.297e+16, 3.4e+17]") == ["6.297e+16", "3.4e+17"]
     assert numbers("cm^-3") == []
-    assert words("a b c d e f g h") == MAX_WORDS
+    assert words(" ".join(["w"] * MAX_WORDS)) == MAX_WORDS
 
 
 def test_positive_control_table_and_opt_out():
