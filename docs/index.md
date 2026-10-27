@@ -4,7 +4,7 @@ Open-source {term}`TCAD` for the GlobalFoundries {term}`GF180MCU` 5 V transistor
 ({{ gf180mcu_pdk }}), compared quantitatively, reproducibly and in public against the
 {term}`PDK`'s own {term}`SPICE` models.
 
-**The SPICE models are the {term}`golden reference`; the TCAD is the suspect.** The
+**The SPICE models are the {term}`SPICE reference`; the TCAD is the suspect.** The
 aim is to earn (or fail to earn) confidence in the TCAD setup. Only once that
 confidence exists would TCAD be used, in later work, to improve or create SPICE
 models. Every mismatch is listed with a probable cause rather than hidden, and
