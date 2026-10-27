@@ -249,8 +249,9 @@ every hash. The trees, their writers and the commands that regenerate them (then
 | {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate run --device D --out results/tcad/calibration` |
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate validate --device D --out results/tcad/validation`, after the calibration is committed |
 
-**Restamping.** When a change to a writer's closure cannot have changed a tree's data and the
-tree is not regenerated (the 2D jobs take hours), the tree's provenance can be restamped:
+**Restamping.** When a change to a writer's closure cannot have changed a tree's data, and a
+rerun of a representative job is shown to give the same bytes (design spec §9), the tree's
+provenance can be restamped instead of rerunning every job:
 
 ```sh
 uv run --locked python tools/restamp-tcad-provenance results/tcad/<tree>   # --dry-run first
