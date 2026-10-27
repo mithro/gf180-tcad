@@ -44,12 +44,14 @@ doping. {py:func}`gf180tcad.tcad.moscap2d.simulate` meshes the cross-section wit
 C/{term}`Cox` above 1 in accumulation. An early {term}`Phase 2` prototype gave 1.0039 at −5 V with a 15.2 nm oxide.
 With the same structure at 16 nm it gave 0.9909 (see the
 {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
+
 In 1D, C/Cox > 1 is impossible and does not occur ({ref}`mesh-convergence`). The diagnosis below
 uses the simplest 2D structure that must equal 1D: the nfet stack extruded over 1 µm, with a gate
 over the whole domain, no source or drain and zero-flux sides
 ({py:func}`gf180tcad.tcad.stack.uniform`). Every number is the QS C/Cox at −5 V
 (accumulation) and the 2D/1D ratio minus 1 at the worst of five biases (−5, −1, 0.65, +2, +5 V);
 the 1D reference is the converged 1D stack, C/Cox = 0.98099. Interfaces at 0.5 nm, grading 1.2.
+
 Each mesh change below adds to the ones above it; the last row of each table is the vertex-grid
 fix. These rows use a 2 nm oxide spacing; the 2D start mesh, `DEFAULT_2D`, uses 1 nm (see below).
 
@@ -75,12 +77,15 @@ The 16 nm oxide is unchanged by the vertex-grid fix because it lies on the 1 nm 
 vertex to its `point_tolerance`, which defaults to 1e-3 µm, and the plugin's cross-section path
 leaves it at the default unless it is passed in. At the default, a 15.2 nm oxide is meshed
 **15.0 nm** thick (its nodes span y = 0 to 0.015 µm). That makes {term}`Cox` 1.3 % too large.
-It turns the 1D C/Cox of 0.981 into 1.0013 (and, in the prototype, into 1.0039). A 16 nm
-oxide lies on the 1 nm grid, so it is meshed exactly. That is why the two thicknesses disagree:
+It turns the 1D C/Cox of 0.981 into 1.0013 (and, in the prototype, into 1.0039).
+
+A 16 nm oxide lies on the 1 nm grid, so it is meshed exactly. That is why the two thicknesses disagree:
 1.00126 against 0.98765 at the {{ meshwell }} defaults. The fix passes a `point_tolerance` through
 the plugin's 2D path ({{ gplugins_fork }} [PR #8](https://github.com/mithro/gplugins/pull/8)); the 2D MOS capacitor
 uses 1e-6 µm ({py:data}`gf180tcad.tcad.stack.POINT_TOLERANCE_UM`), so a 15.2 nm oxide is
-meshed 15.2 nm thick, and any calibrated thickness within 1e-4 relative. Every 2D run checks
+meshed 15.2 nm thick, and any calibrated thickness within 1e-4 relative.
+
+Every 2D run checks
 the meshed geometry against the stack: the oxide, the poly, the body and every electrode. It
 raises {py:class}`~gf180tcad.tcad.moscap2d.GeometryError` if it differs
 ({py:func}`~gf180tcad.tcad.moscap2d.check_geometry`). The source/drain profile is an analytic
@@ -159,8 +164,9 @@ to the bulk spacing
 ({py:meth}`MeshSpec.to_resolution_specs <gf180tcad.tcad.mesh.MeshSpec.to_resolution_specs>`),
 so with the grading held fixed, beyond a few nm (the depletion region) every level has the
 same size. Only the interfaces are refined. The 2D/1D agreement then converges on the
-plateaus but not at the C–V minimum, and at the finest level it gets worse. Here is the
-uniform nfet stack with the grading held fixed, 2D/1D − 1 by level (these results are not
+plateaus but not at the C–V minimum, and at the finest level it gets worse.
+
+Here is the uniform nfet stack with the grading held fixed, 2D/1D − 1 by level (these results are not
 committed). Levels 0 to 3 have 101k, 154k, 239k and 381k nodes. In the gate-bias column,
 −5 V is accumulation, +0.5 V the C–V minimum, +1 V the onset of inversion and +5 V inversion.
 The last row is the worst of 21 biases.
@@ -215,7 +221,9 @@ caps the ratio of neighbouring spacings.
 The pfet source/drain peak, `sd_peak_cm3` = 1e20 cm⁻³, is a `literature` value, not a card value.
 With the junction depth {term}`XJ` fixed, the peak also sets the straggle (44.5, 42.0 and 39.9 nm
 for 5e19, 1e20 and 2e20 cm⁻³), and so how far the p⁺ edge reaches under the gate: fixing XJ is a
-modelling choice that couples the two. At the pfet {term}`Lmin` (0.5 µm) a factor of two in the
+modelling choice that couples the two.
+
+At the pfet {term}`Lmin` (0.5 µm) a factor of two in the
 peak moves Cgg by −1.52 % / +1.25 % at worst (depletion), −0.56 % / +0.50 % in accumulation and
 −0.03 % / +0.03 % in inversion; the effect is at the gate edges, so its share of Cgg scales as 1/L. So the
 2D Lmin depletion Cgg carries up to −1.52 % / +1.25 % from this value. That belongs in the
@@ -332,6 +340,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The cells th
 The sweep times are the last `elapsed` of each sweep's progress log (QS 201 points, AC 21
 points, each including its own meshing); the job total is the wall time of the host command.
 The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
+
 The run record, with the exit code and the image, is on {ref}`tcad-provenance`. The job had no
 round-off acceptance and no extended-precision fallback; its meshed oxide is 16.05 nm, the
 calibrated value. Its `mesh.msh` is not committed ({ref}`moscap2d-meshes`); it is in the
@@ -346,7 +355,9 @@ inside it ([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
 The L = 10 µm cell has no 2D result. At `DEFAULT_2D` the equilibrium {term}`drift-diffusion`
 solve that sets up every 2D device fails. It fails inside {{ DEVSIM }}'s direct solver
 ({term}`UMFPACK` 5.1: "umfpack numeric failed"). The first, Poisson-only step of the solve,
-0.86 million unknowns, still solves. This is an open correctness
+0.86 million unknowns, still solves.
+
+This is an open correctness
 problem, tracked in [issue #58](https://github.com/mithro/gf180-tcad/issues/58). Its long-channel
 C per area is covered by the 2D-equals-1D check and by the 1D MOS capacitor.
 
@@ -356,7 +367,9 @@ Per drawn area, the PDK cell's C/Cox does exceed 1, and should. At the nfet {ter
 (0.6 µm) without source or drain, C/Cox at −5 V and +5 V is 1.108 and 1.092 with the spacer
 and inter-layer dielectric, and 0.987 and 0.977 when that dielectric is replaced by zero-flux
 boundaries. The difference, 0.121 Cox at −5 V and 0.115 Cox at +5 V, is the outer fringe.
-It runs from the poly sidewalls to the silicon outside the gate. BSIM4's CF of 0.0727 fF/µm per side would add
+It runs from the poly sidewalls to the silicon outside the gate.
+
+BSIM4's CF of 0.0727 fF/µm per side would add
 2 × 0.0727 / (0.6 µm × 2.272 fF/µm²) = 0.107 Cox. With source and drain, their doping that
 reaches under the gate edges adds the overlap, and C/Cox per drawn area is 1.071 (accumulation) and
 1.090 (inversion) at Lmin. {test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1` therefore
