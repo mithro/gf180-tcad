@@ -8,7 +8,7 @@ It is the first use of the {term}`calibrated parameter budget`: the 1D {term}`TC
 {term}`MOS capacitor <MOSCAP>` fitted to the {term}`SPICE` {term}`Cgg`–Vg of the
 {term}`calibration targets <calibration target>`, then fixed and checked at the
 {term}`held-out geometries <held-out geometry>`
-({repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`).
+({repo}`plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`).
 The code is {py:mod}`gf180tcad.calibrate.cv`; the results are
 {repo}`results/tcad/calibration` and {repo}`results/tcad/validation`.
 
@@ -18,8 +18,8 @@ The TCAD gate stack has three free numbers: how thick the oxide looks electrical
 heavily the silicon under it is doped, and a small offset of the voltage at which the surface
 turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
-gate lengths. Then they are frozen, and the TCAD is compared with SPICE at gate lengths it never
-saw. For the nfet the result is good: in 1D the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check has its first result, a {term}`Disagree` at {term}`Lmin`, below). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
+gate lengths. Then they are fixed, and the TCAD is compared with SPICE at gate lengths it never
+saw. For the nfet the result is good: in 1D the fixed stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check has its first result, a {term}`Disagree` at {term}`Lmin`, below). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
 
 ## What is fitted
 
@@ -43,8 +43,9 @@ fixed {term}`NGATE`. Its C per area is turned into a gate capacitance of each ge
 fixed {term}`BSIM4` bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`): the
 capacitance area LeffCV × WeffCV ({term}`DLC`, {term}`DWC`) plus the overlap, fringe and
 gate-bulk terms. That bookkeeping is reference-model data, fixed, and not part of the budget.
-At {term}`Lmin` it is a large part of Cgg (about 4 of 14 fF in accumulation), so Lmin mostly tests
-the bookkeeping.
+At {term}`Lmin` it is a large part of Cgg, so Lmin mostly tests the bookkeeping. For the
+calibrated nfet at u = −5 V (accumulation) it is 3.97 of 14.36 fF
+({py:meth}`~gf180tcad.tcad.moscap1d.MoscapCV.area_scaled` of the committed calibrated 1D curve).
 
 The targets are the {term}`TT` {{ ngspice }} {term}`cv` sweeps (1 MHz, Vds = 0) of the three
 calibration geometries, W = 10 µm at L = 10 µm, 2 µm and Lmin. {{ Xyce }} has no {term}`C–V` analysis,
@@ -103,10 +104,11 @@ sets Cgg ≤ 5 % in accumulation, depletion and inversion. Here the depletion-re
 replaced by the two ΔV crossings, deliberately. In the transition a relative-C metric measures
 the slope of the curve, not whether TCAD and SPICE agree. For the nfet W10/L10 at TT,
 SPICE Cgg rises from 81.84 fF at u = 0.5 V to 143.75 fF at 0.7 V, and its slope reaches
-0.513 fF/mV at 0.675 V. There C is about 131 fF, so a curve shifted by only 13 mV (5 % of 131 fF
-over 0.513 fF/mV) already fails 5 %; on the 50 mV grid, with linear interpolation, the
+0.513 fF/mV at 0.675 V. There C is 130.9 fF (interpolated between the 0.65 V and 0.7 V points), so a curve shifted by
+only 13 mV (5 % of 130.9 fF over 0.513 fF/mV) already fails 5 %; on the 50 mV grid, with linear interpolation, the
 smallest whole-millivolt rigid shift that fails 5 % at some bias is 15 mV. A 15 mV shift is a
-small fraction of the {term}`corner` spread of the crossings (about ±125 mV, below). The deviation is
+small fraction of the {term}`corner` spread of the crossings: 252 mV (u_dep) and 249 mV (u_inv)
+wide for the nfet W10/L10 (below). The deviation is
 also listed on {ref}`the limitations page <limitations-spec-deviations>`.
 
 (cv-agreement-windows)=
@@ -163,8 +165,8 @@ How the optimiser stopped:
 
 "Evaluations" is scipy's `nfev`, the residual evaluations of the optimiser's steps. It leaves
 out the finite-difference Jacobians (`njev`: 8 for the nfet and 11 for the pfet, each 3
-evaluations), so the 1D {{ DEVSIM }} sweeps were about 15 + 3 × 8 = 39 (nfet) and
-11 + 3 × 11 = 44 (pfet); the {term}`job`'s `progress.log` counts every one.
+evaluations). So the 1D {{ DEVSIM }} sweeps number `nfev` + 3 × `njev`: 15 + 3 × 8 = 39 (nfet)
+and 11 + 3 × 11 = 44 (pfet). The {term}`job`'s `progress.log` counts every one.
 
 The `t_ox_eff_nm` upper bounds are TOXP plus the charge-centroid allowance Δ: 0.95 nm for the
 nfet and 0.79 nm for the pfet, the maximum over both plateaus of the BSIM4 charge-thickness
@@ -205,7 +207,7 @@ inversion are the largest plateau errors and Depletion the depletion error, all 
 
 Every plateau window is set by the Cox spec side of the combined range (`source` "spec" at every
 plateau bias): the 1.8–2.8 fF/µm² spec is far wider than the corner envelope, so on the plateaus
-"Same process" says only that the oxide is a plausible GF180 6 V oxide. The crossing windows are
+"Same process" says only that the C per area is inside the PDK's 6 V oxide-capacitance spec. The crossing windows are
 the corners' own; for the nfet W10/L10 they are −0.870 to −0.618 V (u_dep) and +0.576 to
 +0.825 V (u_inv).
 
@@ -245,8 +247,9 @@ as ΔV/50 mV): Lmin (+309 mV) and L = 10 µm (−218 mV), pulling in opposite di
 
 ## Validation
 
-The validation ({py:func}`~gf180tcad.calibrate.cv.validate_cv`) runs only on the committed
-calibration file; it records that file's sha256 and `param_sha256`.
+The validation ({py:func}`~gf180tcad.calibrate.cv.validate_cv`) ran after the calibration was
+committed, on the committed file. It records that file's sha256 and `param_sha256`. This order
+is the evidence that the held-out geometries were not in the fit.
 Results at 1.6/0.7 are tagged in advance with the causes `geometry-2d` and `spice-fit`, and at
 Lmin with `spice-fit`.
 
@@ -254,7 +257,7 @@ Lmin with `spice-fit`.
   nfet: {term}`Agree` at all three. pfet: {term}`Agree` at L = 1 µm and {term}`Same process` at
   L = 0.7 µm and 1.6/0.7, both from the depletion-side crossing (+124 and +132 mV, inside the
   corner window) and, at 1.6/0.7, the accumulation plateau (6.12 %).
-- **2D: under way, first cell nfet Lmin, {term}`Disagree`.** The 2D check uses the calibrated 2D
+- **2D: first cell nfet Lmin, {term}`Disagree`.** The 2D check uses the calibrated 2D
   results, `python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID
   --out results/tcad/moscap2d` (the same `moscap2d.simulate` with source and drain, QS, on the
   selected 2D mesh and the SPICE grid; one {term}`job` at a time, 16 GiB each, hours each). The
@@ -262,8 +265,10 @@ Lmin with `spice-fit`.
   {repo}`results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60 <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`
   (its run: {ref}`moscap2d-calibrated`). It is compared with the TT ngspice Cgg by the
   function {py:func}`~gf180tcad.calibrate.cv.validate_cv` uses (its 2D part, run on the host).
-  The validation file is regenerated when the host has room for the 2 GiB validation job beside
-  the 2D jobs. The frozen stack in 2D, with its own overlap and fringe, does **not** agree:
+  The committed validation file records every 2D cell as "not run"; it is regenerated with the
+  2D results, as the {doc}`roadmap </roadmap>` lists
+  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The fixed stack in 2D, with its
+  own overlap and fringe, does **not** agree:
 
   | Check | Calibrated 2D | Calibrated verdict | Start 2D | Start verdict |
   |---|---|---|---|---|
@@ -274,16 +279,17 @@ Lmin with `spice-fit`.
 
   So the calibration moves the 2D inversion crossing onto SPICE but the plateaus away from it.
   The calibrated oxide (16.05 nm against the card's 15.2 nm) was fitted in 1D, where the BSIM4
-  overlap, fringe and gate-bulk terms are added to the intrinsic C; presumably (not yet
-  measured) the 2D cell's own overlap and fringe are smaller than those terms. The 2D Cgg is
+  overlap, fringe and gate-bulk terms are added to the intrinsic C. How the 2D cell's own
+  overlap and fringe compare with those terms is not measured
+  ([issue #74](https://github.com/mithro/gf180-tcad/issues/74)). The 2D Cgg is
   13.88 fF at −5 V and 14.12 fF at +5 V, 1.7 % apart, while the SPICE plateau levels are 14.33
-  and 16.70 fF, 16.5 % apart: most of the gap is on the inversion side. This is one geometry;
-  the other 2D cells (L = 0.7, 1 and 2 µm, W1.6/L0.7) follow, one job at a time
+  and 16.70 fF, 16.5 % apart: most of the gap is on the inversion side. This is one geometry.
+  The other 2D cells (L = 0.7, 1 and 2 µm, W1.6/L0.7) are on the {doc}`roadmap </roadmap>`
   ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`) and stays "not run".
   This deviates from the plan in one respect: the plan has
   {py:func}`~gf180tcad.calibrate.cv.validate_cv` call `moscap2d.simulate` itself; it reads the
   committed calibrated 2D results instead, so the multi-hour 2D sweeps run once, through the
-  resumable 2D job, and serve both the result tree and the validation.
+  resumable 2D job, and serve both the results folder and the validation.
 
 ## Reproduce
 
@@ -292,7 +298,8 @@ uv run --locked python -m gf180tcad.calibrate run --device nfet_05v0 --out resul
 uv run --locked python -m gf180tcad.calibrate validate --device nfet_05v0 --out results/tcad/validation
 ```
 
-and the same for `pfet_05v0`. Each `run` is one {term}`sandbox` job of 1 CPU and 2 GiB (about 20 minutes
-here); two runs give byte-identical files. The result-file schema: `<device>.json` is the
+and the same for `pfet_05v0`. Each `run` is one {term}`sandbox` job of 1 CPU and 2 GiB. A second
+run gives byte-identical files
+({test}`tests/test_calibrate_cv.py::test_calibration_reproduces_the_committed_files`). The result-file schema: `<device>.json` is the
 calibration file of {py:mod}`gf180tcad.tcad.calibration`, unchanged, so that `--params calibrated`
 reads it; everything else is in `<device>.result.json`, which records the first file's sha256.
