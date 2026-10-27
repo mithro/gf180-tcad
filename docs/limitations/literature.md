@@ -94,7 +94,7 @@ Each annotation names what the project uses the item for.
 
 The chapter titles below are those of the edition cited, read from its Crossref record.
 
-- Sze and Ng, 3rd ed. ({ref}`lit-sze`): ch. 4, "Metal-Insulator-Semiconductor Capacitors", and
+- {ref}`Sze and Ng, 3rd ed. <lit-sze>`: ch. 4, "Metal-Insulator-Semiconductor Capacitors", and
   ch. 6, "MOSFETs".
 
 (lit-taur)=

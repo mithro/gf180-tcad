@@ -15,6 +15,11 @@ gf180tcad.calibrate.cv
 gf180tcad.derive
 gf180tcad.devices
 gf180tcad.docgen
+gf180tcad.explain
+gf180tcad.explain.figures
+gf180tcad.explain.idealised
+gf180tcad.explain.model
+gf180tcad.explain.numbers
 gf180tcad.history
 gf180tcad.history.__main__
 gf180tcad.io
