@@ -73,7 +73,7 @@ belongs to the next bin, `.model nfet_06v0.1`.
 The pfet card's {term}`NSD` of 6e16 (line [38207](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38207)) has no clear physical meaning and is not
 used. The pfet source/drain peak of the 2D {term}`MOSCAP` is therefore a `literature` value, 1e20 cm⁻³, the
 p⁺ source/drain implant of the complementary MOS (CMOS) process flow in Plummer, Deal and Griffin, *Silicon VLSI
-Technology* (Prentice Hall, 2000), chapter 2; it is not load-bearing for the {term}`C–V`
+Technology* (Prentice Hall, 2000, [ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)), chapter 2; it is not load-bearing for the {term}`C–V`
 ({test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive`, {ref}`moscap2d`).
 
 (process-data-bins)=
