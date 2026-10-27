@@ -44,6 +44,8 @@ STYLE = {
     # The stack diagram: the layers fill this fraction of the width, their labels start here.
     "stack_width": 0.3,
     "label_x": 0.34,
+    # Room round the layer boxes, as a fraction of the width and height, so no border is clipped.
+    "stack_margin": 0.01,
     # A layer thinner than this (µm) gives its thickness in nm.
     "nm_below_um": 0.1,
     # Most significant digits a label shows (fewer when they print the same value).
@@ -57,6 +59,7 @@ PALETTES = {
         "text": "#222222",
         "grid": "#c8c8c8",
         "highlight": "#009E73",
+        "highlight_oxide": "#CC79A7",
         "muted": "#8c8c8c",
         "electron": "#0072B2",
         "hole": "#D55E00",
@@ -67,6 +70,7 @@ PALETTES = {
         "text": "#e4e4e4",
         "grid": "#4a4a4a",
         "highlight": "#2fbf8f",
+        "highlight_oxide": "#e09bc4",
         "muted": "#9a9a9a",
         "electron": "#56B4E9",
         "hole": "#E69F00",
@@ -213,12 +217,19 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
         FigureCanvasAgg(fig)
         ax = fig.subplots()
         ax.set_axis_off()
-        ax.set_xlim(0, 1)
-        ax.set_ylim(edges[-1][2], edges[0][1])  # depth grows downwards
+        ax.set_xlim(-STYLE["stack_margin"], 1)
+        top, bottom = edges[0][1], edges[-1][2]
+        pad = (bottom - top) * STYLE["stack_margin"]
+        ax.set_ylim(bottom + pad, top - pad)  # depth grows downwards
         for layer, a, b in edges:
             role = "highlight" if layer.part in highlight else "muted"
             ax.fill_between(
-                [0, width], a, b, color=pal[role], alpha=STYLE["band_alpha"][role], linewidth=0
+                [0, width],
+                a,
+                b,
+                color=pal.get(f"{role}_{layer.part}", pal[role]),
+                alpha=STYLE["band_alpha"][role],
+                linewidth=0,
             )
             ax.plot([0, width, width, 0, 0], [a, a, b, b, a], color=pal["text"],
                     lw=STYLE["edge_width"])  # fmt: skip
