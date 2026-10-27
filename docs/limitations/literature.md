@@ -41,6 +41,8 @@ Each annotation names what the project uses the item for.
   {doi}`10.1002/0470068329`: ch. 2, the p-n junction ({term}`built-in potential`, the
   {term}`depletion approximation`, the {term}`ideality factor`); ch. 1, carrier statistics
   ({term}`Boltzmann statistics`); ch. 3, metal-semiconductor and {term}`ohmic contacts <ohmic contact>`.
+- Its ch. 4 and appendices G and H: the Si and SiO₂ band values the render band diagrams draw
+  ({repo}`data/render/display.toml`).
 
 (lit-shockley)=
 
