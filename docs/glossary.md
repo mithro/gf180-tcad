@@ -13,22 +13,23 @@ dev-HEAD TCAD image
   commit: the stack of the final results. See {ref}`tcad-dev-image`.
 
 stable TCAD image
-  The {term}`TCAD` image built from the latest PyPI releases of the TCAD stack: the baseline for how
-  things used to work and for debugging. See {ref}`tcad-image`.
+  The {term}`TCAD` image built from the latest PyPI releases of the TCAD stack: the released
+  baseline, used to tell a regression in a development version from a bug here. See {ref}`tcad-image`.
 
 TCAD
   Technology computer-aided design: physics-based device simulation, here with {{ DEVSIM }}
-  cross-checked with {{ Charon }}. In this project it is the suspect being validated against the
-  {term}`golden reference`. See {doc}`index`.
+  cross-checked with {{ Charon }}. In this project it is what is being tested: its results are
+  compared with the {term}`SPICE reference`. See {doc}`index`.
 
 SPICE
   Circuit simulation with compact models. Here the {term}`PDK`'s {term}`BSIM4`
   {term}`model cards <model card>`, evaluated by {{ ngspice }} (primary) and {{ Xyce }}
   (secondary). See {ref}`comparison-space`.
 
-golden reference
-  The {term}`PDK` {term}`SPICE` models, against which the {term}`TCAD` is judged: "the SPICE models are the golden
-  reference; the TCAD is the suspect". See {doc}`index`.
+SPICE reference
+  The results of the {term}`PDK`'s {term}`SPICE` models, simulated by {{ ngspice }} and {{ Xyce }}
+  and committed under {repo}`results/spice`: the yardstick the {term}`TCAD` is compared with.
+  See {doc}`index`.
 
 PDK
   Process design kit. Here the open {{ gf180mcu_pdk }}, its public documentation
@@ -109,14 +110,16 @@ spec window
   The {term}`PDK`'s published min-max of a metric. A one-sided limit becomes an interval from 0, because
   a magnitude cannot be negative. See {doc}`comparison/pdk-spec-check`.
 
-hull
-  Of two intervals: the interval from the lowest lower bound to the highest upper bound. See
+combined range
+  Of two ranges: the range from the lower of the two minimums to the higher of the two maximums
+  (in interval arithmetic, the interval hull). The code calls it `hull`. See
   {ref}`pdk-same-process-window`.
 
 "Same process" window
-  The interval used for the {term}`Same process` verdict: the {term}`hull` of the
+  The interval used for the {term}`Same process` verdict: the {term}`combined range` of the
   {term}`spec window` and the {term}`corner envelope`, or the corner envelope alone where the
-  {term}`PDK` publishes no spec. The results pages say which one sets it (`spec`, `envelope` or `hull`).
+  {term}`PDK` publishes no spec. The results pages say which one sets it (spec, corner envelope
+  or combined range).
   See {ref}`same-process-window`.
 
 Agree
@@ -148,7 +151,9 @@ validation target
 
 held-out geometry
   A geometry fixed before calibration and used for validation only: W = 10 µm at L = 0.7 and
-  1 µm, and the narrow 1.6/0.7. See {ref}`calibration-validation`.
+  1 µm, and the narrow W = 1.6 µm, L = 0.7 µm. "Held-out" is the usual statistics term for data
+  kept out of a fit to test it (Hastie, Tibshirani and Friedman, *The Elements of Statistical
+  Learning*, 2nd ed., 2009, section 7.2). See {ref}`calibration-validation`.
 
 calibrated parameter budget
 parameter budget
@@ -337,7 +342,7 @@ WWLC
 uniform refinement
 mesh convergence
   Refining every spacing of a mesh by the same factor, with the grading fixed, to show that the
-  results no longer depend on the mesh. Here each {term}`TCAD` {term}`MOSCAP` is solved at four
+  results do not depend on the mesh. Here each {term}`TCAD` {term}`MOSCAP` is solved at four
   levels a factor √2 apart ({py:data}`gf180tcad.tcad.meshconv.LEVELS`), and a level is converged
   when the next finer one changes its {term}`C–V` by less than 1 % at every bias
   ([Roache 1994](https://doi.org/10.1115/1.2910291)). See {ref}`mesh-convergence`.
@@ -373,11 +378,6 @@ Newton iteration
   below the {term}`tolerance` ([Newton's method](https://en.wikipedia.org/wiki/Newton%27s_method)). See
   {ref}`moscap2d-solver`.
 
-Poisson stage
-  The first solve of a {{ DEVSIM }} device: [Poisson's equation](https://en.wikipedia.org/wiki/Poisson%27s_equation)
-  alone for the potential, before the {term}`drift-diffusion` equations are added. It has fewer
-  unknowns than the full solve (0.86 million against 2.0 million at L = 10 µm). See {ref}`moscap2d-l10`.
-
 MOSCAP
 MOS capacitor
   A poly-gate, oxide and body stack without source and drain, simulated by the {term}`TCAD` to
@@ -397,9 +397,9 @@ A_Vt
   and L ({ref}`Pelgrom 1989 <lit-pelgrom>`), used to express an error
   in physical units. See {ref}`tolerances`.
 
-polarity-stripped
-  Voltages and currents multiplied by the device polarity, so the nfet and the pfet plot alike
-  (|Vgs|, |Vds|, |Id|). See {py:mod}`gf180tcad.docgen`.
+sign-flipped
+  Voltages and currents multiplied by the device polarity (+1 for the nfet, −1 for the pfet),
+  so the nfet and the pfet plot alike (|Vgs|, |Vds|, |Id|). See {py:mod}`gf180tcad.docgen`.
 
 sweep
 idvg_lin
@@ -431,8 +431,9 @@ xfail
   {doc}`limitations/engine-cross-check`.
 
 job
-  One engine, {term}`corner`, device and geometry of the {term}`SPICE` reference, run as one {term}`sandbox`
-  container. See {ref}`how the reference runs <reproduce-how-it-works>`.
+  One simulation run in its own {term}`sandbox` container: for the {term}`SPICE` reference one
+  engine, {term}`corner`, device and geometry; for the {term}`TCAD` one device, geometry and
+  set of parameter values. See {ref}`how the reference runs <reproduce-how-it-works>`.
 
 sandbox
   The resource-limited container wrapper {repo}`tools/sandbox-run` ({{ Python }}:
