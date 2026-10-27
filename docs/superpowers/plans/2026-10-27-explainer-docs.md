@@ -1,0 +1,254 @@
+# How it works: the explainer documentation section — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Add a fifth documentation section, `docs/explained/`, that explains in plain words how the parts of a semiconductor device work (silicon and carriers, bands, the pn junction, the transistor's parts, the MOS capacitor, the MOSFET), grounded in this repo's committed artefacts: every number on a page comes from a committed file by substitution, or is a textbook value labelled and cited as such, or is an idealised example labelled as such and computed by the docs build from stated inputs. Every figure is generated at docs build time from committed files by one figure module, in a light and a dark twin. The pages embed the 3D renders of the renders plan as they land, with a generated plain diagram until then. Each task ends in a reviewed, merged PR that leaves `main` standing on its own.
+
+**Owner's words** (spec §16, 2026-10-27): "Add to the spec that there should be a section of the documentation which is designed to be a general explaination how the various parts of semiconductors work using the references / assets from the repo to ground things in the real world."
+
+**Architecture:** One new host-side package, `src/gf180tcad/explain/`, imported only by `docs/conf.py`, `gf180tcad.docgen` and the tests, never by a generator module. (1) `explain/numbers.py`: a registry of named numbers, each read from a committed file (JSON key path, TOML key, CSV column with a row selector, the `metrics.json` of a device and geometry) or from `data/explain/textbook.toml` (textbook values, each with its citation), optionally passed through one formula from a closed table (`explain/derive.py`: mass action, Boltzmann Fermi level, built-in potential, depletion width, oxide capacitance, flat-band voltage of the idealised stack), and formatted with a stated number of significant digits and a unit. `substitutions()` returns `{"x_<name>": "<value> <unit>"}`, which `docs/conf.py` merges into `myst_substitutions` at configuration time, so a page writes `{{ x_n_ch_nfet_cal }}` and the build prints the committed value. (2) `explain/figures.py`: every explainer figure, drawn with the existing deterministic SVG settings of `gf180tcad.plots` (fixed hash salt, text as text, no date), sized for a phone, and written twice (light and dark palette) into `docs/_generated/explained/` by `docgen.generate()` at `builder-inited`, like the results pages. Data readers are shared with docgen (the 1D and SPICE curve readers move from private `docgen` helpers into `explain/data.py` or stay in docgen as public functions; nothing is copied). (3) `explain/model.py`: one source model of the device drawn on every page (the 1D stack and the 2D cell: poly, oxide, body, source and drain, junction depth, with their dimensions and doping from committed files), re-drawn per page with that page's part highlighted and the rest muted, and an exaggeration statement generated from its scale factors. Nothing generated is committed; the docs build stays offline and deterministic.
+
+**Tech Stack:** the existing docs stack (Sphinx with `-W`, MyST with `dollarmath` and `substitution`, Furo, matplotlib through `gf180tcad.plots`, numpy, pytest); the vendored `tools/measure_docs.py` and `tools/docs_lint.py`; headless Chrome for the 400 px screenshots (`CONTRIBUTING.md`, PR checklist). No new dependency, no simulator, no Docker.
+
+**Spec:** `docs/superpowers/specs/2026-10-18-gf180-tcad-design.md`. Read §10 (all of it: §10.1 for the renders, §10.2 is the requirements list of this plan, §10.3 the writing rules) and §16 before any task. Tracking issue: [#46](https://github.com/mithro/gf180-tcad/issues/46). Embeds the renders of [#43](https://github.com/mithro/gf180-tcad/issues/43) (`docs/superpowers/plans/2026-10-27-renders-pipeline.md`, Task R3) and the mesh figure of [#39](https://github.com/mithro/gf180-tcad/issues/39) (renders plan Task R0). The MOSFET tier takes its TCAD results from Phase 3 ([#68](https://github.com/mithro/gf180-tcad/issues/68)).
+
+**Rule books:** the user's skills `docs-writing` (`writing-docs`, 1.0.0) and `writing-sourced-docs` (`writing-sourced-documentation`, 1.0.0), installed from `mithro-local`. Every implementer reads both `SKILL.md` files, `docs-writing`'s `references/page-types.md` (explanation), `references/pictures.md`, `references/style.md`, `references/review.md` and its template `assets/templates/explanation.md`, and `writing-sourced-docs`' `references/figures.md`, before writing a page. Where they conflict, spec §10.3's house decisions settle it.
+
+**Repo facts this plan binds to** (read 2026-10-27 on `main` `e7a9c6c`):
+
+- Docs tree: `docs/index.md` toctree `reproduce/index, results/index, comparison/index, limitations/index, roadmap, glossary, api/index`; its text says "The documentation has four sections, plus a glossary and the API reference." Generated pages go to the git-ignored `docs/_generated/` from `docgen.generate()` at `builder-inited` (`docs/conf.py`). `myst_substitutions` holds only the tool links of `_TOOLS` today. `docs/conf.py` puts `src/` on `sys.path`, so it can import `gf180tcad.explain` at configuration time.
+- `docs/limitations/literature.md` cites one textbook, Sze and Ng, *Physics of Semiconductor Devices*, 3rd ed., Wiley, 2006, `doi:10.1002/0470068329` (anchor `lit-sze`), for ch. 1 (carrier statistics), ch. 2 (the pn junction) and ch. 3 (contacts). The Tsividis entry (`lit-tsividis`) is the 1994 JSSC paper on model benchmark tests, not the textbook. No Pierret and no MOS-device textbook is cited.
+- Process data: `data/process/{nfet,pfet}_05v0.toml` (`[param.*]` with `value`, `unit`, `source`; for the nfet `toxe_nm` 15.2, `toxp_nm` 16.0, `ndep_cm3` 1.7e17, `ngate_cm3` 1e20, `xj_um` 0.15, `sd_peak_cm3` 1e20, `epsrox` 3.9, `vth0_v`, `k1_sqrt_v`, `dlc_nm`, and the tunables `t_ox_eff_nm`, `n_ch_cm3`, `dv_fb_v` with `bounds` and `bounds_source`).
+- 1D TCAD: `results/tcad/moscap1d/<device>/{start,calibrated}/per_area.{csv,meta.json}`; the meta has `constants` (`n_i_cm3` 8.265841554853887e9 at `t_k` 298.15, `n_i300_cm3` 9.65e9, `vt_v`, `eps_si` 11.7, `eps0_f_per_cm`, `q_c`, mobilities) and `stack` (`poly_um` 0.2, `t_ox_nm`, `body_um` 1.0, `n_ch_cm3`, `ngate_cm3`, `eps_ox`, `polarity`); the nfet calibrated stack has `t_ox_nm` 16.050483616382458 and `n_ch_cm3` 8.813323306821749e16.
+- 2D TCAD: `results/tcad/moscap2d/<device>/{start,calibrated}/<gid>/{cv.csv,cgx.csv,cv.meta.json}` (`l_um`, `meshed_t_ox_nm`, `node_count`, `mesh_sha256`, `contacts`, `ac_freq_hz`); the stack docstring (`src/gf180tcad/tcad/stack.py` lines 20–26) states that the pfet body is the n-well and that spacers and LDD are not modelled.
+- Calibration: `results/tcad/calibration/<device>.{json,result.json}` (`bounds`, `optimiser`, `cox_check`, `per_geometry[].verdicts`); validation: `results/tcad/validation/<device>.json`; agreement page `docs/comparison/cv-agreement.md` (anchors `cv-agreement`, `cv-agreement-results`, `cv-agreement-mismatch`, `cv-agreement-validation`). In 1D the nfet is Agree at every geometry and the pfet is Disagree; both calibrated 2D nfet cells are Disagree (`docs/index.md` Status).
+- SPICE: `results/spice/<engine>/<corner>/<device>/<gid>/{cv,idvd,idvg_lin,idvg_sat,ioff}.csv` and `metrics.json` (`metrics.vt_lin_maxgm`, `body_effect_v`, `dibl_mv_per_v`, `ss_mv_per_dec`, `idsat_ua_per_um`, `ioff_pa_per_um`, `cgg_acc_ff`, `cgg_inv_ff`); six nfet geometries (`w10p0_l0p60` to `w10p0_l10p00`, `w1p6_l0p70`); `results/spice/envelope.json`.
+- Glossary (`docs/glossary.md`, `{glossary}` with `:sorted:`) already defines: threshold voltage (Vt), Vt roll-off, body effect, DIBL, subthreshold slope, Idsat, Ioff, Cgg, C–V, quasi-static (QS), HF C–V, Cox, effective oxide thickness, poly depletion, MOSCAP, depletion width, built-in potential, depletion approximation, Boltzmann statistics, drift-diffusion, LDD, S/D, STI, NGATE, XJ, NSD. It lacks: electron, hole, dopant, donor, acceptor, intrinsic carrier density, majority and minority carrier, conduction band, valence band, band gap, Fermi level, pn junction, well, gate oxide, polysilicon, accumulation, depletion (the C–V region), inversion, flat band, channel, saturation.
+- Tests that already apply to every page under `docs/` outside `docs/superpowers/` and `docs/api/`: `tests/test_doc_style.py` (one value per cell and 25 words, history phrases, `test_no_hedge_words`, glossary entries at most 80 words, every `{term}` defined), `tests/test_doc_measure.py` (the two vendored tools; global counts held as a ceiling in `tests/doc_measure_baseline.json`; table cells at zero), `tests/test_doc_links.py` (first mention of a tool linked, every reference a link), `tests/test_doc_numbers.py` (hand-written numbers matched to the SPICE results by a `CASES` table and `rounds_to`), `tests/test_docgen.py::test_svg_deterministic` and `::test_docs_build_offline`. Sphinx runs with `-W` in CI (`.github/workflows/ci.yml` line 58); `docs/_ext/repo_roles.py` fails the build on a `{repo}` path that does not exist.
+- The generator registry: `src/gf180tcad/generators.json` does not exist on `main` (Charon plan Task B0 has not merged). `gf180tcad.docgen` is not a generator module and is in no hashed closure (renders plan, Task R0 "Provenance impact").
+
+## Global Constraints
+
+All Phase 2 Global Constraints apply where they touch the docs (licences, git rules, public data, documentation links, host budget). In addition:
+
+- **Every number from a committed file, mechanically.** A number on an explainer page enters by `{{ x_<name> }}` substitution from `gf180tcad.explain.numbers`. The registry entry names its kind: `committed` (a file under `data/` or `results/`, read by key), `textbook` (`data/explain/textbook.toml`, one entry per value with `source` naming a `literature.md` anchor and the chapter, section or table, and `unit`), or `idealised` (a formula from `explain/derive.py` over named inputs, each itself a registry entry). The page sentence says which kind it is: "this repo's calibrated nfet body doping", "the textbook value ([Sze and Ng](…), ch. 1)", "an idealised abrupt junction with this repo's doping". A hand-typed number is allowed only where substitution cannot reach (a figure caption written by the figure module counts as substituted) and is then listed in `tests/test_doc_numbers.py` `CASES` with its source. `tests/test_explained.py::test_no_bare_numbers` fails on any digit on an explainer page outside math, code, roles, substitutions, link targets, headings that name a device (`nfet_05v0`, "1D", "2D") and lines carrying `<!-- number-ok: reason -->`.
+- **Every figure from a committed file, mechanically.** No figure is hand-drawn, and no number is typed into `explain/figures.py` or `explain/model.py` except styling (sizes, colours, line widths, label offsets) kept in one `STYLE` table at the top of `explain/figures.py`, and the 0, 1, 2, −1 of indexing. `tests/test_explained.py::test_figure_code_has_no_numeric_literals` (an AST scan, as the renders plan's `test_scene_builders_have_no_numeric_literals`) enforces it. A figure's data come from registry entries or from the shared data readers, so a figure and the sentence beside it can never disagree.
+- **One source model, many views.** The device diagram on every page is `explain.model.device(device, params, geometry)` drawn by `figures.cross_section(model, highlight=<part>)` or `figures.stack_1d(model, highlight=<part>)`. A page about one part highlights that part and mutes the rest (docs-writing, pictures rule 3); a crop carries the whole cell as an inset (rule 4). A fix to the model fixes every page.
+- **Exaggeration is data.** A diagram not to scale carries its scale factors in `explain.model` (`oxide ×N` computed as the factor that makes the oxide a fixed fraction of the drawn height, a styling target in `STYLE`), and the statement ("oxide thickness ×40, not to scale") is generated from them into the figure and its caption, as spec §10.1 requires of the renders.
+- **Light and dark are one figure.** Each figure is written as `<name>-light.svg` and `<name>-dark.svg` from one palette table (Okabe–Ito categories, cividis for magnitudes, a diverging map for signed quantities, the renders' material colours once `render/style.toml` exists), and embedded with the `{image}` directive twice, classes `only-light` and `only-dark` (Furo shows the one that matches the reader's theme). The reader never chooses between links.
+- **Phone first.** Explainer figures are 6.4 × 4.8 in at 100 dpi with 12 pt text, so text is at least 9 px high at a 400 px content width; `tests/test_explained.py::test_figures_legible_at_400px` computes that from `STYLE`. Tables follow spec §10.3 (one value per cell, at most 5 columns of numbers or 3 with prose) and are checked at 400 px by screenshot.
+- **One page type per page.** Every page in `docs/explained/` is an explanation (noun title, the one question in the opening sentences, at most seven headings, no numbered steps, a diagram where it replaces the longest paragraph), except `docs/explained/index.md`, a landing page (one line per page). A page that starts to instruct links a how-to in `docs/reproduce/` instead.
+- **Present state, no hedges, no future.** Spec §10.3: no hedge word, no "not yet", no history phrase, no promise. A missing render is not mentioned; the page shows the plain diagram. A missing TCAD MOSFET result is stated as the present state in one sentence linking the roadmap, never as "coming".
+- **Honest about the gap** (spec §10.2). Each page ends with a section "Where this repo's results differ" that links the results and limitations pages of the same device and states, with its evidence, where the simple picture and the simulated or SPICE result differ.
+- **No provenance change.** `gf180tcad.explain` is imported by no module in any generator closure (`tests/test_explained.py::test_explain_in_no_generator_closure`, over the TCAD entry points of `gf180tcad.tcad` today and over `generators.json` once Charon B0 lands); no committed tree is restamped; `tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` stays green.
+- **Logs.** Every long command writes complete stdout and stderr to a file under the worktree's `tmp/`, with `set -o pipefail`; implementers report exit codes and log paths. Pytest runs as `uv run --locked pytest -rs -v -m "not sandbox" …`. Pushes run in the background or with a timeout of at least 300 s (the pre-push hook runs tests), never with `--no-verify`.
+
+## Decisions
+
+**Decision: figures and numbers are built, not committed.** The explainer's figures and substituted numbers are computed at docs build time from committed files, as the generated results pages are (spec §10: "Results pages are generated from the hashed result files"). A committed SVG or number table would need a staleness test and a regeneration rule; a built one cannot be stale. `test_svg_deterministic` is extended to the explainer figures (two fresh processes, identical bytes), so a build is reproducible. Renders are the exception, because they cannot be made at build time (Blender, hours): they are committed by the renders plan with their manifests and only embedded here.
+
+**Decision: how the explainer is registered, and why no generator section is needed.** The renders plan adds a top-level `renders` section to `generators.json` (renders plan, Task R2b) because renders are committed artefacts with a `provenance.json`, read only by `gf180tcad.render.provenance` and never by `gf180tcad.tcad.generator_files()`. The explainer commits no generated artefact, so it has no tree, no `provenance.json` and no `generators.json` entry, exactly as `gf180tcad.docgen` has none. If a later task commits an explainer artefact (for example an idealised-example data file too slow to compute at build time), it follows the `renders` precedent: a separate top-level `explained` section (`module_list`, `extra_files`, `tree: "explained"`), read only by `gf180tcad.explain`, never in `entry_points` or `trees`, with a test that it changes no TCAD hash (`test_explained_section_changes_no_tcad_hash`) and a regeneration test that rewrites the artefact byte for byte. No task of this plan needs it.
+
+**Decision: textbook constants have one home.** The renders plan's Task R1a creates `data/render/display.toml` for display-only physical values (the silicon band gap, the Si/SiO₂ band offsets), each with a literature source. The explainer needs the same band gap. Whichever task lands first creates the value; the explainer reads `silicon.band_gap_ev` and the offsets from `data/render/display.toml` when that file exists, and holds in `data/explain/textbook.toml` only values the renders do not use (effective densities of states, the electron affinity if a page uses it). `tests/test_explained.py::test_no_textbook_value_twice` fails when a key is defined in both files. If R1a has not merged when Task E2 needs the band gap, E2 creates `data/render/display.toml` in R1a's schema (`[silicon] band_gap_ev`, `source`, `display_only` statement) and comments on #43 so R1a builds on it.
+
+**Decision: the quantity readers are shared with the renders.** The renders plan's `gf180tcad.render.manifest.Quantity` readers (JSON key path, CSV column with a row selector, TOML key) do what `explain/numbers.py` needs. If R1a has merged when Task E0 starts, `explain/numbers.py` uses them. If it has not, E0 writes the readers in a neutral module `src/gf180tcad/quantity.py` (no `bpy`, no `gf180tcad.tcad` import), and comments on #43 so that R1a imports them instead of writing its own. Never two reader implementations.
+
+**Decision: the reader.** The named reader of every explainer page is a newcomer: someone who knows basic circuits (Ohm's law, a capacitor, a transistor used as a switch) and high-school physics, has never studied semiconductor physics, and has followed a link to this project, often on a phone. They want to understand what the repo simulates well enough to read a results page. The opening sentences of each page name this reader and the one question; the pages assume nothing beyond the earlier pages of the section, which each page links where it builds on them.
+
+**Decision: no front matter.** The site's house decision is no front matter (`tools/docs_lint.py --no-front-matter` in `tests/test_doc_measure.py` and `CONTRIBUTING.md`). The explainer pages follow it; each page's type and reader are stated in its scope sentences and in the PR body.
+
+**Decision: textbooks added to the literature page.** Tier 2 and 3 need a MOS-device textbook beside Sze and Ng. Task E0 Step 1 adds them to `docs/limitations/literature.md` under a new heading "Textbooks for the explainer pages", each only after its record is fetched (publisher page or Crossref by DOI or ISBN) and its chapter titles are read from the table of contents of the edition cited. Candidates: Tsividis and McAndrew, *Operation and Modeling of the MOS Transistor* (3rd ed., Oxford University Press); Pierret, *Semiconductor Device Fundamentals* (Addison-Wesley); Taur and Ning, *Fundamentals of Modern VLSI Devices* (Cambridge University Press). A candidate whose record cannot be fetched is not cited, and the page that needed it cites Sze and Ng's chapter on the same topic or leaves the value out and files an issue.
+
+## Page list
+
+Every page lives in `docs/explained/`, is an explanation, and opens with the device diagram from the one source model, its subject highlighted. "Drawn from" is the set of committed files the page's numbers and figures come from; the page names them in its sentences with `{repo}` links (the build fails on a missing path) and `tests/test_explained.py::test_sources_exist` checks the registry's paths on the host.
+
+### Tier 1: basics
+
+| Page | Question |
+|---|---|
+| `silicon-and-carriers.md` | What are electrons, holes and dopants, and how many are in this process's silicon? |
+| `bands-and-fermi-level.md` | How does a band diagram show where the carriers are? |
+| `pn-junction.md` | Why does a depletion region form where n-type meets p-type silicon? |
+| `transistor-parts.md` | What are the well, source, drain and gate of a GF180MCU 5 V transistor? |
+| `oxide-and-poly.md` | What are the gate oxide and the poly-silicon gate, and why do their properties matter? |
+
+- **Silicon, doping and carriers.** Sources: Sze and Ng ch. 1 (carrier statistics, mass action), cited as textbook. Numbers: the committed intrinsic density `constants.n_i_cm3` at `constants.t_k` and `constants.n_i300_cm3` (`per_area.meta.json`); the body doping start `param.ndep_cm3` and calibrated `stack.n_ch_cm3`; gate doping `param.ngate_cm3`; source and drain peak `param.sd_peak_cm3`; the minority density in the body by mass action (idealised, `derive.mass_action`). Figure: net doping against depth through the 1D stack (poly, oxide, body) on a log axis with the intrinsic density as a line, from the committed stack, drawn with the existing `plots.Panel` log axis. Grounding asset: the committed 1D stack; R1 (renders plan) later replaces the stack diagram with its poster still. Gap section: the TCAD uses Boltzmann statistics with a constant intrinsic density (the committed constants), and the gate at 10²⁰ cm⁻³ is degenerate, which the flat-band offset absorbs (`data/process/nfet_05v0.toml`, `param.dv_fb_v.note`).
+- **Energy bands and the Fermi level.** Sources: Sze and Ng ch. 1 (textbook). Numbers: band gap (textbook, `data/render/display.toml`), the Fermi level of the body and of the gate relative to the intrinsic level by `derive.boltzmann_fermi` from the committed dopings and `constants.vt_v` (idealised, labelled). Figure: two flat band diagrams side by side, the n⁺ poly gate and the p body of the nfet, with the Fermi level drawn at the computed position. Grounding asset: R1's band diagram frame at flat band once committed; the plain diagram until then. Gap section: Boltzmann statistics place the gate Fermi level inside the conduction band at 10²⁰ cm⁻³; the page states that this is where the simple formula stops holding, with the process file's note as the evidence.
+- **The pn junction and its depletion region.** Sources: Sze and Ng ch. 2 (built-in potential, depletion approximation), Shockley 1949 (`lit-shockley`) for the diode law. Numbers: built-in potential and zero-bias depletion width of an idealised abrupt junction with this repo's source/drain peak and body doping (`derive.built_in_potential`, `derive.depletion_width`, labelled idealised); the junction depth `param.xj_um`. Figure: the abrupt-junction charge, field and potential panels, computed from those inputs. Grounding asset: the 2D cell's source/body junction in `figures.cross_section(highlight="junction")`; R2 later. Gap section: the 2D cell's source and drain are an analytic profile with a lateral straggle (`stack.py` docstring), not an abrupt step.
+- **The parts of a transistor.** An orientation explanation (docs-writing, page types): the whole cell first, then one section per part. Numbers: drawn gate length and width of a committed 2D cell (`cv.meta.json` `l_um`, `geometry.w_um`), `meshed_t_ox_nm`, `poly_um`, `xj_um`, `node_count`. Figure: the master cross-section with numbered callouts equal to the page's sections (gate, oxide, source, drain, body or n-well, contacts from `cv.meta.json` `contacts`), from the one model; once renders plan Task R0 commits a mesh window, the mesh figure of that job beside it. Grounding asset: the calibrated nfet `w10p0_l0p70` cell; R2 later. A public photo of a GF180MCU die or cross-section with a stated licence is searched for in Task E2 (docs-writing, pictures rule 3); if none is found, the plain diagram ships and the wanted photo is listed in the PR body and filed as an issue. Gap section: spacers, LDD and STI are not in the 2D cell (`stack.py` lines 20–26); the pfet's body is the n-well, uniformly doped.
+- **Gate oxide and poly-silicon.** Sources: Sze and Ng ch. 4 (the MIS capacitor; chapter number checked against the edition's table of contents in E0), the BSIM4 manual (`lit-bsim4`) for TOXE, TOXP and NGATE. Numbers: `param.epsrox`, `param.toxe_nm`, `param.toxp_nm`, the calibrated `stack.t_ox_nm`, `param.ngate_cm3`, `stack.poly_um`, and the oxide capacitance per area `derive.c_ox` checked against the calibration result's `cox_check`. Figure: the 1D stack with oxide and poly highlighted, exaggeration statement generated. Gap section: the calibrated oxide is thicker than TOXE; the page says what that thickness stands for (the charge-centroid allowance of `[centroid_allowance]` and poly depletion) and links the calibration page.
+
+### Tier 2: the MOS capacitor
+
+| Page | Question |
+|---|---|
+| `mos-capacitor.md` | What is a MOS capacitor, and why does this project simulate it first? |
+| `accumulation-depletion-inversion.md` | What happens under the gate as the gate voltage sweeps? |
+| `cv-curve.md` | What sets each part of the C–V curve? |
+| `calibration.md` | What does the calibration change, and what does it leave alone? |
+
+- **The MOS capacitor.** Numbers: the committed 1D stack (`per_area.meta.json` `stack.*`), the oxide capacitance per area (`cox_check.c_ox_ff_per_um2` of the calibration result, and `derive.c_ox` from the stack as a cross-check printed beside it), the SPICE Cgg plateaus `metrics.cgg_acc_ff` and `metrics.cgg_inv_ff`. Figure: the calibrated nfet 1D C–V (`per_area.csv`) against the SPICE Cgg–Vg, read by the readers docgen already uses (no copy). Grounding asset: the committed calibrated 1D curves; R1 poster later.
+- **Accumulation, depletion and inversion.** Numbers: flat-band and threshold voltages of the idealised stack (`derive.flat_band`, `derive.threshold`, labelled idealised, from the committed `n_ch_cm3`, `t_ox_nm`, `ngate_cm3`), and the voltages where the committed curve crosses each region (from the calibration result's `tcad_crossings` and `spice_regions`). Figure: the committed calibrated C–V with the three regions shaded at those crossings, plus one band-diagram panel per region of the idealised stack (depletion approximation). Grounding asset: renders plan R1 (the C–V sweep animation with band bending), embedded with its poster when committed; this page is its home. Gap section: the idealised panels use the depletion approximation; the TCAD solves Poisson–Boltzmann (`per_area.meta.json` `method`), and R1's profiles (renders plan Task R1b) show the solved bands.
+- **What sets each part of the C–V curve.** Numbers: start and calibrated tunables (`t_ox_eff_nm`, `n_ch_cm3`, `dv_fb_v`) from the process file and `calibration/<device>.json`; the plateau errors from the calibration result. Figure: start and calibrated curves against SPICE, each part (accumulation plateau, depletion slope, inversion plateau, position on the voltage axis) labelled with the parameter that sets it. Sources: Sze and Ng ch. 4 and the MOS textbook added in E0 (quasi-static and high-frequency curves). Gap section: the TCAD curve is quasi-static and the SPICE curve is BSIM4's charge model at the sweep's frequency; the pfet 1D curve is Disagree (`cv-agreement-mismatch`), with the cause and evidence stated there.
+- **What the calibration changes.** Numbers: bounds, start and final values of the three tunables (`calibration/<device>.result.json` `bounds`, `optimiser.x0`; `calibration/<device>.json`), the evaluation count `nfev`, the verdicts per geometry. Table: one row per tunable, columns tunable, unit, start, final, bounds lower, bounds upper split into two tables if over 5 columns. Figure: renders plan R3 when committed; until then the start and final curves of the previous page, reused. Gap section: calibration fits three of the eight budgeted parameters in 1D; the 2D validation cells are Disagree (`cv-agreement-validation`).
+
+### Tier 3: the MOSFET
+
+| Page | Question |
+|---|---|
+| `channel-and-threshold.md` | How does the gate make a channel, and what is the threshold voltage? |
+| `body-effect.md` | Why does the body voltage move the threshold? |
+| `short-channel-effects.md` | Why do short transistors leak more and turn on earlier? |
+| `saturation.md` | Why does the drain current stop growing with drain voltage? |
+
+These pages are grounded in the committed SPICE reference, which exists for every geometry, and gain the TCAD MOSFET results when Phase 3 commits them (the hook in Task E5).
+
+- **The channel and the threshold voltage.** Numbers: `metrics.vt_lin_maxgm`, `vt_lin_cc`, `ss_mv_per_dec` of the nfet and pfet Lmin geometries; `param.vth0_v` of the card. Figure: `idvg_lin.csv` on linear and log axes for one geometry with the max-gm threshold marked. Sources: Sze and Ng ch. 6; the MOS textbook.
+- **The body effect.** Numbers: `metrics.body_effect_v`; `param.k1_sqrt_v`. Figure: `idvg_lin.csv` rows at each committed `vb`.
+- **Short-channel effects.** Numbers: `metrics.vt_lin_maxgm` and `dibl_mv_per_v` across the `W10` geometries (`w10p0_l0p60` to `w10p0_l10p00`). Figure: Vt against L and DIBL against L from the six `metrics.json` files, with the five-corner envelope from `results/spice/envelope.json`.
+- **Saturation.** Numbers: `metrics.idsat_ua_per_um`, `gds_at_5v_s`. Figure: `idvd.csv` for the committed `vg` steps. Sources: Caughey and Thomas (`lit-caughey`) for velocity saturation.
+- Gap sections: the curves are the PDK's SPICE models; the repo's TCAD MOSFET has no committed result, stated once per page with a link to the roadmap and #68.
+
+### Glossary integration
+
+- Each concept is defined once, in `docs/glossary.md`, in plain words, at most 80 words (`test_glossary_definitions_short`), the first sentence spelling out an acronym, ending with a link to the explainer section that explains it (the authoritative plain-words statement). A term already in the glossary (the list in the repo facts) is reused, not redefined; where its definition is written for an expert (for example "poly depletion"), the explainer task adds a plain first sentence and keeps the rest, as a content change labelled as such.
+- Each page links a glossary term with `{term}` on its first prose use, never in a heading, a table header, a quotation or link text (writing-sourced-docs, links and terms). `test_every_term_is_defined` already fails on an undefined `{term}`; Sphinx `-W` fails on a duplicate glossary entry.
+- No invented terms (spec §16, directive 5): every new entry is standard in the field and cites the textbook section it comes from, or describes in ordinary words a thing this repo does.
+
+## Open questions for the owner
+
+1. **Placement.** The plan puts "How it works" first in the top-level toctree, before Reproduce, because it is the one section that needs no prior knowledge. The alternative is last, before the roadmap. Default if no answer: first.
+2. **The reader.** The plan writes for someone who knows basic circuits and no semiconductor physics (Decisions). If the intended reader is a chip designer who knows the transistor from the circuit side, Tier 1 shrinks to two pages. Default if no answer: the newcomer.
+
+## Review Focus
+
+- **Docs updated in the same PR (2026-10-27).** Every review checks that the PR updated the pages it affects (`docs/index.md` sections sentence and toctree, README Status if it lists sections, this plan's checkboxes, the glossary, the roadmap line, the limitations index if a gap moved) at the same time; a PR whose docs lag is "needs fixes" (`CONTRIBUTING.md`, PR checklist).
+- **Review by use, first.** The dispatcher (not the author) writes the brief from docs-writing `references/review.md`: "Review `docs/explained/<pages>` as a newcomer who knows basic circuits and no semiconductor physics, reading on a phone." The reviewer is given the 400 px light and dark screenshots of every page (headless Chrome, `CONTRIBUTING.md`) and the SVGs, and reads the section from its landing page with nothing but the rendered pages. It returns one row per section: could I follow it from the figure and the paragraph beside it? what did I guess? what did I look for and not find? which word did I not know? Every stop is a finding.
+- **Audit, second** (writing-sourced-docs review protocol). At least three numbers per page traced from the rendered value to the registry entry and its committed file or textbook entry; every "idealised" value recomputed by hand from its stated inputs; every figure described in words before it is judged (does the highlight sit on the page's subject? is the look-alike muted? does the exaggeration statement match the model's factors?); every claim marked committed file, textbook (with chapter) or without a source. Findings as `file:line — severity — what is wrong — what the source says`.
+- **Hunt for shortcuts**, in so many words: a number typed by hand; a figure narrated in the text; the same overview reused without its part highlighted; a hedge or future promise; a term not in the glossary; a textbook value presented as this repo's; an idealised value presented as a result; a figure with no dark twin; a table that scrolls at 400 px.
+- **No provenance moved.** `git diff --stat` touches no `results/**` and no hashed `src/gf180tcad/tcad/**`; `test_committed_tcad_provenance_current` green.
+
+---
+
+### Task E0: the section, the number registry, the figure module and the first page
+
+**Context.** One PR: the section skeleton, the machinery and the first page, so the section never exists empty (docs-writing: "Do not build empty sections for types that have no pages yet"). The first page is `silicon-and-carriers.md`, the easiest and most visible: textbook statements plus committed dopings and one figure drawn with the existing `plots.Panel` log axis.
+
+**Files:**
+- `docs/explained/index.md` (landing: one line per page, "[Silicon, doping and carriers](silicon-and-carriers.md): what electrons, holes and dopants are, with this process's numbers"), `docs/explained/silicon-and-carriers.md`;
+- `docs/index.md` (toctree gains `explained/index` as its first entry; "four sections" becomes "five sections", with one line naming the explainer section), README.md if it lists the sections;
+- `src/gf180tcad/explain/__init__.py`, `numbers.py` (`Number(name, kind, source, key, unit, digits, derive=None, inputs=())`, `REGISTRY`, `value(name)`, `substitutions()`), `derive.py` (closed table, pure numpy, each function with a docstring naming its textbook equation: `mass_action`, `boltzmann_fermi`; later tasks add `built_in_potential`, `depletion_width`, `c_ox`, `flat_band`, `threshold`), `model.py` (`device(device, params, geometry=None) -> Device`, reading the 1D stack now and the 2D cell from E2), `figures.py` (`STYLE`, `PALETTES = {"light": …, "dark": …}`, `doping_profile(model)`, `write_all(out_dir)` writing every figure in both palettes), `src/gf180tcad/quantity.py` (only if renders plan R1a has not merged: the readers, see Decisions);
+- `src/gf180tcad/docgen.py` (`generate()` calls `explain.figures.write_all(out / "explained")`; the 1D and SPICE curve readers made public or moved to `explain/data.py`, with docgen importing them: a refactor that changes no generated byte, proven by building `docs/_generated/` before and after and diffing the trees);
+- `docs/conf.py` (after the `sys.path` insertion: `myst_substitutions.update(explain.numbers.substitutions())`; a key clash with `_TOOLS` raises);
+- `data/explain/textbook.toml` (only values a page of E0 needs, each with `source`, `unit`);
+- `docs/limitations/literature.md` (the textbook heading, Decisions);
+- `docs/glossary.md` (electron, hole, dopant, donor, acceptor, intrinsic carrier density, majority carrier, minority carrier: each at most 80 words, plain words first, ending "See {ref}`<explainer anchor>`");
+- `tests/test_explained.py`: `::test_substitutions_defined` (every `{{ x_* }}` on a page is in the registry), `::test_every_registered_number_is_used`, `::test_sources_exist`, `::test_textbook_entries_cite_literature` (every `source` names an anchor that exists in `literature.md`), `::test_no_textbook_value_twice`, `::test_derive_against_hand_values` (each formula against a value worked by hand in the test's docstring), `::test_no_bare_numbers` (with a positive control), `::test_figure_code_has_no_numeric_literals`, `::test_figures_have_dark_twins` (every `-light.svg` has a `-dark.svg` and every page embeds both), `::test_figures_legible_at_400px`, `::test_explained_pages_meet_every_cap` (`tools/measure_docs.py` and `tools/docs_lint.py --no-front-matter` report nothing for `docs/explained/**`, apart from the two finding kinds the house decision on citations does not count), `::test_explained_pages_are_explanations` (each page has at most seven `##` headings, no numbered list at line start, a "Where this repo's results differ" heading, and opens with a figure), `::test_explain_in_no_generator_closure`, `::test_landing_lists_every_page` (the landing page and the toctree name every file in `docs/explained/`);
+- `tests/test_docgen.py::test_svg_deterministic` (extended to one explainer figure, both palettes), `::test_docs_build_offline` (unchanged; covers the new section).
+
+- [ ] **Step 1: Verify the sources.** Fetch the Sze and Ng table of contents for the 3rd edition and record the chapter numbers and titles the pages cite (ch. 1, 2, 4, 6); fetch each candidate MOS textbook's publisher or Crossref record and table of contents; add the verified ones to `literature.md` with descriptive inline links (no footnotes). Log every fetch (URL, HTTP status, date) in the PR body.
+- [ ] **Step 2: Write the tests first.** Run `uv run --locked pytest -rs -v -m "not sandbox" -p no:cacheprovider tests/test_explained.py > tmp/e0-tests-red.log 2>&1`; they FAIL. Commit.
+- [ ] **Step 3: Implement** `quantity` (if needed), `numbers`, `derive`, `model`, `figures`; the docgen refactor with its byte-identity proof (`tmp/e0-generated-before/`, `tmp/e0-generated-after/`, `diff -r` logged to `tmp/e0-generated-diff.log`, empty). Commit per module; push after each few.
+- [ ] **Step 4: Write the page** from `assets/templates/explanation.md`: the scope sentences (question, reader, what it leaves out: bands, which the next page covers), the stack figure with the body highlighted, sections "Atoms and bonds" (no numbers), "Electrons and holes", "Dopants", "How many carriers", "Where this repo's results differ". Every number by substitution. Run `uv run --no-project python -I tools/measure_docs.py docs/explained/*.md` and `uv run --no-project python -I tools/docs_lint.py --no-front-matter docs/explained/*.md`, logs in `tmp/`; fix every finding.
+- [ ] **Step 5: Build and look.** `uv run --locked --group docs sphinx-build -W -b html docs tmp/docs-html > tmp/e0-sphinx.log 2>&1`; screenshots at 400 px and 1280 px, light and dark (Furo's theme switch, or `prefers-color-scheme` by Chrome's `--force-dark-mode`), under `tmp/shots/`; attach to the PR.
+- [ ] **Step 6: Full test run** (`uv run --locked pytest -rs -v -m "not sandbox" -p no:cacheprovider > tmp/e0-tests.log 2>&1`), lower `tests/doc_measure_baseline.json` if counts fell. PR; review by use, then audit; fix; merge.
+
+**Provenance impact.** None: no file under `results/` or `src/gf180tcad/tcad/` changes; `gf180tcad.explain` and `gf180tcad.quantity` are in no closure (tested). **Host:** host only, no Docker. **Calendar:** 1.5–2 days.
+
+### Task E1: the rest of Tier 1
+
+**Files:** `docs/explained/{bands-and-fermi-level,pn-junction,transistor-parts,oxide-and-poly}.md`; `explain/derive.py` (`built_in_potential`, `depletion_width`, `c_ox`), `explain/model.py` (the 2D cell from `cv.meta.json` and `gf180tcad.tcad.stack.cell` read as data, imported by `explain` and never the reverse), `explain/figures.py` (`band_flat`, `junction_panels`, `cross_section`); `data/render/display.toml` or `data/explain/textbook.toml` (band gap, per Decisions); `docs/glossary.md` (conduction band, valence band, band gap, Fermi level, pn junction, well, gate oxide, polysilicon); `docs/explained/index.md`; `tests/test_explained.py` (the new derive hand values; `::test_cross_section_matches_cell`, every drawn dimension equals the model's before its stated scale factor).
+
+- [ ] **Step 1:** tests first (FAIL), then `derive` and figures, committed per function.
+- [ ] **Step 2:** the photo search for `transistor-parts.md` (public GF180MCU die photos or cross-sections with a stated licence; record URL, licence, date in the PR body). Use one only with a licence that allows it; otherwise list it as a wanted photo in the PR body and file an issue.
+- [ ] **Step 3:** the four pages, each with its highlighted view of the one model; lint, measure, build, screenshots as in E0.
+- [ ] **Step 4:** PR (one PR, or two if the review is long: bands and junction, then parts and oxide); review by use, audit; merge.
+
+**Provenance impact.** None (as E0). **Calendar:** 2–3 days.
+
+### Task E2: Tier 2, the MOS capacitor
+
+**Files:** `docs/explained/{mos-capacitor,accumulation-depletion-inversion,cv-curve,calibration}.md`; `explain/derive.py` (`flat_band`, `threshold`), `explain/figures.py` (`cv_regions`, `cv_parts`, `band_regimes`), `explain/numbers.py` (entries reading `calibration/<device>.result.json` and `.json`, `per_area.csv`, `metrics.json`); `docs/glossary.md` (accumulation, depletion, inversion, flat band); `tests/test_explained.py::test_regions_follow_the_committed_crossings` (the shaded region edges equal the result file's values), `::test_calibration_table_from_result_file`.
+
+- [ ] **Step 1:** tests first; implementation; pages; lint, measure, build, screenshots.
+- [ ] **Step 2:** the gap sections link `cv-agreement-mismatch` and `cv-agreement-validation` and state the pfet 1D and 2D nfet verdicts as the committed result files give them, read by substitution so a new verdict changes the sentence (a verdict substitution reads `verdicts` from the result or validation file, never a typed word).
+- [ ] **Step 3:** PR; review by use, audit; merge.
+
+**Provenance impact.** None. **Calendar:** 2–3 days.
+
+### Task E3: Tier 3, the MOSFET from the SPICE reference
+
+**Files:** `docs/explained/{channel-and-threshold,body-effect,short-channel-effects,saturation}.md`; `explain/figures.py` (`idvg_with_vt`, `idvg_vb_family`, `vt_dibl_against_l`, `idvd_family`), `explain/numbers.py` (`metrics.json` entries); `docs/glossary.md` (channel, saturation); `tests/test_explained.py::test_vt_against_l_from_every_geometry` (one point per committed `W10` geometry, none typed).
+
+- [ ] **Step 1:** tests first; implementation; pages; lint, measure, build, screenshots.
+- [ ] **Step 2:** PR; review by use, audit; merge.
+
+**Provenance impact.** None. **Calendar:** 2 days. Needs only E0 (it may run in parallel with E1 and E2, in its own worktree, if the figure module's interfaces are merged).
+
+### Task E4: embed the renders as they land
+
+One small PR per render, opened by the renders plan's Task R3 PR that commits it or right after it merges:
+
+| Render | Page |
+|---|---|
+| R1 1D C–V sweep | `accumulation-depletion-inversion.md` |
+| R1 poster frame | `bands-and-fermi-level.md`, `mos-capacitor.md` |
+| R2 2D cross-section | `transistor-parts.md`, `pn-junction.md` |
+| R3 calibration loop | `calibration.md` |
+| R4 SPICE sweeps | `channel-and-threshold.md`, `saturation.md` |
+| Mesh window (R0) | `transistor-parts.md` |
+
+**Files:** the pages; `tests/test_explained.py::test_render_paths_exist` (every embedded `results/renders/**` path exists and is in `results/MANIFEST.sha256`). The render's scale statement is shown from its committed `<render>.render.json` `exaggeration` list by substitution, never retyped. The plain diagram stays beside the render where it shows a part the render does not.
+
+- [ ] **Step 1 (per render):** embed; build; screenshots; PR; review by use of the changed page; merge.
+
+**Provenance impact.** None (only reads committed renders). **Calendar:** 0.5 day per render.
+
+### Task E5: the Phase 3 hook
+
+**Files:** `tests/test_explained.py::test_mosfet_pages_name_every_mosfet_tree`: when a MOSFET TCAD tree exists under `results/tcad*/` (the tree names come from `RESULTS_IMAGE`, or from `generators.json` once Charon B0 lands), each Tier 3 page must reference it with a `{repo}` link, so the Phase 3 PR that commits the first MOSFET result fails CI until it updates the explainer (overlay figure and gap section). The test has a positive control with a fake tree (as `tests/test_docs_status.py` does). A comment on #68 names the test and the four pages.
+
+- [ ] **Step 1:** test with positive control; comment on #68; PR inside E3's PR or on its own; merge.
+
+**Provenance impact.** None. **Calendar:** 0.5 day.
+
+### Task E6: review of the whole section as the reader, and closing #46
+
+- [ ] **Step 1:** once E0–E3 are merged, one review of the whole section (docs-writing, review.md "The whole deliverable, as the reader"): a subagent that wrote none of it reads the rendered section from the landing page at 400 px as the newcomer, and reports structural findings with their cost (a page too long, a tier in the wrong order, a missing concept). Each finding fixed or filed.
+- [ ] **Step 2:** close #46 when the three tiers are merged, R1–R3 are embedded (E4), and E5's hook is on `main`, with a comment linking the section and naming what Phase 3 adds through the hook.
+
+**Calendar:** 0.5–1 day, plus the fixes.
+
+---
+
+## Order of work and estimates
+
+| Task | Needs | PRs | Calendar |
+|---|---|---|---|
+| E0 skeleton, machinery, first page | nothing | 1 | 1.5–2 d |
+| E1 Tier 1 rest | E0 | 1–2 | 2–3 d |
+| E2 Tier 2 MOS capacitor | E0 (E1's model for the stack views) | 1 | 2–3 d |
+| E3 Tier 3 MOSFET from SPICE | E0 | 1 | 2 d |
+| E5 Phase 3 hook | E3 | 0–1 | 0.5 d |
+| E4 renders, per render | renders plan R3 (and R0 for the mesh window) | 1 each | 0.5 d each |
+| E6 whole-section review, close #46 | E0–E5, R1–R3 embedded | 1 | 0.5–1 d |
+
+Total 9–12 working days of writing, independent of the simulators: no task runs Docker or a solver. E0 first; E1, E2 and E3 in that order, with E3 able to run beside E1 and E2.
+
+## Risks, each with what settles it
+
+- **MyST substitutions in tables and captions.** MyST replaces `{{ }}` in inline text; a substitution inside a figure caption or a table cell may render differently. *Settled by* E0 Step 5 (one table and one caption with substitutions, checked in the HTML). *Mitigation:* the figure module writes captions with the value already in them; a table is generated by `explain` and included with `{include}` from `docs/_generated/explained/`.
+- **Furo's `only-light` / `only-dark` classes.** *Settled by* the E0 screenshots in both themes. *Mitigation:* SVGs styled with CSS custom properties that follow the theme, one file per figure.
+- **The no-bare-numbers test is too strict.** Equations, chapter numbers and device names carry digits. *Settled by* E0's positive and negative controls. *Mitigation:* the exclusion list in Global Constraints and the per-line `number-ok` opt-out with a reason, read by the reviewer.
+- **A textbook cannot be verified.** *Mitigation:* Decisions (cite Sze and Ng, or leave the value out and file an issue).
+- **The docgen refactor changes a generated byte.** *Settled by* the before/after tree diff in E0 Step 3. *Mitigation:* none needed if empty; otherwise the refactor is reverted to an import of the private helpers.
+- **Render plan slips.** Pages ship with plain diagrams; E4 waits without blocking any other task.
+
+## Phase exit
+
+- [ ] `docs/explained/` holds the landing page and the thirteen explanation pages of the three tiers, each reviewed by use as the newcomer and audited, at zero findings of the two docs tools (`test_explained_pages_meet_every_cap`).
+- [ ] Every number on those pages comes from the registry or is listed in `tests/test_doc_numbers.py` (`test_no_bare_numbers` green), and every figure is built from committed files in a light and a dark twin, byte-deterministic.
+- [ ] Every new term is in the glossary once, at most 80 words, linked on first use per page.
+- [ ] Renders R1–R3 and the mesh window are embedded where the table of Task E4 places them.
+- [ ] The Phase 3 hook test is on `main` and #68 names it; #46 is closed with a comment linking the section.
