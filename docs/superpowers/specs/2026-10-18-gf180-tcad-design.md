@@ -130,6 +130,99 @@ Metrics are always reported also as error / σ_mismatch where σ_Vt = A_Vt/√(W
 - Charge conservation in AC (Cgg = −(Cgd + Cgs + Cgb) within 0.1 %).
 - DEVSIM vs Charon on the identical mesh and identical models: ≤ 1 % on Id, ≤ 2 mV on Vt; every other metric by kind, ≤ 1 % for relative quantities and ≤ 2 mV for voltages (§12.1). (A larger difference is a *simulator* problem and blocks process conclusions.)
 
+### 5.3 Corner bounds and spread of the physical inputs
+
+Added 2026-10-27 at the user's request (§16); tracked in issue #57. For each device, the TCAD
+gives not only one value of each physical input (doping levels, oxide and layer thicknesses,
+gate length and width, overlap) but a lower and an upper bound, taken from the SPICE corners
+the PDK ships, and the spread between them. The typical value matters; so does the variation
+around it.
+
+**What the PDK ships.** The model library `sm141064.ngspice` has five MOSFET corner sections,
+selected with `.lib sm141064.ngspice <corner>`: `typical`, `ff`, `ss`, `fs` and `sf` (the
+first letter is the nfet, the second the pfet: fast or slow). These are the five the SPICE
+reference already runs (`gf180tcad.devices.CORNERS`). The library also has:
+- a `statistical` section: Monte Carlo of the global (die-to-die and wafer-to-wafer) variation,
+  switched on by `sw_stat_global = 1`;
+- a mismatch wrapper per device (`fets_mm`, switched on by `sw_stat_mismatch = 1`): a random
+  threshold-voltage offset per transistor that falls with the square root of its area. In the
+  upstream file the 6 V nfet (`nmos_6p0`) wrapper has `par_vth` = 11.55 mV·µm, the pair-difference
+  coefficient (the A_Vt of §5.2); one transistor's σ is 0.7071 · par_vth / √(area), with
+  the wrapper's own length and width offsets;
+- corner sections for other devices (`moscap_*`, `bjt_*`, `diode_*`, `res_*`, `mimcap_*`),
+  with typical, ff and ss only. They are out of scope with those devices (§2).
+
+The SPICE reference runs with both statistical switches at 0 (`design.ngspice`), so each corner
+is one deterministic curve.
+
+**What the 6 V corners change.** Each corner adds an offset to some BSIM4 inputs and multiplies
+others by a factor, the same for every geometry. The values below were read from the upstream
+model file (`google/globalfoundries-pdk-libs-gf180mcu_fd_pr` commit `9f992d5`,
+`models/ngspice/sm141064.ngspice`, sha256 `73fc67d3…`, sections `.LIB ff` and `.LIB ss`). That
+file is not the pinned one: the pinned PDK's copy (sha256 `69a7ab87…`, recorded in
+`results/spice/provenance.json`) differs from it, and only the pinned copy has the
+`nfet_05v0`/`pfet_05v0` wrappers. The first step of the implementing task re-reads every value
+from the pinned copy and corrects these tables where they differ.
+
+Offsets added to the card value:
+
+| Input | BSIM4 parameter | Unit | nfet ff | nfet ss | pfet ff | pfet ss |
+|---|---|---|---|---|---|---|
+| Threshold voltage offset | VTH0 | V | −0.1298 | +0.1193 | +0.1245 | −0.1225 |
+| Oxide thickness offset, nfet | TOXE, TOXP | nm | −1.0 | +1.0 | — | — |
+| Oxide thickness offset, pfet | TOXE | nm | — | — | −1.0 | +1.0 |
+| Gate length offset | XL | nm | −42 | +70 | −46.5 | +69 |
+| Gate width offset | XW | nm | +50 | −50 | +50 | −50 |
+
+Factors that multiply the card value:
+
+| Input | BSIM4 parameters | nfet ff | nfet ss | pfet ff | pfet ss |
+|---|---|---|---|---|---|
+| Overlap capacitance | CGSO, CGDO, CGSL, CGDL | 0.90 | 1.10 | 0.90 | 1.10 |
+| Saturation velocity | VSAT | 1.0846 | 0.899 | — | — |
+
+The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet card shifts
+TOXE only, not TOXP. `fs` and `sf` scale the nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT)
+or 0.75 (VTH0, TOXE) and give the pfet its own values between those of `ff` and `ss`; their
+overlap factors are 0.93 and 1.07 (nfet) and 1.07 and 0.93 (pfet). The `statistical` section gives each of the same inputs a Gaussian spread (for
+the 6 V nfet, for example, a VTH0 term of 8 mV shared with the pfet plus 28 mV of its own, and
+a TOXE term of 0.4 nm plus 0.13 nm, each at one standard deviation with `mc_skew = 3`).
+
+**Requirement.**
+- *Corner calibration.* Each device's process description is calibrated against each of the
+  five corners, by the same procedure, the same tunables, the same geometries and the same
+  parameter budget as the typical-corner calibration (§5.2), with the corner's SPICE curves as
+  targets. The card values the fit does not tune are the corner's own: the area and overlap
+  bookkeeping that turns a C per area into a Cgg (XL and XW in the capacitance length and width,
+  the overlap and fringe terms CGSO, CGDO, CGSL, CGDL) uses that corner's card values as fixed
+  inputs. Otherwise the corner's XL, XW and overlap shifts, several percent of the gate area at
+  L = 1–2 µm, would be absorbed into the oxide and doping tunables. The bounds of a tunable
+  follow the corner where the card shifts the same quantity: the oxide bounds move by the
+  corner's TOXE offset and the flat-band bounds by its VTH0 offset; the doping bounds stay as at
+  TT. A bound hit is reported, as at TT, and a minimum or maximum that sits on a bound is
+  reported as that bound, not as a measured value. Anti-goal A1 applies: the corner fits never change the
+  typical calibration, and each corner's validation uses the held-out geometries of §5.2
+  against the same corner.
+- *What is reported.* For every tunable physical input of the device: the typical value (the
+  TT fit), the minimum and the maximum across the five corner fits, and which corner gave each.
+  Where a distribution is available (the `statistical` section), also the mean, the standard
+  deviation and the 2.5 % and 97.5 % percentiles over a fixed-seed Monte Carlo of the global
+  variation (mismatch off), each sample's SPICE curve calibrated the same way, with that
+  sample's own drawn XL, XW and overlap values in the bookkeeping (printed by ngspice for each
+  seed and recorded with the sample). The number of
+  samples and the seeds are fixed in the plan and recorded with the results.
+- *Cross-check against the card.* Where the card states the shift of a tuned physical quantity
+  directly (TOXE ±1 nm), the spread of the TCAD-fitted quantity is compared with it
+  and the difference is reported. A TCAD oxide spread far from ±1 nm says the fit is
+  absorbing the corner shift into another tunable.
+- *Where it is shown.* A table per device on the results pages and on the agreement pages
+  (§10(b), §10(c)): one row per input, columns for the unit, the typical value, the minimum,
+  the maximum, the corner of each, and the Monte Carlo statistics. The values live in committed
+  result files with provenance (§9), never only on the page.
+- *Phasing.* Phase 2 does it for the three 1D MOS capacitor tunables from the C–V curves
+  (Phase 2 plan, Task 16). Phase 3 extends it to the MOSFET inputs that I–V curves constrain
+  (gate length and width offsets, LDD and source/drain, overlap, velocity saturation).
+
 ## 6. Mismatch taxonomy (documented per result)
 
 Every mismatch in the results pages is tagged with one or more causes, with an estimated magnitude where possible:
@@ -172,13 +265,54 @@ Source pointers: the per-design summaries of the wafer.space run 1 and run 2 des
 - OOM inside a container is a reported job failure (exit 137), never a host event.
 - Thread counts pinned (`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`) — needed for determinism (§9) as well as resource control.
 
+### 8.1 Long runs: justified by what they tell us, managed so they cannot waste a day
+
+Added 2026-10-27 at the user's request (§16); the job runners' part is tracked in issue #63.
+Machine time is cheap; a wrong number or a lost day is not. So:
+- **A run is justified by what it tells us**, never ruled out by its length alone. A 24-hour
+  job is fine; a quick job whose answer nobody needs is not. Run time is a scheduling fact (it
+  decides the order, and that 16 GiB jobs run one at a time on this host, §8), not a reason to
+  leave a result out. A missing result whose only reason is "it takes too long" is not
+  accepted: it is either run or the plan says what it would tell us and why that is not needed.
+- **A failure to converge or a solver error is a correctness problem**, recorded with what is
+  known and an issue, never accepted as "infeasible" and dropped.
+- **Every run longer than a few minutes is managed**, so that it never runs for a day and gives
+  wrong values, or runs for a day and then fails on something that could have been checked at
+  the start:
+  - *checks first*: inputs, image, mesh and output directory are checked, and one bias point is
+    solved, before the long part starts;
+  - *progress log*: a line per completed step (bias point, level, sample) with the time and the
+    peak memory, written to a log file, not only to the terminal;
+  - *resume state*: the run saves its state after each completed step and continues from it
+    after a restart; a resumed run records that it was resumed (as the 2D sweeps do with
+    `resumed`);
+  - *bounded retries*: a failed step is retried a fixed, small number of times with a recorded
+    change (for example extended precision), then the run stops with an error that names the
+    step;
+  - *output checks that fail loudly*: each step's result is checked as it is written (finite,
+    within physical limits, smooth against its neighbours where that is expected), and a failed
+    check stops the run instead of writing a number;
+  - *memory cap*: every run is in the sandbox with its memory limit (§8), so running out of
+    memory is a reported failure of that job, never a host event, and the limit is never raised
+    just to make a run pass.
+- **Decisions taken on run time alone are revisited** (the list and their status are in §16).
+- **What exists and what is missing.** Every job already runs under its sandbox memory cap; the 2D
+  sweeps already resume per bias point (and record `resumed`), write a progress log, and retry a
+  failed point once in extended precision (`precision_fallback`). Missing, and the work of issue
+  #63: checks first in every runner, time and peak memory in every progress log (the SPICE
+  reference writes none), bounded retries outside the 2D sweep, loud output checks, and resume
+  for the mesh-convergence levels and the calibration.
+
 ## 9. Reproducibility ("bit-identical")
 
 - Everything pinned: container images by digest; Python deps via a lock file with hashes; PDK by commit; forks (`mithro/gplugins`, any others) by commit; Charon/Trilinos by version and source hash.
 - Images built in GitHub Actions as thin layers over the pinned IIC-OSIC-TOOLS digest, with reproducible-build settings (`SOURCE_DATE_EPOCH`, BuildKit timestamp rewriting, pip installs from a hashed lock file, no unpinned `apt-get`), pushed to `ghcr.io/mithro/gf180-tcad-*`. A CI job rebuilds and checks the digest matches. Upgrading to a newer upstream image is a deliberate, reviewed change that reruns the full comparison.
 - Deterministic numerics: fixed thread counts (single-threaded linear solvers in the reference configuration), fixed mesh seeds, no wall-clock or hostname in outputs.
 - Every result file has a SHA-256 recorded in a committed manifest. The full set is reproducible with one command (`make reproduce` or equivalent) inside the pinned images.
-- **Where things run (user decision).** Simulations start **local** (this host, sandboxed per §8). **No self-hosted GitHub runners.** Once a simulation is working well and is cheap enough, it is *also* run on **GitHub-hosted runners**, and CI fails on any hash difference against the committed manifest. This cross-check between local and GitHub-hosted results is the evidence for deterministic output across machines; at least a representative subset (SPICE reference + one MOSCAP + one 2D MOSFET bias sweep, coarse mesh if needed) must be cross-checked this way. Expensive runs (fine meshes, 3D, Charon) stay local, with their hashes committed and the docs stating which results were cross-checked on GitHub and which only locally.
+- **Where things run (user decision).** Simulations start **local** (this host, sandboxed per §8). **No self-hosted GitHub runners.** Once a simulation is working well and fits a GitHub-hosted runner's limits (time per job and memory), it is *also* run on **GitHub-hosted runners**, and CI fails on any hash difference against the committed manifest. This cross-check between local and GitHub-hosted results is the evidence for deterministic output across machines; at least a representative subset (SPICE reference + one MOSCAP + one 2D MOSFET bias sweep, coarse mesh if needed) must be cross-checked this way. Runs that do not fit those limits (fine meshes, 3D, Charon) stay local, with their hashes committed and the docs stating which results were cross-checked on GitHub and which only locally.
+- **Restamps.** Updating a committed tree's `provenance.json` to a new generator hash without
+  rerunning it (a restamp) is allowed only where the rerun is shown to give the same bytes, for
+  example by rerunning a representative job and comparing hashes. Otherwise the tree is rerun.
 - If some step proves non-deterministic despite this, that step is documented in (d) with the observed variation, and its outputs are compared numerically (with a stated tolerance) instead of by hash. This is a fallback, not the plan.
 
 ### 9.1 Output cache for large regenerable artefacts
@@ -210,8 +344,8 @@ is a shared cache for everyone, not an archive.
 
 Sources in `docs/`; built in CI; published from `main` on Read the Docs. Sections map to the user's four requirements, plus the explainer section of §10.2:
 - (a) **Reproduce** — prerequisites, one-command reproduction, image digests, how hashes are checked, how to run a single device.
-- (b) **Results** — auto-generated per device/geometry pages: I-V/C-V overlay plots (TCAD vs ngspice vs Xyce), extracted metrics table, verdict badges, mesh pictures (drawn as part of the renders of §10.1), the process file in use.
-- (c) **Comparison with the PDK** — the agreement definition (§5, both levels), a summary matrix (device × metric → Agree / Same process / Disagree), and per-mismatch explanations (§6) at both depths.
+- (b) **Results** — auto-generated per device/geometry pages: I-V/C-V overlay plots (TCAD vs ngspice vs Xyce), extracted metrics table, verdict badges, mesh pictures (drawn as part of the renders of §10.1), the process file in use, and the corner bounds and spread of each physical input (§5.3).
+- (c) **Comparison with the PDK** — the agreement definition (§5, both levels), a summary matrix (device × metric → Agree / Same process / Disagree), per-mismatch explanations (§6) at both depths, and the corner bounds of the physical inputs next to the typical values (§5.3).
 - (d) **Limitations & status** — known shortcomings, what's in progress, roadmap, assumptions and their public sources, the "no measured silicon yet" caveat, the silicon-validation inventory (§7), a literature page (§11).
 Results pages are generated from the hashed result files, so the docs never show numbers that are not reproducible.
 
@@ -322,9 +456,9 @@ and the artefact come from one mesh.
 
 **Phasing.** Render image first; then R1 and R2 (with the reduced mesh artefact and the 1D
 profile files they need); then R3, R4 and R5; then the later phases' renders as those phases
-produce results. Cost: every 2D job whose mesh is neither in the cache nor reproduced with its
-committed `mesh_sha256` is rerun, one 16 GiB job at a time and hours each (§8; the committed 2D
-trees predate the current job format, so this is likely for all of them).
+produce results. Every 2D job whose mesh is neither in the cache nor reproduced with its
+committed `mesh_sha256` is rerun, one 16 GiB job at a time (§8), managed as §8.1 requires (the
+committed 2D trees predate the current job format, so this is likely for all of them).
 
 ### 10.2 How it works: explainer section
 
@@ -358,6 +492,85 @@ numbers.
   (preferred), or, when hand-written, is listed in `tests/test_doc_numbers.py` with its source.
   A test checks that every artefact an explainer page references exists, so a moved or
   regenerated result cannot leave a stale explanation.
+
+### 10.3 How the documentation is written
+
+Added 2026-10-27 at the user's request (§16). Work that is not documented and explained does
+not count as done: if it cannot be explained in plain English, it is not understood yet.
+
+**Source of the rules.** The user's `writing-sourced-docs` skill (plugin
+`writing-sourced-docs@mithro-personal`, skill `writing-sourced-documentation`, version 1.0.0,
+from `github.com/mithro/dot-claude`, Apache-2.0) is the rule book for every docs page. Its
+`SKILL.md` and `references/` (readability rules, page templates, citations, review and tooling)
+are normative; this section records how they apply here and what enforces them. Where this
+section and the skill differ, the skill wins and this section is corrected.
+
+**Evidence.** Every asserting sentence is one of the skill's five kinds of statement, worded
+with its fixed hedge:
+- *public fact* ("the PDK documentation gives …", the source's words in quotation marks),
+  cited directly after the claim;
+- *typical value* ("typical", "industry-typical"), with a textbook, paper or standard citation,
+  never presented as this PDK's own number;
+- *inference* ("we infer … because …"), with the reasoning on the page and its evidence cited;
+- *reading* ("our reading of …", "(our arithmetic)"), with the source read cited;
+- *not public* ("not public", "not stated", "—" in a table), with an Open-questions bullet
+  saying what evidence would settle it.
+
+A number always carries a citation, or a "typical" label with its own citation. A number
+computed by this repo cites the committed result file it comes from. Citations are Markdown
+footnotes (`[^label]` after the claim, definitions at the page foot), per the skill's
+`references/citations.md`; quotations are verbatim.
+
+**Present state only.** A page says what is true now and what the reader needs to know now.
+What used to be true, what was changed and when, and how a result came about belong in the
+change log of this spec (§16), the plans (`docs/superpowers/plans/`), the reproduction record
+(`docs/reproduce/`) and the plugin-history page, nowhere else.
+
+**Plain English; no invented terms.** No expert is needed: each page opens with what it shows in
+plain words, and every acronym is spelled out on first use per page. Each glossary term is
+either standard in the field, with a reference, or a short plain-words description of a thing
+this repo does, named in ordinary words. Code identifiers keep their names; the prose around
+them uses plain words.
+
+**Limits** (the skill's caps; a quotation or code span counts as one word):
+
+| Element | Hard cap |
+|---|---|
+| Prose paragraph | 100 words |
+| List item | 60 words |
+| Sentence | 45 words |
+| Sentence, target | 30 words |
+| Table cell | 25 words, one value |
+| Columns of a table with prose | 3 |
+| Glossary entry | 80 words |
+| Page width | no sideways scroll at 400 px |
+
+Tables hold data: one value per cell, units in the header, numbers in columns of their own;
+no cell joins two numbers. A table that mixes kinds is split.
+
+**Presentation passes change no content.** A readability or formatting pass follows the
+skill's Never list: no fact, number, unit, significant figure, quotation, hedge or citation
+changes, and no hedge moves away from its claim. `measure_docs.py --preserve BEFORE AFTER`
+proves it for each restructured page. Content fixes are separate commits, labelled as such.
+
+**Review.** Every docs PR is reviewed by an agent that did not write it, by the skill's review
+protocol: at least three claims per page checked against the cited source, the diff read as a
+fact diff, the rendered page read at desktop and 400 px width, and findings returned as
+`file:line — severity — what is wrong — what the source says`.
+
+**What enforces it.** The docs style pass that follows this amendment adds:
+- `tools/measure_docs.py`, the skill's measurement script vendored with an origin header (its
+  licence allows it), and a test that runs it over `docs/` and `README.md` with the caps above;
+- `tests/test_doc_style.py`: `test_table_cells` (Markdown sources) and
+  `test_generated_table_cells` (generated pages) for the one-value-per-cell and 25-word rules,
+  with an explicit per-table opt-out `<!-- table-ok: reason -->`;
+  `test_glossary_definitions_short` (80 words); `test_every_term_is_defined` and
+  `test_generated_terms_are_defined`; `test_no_history_phrases`, which fails on narrative
+  phrases ("previously", "no longer", "before PR", "was changed") outside the places listed
+  above, with a per-line opt-out `<!-- history-ok: reason -->`.
+
+The evidence rules, the 400 px check and the review protocol are checked by review, not by a
+test.
 
 ## 11. Literature (initial; [verify] items to be checked before citing)
 
@@ -475,8 +688,9 @@ limitations page as they are answered):
 - **Calibration.** Whether each backend is also calibrated independently (comparing the two
   calibrated parameter sets is a further check), in addition to running Charon on DEVSIM's
   calibrated values.
-- **Cost of 2D on this host.** 2D DEVSIM jobs already take hours at 16 GiB, one at a time;
-  doubling them with Charon doubles the 2D run time unless Charon is faster.
+- **2D run time and memory on this host.** 2D DEVSIM jobs take hours at 16 GiB, one at a time,
+  and Charon adds its own. This sets the order of the work, not whether a job runs (§8.1); the
+  Charon plan measures it.
 
 ## 13. Phases
 
@@ -484,8 +698,8 @@ Each phase ends with merged, reviewed work on `main`, published docs and passing
 
 - **Phase 0 — Foundations.** Repo skeleton, Apache-2.0, sandbox wrapper with limits verified by a deliberate OOM test, base container images built reproducibly on GitHub → ghcr.io, Sphinx skeleton live on Read the Docs, CI (lint, tests, docs, hash check), contribution/review/merge rules written down.
 - **Phase 1 — SPICE golden reference.** Pinned PDK; ngspice + Xyce sweeps for the device/geometry/bias matrix (§5.2); metric extraction library with tests; docs pages (b)/(c) showing SPICE-only results and spec-window checks (sanity: SPICE reproduces the PDK's own electrical spec table).
-- **Phase 2 — gplugins DEVSIM fix + 1D/2D MOSCAP.** Fix the fork's plugin; MOS capacitor from gdsfactory geometry; mesh-convergence tooling; calibrate oxide and channel doping against SPICE Cgg–Vg.
-- **Phase 3 — 2D MOSFET (DEVSIM and Charon, §12.1).** Extend the plugin for MOSFETs; process description file with public sources; calibration on §5.2 calibration targets; validation on held-out targets; mismatch taxonomy filled in; full results/comparison docs.
+- **Phase 2 — gplugins DEVSIM fix + 1D/2D MOSCAP.** Fix the fork's plugin; MOS capacitor from gdsfactory geometry; mesh-convergence tooling; calibrate oxide and channel doping against SPICE Cgg–Vg; corner bounds and spread of those inputs (§5.3).
+- **Phase 3 — 2D MOSFET (DEVSIM and Charon, §12.1).** Extend the plugin for MOSFETs; process description file with public sources; calibration on §5.2 calibration targets; validation on held-out targets; mismatch taxonomy filled in; corner bounds and spread of the MOSFET inputs (§5.3); full results/comparison docs.
 - **Phase 4 — Charon in parallel (amended 2026-10-27, §12.1).** No longer after Phase 3: it starts once the Phase 2 backend seam exists and runs alongside Phases 2–3. Reproducible Charon image; Charon backend in the plugin; the 1D, then 2D MOS capacitor on Charon, then every later device on both backends; per-job DEVSIM-vs-Charon comparison files and agreement page; Charon-only physics (BGN, impact ionisation) used to explain mismatches. Phases 2 and 3 can close without Charon results for their devices; Phase 4 closes when every device has results from both backends and the comparison page.
 - **Phase 5 — 3D and silicon-readiness.** 3D narrow-width (1.6/0.7) simulation; silicon-validation inventory and predictions at the exact TRID/ASHES/T0P3 geometries; temperature extension; roadmap for the rest of the PDK device list.
 
@@ -499,6 +713,7 @@ Each phase ends with merged, reviewed work on `main`, published docs and passing
 - DEVSIM first, Charon as cross-check; ngspice primary SPICE, Xyce secondary. *(Superseded 2026-10-27 by the user: DEVSIM and Charon run in parallel and are cross-compared, §12.1.)*
 - MOSCAP before MOSFET.
 - Parameter-source hierarchy, 8-parameter calibration budget, held-out geometries, SPICE reference instance parameters, corner-envelope "Same process" window (all §5.2).
+- Corner spread statistics (§5.3): min and max across the five corners, plus the mean, standard deviation and 2.5 % / 97.5 % percentiles of a fixed-seed Monte Carlo of the global variation.
 - IIC-OSIC-TOOLS as the base container; latest gf180mcuD as primary reference, run-1/2 `d658698` as secondary.
 
 ## 15. Left to the builder
@@ -543,3 +758,57 @@ that the intent survives later rewording of the sections it changed.
   >
   > "Make sure that as part of every review it also checks if the docs have been correctly
   > updated at the same time."
+- **2026-10-27 12:15 ACDT: six directives after reading the documentation.** The user's words,
+  in the order given:
+  1. > "Just because something takes a long time to run, doesn't mean it is worth doing. CPU
+     > time is pretty cheap. Its fine to run a 24 hour job if it is correctly managed so that
+     > it doesn't run 24 hours and produce rubbish or incorrect values, takes 24 hours and just
+     > gives an error, etc."
+  2. > "We want TCAD simulations to be able to provide upper and lower bound values for things
+     > like doping level, material thickness and shape, etc all based on the corners that spice
+     > provides."
+  3. > "The medium / average value is important but so is the variance -- we want to understand
+     > the upper and lower bounds on things."
+  4. > "The work doesn't exist unless it has been properly documented and explained (you don't
+     > understand something unless you can explain it in plain english). It should not explain
+     > historic / old stuff -- it should explain what the person needs to know right now.
+     > Historic state is for historians."
+  5. > "Make sure to not make up jargon or terminology that doesn't exist. Use short plain
+     > descriptions and link to the more detailed explaination if needed. Nothing should
+     > require you to be an expert to understand things."
+  6. > "There are a huge number of tables which mash data which should be in columns into
+     > textual descriptions embedded in cells. Tables with long text or multiple numbers in an
+     > individual cell are huge red flags the table is not formatted correctly."
+
+  What changed: directive 1 is new §8.1; §9 (what runs on GitHub-hosted runners), §10.1
+  (phasing) and §12.1 (the open question on 2D run time) lost their cost reasoning. Directives
+  2 and 3 are new §5.3, with Task 16 in the Phase 2 plan and a Phase 3 item (§13); issue #57.
+  Directives 4 to 6 are new §10.3, whose rules are those of the user's `writing-sourced-docs`
+  skill (named there by the user at 13:50 the same day), enforced by `tests/test_doc_style.py`
+  and the vendored `tools/measure_docs.py`.
+
+  Decisions that had been taken on run time, and their status under §8.1:
+  - *Renders plan: no 2D rerun only to get mesh pictures.* Already changed before these
+    directives: the renders plan follows §10.1, which reruns every 2D job whose mesh cannot be
+    reproduced (`docs/superpowers/plans/2026-10-27-renders-pipeline.md`, Task R0). No further
+    change.
+  - *The 2D MOS capacitor at L = 10 µm is not run* (`docs/limitations/moscap2d.md`): its
+    equilibrium drift-diffusion solve fails in UMFPACK. Reopened as a correctness problem,
+    issue #58.
+  - *The 2D MOS capacitor at L = 2 µm has no AC result*: the small-signal solve fails in
+    UMFPACK. Reopened as a correctness problem, issue #59.
+  - *Level 3 of the 2D mesh-convergence study is left out*, for an estimated 9.7 h of QS
+    ("over the 8 h job rule", `gf180tcad.tcad.meshconv.EXCLUDED_2D`) and for the L = 10 µm
+    solver failure. There is no 8-hour rule any more; the run-time half of the reason is
+    withdrawn. The level stays out until #58 is solved, since it is expected to fail the same
+    way (the same size; not yet attempted, and #58 includes running it); the
+    recorded reason is reworded when the 2D study is next rerun (it is part of the committed
+    report, so changing it restamps that tree).
+  - *Provenance restamped instead of rerun* (Task 12 and issue #34, the 2D trees and the 2D mesh
+    convergence): replaced by the reruns of #35, which regenerate the 2D trees with today's
+    code. The restamp rule is now in §9.
+  - *`make reproduce` not run end to end, because the 2D jobs take hours*: to be run, managed
+    per §8.1, once #35's 2D reruns are in.
+  - *GitHub-hosted cross-check only where a run is "cheap enough"* (§9): reworded to the
+    runners' actual limits (time per job and memory), which a run must fit; anything that does
+    not fit is cross-checked locally and the docs say so, as before.

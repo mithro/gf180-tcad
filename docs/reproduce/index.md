@@ -255,8 +255,9 @@ The 2D jobs run one 16 GiB job at a time, hours each; the L = 2 µm cells run `-
 then `--method combine-qs`. The validation is regenerated after the calibration is committed.
 
 **Updating the provenance without a rerun.** When a change to a writer's closure cannot have
-changed a results folder's data and the folder is not regenerated (the 2D jobs take hours), its
-provenance can be updated to the current hash without a rerun:
+changed a results folder's data, and a rerun of a representative job is shown to give the same
+bytes (design spec §9), its provenance can be updated to the current hash instead of rerunning
+every job:
 
 ```sh
 uv run --locked python tools/restamp-tcad-provenance results/tcad/<tree>   # --dry-run first

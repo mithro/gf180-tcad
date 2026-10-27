@@ -19,13 +19,19 @@ there.
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`). The 2D validation of the calibrated stack
-  is in progress but not committed: no calibrated 2D results are committed yet, since each 2D
-  {term}`job` takes hours at 16 GiB, one at a time, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
-  ({doc}`moscap2d`); [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
+  is in progress but not committed: no calibrated 2D results are committed yet
+  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and are open
+  correctness problems: the L = 2 µm cell's AC solve
+  ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)) and the L = 10 µm cell's
+  equilibrium solve ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)); see
+  {doc}`moscap2d`.
+- **No {term}`corner` bounds yet.** The design spec asks for the typical value, the lower and upper
+  bound across the {term}`PDK`'s SPICE corners, and a Monte Carlo spread of every physical input
+  ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)); none is computed yet.
 - **TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
   names the current generator, not the one that made them (Task 12), and every TCAD tree was
   restamped once more to the per-tree {term}`generator_sha256` of [issue #34](https://github.com/mithro/gf180-tcad/issues/34), without a rerun.
-  Only the two calibrated 1D jobs are rerun and compared byte for byte by the cross-check; see
+  Only the two calibrated 1D {term}`jobs <job>` are rerun and compared byte for byte by the cross-check; see
   {ref}`tcad-provenance`.
 - **`make reproduce` does not yet reproduce the 2D TCAD files, and has not been run end to
   end.** The 2D job files lack entries the current job writes and the L = 2 µm {term}`sweeps <sweep>` are resumed ones, so a
