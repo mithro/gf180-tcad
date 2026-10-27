@@ -649,3 +649,80 @@ def test_glossary_terms_of_the_section():
         "minority carrier",
     ):
         assert terms[t] == 1, t
+
+
+# --- the oxide and poly-silicon page (task E1) -----------------------------------------------
+
+OXIDE_PAGE = EXPLAINED / "oxide-and-poly.md"
+_RESULT = "results/tcad/calibration/nfet_05v0.result.json"
+
+
+def test_unitless_value_has_no_trailing_space():
+    assert _numbers().format_value(3.9, 2, "") == "3.9"
+
+
+def test_oxide_capacitance_is_the_shared_formula():
+    """C_ox comes from gf180tcad.derive.oxide_capacitance, never from a second copy, and agrees
+    with the calibration result's own check.
+
+    Hand value: ε_ox = 3.9, ε_0 = 8.8541878128e-14 F/cm and TOXE = 15.2 nm = 1.52e-6 cm give
+    C_ox = 3.9 × 8.8541878128e-14 / 1.52e-6 = 2.271798e-7 F/cm² = 2.271798 fF/µm².
+    """
+    from gf180tcad import derive
+    from gf180tcad.explain import idealised
+
+    numbers = _numbers()
+    assert "oxide_capacitance" not in idealised.FORMULAS
+    assert "oxide_capacitance" in derive.FORMULAS
+    for name in ("cox_nfet_cal", "cox_toxe_nfet"):
+        n = numbers.REGISTRY[name]
+        assert (n.kind, n.formula) == ("idealised", "oxide_capacitance"), name
+    assert numbers.value("cox_toxe_nfet") == pytest.approx(2.271798, rel=1e-6)
+    result = json.loads((ROOT / _RESULT).read_text("utf-8"))
+    assert numbers.value("cox_nfet_cal") == pytest.approx(
+        result["cox_check"]["c_ox_ff_per_um2"], rel=1e-12
+    )
+    assert numbers.value("cox_check_nfet") == result["cox_check"]["c_ox_ff_per_um2"]
+
+
+def test_oxide_values_are_the_files():
+    """The thicknesses and bounds the oxide page prints, traced to their files by hand."""
+    numbers = _numbers()
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))
+    meta = json.loads(
+        (ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json").read_text("utf-8")
+    )
+    result = json.loads((ROOT / _RESULT).read_text("utf-8"))
+    assert numbers.value("toxe_nfet") == proc["param"]["toxe_nm"]["value"]
+    assert numbers.value("toxp_nfet") == proc["param"]["toxp_nm"]["value"]
+    assert numbers.value("epsrox_nfet") == proc["param"]["epsrox"]["value"]
+    assert numbers.value("delta_nfet") == proc["centroid_allowance"]["delta_nm"]
+    assert numbers.value("t_ox_nfet_cal") == meta["stack"]["t_ox_nm"]
+    assert numbers.value("t_ox_upper_nfet") == result["bounds"]["t_ox_eff_nm"][1]
+    assert numbers.value("poly_nfet") == meta["stack"]["poly_um"]
+    assert numbers.value("cox_spec_min") == result["cox_check"]["spec"]["min"]
+    assert numbers.value("cox_spec_max") == result["cox_check"]["spec"]["max"]
+
+
+def test_stack_figure_draws_the_model():
+    """Every drawn layer of the stack figure is the model's thickness times its stated scale,
+    the layers touch, and the figure is written in both palettes."""
+    from gf180tcad.explain import figures, model
+
+    dev = model.device("nfet_05v0", "calibrated", scales=figures.STYLE["scales"])
+    drawn = figures.stack_extents(dev)
+    assert [layer.part for layer, _a, _b in drawn] == ["gate", "oxide", "body"]
+    for layer, a, b in drawn:
+        assert b - a == pytest.approx(layer.thickness_um * dev.scales.get(layer.part, 1)), layer
+    for (_l, _a, b), (_m, c, _d) in zip(drawn, drawn[1:], strict=False):
+        assert b == pytest.approx(c)
+    assert "oxide-stack" in figures.FIGURES
+    light = figures.FIGURES["oxide-stack"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["oxide-stack"]("dark")
+
+
+def test_oxide_page_prints_its_numbers():
+    text = OXIDE_PAGE.read_text(encoding="utf-8")
+    for key in ("toxe_nfet", "toxp_nfet", "t_ox_nfet_cal", "cox_nfet_cal", "cox_check_nfet"):
+        assert "{{ x_" + key + " }}" in text, key
+    assert "/_generated/explained/oxide-stack-light.svg" in text
