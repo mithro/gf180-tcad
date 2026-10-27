@@ -531,22 +531,38 @@ def test_moscap_summary_2d_sentence_follows_the_statuses(tmp_path):
         assert line.endswith(f"| {want} |"), line
         for f in csv.parent.iterdir():
             f.unlink()
-    # no calibrated 2D cell and nothing compared: every geometry not run
-    path = tree / "validation" / "nfet_05v0.json"
-    val = json.loads(path.read_text("utf-8"))
-    for gid in val["two_d"]:
-        val["two_d"][gid] = {"causes": [], "reason": "none", "status": "not run"}
-    path.unlink()
-    path.write_text(json.dumps(val), "utf-8")
+    # no calibrated 2D cell and nothing compared, for either device: every geometry not run
+    for device in DEVICES:
+        path = tree / "validation" / f"{device}.json"
+        val = json.loads(path.read_text("utf-8"))
+        for gid in val["two_d"]:
+            val["two_d"][gid] = {"causes": [], "reason": "none", "status": "not run"}
+        path.unlink()
+        path.write_text(json.dumps(val), "utf-8")
     text = summary()
     assert "not run for any geometry" in text and docgen._TWO_D_PENDING not in text
     # a compared entry shows its verdict
+    path = tree / "validation" / "nfet_05v0.json"
+    val = json.loads(path.read_text("utf-8"))
     gid = next(iter(val["two_d"]))
     val["two_d"][gid].update(status="compared", verdict="Disagree")
     path.unlink()
     path.write_text(json.dumps(val), "utf-8")
     text = summary()
     assert "not run for any geometry" not in text and row(text, gid).endswith("| Disagree |")
+    # only a pfet entry compared: the sentence must follow the pfet too
+    val["two_d"][gid] = {"causes": [], "reason": "none", "status": "not run"}
+    path.unlink()
+    path.write_text(json.dumps(val), "utf-8")
+    ppath = tree / "validation" / "pfet_05v0.json"
+    pval = json.loads(ppath.read_text("utf-8"))
+    pgid = next(iter(pval["two_d"]))
+    pval["two_d"][pgid].update(status="compared", verdict="Disagree")
+    ppath.unlink()
+    ppath.write_text(json.dumps(pval), "utf-8")
+    text = summary()
+    prow = next(ln for ln in text.splitlines() if f"<pfet_05v0/{pgid}>" in ln)
+    assert "not run for any geometry" not in text and prow.endswith("| Disagree |")
 
 
 def test_checks_match_the_committed_verdicts():

@@ -22,7 +22,7 @@ there.
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`).
 - **2D validation: {term}`Disagree` at the two shortest nfet cells.** Both plateaus lie below
-  SPICE at every calibrated nfet cell ({ref}`cv-agreement-validation`, [issue #77](https://github.com/mithro/gf180-tcad/issues/77)). The other
+  SPICE at every calibrated cell ({ref}`cv-agreement-validation`, [issue #77](https://github.com/mithro/gf180-tcad/issues/77)). The other
   geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
   The L = 2 µm cell's AC solve fails
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)). The L = 10 µm cell's
