@@ -74,7 +74,12 @@ def words(cell: str) -> int:
 def numbers(cell: str) -> list[str]:
     """The numbers in a cell's visible text (code spans, role targets and URLs excluded)."""
     out = []
-    for tok in _TOKEN_SPLIT.split(visible_text(cell)):
+    # A date or a date and time (2026-10-27 11:31) is one value.
+    text = re.sub(
+        r"\b\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?\b", "DATE", visible_text(cell)
+    )
+    text = re.sub(r"\b\d{1,2}:\d{2}\b", "TIME", text)
+    for tok in _TOKEN_SPLIT.split(text):
         tok = tok.strip(",.").lstrip("−+-±~≈×").rstrip("%")
         if tok and _NUMBER.fullmatch(tok):
             out.append(tok)

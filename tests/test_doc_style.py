@@ -182,6 +182,7 @@ def test_positive_control_bad_cells(cell):
         "corner envelope",
         "+308.6",
         "Same process",
+        "2026-10-27 11:31",
     ],
 )
 def test_positive_control_good_cells(cell):
