@@ -256,7 +256,10 @@ def test_positive_control_unlabelled(textbook_entry):
 def test_idealised_table_is_closed_and_documented():
     from gf180tcad.explain import idealised
 
-    assert set(idealised.FORMULAS) == {"boltzmann_fermi", "degenerate_offset", "mass_action"}
+    assert set(idealised.FORMULAS) == {
+        "abrupt_junction", "boltzmann_fermi", "built_in_potential", "degenerate_offset",
+        "depletion_width", "mass_action",
+    }  # fmt: skip
     for f in idealised.FORMULAS.values():
         doc = " ".join((f.fn.__doc__ or "").split())
         assert f.equation in doc and f"Reference: {f.reference}." in doc, f.name
@@ -737,3 +740,136 @@ def test_gate_voltage_shift_is_printed_from_the_calibration_file():
     text = (EXPLAINED / "silicon-and-carriers.md").read_text(encoding="utf-8")
     assert "{{ x_dv_fb_nfet_cal }}" in text
     assert "small shift" not in text
+
+
+# --- the 2D cell, the pn junction and the transistor's parts (task E1b-2) --------------------
+
+JUNCTION_PAGE = EXPLAINED / "pn-junction.md"
+PARTS_PAGE = EXPLAINED / "transistor-parts.md"
+_CELL = "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json"
+
+
+def test_junction_formulas_against_hand_values():
+    """The built-in potential and the depletion width of an idealised abrupt junction.
+
+    - built_in_potential: N_A = N_D = 1e17 cm⁻³, n_i = 1e10 cm⁻³, V_t = 0.025 V give
+      V_bi = 0.025·ln(1e34 / 1e20) = 0.025 × 32.23619 = 0.8059048 V.
+    - depletion_width: N_A = N_D = 1e16 cm⁻³, V_bi = 0.7 V, ε_r = 11.7,
+      ε_0 = 8.8541878128e-14 F/cm, q = 1.602176634e-19 C give
+      W = √(2 × 11.7 × 8.8541878128e-14 × 0.7 × (2e-16) / 1.602176634e-19)
+        = √(1.810504e-9) = 4.255001e-5 cm = 0.4255 µm.
+    - The committed nfet values (calibrated n_ch = 8.813323306821749e16 cm⁻³, NSD peak 1e20 cm⁻³,
+      n_i = 8.265841554853887e9 cm⁻³, V_t = 0.02569257912108585 V): V_bi = V_t·ln(8.8133e36 /
+      6.8324e19) = 0.02569258 × 39.39857 = 1.012250 V, and W = 0.121925 µm.
+    """
+    from gf180tcad.explain import idealised
+
+    assert idealised.built_in_potential(1e17, 1e17, 1e10, 0.025) == pytest.approx(0.8059048, rel=1e-6)
+    w = idealised.depletion_width(1e16, 1e16, 0.7, 11.7, 8.8541878128e-14, 1.602176634e-19)
+    assert w == pytest.approx(4.255001e-5, rel=1e-6)
+    numbers = _numbers()
+    assert numbers.value("vbi_nfet") == pytest.approx(1.012250, abs=1e-6)
+    assert numbers.value("w_dep_nfet") * numbers.REGISTRY["w_dep_nfet"].factor == pytest.approx(
+        0.121925, abs=1e-6
+    )
+    assert numbers.text("w_dep_nfet") == "0.122 µm"
+
+
+def test_abrupt_junction_profile_is_consistent():
+    """The drawn charge, field and potential of the depletion approximation: neutral overall, the
+    field peaks at the junction and vanishes at both depletion edges, and the potential rises by
+    the built-in potential across the region."""
+    import numpy as np
+
+    from gf180tcad.explain import idealised
+
+    n_a, n_d, vbi, eps, e0, q = 1e17, 1e18, 0.9, 11.7, 8.8541878128e-14, 1.602176634e-19
+    w = idealised.depletion_width(n_a, n_d, vbi, eps, e0, q)
+    x = np.linspace(-w, w, 200001)
+    p = idealised.abrupt_junction(x, n_a, n_d, vbi, eps, e0, q)
+    assert np.trapezoid(p["charge_cm3"], x) == pytest.approx(0, abs=1e-6 * n_d * w)
+    assert np.argmax(np.abs(p["field_v_per_cm"])) == np.argmin(np.abs(x))
+    assert p["field_v_per_cm"][0] == pytest.approx(0, abs=1) and p["field_v_per_cm"][-1] == pytest.approx(0, abs=1)
+    assert p["potential_v"][0] - p["potential_v"][-1] == pytest.approx(vbi, rel=1e-9)
+
+
+def test_cell_reads_the_committed_files():
+    """The 2D cell of the model from cv.meta.json, the process file and the 1D stack only."""
+    from gf180tcad.explain import model
+
+    meta = json.loads((ROOT / _CELL).read_text("utf-8"))
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))
+    stack = json.loads(
+        (ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json").read_text("utf-8")
+    )["stack"]
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={}, drawn={})
+    assert c.l_um == meta["geometry"]["l_um"] and c.w_um == meta["geometry"]["w_um"]
+    assert c.t_ox_um == meta["meshed_t_ox_nm"] / 1000
+    assert c.xj_um == proc["param"]["xj_um"]["value"]
+    assert (c.poly_um, c.body_um) == (stack["poly_um"], stack["body_um"])
+    assert c.n_sd_cm3 == meta["sd_peak_cm3"]
+    assert c.n_body_cm3 == meta["tunables"]["n_ch_cm3"]["value"]
+    assert c.contacts == tuple(meta["contacts"])
+    assert (c.sd_dopant, c.body_dopant) == ("donor", "acceptor")
+
+
+def test_cross_section_matches_cell():
+    """Every drawn part of the cross-section is the cell's dimension times its stated scale, and a
+    drawn-not-to-scale extent is named in the exaggeration statement."""
+    from gf180tcad.explain import figures, model
+
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70",
+        scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
+    )  # fmt: skip
+    ext = figures.cell_extents(c)
+    s_ox = c.scales.get("oxide", 1)
+    gx0, gx1, gy0, gy1 = ext["gate"]
+    assert gx1 - gx0 == pytest.approx(c.l_um)
+    assert gy1 - gy0 == pytest.approx(c.poly_um)
+    ox = ext["oxide"]
+    assert ox[1] - ox[0] == pytest.approx(c.l_um) and ox[3] - ox[2] == pytest.approx(c.t_ox_um * s_ox)
+    assert ox[2] == pytest.approx(gy1) and ox[3] == pytest.approx(0)
+    for side in ("source", "drain"):
+        x0, x1, y0, y1 = ext[side]
+        assert (y0, y1) == (0, pytest.approx(c.xj_um))
+        assert x1 - x0 == pytest.approx(c.drawn["source and drain width"])
+    assert ext["source"][1] == pytest.approx(gx0) and ext["drain"][0] == pytest.approx(gx1)
+    bx0, bx1, by0, by1 = ext["body"]
+    assert (bx0, bx1) == (pytest.approx(ext["source"][0]), pytest.approx(ext["drain"][1]))
+    assert by1 - by0 == pytest.approx(c.body_um)
+    statement = model.exaggeration(c.scales, c.drawn)
+    assert "Oxide thickness ×5" in statement and "source and drain width" in statement.lower()
+    for name in ("parts-cell", "junction-cell", "junction-panels"):
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark"), name
+
+
+def test_parts_and_junction_pages_print_their_numbers():
+    parts = PARTS_PAGE.read_text(encoding="utf-8")
+    for key in ("l_cell", "w_cell", "t_ox_cell", "xj_nfet", "node_count_cell", "cgdl_nfet"):
+        assert "{{ x_" + key + " }}" in parts, key
+    assert "/_generated/explained/parts-cell-light.svg" in parts
+    junction = JUNCTION_PAGE.read_text(encoding="utf-8")
+    for key in ("vbi_nfet", "w_dep_nfet", "xj_nfet", "sd_peak_nfet", "n_ch_nfet_cal"):
+        assert "{{ x_" + key + " }}" in junction, key
+    for name in ("junction-cell", "junction-panels"):
+        assert f"/_generated/explained/{name}-light.svg" in junction, name
+
+
+def test_cell_values_are_the_files():
+    numbers = _numbers()
+    meta = json.loads((ROOT / _CELL).read_text("utf-8"))
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))
+    assert numbers.value("l_cell") == meta["geometry"]["l_um"]
+    assert numbers.value("w_cell") == meta["geometry"]["w_um"]
+    assert numbers.value("t_ox_cell") == meta["meshed_t_ox_nm"]
+    assert numbers.value("node_count_cell") == meta["node_count"]
+    assert numbers.value("xj_nfet") == proc["param"]["xj_um"]["value"]
+    assert numbers.value("cgdl_nfet") == proc["param"]["cgdl_f_per_m"]["value"]
+
+
+def test_glossary_terms_of_the_junction_page():
+    text = (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
+    terms = Counter(re.findall(r"^(\S[^\n]*)\n  ", text, re.MULTILINE))
+    assert terms["pn junction"] == 1
