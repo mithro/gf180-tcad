@@ -26,7 +26,7 @@ while read -r local_ref local_sha _remote_ref remote_sha; do
   esac
   [ "$local_sha" = "$head" ] || differs=1
   # the commits this push adds: since the remote's old tip, or for a new branch since main
-  if [ "$remote_sha" != "$zero" ] && git cat-file -e "$remote_sha^{commit}"; then
+  if [ "$remote_sha" != "$zero" ] && git rev-parse -q --verify "$remote_sha^{commit}" >/dev/null; then
     base="$remote_sha"
   else
     base="$(git merge-base origin/main "$local_sha")" || base=""
@@ -39,10 +39,13 @@ while read -r local_ref local_sha _remote_ref remote_sha; do
 done
 [ "$pushing" = 1 ] || exit 0
 
-# Several branches at once, not only the checked-out one: the signature of push.default=matching,
-# which pushes every local branch that also exists on the remote. All worktrees of a clone share
-# their branches, so that pushes other sessions' unfinished work (and starts CI on it).
-if [ "$branches" -gt 1 ] && [ "${#foreign[@]}" -gt 0 ]; then
+# push.default=matching pushes every local branch that also exists on the remote, and all worktrees
+# of a clone share their branches, so a bare `git push` pushes other sessions' unfinished work (and
+# starts CI on it). Refused: a branch other than the checked-out one when push.default is matching
+# (git lists only the refs that are ahead, so that may be the only line), and several branches at
+# once that are not all the checked-out one, whatever the setting.
+push_default="$(git config --get push.default)" || push_default=""
+if [ "${#foreign[@]}" -gt 0 ] && { [ "$branches" -gt 1 ] || [ "$push_default" = matching ]; }; then
   {
     echo "pre-push: refused: this push would also push branches other than the checked-out one:"
     printf '  %s\n' "${foreign[@]}"

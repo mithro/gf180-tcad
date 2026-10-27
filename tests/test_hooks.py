@@ -139,6 +139,16 @@ def test_hook_refuses_a_matching_push_of_other_branches(tmp_path):
     assert "other" in r.stderr and "push.default simple" in r.stderr
 
 
+def test_hook_refuses_one_other_branch_under_push_default_matching(tmp_path):
+    """git lists only the refs that are ahead: a matching push may show just the other branch."""
+    repo = _repo(tmp_path, "true")
+    _git(repo, "config", "push.default", "matching")
+    head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    r = _hook(repo, f"refs/heads/other {head} refs/heads/other {'1' * 40}\n")
+    assert r.returncode == 1
+    assert "other" in r.stderr and "push.default simple" in r.stderr
+
+
 def test_hook_allows_one_explicit_other_branch_and_tags(tmp_path):
     repo = _repo(tmp_path, "true")
     head = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -196,3 +206,51 @@ def test_make_pre_push_runs_make_lint_first():
     lines = r.stdout.splitlines()
     assert lines[:2] == ["uv run --locked ruff check", "uv run --locked ruff format --check"]
     assert any("pytest" in ln for ln in lines[2:]), lines
+
+
+def _hooked_clone(tmp_path: Path) -> tuple[Path, Path]:
+    """A clone with the real hook installed and a bare remote holding branches main and a."""
+    repo = _repo(tmp_path)
+    hooks = repo / "tools" / "git-hooks"
+    hooks.mkdir(parents=True)
+    shutil.copy2(HOOK, hooks / "pre-push")
+    shutil.copy2(INSTALL, repo / "tools" / "install-hooks")
+    _git(repo, "add", "tools")
+    _git(repo, "commit", "-q", "-m", "hooks")
+    _git(repo, "branch", "-M", "main")
+    bare = tmp_path / "remote.git"
+    _git(tmp_path, "init", "-q", "--bare", str(bare))
+    _git(repo, "remote", "add", "origin", str(bare))
+    _git(repo, "push", "-q", "origin", "main", "main:a")
+    assert _install(repo).returncode == 0
+    _git(repo, "fetch", "-q", "origin")
+    return repo, bare
+
+
+def test_real_push_from_a_worktree_runs_the_hook(tmp_path):
+    repo, bare = _hooked_clone(tmp_path)
+    wt = tmp_path / "wt"
+    _git(repo, "worktree", "add", "-q", "-b", "b", str(wt), "main")
+    _commit(wt, "src/m.py")
+    _git(wt, "push", "-q", "origin", "HEAD")
+    head = _git(wt, "rev-parse", "HEAD").stdout.strip()
+    assert _git(bare, "rev-parse", "refs/heads/b").stdout.strip() == head
+    assert (wt.parent / "docs-ran").exists()  # src/ changed: make pre-push-docs ran too
+
+
+def test_real_matching_push_of_another_worktree_s_branch_is_refused(tmp_path):
+    """Session A's branch a is ahead; session B, up to date, runs a bare matching `git push`."""
+    repo, bare = _hooked_clone(tmp_path)
+    _git(repo, "config", "push.default", "matching")
+    wt_a, wt_b = tmp_path / "wt-a", tmp_path / "wt-b"
+    _git(repo, "worktree", "add", "-q", str(wt_a), "a")
+    _git(repo, "worktree", "add", "-q", "-b", "b", str(wt_b), "main")
+    _commit(wt_a, "tests/t.py")
+    before = _git(bare, "rev-parse", "refs/heads/a").stdout.strip()
+    r = subprocess.run(
+        ["git", "push", "origin"],
+        cwd=wt_b, env=_env(), capture_output=True, text=True, check=False,
+    )  # fmt: skip
+    assert r.returncode != 0
+    assert "refused" in r.stderr and "  a" in r.stderr
+    assert _git(bare, "rev-parse", "refs/heads/a").stdout.strip() == before
