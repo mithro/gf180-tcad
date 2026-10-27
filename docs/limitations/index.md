@@ -19,15 +19,20 @@ there.
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`). The 2D validation of the calibrated stack
-  is in progress but not committed: no calibrated 2D results are committed yet
-  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and are open
-  correctness problems: the L = 2 µm cell's AC solve
+  is under way: the first calibrated 2D cell, the nfet at {term}`Lmin`, is {term}`Disagree` (plateaus 8.8 % and
+  15.6 % below SPICE, depletion crossing −240 mV; {ref}`cv-agreement-validation`), and the other
+  cells follow one 16 GiB {term}`job` at a time; the validation file does not yet list the 2D
+  result ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). Two 2D solves fail and
+  are open correctness problems: the L = 2 µm cell's AC solve
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)) and the L = 10 µm cell's
   equilibrium solve ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)); see
   {doc}`moscap2d`.
 - **No {term}`corner` bounds yet.** The design spec asks for the typical value, the lower and upper
   bound across the {term}`PDK`'s SPICE corners, and a Monte Carlo spread of every physical input
   ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)); none is computed yet.
+- **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
+  `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
+  read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
 - **TCAD {term}`provenance` was restamped, not regenerated.** The 2D results' `provenance.json`
   names the current generator, not the one that made them (Task 12), and every TCAD tree was
   restamped once more to the per-tree {term}`generator_sha256` of [issue #34](https://github.com/mithro/gf180-tcad/issues/34), without a rerun.

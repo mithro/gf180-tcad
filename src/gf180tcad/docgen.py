@@ -544,9 +544,9 @@ class _Device:
             return self.val["one_d"][gid], f"results/tcad/validation/{name}.json"
         raise KeyError(f"{name} {gid}: in neither the calibration nor the validation file")
 
-    def two_d(self, gid: str) -> Path | None:
-        """The committed 2D start-parameter job of one geometry, if there is one."""
-        job = self.root / "moscap2d" / self.device.name / "start" / gid
+    def two_d(self, gid: str, params: str = "start") -> Path | None:
+        """The committed 2D job of one geometry at ``params``, if there is one."""
+        job = self.root / "moscap2d" / self.device.name / params / gid
         return job if (job / "cv.meta.json").is_file() else None
 
 
@@ -772,10 +772,21 @@ def _regions_line(rec: dict) -> str:
     )
 
 
+# The 2D status of a geometry whose calibrated 2D cell is committed but which the validation
+# file does not compare yet (it was written before the cell; issue #35).
+_TWO_D_PENDING = "committed, not yet compared"
+
+
 def _two_d_status(d: _Device, gid: str) -> str:
+    """The calibrated 2D validation of ``gid``: the verdict, ``_TWO_D_PENDING`` or the
+    validation file's status ("not run")."""
     entry = d.val["two_d"].get(gid)
     if entry is None:
         raise KeyError(f"{d.device.name} validation file has no two_d entry for {gid}")
+    if entry["status"] == "compared":
+        return entry["verdict"]
+    if d.two_d(gid, "calibrated") is not None:
+        return _TWO_D_PENDING
     return entry["status"]
 
 
@@ -844,11 +855,29 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
     (ddir / f"{gid}_split.svg").write_bytes(_split_svg(spice_root, d, g))
     job = d.two_d(gid)
     status = _two_d_status(d, gid)
+    pending = (
+        "; the calibrated 2D cell is committed, but the validation file "
+        f"({{repo}}`results/tcad/validation/{name}.json`) does not compare it yet; its comparison "
+        "is in {ref}`the validation section <cv-agreement-validation>`"
+        if status == _TWO_D_PENDING
+        else ""
+    )
     lines.append(
-        f"Calibrated 2D validation: {status} ({{doc}}`{CV_DOC}`, "
+        f"Calibrated 2D validation: {status}{pending} ({{doc}}`{CV_DOC}`, "
         "[issue #35](https://github.com/mithro/gf180-tcad/issues/35))."
     )
     lines.append("")
+    cal_job = d.two_d(gid, "calibrated")
+    if cal_job is not None:
+        cal_meta = _read_json(cal_job / "cv.meta.json")
+        rel = f"results/tcad/moscap2d/{name}/calibrated/{gid}"
+        lines += [
+            (
+                f"The committed 2D cell at the calibrated values ({{repo}}`{rel}`): "
+                f"{cal_meta['node_count']} nodes, mesh sha256 `{cal_meta['mesh_sha256']}`."
+            ),
+            "",
+        ]
     if job is None:
         lines += [
             (
@@ -875,7 +904,7 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
         ]
         (ddir / f"{gid}_2d.svg").write_bytes(_two_d_svg(d, job))
     lines += ["### Mesh picture", "", _NO_MESH, ""]
-    if job is None:
+    if job is None and cal_job is None:
         lines += ["No 2D result exists for this geometry, so there is no mesh either.", ""]
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
 
@@ -1107,7 +1136,16 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
                 f"{g.role} | {rec['verdict']} | {_two_d_status(d, gid)} |"
             )
     statuses = {_two_d_status(d, geometry_id(g)) for d in devices for g in d.device.geometries}
-    if statuses == {"not run"}:
+    if _TWO_D_PENDING in statuses:
+        two_d_text = (
+            "The 2D column is the calibrated 2D validation of each geometry, read from "
+            "{repo}`results/tcad/validation`, or "
+            f'"{_TWO_D_PENDING}" where a calibrated 2D cell is committed under '
+            "{repo}`results/tcad/moscap2d` but the validation file does not compare it yet; "
+            "its comparison is in {ref}`the validation section <cv-agreement-validation>` "
+            "([issue #35](https://github.com/mithro/gf180-tcad/issues/35))."
+        )
+    elif statuses == {"not run"}:
         two_d_text = (
             "The 2D column is the calibrated 2D validation: not run for any geometry, since no "
             "calibrated 2D result is committed ([issue "

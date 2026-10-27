@@ -19,8 +19,7 @@ heavily the silicon under it is doped, and a small offset of the voltage at whic
 turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are frozen, and the TCAD is compared with SPICE at gate lengths it never
-saw. For the nfet the result is good: in 1D the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check is in progress and not
-committed yet, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
+saw. For the nfet the result is good: in 1D the frozen stack agrees with SPICE at every geometry, the three it was fitted to and the three it never saw (the 2D check has its first result, a {term}`Disagree` at {term}`Lmin`, below). For the pfet it is not: one stack cannot follow the SPICE model's pfet curves, whose accumulation-to-depletion edge moves by more than half a volt between the longest and the shortest gate, so the pfet is published as {term}`Disagree` with the reasons below.
 
 ## What is fitted
 
@@ -255,17 +254,33 @@ Lmin with `spice-fit`.
   nfet: {term}`Agree` at all three. pfet: {term}`Agree` at L = 1 µm and {term}`Same process` at
   L = 0.7 µm and 1.6/0.7, both from the depletion-side crossing (+124 and +132 mV, inside the
   corner window) and, at 1.6/0.7, the accumulation plateau (6.12 %).
-- **2D: not committed yet** (in progress, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The 2D check uses the calibrated 2D results,
-  `python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID
+- **2D: under way, first cell nfet Lmin, {term}`Disagree`.** The 2D check uses the calibrated 2D
+  results, `python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometry GID
   --out results/tcad/moscap2d` (the same `moscap2d.simulate` with source and drain, QS, on the
-  selected 2D mesh and the SPICE grid; one {term}`job` at a time, 16 GiB each). None is committed: the
-  {repo}`results/tcad/moscap2d` tree holds only start-parameter results, and a 2D job takes
-  hours, the L = 2 µm cell has no AC and the L = 10 µm cell does not solve in 2D
-  ({doc}`/limitations/moscap2d`). The validation files list every geometry under `two_d` with
-  status "not run"; rerunning `python -m gf180tcad.calibrate validate` after the 2D jobs fills
-  them in; the remaining work is [issue #35](https://github.com/mithro/gf180-tcad/issues/35) (L = 2 µm needs
-  `--method qs` then `--method combine-qs`; L = 10 µm does not solve in 2D). This deviates from
-  the plan in one respect: the plan has
+  selected 2D mesh and the SPICE grid; one {term}`job` at a time, 16 GiB each, hours each). The
+  first one is committed,
+  {repo}`results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60 <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`
+  (its run: {ref}`moscap2d-calibrated`). It is compared with the TT ngspice Cgg by the
+  function {py:func}`~gf180tcad.calibrate.cv.validate_cv` uses (its 2D part, run on the host).
+  The validation file is regenerated when the host has room for the 2 GiB validation job beside
+  the 2D jobs. The frozen stack in 2D, with its own overlap and fringe, does **not** agree:
+
+  | Check | Calibrated 2D | Calibrated verdict | Start 2D | Start verdict |
+  |---|---|---|---|---|
+  | Accumulation plateau, worst point below SPICE (%) | 8.8 | {term}`Same process` | 4.2 | {term}`Agree` |
+  | Inversion plateau, worst point below SPICE (%) | 15.6 | Same process | 11.4 | Same process |
+  | Depletion crossing shift (mV) | −240 | Disagree | −268 | Disagree |
+  | Inversion crossing shift (mV) | −49 | Agree | +127 | Disagree |
+
+  So the calibration moves the 2D inversion crossing onto SPICE but the plateaus away from it.
+  The calibrated oxide (16.05 nm against the card's 15.2 nm) was fitted in 1D, where the BSIM4
+  overlap, fringe and gate-bulk terms are added to the intrinsic C; presumably (not yet
+  measured) the 2D cell's own overlap and fringe are smaller than those terms. The 2D Cgg is
+  13.88 fF at −5 V and 14.12 fF at +5 V, 1.7 % apart, while the SPICE plateau levels are 14.33
+  and 16.70 fF, 16.5 % apart: most of the gap is on the inversion side. This is one geometry;
+  the other 2D cells (L = 0.7, 1 and 2 µm, W1.6/L0.7) follow, one job at a time
+  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`) and stays "not run".
+  This deviates from the plan in one respect: the plan has
   {py:func}`~gf180tcad.calibrate.cv.validate_cv` call `moscap2d.simulate` itself; it reads the
   committed calibrated 2D results instead, so the multi-hour 2D sweeps run once, through the
   resumable 2D job, and serve both the result tree and the validation.

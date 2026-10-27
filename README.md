@@ -63,8 +63,8 @@ not expected to match yet
 calibrated 1D [jobs](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-job) are cross-checked byte for byte on a
 [GitHub-hosted runner](https://docs.github.com/en/actions/concepts/runners/github-hosted-runners)
 ([TCAD cross-check](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-tcad)).
-The 2D validation of the calibrated stack is in progress
-([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+The 2D validation of the calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): its first
+calibrated 2D cell, the nfet at the minimum length, is committed and disagrees with SPICE.
 
 Planned, not built yet:
 [DEVSIM](https://devsim.org/) and [Charon](https://charon.sandia.gov/) run in parallel on every

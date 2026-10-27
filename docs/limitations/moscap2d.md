@@ -297,13 +297,34 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 
 **Output cache.** Instead of regenerating it, a mesh is to be fetched from the shared
 {ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
-None of the four committed 2D jobs' meshes is in the cache (nor on any disk), so none can be
+None of the four committed start-value 2D jobs' meshes is in the cache (nor on any disk), so none can be
 fetched yet: `tools/output-cache status` reports all four as absent. The first cached mesh
 belongs to the calibrated {term}`Lmin` nfet cell of
 [issue #35](https://github.com/mithro/gf180-tcad/issues/35). Once a mesh is in the cache,
 `tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh` writes it
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
 committed `cv.meta.json` stays the truth.
+
+(moscap2d-calibrated)=
+
+## The calibrated 2D cells
+
+The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed
+cells with `--params calibrated`, one 16 GiB {term}`job` at a time. Done so far:
+
+| Cell | Nodes | QS sweep (min) | AC sweep (min) | Job total (min) | Peak memory (GiB) | Attempts |
+|---|---|---|---|---|---|---|
+| nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 | 7.8 | 1 |
+
+The sweep times are the last `elapsed` of each sweep's progress log (QS 201 points, AC 21
+points, each including its own meshing); the job total is the wall time of the host command.
+The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
+The run record, with the exit code and the image, is on {ref}`tcad-provenance`. The job had no
+round-off acceptance and no extended-precision fallback; its meshed oxide is 16.05 nm, the
+calibrated value. Its `mesh.msh` is not committed ({ref}`moscap2d-meshes`); it is in the
+output cache ({doc}`/reproduce/output-cache`) under its `mesh_sha256`. The `--resume` scratch
+directory of these jobs is outside the checkout, because the {term}`sandbox` refuses one
+inside it ([issue #55](https://github.com/mithro/gf180-tcad/issues/55)).
 
 (moscap2d-l10)=
 
@@ -340,4 +361,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   agreement criterion ({ref}`mesh-convergence-2d`).
 - **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
   ({ref}`moscap2d-l2`).
+- **Calibrated 2D results so far only at the nfet Lmin** ({ref}`moscap2d-calibrated`).
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).

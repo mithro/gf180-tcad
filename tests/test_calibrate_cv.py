@@ -244,8 +244,15 @@ def test_validate_requires_frozen_hash(fit, tmp_path):
     frozen = cv.load_frozen(NFET, tmp_path)
     assert frozen.values == res.values and frozen.param_sha256 == res.param_sha256
     targets = synthetic_targets(NFET, TRUTH, DEVICES[NFET].geometries)
+    # no 2D results: the committed calibrated 2D tree belongs to the committed calibration
+    m2d = tmp_path / "moscap2d"
     out = cv.validate_cv(
-        NFET, frozen, simulate=Recorder(), targets=targets, calibration_root=tmp_path
+        NFET,
+        frozen,
+        simulate=Recorder(),
+        targets=targets,
+        calibration_root=tmp_path,
+        moscap2d_root=m2d,
     )
     assert out.param_sha256 == res.param_sha256
     assert set(out.one_d) == {geometry_id(g) for g in val_geometries()}
@@ -254,13 +261,23 @@ def test_validate_requires_frozen_hash(fit, tmp_path):
     edited = dataclasses.replace(frozen, values={**frozen.values, "dv_fb_v": 0.07})
     with pytest.raises(cv.NotFrozen):
         cv.validate_cv(
-            NFET, edited, simulate=Recorder(), targets=targets, calibration_root=tmp_path
+            NFET,
+            edited,
+            simulate=Recorder(),
+            targets=targets,
+            calibration_root=tmp_path,
+            moscap2d_root=m2d,
         )
     # nor does a calibration file edited after the fit
     calibration.write(tmp_path / f"{NFET}.json", NFET, {**frozen.values, "dv_fb_v": 0.07})
     with pytest.raises(cv.NotFrozen):
         cv.validate_cv(
-            NFET, frozen, simulate=Recorder(), targets=targets, calibration_root=tmp_path
+            NFET,
+            frozen,
+            simulate=Recorder(),
+            targets=targets,
+            calibration_root=tmp_path,
+            moscap2d_root=m2d,
         )
     with pytest.raises(cv.NotFrozen):
         cv.load_frozen(NFET, tmp_path)
