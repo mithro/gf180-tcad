@@ -466,6 +466,10 @@ manifest digest
   ([OCI image manifest](https://github.com/opencontainers/image-spec/blob/main/manifest.md)),
   recorded in {repo}`docker/IMAGE`; it selects the image to run. See {ref}`image-pinning`.
 
+render manifest
+  The file `<render>.render.json` beside a 3D render. It names the source, value and scale of
+  every number the render draws. See {ref}`render-manifest`.
+
 config digest
 image ID
   The digest of the image configuration

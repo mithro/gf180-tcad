@@ -2,19 +2,19 @@
 
 # The render manifest
 
-Each 3D render has a render manifest beside its image, `<render>.render.json`. For every number
+Each 3D render has a {term}`render manifest` beside its image, `<render>.render.json`. For every number
 the render draws, it names the source file, the place inside it, the unit, the value and the scale.
 The {repo}`design spec, section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`
 sets this rule.
 
-This page lists the manifest's keys, the selector kinds and what the check rejects.
+This page lists the file's keys, the selector kinds and what the check rejects.
 The module {py:mod}`gf180tcad.render.manifest` reads and checks the file. The test {test}`tests/test_renders.py::test_every_entry_rereads_its_source`
-re-reads every entry of every committed manifest from its source.
-The synthetic manifest {repo}`tests/fixtures/renders/r-test.render.json` shows each kind of entry.
+re-reads every entry of every committed render manifest from its source.
+The synthetic example {repo}`tests/fixtures/renders/r-test.render.json` shows each kind of entry.
 
 ## Top-level keys
 
-Key is the JSON key, Holds what its value is, Required whether every manifest has it.
+Key is the JSON key, Holds what its value is, Required whether every render manifest has it.
 
 | Key | Holds | Required |
 |---|---|---|
@@ -47,7 +47,7 @@ Key is the JSON key inside an entry, Holds what its value is.
 
 An entry with the role `geometry` or `axis` always has a `scale`. An entry whose scale is not 1
 always has a `label`. Its exaggeration statement, such as "oxide thickness ×40, not to scale", is
-in the manifest's `exaggeration` list. The canonical JSON is compact, with sorted keys and
+in the file's `exaggeration` list. The canonical JSON is compact, with sorted keys and
 shortest round-trip floats ({py:func}`gf180tcad.quantity.canonical_json`).
 
 ## Selector kinds
@@ -58,7 +58,7 @@ Kind is the selector's one key, Points at what its value names, Reads what comes
 |---|---|---|
 | `json` | a key path of key names and list indices | the value at that path |
 | `csv` | column names and one row rule | one column or several, over all rows or one row |
-| `npz` | the name of one array of a numpy archive | that array |
+| `npz` | the name of one array of an `.npz` archive | that array |
 | `toml` | a key path of table and key names | the value at that path |
 
 A CSV row rule is `rows: "all"`, `where` with one column and the value it equals exactly, or
@@ -67,7 +67,7 @@ A CSV row rule is `rows: "all"`, `where` with one column and the value it equals
 ## Derived entries
 
 A derived entry names one function of {py:mod}`gf180tcad.derive`. Each function's page entry
-gives its equation and its reference. The functions use numpy only and solve nothing, so a
+gives its equation and its reference. The functions use {{ numpy }} only and solve nothing, so a
 render never recomputes what a simulation computed.
 
 ## Display-only values
