@@ -14,7 +14,7 @@ there.
   {ref}`below <limitations-moscap>`.
 - **The {term}`C–V` calibration is 1D only, and the pfet disagrees.** The 1D MOS capacitor is calibrated
   against the SPICE {term}`Cgg`–Vg
-  ({repo}`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
+  ({repo}`calibration plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
   {doc}`/comparison/cv-agreement`). In 1D the nfet is {term}`Agree` at every geometry,
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
@@ -28,7 +28,7 @@ there.
   Only the two calibrated 1D jobs are rerun and compared byte for byte by the cross-check; see
   {ref}`tcad-provenance`.
 - **`make reproduce` does not yet reproduce the 2D TCAD files, and has not been run end to
-  end.** The 2D job files predate the current job format and the L = 2 µm {term}`sweeps <sweep>` were resumed, so a
+  end.** The 2D job files lack entries the current job writes and the L = 2 µm {term}`sweeps <sweep>` are resumed ones, so a
   fresh run differs from them ({ref}`moscap2d-reproduce`). Only the calibrated 1D
   {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
   `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
@@ -38,7 +38,7 @@ there.
   {doc}`plugin-history`.
 - **Two TCAD stacks.** The final results come from the {term}`dev-HEAD TCAD image`
   (each project at its development HEAD, pinned by commit); the
-  {term}`stable TCAD image` (PyPI releases) is the baseline for how things used to work and for
+  {term}`stable TCAD image` (PyPI releases) is the release baseline and is used for
   debugging. A dev HEAD can break what the release did; such drift is reported, never hidden
   by a looser {term}`tolerance`. See {ref}`tcad-dev-image`.
 - **2D results are on the stable image for now.** The 1D results are made on the dev-HEAD
@@ -47,7 +47,7 @@ there.
   cells differently. That rerun is planned before the {term}`Phase 2` exit. See {ref}`tcad-results-image`.
 - **Two dev-HEAD packages are forks.** The dev-HEAD image runs the full flow. To get there,
   {{ meshwell }} and the {{ gf180mcu_gdsfactory }} come from mithro forks of their upstream
-  HEADs ({{ meshwell_fork }}, {{ gf180mcu_fork }}), and one test of {{ gplugins_fork }} was
+  HEADs ({{ meshwell_fork }}, {{ gf180mcu_fork }}), and one test of {{ gplugins_fork }} is
   replaced by a mesh-independent check
   ([mithro/gplugins#10](https://github.com/mithro/gplugins/pull/10)). Each fork adds a small fix for {{ gmsh }} 5 or {{ gdsfactory }} 10
   that upstream does not have yet. These fixes are not upstream, and nothing is sent upstream.
@@ -66,16 +66,16 @@ there.
 - **{{ ngspice }} and {{ Xyce }} disagree by 0.6 % on the nfet in subthreshold.** The
   nfet {term}`card <model card>` declares BSIM4 `version=4.5`; ngspice runs it with BSIM4 4.5.0,
   Xyce's oldest BSIM4 is 4.6.1. See {doc}`engine-cross-check`.
-- **Cross-host identity has limits.** Byte-identical results are guaranteed
-  only on {term}`x86-64-v2` or newer hosts, and the full reference is verified on an Intel Xeon
-  Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
-  ({ref}`cross-host-determinism`). The only pass on an AMD EPYC 9V45 runner was an earlier
-  8-job subset, before the {{ numpy }} fix described there.
+- **The same bytes on another computer: only on some processors.** Byte-identical results are
+  guaranteed only on {term}`x86-64-v2` or newer hosts, and the full reference is verified on an
+  Intel Xeon Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
+  ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
+  and that run did not have the {{ numpy }} fix described there.
 - **{term}`Mesh convergence <mesh convergence>` of the triangle mesh is looser in 2D.** The 1D
   {term}`MOSCAP` mesh changes by less than 1e-4 under {term}`uniform refinement`; the 2D mesh is
   selected at the 1 % criterion and carries a discretisation bias of a few 0.1 %. See
   {doc}`mesh-convergence` and {doc}`moscap2d`, which also explains the C/Cox > 1 artefact of the
-  research spike ({{ meshwell }} rounded the oxide to 1 nm).
+  {{ meshwell }} default mesh (it rounds the oxide to 1 nm).
 - **Not everything the design spec asks for is built yet.** See
   {ref}`limitations-spec-deviations` below.
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
@@ -137,8 +137,9 @@ values are not read as more physical than they are.
 - **The ΔV ≤ 50 mV crossing {term}`tolerance` is a proposal.** No published standard exists for
   it ({ref}`cv-agreement-metric`).
 - **{repo}`results/plugin-history` is not cross-checked.** The {term}`manifest` lists it and two
-  local runs give identical files, but it is not part of the GitHub-hosted cross-host check: its
-  2023 stack has no cross-host bit-identity guarantee ({doc}`plugin-history`).
+  local runs give identical files, but it is not part of the check on another computer (a
+  GitHub-hosted runner): its 2023 stack has no guarantee of the same bytes on another computer
+  ({doc}`plugin-history`).
 
 (limitations-spec-deviations)=
 
@@ -154,7 +155,7 @@ Recorded and accepted for the end of {term}`Phases 0 and 1`. Each is a
   ({ref}`planned secondary reference <secondary-reference>`).
 - **The metric set is narrower than the {term}`tolerance` table.** Not yet extracted:
   {term}`gm` and {term}`gds` at Vgs = {term}`Vt` + 150 mV, gm/Id, Cgd at Vds = 5 V,
-  {term}`Cgg` in depletion, effective {term}`Rsd`, Isub, {term}`Vt roll-off` and the RMS error
+  {term}`Cgg` in depletion, effective {term}`Rsd`, Isub, {term}`Vt roll-off` and the root-mean-square (RMS) error
   of log10(Id). Defined differently: the {term}`body effect` uses the
   {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
   in {ref}`not yet extracted, or defined differently <metrics-not-yet-extracted>`.
