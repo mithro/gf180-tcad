@@ -338,12 +338,23 @@ A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh 
 grid ({ref}`moscap2d-calibrated`). The committed cells are the nfet at W10/L0.6 and W10/L0.7;
 the other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
-| Check | W10/L0.6 value | W10/L0.6 verdict | W10/L0.7 value | W10/L0.7 verdict |
-|---|---|---|---|---|
-| Accumulation plateau, worst difference (%) | 8.8 | {term}`Same process` | 7.6 | Same process |
-| Inversion plateau, worst difference (%) | 15.6 | Same process | 13.8 | Same process |
-| Depletion crossing shift (mV) | −240 | Disagree | −202 | Disagree |
-| Inversion crossing shift (mV) | −49 | {term}`Agree` | −41 | Agree |
+A plateau row is its worst difference from SPICE. At W10/L0.6:
+
+| Check | 2D | Verdict |
+|---|---|---|
+| Accumulation plateau (%) | 8.8 | {term}`Same process` |
+| Inversion plateau (%) | 15.6 | Same process |
+| Depletion crossing shift (mV) | −240 | Disagree |
+| Inversion crossing shift (mV) | −49 | {term}`Agree` |
+
+At W10/L0.7:
+
+| Check | 2D | Verdict |
+|---|---|---|
+| Accumulation plateau (%) | 7.6 | Same process |
+| Inversion plateau (%) | 13.8 | Same process |
+| Depletion crossing shift (mV) | −202 | Disagree |
+| Inversion crossing shift (mV) | −41 | Agree |
 
 The 2D Cgg lies below SPICE on both plateaus, by more on the inversion side. At W10/L0.6 it
 is 14.12 fF at +5 V
