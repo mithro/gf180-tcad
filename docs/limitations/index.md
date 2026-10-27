@@ -18,12 +18,11 @@ there.
   {doc}`/comparison/cv-agreement`). In 1D the nfet is {term}`Agree` at every geometry,
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
-  ({ref}`mismatch analysis <cv-agreement-mismatch>`). The 2D validation of the calibrated stack
-  is under way: the first calibrated 2D cell, the nfet at {term}`Lmin`, is {term}`Disagree` (plateaus 8.8 % and
-  15.6 % below SPICE, depletion crossing −240 mV; {ref}`cv-agreement-validation`), and the other
-  cells follow one 16 GiB {term}`job` at a time, hours each. The L = 10 µm cell does not solve in 2D
-  ({doc}`moscap2d`), and the validation file does not yet list the 2D result;
-  [issue #35](https://github.com/mithro/gf180-tcad/issues/35).
+  ({ref}`mismatch analysis <cv-agreement-mismatch>`).
+- **The 2D validation is {term}`Disagree` at both calibrated nfet cells.** At W10/L0.6 and W10/L0.7
+  both plateaus lie below SPICE, and the depletion crossing is off by more than 200 mV
+  ({ref}`cv-agreement-validation`, [issue #77](https://github.com/mithro/gf180-tcad/issues/77)). The other geometries are "not run"
+  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)); the L = 10 µm cell does not solve in 2D ({doc}`moscap2d`).
 - **`make tcad-start` cannot run its split 2D jobs as written.** Their `--resume` directory,
   `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
   read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).

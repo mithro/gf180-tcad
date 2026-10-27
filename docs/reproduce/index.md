@@ -296,6 +296,7 @@ job. The wall time is that command's; the peak memory is the container's {term}`
 | Device | Geometry | Method | Wall time (s) | Peak memory (GiB) | Exit code | Finished (ACDT) |
 |---|---|---|---|---|---|---|
 | `nfet_05v0` | `w10p0_l0p60` | both | 11338 | 7.82 | 0 | 2026-10-27 11:31 |
+| `nfet_05v0` | `w10p0_l0p70` | both | 12584 | 5.93 | 0 | 2026-10-27 15:01 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 
