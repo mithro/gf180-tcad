@@ -128,9 +128,10 @@ per level:
 | estimated QS time, nfet / pfet | 0.75 / 0.67 h | 1.75 / 1.56 h | 4.1 / 3.65 h | 9.7 / 8.7 h |
 
 The times come from the first 2D study's measured cost: s per bias = 3.25e-6 · nodes^1.278,
-times the 201 biases, times 1.4 for the equilibrium set-up and the retried points. Level 3 would
-take over 8 hours per {term}`job`. It is also as large as the 2D cell at L = 10 µm, whose equilibrium
-{term}`drift-diffusion` solve fails in {{ DEVSIM }}'s direct solver ({ref}`moscap2d-l10`). So
+times the 201 biases, times 1.4 for the equilibrium set-up and the retried points. Level 3 has
+not been attempted: its mesh is as large as the 2D cell at L = 10 µm, whose equilibrium
+{term}`drift-diffusion` solve fails in {{ DEVSIM }}'s direct solver ({ref}`moscap2d-l10`;
+[issue #58](https://github.com/mithro/gf180-tcad/issues/58)). So
 levels 0 and 1 are the candidates, each with a finer neighbour, and level 2 is only the finer
 neighbour of level 1. The levels 0–2 give one triple, and so one observed order, which the
 report gives with its oscillating and noise-floor biases.
