@@ -913,38 +913,77 @@ def _check_frozen(device: str, frozen: CalibrationResult, root: Path) -> Path:
     return path
 
 
+@dataclass(frozen=True)
+class Cv2D:
+    """One calibrated 2D C-V result of one geometry, as :func:`validate_cv` compares it: gate bias
+    (V, file order), total Cgg (fF), the ``param_sha256`` of the values it was computed with, and
+    ``source``, where it came from (for messages)."""
+
+    vg: tuple[float, ...]
+    cgg_total: tuple[float, ...]
+    param_sha256: str | None
+    source: str
+
+
+class No2DResult(LookupError):
+    """There is no calibrated 2D result for a geometry; the message is the reason recorded."""
+
+
+# The 2D source of :func:`validate_cv`: the calibrated 2D result of ``(device, geometry)``, or
+# :class:`No2DResult`.
+Simulate2D = Callable[[str, Geometry], Cv2D]
+
+
+def devsim_2d_results(root: Path | None = None) -> Simulate2D:
+    """The committed calibrated DEVSIM 2D results under ``root`` (default
+    :repo:`results/tcad/moscap2d`): ``<device>/calibrated/<gid>/cv.csv`` and its ``cv.meta.json``,
+    as ``python -m gf180tcad.tcad moscap --dim 2 --params calibrated`` writes them."""
+    root = Path(root) if root is not None else MOSCAP2D_ROOT
+
+    def simulate_2d(device: str, g: Geometry) -> Cv2D:
+        from gf180tcad.tcad import moscap2d
+
+        gid = geometry_id(g)
+        job = moscap2d.job_dir(root, device, "calibrated", g)
+        if not (job / moscap2d.CV_CSV).is_file():
+            raise No2DResult(
+                f"no calibrated 2D result {moscap2d.CV_CSV} in "
+                f"results/tcad/moscap2d/{device}/calibrated/{gid}"
+            )
+        cols, _ = io.read_csv(job / moscap2d.CV_CSV)
+        meta = json.loads((job / moscap2d.META_JSON).read_bytes())
+        return Cv2D(
+            vg=tuple(float(v) for v in cols["vg"]),
+            cgg_total=tuple(float(c) for c in cols["cgg_total"]),
+            param_sha256=meta.get("param_sha256"),
+            source=str(job),
+        )
+
+    return simulate_2d
+
+
 def _two_d(
     device: str,
     frozen: CalibrationResult,
     targets: Mapping[str, Target],
     cox: Mapping,
-    root: Path,
+    simulate_2d: Simulate2D,
 ) -> dict[str, dict]:
-    """The 2D checks from the committed calibrated 2D results (``moscap2d/<device>/calibrated``)."""
-    from gf180tcad.tcad import moscap2d
-
+    """The 2D checks from the calibrated 2D results ``simulate_2d`` gives."""
     proc = process.load(device)
     out = {}
     for g in DEVICES[device].geometries:
         gid = geometry_id(g)
-        job = moscap2d.job_dir(root, device, "calibrated", g)
-        if not (job / moscap2d.CV_CSV).is_file():
-            out[gid] = {
-                "causes": causes(device, g),
-                "reason": f"no calibrated 2D result {moscap2d.CV_CSV} in "
-                f"results/tcad/moscap2d/{device}/calibrated/{gid}",
-                "status": "not run",
-            }
+        try:
+            res = simulate_2d(device, g)
+        except No2DResult as e:
+            out[gid] = {"causes": causes(device, g), "reason": str(e), "status": "not run"}
             continue
-        cols, _ = io.read_csv(job / moscap2d.CV_CSV)
-        meta = json.loads((job / moscap2d.META_JSON).read_bytes())
-        if meta.get("param_sha256") != frozen.param_sha256:
-            raise NotFrozen(f"{job}: not computed with the frozen calibration")
-        vg = tuple(float(v) for v in cols["vg"])
-        total = tuple(float(c) for c in cols["cgg_total"])
+        if res.param_sha256 != frozen.param_sha256:
+            raise NotFrozen(f"{res.source}: not computed with the frozen calibration")
         comp, _ = compare(
-            targets[gid], vg, total, _polarity(proc), spec_area_um2=g.w_um * g.l_um,
-            parasitic_ff=None, cox=cox,
+            targets[gid], res.vg, res.cgg_total, _polarity(proc),
+            spec_area_um2=g.w_um * g.l_um, parasitic_ff=None, cox=cox,
         )  # fmt: skip
         out[gid] = {**comp, "causes": causes(device, g), "status": "compared"}
     return out
@@ -955,6 +994,7 @@ def validate_cv(
     frozen: CalibrationResult,
     *,
     simulate: Simulate | None = None,
+    simulate_2d: Simulate2D | None = None,
     targets: Mapping[str, Target] | None = None,
     calibration_root: Path | None = None,
     moscap2d_root: Path | None = None,
@@ -967,7 +1007,14 @@ def validate_cv(
     and the SPICE grid); a geometry without one is listed as not run. Raises :class:`NotFrozen`
     unless ``frozen`` was loaded from the committed calibration file and its ``param_sha256``
     matches that file.
+
+    The simulators are injected, so another backend validates without editing this module:
+    ``simulate`` (1D) defaults to :func:`devsim_simulator`, ``simulate_2d`` (2D) to
+    :func:`devsim_2d_results` of ``moscap2d_root``; ``moscap2d_root`` with ``simulate_2d`` is a
+    ValueError.
     """
+    if simulate_2d is not None and moscap2d_root is not None:
+        raise ValueError("pass simulate_2d or moscap2d_root, not both")
     root = Path(calibration_root) if calibration_root is not None else CALIBRATION_ROOT
     path = _check_frozen(device, frozen, root)
     proc = process.load(device).with_values(frozen.values)
@@ -984,10 +1031,9 @@ def validate_cv(
     for g in held_out:
         comp, _ = _compare_1d(proc, m, targets[geometry_id(g)], cox)
         one_d[geometry_id(g)] = {**comp, "causes": causes(device, g)}
-    two_d = _two_d(
-        device, frozen, targets, cox,
-        Path(moscap2d_root) if moscap2d_root is not None else MOSCAP2D_ROOT,
-    )  # fmt: skip
+    if simulate_2d is None:
+        simulate_2d = devsim_2d_results(moscap2d_root)
+    two_d = _two_d(device, frozen, targets, cox, simulate_2d)
     return ValidationResult(
         device=device,
         values=dict(frozen.values),
