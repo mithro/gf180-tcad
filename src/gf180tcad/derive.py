@@ -226,11 +226,11 @@ def envelope_minmax(curves):
     return np.stack([a.min(axis=0), a.max(axis=0)])
 
 
-@_formula("C = (C/A)·A", "the area scaling of gf180tcad.tcad.moscap1d")
+@_formula("C = (C/A)·A", "the area scaling of :mod:`gf180tcad.tcad.moscap1d`")
 def area_scale(c_per_area, area_um2):
     """A per-area value times an area, C = (C/A)·A.
 
-    Reference: the area scaling of gf180tcad.tcad.moscap1d.
+    Reference: the area scaling of :mod:`gf180tcad.tcad.moscap1d`.
     """
     return _scalar_or_array(np.asarray(c_per_area, dtype=np.float64) * area_um2)
 
@@ -249,7 +249,7 @@ def _crossing(u: Sequence[float], c: Sequence[float], level: float, i0: int, ste
 
 @_formula(
     "C(u_fb) = 0.9·C_acc, C(u_t) = (C_min + C_inv)/2",
-    "the calibration's region rule, gf180tcad.calibrate.cv.regions",
+    "the calibration's region rule, :func:`gf180tcad.calibrate.cv.regions`",
 )
 def region_boundaries(vg_v, c, polarity):
     """The region boundaries of a C–V curve, in true-sign Vg (V), in this order: accumulation
@@ -263,7 +263,7 @@ def region_boundaries(vg_v, c, polarity):
     ``polarity`` is ``"n"`` or ``"p"``. The same arithmetic as the calibration, so the result
     is bit-equal to it (tested on the committed calibrated curves).
 
-    Reference: the calibration's region rule, gf180tcad.calibrate.cv.regions.
+    Reference: the calibration's region rule, :func:`gf180tcad.calibrate.cv.regions`.
     """
     if polarity not in ("n", "p"):
         raise ValueError(f"polarity must be 'n' or 'p', got {polarity!r}")
