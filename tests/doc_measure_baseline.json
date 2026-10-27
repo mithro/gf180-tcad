@@ -1,10 +1,10 @@
 {
-  "docs_lint banned": 20,
+  "docs_lint banned": 21,
   "docs_lint links": 11,
   "docs_lint list": 2,
-  "docs_lint sentence": 334,
+  "docs_lint sentence": 340,
   "measure_docs first sentence": 5,
   "measure_docs item": 43,
-  "measure_docs paragraph": 27,
-  "measure_docs sentence": 51
+  "measure_docs paragraph": 30,
+  "measure_docs sentence": 52
 }
