@@ -21,10 +21,10 @@ The narrow 1.6/0.7 geometry of the priority-1 devices is part of the
 The structures of each design, and what to note about them:
 
 - **Priority 1, TRID.** Single {term}`nfet_06v0` and {term}`pfet_06v0` devices, W = 1.6 µm,
-  L = 0.7 µm. Each has its own gate, drain and source pads (bulk to the rail). TRID also holds
-  a pair of metal-insulator-metal (MIM) capacitors of equal area and different perimeter, 6 V
-  diodes and a charge-pumping pair. The datasheet says W = 0.75 µm; the layout cell (PCell) and
-  the silicon say 1.6 µm.
+  L = 0.7 µm. Each has its own gate, drain and source pads (bulk to the rail). The datasheet
+  says W = 0.75 µm; the layout cell (PCell) and the silicon say 1.6 µm.
+- **Priority 1, TRID, other structures.** A pair of metal-insulator-metal (MIM) capacitors of
+  equal area and different perimeter, 6 V diodes and a charge-pumping pair.
 - **Priority 2, 0000 / ASHES.** `06v0` n and p FETs of W = 2 µm, L = 1 µm (five of each).
   ASHES also holds `03v3` FETs. **No licence**: reference only, do not redistribute. The pad
   map is not documented.

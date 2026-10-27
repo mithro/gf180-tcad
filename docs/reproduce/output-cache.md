@@ -26,7 +26,7 @@ regenerated before they can be pushed ({ref}`first population <output-cache-firs
   so it is not part of any {term}`generator_sha256`.
 - **The documentation build never fetches from it.** The build stays offline and uses only
   committed files.
-- No git-LFS, Git Large File Storage (it has bandwidth quotas). Each object is a plain git blob under 95 MB after
+- No Git Large File Storage (git-LFS): it has bandwidth quotas. Each object is a plain git blob under 95 MB after
   compression; a file that does not fit is reported and left out.
 
 ## Layout
@@ -34,7 +34,7 @@ regenerated before they can be pushed ({ref}`first population <output-cache-firs
 - `objects/sha256/<first 2 hex>/<sha256>.<ext>.gz`: the file, gzip-compressed deterministically
   (level 9, no file name, mtime 0), keyed by the sha256 of the uncompressed content.
 - `index.json`: sorted JSON mapping each sha256 to its object path, sizes, the results paths it
-  was found at, the `generator_sha256` of the top folder of its results, the commit of this repository it was
+  was found at, the `generator_sha256` of its results folder, the commit of this repository it was
   pushed from, the date and the job (device, dimension, parameter set, directory).
 - a README: the contract, written by `tools/output-cache init`, so the whole repository can
   be recreated from nothing.

@@ -59,10 +59,11 @@ on pull requests and on pushes to `main` (only when `docker/**` or
 3. rebuild from scratch on a fresh runner (`--no-cache`), and require the
    result to equal the first build and the committed digests.
 
-Pull requests push the tag `pr-<number>`, `main` pushes `latest` and
-`sha-<commit>`, each only after the checks above passed (the build itself pushes only the
-staging tag `unverified`, which can point at an image that has not passed the checks) ([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions));
-the weekly and manual runs only rebuild and verify. Whether the results are the same bytes on
+Pull requests push the tag `pr-<number>`; `main` pushes `latest` and `sha-<commit>`. Each
+of these is pushed only after the checks above passed
+([package versions](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base/versions)).
+The build itself pushes only the staging tag `unverified`, which can point at an image that has
+not passed the checks. The weekly and manual runs only rebuild and verify. Whether the results are the same bytes on
 another computer is described in {ref}`cross-host-determinism`.
 
 (tcad-image)=
@@ -401,8 +402,9 @@ image made each result kind in it: the image's name, its reference and its `vers
   from gmsh 4.15.2 (the stable image). A 2D result on dev therefore needs its own mesh
   convergence on dev; the stable image's selected 2D mesh does not carry over. The 2D results of
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
-  are therefore made on the stable image, explicitly. The 2D mesh convergence has not been rerun
-  on the dev image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
+  are therefore made on the stable image, explicitly.
+- **No 2D mesh convergence on dev.** The 2D mesh convergence has not been rerun on the dev
+  image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
 - **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, has the laxer
   builder check. Unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
   driver and BuildKit image before using it
