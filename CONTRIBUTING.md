@@ -54,6 +54,13 @@ PRs but is not a merge blocker.
   [`tests/test_doc_measure.py`](tests/test_doc_measure.py)); a PR that fixes pages lowers
   [`tests/doc_measure_baseline.json`](tests/doc_measure_baseline.json) with
   `uv run --locked python tests/test_doc_measure.py --write-baseline`.
+- A change to a table, in a page or in [`src/gf180tcad/docgen.py`](src/gf180tcad/docgen.py), needs a
+  check at 400 px wide, because no test sees the rendered width. Build the docs, then take a
+  screenshot of the page with
+  `google-chrome --headless=new --hide-scrollbars --window-size=400,1800 --screenshot=tmp/shot.png file://$PWD/tmp/docs-html/<page>.html`.
+  The table must not scroll sideways and no number may break across lines
+  ([`docs/_static/narrow.css`](docs/_static/narrow.css) sets the narrow-screen table style).
+  Attach the screenshots to the PR.
 
 ## Forks only
 
