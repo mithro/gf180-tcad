@@ -12,6 +12,7 @@ gf180tcad.__main__
 gf180tcad.calibrate
 gf180tcad.calibrate.__main__
 gf180tcad.calibrate.cv
+gf180tcad.derive
 gf180tcad.devices
 gf180tcad.docgen
 gf180tcad.history
@@ -25,7 +26,10 @@ gf180tcad.outcache
 gf180tcad.pdk
 gf180tcad.pdkdiff
 gf180tcad.plots
+gf180tcad.quantity
 gf180tcad.reference
+gf180tcad.render
+gf180tcad.render.manifest
 gf180tcad.sandbox
 gf180tcad.specwindow
 gf180tcad.spice
