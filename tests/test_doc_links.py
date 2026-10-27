@@ -600,8 +600,10 @@ _HTML_BLOCK = {
 _HTML_VOID = {"br", "img", "hr", "meta", "link", "input", "wbr", "source"}
 _HTML_SKIP_TAGS = {"pre", "script", "style", "nav", "aside"}
 # Verdict names are ordinary English words in lower case ("the engines agree"), so they are
-# matched with their capital letter only. Every other term and tool is matched ignoring case.
-_CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process"}
+# matched with their capital letter only, and "electron" in lower case only, because the
+# journal name "IEEE Trans. Electron Devices" is not the term. Every other term and tool is
+# matched ignoring case.
+_CASE_SENSITIVE_TERMS = {"Agree", "Disagree", "Same process", "electron"}
 
 
 def _case_sensitive(name: str) -> bool:

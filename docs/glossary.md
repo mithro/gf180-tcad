@@ -548,6 +548,45 @@ ohmic contact
   Potential is the applied bias plus the equilibrium potential of the local doping,
   V_t asinh(N / 2 n_i) ({ref}`Sze and Ng 2006, ch. 3 <lit-sze>`). See {ref}`plugin-history-latest-pn`.
 
+electron
+  A negative charge carrier in silicon: an electron freed from the bond between two atoms,
+  which moves through the crystal and carries current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-carriers`.
+
+hole
+  A positive charge carrier in silicon: a bond that is missing its {term}`electron`. A
+  neighbouring bonded electron can move into it, so the hole moves the other way and carries
+  current ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-carriers`.
+
+intrinsic carrier density
+  The density of electrons, equal to that of holes, in pure silicon in thermal equilibrium:
+  n_i. Heat frees each {term}`electron` and its {term}`hole` as a pair ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-carriers`.
+
+dopant
+  An atom of another element placed in the silicon crystal to set which charge carrier
+  outnumbers the other: a {term}`donor` or an {term}`acceptor` ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-dopants`.
+
+donor
+  A {term}`dopant` with one more outer {term}`electron` than silicon. The spare electron is
+  free to move, so donors make n-type silicon, where electrons are the majority carriers
+  ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-dopants`.
+
+acceptor
+  A {term}`dopant` with one fewer outer {term}`electron` than silicon. It takes an electron
+  from a bond and leaves a {term}`hole`, so acceptors make p-type silicon ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-dopants`.
+
+majority carrier
+  The charge carrier that outnumbers the other in doped silicon: the {term}`electron` in
+  n-type silicon, the {term}`hole` in p-type. Its density equals the doping ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See
+  {ref}`explained-how-many`.
+
+minority carrier
+  The charge carrier that is outnumbered in doped silicon. In thermal equilibrium its density is
+  the {term}`intrinsic carrier density` squared divided by the doping, the mass-action law
+  ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`). See {ref}`explained-how-many`.
+
 Boltzmann statistics
   The non-degenerate approximation of carrier statistics. In detail: the Fermi-Dirac
   occupation is replaced by its Boltzmann tail, so n = n_i exp((ψ − φ_n) / V_t) and
