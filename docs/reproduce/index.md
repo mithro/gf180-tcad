@@ -362,7 +362,7 @@ That test compares the folder's
 had their provenance updated, not rerun, and have no such evidence. With the per-folder hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)) such a
 calibration-only change no longer touches these results folders.
 
-**Provenance updated for the plugin's backend seam (Phase 2 Task 15), not regenerated.**
+**Provenance updated for the plugin's backend seam ({term}`Phase 2` Task 15), not regenerated.**
 The submodule moved to gplugins [`0715c81`](https://github.com/mithro/gplugins/commit/0715c81c4439533512621a97358d9d779411ebf6),
 the merge of [mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13).
 That merge moves and adds hashed `gplugins/devsim` files without changing what the solver computes.
@@ -377,7 +377,7 @@ Every results folder records `gplugins_commit` `0715c81…` instead of `1c071d0�
 The representative rerun came first, as design spec §9 requires.
 On 2026-10-27, at this pin, `make reproduce-quick` printed
 `identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under tcad/`.
-`make manifest` then left `results/` unchanged; PR #51 links the log.
+`make manifest` then left {repo}`results/` unchanged; PR #51 links the log.
 This covers the two calibrated 1D jobs and their `provenance.json`.
 
 The 2D folders were not rerun. Only the file holding `DDComponent` moved, verbatim.
