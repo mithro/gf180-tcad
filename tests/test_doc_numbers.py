@@ -157,18 +157,19 @@ CASES = [
         ENGINE_PAGE,
         (
             rf"current is a nearly constant {NUM} % higher\. That is\na gate-voltage shift of "
-            rf"about {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
+            rf"{NUM} to {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
         ),
         lambda: [
             100 * subthreshold_excess(),
             shift_mv(1e-9),
+            shift_mv(1e-6),
             _at5(),
         ],
     ),
     (
         ENGINE_PAGE,
-        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\): about {NUM} mV of",
-        lambda: [shift_mv(1e-9)],
+        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\): {NUM} to {NUM} mV of",
+        lambda: [shift_mv(1e-9), shift_mv(1e-6)],
     ),
     # pdk-spec-check.md: the TT column
     *(
