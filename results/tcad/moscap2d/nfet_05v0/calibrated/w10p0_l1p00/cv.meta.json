@@ -1,0 +1,85 @@
+{
+  "ac": "computed",
+  "ac_freq_hz": 1000000.0,
+  "ac_points": 21,
+  "constants": {
+    "eps0_f_per_cm": 8.8541878128e-14,
+    "eps_si": 11.7,
+    "k_b_j_per_k": 1.380649e-23,
+    "mu_n_cm2_per_vs": 1417.0,
+    "mu_p_cm2_per_vs": 470.5,
+    "n_i300_cm3": 9650000000.0,
+    "n_i_cm3": 8265841554.853887,
+    "q_c": 1.602176634e-19,
+    "t_k": 298.15,
+    "tau_n_s": 1e-05,
+    "tau_p_s": 1e-05,
+    "vt_v": 0.02569257912108585
+  },
+  "contacts": [
+    "gate",
+    "body",
+    "drain",
+    "source"
+  ],
+  "device": "nfet_05v0",
+  "dim": 2,
+  "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
+  "geometry": {
+    "l_um": 1,
+    "role": "validation",
+    "w_um": 10
+  },
+  "l_um": 1.0,
+  "mesh": {
+    "grading": 1.1414213562373094,
+    "h_ox_nm": 0.7071067811865476,
+    "h_poly_nm": 0.3535533905932738,
+    "h_si_bulk_nm": 70.71067811865476,
+    "h_si_surface_nm": 0.3535533905932738
+  },
+  "mesh_sha256": "3715e9d78507b83bc32e51d15b071d25dc8865b8815fb20154f7f15407db0a48",
+  "mesh_source": "results/tcad/meshconv/moscap2d/nfet_05v0/selected.json",
+  "meshed_l_um": 0.9999999999999998,
+  "meshed_t_ox_nm": 16.05,
+  "node_count": 306136,
+  "normalisation": "c_per_area = Cgg per unit width / drawn L; cgg_total = per unit width * drawn W; no DLC or BSIM4 parasitics",
+  "param_sha256": "791e01ae1b48d92cc287e575324a83aa1cf9b60987a76f06fe57468c0941125c",
+  "params": "calibrated",
+  "point_tolerance_um": 1e-06,
+  "points": 201,
+  "resumed": {
+    "ac": 0,
+    "qs": 0
+  },
+  "sd_peak_cm3": 1e+20,
+  "sweep": {
+    "abs_tol_v": 1e-12,
+    "dv_qs_v": 0.001,
+    "max_iterations": 50,
+    "qs_extended_fallback_points": [],
+    "qs_extended_precision": false,
+    "qs_roundoff_accepted": [],
+    "rel_tol": 1e-10
+  },
+  "t_ox_nm": 16.050483616382458,
+  "tunables": {
+    "dv_fb_v": {
+      "calibration_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+      "origin": "calibrated",
+      "value": 0.09874753146964436
+    },
+    "n_ch_cm3": {
+      "calibration_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+      "origin": "calibrated",
+      "value": 8.813323306821749e+16
+    },
+    "t_ox_eff_nm": {
+      "calibration_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+      "origin": "calibrated",
+      "value": 16.050483616382458
+    }
+  },
+  "w_um": 10.0,
+  "with_sd": true
+}

@@ -71,7 +71,7 @@ Each step is a target of its own, which can also be run alone:
 | `tcad-meshconv` | `python -m gf180tcad.tcad meshconv --dim 1` for both devices, then `--dim 2 --jobs 1` (one 16 GiB {term}`job` at a time) | {repo}`results/tcad/meshconv` |
 | `tcad-start` | `python -m gf180tcad.tcad moscap --params start`: `--dim 1` for both devices, and `--dim 2` for each committed 2D cell (L = 2 µm: see below) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
-| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (the nfet at W10/L0.6 and W10/L0.7, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
+| `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell (the nfet at W10/L0.6, W10/L0.7 and W10/L1, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
 
 In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs`. Both use the
@@ -315,11 +315,13 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 |---|---|---|---|
 | `nfet_05v0` | `w10p0_l0p60` | both | 11338 |
 | `nfet_05v0` | `w10p0_l0p70` | both | 12584 |
+| `nfet_05v0` | `w10p0_l1p00` | both | 15169 |
 
 | Device | Geometry | Peak memory (GiB) | Exit code | Finished (ACDT) |
 |---|---|---|---|---|
 | `nfet_05v0` | `w10p0_l0p60` | 7.82 | 0 | 2026-10-27 11:31 |
 | `nfet_05v0` | `w10p0_l0p70` | 5.93 | 0 | 2026-10-27 15:01 |
+| `nfet_05v0` | `w10p0_l1p00` | 6.09 | 0 | 2026-10-27 19:51 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 
@@ -539,8 +541,8 @@ rerun byte for byte locally by
 ## Output cache
 
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
-content-addressed cache repository: {repo}`tools/output-cache` `pull` fetches one and checks it against
-the sha256 the committed results name. It holds the meshes of the two calibrated nfet cells, W10/L0.6 and W10/L0.7;
+content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
+the sha256 the committed results name. It holds the meshes of the three calibrated nfet cells, W10/L0.6, W10/L0.7 and W10/L1;
 see {doc}`output-cache`.
 
 ```{toctree}
