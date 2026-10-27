@@ -19,7 +19,7 @@ OUTPUT_CACHE ?= tmp/output-cache
 
 .PHONY: reproduce reproduce-quick manifest spice-reference \
 	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate \
-	cache-status cache-push
+	cache-status cache-push lint pre-push pre-push-docs
 
 # Everything, in dependency order: the SPICE reference, then the TCAD trees (mesh convergence,
 # start values, calibration, calibrated values, validation), then the manifest check. Hours:
@@ -103,3 +103,29 @@ cache-status:
 # write access to the cache repository; run tools/output-cache push --dry-run first).
 cache-push:
 	$(PYTHON) tools/output-cache push --cache $(OUTPUT_CACHE) --results results --publish
+
+# The lint steps of the CI lint-test job, exactly (.github/workflows/ci.yml runs this target).
+# Seconds.
+lint:
+	uv run --locked ruff check
+	uv run --locked ruff format --check
+
+# What the pre-push hook (tools/git-hooks/pre-push, installed by tools/install-hooks) runs before
+# every push: make lint, then the CI tests except the slow docs build and calibration fits
+# (PRE_PUSH_SLOW; CI runs them). About a minute. -rs lists the skips. The tests' scratch files go
+# to PRE_PUSH_TMP, not the system temporary directory; it must be outside the repository (the
+# sandbox and scratch-directory checks refuse workdirs inside it, so not tmp/), and one per
+# checkout, since pytest empties its --basetemp when it starts and worktrees may push at once.
+PRE_PUSH_TMP ?= $(HOME)/.cache/gf180-tcad/pre-push$(subst /,_,$(CURDIR))
+PRE_PUSH_SLOW = tests/test_docgen.py tests/test_doc_links.py tests/test_calibrate_cv.py
+pre-push: lint
+	mkdir -p $(PRE_PUSH_TMP)
+	uv run --locked pytest -m "not sandbox" -q -rs -p no:cacheprovider \
+		--basetemp=$(PRE_PUSH_TMP)/pytest-pre-push tests $(addprefix --ignore=,$(PRE_PUSH_SLOW))
+
+# The docs-links rule (tests/test_doc_links.py, a few minutes: it builds the docs). The hook runs
+# it as well when a pushed commit changes docs/, src/, results/, README.md or CONTRIBUTING.md.
+pre-push-docs:
+	mkdir -p $(PRE_PUSH_TMP)
+	uv run --locked pytest -m "not sandbox" -q -rs -p no:cacheprovider \
+		--basetemp=$(PRE_PUSH_TMP)/pytest-pre-push-docs tests/test_doc_links.py

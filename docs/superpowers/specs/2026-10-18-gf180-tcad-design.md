@@ -169,8 +169,8 @@ Offsets added to the card value:
 | Input | BSIM4 parameter | Unit | nfet ff | nfet ss | pfet ff | pfet ss |
 |---|---|---|---|---|---|---|
 | Threshold voltage offset | VTH0 | V | −0.1298 | +0.1193 | +0.1245 | −0.1225 |
-| Oxide thickness offset, nfet | TOXE, TOXP | nm | −1.0 | +1.0 | — | — |
-| Oxide thickness offset, pfet | TOXE | nm | — | — | −1.0 | +1.0 |
+| Oxide thickness offset, nfet | TOXE, TOXP | nm | −1.0 | +1.0 | not applicable | not applicable |
+| Oxide thickness offset, pfet | TOXE | nm | not applicable | not applicable | −1.0 | +1.0 |
 | Gate length offset | XL | nm | −42 | +70 | −46.5 | +69 |
 | Gate width offset | XW | nm | +50 | −50 | +50 | −50 |
 
@@ -179,7 +179,7 @@ Factors that multiply the card value:
 | Input | BSIM4 parameters | nfet ff | nfet ss | pfet ff | pfet ss |
 |---|---|---|---|---|---|
 | Overlap capacitance | CGSO, CGDO, CGSL, CGDL | 0.90 | 1.10 | 0.90 | 1.10 |
-| Saturation velocity | VSAT | 1.0846 | 0.899 | — | — |
+| Saturation velocity | VSAT | 1.0846 | 0.899 | not applicable | not applicable |
 
 The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet card shifts
 TOXE only, not TOXP. `fs` and `sf` scale the nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT)
@@ -829,7 +829,7 @@ that the intent survives later rewording of the sections it changed.
     ("over the 8 h job rule", `gf180tcad.tcad.meshconv.EXCLUDED_2D`) and for the L = 10 µm
     solver failure. There is no 8-hour rule any more; the run-time half of the reason is
     withdrawn. The level stays out until #58 is solved, since it is expected to fail the same
-    way (the same size; not yet attempted, and #58 includes running it); the
+    way (the same size; it has not been attempted, and #58 includes running it); the
     recorded reason is reworded when the 2D study is next rerun (it is part of the committed
     report, so changing it restamps that tree).
   - *Provenance restamped instead of rerun* (Task 12 and issue #34, the 2D trees and the 2D mesh
@@ -840,3 +840,13 @@ that the intent survives later rewording of the sections it changed.
   - *GitHub-hosted cross-check only where a run is "cheap enough"* (§9): reworded to the
     runners' actual limits (time per job and memory), which a run must fit; anything that does
     not fit is cross-checked locally and the docs say so, as before.
+- **2026-10-27 13:50 and 14:05 ACDT: the documentation skills.** §10.3 takes its rules from two
+  of the user's skills, both installed here from the path marketplace `mithro-local`. The user's
+  words, at 13:50:
+  > "Install writing-sourced-docs@mithro-personal and start using it."
+
+  and at 14:05:
+  > "Also use the docs-writing-skill shown below;"
+
+  followed by pasted install instructions for `docs-writing@mithro-personal`. The paste gave the
+  command-line installation steps, not rules; the rules are those of the installed skill.
