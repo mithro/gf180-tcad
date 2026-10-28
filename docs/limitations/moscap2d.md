@@ -252,7 +252,8 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
   The restart counts in these job files were written after the runs, from the progress logs.
 - **The calibrated nfet cell is resumed too.** Its job file records 2 restarts, after points 67
   and 147 ({ref}`moscap2d-calibrated`). The same command was rerun on the same `--resume`,
-  three attempts in all ({ref}`tcad-provenance`).
+  three attempts in all ({ref}`tcad-provenance`). The calibrated pfet cell finished in one attempt,
+  with a peak of 9.8 GiB.
 - **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
   every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
   sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
@@ -340,6 +341,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | pfet `w10p0_l0p50` | 205520 | 85 | 76 | 162 |
 | pfet `w10p0_l0p70` | 244880 | 105 | 93 | 198 |
 | pfet `w10p0_l1p00` | 304781 | 131 | 123 | 255 |
+| pfet `w10p0_l2p00` | 503672 | 236 | none | 236 |
 
 | Cell | Peak memory (GiB) | Attempts |
 |---|---|---|
@@ -350,6 +352,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | pfet `w10p0_l0p50` | 7.4 | 1 |
 | pfet `w10p0_l0p70` | 5.4 | 1 |
 | pfet `w10p0_l1p00` | 7.8 | 1 |
+| pfet `w10p0_l2p00` | 9.8 | 1 |
 
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
@@ -440,5 +443,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   ({ref}`moscap2d-l2`).
 - **Few calibrated 2D cells** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
   They are the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2.
-  The pfet cells are W10/L0.5, W10/L0.7 and W10/L1.
+  The pfet cells are W10/L0.5, W10/L0.7, W10/L1 and W10/L2.
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).
