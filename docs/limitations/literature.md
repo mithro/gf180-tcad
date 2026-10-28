@@ -110,8 +110,7 @@ Each chapter below is named from the Crossref record of the edition cited, with 
 
 - Taur and Ning, *Fundamentals of Modern VLSI Devices*, 3rd ed., Cambridge University Press,
   2021, {doi}`10.1017/9781108847087`. The explainer pages use its ch. 2, "Basic Device
-  Physics", ch. 4, "MOS Capacitors", about the {term}`MOS capacitor <MOSCAP>`, and ch. 5,
-  "MOSFETs".
+  Physics", ch. 4, "{term}`MOS Capacitors <MOSCAP>`", and ch. 5, "MOSFETs".
 
 ## Mismatch
 

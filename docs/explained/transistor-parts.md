@@ -43,8 +43,8 @@ and the active area on its `COMP` layer ({py:mod}`gf180tcad.tcad.stack`).
 ```{figure} images/gf180mcu-pmos-pair-plan-view.png
 :alt: Two transistors seen from above, each a blue gate strip crossing a black-outlined active area with a contact square on either side, inside a yellow n-well. A legend row below names the layers: Nwell, COMP, Pplus, Nplus, SAB, Contact, Poly2 and Metal.
 
-Two p-channel transistors, whose channel carries holes, seen from above. They are drawn as a
-matched pair in the GF180MCU design manual ([§10.6.1](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_10_6_1.rst),
+Two p-channel transistors, whose channel carries {term}`holes <hole>`, seen from above. They are
+drawn as a matched pair in the GF180MCU design manual ([§10.6.1](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_10_6_1.rst),
 Apache License). G is the gate, S the source and D the drain.
 ```
 
@@ -79,7 +79,7 @@ to {{ x_sd_peak_nfet }} of {term}`donors <donor>` ({term}`NSD`). They reach {{ x
 
 The body is the silicon around the source and the drain, the channel under the gate included.
 In the nfet it is p-type. The design manual defines the LVPWELL layer for the body of the
-n-channel transistors, whose channel carries electrons
+n-channel transistors, whose channel carries {term}`electrons <electron>`
 ([LVPWELL rules](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_07_04.rst)).
 
 The {term}`pfet_05v0` is the mirror image, with a p-type source and drain in an
