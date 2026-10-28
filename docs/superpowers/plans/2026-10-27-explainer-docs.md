@@ -282,14 +282,16 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   (gate length and width, `meshed_t_ox_nm`, `sd_peak_cm3`, the calibrated `n_ch_cm3`, `contacts`),
   the process file (`xj_um`, `ngate_cm3`) and the 1D meta's `stack` (`poly_um`, `body_um`, the same
   values as `moscap1d.POLY_UM` and `BODY_UM`, read from a committed file instead of imported).
-  It imports nothing from `gf180tcad.tcad`.
+  No `gf180tcad.explain` module imports `gf180tcad.tcad`
+  (`test_explain_imports_nothing_from_tcad`; both review mutations in `model.py` fail it).
 - The lateral width of the source and drain has no committed source until renders Task R0: it is
   `STYLE["drawn_um"]`, and `model.exaggeration(scales, drawn)` names it ("Source and drain width
-  drawn, not to scale"). The callouts are labels on the parts (pictures rule 6), not numbers,
+  chosen for the drawing, not to scale"), and the cell captions call it a project choice. The callouts are labels on the parts (pictures rule 6), not numbers,
   because a digit in a heading fails `test_no_bare_numbers`.
 - `idealised.abrupt_junction` gives the charge, field and potential of the depletion
   approximation; `junction_panels` draws them on a log charge axis, where the n side's charge,
-  a layer 0.1 nm thin, is a vertical line at the junction. `vt_tcad`, `eps_si_tcad`, `q_tcad` and
+  a layer 0.1 nm thin, is a vertical line at the junction, drawn wider than the junction line
+  and above it. The axis label names its sides (source < 0 < body). `vt_tcad`, `eps_si_tcad`, `q_tcad` and
   `eps0_tcad` are committed constants, inputs of `vbi_nfet` and `w_dep_nfet`.
 - Photo search (2026-10-28): the Crowd Supply die photo of a GF180MCU shuttle chip states no
   licence, and its Silicon Prawn page answers 403. No cross-section photo turned up. The page uses
@@ -302,6 +304,8 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
 - The LDD section states only what the BSIM4.5.0 manual (§7.1, §7.5.2) and the card give: the
   bias-dependent overlap capacitance with the lightly doped region, CGDL. What an LDD is for is
   left out (#99 comment).
+- Taur and Ning is cited by chapter number (ch. 2, 4 and 5), read from the Crossref chapter
+  records (`10.1017/9781108847087.005`, `.007`, `.008`).
 
 **Exit criteria.** The four pages are on `main` and in the landing page and toctree; every number on them is a substitution (`test_no_bare_numbers` green); each opens with its highlighted view of the one model, in both themes; the eight new glossary terms are defined and linked on first use; the docs tools report nothing for `docs/explained/**`; the photo search result (used, or filed as a wanted photo with its issue number) is in the PR body; the review by use has no open stop.
 
