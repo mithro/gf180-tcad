@@ -337,6 +337,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | nfet `w10p0_l0p70` | 245515 | 112 | 97 | 210 |
 | nfet `w10p0_l1p00` | 306136 | 133 | 120 | 253 |
 | nfet `w10p0_l2p00` | 506292 | 244 | none | 246 |
+| nfet `w1p6_l0p70` | 245515 | 102 | 95 | 197 |
 | pfet `w10p0_l0p50` | 205520 | 85 | 76 | 162 |
 | pfet `w10p0_l0p70` | 244880 | 105 | 93 | 198 |
 | pfet `w10p0_l1p00` | 304781 | 131 | 123 | 255 |
@@ -347,6 +348,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | nfet `w10p0_l0p70` | 5.9 | 1 |
 | nfet `w10p0_l1p00` | 6.1 | 1 |
 | nfet `w10p0_l2p00` | 16.0 | 3 |
+| nfet `w1p6_l0p70` | 5.5 | 1 |
 | pfet `w10p0_l0p50` | 7.4 | 1 |
 | pfet `w10p0_l0p70` | 5.4 | 1 |
 | pfet `w10p0_l1p00` | 7.8 | 1 |
@@ -380,10 +382,12 @@ width. It keeps only the intervals of the active area, the gate and the contacts
 on that line. The width enters only as `w_um`, which scales `cgg_total`.
 
 W1.6/L0.7 therefore gives the per-width solve of W10/L0.7 when the PDK cell has the same
-intervals on that line. The observed mesh identity is in [issue #77](https://github.com/mithro/gf180-tcad/issues/77). A W-series at fixed L then
-tests the area scaling and the parasitic model, not the 2D solve.
+intervals on that line. The committed nfet W1.6/L0.7 job shows it. Its mesh is the W10/L0.7 mesh,
+and its `cgg_per_um` equals the W10/L0.7 cell's at all 201 points
+({test}`tests/test_calibrate_cv.py::test_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell`).
+A W-series at fixed L then tests the area scaling and the parasitic model, not the 2D solve.
 
-The W1.6/L0.7 comparison follows from the committed W10/L0.7 cell. Its `cgg_per_um`
+So the W1.6/L0.7 comparison follows from the committed W10/L0.7 cell, and the job's comparison is the same. Its `cgg_per_um`
 ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.csv>`) times 1.6 µm
 is compared with the {term}`TT` {{ ngspice }} target of W1.6/L0.7 by
 {py:func}`~gf180tcad.calibrate.cv.compare`. The result is {term}`Disagree`
@@ -395,8 +399,6 @@ is compared with the {term}`TT` {{ ngspice }} target of W1.6/L0.7 by
 | Inversion plateau, worst difference (%) | 13.8 | Same process |
 | Depletion crossing shift (mV) | −194 | Disagree |
 | Inversion crossing shift (mV) | −33 | {term}`Agree` |
-
-The W1.6/L0.7 2D job itself is "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
 (moscap2d-l10)=
 
@@ -439,6 +441,6 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
 - **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
   ({ref}`moscap2d-l2`).
 - **Few calibrated 2D cells** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
-  They are the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2.
+  They are the nfet W10/L0.6, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7.
   The pfet cells are W10/L0.5, W10/L0.7 and W10/L1.
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).
