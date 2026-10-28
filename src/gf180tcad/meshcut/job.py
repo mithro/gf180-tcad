@@ -220,7 +220,7 @@ def _total(profiles, x_range, y_range, x_um, depth_um) -> np.ndarray:
 
 
 def net_doping(mesh: msh.Mesh, win: window.Window, xs) -> np.ndarray:
-    """The job's net doping (cm^-3) at each node of ``win``: :data:`artefact.NET_DOPING`.
+    """The job's net doping (cm^-3) at each node of ``win``: :data:`gf180tcad.meshcut.artefact.NET_DOPING`.
 
     A node of a silicon region gets that region's Donors - Acceptors at its position in the
     region's frame (:func:`doping_frames`), each profile bound to the region's bounds over
