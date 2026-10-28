@@ -32,22 +32,24 @@ project choices. {{ x_fig_parts_cell_scale }}
 
 ## The gate
 
-The gate is the electrode on top, which takes the control voltage. It is a strip of
+The gate is the electrode on top, which takes the control voltage. That voltage controls the
+channel, the thin layer of silicon under the gate where the current flows
+({ref}`Taur and Ning, ch. 5 <lit-taur>`). The gate is a strip of
 {term}`poly-silicon` that crosses the active area, the stretch of silicon that holds the
 transistor. The {term}`PDK` draws the gate on its `Poly2` layer
 ([gate layer rules](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_07_08.rst))
 and the active area on its `COMP` layer ({py:mod}`gf180tcad.tcad.stack`).
 
 ```{figure} images/gf180mcu-pmos-pair-plan-view.png
-:alt: Two transistors seen from above, each a blue gate strip crossing a black-outlined active area with a contact square on either side, inside a yellow n-well.
+:alt: Two transistors seen from above, each a blue gate strip crossing a black-outlined active area with a contact square on either side, inside a yellow n-well. A legend row below names the layers: Nwell, COMP, Pplus, Nplus, SAB, Contact, Poly2 and Metal.
 
-Two p-channel transistors seen from above, drawn as a matched pair in the GF180MCU design
-manual ([§10.6.1](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_10_6_1.rst),
+Two p-channel transistors, whose channel carries holes, seen from above. They are drawn as a
+matched pair in the GF180MCU design manual ([§10.6.1](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_10_6_1.rst),
 Apache License). G is the gate, S the source and D the drain.
 ```
 
-The gate's length runs from source to drain, and its width runs along the strip. The cell above
-has a gate {{ x_l_cell }} long and {{ x_w_cell }} wide
+The gate's length runs from source to drain, and its width runs along the strip. The
+simulated cell in the first figure has a gate {{ x_l_cell }} long and {{ x_w_cell }} wide
 ({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`).
 The cross-section cuts across the strip, so it shows the length; the width runs into the page.
 
@@ -66,7 +68,7 @@ thickness and its capacitance.
 
 The source and the drain ({term}`S/D`) are the regions either side of the gate. Carriers
 enter the channel at the source and leave at the drain
-({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). In the nfet both are n-type, with up
+({ref}`Taur and Ning, ch. 5 <lit-taur>`). In the nfet both are n-type, with up
 to {{ x_sd_peak_nfet }} of {term}`donors <donor>` ({term}`NSD`). They reach {{ x_xj_nfet }} below the surface
 ({term}`XJ`), where they meet the body in a {term}`pn junction`
 ({doc}`pn-junction`).
@@ -75,15 +77,16 @@ to {{ x_sd_peak_nfet }} of {term}`donors <donor>` ({term}`NSD`). They reach {{ x
 
 ## The body and the wells
 
-The body is the silicon under the gate, between the source and the drain. In the nfet it is
-p-type. The design manual defines the LVPWELL layer for the body of the n-channel transistors
+The body is the silicon around the source and the drain, the channel under the gate included.
+In the nfet it is p-type. The design manual defines the LVPWELL layer for the body of the
+n-channel transistors, whose channel carries electrons
 ([LVPWELL rules](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_07_04.rst)).
 
 The {term}`pfet_05v0` is the mirror image, with a p-type source and drain in an
-{term}`n-well` body. The drawing above shows that well in yellow
+{term}`n-well` body. The plan-view drawing above shows that well in yellow
 ([Nwell rules](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_07_05.rst)).
-This repo dopes each body uniformly, at its calibrated value
-({{ x_n_ch_nfet_cal }} for the nfet, {py:mod}`gf180tcad.tcad.stack`).
+This repo dopes each body uniformly ({py:mod}`gf180tcad.tcad.stack`). The doping is a value
+fitted to the {term}`SPICE` model, {{ x_n_ch_nfet_cal }} for the nfet.
 
 (explained-parts-contacts)=
 
@@ -100,8 +103,9 @@ The simulator solves for the cell on a mesh, a grid of {{ x_node_count_cell }} p
 
 A lightly doped drain ({term}`LDD`) is a part of the source and drain with less doping, under the
 edge of the gate. The {term}`BSIM4` model gives the gate's overlap with it a capacitance of its
-own, which changes with the gate voltage ({ref}`BSIM4 manual, §7.5 <lit-bsim4>`). The nfet's
-model card sets that capacitance, CGDL, to {{ x_cgdl_nfet }} of gate width
+own, which changes with the gate voltage
+({ref}`BSIM4 manual, §7.1 and §7.5.2 <lit-bsim4>`). The nfet's model card sets that
+capacitance, CGDL, to {{ x_cgdl_nfet }} of gate width
 ({repo}`data/process/nfet_05v0.toml`).
 
 (explained-parts-differs)=

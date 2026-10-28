@@ -313,6 +313,7 @@ PROPER_NAMES = (
     "2D",
     "3D",
     "BSIM4",
+    "Poly2",  # the PDK's gate layer, named in the plan view's alt text
     "Tier 1",
     "Tier 2",
     "Tier 3",
