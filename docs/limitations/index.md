@@ -21,13 +21,12 @@ there.
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`).
-- **2D validation: {term}`Disagree` at three cells,** nfet W10/L0.6 and W10/L0.7 and pfet W10/L1. Both plateaus lie below
-  SPICE at every calibrated cell ({ref}`cv-agreement-validation`, [issue #77](https://github.com/mithro/gf180-tcad/issues/77)). The other
-  geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
-  The L = 2 µm cell's AC solve fails
-  ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)). The L = 10 µm cell's
-  equilibrium solve fails ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)). See
-  {doc}`moscap2d`.
+- **2D validation: {term}`Disagree` at three cells,** nfet W10/L0.6 and W10/L0.7 and pfet W10/L1.
+  All three fail on the depletion crossing, which the 2D cell moves below the 1D one ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
+  Every 2D plateau lies below SPICE ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+  The L = 2 µm AC solve and the L = 10 µm equilibrium solve fail
+  ([issue #59](https://github.com/mithro/gf180-tcad/issues/59), [issue #58](https://github.com/mithro/gf180-tcad/issues/58);
+  {ref}`cv-agreement-validation`, {doc}`moscap2d`).
 - **No {term}`corner` bounds.** The spec asks for a typical value of each physical input.
   It also asks for its bounds across the {term}`PDK`'s SPICE corners and a Monte Carlo spread.
   These are not computed ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
