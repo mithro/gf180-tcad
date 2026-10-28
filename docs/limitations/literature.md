@@ -32,6 +32,8 @@ Each annotation names what the project uses the item for.
 (lit-bsim4)=
 
 - {{ BSIM4_site }} manual (UC Berkeley): the meaning of TOXE, TOXP, {term}`NGATE` and LPE0.
+  Its §7.1 and §7.5.2 give the gate-bias-dependent overlap capacitance with the lightly doped
+  source and drain region, CGDL.
 
 ## Physics models
 
@@ -99,8 +101,7 @@ Each annotation names what the project uses the item for.
 
 ## Textbooks for the explainer pages
 
-Each chapter below is named from the Crossref record of the edition cited. Sze and Ng's chapters
-carry their titles, and Taur and Ning's are named by topic.
+Each chapter below is named from the Crossref record of the edition cited, with its title.
 
 - {ref}`Sze and Ng, 3rd ed. <lit-sze>`: ch. 4, "Metal-Insulator-Semiconductor Capacitors", and
   ch. 6, "MOSFETs".
@@ -108,8 +109,8 @@ carry their titles, and Taur and Ning's are named by topic.
 (lit-taur)=
 
 - Taur and Ning, *Fundamentals of Modern VLSI Devices*, 3rd ed., Cambridge University Press,
-  2021, {doi}`10.1017/9781108847087`. The explainer pages use its chapters on basic device
-  physics, the {term}`MOS capacitor <MOSCAP>` and the MOSFET.
+  2021, {doi}`10.1017/9781108847087`. The explainer pages use its ch. 2, "Basic Device
+  Physics", ch. 4, "{term}`MOS Capacitors <MOSCAP>`", and ch. 5, "MOSFETs".
 
 ## Mismatch
 

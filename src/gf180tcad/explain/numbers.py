@@ -64,6 +64,7 @@ def _proc(device: str) -> str:
 _CM3 = "cm⁻³"
 _CAP = "fF/µm²"
 _RESULT = "results/tcad/calibration/nfet_05v0.result.json"
+_CELL = "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json"
 _ENTRIES = (
     Number("n_i_tcad", "committed", _CM3, 3, _meta("nfet_05v0"), {"json": ["constants", "n_i_cm3"]}),
     Number("t_tcad", "committed", "K", 5, _meta("nfet_05v0"), {"json": ["constants", "t_k"]}),
@@ -113,6 +114,28 @@ _ENTRIES = (
         "fermi_body_nfet", "idealised", "eV", 3,
         formula="boltzmann_fermi", inputs=("n_minority_nfet", "n_i_tcad", "vt_tcad"), factor=-1.0,
     ),
+    # The pn junction (pn-junction.md).
+    Number("eps_si_tcad", "committed", "", 3, _meta("nfet_05v0"), {"json": ["constants", "eps_si"]}),
+    Number("q_tcad", "committed", "C", 5, _meta("nfet_05v0"), {"json": ["constants", "q_c"]}),
+    Number("xj_nfet", "committed", "µm", 2, _proc("nfet_05v0"), {"toml": ["param", "xj_um", "value"]}),
+    Number(
+        "vbi_nfet", "idealised", "V", 3,
+        formula="built_in_potential", inputs=("n_ch_nfet_cal", "sd_peak_nfet", "n_i_tcad", "vt_tcad"),
+    ),
+    # depletion_width is in cm; the page prints µm.
+    Number(
+        "w_dep_nfet", "idealised", "µm", 3,
+        formula="depletion_width",
+        inputs=("n_ch_nfet_cal", "sd_peak_nfet", "vbi_nfet", "eps_si_tcad", "eps0_tcad", "q_tcad"),
+        factor=1e4,
+    ),
+    # The transistor's parts (transistor-parts.md): the calibrated nfet 2D cell w10p0_l0p70.
+    Number("l_cell", "committed", "µm", 1, _CELL, {"json": ["geometry", "l_um"]}),
+    Number("w_cell", "committed", "µm", 2, _CELL, {"json": ["geometry", "w_um"]}),
+    Number("t_ox_cell", "committed", "nm", 4, _CELL, {"json": ["meshed_t_ox_nm"]}),
+    Number("node_count_cell", "committed", "", 3, _CELL, {"json": ["node_count"]}),
+    # F/m on the card; the page prints fF/µm (1e15 fF/F over 1e6 µm/m).
+    Number("cgdl_nfet", "committed", "fF/µm", 2, _proc("nfet_05v0"), {"toml": ["param", "cgdl_f_per_m", "value"]}, factor=1e9),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
 

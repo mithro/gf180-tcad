@@ -56,7 +56,7 @@ more outer electron than silicon, and that spare electron is free to move. Donor
 silicon. An {term}`acceptor` has one fewer, takes an electron from a bond and leaves a hole, so
 acceptors make p-type silicon ({ref}`Sze and Ng, ch. 1 <lit-sze>`).
 
-A transistor has five parts ({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). The gate
+A transistor has five parts ({ref}`Taur and Ning, ch. 5 <lit-taur>`). The gate
 is the top electrode, which takes the control voltage. The gate oxide insulates it from the
 body, the silicon underneath. The source and drain ({term}`S/D`) are the regions at either end
 of the gate, where the current enters and leaves the body.

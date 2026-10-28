@@ -224,7 +224,7 @@ step (`potential_range_by_region`).
 **The bias does not reach the junction, because the rib floats.** This was the record's
 leading hypothesis, and the junction probe confirms it:
 - **The mesh has no [`core___slab90`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/get_simulation.py#L189) group.** v0.8.0's mesher never tagged the boundary between
-  the rib (`core`), which holds the whole pn junction, and the slab (`slab90`). So the DEVSIM
+  the rib (`core`), which holds the whole {term}`pn junction`, and the slab (`slab90`). So the DEVSIM
   device has no interface there, and the rib is a region with no path to either contact. The
   contacts are on the slab, so the bias moves the slab and the contact potentials only.
 - **The junction drop never changes with bias.** It stays at 0.83450 V, the {term}`built-in potential`
