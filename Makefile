@@ -88,6 +88,8 @@ tcad-calibrated:
 	$(TCAD) moscap --device nfet_05v0 --dim 2 --params calibrated --geometry w10p0_l2p00 \
 		--method combine-qs --resume $(TCAD_SCRATCH)/moscap2d-nfet_05v0-calibrated-w10p0_l2p00 \
 		--out results/tcad/moscap2d
+	$(TCAD) moscap --device nfet_05v0 --dim 2 --params calibrated --geometry w1p6_l0p70 \
+		--out results/tcad/moscap2d
 	$(TCAD) moscap --device pfet_05v0 --dim 2 --params calibrated --geometry w10p0_l0p50 \
 		--out results/tcad/moscap2d
 	$(TCAD) moscap --device pfet_05v0 --dim 2 --params calibrated --geometry w10p0_l0p70 \
