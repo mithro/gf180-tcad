@@ -5,7 +5,7 @@
 # quantity. Each value's source cites an anchor of docs/limitations/literature.md.
 
 note = "display only: not an input to any simulation"
-mismatch = "The simulation runs at T = 298.15 K and scales n_i by exp(-6726 K (1/T - 1/300 K)) (gf180tcad.tcad.process.Constants.n_i_cm3), which implies E_g = 1.16 eV (2 x 6726 K x k_B/q). The drawing uses the 300 K value of Sze and Ng, E_g = 1.12 eV. The band gap in the image is a display value, not the simulation's."
+mismatch = "The simulation runs at T = 298.15 K and scales n_i by exp(-6726 K (1/T - 1/300 K)) (gf180tcad.tcad.process.Constants.n_i_cm3), which implies E_g = 1.16 eV (2 x 6726 K x k_B/q). The drawing uses the 300 K value of the Ioffe archive and Sze and Ng, E_g = 1.12 eV. The band gap in the image is a display value, not the simulation's."
 
 [silicon]
 band_gap_ev = 1.12
@@ -18,7 +18,7 @@ nc_cm3 = "cm^-3"
 nv_cm3 = "cm^-3"
 
 [silicon.sources]
-band_gap_ev = "Sze and Ng 2006 (lit-sze), Appendix G, Properties of Si and GaAs: energy gap of Si at 300 K"
+band_gap_ev = "Ioffe NSM archive (lit-ioffe), Si, Band structure and carrier concentration, Basic Parameters: energy gap of Si at 300 K; also Sze and Ng 2006 (lit-sze), Appendix G, Properties of Si and GaAs"
 nc_cm3 = "Sze and Ng 2006 (lit-sze), Appendix G, Properties of Si and GaAs: effective density of states in the conduction band of Si at 300 K"
 nv_cm3 = "Sze and Ng 2006 (lit-sze), Appendix G, Properties of Si and GaAs: effective density of states in the valence band of Si at 300 K"
 
