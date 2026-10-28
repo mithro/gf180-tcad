@@ -350,6 +350,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `nfet_05v0` | `w10p0_l1p00` | both | 15169 |
 | `nfet_05v0` | `w10p0_l2p00` | qs | 14755 |
 | `nfet_05v0` | `w10p0_l2p00` | combine-qs | 3 |
+| `nfet_05v0` | `w1p6_l0p70` | both | 11812 |
 | `pfet_05v0` | `w10p0_l0p50` | both | 9701 |
 | `pfet_05v0` | `w10p0_l0p70` | both | 11888 |
 | `pfet_05v0` | `w10p0_l1p00` | both | 15279 |
@@ -360,6 +361,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `nfet_05v0` | `w10p0_l0p70` | 5.93 | 0 | 2026-10-27 15:01 |
 | `nfet_05v0` | `w10p0_l1p00` | 6.09 | 0 | 2026-10-27 19:51 |
 | `nfet_05v0` | `w10p0_l2p00` | 16.00 | 0 | 2026-10-28 00:32 |
+| `nfet_05v0` | `w1p6_l0p70` | 5.54 | 0 | 2026-10-28 18:24 |
 | `pfet_05v0` | `w10p0_l0p50` | 7.43 | 0 | 2026-10-28 03:18 |
 | `pfet_05v0` | `w10p0_l0p70` | 5.43 | 0 | 2026-10-28 06:38 |
 | `pfet_05v0` | `w10p0_l1p00` | 7.75 | 0 | 2026-10-28 10:55 |

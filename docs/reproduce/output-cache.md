@@ -14,7 +14,7 @@ The cache holds seven objects, the `mesh.msh` of seven calibrated cells of
 | Cell | Mesh sha256 |
 |---|---|
 | nfet W10/L0.6 | `8dad0ca787dc…` |
-| nfet W10/L0.7 | `e0437cde0b28…` |
+| nfet W10/L0.7 and W1.6/L0.7 | `e0437cde0b28…` |
 | nfet W10/L1 | `3715e9d78507…` |
 | nfet W10/L2 | `95e3225699ce…` |
 | pfet W10/L0.5 | `1a8513e2d300…` |
