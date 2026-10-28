@@ -416,6 +416,61 @@ def test_outcache_is_not_a_generator_module():
     assert not any("outcache" in f or "output-cache" in f for f in tcad.TCAD_GENERATOR_EXTRA_FILES)
 
 
+def _static_closure(root: str, src: Path = REPO / "src") -> set[str]:
+    """Every gf180tcad module ``root`` imports, transitively, from the AST: an import inside a
+    function counts, and so does each parent package of an imported module."""
+    import ast
+
+    def file_of(name):
+        base = src.joinpath(*name.split("."))
+        for f in (base / "__init__.py", base.with_suffix(".py")):
+            if f.is_file():
+                return f
+        return None
+
+    seen, todo = set(), [root]
+    while todo:
+        name = todo.pop()
+        parts = name.split(".")
+        for m in {".".join(parts[:i]) for i in range(1, len(parts) + 1)} - seen:
+            seen.add(m)
+            for node in ast.walk(ast.parse(file_of(m).read_text(encoding="utf-8"))):
+                found = []
+                if isinstance(node, ast.Import):
+                    found = [a.name for a in node.names]
+                elif isinstance(node, ast.ImportFrom):
+                    found = [node.module, *(f"{node.module}.{a.name}" for a in node.names)]
+                todo += [f for f in found if f and f.startswith("gf180tcad") and file_of(f)]
+    return seen
+
+
+def test_no_entry_point_imports_outcache():
+    """Every entry point of src/gf180tcad/generators.json, the meshcut one included (renders plan
+    Task R0: its host command pulls with a tools/output-cache subprocess), has
+    gf180tcad.outcache neither in its hashed list nor in its static import closure."""
+    reg = json.loads((REPO / "src" / "gf180tcad" / "generators.json").read_bytes())
+    assert "gf180tcad.meshcut.__main__" in reg["entry_points"]
+    for entry, modules in reg["entry_points"].items():
+        assert "gf180tcad.outcache" not in modules, entry
+        closure = _static_closure(entry)
+        assert entry in closure
+        assert "gf180tcad.outcache" not in closure, entry
+
+
+def test_static_closure_sees_an_import_inside_a_function(tmp_path):
+    """Positive control: the scan finds gf180tcad.outcache through a function-level import two
+    modules away."""
+    pkg = tmp_path / "gf180tcad"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "outcache.py").write_text("", encoding="utf-8")
+    (pkg / "b.py").write_text("def f():\n    from gf180tcad import outcache\n", "utf-8")
+    (pkg / "a.py").write_text("import gf180tcad.b\n", encoding="utf-8")
+    assert _static_closure("gf180tcad.a", tmp_path) == {
+        "gf180tcad", "gf180tcad.a", "gf180tcad.b", "gf180tcad.outcache",
+    }  # fmt: skip
+
+
 # --- review fixes (PR #49) --------------------------------------------------------------------
 
 

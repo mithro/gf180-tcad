@@ -27,6 +27,9 @@ gf180tcad.known
 gf180tcad.layout
 gf180tcad.manifest
 gf180tcad.meshcut
+gf180tcad.meshcut.__main__
+gf180tcad.meshcut.artefact
+gf180tcad.meshcut.job
 gf180tcad.meshcut.msh
 gf180tcad.meshcut.npz
 gf180tcad.meshcut.window

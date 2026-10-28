@@ -11,7 +11,7 @@ ascending order of their id in the full mesh, with their coordinates copied unco
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -44,7 +44,9 @@ class Window:
     """The cut: ``nodes_cm`` (n, 2) float64 in the mesh file's unit, ``node_id`` (n,) int64,
     ``triangles`` (m, 3) int32 and ``boundary_lines`` (k, 2) int32 indices into the nodes,
     ``region`` (m,) uint8 into ``regions`` and ``boundary`` (k,) uint8 into ``boundaries``,
-    and the bounds ``x_um``, ``y_um`` it was cut with."""
+    and the bounds ``x_um``, ``y_um`` it was cut with. ``net_doping_cm3`` (n,) float64 is the
+    job's net doping at each node (:func:`gf180tcad.meshcut.job.net_doping`), None until
+    :meth:`with_net_doping` sets it."""
 
     nodes_cm: np.ndarray
     node_id: np.ndarray
@@ -56,10 +58,11 @@ class Window:
     boundaries: tuple[str, ...]
     x_um: tuple[float, float]
     y_um: tuple[float, float]
+    net_doping_cm3: np.ndarray | None = None
 
     def arrays(self) -> dict[str, np.ndarray]:
-        """The npz members of the artefact."""
-        return {
+        """The npz members of the artefact (``net_doping_cm3`` only once it is set)."""
+        out = {
             "boundary": self.boundary,
             "boundary_lines": self.boundary_lines,
             "node_id": self.node_id,
@@ -67,6 +70,18 @@ class Window:
             "region": self.region,
             "triangles": self.triangles,
         }
+        if self.net_doping_cm3 is not None:
+            out["net_doping_cm3"] = self.net_doping_cm3
+        return out
+
+    def with_net_doping(self, values: np.ndarray) -> Window:
+        """This window with ``net_doping_cm3`` set to ``values`` (cm^-3), one per node."""
+        values = np.asarray(values, dtype=np.float64)
+        if values.shape != (len(self.node_id),):
+            raise ValueError(
+                f"net doping needs one value per node ({len(self.node_id)}), got {values.shape}"
+            )
+        return replace(self, net_doping_cm3=values)
 
 
 def _tag_index(mesh: Mesh, dim: int) -> dict[int, int]:

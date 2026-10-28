@@ -35,6 +35,10 @@ REGISTRY = REPO / "src" / "gf180tcad" / "generators.json"
 TCAD_MAIN = "gf180tcad.tcad.__main__"
 CALIBRATE_MAIN = "gf180tcad.calibrate.__main__"
 ROOTS = (TCAD_MAIN, CALIBRATE_MAIN)
+# The reduced mesh artefact generator (renders plan Task R0): an entry point of the registry
+# that writes the per-image trees tcad/meshes/<image> once their artefacts are committed.
+MESHCUT_MAIN = "gf180tcad.meshcut.__main__"
+ENTRY_POINTS = (*ROOTS, MESHCUT_MAIN)
 # The entry point that writes each tree root, by its path relative to results/
 # (docs/reproduce/index.md, tcad-provenance).
 WRITERS = {
@@ -99,8 +103,8 @@ def _ast_import_closure(roots: tuple[str, ...]) -> set[str]:
     return seen
 
 
-def test_tcad_generators_are_the_two_entry_points():
-    assert set(tcad.TCAD_GENERATORS) == set(ROOTS)
+def test_tcad_generators_are_the_registered_entry_points():
+    assert set(tcad.TCAD_GENERATORS) == set(ENTRY_POINTS)
     assert (tcad.TCAD_MAIN, tcad.CALIBRATE_MAIN) == ROOTS
     for entry, modules in tcad.TCAD_GENERATORS.items():
         assert entry in modules
@@ -272,7 +276,7 @@ def test_calibration_file_per_backend():
         tcad.calibration_file("nfet_05v0", backend="spice")
 
 
-@pytest.mark.parametrize("entry", ROOTS)
+@pytest.mark.parametrize("entry", ENTRY_POINTS)
 def test_registry_lists_match_the_import_graph(entry):
     graph = _ast_import_closure((entry,))
     listed = set(tcad.TCAD_GENERATORS[entry])
@@ -280,7 +284,7 @@ def test_registry_lists_match_the_import_graph(entry):
     assert not listed - graph, f"hashed for {entry} but not imported: {sorted(listed - graph)}"
 
 
-@pytest.mark.parametrize("entry", ROOTS)
+@pytest.mark.parametrize("entry", ENTRY_POINTS)
 def test_tcad_generator_modules_cover_what_python_loads(entry):
     """Importing the entry point loads only listed modules. The list can hold more: imports inside
     functions count too (the static closure of the test above)."""
@@ -309,14 +313,89 @@ def test_the_tcad_entry_point_does_not_hash_the_calibration_code():
     assert TCAD_MAIN not in calibrate_main and CALIBRATE_MAIN not in tcad_main
 
 
+# --- the meshcut entry point (renders plan Task R0) -----------------------------------------
+
+
+def test_meshcut_modules_match_the_import_graph():
+    """The meshcut entry point hashes its whole static closure: its own modules and the TCAD
+    modules it rebuilds the job's cross-section with (stack, moscap2d, the tcad CLI's
+    load_params and geometry_of), and nothing of the calibration or the output cache."""
+    listed = set(tcad.TCAD_GENERATORS[MESHCUT_MAIN])
+    assert listed == _ast_import_closure((MESHCUT_MAIN,))
+    assert {
+        "gf180tcad.meshcut", "gf180tcad.meshcut.__main__", "gf180tcad.meshcut.artefact",
+        "gf180tcad.meshcut.job", "gf180tcad.meshcut.msh", "gf180tcad.meshcut.npz",
+        "gf180tcad.meshcut.window", "gf180tcad.tcad.__main__", "gf180tcad.tcad.moscap2d",
+        "gf180tcad.tcad.stack",
+    } <= listed  # fmt: skip
+    assert not {m for m in listed if m.startswith(("gf180tcad.calibrate", "gf180tcad.render"))}
+    assert "gf180tcad.outcache" not in listed
+    assert tcad.PLUGIN_EXCLUDES[MESHCUT_MAIN] == tcad.PLUGIN_EXCLUDES[TCAD_MAIN]
+
+
+def test_no_other_entry_point_imports_meshcut():
+    """meshcut imports TCAD modules, never the reverse, so no existing closure (and no committed
+    tree's generator_sha256) changes with it."""
+    for entry in ROOTS:
+        assert not [m for m in tcad.TCAD_GENERATORS[entry] if m.startswith("gf180tcad.meshcut")]
+        assert not [m for m in _ast_import_closure((entry,)) if m.startswith("gf180tcad.meshcut")]
+
+
+def test_meshcut_hash_is_its_own(monkeypatch):
+    """A change to a meshcut module moves only the meshcut hash; a change to the tcad CLI it
+    imports moves it and the TCAD entry point's, never the calibration's."""
+    before = {e: tcad.generator_sha256(e) for e in ENTRY_POINTS}
+    assert len(set(before.values())) == 3
+    real = tcad._sha256
+    target = ""
+
+    def changed(path):
+        return "0" * 64 if path.as_posix().endswith(target) else real(path)
+
+    monkeypatch.setattr(tcad, "_sha256", changed)
+    target = "src/gf180tcad/meshcut/job.py"
+    assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
+        TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: True,
+    }  # fmt: skip
+    target = "src/gf180tcad/tcad/__main__.py"
+    assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
+        TCAD_MAIN: True, CALIBRATE_MAIN: False, MESHCUT_MAIN: True,
+    }  # fmt: skip
+
+
+MESHES = TCAD_RESULTS / "meshes"
+
+
+def test_meshcut_writes_a_tree_only_with_its_results():
+    """The registry gains the tcad/meshes/<image> rows with the first committed artefacts
+    (renders plan Step 5), as every tree row comes with its results; until then the meshcut
+    entry point writes no registered tree and results/tcad/meshes does not exist."""
+    meshes_rows = {k for k, v in tcad.TREE_GENERATORS.items() if v == MESHCUT_MAIN}
+    assert meshes_rows <= {f"tcad/meshes/{image}" for image in tcad.IMAGES}
+    assert bool(meshes_rows) == MESHES.is_dir()
+
+
+def test_meshes_tree_provenance_current():
+    """Each committed tcad/meshes/<image> tree's provenance.json is what the meshcut entry point
+    would write now, with the tree's image under ``meshes``."""
+    roots = sorted(MESHES / k.removeprefix("tcad/meshes/") for k, v in tcad.TREE_GENERATORS.items()
+                   if v == MESHCUT_MAIN)  # fmt: skip
+    assert bool(roots) == MESHES.is_dir()
+    for root in roots:
+        committed = json.loads((root / PROVENANCE_NAME).read_bytes())
+        current = tcad.tree_provenance(root, {"meshes": root.name}, generator=MESHCUT_MAIN)
+        assert committed == current, f"{root.relative_to(REPO)}: rerun the cut or restamp"
+
+
 def test_spice_provenance_untouched_by_tcad():
     """No TCAD module is a SPICE generator module, and the reverse holds for the TCAD-only ones."""
     every = {m for modules in tcad.TCAD_GENERATORS.values() for m in modules}
-    tcad_only = {m for m in every if m.startswith("gf180tcad.tcad")}
+    tcad_only = {m for m in every if m.startswith(("gf180tcad.tcad", "gf180tcad.meshcut"))}
+    assert any(m.startswith("gf180tcad.meshcut") for m in tcad_only)
     assert not tcad_only & set(reference.GENERATOR_MODULES)
 
 
-@pytest.mark.parametrize("entry", ROOTS)
+@pytest.mark.parametrize("entry", ENTRY_POINTS)
 def test_generator_files_cover_plugin_process_and_sandbox(entry):
     files = tcad.generator_files(entry)
     assert "tools/sandbox-run" in files
@@ -366,7 +445,7 @@ def test_generator_sha256_per_entry_point(monkeypatch):
             assert tcad.generator_sha256(e) != before[e], (target, e)
 
 
-@pytest.mark.parametrize("entry", ROOTS)
+@pytest.mark.parametrize("entry", ENTRY_POINTS)
 def test_provenance_names_its_generator(entry):
     prov = tcad.provenance(images={"moscap1d": "dev"}, generator=entry)
     assert prov["generator"] == entry
