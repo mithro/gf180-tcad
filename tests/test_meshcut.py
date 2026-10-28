@@ -14,6 +14,7 @@ import hashlib
 import json
 import struct
 import zipfile
+from dataclasses import asdict
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -650,7 +651,7 @@ def test_committed_2d_jobs_tie_to_today_s_parameters(rel):
     cv_meta = json.loads((d / "cv.meta.json").read_bytes())
     proc, geometry = job.load_params(d, cv_meta)
     assert proc.device == cv_meta["device"]
-    assert geometry.l_um == cv_meta["l_um"] and geometry.w_um == cv_meta["w_um"]
+    assert asdict(geometry) == cv_meta["geometry"]
 
 
 def test_load_params_refuses_a_job_from_other_parameters(tmp_path):
@@ -808,7 +809,11 @@ def test_host_command_end_to_end_without_docker(tmp_path, monkeypatch, inside):
     monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
     monkeypatch.setattr(meshcut_cli, "source_image", lambda job_dir: "stable")
 
+    real_run = meshcut_cli.subprocess.run
+
     def fake_pull(cmd, **kw):
+        if Path(cmd[1]).name != "output-cache":  # git, for the provenance
+            return real_run(cmd, **kw)
         Path(cmd[cmd.index("--out") + 1]).write_bytes(FIXTURE.read_bytes())
 
     def fake_sandbox(cmd, *, out_dir, **kw):
@@ -818,10 +823,10 @@ def test_host_command_end_to_end_without_docker(tmp_path, monkeypatch, inside):
     monkeypatch.setattr(meshcut_cli.subprocess, "run", fake_pull)
     monkeypatch.setattr(meshcut_cli.sandbox, "run", fake_sandbox)
     out = tmp_path / "meshes" / "stable"
-    dest = meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.1, scratch=tmp_path / "s",
+    dest = meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.2, scratch=tmp_path / "s",
                                results_root=results)  # fmt: skip
     assert dest == out / "nfet_05v0" / "start" / "w1p0_l0p50"
-    assert sorted(p.name for p in dest.iterdir()) == [meshcut.ARTEFACT, meshcut.META]
+    assert sorted(p.name for p in dest.iterdir()) == sorted([meshcut.ARTEFACT, meshcut.META])
     prov = json.loads((out / "provenance.json").read_bytes())
     assert prov["generator"] == "gf180tcad.meshcut.__main__"
     assert prov["images"]["meshes"]["name"] == "stable"
