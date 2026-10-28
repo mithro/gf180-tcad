@@ -946,6 +946,7 @@ def test_cross_section_matches_cell():
     assert by1 - by0 == pytest.approx(c.body_um)
     statement = model.exaggeration(c.scales, c.drawn)
     assert "Oxide thickness ×5" in statement and "source and drain width" in statement.lower()
+    assert "Source and drain width chosen for the drawing, not to scale." in statement
     subs = figures.substitutions()
     assert subs["x_fig_parts_cell_scale"] == subs["x_fig_junction_cell_scale"] == statement
     assert "x_fig_junction_panels_scale" not in subs  # a plot of curves, not a drawing

@@ -11,8 +11,9 @@ It covers the junction at rest, with no voltage applied, and leaves out the curr
 :alt: Cross-section of the transistor with gate, oxide, source, drain and body muted; the lower and inner edges of the source and drain are drawn as a bold line labelled junction.
 
 The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`, with the junctions
-of the source and the drain drawn bold. The junction depth is the {term}`model card`'s value,
-and the gate and body depths are project choices. {{ x_fig_junction_cell_scale }}
+of the source and the drain drawn bold. The oxide thickness and the body doping are fitted to
+the {term}`SPICE` model, and the junction depth is the {term}`model card`'s value. The gate and
+body depths and the source and drain width are project choices. {{ x_fig_junction_cell_scale }}
 ```
 
 ```{figure} /_generated/explained/junction-cell-dark.svg
@@ -20,8 +21,9 @@ and the gate and body depths are project choices. {{ x_fig_junction_cell_scale }
 :alt: Cross-section of the transistor with gate, oxide, source, drain and body muted; the lower and inner edges of the source and drain are drawn as a bold line labelled junction.
 
 The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`, with the junctions
-of the source and the drain drawn bold. The junction depth is the {term}`model card`'s value,
-and the gate and body depths are project choices. {{ x_fig_junction_cell_scale }}
+of the source and the drain drawn bold. The oxide thickness and the body doping are fitted to
+the {term}`SPICE` model, and the junction depth is the {term}`model card`'s value. The gate and
+body depths and the source and drain width are project choices. {{ x_fig_junction_cell_scale }}
 ```
 
 (explained-junction-meet)=
