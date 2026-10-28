@@ -111,7 +111,7 @@ an idealised example from the calibrated body doping.
 
 The conduction band edge lies half the band gap above the middle. In the gate the formula puts the
 Fermi level above that edge, as the diagram shows. There the Fermi level lies past the band
-edge, where Boltzmann statistics no longer hold ({ref}`Sze and Ng, ch. 1 <lit-sze>`).
+edge, where Boltzmann statistics fail ({ref}`Sze and Ng, ch. 1 <lit-sze>`).
 
 The {term}`TCAD` still counts the gate's carriers with Boltzmann statistics. The size of that
 error, and the calibration parameter that absorbs it, are on {doc}`/limitations/index`, in its
