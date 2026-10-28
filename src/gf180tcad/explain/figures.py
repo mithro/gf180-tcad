@@ -50,6 +50,14 @@ STYLE = {
     "nm_below_um": 0.1,
     # Most significant digits a label shows (fewer when they print the same value).
     "label_digits": {"thickness": 4, "doping": 3},
+    # The band diagram: room above the conduction band edge and below the valence band edge,
+    # as a fraction of the band gap; band names sit this far into that room.
+    "band_room": 0.45,
+    "band_name_at": 0.6,
+    # Line labels sit this fraction of the band gap above their line, at this x (0 to 1).
+    "level_label_lift": 0.02,
+    "level_label_x": 0.04,
+    "fill_alpha": 0.22,
 }
 
 # Okabe-Ito colours for the carriers and the highlight; greys for the muted parts.
@@ -206,7 +214,8 @@ _STACK_NAME = {"gate": "gate", "oxide": "gate oxide", "body": "body"}
 
 def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
     """The 1D stack as layers, gate on top, each labelled with its material, its thickness and
-    its doping from the model. The parts in ``highlight`` are shaded, the rest muted. Drawn at
+    its doping from the model. The parts in ``highlight`` are shaded (a silicon layer in its
+    majority carrier's colour), the rest muted. Drawn at
     the model's scale factors, stated in the title; there is no distance axis, because the
     drawing is stretched, so each layer carries its own thickness."""
     pal = PALETTES[palette]
@@ -223,11 +232,16 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
         ax.set_ylim(bottom + pad, top - pad)  # depth grows downwards
         for layer, a, b in edges:
             role = "highlight" if layer.part in highlight else "muted"
+            # A highlighted silicon layer takes its majority carrier's colour (n-type: electrons,
+            # p-type: holes), as in the band diagram; the oxide its own.
+            colour = pal.get(f"{role}_{layer.part}", pal[role])
+            if role == "highlight" and layer.dopant is not None:
+                colour = pal[_MAJORITY[layer.dopant]]
             ax.fill_between(
                 [0, width],
                 a,
                 b,
-                color=pal.get(f"{role}_{layer.part}", pal[role]),
+                color=colour,
                 alpha=STYLE["band_alpha"][role],
                 linewidth=0,
             )
@@ -249,6 +263,68 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
         return _svg(fig)
 
 
+def band_levels(dev: model.Device, part: str) -> dict[str, float]:
+    """The flat-band energy levels of the silicon layer ``part`` (eV, from the middle of the gap,
+    taken as the intrinsic level): the band edges half the :term:`band gap` above and below it
+    (``band_gap_si``, a textbook value), and the :term:`Fermi level` of Boltzmann statistics
+    (:func:`gf180tcad.explain.idealised.boltzmann_fermi`) from the layer's electron density,
+    the doping for donors or the mass-action minority density for acceptors."""
+    layer = dev.layer(part)
+    if layer.dopant is None:
+        raise ValueError(f"{part} is not a silicon layer")
+    half = numbers.value("band_gap_si") / 2
+    n = layer.doping_cm3
+    if layer.dopant == "acceptor":
+        n = idealised.mass_action(dev.n_i_cm3, layer.doping_cm3)
+    fermi = idealised.boltzmann_fermi(n, dev.n_i_cm3, dev.vt_v)
+    return {"conduction": half, "valence": -half, "intrinsic": 0, "fermi": fermi}
+
+
+_DOPED = {"donor": "n-type", "acceptor": "p-type"}
+
+
+def band_flat(dev: model.Device, parts: tuple[str, ...], palette: str) -> bytes:
+    """One flat band diagram per silicon layer in ``parts``, side by side on one energy axis:
+    the :term:`conduction band` (shaded above its edge), the :term:`valence band` (shaded below
+    its edge), the middle of the gap (dotted) and the Fermi level (:func:`band_levels`)."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    gap = numbers.value("band_gap_si")
+    room = gap * STYLE["band_room"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(parts), sharey=True)
+        for ax, part in zip(axes, parts, strict=True):
+            lv = band_levels(dev, part)
+            top, bottom = lv["conduction"] + room, lv["valence"] - room
+            ax.set_xlim(0, 1)
+            ax.set_ylim(bottom, top)
+            ax.set_xticks([])
+            ax.axhspan(
+                lv["conduction"], top, color=pal["electron"], alpha=STYLE["fill_alpha"], lw=0
+            )
+            ax.axhspan(bottom, lv["valence"], color=pal["hole"], alpha=STYLE["fill_alpha"], lw=0)
+            ax.axhline(lv["conduction"], color=pal["electron"], lw=lw)
+            ax.axhline(lv["valence"], color=pal["hole"], lw=lw)
+            ax.axhline(lv["intrinsic"], color=pal["intrinsic"], lw=lw, ls=":")
+            ax.axhline(lv["fermi"], color=pal["highlight"], lw=lw, ls="--")
+            mid = (ax.get_xlim()[0] + ax.get_xlim()[1]) / 2
+            at = STYLE["band_name_at"] * room
+            ax.text(mid, lv["conduction"] + at, "conduction band", ha="center", va="center")
+            ax.text(mid, lv["valence"] - at, "valence band", ha="center", va="center")
+            lift = gap * STYLE["level_label_lift"]
+            x = STYLE["level_label_x"]
+            ax.text(x, lv["fermi"] + lift, "Fermi level", ha="left", va="bottom",
+                    color=pal["highlight"], fontweight="bold")  # fmt: skip
+            ax.text(x, lv["intrinsic"] - lift, "middle of the gap", ha="left", va="top",
+                    color=pal["intrinsic"])  # fmt: skip
+            layer = dev.layer(part)
+            ax.set_title(f"{_DOPED[layer.dopant]} {_PART_LABEL[part]}", fontsize=STYLE["text_pt"])
+        axes[0].set_ylabel("energy from the middle of the gap (eV)")
+        return _svg(fig)
+
+
 def _silicon_doping(palette: str) -> bytes:
     dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
     return doping_profile(dev, "body", palette)
@@ -259,10 +335,22 @@ def _oxide_stack(palette: str) -> bytes:
     return stack_1d(dev, ("gate", "oxide"), palette)
 
 
+def _bands_stack(palette: str) -> bytes:
+    dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
+    return stack_1d(dev, ("gate", "body"), palette)
+
+
+def _bands_flat(palette: str) -> bytes:
+    dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
+    return band_flat(dev, ("gate", "body"), palette)
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
     "oxide-stack": _oxide_stack,
+    "bands-stack": _bands_stack,
+    "bands-flat": _bands_flat,
 }
 
 
