@@ -730,6 +730,26 @@ def test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell():
     ]  # fmt: skip
 
 
+def test_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
+    """The committed nfet W1.6/L0.7 2D job gives what the derivation from W10/L0.7 gives: the
+    same mesh, the same per-width Cgg, and the same comparison in the validation file."""
+    root = cv.MOSCAP2D_ROOT / NFET / "calibrated"
+    metas = [
+        json.loads((root / gid / "cv.meta.json").read_bytes())
+        for gid in ("w10p0_l0p70", "w1p6_l0p70")
+    ]
+    assert metas[0]["mesh_sha256"] == metas[1]["mesh_sha256"]
+    a, _ = io.read_csv(root / "w10p0_l0p70" / "cv.csv")
+    b, _ = io.read_csv(root / "w1p6_l0p70" / "cv.csv")
+    assert list(a["cgg_per_um"]) == list(b["cgg_per_um"])
+    committed = json.loads((cv.VALIDATION_ROOT / f"{NFET}.json").read_bytes())["two_d"][
+        "w1p6_l0p70"
+    ]
+    derived = json.loads(json.dumps(width_scaled_two_d(NFET, "w10p0_l0p70", "w1p6_l0p70")))
+    assert committed["status"] == "compared"
+    assert {k: committed[k] for k in derived} == derived
+
+
 def test_simulate_is_injectable_and_defaults_to_devsim(fit, tmp_path, monkeypatch):
     """Charon plan Task B0: both simulators are parameters, so another backend calibrates and
     validates without editing calibrate.cv; omitted, they are the DEVSIM ones."""
