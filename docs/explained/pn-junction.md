@@ -36,8 +36,8 @@ The boundary between the two is a {term}`pn junction`
 ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
 
 The source and drain hold up to {{ x_sd_peak_nfet }} of {term}`donors <donor>`
-({term}`NSD`). The body holds {{ x_n_ch_nfet_cal }} of {term}`acceptors <acceptor>`, this
-repo's calibrated value. The junction lies {{ x_xj_nfet }} below the silicon surface
+({term}`NSD`). The body holds {{ x_n_ch_nfet_cal }} of {term}`acceptors <acceptor>`, a value
+this repo fits to the {term}`SPICE` model. The junction lies {{ x_xj_nfet }} below the silicon surface
 ({term}`XJ`, {repo}`data/process/nfet_05v0.toml`).
 
 (explained-junction-depletion)=
@@ -69,8 +69,12 @@ V_{bi} = V_t \, \ln \frac{N_A \, N_D}{n_i^2}
 $$
 
 Here $N_A$ and $N_D$ are the acceptor and donor densities and $n_i$ is the
-{term}`intrinsic carrier density`. The thermal voltage $V_t$ is {{ x_vt_tcad }}. For an
-idealised abrupt junction between the card's source peak and the calibrated body doping,
+{term}`intrinsic carrier density`. The thermal voltage $V_t$ is the heat energy of one carrier,
+expressed as a voltage. The simulations of this repo use $V_t$ = {{ x_vt_tcad }}
+({repo}`per_area.meta.json <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`).
+The formula assumes {term}`Boltzmann statistics` and that every dopant atom is ionised.
+
+For an idealised abrupt junction between the card's source peak and the fitted body doping,
 $V_{bi}$ is {{ x_vbi_nfet }}.
 
 (explained-junction-width)=
@@ -78,8 +82,10 @@ $V_{bi}$ is {{ x_vbi_nfet }}.
 ## How wide the region is
 
 The {term}`depletion approximation` treats the region as fully emptied of carriers and the rest
-as neutral. It gives the width $W$ of the region, with $\varepsilon_{si}$ the permittivity of
-silicon and $q$ the charge of one electron ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
+as neutral. It gives the width $W$ of the region, the {term}`depletion width`
+({ref}`Sze and Ng, ch. 2 <lit-sze>`). Here $q$ is the charge of one electron and
+$\varepsilon_{si}$ the permittivity of silicon. The permittivity sets how much charge a material
+holds at a given voltage, compared with a vacuum gap.
 
 $$
 W = \sqrt{\frac{2 \, \varepsilon_{si} \, V_{bi}}{q} \left( \frac{1}{N_A} + \frac{1}{N_D} \right)}
@@ -113,8 +119,9 @@ are an idealised example computed from them in the depletion approximation.
 
 ## Where this repo's results differ
 
-The 2D cell's source and drain are not a step. Their doping peaks at the surface and falls to the
-body's at the junction depth, as a Gaussian. It also spreads sideways under the gate edge
+The 2D cell's source and drain are not a step. Their doping peaks at the surface and falls smoothly
+to the body's at the junction depth, in a bell-shaped curve called a Gaussian. It also spreads
+sideways under the gate edge
 ({py:mod}`gf180tcad.tcad.stack`). Near the junction the n side is therefore lightly doped too.
 The textbook treats such a profile as a graded junction ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
 
