@@ -319,8 +319,7 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 {ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
 None of the four committed start-value 2D jobs' meshes is in the cache, nor on any disk:
 `tools/output-cache status` reports all four as absent. The cache holds the meshes of the
-calibrated nfet cells W10/L0.6, W10/L0.7, W10/L1 and W10/L2 of
-[issue #35](https://github.com/mithro/gf180-tcad/issues/35). Once a mesh is in the cache,
+calibrated cells of [issue #35](https://github.com/mithro/gf180-tcad/issues/35), listed on {doc}`/reproduce/output-cache`. Once a mesh is in the cache,
 `tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh` writes it
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
 committed `cv.meta.json` stays the truth.

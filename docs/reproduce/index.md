@@ -486,7 +486,7 @@ Between the two hashes, two entries of the hashed file list differ.
 Every file on the 2D compute path is byte-identical, including all of `gplugins/devsim`.
 The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `make reproduce-quick` run above.
 
-**The pfet W10/L0.7 and W10/L1 jobs needed no restamp.** It ran at gplugins `0715c81` and `bf8f2dcc…`.
+**The pfet W10/L0.7 and W10/L1 jobs needed no restamp.** They ran at gplugins `0715c81` and `bf8f2dcc…`.
 Those are the stamps the folder already had, so the jobs left
 {repo}`results/tcad/moscap2d/provenance.json` unchanged.
 
