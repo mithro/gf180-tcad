@@ -730,6 +730,39 @@ def test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell():
     ]  # fmt: skip
 
 
+def test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
+    """The committed pfet W1.6/L0.7 2D job gives what the derivation from W10/L0.7 gives: the
+    same mesh, the same per-width Cgg, and the same comparison in the validation file."""
+    root = cv.MOSCAP2D_ROOT / PFET / "calibrated"
+    metas = [
+        json.loads((root / gid / "cv.meta.json").read_bytes())
+        for gid in ("w10p0_l0p70", "w1p6_l0p70")
+    ]
+    assert metas[0]["mesh_sha256"] == metas[1]["mesh_sha256"]
+    a, _ = io.read_csv(root / "w10p0_l0p70" / "cv.csv")
+    b, _ = io.read_csv(root / "w1p6_l0p70" / "cv.csv")
+    assert list(a["cgg_per_um"]) == list(b["cgg_per_um"])
+    val = json.loads((cv.VALIDATION_ROOT / f"{PFET}.json").read_bytes())
+    committed = val["two_d"]["w1p6_l0p70"]
+    derived = json.loads(json.dumps(width_scaled_two_d(PFET, "w10p0_l0p70", "w1p6_l0p70")))
+    assert committed["status"] == "compared"
+    assert {k: committed[k] for k in derived} == derived
+
+
+def test_pfet_w1p6_l0p70_two_d():
+    """The pfet W1.6/L0.7 2D comparison (Same process; docs/limitations/moscap2d.md)."""
+    comp = width_scaled_two_d(PFET, "w10p0_l0p70", "w1p6_l0p70")
+    v = comp["verdicts"]
+    assert comp["verdict"] == "Same process"
+    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.1063, abs=5e-5)
+    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.0988, abs=5e-5)
+    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1091, abs=5e-5)
+    assert v["dv_inv"]["dv_v"] == pytest.approx(0.0065, abs=5e-5)
+    assert [v[k]["verdict"] for k in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv")] == [
+        "Same process", "Same process", "Same process", "Agree",
+    ]  # fmt: skip
+
+
 def test_simulate_is_injectable_and_defaults_to_devsim(fit, tmp_path, monkeypatch):
     """Charon plan Task B0: both simulators are parameters, so another backend calibrates and
     validates without editing calibrate.cv; omitted, they are the DEVSIM ones."""

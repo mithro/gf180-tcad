@@ -353,6 +353,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w10p0_l0p50` | both | 9701 |
 | `pfet_05v0` | `w10p0_l0p70` | both | 11888 |
 | `pfet_05v0` | `w10p0_l1p00` | both | 15279 |
+| `pfet_05v0` | `w1p6_l0p70` | both | 11602 |
 
 | Device | Geometry | Peak memory (GiB) | Exit code | Finished (ACDT) |
 |---|---|---|---|---|
@@ -363,6 +364,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w10p0_l0p50` | 7.43 | 0 | 2026-10-28 03:18 |
 | `pfet_05v0` | `w10p0_l0p70` | 5.43 | 0 | 2026-10-28 06:38 |
 | `pfet_05v0` | `w10p0_l1p00` | 7.75 | 0 | 2026-10-28 10:55 |
+| `pfet_05v0` | `w1p6_l0p70` | 5.35 | 0 | 2026-10-28 21:45 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 
@@ -486,7 +488,7 @@ Between the two hashes, two entries of the hashed file list differ.
 Every file on the 2D compute path is byte-identical, including all of `gplugins/devsim`.
 The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `make reproduce-quick` run above.
 
-**The pfet W10/L0.7 and W10/L1 jobs needed no restamp.** They ran at gplugins `0715c81` and `bf8f2dcc…`.
+**The pfet W10/L0.7, W10/L1 and W1.6/L0.7 jobs needed no restamp.** They ran at gplugins `0715c81` and `bf8f2dcc…`.
 Those are the stamps the folder already had, so the jobs left
 {repo}`results/tcad/moscap2d/provenance.json` unchanged.
 

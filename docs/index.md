@@ -22,7 +22,7 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
 - the 1D and 2D MOS capacitor {term}`C–V` curves at the start values, in
   {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`);
 - the calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1 and W10/L2, in {repo}`results/tcad/moscap2d`;
-- the calibrated 2D pfet cells at W10/L0.5, W10/L0.7 and W10/L1, in the same folder;
+- the calibrated 2D pfet cells at W10/L0.5, W10/L0.7, W10/L1 and W1.6/L0.7, in the same folder;
 - their {term}`mesh convergence`, 1D and 2D, in {repo}`results/tcad/meshconv`
   ({doc}`limitations/mesh-convergence`);
 - the 1D calibration against the SPICE {term}`Cgg`–Vg, in {repo}`results/tcad/calibration`,
