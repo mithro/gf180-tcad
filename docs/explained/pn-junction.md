@@ -91,18 +91,20 @@ one ({ref}`Sze and Ng, ch. 2 <lit-sze>`). Here it lies almost all in the body.
 
 ```{figure} /_generated/explained/junction-panels-light.svg
 :figclass: only-light
-:alt: Three panels against distance into the body: a tall thin donor spike at the junction and a low acceptor step, a triangular field and a potential that falls to zero at the depletion edge.
+:alt: Three panels against distance from the junction, negative in the source and positive in the body: a tall thin donor spike at the junction and a low acceptor step, a triangular field and a potential that falls to zero at the depletion edge.
 
-The charge, the field and the potential of the idealised abrupt junction. The source doping is
+The charge, the field and the potential of the idealised abrupt junction. Negative distances lie
+in the source and positive ones in the body. The source doping is
 the model card's peak value, and the body doping is fitted to the {term}`SPICE` model. The curves
 are an idealised example computed from them in the depletion approximation.
 ```
 
 ```{figure} /_generated/explained/junction-panels-dark.svg
 :figclass: only-dark
-:alt: Three panels against distance into the body: a tall thin donor spike at the junction and a low acceptor step, a triangular field and a potential that falls to zero at the depletion edge.
+:alt: Three panels against distance from the junction, negative in the source and positive in the body: a tall thin donor spike at the junction and a low acceptor step, a triangular field and a potential that falls to zero at the depletion edge.
 
-The charge, the field and the potential of the idealised abrupt junction. The source doping is
+The charge, the field and the potential of the idealised abrupt junction. Negative distances lie
+in the source and positive ones in the body. The source doping is
 the model card's peak value, and the body doping is fitted to the {term}`SPICE` model. The curves
 are an idealised example computed from them in the depletion approximation.
 ```

@@ -74,6 +74,11 @@ STYLE = {
     # source, on this many points; the charge axis spans the dopings with headroom.
     "junction_pad": 0.25,
     "junction_points": 20001,
+    # The donor spike of the junction panels sits on the junction line: drawn this wide, and
+    # stacked above it (matplotlib zorder; its lines and curves default to 2).
+    "spike_width": 3.5,
+    "spike_zorder": 3,
+    "junction_line_zorder": 1,
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -486,7 +491,7 @@ def junction_panels(palette: str) -> bytes:
     """The charge, field and potential of the idealised abrupt junction between the nfet's
     source and its body (:func:`gf180tcad.explain.idealised.abrupt_junction`), from the
     registry's dopings, built-in potential and constants, against the distance from the
-    junction into the body."""
+    junction: negative in the source, positive in the body."""
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     n_a, n_d = numbers.value("n_ch_nfet_cal"), numbers.value("sd_peak_nfet")
@@ -509,7 +514,14 @@ def junction_panels(palette: str) -> bytes:
         ax_q.set_yscale("log")
         ax_q.plot(x_um, pos, color=pal["electron"], lw=lw, label="donors (+)")
         ax_q.plot(x_um, neg, color=pal["hole"], lw=lw, label="acceptors (−)")
-        ax_q.vlines(0.0, n_a, n_d, color=pal["electron"], lw=lw)
+        ax_q.vlines(
+            0.0,
+            n_a,
+            n_d,
+            color=pal["electron"],
+            lw=STYLE["spike_width"],
+            zorder=STYLE["spike_zorder"],
+        )
         ax_q.set_ylim(n_a / STYLE["headroom"], n_d * STYLE["headroom"])
         ax_q.set_ylabel("ions (cm⁻³)")
         ax_q.legend(loc="upper right", frameon=False, ncols=2)
@@ -517,9 +529,11 @@ def junction_panels(palette: str) -> bytes:
         ax_e.set_ylabel("field (kV/cm)")
         ax_v.plot(x_um, prof["potential_v"], color=pal["highlight"], lw=lw)
         ax_v.set_ylabel("potential (V)")
-        ax_v.set_xlabel("distance from the junction into the body (µm)")
+        ax_v.set_xlabel("distance from the junction (µm): source < 0 < body")
         for ax in (ax_q, ax_e, ax_v):
-            ax.axvline(0.0, color=pal["text"], lw=STYLE["edge_width"])
+            ax.axvline(
+                0.0, color=pal["text"], lw=STYLE["edge_width"], zorder=STYLE["junction_line_zorder"]
+            )
             ax.axvline(x_p, color=pal["intrinsic"], lw=STYLE["edge_width"], ls=":")
         ax_v.text(x_p, vbi, "depletion edge ", ha="right", va="top", color=pal["intrinsic"])
         return _svg(fig)
