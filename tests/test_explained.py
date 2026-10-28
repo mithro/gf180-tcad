@@ -615,6 +615,32 @@ def test_positive_control_import_scan(tmp_path):
     assert "gf180tcad.explain.numbers" in found and "gf180tcad.explain" in found
 
 
+def _explain_modules() -> list[tuple[Path, str]]:
+    pkg = SRC / "gf180tcad" / "explain"
+    out = []
+    for path in sorted(pkg.rglob("*.py")):
+        rel = path.relative_to(SRC).with_suffix("")
+        parts = rel.parts[:-1] if path.name == "__init__.py" else rel.parts
+        out.append((path, ".".join(parts)))
+    return out
+
+
+def test_explain_imports_nothing_from_tcad():
+    """The explainer redraws the cell from committed data, never from ``gf180tcad.tcad``."""
+    mods = _explain_modules()
+    assert {m for _, m in mods} >= {"gf180tcad.explain", "gf180tcad.explain.model"}
+    for path, mod in mods:
+        bad = {i for i in _imports(path, mod) if i.split(".")[:2] == ["gf180tcad", "tcad"]}
+        assert not bad, f"{mod} imports {sorted(bad)}"
+
+
+def test_positive_control_tcad_import_scan(tmp_path):
+    f = tmp_path / "m.py"
+    f.write_text("import gf180tcad.tcad.stack\nfrom ..tcad import moscap1d\n", "utf-8")
+    found = _imports(f, "gf180tcad.explain.m")
+    assert "gf180tcad.tcad.stack" in found and "gf180tcad.tcad.moscap1d" in found
+
+
 _DOCS_GROUP_ONLY = textwrap.dedent(
     """
     import sys
