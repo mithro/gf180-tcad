@@ -102,7 +102,7 @@ number as $V_t$ in volts. The simulations of this repo use $V_t$ = {{ x_vt_tcad 
 In the nfet's n-type gate, $n$ is the donor doping. The formula puts the Fermi level
 {{ x_fermi_gate_nfet }} above the middle, an idealised example from the model card's gate doping.
 In the p-type body, $n$ is the few electrons that the mass-action law leaves
-({ref}`explained-carriers`). There the Fermi level is {{ x_fermi_body_nfet }} below the middle,
+({ref}`explained-how-many`). There the Fermi level is {{ x_fermi_body_nfet }} below the middle,
 an idealised example from the calibrated body doping.
 
 (explained-bands-differs)=
