@@ -23,6 +23,30 @@
       "gf180tcad.tcad.process",
       "gf180tcad.tcad.stack"
     ],
+    "gf180tcad.meshcut.__main__": [
+      "gf180tcad",
+      "gf180tcad.devices",
+      "gf180tcad.io",
+      "gf180tcad.layout",
+      "gf180tcad.meshcut",
+      "gf180tcad.meshcut.__main__",
+      "gf180tcad.meshcut.artefact",
+      "gf180tcad.meshcut.job",
+      "gf180tcad.meshcut.msh",
+      "gf180tcad.meshcut.npz",
+      "gf180tcad.meshcut.window",
+      "gf180tcad.sandbox",
+      "gf180tcad.tcad",
+      "gf180tcad.tcad.__main__",
+      "gf180tcad.tcad.analytic",
+      "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.mesh",
+      "gf180tcad.tcad.meshconv",
+      "gf180tcad.tcad.moscap1d",
+      "gf180tcad.tcad.moscap2d",
+      "gf180tcad.tcad.process",
+      "gf180tcad.tcad.stack"
+    ],
     "gf180tcad.tcad.__main__": [
       "gf180tcad",
       "gf180tcad.devices",
@@ -53,6 +77,9 @@
   },
   "plugin_excludes": {
     "gf180tcad.calibrate.__main__": [
+      "gplugins/devsim/backends/charon/*"
+    ],
+    "gf180tcad.meshcut.__main__": [
       "gplugins/devsim/backends/charon/*"
     ],
     "gf180tcad.tcad.__main__": [
