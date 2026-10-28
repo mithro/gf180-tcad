@@ -236,7 +236,7 @@ folder (`generator`) and a {term}`generator_sha256`.
 The hash is **per results folder**
 ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)). It covers the import closure of
 the entry point that writes the folder, one module list per entry point in
-{py:data}`gf180tcad.tcad.TCAD_GENERATORS`. It also covers the inputs both entry points share: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
+{py:data}`gf180tcad.tcad.TCAD_GENERATORS`. It also covers the inputs every entry point shares: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
 {repo}`tools/sandbox-run`. The closure is the static one, so an import inside a function counts
 too ({test}`tests/tcad/test_tcad_provenance.py::test_registry_lists_match_the_import_graph`
 runs once per entry point). {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties each results folder
@@ -260,13 +260,20 @@ calibration that `provenance.json` records. Its keys:
 | `plugin_excludes` | each entry point's plugin files left out of its hash |
 | `calibration_dirs` | each backend's calibration folder |
 
-Both entry points leave the plugin's `gplugins/devsim/backends/charon/` out of their hash
+Every entry point leaves the plugin's `gplugins/devsim/backends/charon/` out of its hash
 ({py:data}`gf180tcad.tcad.PLUGIN_EXCLUDES`), and
 {test}`tests/tcad/test_tcad_provenance.py::test_excluded_plugin_files_are_not_imported_by_the_hashed_ones`
 checks that no hashed plugin file imports it. An entry point, a results folder or an image for
 another simulator is a row in the file. Adding one leaves every committed hash as it is.
 {test}`tests/tcad/test_tcad_provenance.py::test_registry_trees_cover_every_committed_root`
 requires every results folder under `results/tcad*/` to be a row of `trees`.
+
+The registry has three entry points:
+
+- {py:mod}`gf180tcad.tcad.__main__` writes the MOS capacitor and mesh-convergence folders;
+- {py:mod}`gf180tcad.calibrate.__main__` writes the calibration and validation folders;
+- {py:mod}`gf180tcad.meshcut.__main__` cuts the reduced mesh artefact of a 2D job
+  ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)). It writes no committed folder.
 
 A change to a module that a folder's writer never imports therefore leaves the folder's hash alone.
 The calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in

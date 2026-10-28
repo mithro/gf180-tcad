@@ -34,6 +34,9 @@ They have to be regenerated before they can be pushed ({ref}`first population <o
   `tools/output-cache pull` writes a file only if its sha256 is that hash. Using the cache never
   changes a result or its provenance: {py:mod}`gf180tcad.outcache` is not a generator module,
   so it is not part of any {term}`generator_sha256`.
+- **One generator reads it.** The `cut` command of {py:mod}`gf180tcad.meshcut.__main__` cuts
+  the reduced mesh artefact of a 2D job. It fetches the job's mesh with a `tools/output-cache pull`
+  subprocess, before its sandboxed run, which has no network.
 - **The documentation build never fetches from it.** The build stays offline and uses only
   committed files.
 - No Git Large File Storage (git-LFS): it has bandwidth quotas. Each object is a plain git blob under 95 MB after
