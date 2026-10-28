@@ -340,6 +340,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | pfet `w10p0_l0p50` | 205520 | 85 | 76 | 162 |
 | pfet `w10p0_l0p70` | 244880 | 105 | 93 | 198 |
 | pfet `w10p0_l1p00` | 304781 | 131 | 123 | 255 |
+| pfet `w1p6_l0p70` | 244880 | 102 | 91 | 193 |
 
 | Cell | Peak memory (GiB) | Attempts |
 |---|---|---|
@@ -350,6 +351,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | pfet `w10p0_l0p50` | 7.4 | 1 |
 | pfet `w10p0_l0p70` | 5.4 | 1 |
 | pfet `w10p0_l1p00` | 7.8 | 1 |
+| pfet `w1p6_l0p70` | 5.4 | 1 |
 
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
@@ -367,6 +369,8 @@ first QS point (+5 V) of pfet `w10p0_l0p70`. Its gate was at 4.487 V; the update
 The +5 V point itself converged to the full tolerance, so no committed Cgg comes from that solve.
 Its `cv.meta.json` records it in `qs_roundoff_accepted` ({ref}`moscap2d-solver` gives the conditions).
 That entry's `vg` is a ramp bias, not a grid point ([issue #102](https://github.com/mithro/gf180-tcad/issues/102)).
+
+The pfet `w1p6_l0p70` job, on the same mesh, records the same entry.
 
 Each meshed oxide is the calibrated value:
 16.05 nm for the nfet and 15.721 nm for the pfet. The meshes are not committed ({ref}`moscap2d-meshes`); the output cache
@@ -396,7 +400,18 @@ is compared with the {term}`TT` {{ ngspice }} target of W1.6/L0.7 by
 | Depletion crossing shift (mV) | −194 | Disagree |
 | Inversion crossing shift (mV) | −33 | {term}`Agree` |
 
-The W1.6/L0.7 2D job itself is "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+The pfet W1.6/L0.7 job is committed. Its mesh is the pfet W10/L0.7 mesh, and its `cgg_per_um` equals that
+cell's at all 201 points
+({test}`tests/test_calibrate_cv.py::test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell`).
+Its comparison is {term}`Same process`
+({test}`tests/test_calibrate_cv.py::test_pfet_w1p6_l0p70_two_d`):
+
+| Check | Value | Verdict |
+|---|---|---|
+| Accumulation plateau, worst difference (%) | 10.6 | Same process |
+| Inversion plateau, worst difference (%) | 9.9 | Same process |
+| Depletion crossing shift (mV) | −109 | Same process |
+| Inversion crossing shift (mV) | +7 | Agree |
 
 (moscap2d-l10)=
 
@@ -440,5 +455,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   ({ref}`moscap2d-l2`).
 - **Few calibrated 2D cells** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
   They are the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2.
-  The pfet cells are W10/L0.5, W10/L0.7 and W10/L1.
+  The pfet cells are W10/L0.5, W10/L0.7, W10/L1 and W1.6/L0.7.
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).

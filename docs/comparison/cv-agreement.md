@@ -334,11 +334,11 @@ Lmin with `spice-fit`.
 All three fail on the depletion crossing alone ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The
 {repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each calibrated 2D
 cell with the TT ngspice Cgg; W10/L1 and W10/L2 are {term}`Same process`. The
-{repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>` does the same for the pfet cells. W10/L0.5 and W10/L0.7 are Same process.
+{repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>` does the same for the pfet cells. W10/L0.5, W10/L0.7 and W1.6/L0.7 are Same process.
 
 A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh and the SPICE
 grid ({ref}`moscap2d-calibrated`). The committed nfet cells are W10/L0.6, W10/L0.7,
-W10/L1 and W10/L2. The pfet cells are W10/L0.5, W10/L0.7 and W10/L1. The other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+W10/L1 and W10/L2. The pfet cells are W10/L0.5, W10/L0.7, W10/L1 and W1.6/L0.7 ({ref}`moscap2d-calibrated`). The other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
 A plateau row is its worst difference from SPICE. At W10/L0.6, a calibration geometry of the 1D fit:
 
