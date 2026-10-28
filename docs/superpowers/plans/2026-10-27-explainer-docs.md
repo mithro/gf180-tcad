@@ -262,7 +262,8 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   (Sze and Ng ch. 1).
 - The plan's second band-gap value (≈ 1.16 eV implied by the n_i scaling of
   `gf180tcad.tcad.process.Constants`) is left out: its activation temperature is a code constant,
-  not a committed data file, so no registry entry can read it. The page says the simulations read
+  not a committed data file, so no registry entry can read it, and its source (Misiakos and
+  Tsamakis 1993) is not on the literature page. #97 settles it. The page says the simulations read
   n_i and no band gap.
 - `idealised.degenerate_offset` stays off the page (#88, #98): the gap section states the plain
   claim and links the limitations item on the poly gate, which gives the size of the error.
@@ -270,6 +271,10 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   limitations item on the poly gate, the render manifest page and the `gf180tcad.derive` module
   docstring (a docstring change; no render is committed, so nothing is restamped).
 - The two "300 K" mentions carry `number-ok` (the temperature of the cited value).
+- Review of #103: Boltzmann statistics get the plain clause of Sze and Ng ch. 1 (holds while the
+  Fermi level stays several times a carrier's heat energy from the band edges); the flat-band
+  caption names the card's gate doping, the fitted body doping and the idealised level; a
+  highlighted silicon layer of `stack_1d` takes its majority carrier's colour.
 
 **As built (E1b-2).**
 

@@ -5,7 +5,7 @@
 # quantity. Each value's source cites an anchor of docs/limitations/literature.md.
 
 note = "display only: not an input to any simulation"
-mismatch = "The simulation runs at T = 298.15 K and scales n_i by exp(-6726 K (1/T - 1/300 K)) (gf180tcad.tcad.process.Constants.n_i_cm3), which implies E_g = 1.16 eV (2 x 6726 K x k_B/q). The drawing uses the 300 K value of Sze and Ng, E_g = 1.12 eV. The band gap in the image is a display value, not the simulation's."
+mismatch = "The simulation runs at T = 298.15 K and scales n_i by exp(-6726 K (1/T - 1/300 K)) (gf180tcad.tcad.process.Constants.n_i_cm3), which implies E_g = 1.16 eV (2 x 6726 K x k_B/q). The drawing uses the 300 K value of the Ioffe archive and Sze and Ng, E_g = 1.12 eV. The band gap in the image is a display value, not the simulation's."
 
 [silicon]
 band_gap_ev = 1.12
