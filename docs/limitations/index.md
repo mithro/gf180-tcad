@@ -21,7 +21,7 @@ there.
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`).
-- **2D validation: {term}`Disagree` at the two shortest nfet cells.** Both plateaus lie below
+- **2D validation: {term}`Disagree` at three cells,** nfet W10/L0.6 and W10/L0.7 and pfet W10/L1. Both plateaus lie below
   SPICE at every calibrated cell ({ref}`cv-agreement-validation`, [issue #77](https://github.com/mithro/gf180-tcad/issues/77)). The other
   geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
   The L = 2 µm cell's AC solve fails
