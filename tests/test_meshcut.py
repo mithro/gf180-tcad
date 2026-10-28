@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 
 from gf180tcad import meshcut
+from gf180tcad.meshcut import __main__ as meshcut_cli
 from gf180tcad.meshcut import artefact, job, msh, npz, window
 
 REPO = Path(__file__).resolve().parents[1]
@@ -674,3 +675,265 @@ def test_check_cross_section_refuses_another_structure():
         bad = SimpleNamespace(**{**vars(ok), field: value})
         with pytest.raises(job.JobMismatch, match=field):
             job.check_cross_section(bad, cv_meta)
+
+
+def test_cut_job_runs_only_in_the_sandbox(tmp_path):
+    results, d = _fixture_job(tmp_path)
+    with pytest.raises(RuntimeError, match="sandbox"):
+        job.run_cut_job(d, tmp_path, kx=0.0, depth_um=0.1, results_root=results)
+
+
+def test_cut_job_in_the_sandbox(tmp_path, inside, monkeypatch):
+    results, d = _fixture_job(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "mesh.msh").write_bytes(FIXTURE.read_bytes())
+    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
+    meta = job.run_cut_job(d, out, kx=0.0, depth_um=0.1, results_root=results)
+    assert meta["source"] == "cache" and (out / meshcut.META).is_file()
+
+
+def _fake_regenerate(content):
+    def mesh_it(xs, spec, path):
+        Path(path).write_bytes(content)
+
+    return mesh_it
+
+
+def test_regenerate_refuses_to_cut_on_mismatch(tmp_path, inside, monkeypatch, capsys):
+    results, d = _fixture_job(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
+    other = FIXTURE.read_bytes().replace(b"5e-05 2e-05 0\n", b"5.0e-05 2e-05 0\n")
+    assert other != FIXTURE.read_bytes()
+    with pytest.raises(job.MeshShaMismatch, match="refuses to cut"):
+        job.run_regenerate_job(d, out, cut=True, kx=0.0, depth_um=0.1, results_root=results,
+                               mesh_it=_fake_regenerate(other))  # fmt: skip
+    printed = capsys.readouterr().out
+    assert _sha(FIXTURE) in printed and hashlib.sha256(other).hexdigest() in printed
+    assert not (out / meshcut.ARTEFACT).exists()
+    report = json.loads((out / job.REGENERATE_REPORT).read_bytes())
+    assert report == {
+        "committed_mesh_sha256": _sha(FIXTURE),
+        "match": False,
+        "regenerated_mesh_sha256": hashlib.sha256(other).hexdigest(),
+    }
+
+
+def test_regenerate_cuts_on_match(tmp_path, inside, monkeypatch):
+    results, d = _fixture_job(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
+    meta = job.run_regenerate_job(d, out, cut=True, kx=0.0, depth_um=0.1, results_root=results,
+                                  mesh_it=_fake_regenerate(FIXTURE.read_bytes()))  # fmt: skip
+    assert meta["source"] == "regenerated"
+    assert json.loads((out / job.REGENERATE_REPORT).read_bytes())["match"] is True
+
+
+def test_regenerate_without_cut_only_reports(tmp_path, inside, monkeypatch):
+    results, d = _fixture_job(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
+    assert job.run_regenerate_job(d, out, cut=False, kx=None, depth_um=None, results_root=results,
+                                  mesh_it=_fake_regenerate(b"other")) is None  # fmt: skip
+    assert not (out / meshcut.ARTEFACT).exists()
+    assert json.loads((out / job.REGENERATE_REPORT).read_bytes())["match"] is False
+
+
+# --- the host command ------------------------------------------------------------------------
+
+
+def test_host_command_pulls_by_subprocess_only(tmp_path, monkeypatch):
+    """The host command fetches the mesh with a ``tools/output-cache pull`` subprocess before the
+    ``--network none`` sandbox run, and gf180tcad.outcache is in no meshcut module's import
+    closure (spec §9.1; the AST half is test_meshcut_closure_has_no_outcache)."""
+    calls = []
+    monkeypatch.setattr(
+        meshcut_cli.subprocess, "run", lambda cmd, **kw: calls.append(("pull", cmd, kw))
+    )
+
+    def fake_sandbox(cmd, **kw):
+        calls.append(("sandbox", cmd, kw))
+        raise RuntimeError("stop here")
+
+    monkeypatch.setattr(meshcut_cli.sandbox, "run", fake_sandbox)
+    scratch = tmp_path / "scratch"
+    with pytest.raises(RuntimeError, match="stop here"):
+        meshcut_cli.run_cut(
+            L0P60, MESHES / "stable", kx=0.25, depth_um=0.1, scratch=scratch,
+            cache="https://example.invalid/cache.git",
+        )  # fmt: skip
+    (kind, pull, kw), (kind2, cmd, skw) = calls
+    sha = json.loads((L0P60 / "cv.meta.json").read_bytes())["mesh_sha256"]
+    assert kind == "pull" and kind2 == "sandbox"
+    assert Path(pull[1]) == REPO / "tools" / "output-cache"
+    assert pull[2:] == [
+        "pull", sha, "--out", str(scratch / "mesh.msh"), "--cache",
+        "https://example.invalid/cache.git",
+    ]  # fmt: skip
+    assert kw.get("check") is True
+    assert skw.get("network", False) is False
+    assert skw["out_dir"] == scratch and skw["mem"] == job.JOB_MEM
+    assert skw["image"] == meshcut_cli.tcad.image_ref("stable")
+    assert cmd[:4] == ["python3", "-m", "gf180tcad.meshcut", "cut-job"]
+    assert cmd[cmd.index("--job") + 1] == L0P60.relative_to(REPO).as_posix()
+
+
+def test_host_command_skips_the_pull_of_a_mesh_already_there(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(meshcut_cli.subprocess, "run", lambda cmd, **kw: calls.append(cmd))
+    _fixture_job(tmp_path)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    (scratch / "mesh.msh").write_bytes(FIXTURE.read_bytes())
+    meshcut_cli.pull(_sha(FIXTURE), scratch / "mesh.msh")
+    assert calls == []
+    (scratch / "mesh.msh").write_bytes(b"other")
+    meshcut_cli.pull(_sha(FIXTURE), scratch / "mesh.msh")
+    assert len(calls) == 1 and "--force" in calls[0]
+
+
+def test_host_command_refuses_an_out_of_another_image(tmp_path):
+    with pytest.raises(ValueError, match="stable"):
+        meshcut_cli.run_cut(L0P60, tmp_path / "meshes" / "dev", kx=0.25, depth_um=0.1)
+
+
+def test_host_command_end_to_end_without_docker(tmp_path, monkeypatch, inside):
+    """pull (faked: the fixture mesh), the job (in-process, as the sandbox would run it) and the
+    install into ``<out>/<device>/<params>/<gid>/`` with the tree's provenance.json."""
+    results, d = _fixture_job(tmp_path)
+    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
+    monkeypatch.setattr(meshcut_cli, "source_image", lambda job_dir: "stable")
+
+    def fake_pull(cmd, **kw):
+        Path(cmd[cmd.index("--out") + 1]).write_bytes(FIXTURE.read_bytes())
+
+    def fake_sandbox(cmd, *, out_dir, **kw):
+        a = meshcut_cli._parser().parse_args(cmd[3:])
+        job.run_cut_job(d, out_dir, kx=a.kx, depth_um=a.depth_um, results_root=results)
+
+    monkeypatch.setattr(meshcut_cli.subprocess, "run", fake_pull)
+    monkeypatch.setattr(meshcut_cli.sandbox, "run", fake_sandbox)
+    out = tmp_path / "meshes" / "stable"
+    dest = meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.1, scratch=tmp_path / "s",
+                               results_root=results)  # fmt: skip
+    assert dest == out / "nfet_05v0" / "start" / "w1p0_l0p50"
+    assert sorted(p.name for p in dest.iterdir()) == [meshcut.ARTEFACT, meshcut.META]
+    prov = json.loads((out / "provenance.json").read_bytes())
+    assert prov["generator"] == "gf180tcad.meshcut.__main__"
+    assert prov["images"]["meshes"]["name"] == "stable"
+    assert meshcut.read(dest).node_id.tolist() == list(range(1, 31))
+
+
+def test_host_command_refuses_an_artefact_over_budget(tmp_path, monkeypatch, inside):
+    results, d = _fixture_job(tmp_path)
+    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
+    monkeypatch.setattr(meshcut_cli, "source_image", lambda job_dir: "stable")
+    monkeypatch.setattr(meshcut, "MAX_BYTES", 100)
+    monkeypatch.setattr(
+        meshcut_cli.subprocess, "run",
+        lambda cmd, **kw: Path(cmd[cmd.index("--out") + 1]).write_bytes(FIXTURE.read_bytes()),
+    )  # fmt: skip
+    monkeypatch.setattr(
+        meshcut_cli.sandbox, "run",
+        lambda cmd, *, out_dir, **kw: job.run_cut_job(d, out_dir, kx=0.0, depth_um=0.1,
+                                                      results_root=results),
+    )  # fmt: skip
+    out = tmp_path / "meshes" / "stable"
+    with pytest.raises(ValueError, match="2 MB|budget|100"):
+        meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.1, scratch=tmp_path / "s",
+                            results_root=results)  # fmt: skip
+    assert not out.exists()
+
+
+def test_source_image_is_the_tree_s_recorded_image():
+    assert meshcut_cli.source_image(L0P60) == "stable"
+
+
+def test_cli_parses_every_command():
+    p = meshcut_cli._parser()
+    a = p.parse_args(["cut", "--job", "j", "--out", "o", "--kx", "0.25", "--depth-um", "0.1"])
+    assert (a.command, a.kx, a.depth_um, a.cache) == ("cut", 0.25, 0.1, None)
+    a = p.parse_args(["regenerate", "--job", "j"])
+    assert a.command == "regenerate" and not a.cut
+    a = p.parse_args(
+        ["cut-job", "--job", "j", "--out", "/work/out", "--kx", "0", "--depth-um", "1"]
+    )
+    assert a.command == "cut-job"
+    a = p.parse_args(["regenerate-job", "--job", "j", "--out", "/work/out", "--cut", "--kx", "0",
+                      "--depth-um", "1"])  # fmt: skip
+    assert a.cut
+    assert meshcut_cli.main(["regenerate", "--job", str(L0P60), "--cut"]) == 2  # --cut needs --out
+
+
+# --- the committed artefacts ------------------------------------------------------------------
+
+
+def _committed_metas():
+    return sorted(MESHES.glob(f"*/*/*/*/{meshcut.META}"))
+
+
+def test_committed_artefacts_match_their_jobs():
+    """Every committed artefact names its job's committed mesh_sha256 and cv.meta.json, and its
+    own npz. None is committed before Experiment M1 fixes the window (renders plan, Step 3)."""
+    metas = _committed_metas()
+    assert bool(metas) == MESHES.is_dir()
+    for path in metas:
+        meta = json.loads(path.read_bytes())
+        artefact.check_meta(meta)
+        j = meta["job"]
+        src = RESULTS / j["tree"] / j["device"] / j["params"] / j["geometry_id"]
+        cv_meta = json.loads((src / "cv.meta.json").read_bytes())
+        assert meta["full_mesh_sha256"] == cv_meta["mesh_sha256"], path
+        assert j["cv_meta_sha256"] == _sha(src / "cv.meta.json"), path
+        assert meta["npz_sha256"] == _sha(path.parent / meshcut.ARTEFACT), path
+        assert path.parent.relative_to(MESHES).parts[1:] == (
+            j["device"], j["params"], j["geometry_id"],
+        )  # fmt: skip
+
+
+def test_committed_artefacts_within_budget():
+    for path in _committed_metas():
+        assert (path.parent / meshcut.ARTEFACT).stat().st_size <= meshcut.MAX_BYTES, path
+
+
+# --- the real mesh (pulled from the output cache) ---------------------------------------------
+
+
+@pytest.mark.skipif(
+    not (L0P60 / "mesh.msh").is_file(),
+    reason="pull it first: uv run --locked tools/output-cache pull "
+    "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/mesh.msh",
+)
+def test_cut_of_the_real_mesh(tmp_path):
+    """The job's cut on the #35 calibrated nfet mesh, with a host stand-in for the cross-section
+    (the gate edges and the poly top of the mesh's own gate_poly region): its nodes are an exact
+    subset of the full mesh's, its meta ties to the committed job."""
+    cv_meta = json.loads((L0P60 / "cv.meta.json").read_bytes())
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "mesh.msh").symlink_to(L0P60 / "mesh.msh")
+    from gf180tcad.tcad.moscap1d import POLY_UM
+
+    xs = _fixture_xs(
+        gate_u=(0.44, 1.04),
+        t_ox_nm=cv_meta["t_ox_nm"],
+        levels={"gate_poly": ((1003, 0), cv_meta["t_ox_nm"] * 1e-3, POLY_UM, "si")},
+        doping={"body": ((), (_Lin(cv_meta["tunables"]["n_ch_cm3"]["value"]),)),
+                "gate_poly": ((_Lin(1e20),), ())},
+    )  # fmt: skip
+    meta = job.cut(out / "mesh.msh", job_dir=L0P60, results_root=RESULTS, xs=xs, kx=0.0,
+                   depth_um=0.05, source="cache", out=out)  # fmt: skip
+    assert meta["full_mesh_sha256"] == cv_meta["mesh_sha256"]
+    assert meta["full_mesh_node_count"] == cv_meta["node_count"]
+    full = msh.read(L0P60 / "mesh.msh")
+    w = meshcut.read(out)
+    idx = np.searchsorted(full.node_id, w.node_id)
+    assert np.array_equal(full.node_id[idx], w.node_id)
+    assert np.array_equal(_bits(full.nodes[idx]), _bits(w.nodes_cm))
+    assert meta["node_count"] == 84_728  # the part 1 measurement of this window
+    body = np.array([w.regions[r] for r in w.region]) == "body"
+    assert body.any()
