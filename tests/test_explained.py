@@ -1086,7 +1086,9 @@ def test_moscap_values_are_the_files():
     assert numbers.value("plateau_acc_l10") == rec["metrics"]["plateau_acc_max_rel"]
     assert numbers.value("plateau_inv_l10") == rec["metrics"]["plateau_inv_max_rel"]
     assert numbers.value("plateau_tol_l10") == rec["verdicts"]["plateau_acc"]["tolerance"]
-    assert rec["verdicts"]["plateau_inv"]["tolerance"] == rec["verdicts"]["plateau_acc"]["tolerance"]
+    assert (
+        rec["verdicts"]["plateau_inv"]["tolerance"] == rec["verdicts"]["plateau_acc"]["tolerance"]
+    )
     assert numbers.text("plateau_tol_l10") == "5 %"
 
 
