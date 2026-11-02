@@ -62,8 +62,6 @@ STYLE = {
     "level_label_lift": 0.02,
     "level_label_x": 0.04,
     "fill_alpha": 0.22,
-    # The 2D cross-section: extents with no committed source, drawn at a chosen size (µm).
-    "drawn_um": {"source and drain width": 0.6},
     # Contacts are bars this fraction of the drawing's height thick, the source and drain ones
     # this fraction of their region's width wide.
     "contact_frac": 0.025,
@@ -425,16 +423,15 @@ class Box(NamedTuple):
 def cell_extents(c: model.Cell) -> dict[str, Box]:
     """The drawn extent ``(x0, x1, y0, y1)`` of each part of the 2D cell (µm), the silicon surface
     at y = 0 and depth growing downwards, the gate centred on x = 0. The oxide is drawn at its
-    scale factor; the source and drain width is the drawn extent ``c.drawn``."""
+    scale factor; the source and drain widths are the cell's, from its reduced mesh artefact."""
     half = c.l_um / 2
-    sd = c.drawn["source and drain width"]
     t_ox = c.t_ox_um * c.scales.get("oxide", 1)
     return {
         "gate": Box(-half, half, -(t_ox + c.poly_um), -t_ox),
         "oxide": Box(-half, half, -t_ox, 0.0),
-        "source": Box(-half - sd, -half, 0.0, c.xj_um),
-        "drain": Box(half, half + sd, 0.0, c.xj_um),
-        "body": Box(-half - sd, half + sd, 0.0, c.body_um),
+        "source": Box(-half - c.source_um, -half, 0.0, c.xj_um),
+        "drain": Box(half, half + c.drain_um, 0.0, c.xj_um),
+        "body": Box(-half - c.source_um, half + c.drain_um, 0.0, c.body_um),
     }
 
 
@@ -544,7 +541,7 @@ def cross_section(
             # parts' boundaries.
             ax.text(a - pad / 2, top + gap, "mesh window", ha="right", va="center",
                     color=pal["highlight"], fontweight="bold")  # fmt: skip
-        statement = model.exaggeration(c.scales, c.drawn).replace(". ", ".\n")
+        statement = model.exaggeration(c.scales).replace(". ", ".\n")
         ax.set_title(statement, fontsize=STYLE["text_pt"])
         return _svg(fig)
 
@@ -645,21 +642,21 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
 
 def _parts_cell(palette: str) -> bytes:
     c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"]
     )
     return cross_section(c, (), palette)
 
 
 def _mesh_window(palette: str) -> bytes:
     c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+        "nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"]
     )
     return cross_section(c, (), palette, window=window_box(c))
 
 
 def _junction_cell(palette: str) -> bytes:
     c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"]
     )
     return cross_section(c, ("junction",), palette)
 
@@ -722,7 +719,7 @@ def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
 
 def _moscap_cell(palette: str) -> bytes:
     c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"]
     )
     return cross_section(c, ("gate", "oxide", "body"), palette)
 
@@ -964,21 +961,18 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
 }
 
 
-# The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
-# computed curves (not drawings of the device) carry no statement.
-_CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell", "mesh-window")
+# The plots of computed curves (not drawings of the device) carry no statement.
 _PLOTS = ("bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes", "cv-parts")
 
 
 def substitutions() -> dict[str, str]:
     """``{"x_fig_<name>_scale": statement}``: the exaggeration statement of each drawing of the
-    device, for its caption, from the same scale factors (and drawn extents) the drawing uses."""
+    device, for its caption, from the same scale factors the drawing uses."""
     out = {}
     for name in FIGURES:
         if name in _PLOTS:
             continue
-        drawn = STYLE["drawn_um"] if name in _CELL_FIGURES else None
-        out[f"x_fig_{name.replace('-', '_')}_scale"] = model.exaggeration(STYLE["scales"], drawn)
+        out[f"x_fig_{name.replace('-', '_')}_scale"] = model.exaggeration(STYLE["scales"])
     return out
 
 

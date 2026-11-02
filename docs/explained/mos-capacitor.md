@@ -14,7 +14,8 @@ The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`. The 1D stack is the column u
 gate: the gate, the {term}`gate oxide` and the body, in colour. The source and the drain, muted,
 are the parts the MOS capacitor leaves out. The oxide thickness and the body doping are fitted
 to the {term}`SPICE` model. The junction depth is the {term}`model card`'s value. The gate and
-body depths and the source and drain width are project choices. {{ x_fig_moscap_cell_scale }}
+body depths are project choices. The source and drain widths come from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_moscap_cell_scale }}
 ```
 
 ```{figure} /_generated/explained/moscap-cell-dark.svg
@@ -25,7 +26,8 @@ The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`. The 1D stack is the column u
 gate: the gate, the {term}`gate oxide` and the body, in colour. The source and the drain, muted,
 are the parts the MOS capacitor leaves out. The oxide thickness and the body doping are fitted
 to the {term}`SPICE` model. The junction depth is the {term}`model card`'s value. The gate and
-body depths and the source and drain width are project choices. {{ x_fig_moscap_cell_scale }}
+body depths are project choices. The source and drain widths come from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_moscap_cell_scale }}
 ```
 
 (explained-moscap-stack)=

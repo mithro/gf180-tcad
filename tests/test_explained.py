@@ -976,7 +976,7 @@ def test_cell_reads_the_committed_files():
     stack = json.loads(
         (ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json").read_text("utf-8")
     )["stack"]
-    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={}, drawn={})
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={})
     assert c.l_um == meta["geometry"]["l_um"] and c.w_um == meta["geometry"]["w_um"]
     assert c.t_ox_um == meta["meshed_t_ox_nm"] / 1000
     assert c.xj_um == proc["param"]["xj_um"]["value"]
@@ -987,15 +987,31 @@ def test_cell_reads_the_committed_files():
     assert (c.sd_dopant, c.body_dopant) == ("donor", "acceptor")
 
 
+def test_cell_source_and_drain_widths_come_from_the_artefact():
+    """The source and drain widths are the reduced mesh artefact's (issue #128): from the body's
+    ends to the gate's edges in the full mesh, and the gate there is the cell's drawn L."""
+    from gf180tcad.explain import model
+
+    path = ROOT / model.artefact_meta_path("nfet_05v0", "calibrated", "w10p0_l0p70")
+    assert path == ROOT / "results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p70" / (
+        "mesh-window.meta.json"
+    )
+    bounds = json.loads(path.read_text("utf-8"))["region_bounds_um"]
+    body, gate = bounds["body"]["x_um"], bounds["gate_poly"]["x_um"]
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={})
+    assert (c.source_um, c.drain_um) == (gate[0] - body[0], body[1] - gate[1])
+    assert c.source_um > 0 and c.drain_um > 0
+    assert gate[1] - gate[0] == pytest.approx(c.l_um)
+    with pytest.raises(ValueError, match="expected one reduced mesh artefact"):
+        model.artefact_meta_path("nfet_05v0", "start", "w10p0_l0p70")
+
+
 def test_cross_section_matches_cell():
-    """Every drawn part of the cross-section is the cell's dimension times its stated scale, and a
-    drawn-not-to-scale extent is named in the exaggeration statement."""
+    """Every drawn part of the cross-section is the cell's dimension times its stated scale; the
+    source and drain are drawn at the artefact's widths, so the statement names only scales."""
     from gf180tcad.explain import figures, model
 
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70",
-        scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
-    )  # fmt: skip
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=figures.STYLE["scales"])
     ext = figures.cell_extents(c)
     s_ox = c.scales.get("oxide", 1)
     gx0, gx1, gy0, gy1 = ext["gate"]
@@ -1006,17 +1022,17 @@ def test_cross_section_matches_cell():
         c.t_ox_um * s_ox
     )
     assert ox[2] == pytest.approx(gy1) and ox[3] == pytest.approx(0)
-    for side in ("source", "drain"):
+    for side, width in (("source", c.source_um), ("drain", c.drain_um)):
         x0, x1, y0, y1 = ext[side]
         assert (y0, y1) == (0, pytest.approx(c.xj_um))
-        assert x1 - x0 == pytest.approx(c.drawn["source and drain width"])
+        assert x1 - x0 == pytest.approx(width)
     assert ext["source"][1] == pytest.approx(gx0) and ext["drain"][0] == pytest.approx(gx1)
     bx0, bx1, by0, by1 = ext["body"]
     assert (bx0, bx1) == (pytest.approx(ext["source"][0]), pytest.approx(ext["drain"][1]))
     assert by1 - by0 == pytest.approx(c.body_um)
-    statement = model.exaggeration(c.scales, c.drawn)
-    assert "Oxide thickness ×5" in statement and "source and drain width" in statement.lower()
-    assert "Source and drain width chosen for the drawing, not to scale." in statement
+    statement = model.exaggeration(c.scales)
+    assert statement == "Oxide thickness ×5, not to scale."
+    assert "drawing" not in statement and "source" not in statement.lower()
     subs = figures.substitutions()
     assert subs["x_fig_parts_cell_scale"] == subs["x_fig_junction_cell_scale"] == statement
     assert "x_fig_junction_panels_scale" not in subs  # a plot of curves, not a drawing
@@ -1587,8 +1603,7 @@ def test_mesh_window_figure_draws_the_window_rule():
     from gf180tcad import meshcut
     from gf180tcad.explain import figures, model
 
-    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=figures.STYLE["scales"],
-                   drawn=figures.STYLE["drawn_um"])  # fmt: skip
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=figures.STYLE["scales"])
     gate = figures.cell_extents(c)["gate"]
     box = figures.window_box(c)
     assert box.x0 == pytest.approx(gate.x0 - meshcut.WINDOW_KX * c.l_um)

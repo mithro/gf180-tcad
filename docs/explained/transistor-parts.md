@@ -13,8 +13,9 @@ read {doc}`silicon-and-carriers`. It names each part and leaves out how the tran
 The 2D cell of the {term}`nfet_05v0` with {term}`geometry id` `w10p0_l0p70`, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type. The oxide thickness and the
 body doping are fitted to the {term}`SPICE` model. The junction depth is the
-{term}`model card`'s value. The gate and body depths and the source and drain width are
-project choices. {{ x_fig_parts_cell_scale }}
+{term}`model card`'s value. The gate and
+body depths are project choices. The source and drain widths come from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_parts_cell_scale }}
 ```
 
 ```{figure} /_generated/explained/parts-cell-dark.svg
@@ -24,8 +25,9 @@ project choices. {{ x_fig_parts_cell_scale }}
 The 2D cell of the {term}`nfet_05v0` with {term}`geometry id` `w10p0_l0p70`, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type. The oxide thickness and the
 body doping are fitted to the {term}`SPICE` model. The junction depth is the
-{term}`model card`'s value. The gate and body depths and the source and drain width are
-project choices. {{ x_fig_parts_cell_scale }}
+{term}`model card`'s value. The gate and
+body depths are project choices. The source and drain widths come from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_parts_cell_scale }}
 ```
 
 (explained-parts-gate)=
@@ -118,6 +120,7 @@ stack of layers on its own, from the model card instead
 ({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`). The cell also has no shallow trench isolation
 ({term}`STI`): its sides are boundaries that no current crosses.
 
-The drawing's source and drain width is not to scale. The real contacts sit at the contact
+The drawing's source and drain run from the gate's edges to the ends of the active area, as in
+the simulated cell. The real contacts sit at the contact
 openings of the PDK cell, not at the middle of each region. The 2D cell and its other differences
 are on {doc}`/limitations/moscap2d`, and every known gap is on {doc}`/limitations/index`.
