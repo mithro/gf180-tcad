@@ -323,14 +323,15 @@ quantity, as {math:numref}`eq-corner-bounds` gives. The doping bounds stay as at
 corner.
 
 $$
-b_c = b + \Delta_c
+t_c = t + \Delta t_c, \qquad V_c = V + \Delta V_c
 $$ (eq-corner-bounds)
 
 where
 
-- $b_c$ is a bound or the start value at corner $c$, in nm or V;
-- $b$ is the same bound or start value at the typical corner, in nm or V;
-- $\Delta_c$ is the corner's TOXE offset for the oxide, in nm, or its VTH0 offset for the {term}`flat band`, in V.
+- $t_c$, $t$ are an oxide bound or start value at corner $c$ and at the typical corner, in nm;
+- $\Delta t_c$ is the corner's TOXE offset, in nm;
+- $V_c$, $V$ are a {term}`flat band` bound or start value at corner $c$ and at the typical corner, in V;
+- $\Delta V_c$ is the corner's VTH0 offset, in V.
 
 The typical oxide upper bound is TOXP plus the charge-centroid allowance of the typical fit
 ({py:func}`~gf180tcad.tcad.process.centroid_allowance_nm`). A corner fit moves that bound by its
@@ -351,8 +352,8 @@ $$ (eq-corner-pvth0)
 where
 
 - $\Delta V_{\mathrm{th0}}$ is the change of the pfet's VTH0 at the corner, in V;
-- $\Delta P_{\mathrm{VTH0}}$ is the corner's change of PVTH0, in V·µm². It is 8.47 × 10⁻³
-  times the corner's DVTH0 (the `pvth0` row of {repo}`data/pdk_corners.json`; BINUNIT = 1);
+- $\Delta P_{\mathrm{VTH0}}$ is 8.47 × 10⁻³ times the corner's DVTH0
+  ({repo}`data/pdk_corners.json`, row `pvth0`), in V·µm²;
 - $L_{\mathrm{eff}}$, $W_{\mathrm{eff}}$ are the effective channel length and width, in µm.
 
 The effective size follows §1.3 of the [BSIM4.5.0 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), with the bias terms
@@ -360,29 +361,47 @@ off. Its equations 1.3.1 to 1.3.4 become {math:numref}`eq-corner-leff`,
 {math:numref}`eq-corner-dl` and {math:numref}`eq-corner-dw` as `b4temp.c` computes them:
 
 $$
-L_{\mathrm{eff}} = L_n - 2\,\delta L, \qquad W_{\mathrm{eff}} = W_n - 2\,\delta W
+L_{\mathrm{eff}} = L + X_L - 2\,d_L, \qquad W_{\mathrm{eff}} = W + X_W - 2\,d_W
 $$ (eq-corner-leff)
 
-$$
-\delta L = \mathrm{LINT} + \mathrm{LL} \, L_n^{-\mathrm{LLN}} + \mathrm{LW} \, W_n^{-\mathrm{LWN}}
-+ \mathrm{LWL} \, L_n^{-\mathrm{LLN}} W_n^{-\mathrm{LWN}}
-$$ (eq-corner-dl)
+where
+
+- $L_{\mathrm{eff}}$, $W_{\mathrm{eff}}$ are the effective channel length and width, in m;
+- $L$, $W$ are the drawn gate length and width, in m;
+- $X_L$, $X_W$ are the corner's {term}`XL` and {term}`XW`, in m;
+- $d_L$, $d_W$ are the length and width reductions per side, in m.
 
 $$
-\delta W = \mathrm{WINT} + \mathrm{WL} \, L_n^{-\mathrm{WLN}} + \mathrm{WW} \, W_n^{-\mathrm{WWN}}
-+ \mathrm{WWL} \, L_n^{-\mathrm{WLN}} W_n^{-\mathrm{WWN}}
+d_L = \mathrm{LINT} + \frac{\mathrm{LL}}{(L + X_L)^{\mathrm{LLN}}} + \frac{\mathrm{LW}}{(W + X_W)^{\mathrm{LWN}}}
++ \frac{\mathrm{LWL}}{(L + X_L)^{\mathrm{LLN}} (W + X_W)^{\mathrm{LWN}}}
+$$ (eq-corner-dl)
+
+where
+
+- $d_L$ is the length reduction per side, in m;
+- $L$, $W$ are the drawn gate length and width, in m;
+- $X_L$, $X_W$ are the corner's XL and XW, in m;
+- $\mathrm{LINT}$ is the card's length offset ([line 38173](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38173)), in m;
+- $\mathrm{LL}$, $\mathrm{LW}$ are its coefficients ([LL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38174), [LW](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38186)); with
+  LLN = LWN = 1, in m²;
+- $\mathrm{LWL}$ is its cross coefficient ([line 38187](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38187)), in m³;
+- $\mathrm{LLN}$, $\mathrm{LWN}$ are exponents ([LLN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38175), [LWN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38188)), dimensionless.
+
+$$
+d_W = \mathrm{WINT} + \frac{\mathrm{WL}}{(L + X_L)^{\mathrm{WLN}}} + \frac{\mathrm{WW}}{(W + X_W)^{\mathrm{WWN}}}
++ \frac{\mathrm{WWL}}{(L + X_L)^{\mathrm{WLN}} (W + X_W)^{\mathrm{WWN}}}
 $$ (eq-corner-dw)
 
 where
 
-- $L_n = L + X_L$ and $W_n = W + X_W$: drawn size plus the corner's {term}`XL` and {term}`XW`, in m;
-- $\delta L$, $\delta W$ are the length and width reductions per side, in m;
-- LINT and WINT are the card's offsets, in m ([LINT](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38173), [WINT](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38278));
-- LL, LW, LWL, WL, WW and WWL are coefficients. Each is in m raised to one plus the sum of its
-  exponents ([LL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38174), [LW](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38186), [LWL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38187), [WL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38280),
-  [WW](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38288), [WWL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38289));
-- LLN, LWN, WLN and WWN are exponents, dimensionless ([LLN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38175), [LWN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38188),
-  [WLN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38281), [WWN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38290)).
+- $d_W$ is the width reduction per side, in m;
+- $L$, $W$ are the drawn gate length and width, in m;
+- $X_L$, $X_W$ are the corner's XL and XW, in m;
+- $\mathrm{WINT}$ is the card's width offset ([line 38278](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38278)), in m;
+- $\mathrm{WL}$, $\mathrm{WW}$ are its coefficients ([WL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38280), [WW](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38288)); with
+  WLN = WWN = 1, in m²;
+- $\mathrm{WWL}$ is its cross coefficient ([line 38289](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38289)), in m³;
+- $\mathrm{WLN}$, $\mathrm{WWN}$ are exponents ([WLN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38281), [WWN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38290)), dimensionless.
 
 The function {py:func}`~gf180tcad.calibrate.corners.largest_pvth0_shift` evaluates these at
 every fitted corner and calibration gate. The largest shift is at {{ x_corner_pvth0_corner }}
@@ -393,18 +412,9 @@ on the W = {{ x_corner_pvth0_w }}, L = {{ x_corner_pvth0_l }} gate. There DVTH0 
 {{ x_corner_pvth0_dv }}.
 
 **What the summary reports.** For each fitted number it gives the typical value and the value at
-each corner. It names the corners of the lowest and the highest value. The spread is given by
-{math:numref}`eq-corner-spread`. A lowest or highest value on a bound of its fit is reported as
+each corner. It names the corners of the lowest and the highest value. The spread is the highest value minus
+the lowest. A lowest or highest value on a bound of its fit is reported as
 that bound.
-
-$$
-s = p_{\max} - p_{\min}
-$$ (eq-corner-spread)
-
-where
-
-- $s$ is the spread of one fitted number, in its unit;
-- $p_{\max}$, $p_{\min}$ are its highest and lowest value over the five corners, in its unit.
 
 For the oxide and the flat band it also sets the fit's shift from the typical value beside the
 card's shift, and their difference.
