@@ -446,7 +446,9 @@ written in the TCAD image by a generator module from the job's own mesh, fetched
 output cache by hash (`tools/output-cache`, on the host before the sandboxed run) or
 regenerated: the node coordinates,
 the triangle connectivity and the region of each element, restricted to a window around the
-gate (or the mesher's own export of that window), at most 2 MB per job. It records the sha256
+gate (or the mesher's own export of that window). It has no fixed size cap (the owner's
+decision of 2026-11-03 01:15 ACDT, §16). Its size is measured, recorded in its meta file
+(`size_bytes`) and printed on the reproduce page. It records the sha256
 of the full mesh it came from, which must equal the committed `mesh_sha256` of that job
 (`cv.meta.json`), so the picture is tied to the mesh that produced the results. The same
 artefact feeds the 2D docs pages' flat mesh figure. Until it exists, the deviation stays on the
@@ -936,6 +938,12 @@ that the intent survives later rewording of the sections it changed.
   "not public" on a reader page is replaced: reader pages carry neither that wording nor hedges,
   and a fact without a source is left out and filed as an issue. The user's words:
   > "Both not public and hedges are banned."
+- **2026-11-03 01:15 ACDT: no fixed size for the reduced mesh artefact.** §10.1 "Mesh
+  pictures" said "at most 2 MB per job". On an L = 0.6 µm cell, the smallest window
+  of the renders plan's grid is 3,275,405 bytes without the net doping. So the cap was wrong,
+  not the window. The size budget of the render files (stills, animations, `results/renders/`) is
+  unchanged. The owner's words:
+  > "Go ahead with changing the budget, no budget is fixed."
 - **2026-11-03 02:00 ACDT: figures, equations and file links**. Section 10.3 gains three rules.
   A clearly marked figure shows every described situation, every equation is explained in one
   house form, and every file is a link. `docs_lint.py --rules` checks them. Issues #129 to #134

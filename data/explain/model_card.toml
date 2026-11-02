@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+# Model-selector values of the PDK's ngspice model card that the explainer pages print (read by
+# gf180tcad.explain.numbers). The card is the one data/process/nfet_05v0.toml names (same file and
+# sha256). Each value is the card's own `+ key=value` line, named by its line number, in every
+# length bin of the device (gf180tcad.tcad.process.CARD_BINS: nfet_06v0.0 holds L 0.7-50 um and
+# nfet_06v0.1 holds L 0.6-0.7 um). The sandbox test
+# tests/tcad/test_process.py::test_explain_model_card_lines reads the card in the image and checks
+# every line; tests/test_explained.py ties this file to the process file and the bins.
+
+schema = 1
+
+[card]
+file = "libs.tech/ngspice/sm141064.ngspice"
+sha256 = "69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8"
+
+# BSIM4 selectors (BSIM4.5.0 manual section 8.1, appendix A): acnqsmod is the AC small-signal
+# non-quasi-static model, trnqsmod the transient one; 0 turns each off.
+
+[nfet_05v0."nfet_06v0.0"]
+model_line = 37055
+acnqsmod = { value = 0, card_line = 37060 }
+trnqsmod = { value = 0, card_line = 37316 }
+
+[nfet_05v0."nfet_06v0.1"]
+model_line = 37393
+acnqsmod = { value = 0, card_line = 37398 }
+trnqsmod = { value = 0, card_line = 37654 }

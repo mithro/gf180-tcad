@@ -145,13 +145,15 @@ def test_value_text_and_labels():
 @pytest.mark.parametrize(
     ("value", "digits", "unit", "text"),
     [
-        (8.813323306821749e16, 3, "cm⁻³", "8.81 × 10¹⁶ cm⁻³"),
-        (1e20, 2, "cm⁻³", "1.0 × 10²⁰ cm⁻³"),
-        (8265841554.853887, 3, "cm⁻³", "8.27 × 10⁹ cm⁻³"),
-        (298.15, 5, "K", "298.15 K"),
-        (775.2, 3, "cm⁻³", "775 cm⁻³"),
-        (0.0371, 2, "V", "0.037 V"),
-        (-0.25, 2, "V", "−0.25 V"),
+        (8.813323306821749e16, 3, "cm⁻³", "8.81\u00a0×\u00a010¹⁶\u00a0cm⁻³"),
+        (1e20, 2, "cm⁻³", "1.0\u00a0×\u00a010²⁰\u00a0cm⁻³"),
+        (8265841554.853887, 3, "cm⁻³", "8.27\u00a0×\u00a010⁹\u00a0cm⁻³"),
+        (298.15, 5, "K", "298.15\u00a0K"),
+        (775.2, 3, "cm⁻³", "775\u00a0cm⁻³"),
+        (0.0371, 2, "V", "0.037\u00a0V"),
+        (-0.25, 2, "V", "−0.25\u00a0V"),
+        (2.15, 3, "fF/µm²", "2.15\u00a0fF/\u2060µm²"),
+        (0.67, 2, "%", "0.67\u00a0%"),
     ],
 )
 def test_format(value, digits, unit, text):
@@ -867,7 +869,7 @@ def test_fermi_levels_against_hand_values():
     assert numbers.REGISTRY["fermi_gate_nfet"].formula == "boltzmann_fermi"
     assert numbers.value("fermi_gate_nfet") == pytest.approx(0.596487, abs=1e-6)
     assert numbers.value("fermi_body_nfet") == pytest.approx(-0.415763, abs=1e-6)
-    assert numbers.text("fermi_body_nfet") == "0.416 eV"
+    assert numbers.text("fermi_body_nfet") == "0.416\u00a0eV"
     meta = json.loads(
         (ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json").read_text("utf-8")
     )
@@ -941,7 +943,7 @@ def test_junction_formulas_against_hand_values():
     assert numbers.value("w_dep_nfet") * numbers.REGISTRY["w_dep_nfet"].factor == pytest.approx(
         0.121925, abs=1e-6
     )
-    assert numbers.text("w_dep_nfet") == "0.122 µm"
+    assert numbers.text("w_dep_nfet") == "0.122\u00a0µm"
 
 
 def test_abrupt_junction_profile_is_consistent():
@@ -1122,7 +1124,7 @@ def test_moscap_values_are_the_files():
     assert (
         rec["verdicts"]["plateau_inv"]["tolerance"] == rec["verdicts"]["plateau_acc"]["tolerance"]
     )
-    assert numbers.text("plateau_tol_l10") == "5 %"
+    assert numbers.text("plateau_tol_l10") == "5\u00a0%"
 
 
 _VERDICT_FILES = {
@@ -1407,7 +1409,7 @@ def test_region_values_are_the_files():
             v = v[k]
         assert numbers.value(name) == v, name
     assert rec["verdicts"]["dv_inv"]["tolerance_v"] == rec["verdicts"]["dv_dep"]["tolerance_v"]
-    assert numbers.text("dv_tol_l10") == "50 mV"
+    assert numbers.text("dv_tol_l10") == "50\u00a0mV"
     for check in ("dv_dep", "dv_inv"):
         assert numbers.word(f"verdict_{check}_l10") == rec["verdicts"][check]["verdict"], check
 
@@ -1573,6 +1575,36 @@ def test_glossary_terms_of_the_regions_page():
         assert "{ref}`explained-regions" in entry, t
 
 
+# --- the mesh window figure (renders plan Task R0, docs/reproduce/index.md) -------------------
+
+REPRODUCE_PAGE = ROOT / "docs" / "reproduce" / "index.md"
+
+
+def test_mesh_window_figure_draws_the_window_rule():
+    """The reproduce page's figure outlines the window that meshcut cuts with its default rule:
+    a quarter gate length either side of the gate, from the drawn poly top down to
+    WINDOW_DEPTH_UM below the silicon surface (depth grows downwards in the drawing)."""
+    from gf180tcad import meshcut
+    from gf180tcad.explain import figures, model
+
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=figures.STYLE["scales"],
+                   drawn=figures.STYLE["drawn_um"])  # fmt: skip
+    gate = figures.cell_extents(c)["gate"]
+    box = figures.window_box(c)
+    assert box.x0 == pytest.approx(gate.x0 - meshcut.WINDOW_KX * c.l_um)
+    assert box.x1 == pytest.approx(gate.x1 + meshcut.WINDOW_KX * c.l_um)
+    assert box.y0 == pytest.approx(gate.y0)  # the poly top
+    assert box.y1 == pytest.approx(meshcut.WINDOW_DEPTH_UM)
+    assert "mesh-window" in figures.FIGURES
+    light = figures.FIGURES["mesh-window"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["mesh-window"]("dark")
+    assert b"window" in light
+    text = REPRODUCE_PAGE.read_text(encoding="utf-8")
+    for palette in figures.PALETTES:
+        assert f"/_generated/explained/mesh-window-{palette}.svg" in text, palette
+    assert "{numref}`mesh-window-figure`" in text
+
+
 # --- the C-V curve page (task E2c) -----------------------------------------------------------
 
 CV_PAGE = EXPLAINED / "cv-curve.md"
@@ -1615,7 +1647,7 @@ def test_cv_parts_values_are_the_files():
     rec = _l10_record()["metrics"]
     for name, key in _CV_METRICS.items():
         assert numbers.value(name) == rec[key], name
-    assert numbers.text("dv_fb_nfet_start") == "0 V"
+    assert numbers.text("dv_fb_nfet_start") == "0\u00a0V"
 
 
 def test_cv_parts_draws_the_start_and_fitted_curves():
@@ -1711,3 +1743,41 @@ def test_cv_page_table_rows_are_the_registry():
     for start, fitted in zip(_START_KEYS, _FITTED_KEYS, strict=True):
         row = rf"^\|[^|\n]+\| \{{\{{ x_{start} \}}\}} \| \{{\{{ x_{fitted} \}}\}} \|$"
         assert re.search(row, text, re.MULTILINE), (start, fitted)
+
+
+# --- the SPICE model's quasi-static switches (cv-curve.md) -----------------------------------
+
+MODEL_CARD = ROOT / "data" / "explain" / "model_card.toml"
+
+
+def test_model_card_file_names_the_process_files_card():
+    """data/explain/model_card.toml reads the card that data/process/nfet_05v0.toml names (same
+    file and sha256), with the process file's model among its bins, and every bin holds the
+    values the registry prints. tests/tcad/test_process.py ties the bins to the card's length
+    bins and, in the sandbox, checks each line in the card."""
+    numbers = _numbers()
+    card = tomllib.loads(MODEL_CARD.read_text(encoding="utf-8"))
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text(encoding="utf-8"))
+    assert card["card"] == {k: proc["card"][k] for k in ("file", "sha256")}
+    bins = card["nfet_05v0"]
+    assert bins[proc["card"]["model"]]["model_line"] == proc["card"]["model_line"]
+    assert len(bins) == 2
+    for key in ("acnqsmod", "trnqsmod"):
+        n = numbers.REGISTRY[f"{key}_nfet"]
+        assert (n.kind, n.source) == ("committed", numbers.MODEL_CARD)
+        for model, b in bins.items():
+            assert numbers.value(n.name) == b[key]["value"], (model, key)
+            assert b[key]["card_line"] > b["model_line"], (model, key)
+
+
+def test_cv_page_says_quasi_static_only_when_both_switches_are_off():
+    """The page calls the SPICE capacitance quasi-static because both selectors are 0, which
+    turns BSIM4's non-quasi-static model off (manual section 8.1, appendix A)."""
+    numbers = _numbers()
+    text = CV_PAGE.read_text(encoding="utf-8")
+    assert "{{ x_acnqsmod_nfet }}" in text and "{{ x_trnqsmod_nfet }}" in text
+    assert (
+        "<lit-bsim4>" in text and "{repo}`model_card.toml <data/explain/model_card.toml>`" in text
+    )
+    assert "SPICE capacitance is\nquasi-static" in text
+    assert numbers.value("acnqsmod_nfet") == 0 and numbers.value("trnqsmod_nfet") == 0

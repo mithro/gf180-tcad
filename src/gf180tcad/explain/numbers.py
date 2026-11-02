@@ -44,6 +44,8 @@ LABELS = {
 }
 DISPLAY = "data/render/display.toml"
 TEXTBOOK = "data/explain/textbook.toml"
+#: The model card's selector values the pages print, each with its card line.
+MODEL_CARD = "data/explain/model_card.toml"
 
 
 @dataclass(frozen=True)
@@ -185,6 +187,10 @@ _ENTRIES = (
     Number("dv_inv_l10", "committed", "mV", 2, _RESULT, {"json": [*_L10, "metrics", "dv_inv_v"]}, factor=1000.0),
     # A fraction in the file; the page prints per cent.
     Number("depletion_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "depletion_max_rel"]}, factor=100.0),
+    # The card's non-quasi-static model selectors (BSIM4 manual section 8.1), bin nfet_06v0.0;
+    # tests/test_explained.py checks that every bin of the nfet has the same values.
+    Number("acnqsmod_nfet", "committed", "", 1, MODEL_CARD, {"toml": ["nfet_05v0", "nfet_06v0.0", "acnqsmod", "value"]}),
+    Number("trnqsmod_nfet", "committed", "", 1, MODEL_CARD, {"toml": ["nfet_05v0", "nfet_06v0.0", "trnqsmod", "value"]}),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
 
@@ -333,10 +339,20 @@ def citation(name: str) -> str:
 _SUP = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 
 
+#: The non-breaking space (U+00A0) that joins a value to its unit and the parts of "a × 10ⁿ"
+#: (issue #119).
+NBSP = "\u00a0"
+#: The word joiner (U+2060) put after the "/" of a compound unit such as fF/µm², so the line
+#: never breaks at the slash (issue #119).
+WORD_JOINER = "\u2060"
+
+
 def format_value(v: float, digits: int, unit: str) -> str:
     """``v`` to ``digits`` significant digits with its unit: plain from 0.001 to 9999, else as
     a mantissa times a power of ten; a typographic minus sign; no space when ``unit`` is
-    empty (a pure number)."""
+    empty (a pure number). The value and its unit are joined by a non-breaking space
+    (``NBSP``) and a "/" in the unit is followed by a word joiner (``WORD_JOINER``),
+    so a page never breaks a number from its unit across lines."""
     if not math.isfinite(v):
         raise ValueError(f"{v!r} is not a finite number")
     sign = "−" if v < 0 else ""
@@ -345,8 +361,9 @@ def format_value(v: float, digits: int, unit: str) -> str:
     if -3 <= e < 4:
         body = f"{abs(v):.{max(digits - 1 - e, 0)}f}"
     else:
-        body = f"{mant} × 10{str(e).translate(_SUP)}"
-    return f"{sign}{body} {unit}" if unit else f"{sign}{body}"
+        body = f"{mant}{NBSP}×{NBSP}10{str(e).translate(_SUP)}"
+    unit = unit.replace("/", "/" + WORD_JOINER)
+    return f"{sign}{body}{NBSP}{unit}" if unit else f"{sign}{body}"
 
 
 def text(name: str) -> str:
