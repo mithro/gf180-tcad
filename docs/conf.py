@@ -29,8 +29,6 @@ extensions = [
     "unit_join",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
-# Figures, tables and code blocks get numbers, so a page can name one with {numref}.
-numfig = True
 source_suffix = {".md": "markdown"}
 root_doc = "index"
 

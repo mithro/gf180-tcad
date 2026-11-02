@@ -612,7 +612,7 @@ host runs docker with systemd.
 
 1. `deps` fetches every input, checks its sha256, installs the build packages and applies the
    patches. This is the only step with a network.
-2. `build` runs Charon's `build_charon.py` through {repo}`docker/charon-libs/build-charon.sh`,
+2. `build` runs Charon's [`build_charon.py`](https://charon.sandia.gov/charon-downloads/source-code/) through {repo}`docker/charon-libs/build-charon.sh`,
    then `make` and `make install`. Four upstream nightly tests then run as the build check, and
    every one must run and pass.
 3. The image is the base image plus `/opt/charon`, with no compiler or source tree left in it.
