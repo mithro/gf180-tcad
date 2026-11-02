@@ -522,7 +522,9 @@ def cross_section(
             a, b, y0, y1 = window
             ax.plot([a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["highlight"],
                     lw=STYLE["window_width"], ls=STYLE["window_dash"])  # fmt: skip
-            ax.text(b, y1 + gap, "mesh window", ha="right", va="top",
+            # Left of the box, level with the "gate oxide" label on the right: clear of the
+            # parts' boundaries.
+            ax.text(a - pad / 2, top + gap, "mesh window", ha="right", va="center",
                     color=pal["highlight"], fontweight="bold")  # fmt: skip
         statement = model.exaggeration(c.scales, c.drawn).replace(". ", ".\n")
         ax.set_title(statement, fontsize=STYLE["text_pt"])
