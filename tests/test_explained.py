@@ -567,9 +567,12 @@ def test_landing_lists_every_page():
         assert re.search(rf"^- \{{doc\}}`[^`<]+<{re.escape(name)}>`: ", text, re.MULTILINE), name
     prose = [
         ln for ln in text[: toc.start()].splitlines()
-        if ln.strip() and not ln.startswith(("# ", "- ", "(")) and not ln.startswith("  ")
+        if ln.strip() and not ln.startswith(("# ", "## ", "### ", "- ", "(")) and not ln.startswith("  ")
     ]  # fmt: skip
     assert len(prose) <= 2, f"a landing page is one line per destination: {prose}"
+    # One heading per tier keeps each list within the 7-item cap.
+    for head in re.findall(r"^## (.+)$", text[: toc.start()], re.MULTILINE):
+        assert head in ("The basics", "The MOS capacitor", "The MOSFET"), head
 
 
 def test_explained_is_first_in_the_top_toctree():
@@ -1568,3 +1571,143 @@ def test_glossary_terms_of_the_regions_page():
         assert terms[t] == 1, t
         entry = text[text.index(f"\n{t}\n") :].split("\n\n", 1)[0]
         assert "{ref}`explained-regions" in entry, t
+
+
+# --- the C-V curve page (task E2c) -----------------------------------------------------------
+
+CV_PAGE = EXPLAINED / "cv-curve.md"
+# The calibration's start and fitted values of the three tunables, as the result file records
+# them, and the registry entries that print them.
+_START_KEYS = {
+    "t_ox_nfet_start": "t_ox_eff_nm",
+    "n_ch_nfet_start": "n_ch_cm3",
+    "dv_fb_nfet_start": "dv_fb_v",
+}
+_FITTED_KEYS = {
+    "t_ox_nfet_cal": "t_ox_eff_nm",
+    "n_ch_nfet_cal": "n_ch_cm3",
+    "dv_fb_nfet_cal": "dv_fb_v",
+}
+# The fit's errors at w10p0_l10p00, from the result file's metrics.
+_CV_METRICS = {
+    "dv_dep_l10": "dv_dep_v",
+    "dv_inv_l10": "dv_inv_v",
+    "depletion_l10": "depletion_max_rel",
+}
+
+
+def test_cv_parts_values_are_the_files():
+    """The start and fitted values the page prints are the result file's ``start`` and
+    ``values``; the fitted ones are also the calibration file's and the 1D stack's."""
+    numbers = _numbers()
+    result = json.loads((ROOT / _RESULT).read_text("utf-8"))
+    cal = json.loads((ROOT / "results/tcad/calibration/nfet_05v0.json").read_text("utf-8"))
+    for name, key in _START_KEYS.items():
+        assert numbers.value(name) == result["start"][key], name
+    for name, key in _FITTED_KEYS.items():
+        assert numbers.value(name) == result["values"][key] == cal["values"][key], name
+    # The start values are the process file's values (the card's TOXE and NDEP, and 0 V).
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))["param"]
+    for name, key in _START_KEYS.items():
+        assert numbers.value(name) == proc[key]["value"], name
+    assert numbers.value("t_ox_nfet_start") == numbers.value("toxe_nfet")
+    assert numbers.value("n_ch_nfet_start") == numbers.value("ndep_nfet")
+    rec = _l10_record()["metrics"]
+    for name, key in _CV_METRICS.items():
+        assert numbers.value(name) == rec[key], name
+    assert numbers.text("dv_fb_nfet_start") == "0 V"
+
+
+def test_cv_parts_draws_the_start_and_fitted_curves():
+    """The cv-parts figure draws the committed start and calibrated 1D curves through the BSIM4
+    bookkeeping, and the SPICE typical curve, read by the readers the results pages use."""
+    from gf180tcad.explain import figures
+
+    for palette in figures.PALETTES:
+        (ax,) = figures.cv_parts_figure(palette).axes
+        lines = {ln.get_label(): ln for ln in ax.get_lines()}
+        assert set(figures.CV_PARTS_LINES.values()) <= set(lines)
+        for params, label in figures.CV_PARTS_LINES.items():
+            want = figures.cv_curves(
+                "nfet_05v0", "calibrated" if params == "spice" else params, _L10
+            )
+            x, y = lines[label].get_data()
+            if params == "spice":
+                assert list(x) == list(want["u_spice"]) and list(y) == list(want["spice_tt"])
+            else:
+                assert list(x) == list(want["u"]) and list(y) == list(want["tcad"])
+    start = figures.cv_curves("nfet_05v0", "start", _L10)["tcad"]
+    fitted = figures.cv_curves("nfet_05v0", "calibrated", _L10)["tcad"]
+    assert list(start) != list(fitted)
+
+
+def test_cv_parts_labels_name_the_parameters_at_the_committed_marks():
+    """Each part of the curve carries the parameter that sets it; the dip label points at the
+    SPICE minimum and the shift arrow sits on the SPICE falling-side crossing, from the result
+    file."""
+    from matplotlib.patches import ArrowStyle
+
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    (ax,) = figures.cv_parts_figure("light").axes
+    texts = {t.get_text(): t for t in ax.texts}
+    assert set(figures.CV_PARTS.values()) <= set(texts)
+    dip = texts[figures.CV_PARTS["dip"]]
+    assert tuple(dip.xy) == (numbers.value("u_min_l10"), numbers.value("c_min_l10"))
+    shift = texts[figures.CV_PARTS["position"]]
+    assert shift.xy[0] == pytest.approx(numbers.value("u_dep_spice_l10"))
+    # The shift arrow: one head, at its more positive end, centred on the crossing.
+    (arrow,) = [t for t in ax.texts if not t.get_text() and t.arrow_patch is not None]
+    style = arrow.arrow_patch.get_arrowstyle()
+    assert isinstance(style, ArrowStyle.CurveB), style
+    head, tail = arrow.xy, arrow.xyann
+    assert head[0] > tail[0] and head[1] == tail[1]
+    assert (head[0] + tail[0]) / 2 == pytest.approx(numbers.value("u_dep_spice_l10"))
+    lo, hi = figures.region_edges()
+    acc = texts[figures.CV_PARTS["accumulation"]]
+    inv = texts[figures.CV_PARTS["inversion"]]
+    assert acc.xy[0] < lo and inv.xy[0] > hi
+
+
+def test_cv_page_dip_order_is_the_curves():
+    """The page says the start curve's dip is shallower than the SPICE minimum it prints and the
+    fitted curve's dip is deeper: the committed curves' minima, in that order."""
+    from gf180tcad.explain import figures
+
+    c_min = _numbers().value("c_min_l10")
+    fitted = figures.cv_curves("nfet_05v0", "calibrated", _L10)
+    start = figures.cv_curves("nfet_05v0", "start", _L10)
+    assert min(fitted["spice_tt"]) == pytest.approx(c_min)
+    assert min(fitted["tcad"]) < c_min < min(start["tcad"])
+
+
+def test_cv_parts_figure_is_registered():
+    from gf180tcad.explain import figures
+
+    assert "cv-parts" in figures.FIGURES
+    light = figures.FIGURES["cv-parts"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["cv-parts"]("dark")
+    assert "x_fig_cv_parts_scale" not in figures.substitutions()
+
+
+def test_cv_page_prints_its_numbers():
+    text = CV_PAGE.read_text(encoding="utf-8")
+    for key in (*_START_KEYS, *_FITTED_KEYS, *_CV_METRICS, "plateau_acc_l10", "plateau_inv_l10",
+                "plateau_tol_l10", "dv_tol_l10", "cox_toxe_nfet", "cox_nfet_cal",
+                "verdict_nfet_1d", "verdict_pfet_1d", "two_d_disagree",
+                "fit_length_count", "c_min_l10"):  # fmt: skip
+        assert "{{ x_" + key + " }}" in text, key
+    assert "/_generated/explained/cv-parts-light.svg" in text
+    for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-deviation",
+                   "explained-regions-dip"):  # fmt: skip
+        assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor
+    assert not _COUNT_WORDS.findall(text)
+
+
+def test_cv_page_table_rows_are_the_registry():
+    """The page's table of tunables has one row per tunable, start then fitted, by substitution."""
+    text = CV_PAGE.read_text(encoding="utf-8")
+    for start, fitted in zip(_START_KEYS, _FITTED_KEYS, strict=True):
+        row = rf"^\|[^|\n]+\| \{{\{{ x_{start} \}}\}} \| \{{\{{ x_{fitted} \}}\}} \|$"
+        assert re.search(row, text, re.MULTILINE), (start, fitted)

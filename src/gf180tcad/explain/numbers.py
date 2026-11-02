@@ -175,6 +175,16 @@ _ENTRIES = (
         inputs=("n_ch_nfet_cal", "n_i_tcad", "vt_tcad", "v_fb_nfet", "eps_si_tcad", "eps0_tcad",
                 "q_tcad", "cox_nfet_cal"),
     ),
+    # What sets each part of the C-V curve (cv-curve.md): the calibration's start values of the
+    # three tunables, as the result file records them, and the fit's errors at w10p0_l10p00.
+    Number("t_ox_nfet_start", "committed", "nm", 3, _RESULT, {"json": ["start", "t_ox_eff_nm"]}),
+    Number("n_ch_nfet_start", "committed", _CM3, 2, _RESULT, {"json": ["start", "n_ch_cm3"]}),
+    Number("dv_fb_nfet_start", "committed", "V", 1, _RESULT, {"json": ["start", "dv_fb_v"]}),
+    # V in the file; the page prints mV. Simulated crossing minus the SPICE one.
+    Number("dv_dep_l10", "committed", "mV", 2, _RESULT, {"json": [*_L10, "metrics", "dv_dep_v"]}, factor=1000.0),
+    Number("dv_inv_l10", "committed", "mV", 2, _RESULT, {"json": [*_L10, "metrics", "dv_inv_v"]}, factor=1000.0),
+    # A fraction in the file; the page prints per cent.
+    Number("depletion_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "depletion_max_rel"]}, factor=100.0),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
 

@@ -34,6 +34,8 @@ Each annotation names what the project uses the item for.
 - {{ BSIM4_site }} manual (UC Berkeley): the meaning of TOXE, TOXP, {term}`NGATE` and LPE0.
   Its §7.1 and §7.5.2 give the gate-bias-dependent overlap capacitance with the lightly doped
   source and drain region, CGDL.
+- Its ch. 7, "Capacitance Model", gives the equations of the {term}`SPICE` gate capacitance that
+  {ref}`explained-cv-curve` compares with the simulated stack.
 
 ## Physics models
 
