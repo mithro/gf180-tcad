@@ -917,6 +917,7 @@ def corner_cv(palette: str) -> bytes:
 # The gate-area figure of the corner-fit section of docs/reproduce/index.md (eq-corner-area and
 # eq-corner-overlap): the gate seen from above at one corner, with the signs of that corner's
 # XL and XW for the nfet of the corner-cv figure.
+#: The corner whose XL and XW signs the gate-area figure draws: the slow corner.
 AREA_CORNER = "ss"
 _OVERLAP_LABEL = {
     "source overlap": "source overlap:\nCGSO, CGSL",
