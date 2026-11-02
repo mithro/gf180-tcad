@@ -169,6 +169,7 @@ _WORDS = (
     Word("verdict_nfet_2d_l0p60", _VALIDATION, {"json": ["two_d", "w10p0_l0p60", "verdict"]}),
     Word("verdict_nfet_2d_l0p70", _VALIDATION, {"json": ["two_d", "w10p0_l0p70", "verdict"]}),
 )  # fmt: skip
+#: The verdict words of the pages, by name (see :class:`Word`).
 WORDS: dict[str, Word] = {w.name: w for w in _WORDS}
 
 

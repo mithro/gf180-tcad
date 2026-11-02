@@ -556,8 +556,8 @@ def _junction_cell(palette: str) -> bytes:
     return cross_section(c, ("junction",), palette)
 
 
-#: The committed SPICE reference tree, and its typical corner (the line; the five corners give
-#: the band).
+# The committed SPICE reference tree, and its typical corner (the line; the five corners give
+# the band).
 SPICE_ROOT = numbers.ROOT / "results" / "spice"
 TYPICAL = "typical"
 
