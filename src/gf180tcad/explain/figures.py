@@ -390,6 +390,12 @@ def _oxide_stack(palette: str) -> bytes:
     return stack_1d(dev, ("gate", "oxide"), palette)
 
 
+def _calibration_stack(palette: str) -> bytes:
+    # The calibration page: the two layers the fit changes, the oxide and the body, highlighted.
+    dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
+    return stack_1d(dev, ("oxide", "body"), palette)
+
+
 def _bands_stack(palette: str) -> bytes:
     dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
     return stack_1d(dev, ("gate", "body"), palette)
@@ -1039,6 +1045,7 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "calibration-limits": calibration_limits,
     "calibration-compare": calibration_compare,
     "calibration-pfet": calibration_pfet,
+    "calibration-stack": _calibration_stack,
 }
 
 
