@@ -510,8 +510,10 @@ Those are the stamps the folder already had, so the jobs left
 
 ## The same bytes on another computer
 
-The committed reference is generated on the project's own machine, whose CPUs
-are Intel Xeon Gold 6152. To show that the same bytes come out on a different
+The committed reference is generated on the project's own machine. Each run's CPU
+model goes into its run record ([issue #144](https://github.com/mithro/gf180-tcad/issues/144)).
+
+To show that the same bytes come out on a different
 host, the `crosscheck` {{ GitHub_Actions }} workflow
 ({repo}`.github/workflows/crosscheck.yml`) regenerates it on a {{ GitHub_hosted_runner }}
 (`ubuntu-latest`) and requires every file to be byte-identical, by sha256, to the
@@ -541,8 +543,7 @@ AMD EPYC 7763) failed. Every raw simulator CSV was identical, but five
 the {term}`DIBL` derived from them. The cause was numpy's run-time {term}`SIMD dispatch`.
 numpy picks a kernel for each operation by CPU feature level, and its
 `log10` kernels for AVX-512 and for AVX2 differ by one {term}`ulp` on some inputs.
-The local Xeon and an earlier EPYC 9V45 runner both have AVX-512; the
-EPYC 7763 has only AVX2.
+An earlier EPYC 9V45 runner has AVX-512; the EPYC 7763 has only AVX2.
 
 The sandbox ({repo}`tools/sandbox-run`) now pins numpy to its
 baseline ({term}`x86-64-v2`) kernels by disabling every dispatch target with
