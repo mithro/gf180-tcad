@@ -259,7 +259,7 @@ against −1 nm at ff and +1 nm at ss ({repo}`data/pdk_corners.json`).
 ```
 
 **What a corner fit changes.** Its targets are the corner's ngspice curves at the three
-calibration geometries, as {ref}`the corner curves <fig-corner-cv>` shows. Its fixed inputs come from the
+calibration geometries, as {numref}`fig-corner-cv` shows. Its fixed inputs come from the
 corner's section of the {term}`model card`, read into {repo}`data/pdk_corners.json` with each
 line number. The table also holds the card's second nfet {term}`bin`, `nfet_06v0.1`, which has
 the shortest calibration gate. Its lines for these inputs equal the first bin's. The 1D stack is the same; the residuals and the optimiser settings are the typical
@@ -292,7 +292,7 @@ wide, carry the overlap capacitances of {math:numref}`eq-corner-overlap`.
 ```
 
 The capacitance area uses the corner's length and width offsets, as {math:numref}`eq-corner-area`
-gives and {ref}`the gate-area figure <fig-corner-area>` shows:
+gives and {numref}`fig-corner-area` shows:
 
 $$
 L_c = L + X_{L,c} - 2 D_L, \qquad W_c = W + X_{W,c} - 2 D_W
@@ -306,7 +306,7 @@ where
 - $D_L$, $D_W$ are the card's {term}`DLC` and {term}`DWC`, in µm.
 
 The four overlap capacitances scale by the corner's factor, as {math:numref}`eq-corner-overlap`
-gives. They sit on the source and drain strips of {ref}`the gate-area figure <fig-corner-area>`. The fringe capacitance CF is the {{ BSIM4_site }} default at the corner's oxide thickness TOXE.
+gives. They sit on the source and drain strips of {numref}`fig-corner-area`. The fringe capacitance CF is the {{ BSIM4_site }} default at the corner's oxide thickness TOXE.
 
 $$
 C_{o,c} = f_c \, C_o
