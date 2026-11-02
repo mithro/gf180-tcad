@@ -8,8 +8,8 @@ the issue says what is open and what settles it. The phases are those of the
 
 ## Phase 2: the MOS capacitor
 
-- **2D validation of the calibrated stack** ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): every calibrated 2D cell that solves
-  is committed. Two 2D solves fail; the next two items name them.
+- **2D validation of the calibrated stack** ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): the stack is the column under the gate
+  of the 2D cell in {numref}`roadmap-cell-figure`. Every calibrated 2D cell that solves is committed. Two 2D solves fail; the next two items name them.
   The 2D plateaus lie below {term}`SPICE` (issue #77). The 2D {term}`depletion` crossing lies below 1D
   (issue #108, {ref}`cv-agreement-validation`). The memory grows with every 2D point (issue #78).
 - **2D {term}`MOS capacitor <MOSCAP>` at L = 2 µm**: its small-signal (AC) solve fails
@@ -22,6 +22,27 @@ the issue says what is open and what settles it. The phases are those of the
   ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
 - **Mesh pictures** on the TCAD results pages
   ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
+
+```{figure} /_generated/explained/moscap-cell-light.svg
+:figclass: only-light
+:name: roadmap-cell-figure
+:alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey.
+
+The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`, cut along the gate's length. The 1D
+stack is the column under the gate: the gate, the {term}`gate oxide` and the body, in colour.
+The source and the drain, muted, are the parts the MOS capacitor leaves out. The 2D validation
+runs the calibrated stack in cells like this one. {{ x_fig_moscap_cell_scale }}
+```
+
+```{figure} /_generated/explained/moscap-cell-dark.svg
+:figclass: only-dark
+:alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey.
+
+The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`, cut along the gate's length. The 1D
+stack is the column under the gate: the gate, the {term}`gate oxide` and the body, in colour.
+The source and the drain, muted, are the parts the MOS capacitor leaves out. The 2D validation
+runs the calibrated stack in cells like this one. {{ x_fig_moscap_cell_scale }}
+```
 
 ## Phase 3: the MOSFET
 
@@ -51,6 +72,8 @@ the issue says what is open and what settles it. The phases are those of the
   [issue #72](https://github.com/mithro/gf180-tcad/issues/72)).
 
 ## Documentation
+
+<!-- figure-ok: these items name the topics of explainer pages and renders; those pages carry the figures -->
 
 - **3D renders** of the simulated processes
   ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
