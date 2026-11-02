@@ -1174,6 +1174,60 @@ def test_first_use_links_the_path_inside_a_command():
     assert not list(lits[1].findall(nodes.reference))  # linked once is enough
 
 
+def _api_entry():
+    """An autodoc-shaped entry: a signature naming TCAD, then a field list whose parameter name
+    is the term "corner" (Sphinx renders it as a bare <strong>, as the description's prose)."""
+    from docutils import nodes
+    from docutils.frontend import get_default_settings
+    from docutils.parsers.rst import Parser
+    from docutils.utils import new_document
+    from sphinx import addnodes
+
+    tree = new_document("api", get_default_settings(Parser))
+    sig = addnodes.desc_signature("", "", addnodes.desc_name("TCAD_RUN", "TCAD_RUN"))
+    sig += nodes.Text(" (TCAD corner)")
+    item = nodes.paragraph("", "", addnodes.literal_strong("corner", "corner"))
+    item += nodes.Text(" – the corner of the TCAD run")
+    body = nodes.field_body("", item)
+    fields = nodes.field_list("", nodes.field("", nodes.field_name("", "Parameters"), body))
+    tree += addnodes.desc("", sig, addnodes.desc_content("", fields))
+    return tree
+
+
+def test_first_use_skips_the_signature():
+    """The HTML check skips the "sig" class: a use there is neither linked nor the first use."""
+    from sphinx import addnodes
+
+    _app = _FakeApp()
+    import api_links
+
+    tree = _api_entry()
+    api_links.FirstUses(_app.subs).run(tree)
+    sig = next(tree.findall(addnodes.desc_signature))
+    assert not list(sig.findall(_pending_xref()))
+    assert ("term", "tcad", "TCAD") in _xrefs(tree)  # the description's use is the first
+
+
+def test_first_use_parameter_name_is_a_use():
+    """A parameter name renders as <strong>, which the HTML check reads as prose; the pass
+    agrees: the name is the first use and carries the link, the description's use does not."""
+    from sphinx import addnodes
+
+    _app = _FakeApp()
+    import api_links
+
+    tree = _api_entry()
+    api_links.FirstUses(_app.subs).run(tree)
+    name = next(tree.findall(addnodes.literal_strong))
+    assert [n["reftarget"] for n in name.findall(_pending_xref())] == ["corner"]
+    assert [t[1] for t in _xrefs(tree)].count("corner") == 1
+    html = (
+        '<html><body><div id="furo-main-content"><dl class="field-list"><dt>Parameters</dt>'
+        "<dd><p><strong>corner</strong> – the corner</p></dd></dl></div></body></html>"
+    )
+    assert [q.kind for q in check_html("u.html", html)] == ["html-term"]
+
+
 def test_html_scan_short_names_are_case_sensitive():
     page = (
         '<html><body><div id="furo-main-content"><p>Capacitance in fF, and the ss and tt '

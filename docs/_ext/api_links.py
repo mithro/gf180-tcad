@@ -179,12 +179,13 @@ class _Linker:
 # same): the journal names "IEEE Trans. Electron Devices" and "IEEE Electron Device Letters".
 NOT_TERM_PHRASES = re.compile(r"\bElectron Devices?\b")
 # Never a use: headings, signatures, code blocks and markup without prose. The HTML check skips
-# the same (h1-h6, the "sig" class, <pre>); a field name is "Parameters", or a parameter's name.
+# the same (h1-h6, the "sig" class, <pre>); a field name is "Parameters" or "Returns". A
+# parameter name or type in a field list (literal_strong, literal_emphasis) is not skipped:
+# Sphinx renders it as a bare <strong> or <em>, which the HTML check reads as prose.
 _SKIP = (
     nodes.literal_block, nodes.doctest_block, nodes.raw, nodes.comment, nodes.math,
     nodes.math_block, nodes.field_name, nodes.substitution_definition, nodes.system_message,
     nodes.target, nodes.subtitle, addnodes.desc_signature, addnodes.toctree,
-    addnodes.literal_strong, addnodes.literal_emphasis,
 )  # fmt: skip
 _COMMAND_WORD = re.compile(r"\S+")
 
