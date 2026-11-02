@@ -1,0 +1,25 @@
+gf180mcu-afe-die-photo.jpg
+
+What:    Die photo of a GF180MCU analog front-end chip (OPAMP blocks, SAR ADC and switched-
+         capacitance circuits; OpenFASoC tapeout mpw18h1), shown enlarged beside a tray of dies.
+         Captioned on the source page "The fabricated GF180MCU chip showing OPAMP blocks, SAR ADC,
+         and switched-capacitance circuits". Copied unchanged (1265 x 741 px JPEG, the page's
+         "gallery-lg" size; no resize was needed for the 1600 px cap).
+Source:  https://www.crowdsupply.com/img/e133/9fd6259b-ff38-4be4-b1b7-850c9ea8e133_gallery-lg.jpg
+Page:    https://www.crowdsupply.com/wafer-space/gf180mcu-run-1/updates/openfasoc
+         (Crowd Supply update "Building Real Sensors with GF180MCU", wafer.space GF180MCU Run 1,
+         dated Nov 05, 2025, signed Tim "mithro" Ansell)
+Full resolution:
+         https://siliconprawn.org/archive/doku.php?id=mcmaster:efabless:gf180mcu-mpw18h1-18100004
+         (linked from the update as "View high-resolution die photography on Silicon Prawn").
+         That page answered HTTP 403 (a Cloudflare challenge) on 2026-10-28 and again on
+         2026-11-03, so the photographer's name as given there could not be read. The update
+         names no photographer.
+Author:  wafer.space (the Crowd Supply update's author, Tim "mithro" Ansell), with the
+         full-resolution photography on Silicon Prawn.
+Licence: CC BY (Creative Commons Attribution). No version is stated on the update.
+         The repository owner confirmed the licence on 2026-11-03 01:45 ACDT, verbatim:
+         "The silicon prawn images and the die photos on the cs updates are all CC-BY."
+         (issue https://github.com/mithro/gf180-tcad/issues/104)
+Fetched: 2026-11-03, HTTP 200, 121982 bytes,
+         sha256 629fa5283352ba96aac50c25444aa6c4c8549c0559027c7309418b86d9001777.
