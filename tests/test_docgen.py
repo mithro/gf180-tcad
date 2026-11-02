@@ -66,6 +66,8 @@ EXPLAINED_FIGURES = [
     "junction-panels",
     "moscap-cell",
     "moscap-cv",
+    "cv-regions",
+    "band-regimes",
 ]
 
 

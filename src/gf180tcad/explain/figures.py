@@ -691,7 +691,9 @@ def cv_regions(palette: str) -> bytes:
     """The gate capacitance of the nfet at ``w10p0_l10p00`` against the gate voltage, the
     :term:`SPICE` curve at the :term:`typical corner` (solid) and the fitted simulation (dashed),
     with the three regions shaded between the calibration's marks (:func:`region_edges`)."""
-    return _svg(cv_regions_figure(palette))
+    # Saved inside the palette's rc context: the SVG settings (text as text, hash salt) apply.
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(cv_regions_figure(palette))
 
 
 #: The four states of the band panels, by rising gate voltage, and the surface bending of each
@@ -757,7 +759,8 @@ def band_regimes(palette: str) -> bytes:
     (:func:`gf180tcad.explain.idealised.surface_bending`): the band edges, the middle of the gap
     and the :term:`Fermi level` (the zero of energy), from the calibrated body doping, the
     simulations' constants and the textbook band gap."""
-    return _svg(band_regimes_figure(palette))
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(band_regimes_figure(palette))
 
 
 # name -> function of the palette name; each is written in both palettes by write_all.
