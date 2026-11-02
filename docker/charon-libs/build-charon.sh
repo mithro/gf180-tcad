@@ -23,6 +23,8 @@ prepare() {
     mkdir -p "$tree/tcad-charon/Trilinos"
     tar -xzf "$src"/Trilinos-*.tar.gz -C "$tree/tcad-charon/Trilinos" --strip-components=1
     tar -xzf "$src"/TriBITS-*.tar.gz -C "$tree/TriBITS" --strip-components=1
+    # The tarballs carry their authors' modes (some owner-only); everyone may read the tree.
+    chmod -R a+rX,go-w "$tree"
     /usr/bin/python3 -I "$ctx/inputs.py" check-opts "$ctx/upstream.json" "$tree/tcad-charon" \
         "$ctx/opts/gf180.opts"
     local p
