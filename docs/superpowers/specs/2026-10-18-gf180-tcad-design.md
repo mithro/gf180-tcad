@@ -182,8 +182,8 @@ Factors that multiply the card value:
 | Overlap capacitance | CGSO, CGDO, CGSL, CGDL | 0.90 | 1.10 | 0.90 | 1.10 |
 | Saturation velocity | VSAT | 1.0846 | 0.899 | not applicable | not applicable |
 
-The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet card shifts
-TOXE only, not TOXP. `fs` and `sf` scale the nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT)
+The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet model has
+no TOXP line, so its TOXP follows TOXE and moves with the TOXE offset. `fs` and `sf` scale the nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT)
 or 0.75 (VTH0, TOXE) and give the pfet its own values between those of `ff` and `ss`; their
 overlap factors are 0.93 and 1.07 (nfet) and 1.07 and 0.93 (pfet). The `statistical` section gives each of the same inputs a Gaussian spread (for
 the 6 V nfet, for example, a VTH0 term of 8 mV shared with the pfet plus 28 mV of its own, and
