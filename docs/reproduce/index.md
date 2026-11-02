@@ -651,6 +651,36 @@ content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a 
 the sha256 the committed results name. It holds the meshes of the calibrated 2D nfet and pfet cells,
 W1.6/L0.7 included; {doc}`output-cache` lists them.
 
+(mesh-artefact)=
+
+## Reduced mesh artefact
+
+A mesh figure of a 2D job is drawn from a committed reduced artefact, not from the full mesh.
+The command line {py:mod}`gf180tcad.meshcut.__main__` cuts a window around the gate out of the
+job's mesh. It writes `mesh-window.npz` and `mesh-window.meta.json` under
+`results/tcad/meshes/<image>/`.
+Every kept element is an element of the full mesh, with its node coordinates copied bit for bit.
+
+The window rule is the same for every job ({py:mod}`gf180tcad.meshcut`):
+
+| bound | where | constant |
+|---|---|---|
+| left | gate's left edge minus 0.25 gate lengths | `WINDOW_KX` |
+| right | gate's right edge plus 0.25 gate lengths | `WINDOW_KX` |
+| top | top of the gate polysilicon | none |
+| bottom | 0.1 µm below the silicon surface | `WINDOW_DEPTH_UM` |
+
+The artefact has no size cap. `cut` measures the file, records its size in the meta file as
+`size_bytes` and prints it
+({repo}`design spec §10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`).
+The meta file also records the sha256 of the full mesh, which must equal the job's committed
+`mesh_sha256`. No artefact is committed. The command for one job:
+
+```sh
+uv run --locked python -m gf180tcad.meshcut cut \
+  --job results/tcad/moscap2d/<device>/<params>/<gid> --out results/tcad/meshes/<image>
+```
+
 ## Render manifest
 
 A 3D render records the source, value and scale of every number it draws in its render
