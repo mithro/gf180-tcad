@@ -216,7 +216,7 @@ leaves out the extra solves that measure how each number moves the curve
 
 ## What the corners give
 
-The PDK's SPICE model has {{ x_corner_count }} {term}`corners <corner>`, the typical one among
+The SPICE reference runs {{ x_corner_count }} {term}`corners <corner>`, the typical one among
 them. This repo fits the typical corner alone, so this page shows no lower or upper bound of a
 fitted number. Fits at the other corners give those bounds and the spread
 (issues [#57](https://github.com/mithro/gf180-tcad/issues/57) and [#121](https://github.com/mithro/gf180-tcad/issues/121)).
