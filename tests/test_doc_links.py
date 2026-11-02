@@ -27,6 +27,7 @@ Each detector has a positive control below that proves it fires.
 from __future__ import annotations
 
 import ast
+import html as html_lib
 import re
 import subprocess
 import sys
@@ -1252,14 +1253,33 @@ def test_journal_name_is_not_the_electron_term():
     assert any("Electrons" in f for f in found), found
 
 
+def _page_title(page) -> str:
+    """The page's own title: the first <title> of the built page, without the site name."""
+    m = re.search(r"<title>([^<]*?) - gf180-tcad</title>", page.read_text(encoding="utf-8"))
+    return html_lib.unescape(m.group(1)) if m else ""
+
+
 def test_site_figures_are_numbered_as_figure_n(built_html):
     """numfig is on and numfig_format is "Figure %s" in docs/conf.py: every numbered figure of
-    the built site reads "Figure N", and every {numref} citation names it the same way."""
+    the built site reads "Figure N", and every {numref} citation names it the same way. Numbers
+    restart on each page, so a citation of another page's figure reads "Figure N of <title>",
+    with the title of the page it links to (spec §10.3)."""
     captions, cited = [], []
     for page in _html_pages(built_html):
         html = page.read_text(encoding="utf-8")
         captions += re.findall(r'<span class="caption-number">([^<]*)</span>', html)
-        cited += re.findall(r'<span class="std std-numref">([^<]*)</span>', html)
+        for href, text in re.findall(
+            r'<a class="reference internal" href="([^"]*)"><span class="std std-numref">([^<]*)'
+            r"</span>",
+            html,
+        ):
+            target = href.split("#", 1)[0]
+            text = html_lib.unescape(text)
+            if target and (page.parent / target).resolve() != page.resolve():
+                title = _page_title((page.parent / target).resolve())
+                cited.append(text.removesuffix(f" of {title}") if title else text)
+            else:
+                cited.append(text)
     assert captions, "no numbered figure in the built site: is numfig on in docs/conf.py?"
     assert cited, "no {numref} citation in the built site"
     bad = [c for c in captions + cited if not re.fullmatch(r"Figure \d+\s*", c)]

@@ -461,8 +461,9 @@ def centroid_curves(device: str) -> dict:
 
 def centroid(palette: str) -> bytes:
     """X_DC against u for both devices: the accumulation formula (solid), the plateau windows
-    beyond ±:data:`gf180tcad.tcad.process.PLATEAU_V` (shaded), the largest value inside the
-    accumulation window (marked) and the inversion supremum (dotted, on the inversion window)."""
+    beyond plus and minus :data:`gf180tcad.tcad.process.PLATEAU_V` (shaded), the largest value
+    inside the accumulation window (marked) and the inversion supremum (dotted, on the inversion
+    window)."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     edge = process.PLATEAU_V
