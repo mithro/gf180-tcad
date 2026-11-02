@@ -318,6 +318,30 @@ def test_resolve_refuses_to_replace_a_base_package():
         lock_debs.resolve(["a-dev"], pkgs, {"liba": "1"})
 
 
+@pytest.mark.parametrize("field", ["Breaks", "Conflicts", "Replaces"])
+def test_resolve_refuses_a_package_that_breaks_conflicts_or_replaces_a_base_package(field):
+    """dpkg -i stops on Breaks and Conflicts, but would let Replaces take over a base package's
+    files silently: the resolver refuses all three when they match what the base image has."""
+    new = _pkg("a-dev", "2") | {field: "libold (<< 3)"}
+    pkgs = {"a-dev": [new], "libold": [_pkg("libold", "2")]}
+    with pytest.raises(SystemExit, match=f"a-dev {field} libold"):
+        lock_debs.resolve(["a-dev"], pkgs, {"libold": "2"})
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "libold (<< 2)",  # the base image's version is outside the range
+        "a-dev (<< 2)",  # a package naming older versions of itself
+        "other",  # a package the base image does not have
+    ],
+)
+def test_resolve_accepts_relations_that_miss_the_base_image(rel):
+    pkgs = {"a-dev": [_pkg("a-dev", "2") | {"Breaks": rel, "Conflicts": rel, "Replaces": rel}]}
+    order = lock_debs.resolve(["a-dev"], pkgs, {"libold": "2"})
+    assert [q["Package"] for q in order] == ["a-dev"]
+
+
 # --- docker/charon-libs/build: the memory-limited builder ------------------------------------
 
 BUILD = LIBS / "build"
