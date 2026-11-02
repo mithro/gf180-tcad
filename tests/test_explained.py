@@ -1233,14 +1233,15 @@ def test_two_d_table_grows_with_a_new_cell(tmp_path):
     numbers = _numbers()
     dst = _validation_copy(tmp_path)
     doc = json.loads((dst / "pfet_05v0.json").read_text("utf-8"))
+    assert "w5p0_l0p70" not in doc["two_d"]  # a cell no validation file has
     new = json.loads(json.dumps(doc["two_d"]["w10p0_l0p70"]))
-    new["geometry"] = {**new["geometry"], "geometry_id": "w1p6_l0p70", "w_um": 1.6}
-    doc["two_d"]["w1p6_l0p70"] = new
+    new["geometry"] = {**new["geometry"], "geometry_id": "w5p0_l0p70", "w_um": 5.0}
+    doc["two_d"]["w5p0_l0p70"] = new
     (dst / "pfet_05v0.json").write_text(json.dumps(doc), "utf-8")
     before = numbers.two_d_table().splitlines()
     after = numbers.two_d_table(root=tmp_path).splitlines()
     assert len(after) == len(before) + 1
-    assert _row("pfet_05v0", 1.6, 0.7, new["verdict"]) in after
+    assert _row("pfet_05v0", 5.0, 0.7, new["verdict"]) in after
 
 
 def test_disagree_clause_follows_the_checks(tmp_path):

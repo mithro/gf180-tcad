@@ -57,6 +57,8 @@ _TOOLS = {
     "Xyce": ("Xyce", "https://xyce.sandia.gov/"),
     "DEVSIM": ("DEVSIM", "https://devsim.org/"),
     "Charon": ("Charon", "https://charon.sandia.gov/"),
+    "Trilinos": ("Trilinos", "https://github.com/trilinos/Trilinos"),
+    "TriBITS": ("TriBITS", "https://github.com/TriBITSPub/TriBITS"),
     "gdsfactory": ("gdsfactory", "https://gdsfactory.github.io/gdsfactory/"),
     "KLayout": ("KLayout", "https://www.klayout.de/"),
     "meshwell": ("meshwell", "https://github.com/simbilod/meshwell"),

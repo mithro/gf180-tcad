@@ -33,7 +33,8 @@ there.
 - **One TCAD backend.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
   for {{ Charon }} in parallel on every {term}`job`, with a per-job cross-comparison
   ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
-  No Charon job has run ({ref}`numerical-acceptance`,
+  No Charon job has run, and no Charon image is pinned ({ref}`numerical-acceptance`,
+  {ref}`charon-images`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
   open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
