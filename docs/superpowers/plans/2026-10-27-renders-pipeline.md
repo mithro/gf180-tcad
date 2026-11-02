@@ -82,7 +82,19 @@ All Phase 2 and Phase 4 Global Constraints apply unchanged (licences, git rules,
 2. **No match** (the expected case per the spec): no artefact is cut from that mesh, and the 2D job **is rerun**, as spec §10.1 requires ("the 2D job is rerun, so that the results and the artefact come from one mesh"). The reruns are not a new task. They are folded into the 2D reruns already planned: the dev-image regeneration of the 2D trees under #35, which the Charon plan's Task E waits for. They run one 16 GiB job at a time, take hours each, and cover **only** the meshes that fail M0; a mesh that reproduces needs no rerun. Each rerun writes its `mesh.msh` beside its new `cv.meta.json`; R0's `cut` then runs on it, and the robot pushes it to the cache as in outcome 1. The M0 record (the four regenerated shas, the image, the wall time and peak RSS) goes on `docs/limitations/moscap2d.md`, and #35 gets a comment listing the start jobs it must rerun. Until those reruns land, the first tied artefacts come from #35's calibrated jobs (their meshes are on disk now), R2 renders the calibrated nfet `w10p0_l0p60` job, which exists first, and the docs say per job which has a figure.
 
 **Interfaces:**
-- Produces: `uv run --locked python -m gf180tcad.meshcut cut --job results/tcad/moscap2d/<device>/<params>/<gid> --out results/tcad/meshes/<image> [--cache URL|DIR]` (host: reads `mesh_sha256` from `cv.meta.json`, pulls into `tmp/meshcut/<sha>/mesh.msh` with `tools/output-cache pull <sha> --out …`, then `tools/sandbox-run --workdir tmp/meshcut/<sha> --mem 4g --network none --image <tree image>` runs `cut-job`); `… regenerate --meshconv-level <device> <k> [--cut]` (no job directory: builds the mesh-convergence structure at level `k`'s `spec` from `report.json`, writes `tmp/meshcut/meshconv/<device>/level<k>/mesh.msh`, and cuts only when its sha equals a committed sha: a per-level `mesh_sha256` once #35's meshconv rerun records them, or, for the selected level, the committed `mesh_sha256` of the job built from the same cell and spec); `… regenerate --job … [--cut]` (host: `--mem 16g`, alone; the job refuses to cut unless the regenerated sha equals the committed one, and prints both); `meshcut.read(job_dir) -> Window` (host-side reader used by docgen and the render scene builders).
+- Produces: `uv run --locked python -m gf180tcad.meshcut cut --job results/tcad/moscap2d/<device>/<params>/<gid> --out results/tcad/meshes/<image> --kx K --depth-um D [--cache URL|DIR] [--scratch DIR]`. On the host it:
+  - reads `mesh_sha256` from the job's `cv.meta.json`;
+  - pulls the mesh into `<scratch>/mesh.msh` with a `tools/output-cache pull <sha> --out …` subprocess;
+  - runs `cut-job` in `<scratch>` through `gf180tcad.sandbox.run`: 4 GiB, no network, the job tree's recorded image;
+  - installs the artefact into `<out>/<device>/<params>/<gid>/` and writes `<out>/provenance.json`.
+
+  The scratch directory lies outside the repository: `sandbox.check_workdir` refuses a workdir inside it. Without `--scratch`, `cut` makes a temporary directory. It removes that directory after a successful install and keeps it after a refusal.
+  `--kx` and `--depth-um` are the window rule's arguments, required until M1 fixes the constants.
+- Produces: `… regenerate --job … [--cut --out … --kx K --depth-um D] [--scratch DIR]` (host: 16 GiB, alone). The job prints the committed and the regenerated sha256. It refuses to cut unless they are equal.
+- Produces: `… regenerate --meshconv-level <device> <k> [--cut]`. It takes no job directory. It builds the mesh-convergence structure at level `k`'s `spec` from `report.json` and writes `<scratch>/mesh.msh`. It cuts only when that sha equals a committed sha:
+  - a per-level `mesh_sha256`, once #35's meshconv rerun records them;
+  - for the selected level, the committed `mesh_sha256` of the job built from the same cell and spec.
+- Produces: `meshcut.read(job_dir) -> Window`, the host-side reader used by docgen and the render scene builders.
 - Consumes: `moscap2d.build_device`, `stack.build`, `stack.cell`, `meshconv.selected_spec`, `cli.load_params`, `cli.geometry_of` (unchanged; imported, so they are in the meshcut closure, not the reverse).
 
 - [ ] **Step 1: Write the tests first** (host, no Docker unless marked):
@@ -123,10 +135,47 @@ All Phase 2 and Phase 4 Global Constraints apply unchanged (licences, git rules,
     - `kx = 0`, 0.05 µm deep: 84,728 nodes, 2,536,922 bytes.
 
     The depth hardly matters; the width does. No point fits 2 MB, so M1 must choose as "What M1 must decide" (under Decision: window) lists.
-  - [ ] **Step 2, part 2: the job.** `meshcut.read(job_dir)`, the meta file and its schema test,
+  - [x] **Step 2, part 2: the job.** `meshcut.read(job_dir)`, the meta file and its schema test,
     the in-image `job.py` (sha check, `net_doping_cm3`, write) and the CLI. Also the
-    `generators.json` rows and the provenance and outcache tests.
-- [ ] **Step 3: Experiment M1, the window.** M1 waits until #35's current 2D job has finished: no 4 GiB cut job runs beside a 16 GiB job. On the #35 calibrated nfet `w10p0_l0p60` mesh (on disk; copy it into the worktree's `tmp/meshcut/`, never read from the scratch dir in place), run `cut-job` in the sandbox (`--mem 4g`) for a grid of `WINDOW_KX ∈ {0.25, 0.5, 1.0}` and `WINDOW_DEPTH_UM ∈ {0.1, 0.25, 0.5}`; log node count, triangle count and npz bytes to `tmp/meshcut-m1.log`; extrapolate to the 503 k-node L = 2 µm cell by its node density in the window (its nodes concentrate along the same interfaces). Fix the constants; record the table on the limitations page. Peak RSS of the cut job (from `/usr/bin/time -v` in the job log) sets the `--mem` value. The host measurement of Step 2 part 1 shows that no grid point fits 2 MB. So M1 also chooses among the options of "What M1 must decide" (Decision: window). It measures the chosen layout with `net_doping_cm3` included and records the choice. A budget change waits for the owner.
+    `generators.json` rows and the provenance and outcache tests. Branch
+    `task/p5-renders-r0-part2`, 2026-10-28. As built:
+    - `meshcut.artefact` writes and checks the two files. `meshcut.read(job_dir)` takes an
+      artefact directory, `meshes/<image>/<device>/<params>/<gid>`, and returns a `Window`.
+    - The meta also has `boundary_line_count` and `net_doping` (how the doping was evaluated).
+      The `units` record holds `um_per_mesh_unit`.
+    - `job.py` refuses a mesh whose sha256 is not the job's before it reads it.
+    - It rebuilds the cross-section with `stack.build` and refuses a job whose `param_sha256`,
+      geometry, L, oxide, S/D peak or `with_sd` differ. It checks the mesh's `gate_poly` against
+      the gate.
+    - `net_doping_cm3` uses the job's own profiles in their numpy form. Each region keeps its
+      frame from `build_device` and its bounds in the full mesh; other nodes get 0.
+    - A test ties `job.doping_frames` to the `surfaces` table of `moscap2d.build_device`.
+
+    The command line:
+    - It has `cut` and `regenerate` on the host, `cut-job` and `regenerate-job` in the
+      sandbox. `--kx` and `--depth-um` are required until M1 fixes the constants.
+    - `cut` refuses an artefact over 2 MB and keeps it in the scratch directory, so M1 can
+      measure its grid with the same command.
+    - The scratch directory is a temporary directory, not `tmp/meshcut/<sha>`:
+      `sandbox.check_workdir` refuses a workdir inside the repository. `cut` removes the
+      temporary directory it made after a successful install and keeps it after a refusal.
+    - The provenance of a meshes tree records its image under the kind `meshes`.
+
+    Registry and tests:
+    - `generators.json` gains the entry point `gf180tcad.meshcut.__main__` and its Charon
+      exclusion. The `tcad/meshes/<image>` tree rows wait for the first committed artefacts
+      (Step 5). `test_registry_trees_cover_every_committed_root` requires a row to come with its
+      results.
+    - No existing closure changes. The five committed trees stay `current` in the restamp dry run.
+    - `test_no_entry_point_imports_outcache` scans each entry point's static import closure.
+      `test_host_command_pulls_by_subprocess_only` fakes the pull and the sandbox run.
+    - The sandbox tests are in `tests/tcad/test_meshcut_job.py` and have not been run.
+    - The host tests cut the #35 calibrated nfet mesh when it has been pulled. Its window at
+      `kx = 0`, 0.05 µm deep keeps 84,728 nodes, as in part 1.
+
+    Left for later steps: `regenerate --meshconv-level` (it needs per-level mesh sha256s
+    from #35), the docgen mesh figure, and the manifest and cross-check rows of Step 5.
+- [ ] **Step 3: Experiment M1, the window.** M1 waits until #35's current 2D job has finished: no 4 GiB cut job runs beside a 16 GiB job. M1 cuts the #35 calibrated nfet `w10p0_l0p60` mesh, which `cut` pulls from the output cache. It runs `cut --kx K --depth-um D --scratch DIR` with DIR outside the repository, so its `cut-job` runs in the sandbox with 4 GiB. The grid is `WINDOW_KX ∈ {0.25, 0.5, 1.0}` by `WINDOW_DEPTH_UM ∈ {0.1, 0.25, 0.5}`. Log node count, triangle count and npz bytes to `tmp/meshcut-m1.log`. Extrapolate to the 503 k-node L = 2 µm cell by its node density in the window (its nodes concentrate along the same interfaces). Fix the constants; record the table on the limitations page. Peak RSS of the cut job (from `/usr/bin/time -v` in the job log) sets the `--mem` value. The host measurement of Step 2 part 1 shows that no grid point fits 2 MB. So M1 also chooses among the options of "What M1 must decide" (Decision: window). It measures the chosen layout with `net_doping_cm3` included and records the choice. A budget change waits for the owner.
 - [ ] **Step 4: Experiment M0, the four start meshes.** `uv run --locked python -m gf180tcad.meshcut regenerate --job results/tcad/moscap2d/<device>/start/<gid>` for each of the four, **one at a time**, nothing else heavy running; logs `tmp/meshcut-m0-<device>-<gid>.log`; record wall time, peak RSS and the regenerated sha against the committed one. Commit the record (docs only) whatever the outcome.
 - [ ] **Step 5: Cut and commit** the artefacts that are tied: matching regenerated start meshes (outcome 1) and every #35 calibrated job whose `cv.meta.json` is on `main` by then (pulled from the cache, or regenerated if #35 did not push). `make manifest`; results-only commits per job. Update the docs pages and the limitations bullet. Open the PR, get it reviewed, merge.
 - [ ] **Step 6: Report on #39** (it is closed in Task R4): a comment saying which 2D docs pages show a mesh figure from a committed artefact and which jobs still wait (for M0-failure reruns or #35), linking the limitations page. If no artefact can be tied yet (M0 no match, #35 not merged), the PR still merges the generator, the tests and the M0/M1 record, and the comment says so.
