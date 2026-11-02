@@ -293,6 +293,8 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             prints PATH:LINE: NOTE FIGURE-OK reason.
   FIGURE-FORM  a {figure} with no :name:, no caption, or no {numref} on the page citing it.
             The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
+            A {numref} to a target not on the page needs the page's title in its text
+            ({numref}`Figure %s of <title> <name>`): numbers restart on each page.
   EQUATION  a display math block that is not in the house form: $$ ... $$ (label), then a line
             "where", then a list with one item per symbol, each starting with the symbol in
             $...$ and ending with ", in <SI unit symbols>" (F/m², cm⁻³) or ", dimensionless".
@@ -612,12 +614,26 @@ def _figure_blocks(lines):
 def figure_form_findings(lines):
     """FIGURE-FORM: a {figure} needs a :name:, a caption and a {numref} on the page that cites
     it. The dark twin of a light/dark pair (:figclass: only-dark) carries no name and is exempt."""
-    cited = set()
-    for _, line, kind in lines:
+    cited, refs = set(), []
+    for i, line, kind in lines:
         if kind in ("prose", "table", "caption", "heading"):
-            for m in re.finditer(r"\{numref\}`(?:[^`<]*<)?\s*([^`<>]+?)\s*>?`", line):
-                cited.add(m.group(1))
+            for m in re.finditer(r"\{numref\}`(?:([^`<]*)<)?\s*([^`<>]+?)\s*>?`", line):
+                cited.add(m.group(2))
+                refs.append((i, m.group(1), m.group(2)))
     out = []
+    # Numbers restart on each page: a {numref} to another page's figure names the page.
+    targets = {opts["name"] for _, opts, _ in _figure_blocks(lines) if opts.get("name")}
+    targets |= {re.match(r"^\s*\(([\w.:-]+)\)=", ln).group(1) for _, ln, k in lines if k == "label"
+                and re.match(r"^\s*\(([\w.:-]+)\)=", ln)}
+    for i, text, target in refs:
+        if target in targets:
+            continue
+        words = re.sub(r"%s|\{number\}|\{name\}|\bFig(ure)?\b\.?", " ", text or "").split()
+        if len(words) < 2:
+            out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', a figure on another page: "
+                                          "numbers restart on each page, so write the page's "
+                                          f"title in the text, {{numref}}`Figure %s of <title> "
+                                          f"<{target}>`"))
     for i, opts, caption in _figure_blocks(lines):
         if "only-dark" in opts.get("figclass", "").split():
             continue

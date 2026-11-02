@@ -602,7 +602,8 @@ The three rules apply to every reader page. That is everything under `docs/` exc
   carries a figure of that item: a `{figure}` directive with a caption and a `:name:`, cited
   from the text with `{numref}`.
 - **Figure numbers**. `numfig` is on in `docs/conf.py`. A figure extension in `docs/_ext/`
-  numbers the figures of each page from 1, as "Figure N".
+  numbers the figures of each page from 1, as "Figure N". So a `{numref}` cites a figure of its
+  own page. One that cites another page's figure puts that page's title in its link text.
 - **Light/dark pairs**. A pair is two adjacent `{figure}` directives with the same caption,
   `only-light` first. The extension merges them into one figure with one number. Only the light
   twin carries the `:name:` that the text cites.

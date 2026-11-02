@@ -723,3 +723,34 @@ def test_equation_symbol_named_inside_an_item_is_not_defined():
     page = TWO_IN_ONE + "- $E$ is the energy of the mass $m$, in J.\n"
     hits = found(page, "EQUATION")
     assert len(hits) == 1 and "does not define m" in hits[0][1]
+
+
+# --- FIGURE-FORM: a {numref} to another page names that page --------------------------------
+# Figure numbers restart on each page, so "Figure 2" alone does not say which page's figure.
+
+
+@pytest.mark.parametrize(
+    "cite",
+    [
+        "{numref}`fig-elsewhere`",
+        "{numref}`Figure %s <fig-elsewhere>`",
+        "{numref}`Fig. {number} <fig-elsewhere>`",
+    ],
+)
+def test_cross_page_numref_without_the_page_title_fires(cite):
+    page = f"# T\n\nThe stack is in {cite}.\n"
+    hits = found(page, "FIGURE-FORM")
+    assert len(hits) == 1 and hits[0][0] == 3 and "another page" in hits[0][1]
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        "# T\n\nThe stack is in {numref}`fig-a`.\n\n" + _figure(),
+        "# T\n\nSee {numref}`Figure %s of The oxide and the poly gate <fig-elsewhere>`.\n",
+        "# T\n\n(tab-a)=\n\nSee {numref}`tab-a`.\n",
+    ],
+    ids=["same-page", "cross-page-with-title", "same-page-label"],
+)
+def test_numref_with_a_target_on_the_page_or_a_title_passes(page):
+    assert found(page, "FIGURE-FORM") == []

@@ -63,6 +63,8 @@ PRs but is not a merge blocker.
     process step, a stack or a mesh. It then shows that thing in a figure. The figure has a
     caption and a `:name:`, and the text cites it with `{numref}`. Of a light/dark pair, the
     light twin carries the `:name:`; the dark twin follows it with the same caption.
+  - Figure numbers restart on each page, so a `{numref}` to another page's figure names that
+    page in its link text.
   - A section whose noun is not a physical thing carries
     `<!-- figure-ok: a reason of six words or more -->`. The check lists each one, and the
     baseline counts them, so each one shows in the PR's diff for the reviewer.
