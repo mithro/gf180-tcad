@@ -16,6 +16,60 @@
             "value": 7e-07
           },
           "model_line": 37055,
+          "size": {
+            "binunit": {
+              "card_line": 37078,
+              "value": 1.0
+            },
+            "lint": {
+              "card_line": 37166,
+              "value": -3e-08
+            },
+            "ll": {
+              "card_line": 37171,
+              "value": 1.93e-14
+            },
+            "lln": {
+              "card_line": 37173,
+              "value": 1.0
+            },
+            "lw": {
+              "card_line": 37191,
+              "value": 0.0
+            },
+            "lwl": {
+              "card_line": 37193,
+              "value": 0.0
+            },
+            "lwn": {
+              "card_line": 37195,
+              "value": 1.0
+            },
+            "wint": {
+              "card_line": 37350,
+              "value": 1.55e-08
+            },
+            "wl": {
+              "card_line": 37354,
+              "value": 0.0
+            },
+            "wln": {
+              "card_line": 37356,
+              "value": 1.0
+            },
+            "ww": {
+              "card_line": 37370,
+              "value": -2.7e-15
+            },
+            "wwl": {
+              "card_line": 37372,
+              "value": 0.0
+            },
+            "wwn": {
+              "card_line": 37374,
+              "value": 1.0
+            }
+          },
           "wmax": {
             "card_line": 37360,
             "value": 0.000100001
@@ -93,6 +147,60 @@
             "value": 6e-07
           },
           "model_line": 37393,
+          "size": {
+            "binunit": {
+              "card_line": 37416,
+              "value": 1.0
+            },
+            "lint": {
+              "card_line": 37504,
+              "value": -3e-08
+            },
+            "ll": {
+              "card_line": 37509,
+              "value": 1.93e-14
+            },
+            "lln": {
+              "card_line": 37511,
+              "value": 1.0
+            },
+            "lw": {
+              "card_line": 37529,
+              "value": 0.0
+            },
+            "lwl": {
+              "card_line": 37531,
+              "value": 0.0
+            },
+            "lwn": {
+              "card_line": 37533,
+              "value": 1.0
+            },
+            "wint": {
+              "card_line": 37688,
+              "value": 1.55e-08
+            },
+            "wl": {
+              "card_line": 37692,
+              "value": 0.0
+            },
+            "wln": {
+              "card_line": 37694,
+              "value": 1.0
+            },
+            "ww": {
+              "card_line": 37708,
+              "value": -2.7e-15
+            },
+            "wwl": {
+              "card_line": 37710,
+              "value": 0.0
+            },
+            "wwn": {
+              "card_line": 37712,
+              "value": 1.0
+            }
+          },
           "wmax": {
             "card_line": 37698,
             "value": 0.000100001
@@ -413,6 +521,60 @@
             "value": 5e-07
           },
           "model_line": 38091,
+          "size": {
+            "binunit": {
+              "card_line": 38106,
+              "value": 1.0
+            },
+            "lint": {
+              "card_line": 38173,
+              "value": 6.7e-08
+            },
+            "ll": {
+              "card_line": 38174,
+              "value": -5.4e-15
+            },
+            "lln": {
+              "card_line": 38175,
+              "value": 1.0
+            },
+            "lw": {
+              "card_line": 38186,
+              "value": 0.0
+            },
+            "lwl": {
+              "card_line": 38187,
+              "value": -4.76e-21
+            },
+            "lwn": {
+              "card_line": 38188,
+              "value": 1.0
+            },
+            "wint": {
+              "card_line": 38278,
+              "value": 4.9e-08
+            },
+            "wl": {
+              "card_line": 38280,
+              "value": 0.0
+            },
+            "wln": {
+              "card_line": 38281,
+              "value": 1.0
+            },
+            "ww": {
+              "card_line": 38288,
+              "value": -1.37e-14
+            },
+            "wwl": {
+              "card_line": 38289,
+              "value": 3.04e-22
+            },
+            "wwn": {
+              "card_line": 38290,
+              "value": 1.0
+            }
+          },
           "wmax": {
             "card_line": 38282,
             "value": 0.00010001
@@ -670,6 +832,6 @@
     "ss": 169,
     "typical": 105
   },
-  "note": "The corner sections of the PDK's ngspice card for the 6 V transistors: per device, the card lines that use a corner parameter (inputs: those the 1D corner fits apply, and VSAT; other_lines: binning and TOXM terms they do not apply) and the value of each corner parameter in each `.lib <corner>` section, with line numbers. bins: every bin of each device's model in its `.lib` section, with its LMIN, LMAX, WMIN and WMAX lines, and for a bin other than `model` every line that uses a corner parameter; the inputs the fits apply must be the same line in every bin. Written by reading the card; checked against the card in the image by tests/test_calibrate_corners.py::test_corner_table_matches_pinned_pdk.",
+  "note": "The corner sections of the PDK's ngspice card for the 6 V transistors: per device, the card lines that use a corner parameter (inputs: those the 1D corner fits apply, and VSAT; other_lines: binning and TOXM terms they do not apply) and the value of each corner parameter in each `.lib <corner>` section, with line numbers. bins: every bin of each device's model in its `.lib` section, with its LMIN, LMAX, WMIN and WMAX lines, its BINUNIT and the effective-size parameters of BSIM4.5.0 manual §1.3 (LINT, LL, LLN, LW, LWN, LWL, WINT, WL, WLN, WW, WWN, WWL) with their lines, and for a bin other than `model` every line that uses a corner parameter; the inputs the fits apply must be the same line in every bin. Written by reading the card; checked against the card in the image by tests/test_calibrate_corners.py::test_corner_table_matches_pinned_pdk.",
   "schema": 1
 }

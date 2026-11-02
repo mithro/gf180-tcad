@@ -107,6 +107,10 @@ def test_table_holds_the_spec_values(device, corner):
 APPLIED_USES = {"area bookkeeping", "overlap bookkeeping", "oxide bounds", "flat-band bounds"}
 #: The size limits of a model bin (m): BSIM4 takes the bin with LMIN <= L < LMAX, and the same for W.
 BIN_LIMITS = ("lmin", "lmax", "wmin", "wmax")
+#: The BINUNIT and effective-size parameters of each bin (BSIM4.5.0 manual §1.3).
+SIZE_KEYS = (
+    "binunit", "lint", "ll", "lln", "lw", "lwn", "lwl", "wint", "wl", "wln", "ww", "wwn", "wwl",
+)  # fmt: skip
 
 
 def test_applied_uses_are_the_table_uses():
@@ -597,6 +601,11 @@ def _check_bins(lines: list[str], device: str, d: dict, params: set[str]) -> Non
             assert n in body, (name, k)
             key, e = process.parse_card_assignment(lines[n - 1])
             assert (key, float(e)) == (k, b[k]["value"]), (name, k)
+        assert set(b["size"]) == set(SIZE_KEYS), name
+        for k, r in b["size"].items():
+            assert r["card_line"] in body, (name, k)
+            key, e = process.parse_card_assignment(lines[r["card_line"] - 1])
+            assert (key, float(e)) == (k, r["value"]), (name, k)
         if name == d["model"]:
             assert "lines" not in b, name
             continue
@@ -705,3 +714,49 @@ def test_corner_area_figure_follows_the_equations():
     assert "Oxide thickness" not in statement
     light, dark = figures.corner_area("light"), figures.corner_area("dark")
     assert light.startswith(b"<?xml") and light != dark
+
+
+# --- the PVTH0 binning term the fits leave out (docs/reproduce/index.md, eq-corner-pvth0) -------
+
+#: The ff values on the W = 10 µm, L = 0.5 µm pfet gate, worked by hand from the card values
+#: (review of PR #147): dL, dW, L_eff, W_eff in m, dv in V.
+PVTH0_FF = {"dl": 54.05e-9, "dw": 47.70e-9, "leff": 0.3454e-6, "weff": 9.9546e-6, "dv": 0.3067e-3}
+
+
+def _pvth0_matches(r):
+    return all(r[k] == pytest.approx(v, rel=2e-4) for k, v in PVTH0_FF.items())
+
+
+def test_pvth0_shift_at_ff_on_the_shortest_pfet_gate():
+    r = corners.pvth0_shift(PFET, "ff", 0.5, 10)
+    assert _pvth0_matches(r)
+    assert r["dp"] == pytest.approx(8.47e-3 * 0.1245)
+    corner, g, largest = corners.largest_pvth0_shift(PFET)
+    assert (corner, g.l_um, g.w_um) == ("ff", 0.5, 10) and largest == r
+    assert corners.model_bin(NFET, 0.6, 10) == "nfet_06v0.1"
+    assert corners.model_bin(NFET, 0.7, 10) == "nfet_06v0.0"
+
+
+def _mutations():
+    out = [("size", k) for k in SIZE_KEYS]
+    return out + [("xl",), ("xw",), ("pvth0",), ("dvth0",)]
+
+
+@pytest.mark.parametrize("what", _mutations(), ids="-".join)
+def test_pvth0_shift_follows_every_input(what, monkeypatch):
+    """A change to any table value the shift is computed from changes the result."""
+    t = corners.load_table()
+    d = t["devices"][PFET]
+    if what[0] == "size":
+        r = d["bins"]["pfet_06v0.0"]["size"][what[1]]
+        r["value"] = {"binunit": 0.0}.get(what[1], r["value"] * 1.1 if r["value"] else 1e-14)
+    elif what[0] in ("xl", "xw"):
+        d["inputs"][what[0]]["expr"] = d["inputs"][what[0]]["expr"].replace("0+", "1e-8+", 1)
+    elif what[0] == "pvth0":
+        d["other_lines"]["pvth0"]["expr"] = d["other_lines"]["pvth0"]["expr"].replace(
+            "8.47e-3", "8.57e-3"
+        )
+    else:
+        d["corners"]["ff"]["pfet_06v0_dvth0"]["value"] = 0.13
+    monkeypatch.setattr(corners, "load_table", lambda path=None: t)
+    assert not _pvth0_matches(corners.pvth0_shift(PFET, "ff", 0.5, 10)), what

@@ -44,6 +44,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -73,7 +74,7 @@ CORNERS_MAIN = "gf180tcad.calibrate.corners"
 #: The corner table, ``data/pdk_corners.json``.
 PDK_CORNERS_FILE = REPO_ROOT / "data" / "pdk_corners.json"
 #: The table's sha256; a change to the table must change this line.
-PDK_CORNERS_SHA256 = "89e24e774af5b828d1801a33198d4f95b44ac87ae38f65c8f0bbfab77dc39b96"
+PDK_CORNERS_SHA256 = "6a6befcc7b60db97af78f5c50a6653801d8a8c2123592479ce43da5c56a41f29"
 
 #: The tree root of the corner fits, ``results/tcad/corners``.
 CORNERS_ROOT = REPO_ROOT / "results" / "tcad" / "corners"
@@ -181,6 +182,98 @@ def corner_bounds(device: str, corner: str) -> dict[str, tuple[float, float]]:
     proc = process.load(device)
     s = tunable_shifts(device, corner)
     return {n: tuple(b + s[n] for b in proc.params[n].bounds) for n in process.TUNABLES}
+
+
+# --- the PVTH0 binning term the fits leave out ---------------------------------------------------
+
+#: A number in a card expression.
+_NUM = r"-?[0-9.]+(?:[eE][-+]?[0-9]+)?"
+#: BINUNIT = 1: the binning terms take L_eff and W_eff in µm (ngspice ``b4temp.c``, ``Inv_LW``).
+_INV_LW_M2 = {1: 1e-12, 0: 1.0}
+
+
+@dataclass(frozen=True)
+class EffectiveSize:
+    """The BSIM4 effective channel size of one gate at one corner (m): ``dl``, ``dw`` (eq. 1.3.4
+    and 1.3.3 of the BSIM4.5.0 manual, bias terms off), ``leff``, ``weff`` (eqs. 1.3.1, 1.3.2a)."""
+
+    dl: float
+    dw: float
+    leff: float
+    weff: float
+
+
+def model_bin(device: str, l_um: float, w_um: float) -> str:
+    """The bin of ``device``'s model that BSIM4 takes for a drawn L by W gate (µm): LMIN <= L <
+    LMAX and WMIN <= W < WMAX, compared in nm; ValueError unless exactly one bin matches."""
+    bins = load_table()["devices"][device]["bins"]
+
+    def inside(b, um, lo, hi):
+        nm = round(um * 1e3)
+        return round(b[lo]["value"] * 1e9) <= nm < round(b[hi]["value"] * 1e9)
+
+    hits = [k for k, b in bins.items()
+            if inside(b, l_um, "lmin", "lmax") and inside(b, w_um, "wmin", "wmax")]  # fmt: skip
+    if len(hits) != 1:
+        raise ValueError(f"{device}: L={l_um} um, W={w_um} um falls in bins {hits}")
+    return hits[0]
+
+
+def _offset_m(device: str, corner: str, key: str) -> float:
+    """The card's XL or XW (m) at ``corner``: the expression's constant plus the corner offset."""
+    row = load_table()["devices"][device]["inputs"][key]
+    m = re.fullmatch(rf"({_NUM})\+{re.escape(row['param'])}", row["expr"])
+    if m is None:
+        raise ValueError(f"{device}: {key} = {row['expr']!r} is not an offset")
+    return float(m.group(1)) + card_shift(device, corner, key)
+
+
+def effective_size(device: str, corner: str, l_um: float, w_um: float) -> EffectiveSize:
+    """L_eff and W_eff of a drawn L by W gate (µm, one finger) at ``corner``, as ngspice
+    ``b4temp.c`` computes them for the binning terms: L_n = L + XL, W_n = W + XW,
+    dL = LINT + LL/L_n^LLN + LW/W_n^LWN + LWL/(L_n^LLN W_n^LWN), dW the same with the W
+    parameters, L_eff = L_n - 2 dL, W_eff = W_n - 2 dW (BSIM4.5.0 manual §1.3). The parameters
+    are the bin's ``size`` entries of :repo:`data/pdk_corners.json`."""
+    g = {k: v["value"] for k, v in
+         load_table()["devices"][device]["bins"][model_bin(device, l_um, w_um)]["size"].items()}  # fmt: skip
+    ln = l_um * 1e-6 + _offset_m(device, corner, "xl")
+    wn = w_um * 1e-6 + _offset_m(device, corner, "xw")
+    tl, tw = ln ** g["lln"], wn ** g["lwn"]
+    dl = g["lint"] + g["ll"] / tl + g["lw"] / tw + g["lwl"] / (tl * tw)
+    tl, tw = ln ** g["wln"], wn ** g["wwn"]
+    dw = g["wint"] + g["wl"] / tl + g["ww"] / tw + g["wwl"] / (tl * tw)
+    return EffectiveSize(dl, dw, ln - 2 * dl, wn - 2 * dw)
+
+
+def pvth0_shift(device: str, corner: str, l_um: float, w_um: float) -> dict[str, float]:
+    """How far the corner's PVTH0 binning term moves the SPICE VTH0 of a drawn L by W gate:
+    ``dp`` (the change of PVTH0, V·m² scaled by BINUNIT: V·µm² for BINUNIT = 1), ``dv`` (V) =
+    dp × Inv_LW, Inv_LW = 10⁻¹²/(L_eff W_eff) for BINUNIT = 1 (ngspice ``b4temp.c``), with
+    :func:`effective_size`. ``dp`` is the coefficient of the corner parameter in the ``pvth0``
+    line of :repo:`data/pdk_corners.json` times the corner's value. KeyError for a device whose
+    card has no PVTH0 corner term."""
+    d = load_table()["devices"][device]
+    row = d["other_lines"]["pvth0"]
+    m = re.fullmatch(rf"{_NUM}\+({_NUM})\*{re.escape(row['param'])}", row["expr"])
+    if m is None:
+        raise ValueError(f"{device}: pvth0 = {row['expr']!r} is not constant + coefficient*param")
+    dp = float(m.group(1)) * float(d["corners"][corner][row["param"]]["value"])
+    size = effective_size(device, corner, l_um, w_um)
+    binunit = int(d["bins"][model_bin(device, l_um, w_um)]["size"]["binunit"]["value"])
+    dv = dp * _INV_LW_M2[binunit] / (size.leff * size.weff)
+    return {"dl": size.dl, "dw": size.dw, "leff": size.leff, "weff": size.weff, "dp": dp, "dv": dv}
+
+
+def largest_pvth0_shift(device: str = "pfet_05v0") -> tuple[str, Geometry, dict[str, float]]:
+    """The fitted corner and calibration geometry of ``device`` where :func:`pvth0_shift` is
+    largest in size, with its values: the bound the reproduce page states."""
+    cases = [
+        (c, g, pvth0_shift(device, c, g.l_um, g.w_um))
+        for c in FIT_CORNERS
+        for g in DEVICES[device].geometries
+        if g.role == "calibration"
+    ]
+    return max(cases, key=lambda x: abs(x[2]["dv"]))
 
 
 def with_corner_card(
