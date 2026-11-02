@@ -94,7 +94,7 @@ $$
 E_F - E_i = q \, V_t \, \ln \frac{n}{n_i}
 $$
 
-Here $n_i$ is the {term}`intrinsic carrier density` and $q$ the charge of one electron. With the
+Here $n_i$ is the {term}`intrinsic carrier density` and $q$ the elementary charge, the size of one electron's charge. With the
 thermal voltage $V_t$, the product $q V_t$ is the heat energy each carrier has. In eV, $q V_t$ is the same
 number as $V_t$ in volts. The simulations of this repo use $V_t$ = {{ x_vt_tcad }}
 ({repo}`per_area.meta.json <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`).

@@ -95,7 +95,7 @@ where:
 - $\varepsilon_r$ is the relative permittivity of silicon, {{ x_eps_si_tcad }}. Silicon holds that
   many times the charge of a vacuum gap at the same voltage;
 - $\varepsilon_0$ is the permittivity of vacuum, {{ x_eps0_tcad }};
-- $q$ is the charge of one electron, {{ x_q_tcad }};
+- $q$ is the elementary charge, the size of one electron's charge, {{ x_q_tcad }};
 - $V_{bi}$, $N_A$ and $N_D$ are the built-in potential and the two densities of the section above.
 
 The simulations of this repo use these three values
