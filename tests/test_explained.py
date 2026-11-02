@@ -737,3 +737,76 @@ def test_gate_voltage_shift_is_printed_from_the_calibration_file():
     text = (EXPLAINED / "silicon-and-carriers.md").read_text(encoding="utf-8")
     assert "{{ x_dv_fb_nfet_cal }}" in text
     assert "small shift" not in text
+
+
+# --- the energy bands and Fermi level page (task E1b) ----------------------------------------
+
+BANDS_PAGE = EXPLAINED / "bands-and-fermi-level.md"
+
+
+def test_band_gap_is_the_display_value_with_a_checked_source():
+    """The band gap has one home, data/render/display.toml (plan, Decisions), and the source it
+    cites there includes the Ioffe archive page that was read (lit-ioffe); #88 doubts the
+    Sze and Ng values that were not read."""
+    numbers = _numbers()
+    display = tomllib.loads(DISPLAY.read_text("utf-8"))
+    n = numbers.REGISTRY["band_gap_si"]
+    assert (n.kind, n.source) == ("textbook", "data/render/display.toml")
+    assert numbers.value("band_gap_si") == display["silicon"]["band_gap_ev"]
+    assert "(lit-ioffe)" in numbers.citation("band_gap_si")
+    assert "(lit-ioffe)=" in LITERATURE.read_text("utf-8")
+
+
+def test_fermi_levels_against_hand_values():
+    """The two Fermi levels the bands page prints, idealised from the committed dopings.
+
+    Hand values (nfet calibrated per_area.meta.json: n_i = 8.265841554853887e9 cm⁻³,
+    V_t = 0.02569257912108585 V, n_ch = 8.813323306821749e16 cm⁻³; NGATE = 1e20 cm⁻³):
+    - gate: E_F − E_i = V_t·ln(1e20 / 8.2658e9) = 0.025692579 × 23.21653 = 0.596487 eV;
+    - body: n = n_i²/n_ch = 775.24 cm⁻³, E_F − E_i = V_t·ln(775.24 / 8.2658e9) = −0.415763 eV,
+      printed as 0.416 eV below the middle of the gap (factor −1).
+    """
+    numbers = _numbers()
+    assert numbers.REGISTRY["fermi_gate_nfet"].formula == "boltzmann_fermi"
+    assert numbers.value("fermi_gate_nfet") == pytest.approx(0.596487, abs=1e-6)
+    assert numbers.value("fermi_body_nfet") == pytest.approx(-0.415763, abs=1e-6)
+    assert numbers.text("fermi_body_nfet") == "0.416 eV"
+    meta = json.loads(
+        (ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json").read_text("utf-8")
+    )
+    assert numbers.value("vt_tcad") == meta["constants"]["vt_v"]
+
+
+def test_band_figure_draws_the_numbers():
+    """The flat band diagram puts each level where the page's numbers put it: the band edges
+    half the gap above and below the middle, the Fermi level at the idealised value."""
+    from gf180tcad.explain import figures, model
+
+    numbers = _numbers()
+    dev = model.device("nfet_05v0", "calibrated", scales=figures.STYLE["scales"])
+    half = numbers.value("band_gap_si") / 2
+    for part, fermi in (("gate", "fermi_gate_nfet"), ("body", "fermi_body_nfet")):
+        lv = figures.band_levels(dev, part)
+        assert lv["conduction"] == pytest.approx(half)
+        assert lv["valence"] == pytest.approx(-half)
+        assert lv["intrinsic"] == 0
+        assert lv["fermi"] == pytest.approx(numbers.value(fermi), rel=1e-12), part
+    assert dev.vt_v == numbers.value("vt_tcad")
+    for name in ("bands-flat", "bands-stack"):
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark"), name
+
+
+def test_bands_page_prints_its_numbers():
+    text = BANDS_PAGE.read_text(encoding="utf-8")
+    for key in ("band_gap_si", "fermi_gate_nfet", "fermi_body_nfet", "vt_tcad"):
+        assert "{{ x_" + key + " }}" in text, key
+    for name in ("bands-stack", "bands-flat"):
+        assert f"/_generated/explained/{name}-light.svg" in text, name
+
+
+def test_glossary_terms_of_the_bands_page():
+    text = (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
+    terms = Counter(re.findall(r"^(\S[^\n]*)\n  ", text, re.MULTILINE))
+    for t in ("conduction band", "valence band", "band gap", "Fermi level"):
+        assert terms[t] == 1, t

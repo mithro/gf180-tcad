@@ -101,6 +101,18 @@ _ENTRIES = (
     Number("cox_spec_max", "committed", _CAP, 2, _RESULT, {"json": ["cox_check", "spec", "max"]}),
     Number("c_acc_nfet_cal", "committed", _CAP, 3, _RESULT, {"json": ["cox_check", "c_per_area_acc_ff_per_um2"]}),
     Number("c_inv_nfet_cal", "committed", _CAP, 3, _RESULT, {"json": ["cox_check", "c_per_area_inv_ff_per_um2"]}),
+    # Energy bands and the Fermi level (bands-and-fermi-level.md).
+    Number("vt_tcad", "committed", "V", 3, _meta("nfet_05v0"), {"json": ["constants", "vt_v"]}),
+    Number("band_gap_si", "textbook", "eV", 3, DISPLAY, {"toml": ["silicon", "band_gap_ev"]}),
+    Number(
+        "fermi_gate_nfet", "idealised", "eV", 3,
+        formula="boltzmann_fermi", inputs=("ngate_nfet", "n_i_tcad", "vt_tcad"),
+    ),
+    # Below the middle of the gap: the page prints the distance, so the factor is -1.
+    Number(
+        "fermi_body_nfet", "idealised", "eV", 3,
+        formula="boltzmann_fermi", inputs=("n_minority_nfet", "n_i_tcad", "vt_tcad"), factor=-1.0,
+    ),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
 

@@ -67,7 +67,7 @@ render never recomputes what a simulation computed.
 
 ## Display-only values
 
-The file {repo}`data/render/display.toml` holds the band gaps and the Si–SiO₂ band offsets that a band
+The file {repo}`data/render/display.toml` holds the {term}`band gaps <band gap>` and the Si–SiO₂ band offsets that a band
 diagram is drawn with. No simulation reads the file. Each value has a unit and a source in the
 {ref}`literature list <lit-sze>`. The file's `mismatch` text compares the band gap the simulation
 implies with the band gap the drawing uses. A committed render manifest reads every `display`

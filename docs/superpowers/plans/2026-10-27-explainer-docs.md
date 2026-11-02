@@ -210,7 +210,7 @@ the PR #95 re-review nits; E1b is the other three pages, with Steps 1–4 above 
   and `figures.stack_1d`, committed per unit.
 - [x] **E1a Step 2:** `docs/explained/oxide-and-poly.md`, opening with the stack view (gate and
   oxide highlighted, body muted); lint, measure, build, screenshots as in E0.
-- [ ] **E1a Step 3:** PR #101; review by use, audit; merge.
+- [x] **E1a Step 3:** PR #101; review by use, audit; merged (`12c9cc4`).
 
 **As built (E1a).**
 
@@ -228,6 +228,45 @@ the PR #95 re-review nits; E1b is the other three pages, with Steps 1–4 above 
 - `format_value` prints a pure number (EPSROX) with no trailing space.
 - The silicon page's nits: five parts; the gate-voltage shift printed as `x_dv_fb_nfet_cal`; the
   captions say the values are fitted to the SPICE model.
+
+E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
+`bands-and-fermi-level.md`; E1b-2 is `pn-junction.md` and `transistor-parts.md`, which share the
+2D cell of the model and the photo search of Step 2.
+
+- [x] **E1b-1 Step 1:** tests first (red commit `e716ddc`), then the registry entries,
+  `figures.band_levels`, `figures.band_flat` and the `bands-stack` view, committed per unit.
+- [x] **E1b-1 Step 2:** `docs/explained/bands-and-fermi-level.md`, opening with the stack view
+  (gate and body highlighted, oxide muted), then the flat band diagram; the four glossary terms;
+  lint, measure, build, screenshots as in E0.
+- [ ] **E1b-1 Step 3:** PR; review by use, audit; merge.
+- [ ] **E1b-2:** Steps 1–4 above for `pn-junction.md` and `transistor-parts.md`.
+
+**As built (E1b-1).**
+
+- The band gap has its one home in `data/render/display.toml` (`silicon.band_gap_ev`). Its source
+  now names the Ioffe archive page that was read (new literature entry `lit-ioffe`, an archived
+  copy of 2026-10-09: "Energy gap 1.12 eV" at 300 K) beside Sze and Ng's appendix G, which #88
+  has not confirmed. No page uses N_c or N_v.
+- `explain.idealised` is unchanged. Both Fermi levels are `boltzmann_fermi` entries; the body's
+  is printed as a distance below the middle of the gap (`factor` −1).
+- `figures.band_flat` places zero at the middle of the gap, taken as the intrinsic level, and the
+  band edges at ±E_g/2. The page states that the intrinsic level lies close to the middle
+  (Sze and Ng ch. 1).
+- The plan's second band-gap value (≈ 1.16 eV implied by the n_i scaling of
+  `gf180tcad.tcad.process.Constants`) is left out: its activation temperature is a code constant,
+  not a committed data file, so no registry entry can read it, and its source (Misiakos and
+  Tsamakis 1993) is not on the literature page. #97 settles it. The page says the simulations read
+  n_i and no band gap.
+- `idealised.degenerate_offset` stays off the page (#88, #98): the gap section states the plain
+  claim and links the limitations item on the poly gate, which gives the size of the error.
+- New glossary terms make their first uses elsewhere links: the Boltzmann statistics entry, the
+  limitations item on the poly gate, the render manifest page and the `gf180tcad.derive` module
+  docstring (a docstring change; no render is committed, so nothing is restamped).
+- The two "300 K" mentions carry `number-ok` (the temperature of the cited value).
+- Review of #103: Boltzmann statistics get the plain clause of Sze and Ng ch. 1 (holds while the
+  Fermi level stays several times a carrier's heat energy from the band edges); the flat-band
+  caption names the card's gate doping, the fitted body doping and the idealised level; a
+  highlighted silicon layer of `stack_1d` takes its majority carrier's colour.
 
 **Exit criteria.** The four pages are on `main` and in the landing page and toctree; every number on them is a substitution (`test_no_bare_numbers` green); each opens with its highlighted view of the one model, in both themes; the eight new glossary terms are defined and linked on first use; the docs tools report nothing for `docs/explained/**`; the photo search result (used, or filed as a wanted photo with its issue number) is in the PR body; the review by use has no open stop.
 

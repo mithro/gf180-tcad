@@ -46,6 +46,13 @@ Each annotation names what the project uses the item for.
 - Its ch. 1, "Physics and Properties of Semiconductors—A Review": the explainer pages'
   carriers, {term}`dopants <dopant>`, the mass-action law and Fermi–Dirac statistics ({ref}`explained-silicon`).
 
+(lit-ioffe)=
+
+- Ioffe Physico-Technical Institute, NSM archive of semiconductor properties, silicon,
+  [band structure and carrier concentration](https://web.archive.org/web/20261009101141/https://www.ioffe.ru/SVA/NSM/Semicond/Si/bandstr.html)
+  (archived copy of 2026-10-09). It gives the {term}`band gap` of silicon at 300 K that the
+  explainer's band diagrams draw ({ref}`explained-bands`).
+
 (lit-shockley)=
 
 - Shockley, "The theory of p-n junctions in semiconductors and p-n junction transistors", Bell
