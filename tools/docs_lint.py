@@ -351,6 +351,10 @@ GREEK = {"alpha", "beta", "gamma", "delta", "epsilon", "varepsilon", "zeta", "et
          "vartheta", "iota", "kappa", "lambda", "mu", "nu", "xi", "pi", "rho", "varrho", "sigma",
          "varsigma", "tau", "upsilon", "phi", "varphi", "chi", "psi", "omega", "Gamma", "Delta",
          "Theta", "Lambda", "Xi", "Pi", "Sigma", "Upsilon", "Phi", "Psi", "Omega"}
+# Upright function names: "sin x" written without the backslash is sin, not s, i and n.
+_FUNCTION_NAMES = {"sin", "cos", "tan", "cot", "sec", "csc", "sinh", "cosh", "tanh", "coth",
+                   "arcsin", "arccos", "arctan", "exp", "ln", "log", "lg", "max", "min", "sup",
+                   "inf", "lim", "det", "erf", "erfc", "sgn", "arg"}
 _TEXT_COMMANDS = {"mathrm", "text", "textrm", "operatorname", "mbox", "hbox", "label", "tag"}
 _WHERE_ITEM = re.compile(r"^\s*[-*]\s+(?P<syms>\$[^$]+\$(?:\s*(?:,|and)\s*\$[^$]+\$)*)(?P<rest>.*)$",
                          flags=re.S)
@@ -411,6 +415,10 @@ def latex_symbols(latex):
                 continue
             base = "\\" + name
         elif c.isalpha() and c.isascii():
+            word = re.match(r"[A-Za-z]+", latex[i:]).group(0)
+            if word in _FUNCTION_NAMES and (i == 0 or not latex[i - 1].isalpha()):
+                i += len(word)  # an upright function name written without its backslash
+                continue
             base, i = c, i + 1
         else:
             i += 1

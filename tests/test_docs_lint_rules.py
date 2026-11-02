@@ -681,3 +681,20 @@ def test_review_sections_are_flagged_or_not_situations(rel, heading, reason):
         assert flagged or drawn, f"{rel} '{heading}' describes a situation: FIGURE must see it"
     else:
         assert not flagged, f"{rel} '{heading}' is listed as not a situation ({reason})"
+
+
+# --- EQUATION: function names are not symbols ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("latex", "symbols"),
+    [
+        (r"y = A \sin(k x)", {"y", "A", "k", "x"}),
+        (r"y = A sin(k x)", {"y", "A", "k", "x"}),
+        (r"y = \exp(-E / kT) + ln x + log x + cos x + tanh x", {"y", "E", "k", "T", "x"}),
+        (r"V = max(a, b) - min(a, b)", {"V", "a", "b"}),
+        (r"n = s i", {"n", "s", "i"}),
+    ],
+)  # fmt: skip
+def test_equation_function_names_are_not_symbols(latex, symbols):
+    assert lint().latex_symbols(latex) == symbols
