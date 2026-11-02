@@ -297,7 +297,17 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   licence, and its Silicon Prawn page answers 403. No cross-section photo turned up. The page uses
   the design manual's PMOS matched-pair drawing (`google/gf180mcu-pdk` at `de3240d7`,
   Apache-2.0), committed with its source, author and licence beside it
-  (`docs/explained/images/*.licence.txt`). The wanted photo is #104.
+  (`docs/explained/images/*.licence.txt`). The wanted photo was #104.
+- Die photo (#104, 2026-11-03): the owner confirmed the Silicon Prawn images and the die photos
+  in the wafer.space Crowd Supply updates are CC BY. `transistor-parts.md` shows the OpenFASoC
+  `mpw18h1` analog front-end die from the Crowd Supply OpenFASoC update
+  (`images/gf180mcu-afe-die-photo.jpg`, 1265 x 741 px, copied unchanged) below the cross-section,
+  with its licence note. Silicon Prawn still answered 403 (Cloudflare challenge), so the caption
+  links it as the full-resolution source and credits wafer.space; the photographer named there is
+  not recorded. A photo has no dark twin: it reads the same on both themes.
+  `test_every_copied_image_has_a_licence_note` and `test_every_copied_image_is_on_a_page` hold
+  `docs/explained/images/` to its notes. The chip is from the efabless `mpw18h1` shuttle (the
+  Silicon Prawn path), not from a wafer.space run, so the caption does not say it is.
 - The glossary gains "pn junction" only. "Well" is not an entry: the link checkers would demand a
   link at every use of the common word, so the pages use the existing `n-well` and name the
   PDK's LVPWELL layer. "Gate oxide" and "poly-silicon" landed in E0 (#99 comment).
