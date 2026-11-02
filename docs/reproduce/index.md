@@ -679,26 +679,33 @@ The mesh window (dashed) on the 2D cell of the {term}`nfet_05v0` with {term}`geo
 `w10p0_l0p60`, cut along the gate's length. {{ x_fig_mesh_window_scale }}
 ```
 
-The window is set by one rule for every job ({py:func}`gf180tcad.meshcut.window.rule_bounds`):
+The window is set by one rule for every job
+({py:func}`gf180tcad.meshcut.window.rule_bounds`). Across the cell it follows
+{math:numref}`eq-mesh-window-x`, and in height {math:numref}`eq-mesh-window-y`.
 
-```{math}
-x_\mathrm{min} = x_\mathrm{L} - k_x L, \qquad x_\mathrm{max} = x_\mathrm{R} + k_x L, \qquad
-y_\mathrm{min} = y_\mathrm{s} - d, \qquad y_\mathrm{max} = y_\mathrm{p}
-```
+$$
+x_\mathrm{min} = x_\mathrm{L} - k_x L, \qquad x_\mathrm{max} = x_\mathrm{R} + k_x L
+$$ (eq-mesh-window-x)
 
-where:
+where
 
-- $x_\mathrm{min}$ to $x_\mathrm{max}$ is the window across the cell,
-  $y_\mathrm{min}$ to $y_\mathrm{max}$ its height;
+- $x_\mathrm{min}$ and $x_\mathrm{max}$ are the left and right edges of the window, in µm;
 - $x_\mathrm{L}$ and $x_\mathrm{R}$ are the left and right edges of the gate, in µm;
-- $L = x_\mathrm{R} - x_\mathrm{L}$ is the gate length;
+- $L = x_\mathrm{R} - x_\mathrm{L}$ is the gate length, in µm;
 - $k_x = 0.25$ is {py:data}`~gf180tcad.meshcut.WINDOW_KX`, the share of a gate length kept on
-  each side of the gate;
-- $y$ is the height in µm, growing upwards;
-- $y_\mathrm{s}$ is the height of the silicon surface, and $y_\mathrm{p}$ that of the top of the
-  gate polysilicon;
-- $d = 0.1$ µm is {py:data}`~gf180tcad.meshcut.WINDOW_DEPTH_UM`, the depth kept below the
-  surface.
+  each side of the gate, dimensionless.
+
+$$
+y_\mathrm{min} = y_\mathrm{s} - d, \qquad y_\mathrm{max} = y_\mathrm{p}
+$$ (eq-mesh-window-y)
+
+where
+
+- $y_\mathrm{min}$ and $y_\mathrm{max}$ are the bottom and top of the window, in µm;
+- $y_\mathrm{s}$ is the height of the silicon surface, with heights growing upwards, in µm;
+- $y_\mathrm{p}$ is the height of the top of the gate polysilicon, in µm;
+- $d = 0.1$ is {py:data}`~gf180tcad.meshcut.WINDOW_DEPTH_UM`, the depth kept below the surface,
+  in µm.
 
 A triangle of the mesh is kept when its centroid lies inside the window
 ({py:func}`gf180tcad.meshcut.window.cut`). So the edge of the cut follows the mesh elements.
