@@ -2,8 +2,7 @@
 
 Source: {repo}`src/gf180tcad/tcad/process.py`. The data it reads:
 {repo}`data/process/nfet_05v0.toml` and {repo}`data/process/pfet_05v0.toml`
-({ref}`process-data`). Its plateau window and charge centroids concern the
-{term}`accumulation` and {term}`inversion` ends of the {term}`C–V` curve.
+({ref}`process-data`).
 
 ```{eval-rst}
 .. automodule:: gf180tcad.tcad.process
