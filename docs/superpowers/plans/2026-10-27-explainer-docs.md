@@ -344,7 +344,15 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - [x] **E2c Step 2:** the gap section states the 1D nfet and pfet verdicts and the 2D Disagree
   clause by substitution, linking `cv-agreement-deviation`, `cv-agreement-mismatch` and
   `cv-agreement-validation`.
-- [ ] **E2c Step 3:** PR; review by use, audit; merge.
+- [x] **E2c Step 3:** PR #118; review by use, audit; merged (73abcf3).
+- [x] **E2d Step 1:** tests first (red commit `467cb69`); the fit, limit-kind, corner-spread and
+  fit-verdict tables and the bound-hit sentence in `explain.numbers`, the budget and evaluation
+  counts, the `calibration-limits` figure; the page `calibration.md`; the glossary entry
+  "least-squares fit"; lint, measure, build, screenshots.
+- [x] **E2d Step 2:** the gap section states every fit geometry's verdict in a generated table,
+  the pfet 1D verdict and the 2D Disagree clause by substitution, linking `cv-agreement-mismatch`
+  and `cv-agreement-validation`.
+- [ ] **E2d Step 3:** PR; review by use, audit; merge.
 
 **As built (E2a).**
 
@@ -435,6 +443,34 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - The landing page now has one heading per tier, so each list stays within seven items;
   `test_landing_lists_every_page` allows the three tier headings.
 - No glossary entry is added: the page uses existing terms only.
+
+**As built (E2d).**
+
+- The plan's "Start and final" and "Bounds" tables are one generated table per transistor,
+  `numbers.fit_table` (number, lower limit, start, fitted, upper limit), read from `bounds`,
+  `start` and `values` of the result file; a test edits a copy and sees the table change.
+  `numbers.shortest` prints each value with the fewest digits that keep it (the figures' `_short`
+  now calls it, one copy of the rule).
+- Where each start and limit comes from is a generated table of the process files' `start_kind`
+  and `bounds_kind` in plain words (`numbers.KIND_WORDS`); it refuses when the nfet and pfet kinds
+  differ, since one row then cannot show both.
+- The figure is a new one, `calibration-limits`, in place of a reuse of `cv-parts`: each fitted
+  number of both transistors on its own true axis (doping on a log axis), a bar between the
+  limits, the start and the fitted value. A test reads the drawn lines back against the result
+  files and checks that no limit mark is clipped.
+- Corner bounds and spread (spec §5.3): no corner fit is committed (issue #57), so the page says
+  it shows no bound of a fitted number and links #57. It shows the spread of the target instead,
+  `numbers.corner_table`: typical, lowest, highest and spread over the corners of the SPICE flat
+  parts (`metrics.json` of each corner, equal to `envelope.json`, tested) and halfway-level
+  crossings (the result file's corner windows) of the nfet at `w10p0_l10p00`.
+- Counts by substitution: the parameter budget and the part each fit uses (`budget`,
+  `budget_used`, the same in both result files or a ValueError) and scipy's evaluation counts
+  (`optimiser.nfev`; the page says they leave out the slope solves, as the scipy 1.18.0 manual
+  states; 1.18.1, the version in the TCAD image, has no published manual).
+- The fit verdicts per gate length are a generated table of `per_geometry` of both result files.
+  Tests also pin two sentences of the page to the data: the 2D cells reuse the 1D fit
+  (validation `values` equal calibration `values`) and the crossing residuals are the gaps over
+  the tolerance.
 
 **Exit criteria.** The four pages are on `main` and linked from the landing page; the docgen reader move left `docs/_generated/` byte-identical (log in the PR); the region shading and the calibration tables are read from the result files (tests green); the verdict sentences change when a result file's verdict changes (a test edits a copy of the file and sees the sentence change); the four new glossary terms are defined; the docs tools report nothing for `docs/explained/**`; the review by use has no open stop.
 
