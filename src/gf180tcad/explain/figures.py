@@ -107,6 +107,8 @@ STYLE = {
     "limit_width": 10.0,
     "limit_tick_pt": 16.0,
     "marker_pt": 9.0,
+    # The SPICE crossings of the compare plot: hollow rings this size (pt) round the simulated ones.
+    "ring_pt": 16.0,
     "row_pad": 0.6,
     "limit_margin": 0.08,
 }
@@ -944,12 +946,16 @@ def calibration_compare_figure(palette: str):
         ax.plot(c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
                 zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
         for key, xs, uu, cc, marker in (
-            ("spice", [sp["u_dep"], sp["u_inv"]], u, c["spice_tt"], "o"),
             ("tcad", [tc["u_dep"], tc["u_inv"]], c["u"], c["tcad"], "D"),
+            ("spice", [sp["u_dep"], sp["u_inv"]], u, c["spice_tt"], "o"),
         ):
-            ax.plot(xs, np.interp(xs, uu, cc), ls="none", marker=marker, ms=STYLE["marker_pt"],
-                    mfc=pal["background"] if key == "spice" else pal["highlight"], mec=pal["text"],
-                    mew=STYLE["edge_width"] * 2, zorder=STYLE["spike_zorder"] + 1,
+            # The two crossings lie close together: the SPICE ones are hollow rings, larger and
+            # on top, so the simulated diamond shows through each.
+            ring = key == "spice"
+            ax.plot(xs, np.interp(xs, uu, cc), ls="none", marker=marker,
+                    ms=STYLE["ring_pt"] if ring else STYLE["marker_pt"],
+                    mfc="none" if ring else pal["highlight"], mec=pal["text"],
+                    mew=STYLE["edge_width"] * 2, zorder=STYLE["spike_zorder"] + (2 if ring else 1),
                     label=COMPARE_MARKS[key])  # fmt: skip
         ax.set_xlabel("gate voltage (V)")
         ax.set_ylabel("gate capacitance (fF)")
