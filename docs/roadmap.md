@@ -23,8 +23,6 @@ the issue says what is open and what settles it. The phases are those of the
 - **Mesh pictures** on the TCAD results pages
   ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
 
-The calibrated stack is the column under the gate of the 2D cell in {numref}`roadmap-cell-figure`.
-
 ```{figure} /_generated/explained/moscap-cell-light.svg
 :figclass: only-light
 :name: roadmap-cell-figure
@@ -45,6 +43,8 @@ stack is the column under the gate: the gate, the {term}`gate oxide` and the bod
 The source and the drain, muted, are the parts the MOS capacitor leaves out. The 2D validation
 runs the calibrated stack in cells like this one. {{ x_fig_moscap_cell_scale }}
 ```
+
+The calibrated stack is the column under the gate of the 2D cell in {numref}`roadmap-cell-figure`.
 
 ## Phase 3: the MOSFET
 
