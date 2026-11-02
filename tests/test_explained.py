@@ -1669,6 +1669,18 @@ def test_cv_parts_labels_name_the_parameters_at_the_committed_marks():
     assert acc.xy[0] < lo and inv.xy[0] > hi
 
 
+def test_cv_page_dip_order_is_the_curves():
+    """The page says the start curve's dip is shallower than the SPICE minimum it prints and the
+    fitted curve's dip is deeper: the committed curves' minima, in that order."""
+    from gf180tcad.explain import figures
+
+    c_min = _numbers().value("c_min_l10")
+    fitted = figures.cv_curves("nfet_05v0", "calibrated", _L10)
+    start = figures.cv_curves("nfet_05v0", "start", _L10)
+    assert min(fitted["spice_tt"]) == pytest.approx(c_min)
+    assert min(fitted["tcad"]) < c_min < min(start["tcad"])
+
+
 def test_cv_parts_figure_is_registered():
     from gf180tcad.explain import figures
 
@@ -1683,7 +1695,7 @@ def test_cv_page_prints_its_numbers():
     for key in (*_START_KEYS, *_FITTED_KEYS, *_CV_METRICS, "plateau_acc_l10", "plateau_inv_l10",
                 "plateau_tol_l10", "dv_tol_l10", "cox_toxe_nfet", "cox_nfet_cal",
                 "verdict_nfet_1d", "verdict_pfet_1d", "two_d_disagree",
-                "fit_length_count"):  # fmt: skip
+                "fit_length_count", "c_min_l10"):  # fmt: skip
         assert "{{ x_" + key + " }}" in text, key
     assert "/_generated/explained/cv-parts-light.svg" in text
     for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-deviation",

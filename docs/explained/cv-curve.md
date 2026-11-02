@@ -77,8 +77,9 @@ layer without free carriers, whose capacitance is in series with the oxide's
 deeper layer, with a lower capacitance ({ref}`Sze and Ng, ch. 4 <lit-sze>`). So a lighter body
 doping deepens the dip.
 
-The fit lowers the body doping from {{ x_n_ch_nfet_start }} to {{ x_n_ch_nfet_cal }}. The start
-curve's dip is shallower than the SPICE one, and the fitted curve's dip meets it.
+The fit lowers the body doping from {{ x_n_ch_nfet_start }} to {{ x_n_ch_nfet_cal }}. The SPICE
+curve's dip reaches down to {{ x_c_min_l10 }}. The start curve's dip is shallower than that, and
+the fitted curve's dip is deeper.
 
 The doping also moves the start of inversion. The {term}`threshold voltage` rises with the body
 doping, because the gate must deplete a layer holding more {term}`acceptors <acceptor>` first
