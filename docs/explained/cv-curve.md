@@ -36,6 +36,12 @@ The simulation solves the equations of the stack at each gate voltage
 ({py:mod}`gf180tcad.tcad.moscap1d`). The SPICE curve comes from the equations of
 {term}`BSIM4`'s capacitance model ({ref}`BSIM4 manual, ch. 7 <lit-bsim4>`).
 
+BSIM4 has two switches for a non-quasi-static model, ACNQSMOD and TRNQSMOD. The model card
+sets them to {{ x_acnqsmod_nfet }} and {{ x_trnqsmod_nfet }}
+({repo}`model_card.toml <data/explain/model_card.toml>`). Those values turn the model off
+({ref}`BSIM4 manual, §8.1 and appendix A <lit-bsim4>`). So the SPICE capacitance is
+quasi-static: its charges follow the gate voltage without delay.
+
 The simulated stack has three free numbers: the oxide thickness, the body doping and a shift of
 the gate voltage ({ref}`cv-agreement`). The fit searches for the values that bring the simulated
 curve closest to the SPICE one. It starts from the values below and stays within limits set

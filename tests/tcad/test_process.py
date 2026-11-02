@@ -651,6 +651,27 @@ def test_card_values_and_lines(card_lines, device):
     assert "dtox" not in keys
 
 
+@pytest.mark.sandbox
+def test_explain_model_card_lines(card_lines):
+    """Every selector of data/explain/model_card.toml is the card's own ``+ key=value`` line,
+    inside the model it names, with the value the file records."""
+    raw = tomllib.loads((REPO_ROOT / "data/explain/model_card.toml").read_text(encoding="utf-8"))
+    assert raw["card"]["sha256"] == process.load("nfet_05v0").card.sha256
+    devices = {k: v for k, v in raw.items() if k not in ("schema", "card")}
+    assert devices
+    for device, entry in devices.items():
+        start = entry["model_line"]
+        assert card_lines[start - 1].split()[:2] == [".model", entry["model"]], device
+        model = _section(card_lines, start, r"\.model |\.endl")
+        selectors = {k: v for k, v in entry.items() if isinstance(v, dict)}
+        assert selectors, device
+        for key, sel in selectors.items():
+            assert sel["card_line"] in model, (device, key)
+            k, expr = process.parse_card_assignment(card_lines[sel["card_line"] - 1])
+            assert k == key, (device, key, k)
+            assert process.eval_card_expr(expr, {}) == sel["value"], (device, key, expr)
+
+
 # The upstream ngspice card (primitives library at the commit the docs link) and the image's card
 # are byte-identical; the docs rely on this to link card lines upstream.
 UPSTREAM_CARD = (

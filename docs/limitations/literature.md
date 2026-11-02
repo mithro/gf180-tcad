@@ -36,6 +36,8 @@ Each annotation names what the project uses the item for.
   source and drain region, CGDL.
 - Its ch. 7, "Capacitance Model", gives the equations of the {term}`SPICE` gate capacitance that
   {ref}`explained-cv-curve` compares with the simulated stack.
+- Its §8.1 and appendix A give the switches ACNQSMOD and TRNQSMOD of the non-quasi-static model:
+  the value 0, the default, turns the model off.
 
 ## Physics models
 
