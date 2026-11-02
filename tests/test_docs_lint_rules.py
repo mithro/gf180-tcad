@@ -151,8 +151,8 @@ def test_equation_house_form_passes():
     [
         (r"V_{bi} = V_t \, \ln \frac{N_A \, N_D}{n_i^2}", {"V_bi", "V_t", "N_A", "N_D", "n_i"}),
         (
-            r"W = \sqrt{\frac{2 \, \varepsilon_{si} \, V_{bi}}{q} \left( \frac{1}{N_A} + "
-            r"\frac{1}{N_D} \right)}",
+            (r"W = \sqrt{\frac{2 \, \varepsilon_{si} \, V_{bi}}{q} \left( \frac{1}{N_A} + "
+            r"\frac{1}{N_D} \right)}"),
             {"W", r"\varepsilon_si", "V_bi", "q", "N_A", "N_D"},
         ),
         (r"C_{ox} = \frac{\varepsilon_{ox} \, \varepsilon_0}{t_{ox}}",
@@ -182,7 +182,9 @@ def test_equation_fires_without_where_list():
 
 
 def test_equation_fires_on_undefined_symbol():
-    page = GOOD_EQUATION.replace("    - $\\varepsilon_0$ is the permittivity of vacuum, in F/m;\n", "")
+    page = GOOD_EQUATION.replace(
+        "    - $\\varepsilon_0$ is the permittivity of vacuum, in F/m;\n", ""
+    )
     hits = found(page, "EQUATION")
     assert len(hits) == 1 and "\\varepsilon_0" in hits[0][1]
 
@@ -293,3 +295,30 @@ def test_rules_are_opt_in_and_print_file_and_line(tmp_path):
     assert f"{page}:3: FAIL FILELINK" in ruled.stdout
     only = _run("--no-front-matter", "--rules", "filelink", str(page))
     assert "FILELINK" in only.stdout and "FIGURE" not in only.stdout
+
+
+# --- FIGURE: opt-out, software senses, pages outside Sphinx --------------------------------
+
+
+def test_figure_opt_out_with_a_reason():
+    page = "# T\n\n## Files\n\n<!-- figure-ok: the mesh here is a file, not a shape -->\n\nThe mesh file is 9 MB.\n"
+    assert found(page, "FIGURE") == []
+
+
+def test_figure_opt_out_needs_a_reason():
+    page = "# T\n\n## Files\n\n<!-- figure-ok: -->\n\nThe mesh file is 9 MB.\n"
+    assert found(page, "FIGURE")
+
+
+@pytest.mark.parametrize(
+    "line", ["The TCAD stack is at its latest releases.", "It runs on the latest stack.",
+             "The software stack of 2023 is pinned."],
+)  # fmt: skip
+def test_figure_ignores_a_software_stack(line):
+    assert found(f"# T\n\n{line}\n", "FIGURE") == []
+
+
+def test_figure_outside_sphinx_accepts_an_image():
+    page = "# T\n\n![The 2D cell](docs/a.png)\n\nThe stack of the cell.\n"
+    assert lint().rule_findings(page, sphinx=False) == []
+    assert found(page, "FIGURE")  # in Sphinx an image is not a numbered figure

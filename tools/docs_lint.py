@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-# Vendored unchanged (below this header) from github.com/mithro/dot-claude, branch
+# Vendored (below this header) from github.com/mithro/dot-claude, branch
 # docs-writing-skill, commit e0dde9e99ba4d0f9d01bdabc8ac51ef87603825b,
 # marketplace/docs-writing/skills/writing-docs/scripts/docs_lint.py
 # (sha256 d0dedd0829489311d2738420f3b670cfe7216010c28fde3b59f854488f5b79ff of the original file).
 # Copyright Tim Ansell; Apache License 2.0 (the LICENSE at the root of that branch).
-# Update by copying the new upstream file below this header and changing the commit and sha256.
+# Local additions: the block between "--- LOCAL" and "--- end LOCAL" and the lines marked
+# "# LOCAL" (the --rules option: the house rules FIGURE, EQUATION and FILELINK of gf180-tcad
+# spec §10.3). Everything else is the upstream file unchanged. Update by copying the new
+# upstream file below this header, changing the commit and sha256, and carrying the LOCAL
+# parts over.
 """Check Markdown documentation pages against the writing-docs rules.
 
 usage: uv run --no-project docs_lint.py [--no-front-matter] [--front-matter-keys type,owner,reader,review]
@@ -85,6 +89,11 @@ class Page:
         self.words_and_images(prose)
         self.sentences(prose)
         self.counts(prose)
+        outside_sphinx = self.name in ("README.md", "CONTRIBUTING.md")  # LOCAL
+        rules = getattr(self.args, "rules", ())  # LOCAL
+        for line, check, msg in rule_findings(self.text, rules, not outside_sphinx):  # LOCAL
+            self.failed = True  # LOCAL
+            print(f"{self.path}:{line}: FAIL {check} {msg}")  # LOCAL
 
     def front_matter(self):
         fm = re.match(r"---\n(.*?)\n---\n", self.text, flags=re.S)
@@ -260,14 +269,360 @@ class Page:
             self.warn(1, "a page that is only links (a landing page says type: landing)")
 
 
+# --- LOCAL (gf180-tcad): the house rules of spec §10.3, owner 2026-11-03 02:00 ----------------
+# Not part of the upstream file. Run only with --rules, so the upstream checks and their output
+# are unchanged without it.
+
+RULES = ("figure", "equation", "filelink")
+RULES_HELP = """\
+house rules (--rules all, or a comma-separated subset of figure,equation,filelink):
+  FIGURE    a section (the text from one heading to the next) whose prose names a physical
+            situation (a word of SITUATION_NOUNS: curve, mesh, stack, profile, cross-section,
+            region, sweep, layout, die, junction, or a plural) has no {figure} directive and no
+            {numref} role. Tables, headings, code, comments, glossary bodies and role targets
+            are not prose; a {term} role's text is; a software stack is not a stack. In
+            README.md and CONTRIBUTING.md (read on GitHub) a Markdown image counts as a figure.
+            Opt-out for a section whose noun is not a physical thing (a mesh file, a sweep
+            command): <!-- figure-ok: reason of three words or more --> in the section.
+  EQUATION  a display math block that is not in the house form: $$ ... $$ (label), then a line
+            "where", then a list with one item per symbol, each starting with the symbol in
+            $...$ and ending with ", in <unit>" or ", dimensionless". The symbols are parsed
+            from the LaTeX (a letter or Greek letter with its subscript); every one must be
+            defined. A {math} directive is reported too: the house form is $$ ... $$ (label).
+  FILELINK  inline code that names a file or path (a path under results/, tools/, data/, docs/,
+            src/, tests/, docker/ or third_party/, or a file name ending .py, .json, .toml, .md,
+            .csv and similar) and is not the text of a link ({repo}, {test} or another role, or
+            [text](url)). Code blocks are skipped; figure captions and tables are checked.
+Each finding prints PATH:LINE: FAIL CHECK message.
+"""
+
+SITUATION_NOUNS = ("curve", "mesh", "stack", "profile", "cross-section", "region", "sweep",
+                   "layout", "die", "junction")
+_NOUN = re.compile(r"(?<![\w-])(" + "|".join(re.escape(n) for n in SITUATION_NOUNS)
+                   + r")(e?s)?(?![\w-])", flags=re.I)
+_FENCE_OPEN = re.compile(r"^(\s*)(`{3,}|~{3,}|:{3,})\s*(.*)$")
+_PROSE_DIRECTIVES = CALLOUT_DIRECTIVES | {"dropdown", "card", "tab-item", "tab-set"}
+_MATH_OPEN = re.compile(r"^\s*\$\$(.*)$")
+_MATH_CLOSE = re.compile(r"^(.*?)\$\$\s*(?:\((?P<label>[\w.:-]+)\))?\s*$")
+_ROLE = re.compile(r"\{(?P<name>[\w:.-]+)\}`(?P<body>[^`]*)`")
+_MD_LINK = re.compile(r"\[(?:[^\[\]]|\[[^\]]*\])*\]\([^)]*\)")
+_CODE = re.compile(r"(?<!`)`(?P<body>[^`]+)`(?!`)")
+_PATH_DIRS = r"(results|tools|data|docs|src|tests|docker|third_party|bin|logs)"
+_PATH_EXTS = r"(py|json|toml|md|csv|tsv|yml|yaml|txt|svg|png|sh|cfg|ini|lock|gds|tcl|ipynb|log|pdf)"
+_PATHLIKE = re.compile(rf"^(\./)?{_PATH_DIRS}/\S*$|^[^\s/]*(/[^\s/]+)*\.{_PATH_EXTS}(#\S*|::\S*)?$")
+GREEK = {"alpha", "beta", "gamma", "delta", "epsilon", "varepsilon", "zeta", "eta", "theta",
+         "vartheta", "iota", "kappa", "lambda", "mu", "nu", "xi", "pi", "rho", "varrho", "sigma",
+         "varsigma", "tau", "upsilon", "phi", "varphi", "chi", "psi", "omega", "Gamma", "Delta",
+         "Theta", "Lambda", "Xi", "Pi", "Sigma", "Upsilon", "Phi", "Psi", "Omega"}
+_TEXT_COMMANDS = {"mathrm", "text", "textrm", "operatorname", "mbox", "hbox", "label", "tag"}
+_WHERE_ITEM = re.compile(r"^\s*[-*]\s+(?P<syms>\$[^$]+\$(?:\s*(?:,|and)\s*\$[^$]+\$)*)(?P<rest>.*)$",
+                         flags=re.S)
+_UNIT = re.compile(r",\s*(in\s+\S.*|dimensionless)[.;]?\s*$", flags=re.S)
+
+
+def _group(s, i):
+    """The content of the brace group that opens at s[i] == "{", and the index after it."""
+    depth, j = 0, i
+    while j < len(s):
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1:j], j + 1
+        j += 1
+    return s[i + 1:], len(s)
+
+
+def _subscript(s):
+    s = re.sub(r"\\(" + "|".join(_TEXT_COMMANDS) + r")\s*\{([^{}]*)\}", r"\2", s)
+    return re.sub(r"\\[,;:! ]|[\s{}]", "", s)
+
+
+def latex_symbols(latex):
+    """The symbols of a LaTeX formula: each Latin letter or Greek letter with its subscript, as
+    'V_bi' or '\\varepsilon_si' (braces, spaces and \\mathrm dropped from the subscript)."""
+    out, i = set(), 0
+    while i < len(latex):
+        c = latex[i]
+        base = None
+        if c == "\\":
+            m = re.match(r"\\([A-Za-z]+)", latex[i:])
+            if not m:
+                i += 2
+                continue
+            name, i = m.group(1), i + len(m.group(0))
+            if name in _TEXT_COMMANDS:
+                while i < len(latex) and latex[i] == " ":
+                    i += 1
+                if i < len(latex) and latex[i] == "{":
+                    _, i = _group(latex, i)
+                continue
+            if name not in GREEK:
+                continue
+            base = "\\" + name
+        elif c.isalpha() and c.isascii():
+            base, i = c, i + 1
+        else:
+            i += 1
+            continue
+        if i < len(latex) and latex[i] == "_":
+            i += 1
+            if i < len(latex) and latex[i] == "{":
+                sub, i = _group(latex, i)
+            elif i < len(latex) and latex[i] == "\\":
+                m = re.match(r"\\[A-Za-z]+", latex[i:])
+                sub = m.group(0) if m else latex[i:i + 2]
+                i += len(sub)
+            else:
+                sub, i = latex[i:i + 1], i + 1
+            base += "_" + _subscript(sub)
+        while i < len(latex) and latex[i] == "'":
+            base, i = base + "'", i + 1
+        out.add(base)
+    return out
+
+
+def _rule_lines(text):
+    """(lineno, line, kind) for each line; kind is prose, table, heading, caption, figure, math,
+    mathdir, code, option, comment, label, blank or front."""
+    lines = text.splitlines()
+    out, stack, in_comment, in_math = [], [], False, False
+    front = 0
+    if lines and lines[0].strip() == "---":
+        front = next((k + 1 for k in range(1, len(lines)) if lines[k].strip() == "---"), 0)
+    for i, line in enumerate(lines, 1):
+        s = line.strip()
+        if i <= front:
+            out.append((i, line, "front"))
+            continue
+        if stack:
+            mark, kind = stack[-1]
+            if s and set(s) == {mark[0]} and len(s) >= len(mark):
+                stack.pop()
+                out.append((i, line, "fence"))
+                continue
+            if kind in ("code", "mathdir"):
+                out.append((i, line, "code"))
+                continue
+            if kind == "figure" and re.match(r"^\s*:[\w-]+:", line):
+                out.append((i, line, "option"))
+                continue
+        if in_comment:
+            out.append((i, line, "comment"))
+            in_comment = "-->" not in line
+            continue
+        if in_math:
+            out.append((i, line, "math"))
+            in_math = not _MATH_CLOSE.match(line)
+            continue
+        f = _FENCE_OPEN.match(line)
+        if f and f.group(2)[0] in "`~:":
+            info = f.group(3).strip()
+            d = re.match(r"^\{([\w:-]+)\}", info)
+            name = d.group(1).lower() if d else None
+            if name == "figure":
+                kind = "figure"
+            elif name == "math":
+                kind = "mathdir"
+            elif name in _PROSE_DIRECTIVES:
+                kind = "callout"
+            else:
+                kind = "code"
+            stack.append((f.group(2), kind))
+            out.append((i, line, kind if kind in ("figure", "mathdir") else "fence"))
+            continue
+        context = stack[-1][1] if stack else None
+        if s.startswith("<!--"):
+            out.append((i, line, "comment"))
+            in_comment = "-->" not in line
+            continue
+        m = _MATH_OPEN.match(line)
+        if m:
+            out.append((i, line, "math"))
+            rest = m.group(1)
+            in_math = not (rest.strip() and _MATH_CLOSE.match(rest))
+            continue
+        if not s:
+            kind = "blank"
+        elif context == "figure":
+            kind = "caption"
+        elif re.match(r"^\([\w.:-]+\)=\s*$", s) or s.startswith("%"):
+            kind = "label"
+        elif s.startswith("|"):
+            kind = "table"
+        elif re.match(r"^#{1,6}\s", s) and context is None:
+            kind = "heading"
+        elif context == "callout" and re.match(r"^:[\w-]+:", s):
+            kind = "option"
+        else:
+            kind = "prose"
+        out.append((i, line, kind))
+    return out
+
+
+def _visible(line):
+    """Prose as a reader sees it: a {term} role keeps its text, other roles, code, math and link
+    targets go."""
+    line = re.sub(r"\{term\}`([^`<]*?)\s*(<[^`>]*>)?`", r"\1", line)
+    line = _ROLE.sub(" ", line)
+    line = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", line)
+    line = re.sub(r"`[^`]*`|\$[^$]*\$|\{\{[^}]*\}\}|<!--.*?-->", " ", line)
+    return line
+
+
+_SOFTWARE_STACK = re.compile(r"\b(software|TCAD|tool|image|latest|stable|dev|2023|Sept-2023|two|both)"
+                             r"\s+stacks?\b|\bstacks?\s+of\s+20\d\d\b", flags=re.I)
+_FIGURE_OK = re.compile(r"<!--\s*figure-ok:\s*(?P<reason>[^>]*?)\s*-->")
+_IMAGE_LINE = re.compile(r"^\s*!\[[^\]]+\]\([^)]+\)")
+
+
+def figure_findings(lines, sphinx=True):
+    out, sections = [], [[]]
+    for row in lines:
+        if row[2] == "heading":
+            sections.append([])
+        sections[-1].append(row)
+    for sec in sections:
+        has_figure = any(k == "figure" or "{numref}" in ln for _, ln, k in sec)
+        if not sphinx:
+            has_figure = has_figure or any(_IMAGE_LINE.match(ln) for _, ln, _k in sec)
+        opt_out = any(len((m.group("reason") or "").split()) >= 3
+                      for _, ln, _k in sec for m in _FIGURE_OK.finditer(ln))
+        if has_figure or opt_out:
+            continue
+        for i, line, kind in sec:
+            if kind != "prose":
+                continue
+            m = _NOUN.search(_SOFTWARE_STACK.sub(" ", _visible(line)))
+            if m:
+                title = sec[0][1].lstrip("# ").strip() if sec[0][2] == "heading" else "(page top)"
+                out.append((i, "FIGURE", f"section '{title}' describes a {m.group(1).lower()} with no "
+                                         "{figure} and no {numref} in it"))
+                break
+    return out
+
+
+def _where_list(lines, j):
+    """The items (start line, text) of the "where" list that starts at index j, or None."""
+    n = len(lines)
+    while j < n and lines[j][2] == "blank":
+        j += 1
+    if j >= n or not re.match(r"^\s*where:?\s*$", lines[j][1], flags=re.I):
+        return None
+    j += 1
+    while j < n and lines[j][2] == "blank":
+        j += 1
+    items = []
+    while j < n:
+        i, line, kind = lines[j]
+        if re.match(r"^\s*[-*]\s+", line) and kind == "prose":
+            items.append([i, line.strip()])
+        elif items and kind == "prose" and line.startswith((" ", "\t")):
+            items[-1][1] += " " + line.strip()
+        else:
+            break
+        j += 1
+    return items
+
+
+def equation_findings(lines):
+    out, j, n = [], 0, len(lines)
+    while j < n:
+        i, line, kind = lines[j]
+        if kind == "mathdir":
+            out.append((i, "EQUATION", "a {math} directive: the house form is $$ ... $$ (label) "
+                                       "with a 'where' list"))
+            j += 1
+            continue
+        if kind != "math":
+            j += 1
+            continue
+        start, body = i, []
+        while j < n and lines[j][2] == "math":
+            body.append(lines[j][1])
+            j += 1
+        block = "\n".join(body)
+        close = _MATH_CLOSE.match(body[-1].strip()) if body else None
+        label = close.group("label") if close else None
+        latex = re.sub(r"\$\$\s*(\([\w.:-]+\))?", " ", block)
+        symbols = latex_symbols(latex)
+        if not label:
+            out.append((start, "EQUATION", "display math with no label: end it with $$ (eq-name) "
+                                           "and cite it with {math:numref}"))
+        items = _where_list(lines, j)
+        if items is None:
+            out.append((start, "EQUATION", "no 'where' list after the equation defines "
+                                           + ", ".join(sorted(symbols))))
+            continue
+        defined = set()
+        for line_no, item in items:
+            m = _WHERE_ITEM.match(item)
+            if not m:
+                out.append((line_no, "EQUATION", "a 'where' item that does not start with its "
+                                                 "symbol in $...$"))
+                continue
+            for span in re.findall(r"\$([^$]+)\$", m.group("syms")):
+                defined |= latex_symbols(span)
+            if not _UNIT.search(m.group("rest")):
+                out.append((line_no, "EQUATION", f"the 'where' item for {m.group('syms')} gives no "
+                                                 "unit: end it with ', in <unit>' or ', dimensionless'"))
+        missing = symbols - defined
+        if missing:
+            out.append((start, "EQUATION", "the 'where' list does not define "
+                                           + ", ".join(sorted(missing))))
+    return out
+
+
+def filelink_findings(lines):
+    out = []
+    for i, line, kind in lines:
+        if kind not in ("prose", "table", "heading", "caption"):
+            continue
+        linked = [m.span() for m in _ROLE.finditer(line)] + [m.span() for m in _MD_LINK.finditer(line)]
+        for m in _CODE.finditer(line):
+            body = m.group("body").strip()
+            if "://" in body or not _PATHLIKE.match(body):
+                continue
+            if any(a <= m.start() < b for a, b in linked):
+                continue
+            out.append((i, "FILELINK", f"`{body}` is not a link: link the file "
+                                       "({repo} for a file of this repository, a GitHub URL at a "
+                                       "pinned commit otherwise)"))
+    return out
+
+
+def rule_findings(text, rules=RULES, sphinx=True):
+    """(line, CHECK, message) of each finding of the house rules in a page's text. With
+    sphinx=False (README.md, CONTRIBUTING.md: read on GitHub) a Markdown image is a figure."""
+    lines = _rule_lines(text)
+    out = []
+    if "figure" in rules:
+        out += figure_findings(lines, sphinx)
+    if "equation" in rules:
+        out += equation_findings(lines)
+    if "filelink" in rules:
+        out += filelink_findings(lines)
+    return sorted(out)
+
+# --- end LOCAL ------------------------------------------------------------------------------
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 epilog=RULES_HELP)  # LOCAL: epilog
     ap.add_argument("files", nargs="+")
     ap.add_argument("--no-front-matter", action="store_true", help="do not require front matter")
     ap.add_argument("--front-matter-keys", default="type,owner,reader,review",
                     help="comma-separated keys every front matter must carry")
     ap.add_argument("--max-links", type=int, default=15)
+    ap.add_argument("--rules", default="", metavar="all|figure,equation,filelink",  # LOCAL
+                    help="also check the house rules FIGURE, EQUATION and FILELINK (see below)")  # LOCAL
     args = ap.parse_args(argv)
+    args.rules = RULES if args.rules == "all" else tuple(r for r in args.rules.split(",") if r)  # LOCAL
+    unknown = set(args.rules) - set(RULES)  # LOCAL
+    if unknown:  # LOCAL
+        ap.error(f"unknown rule(s): {', '.join(sorted(unknown))}")  # LOCAL
     rc = 0
     for path in args.files:
         page = Page(path, args)
