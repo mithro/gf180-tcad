@@ -186,19 +186,14 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   of log10(Id). Defined differently: the {term}`body effect` uses the
   {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
   in {ref}`metrics not extracted, or defined differently <metrics-not-yet-extracted>`.
-- **No mesh pictures on the TCAD results pages.** The
+- **No mesh pictures of the 2D start cells.** The
   {repo}`design spec, section 10(b) <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#10-documentation-sphinx--read-the-docs>`
-  asks for mesh pictures on the generated device and geometry pages. The 2D meshes are not
-  committed ({ref}`moscap2d-meshes`), and the pages render only committed files, so
-  {doc}`/_generated/tcad/index` shows each 2D job's mesh sha256 instead
-  ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)). The spec's
-  {repo}`section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`
-  draws the mesh pictures as part of the 3D renders of the simulated processes. They come from a
-  committed {ref}`reduced mesh artefact <mesh-artefact>`, with provenance tied to each job's
-  mesh sha256. No artefact, render or mesh picture is committed
-  ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The
-  {ref}`output cache <output-cache>` holds the meshes of the calibrated 2D cells, not those of
-  the 2D start jobs.
+  asks for mesh pictures on the geometry pages. Each calibrated 2D cell's page draws its
+  {ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. The start cells have none: their
+  meshes are in no cache and on no disk
+  ([issue #149](https://github.com/mithro/gf180-tcad/issues/149), part of
+  [issue #39](https://github.com/mithro/gf180-tcad/issues/39)). No 3D render is committed
+  ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)).
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two

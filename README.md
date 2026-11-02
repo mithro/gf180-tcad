@@ -71,6 +71,9 @@ at L = 0.6 and 0.7 µm and are
 [Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) at W10/L1 and W10/L2.
 Five calibrated 2D pfet cells are committed. W10/L0.5, W10/L0.7 and W1.6/L0.7 are Same process, and W10/L1 and W10/L2 disagree.
 
+Each calibrated 2D cell also has a committed reduced mesh artefact, the mesh around its gate, in
+[`results/tcad/meshes/stable`](results/tcad/meshes/stable). Its geometry page draws it.
+
 Planned work, each item with its issue, is on the
 [roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html), among it a
 [Charon](https://charon.sandia.gov/) backend beside DEVSIM for cross-comparison

@@ -38,7 +38,9 @@ They have to be regenerated before they can be pushed ({ref}`first population <o
   so it is not part of any {term}`generator_sha256`.
 - **One generator reads it.** The `cut` command of {py:mod}`gf180tcad.meshcut.__main__` cuts
   the reduced mesh artefact of a 2D job. It fetches the job's mesh with a `tools/output-cache pull`
-  subprocess, before its sandboxed run, which has no network.
+  subprocess, before its sandboxed run, which has no network. The `crosscheck-tcad` job runs it
+  on a GitHub-hosted runner, so the runner fetches the calibrated meshes from the cache too
+  ({ref}`cross-host-tcad`).
 - **The documentation build never fetches from it.** The build stays offline and uses only
   committed files.
 - No Git Large File Storage (git-LFS): it has bandwidth quotas. Each object is a plain git blob under 95 MB after

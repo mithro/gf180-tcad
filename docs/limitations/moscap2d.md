@@ -325,6 +325,67 @@ calibrated cells of [issue #35](https://github.com/mithro/gf180-tcad/issues/35),
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
 committed `cv.meta.json` stays the truth.
 
+(moscap2d-mesh-artefact)=
+
+## The reduced mesh artefact
+
+The mesh pictures come from a committed reduced mesh artefact per 2D cell, not from the full mesh.
+The window rule and the file format are in {ref}`mesh-artefact`. The artefact of the calibrated
+nfet at W10/L0.6 is in {numref}`mesh-artefact-l0p60`.
+
+```{figure} /_generated/tcad/nfet_05v0/w10p0_l0p60_mesh_calibrated-light.svg
+:name: mesh-artefact-l0p60
+:figclass: only-light
+:alt: The mesh around the gate of the calibrated nfet W10/L0.6 cell: small triangles, densest in a thin band at the silicon surface under the gate, coloured by region: the gate on top, the gate oxide under it, the insulator beside the gate and the silicon body below.
+
+The committed reduced mesh artefact of the calibrated nfet W10/L0.6 cell, drawn to scale from
+{repo}`results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p60`.
+```
+
+```{figure} /_generated/tcad/nfet_05v0/w10p0_l0p60_mesh_calibrated-dark.svg
+:figclass: only-dark
+:alt: The mesh around the gate of the calibrated nfet W10/L0.6 cell: small triangles, densest in a thin band at the silicon surface under the gate, coloured by region: the gate on top, the gate oxide under it, the insulator beside the gate and the silicon body below.
+
+The committed reduced mesh artefact of the calibrated nfet W10/L0.6 cell, drawn to scale from
+{repo}`results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p60`.
+```
+
+Each calibrated 2D cell has one, in {repo}`results/tcad/meshes/stable`. The cuts ran in the
+{term}`stable TCAD image`, which made the 2D jobs. Each artefact records the full mesh's sha256,
+and it equals the job's committed `mesh_sha256`
+({test}`tests/test_meshcut.py::test_committed_artefacts_match_their_jobs`).
+
+| Cell | Nodes kept | Triangles kept | Full-mesh triangles | Size (bytes) |
+|---|---|---|---|---|
+| nfet `w10p0_l0p60` | 109188 | 216407 | 451341 | 3444020 |
+| nfet `w10p0_l0p70` | 123989 | 245698 | 490416 | 3928161 |
+| nfet `w10p0_l1p00` | 169991 | 336824 | 611577 | 5372303 |
+| nfet `w10p0_l2p00` | 316448 | 626859 | 1011620 | 10058583 |
+| nfet `w1p6_l0p70` | 123989 | 245698 | 490416 | 3928161 |
+| pfet `w10p0_l0p50` | 93543 | 185407 | 410480 | 2943782 |
+| pfet `w10p0_l0p70` | 123351 | 244427 | 489146 | 3913892 |
+| pfet `w10p0_l1p00` | 168640 | 334122 | 608867 | 5367277 |
+| pfet `w10p0_l2p00` | 313845 | 621643 | 1006380 | 10039177 |
+| pfet `w1p6_l0p70` | 123351 | 244427 | 489146 | 3913892 |
+
+The sizes come from each meta file's `size_bytes`. A W1.6/L0.7 cell has the W10/L0.7 mesh,
+so its `.npz` has the same bytes. At L = 2 µm the window is wider than the cell. A quarter
+gate length is 0.5 µm there, and the source and the drain are 0.44 µm wide.
+
+The 2D start cells have no artefact. Their full meshes are in no cache and on no disk, so
+each must be regenerated first ([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
+Their geometry pages say why they have no mesh picture.
+
+**Memory and time of a cut.** The nfet W10/L0.6 cut ran alone in a 4 GiB
+{term}`sandbox` with one CPU. `/usr/bin/time -v` gave a peak resident memory of 479624 kB and a
+wall time of 24.7 s. The container's {term}`cgroup` `memory.peak` was 479981568 bytes. The
+4 GiB limit stays, because the L = 2 µm full meshes have more than twice as many triangles. The
+ten cuts and their exit codes are on {ref}`tcad-provenance`.
+
+**A regenerated mesh.** {test}`tests/tcad/test_meshcut_job.py::test_regenerated_mesh_sha_reported`
+meshed the calibrated nfet W10/L0.6 cell again in the stable image. Its sha256 equals the
+committed `mesh_sha256`.
+
 (moscap2d-calibrated)=
 
 ## The calibrated 2D cells

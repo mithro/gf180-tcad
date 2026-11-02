@@ -49,10 +49,12 @@ The TCAD pages ({doc}`/_generated/tcad/index`) are generated the same way, by
 overlay with the {term}`corner envelope`, the verdicts, the intrinsic and parasitic parts, the
 committed 2D result). Every verdict and error on them is read from the calibration and
 validation files, which were computed in the {term}`dev-HEAD TCAD image`;
-{py:mod}`gf180tcad.docgen` only renders them. No 2D mesh is committed
-({ref}`moscap2d-meshes`), so the pages show no mesh picture and say so, a
-{ref}`recorded deviation <limitations-spec-deviations>` from the design spec
-([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
+{py:mod}`gf180tcad.docgen` only renders them.
+
+A geometry page draws the mesh of each
+calibrated 2D cell from its committed {ref}`reduced mesh artefact <moscap2d-mesh-artefact>`.
+The 2D start cells have no artefact, and their pages say why
+([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
 
 ```{toctree}
 :maxdepth: 2
