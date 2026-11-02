@@ -466,6 +466,63 @@ def test_figures_legible_at_400px():
     assert px >= 9, f"{px:.1f} px at 400 px"
 
 
+# --- copied images and their licence notes ---------------------------------------------------
+
+IMAGES = EXPLAINED / "images"
+_LICENCE_LINE = re.compile(r"^Licence:\s*\S", re.MULTILINE)
+_SOURCE_LINE = re.compile(r"^Source:\s*https://\S", re.MULTILINE)
+
+
+def licence_problems(images: Path) -> list[str]:
+    """Each copied image needs ``<name>.licence.txt`` beside it naming its source and licence;
+    each note needs its image."""
+    out = []
+    for f in sorted(images.iterdir()):
+        if f.name.endswith(".licence.txt"):
+            if not (images / f.name.removesuffix(".licence.txt")).is_file():
+                out.append(f"{f.name}: a licence note with no image")
+            continue
+        note = images / f"{f.name}.licence.txt"
+        if not note.is_file():
+            out.append(f"{f.name}: no licence note")
+            continue
+        text = note.read_text(encoding="utf-8")
+        if not _LICENCE_LINE.search(text):
+            out.append(f"{note.name}: no 'Licence:' line")
+        if not _SOURCE_LINE.search(text):
+            out.append(f"{note.name}: no 'Source: https://' line")
+    return out
+
+
+def test_every_copied_image_has_a_licence_note():
+    assert IMAGES.is_dir() and any(IMAGES.iterdir())
+    problems = licence_problems(IMAGES)
+    assert not problems, "\n".join(problems)
+
+
+def test_positive_control_licence_notes(tmp_path):
+    (tmp_path / "a.png").write_bytes(b"x")
+    (tmp_path / "b.jpg").write_bytes(b"x")
+    (tmp_path / "b.jpg.licence.txt").write_text(
+        "Source: https://example.org/b\nLicence:\n", encoding="utf-8"
+    )
+    (tmp_path / "c.png.licence.txt").write_text(
+        "Source: https://x\nLicence: CC BY\n", encoding="utf-8"
+    )
+    assert licence_problems(tmp_path) == [
+        "a.png: no licence note",
+        "b.jpg.licence.txt: no 'Licence:' line",
+        "c.png.licence.txt: a licence note with no image",
+    ]
+
+
+def test_every_copied_image_is_on_a_page():
+    used = "".join(p.read_text(encoding="utf-8") for p in pages())
+    for f in IMAGES.iterdir():
+        if not f.name.endswith(".licence.txt"):
+            assert f"images/{f.name}" in used, f.name
+
+
 def test_exaggeration_statement_follows_the_scales():
     from gf180tcad.explain import model
 
