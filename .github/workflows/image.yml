@@ -73,7 +73,7 @@ jobs:
           - image: charon-libs
             name: ghcr.io/mithro/gf180-tcad-charon-libs
             pin: docker/CHARON_LIBS_IMAGE
-            timeout: 360
+            timeout: 350
             gated: true
     env:
       IMAGE_NAME: ${{ matrix.name }}
@@ -215,7 +215,7 @@ jobs:
           - image: charon-libs
             name: ghcr.io/mithro/gf180-tcad-charon-libs
             pin: docker/CHARON_LIBS_IMAGE
-            timeout: 360
+            timeout: 350
             gated: true
     env:
       IMAGE_NAME: ${{ matrix.name }}

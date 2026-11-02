@@ -106,7 +106,7 @@ def test_every_image_is_built_and_rebuilt():
             "image": "charon-libs",
             "name": "ghcr.io/mithro/gf180-tcad-charon-libs",
             "pin": "docker/CHARON_LIBS_IMAGE",
-            "timeout": 360,
+            "timeout": 350,
             "gated": True,
         },
     ]
