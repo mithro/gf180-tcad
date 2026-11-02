@@ -12,7 +12,9 @@ read from :repo:`results/tcad/calibration` and never refitted here.
 
 **The corner values.** :repo:`data/pdk_corners.json` holds each corner's values from the pinned
 :term:`card` ``sm141064.ngspice`` (its sha256 is :data:`PDK_CORNERS_SHA256`, so a change to the table changes
-this module and its generator hash). A corner fit applies the corner's XL, XW, overlap factors
+this module and its generator hash). It also records every bin of each model with its length
+and width range: the nfet's L = 0.6 µm calibration gate is in ``nfet_06v0.1``, whose lines for
+the applied inputs are those of ``nfet_06v0.0`` (tested). A corner fit applies the corner's XL, XW, overlap factors
 and the BSIM4 default CF of its TOXE to the area and overlap bookkeeping as fixed inputs
 (:func:`corner_bookkeeping`, :func:`with_corner_card`). It moves the oxide bounds and start by
 the corner's TOXE offset and the flat-band bounds and start by its VTH0 offset, in true-sign
@@ -71,7 +73,7 @@ CORNERS_MAIN = "gf180tcad.calibrate.corners"
 #: The corner table, ``data/pdk_corners.json``.
 PDK_CORNERS_FILE = REPO_ROOT / "data" / "pdk_corners.json"
 #: The table's sha256; a change to the table must change this line.
-PDK_CORNERS_SHA256 = "27a8ec1954f180064017b2bbd0cf00404bad2f55eddc2ce29e6eaff918b632c0"
+PDK_CORNERS_SHA256 = "89e24e774af5b828d1801a33198d4f95b44ac87ae38f65c8f0bbfab77dc39b96"
 
 #: The tree root of the corner fits, ``results/tcad/corners``.
 CORNERS_ROOT = REPO_ROOT / "results" / "tcad" / "corners"

@@ -5,6 +5,104 @@
   },
   "devices": {
     "nfet_05v0": {
+      "bins": {
+        "nfet_06v0.0": {
+          "lmax": {
+            "card_line": 37176,
+            "value": 5.0001e-05
+          },
+          "lmin": {
+            "card_line": 37177,
+            "value": 7e-07
+          },
+          "model_line": 37055,
+          "wmax": {
+            "card_line": 37360,
+            "value": 0.000100001
+          },
+          "wmin": {
+            "card_line": 37361,
+            "value": 3e-07
+          }
+        },
+        "nfet_06v0.1": {
+          "lines": {
+            "cgdl": {
+              "card_line": 37423,
+              "expr": "1.5e-010*nfet_06v0_cgdo"
+            },
+            "cgdo": {
+              "card_line": 37424,
+              "expr": "1e-010*nfet_06v0_cgdo"
+            },
+            "cgsl": {
+              "card_line": 37426,
+              "expr": "1.5e-010*nfet_06v0_cgso"
+            },
+            "cgso": {
+              "card_line": 37427,
+              "expr": "1e-010*nfet_06v0_cgso"
+            },
+            "lvsat": {
+              "card_line": 37528,
+              "expr": "24946.5*nfet_06v0_vsat"
+            },
+            "pvsat": {
+              "card_line": 37588,
+              "expr": "6308.7053*nfet_06v0_vsat"
+            },
+            "toxe": {
+              "card_line": 37647,
+              "expr": "1.52e-008+nfet_06v0_tox"
+            },
+            "toxm": {
+              "card_line": 37648,
+              "expr": "1.52e-008+nfet_06v0_tox"
+            },
+            "toxp": {
+              "card_line": 37649,
+              "expr": "1.6e-008+nfet_06v0_tox"
+            },
+            "vsat": {
+              "card_line": 37674,
+              "expr": "64848.09*nfet_06v0_vsat"
+            },
+            "vth0": {
+              "card_line": 37675,
+              "expr": "0.67314+nfet_06v0_vth0"
+            },
+            "wvsat": {
+              "card_line": 37707,
+              "expr": "0.14568305*nfet_06v0_vsat"
+            },
+            "xl": {
+              "card_line": 37718,
+              "expr": "0+nfet_06v0_xl"
+            },
+            "xw": {
+              "card_line": 37730,
+              "expr": "0+nfet_06v0_xw"
+            }
+          },
+          "lmax": {
+            "card_line": 37514,
+            "value": 7e-07
+          },
+          "lmin": {
+            "card_line": 37515,
+            "value": 6e-07
+          },
+          "model_line": 37393,
+          "wmax": {
+            "card_line": 37698,
+            "value": 0.000100001
+          },
+          "wmin": {
+            "card_line": 37699,
+            "value": 3e-07
+          }
+        }
+      },
       "corners": {
         "ff": {
           "nfet_06v0_cgdo": {
@@ -304,6 +402,27 @@
       }
     },
     "pfet_05v0": {
+      "bins": {
+        "pfet_06v0.0": {
+          "lmax": {
+            "card_line": 38176,
+            "value": 5.001e-05
+          },
+          "lmin": {
+            "card_line": 38177,
+            "value": 5e-07
+          },
+          "model_line": 38091,
+          "wmax": {
+            "card_line": 38282,
+            "value": 0.00010001
+          },
+          "wmin": {
+            "card_line": 38283,
+            "value": 3e-07
+          }
+        }
+      },
       "corners": {
         "ff": {
           "pfet_06v0_dcgdo": {
@@ -551,6 +670,6 @@
     "ss": 169,
     "typical": 105
   },
-  "note": "The corner sections of the PDK's ngspice card for the 6 V transistors: per device, the card lines that use a corner parameter (inputs: those the 1D corner fits apply, and VSAT; other_lines: binning and TOXM terms they do not apply) and the value of each corner parameter in each `.lib <corner>` section, with line numbers. Written by reading the card; checked against the card in the image by tests/test_calibrate_corners.py::test_corner_table_matches_pinned_pdk.",
+  "note": "The corner sections of the PDK's ngspice card for the 6 V transistors: per device, the card lines that use a corner parameter (inputs: those the 1D corner fits apply, and VSAT; other_lines: binning and TOXM terms they do not apply) and the value of each corner parameter in each `.lib <corner>` section, with line numbers. bins: every bin of each device's model in its `.lib` section, with its LMIN, LMAX, WMIN and WMAX lines, and for a bin other than `model` every line that uses a corner parameter; the inputs the fits apply must be the same line in every bin. Written by reading the card; checked against the card in the image by tests/test_calibrate_corners.py::test_corner_table_matches_pinned_pdk.",
   "schema": 1
 }

@@ -1137,6 +1137,9 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   - Each corner fit also compares the fitted 1D C-V with that corner's curves at the held-out
     geometries (`held_out` in the result file; 1D only).
   - `test_docgen_corner_table_one_value_per_cell` moves to part 2 with the table it tests.
+  - The table records every bin of each model (`bins`, with LMIN, LMAX, WMIN and WMAX). The
+    nfet's L = 0.6 µm calibration gate is in `nfet_06v0.1`; `check_corner_table` requires each
+    applied input's line there to equal `nfet_06v0.0`'s (only the VSAT lines differ).
 - [ ] **Step 3:** Run the eight corner fits (4 corners × 2 devices), 2 GiB each, up to four at a
   time, each with a progress log in `tmp/` (spec §8.1); commit the corner tree in a results-only
   commit, then the summary and the docs. Open PR 16a, get it reviewed and merge.

@@ -103,6 +103,53 @@ def test_table_holds_the_spec_values(device, corner):
         assert corners.card_shift(device, corner, key) == SPEC_FACTORS[corner], key
 
 
+#: The ``use`` of each table input the 1D corner fits apply; VSAT is listed, not applied.
+APPLIED_USES = {"area bookkeeping", "overlap bookkeeping", "oxide bounds", "flat-band bounds"}
+#: The size limits of a model bin (m): BSIM4 takes the bin with LMIN <= L < LMAX, and the same for W.
+BIN_LIMITS = ("lmin", "lmax", "wmin", "wmax")
+
+
+def test_applied_uses_are_the_table_uses():
+    """Every table input is applied but the nfet's VSAT (the pfet card has no VSAT corner)."""
+    velocity = "not in a C-V curve (velocity saturation)"
+    for device, d in corners.load_table()["devices"].items():
+        uses = {r["use"] for r in d["inputs"].values()}
+        assert uses - APPLIED_USES == ({velocity} if device == NFET else set()), device
+
+
+@pytest.mark.parametrize("device", [NFET, PFET])
+def test_every_geometry_is_in_one_bin(device):
+    """Each geometry of the device, calibration and validation, falls in exactly one recorded
+    bin; the nfet's L = 0.6 µm calibration gate falls in nfet_06v0.1, not the table's model."""
+    bins = corners.load_table()["devices"][device]["bins"]
+
+    def inside(b, um, lo, hi):
+        nm = round(um * 1e3)
+        return round(b[lo]["value"] * 1e9) <= nm < round(b[hi]["value"] * 1e9)
+
+    for g in DEVICES[device].geometries:
+        hits = [k for k, b in bins.items()
+                if inside(b, g.l_um, "lmin", "lmax") and inside(b, g.w_um, "wmin", "wmax")]  # fmt: skip
+        assert len(hits) == 1, (device, geometry_id(g), hits)
+    if device == NFET:
+        assert set(bins) == {"nfet_06v0.0", "nfet_06v0.1"}
+        assert inside(bins["nfet_06v0.1"], 0.6, "lmin", "lmax")
+
+
+def test_other_bins_apply_the_same_lines():
+    """In every bin the inputs the fits apply have the table model's expression, so a corner fit
+    applies one shift at every calibration geometry; only the VSAT lines differ between bins."""
+    for device, d in corners.load_table()["devices"].items():
+        applied = {k: r["expr"] for k, r in d["inputs"].items() if r["use"] in APPLIED_USES}
+        for name, b in d["bins"].items():
+            if name == d["model"]:
+                continue
+            assert {k: b["lines"][k]["expr"] for k in applied} == applied, (device, name)
+            primary = {**d["inputs"], **d["other_lines"]}
+            differ = {k for k, r in b["lines"].items() if primary[k]["expr"] != r["expr"]}
+            assert differ <= {"vsat", "lvsat", "pvsat", "wvsat"}, (device, name, differ)
+
+
 def test_pfet_toxp_follows_toxe():
     """The pfet card sets no TOXP (BSIM4: TOXP = TOXE), so only the nfet has a TOXP line."""
     t = corners.load_table()["devices"]
@@ -517,11 +564,53 @@ def _section_end(lines: list[str], start: int, pattern: str) -> int:
     return next(n for n in range(start + 1, len(lines) + 1) if re.match(pattern, lines[n - 1]))
 
 
+def _corner_uses(lines: list[str], body: range, params: set[str]) -> dict[str, tuple[int, str]]:
+    """``{key: (line, expr)}`` of every model line in ``body`` that uses a corner parameter."""
+    uses = {}
+    for n in body:
+        if lines[n - 1].startswith("+"):
+            k, e = process.parse_card_assignment(lines[n - 1])
+            if process.card_expr_names(e) & params:
+                uses[k] = (n, e)
+    return uses
+
+
+def _check_bins(lines: list[str], device: str, d: dict, params: set[str]) -> None:
+    """Every ``.model <base>.<n>`` of the device's ``.lib`` section is a recorded bin, with its
+    LMIN, LMAX, WMIN and WMAX lines; a bin other than the table's model records every line that
+    uses a corner parameter, and each input the fits apply is the same expression as in the
+    table's model."""
+    start = d["model_line"]
+    lib = max(n for n in range(1, start) if lines[n - 1].startswith(".lib "))
+    base = re.escape(d["model"].rsplit(".", 1)[0])
+    models = {}
+    for n in range(lib, _section_end(lines, lib, r"\.endl")):
+        w = lines[n - 1].split()
+        if w[:1] == [".model"] and re.fullmatch(rf"{base}\.\d+", w[1]):
+            models[w[1]] = n
+    assert models == {k: b["model_line"] for k, b in d["bins"].items()}, device
+    applied = {k: r["expr"] for k, r in d["inputs"].items() if r["use"] in APPLIED_USES}
+    for name, b in d["bins"].items():
+        body = range(b["model_line"], _section_end(lines, b["model_line"], r"\.model |\.endl"))
+        for k in BIN_LIMITS:
+            n = b[k]["card_line"]
+            assert n in body, (name, k)
+            key, e = process.parse_card_assignment(lines[n - 1])
+            assert (key, float(e)) == (k, b[k]["value"]), (name, k)
+        if name == d["model"]:
+            assert "lines" not in b, name
+            continue
+        uses = _corner_uses(lines, body, params)
+        assert {k: (r["card_line"], r["expr"]) for k, r in b["lines"].items()} == uses, name
+        assert {k: uses.get(k, (0, None))[1] for k in applied} == applied, name
+
+
 def check_corner_table(card: bytes) -> None:
     """Every entry of data/pdk_corners.json is the card's own line, and nothing is missing: each
     ``.lib <corner>`` line; per device and corner, each corner parameter's ``.param`` line inside
     that section with its expression and value; per device, every line of its model that uses a
-    corner parameter, as an input or another line, with its expression and kind."""
+    corner parameter, as an input or another line, with its expression and kind; and every bin
+    of the model (:func:`_check_bins`)."""
     t = json.loads(TABLE.read_bytes())
     assert hashlib.sha256(card).hexdigest() == t["card"]["sha256"]
     lines = card.decode("utf-8").splitlines()
@@ -543,12 +632,7 @@ def check_corner_table(card: bytes) -> None:
                         found[k] = {"expr": e, "line": n, "value": _arith(e)}
             assert found == values, (device, corner)
         rows = {**d["inputs"], **d["other_lines"]}
-        uses = {}
-        for n in model:
-            if lines[n - 1].startswith("+"):
-                k, e = process.parse_card_assignment(lines[n - 1])
-                if process.card_expr_names(e) & params:
-                    uses[k] = (n, e)
+        uses = _corner_uses(lines, model, params)
         assert {k: (r["card_line"], r["expr"]) for k, r in rows.items()} == uses, device
         for k, r in rows.items():
             num = r"-?[0-9.]+(?:[eE][-+]?[0-9]+)?"
@@ -556,6 +640,7 @@ def check_corner_table(card: bytes) -> None:
             kind = ("offset" if re.fullmatch(rf"{num}\+{p}", r["expr"]) else
                     "factor" if re.fullmatch(rf"{num}\*{p}", r["expr"]) else "other")  # fmt: skip
             assert r["kind"] == kind, (device, k)
+        _check_bins(lines, device, d, params)
 
 
 @pytest.mark.sandbox
