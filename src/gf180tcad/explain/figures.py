@@ -99,6 +99,16 @@ STYLE = {
     # width long, a drawing choice (the fitted shift is too small to see at its true length).
     "part_offset": 0.14,
     "shift_arrow": 0.1,
+    # The calibration limits: a taller figure for the three panels; each limit drawn as a bar this
+    # wide (pt) with end ticks this tall (pt); the start and fitted markers this size (pt); room of
+    # this fraction of a row above and below the two rows, and of the axis width at either end, so
+    # no marker on a limit is clipped.
+    "limits_size_in": (6.4, 6.4),
+    "limit_width": 10.0,
+    "limit_tick_pt": 16.0,
+    "marker_pt": 9.0,
+    "row_pad": 0.6,
+    "limit_margin": 0.08,
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -241,12 +251,8 @@ def doping_profile(dev: model.Device, highlight: str, palette: str) -> bytes:
 
 def _short(v: float, unit: str, most: int) -> str:
     """``v`` with the fewest significant digits (up to ``most``) that print the same value as
-    ``most`` digits do: 0.2 µm, not 0.2000 µm."""
-    target = float(f"{v:.{most - 1}e}")
-    for d in range(1, most + 1):
-        if float(f"{v:.{d - 1}e}") == target:
-            return numbers.format_value(v, d, unit)
-    return numbers.format_value(v, most, unit)
+    ``most`` digits do: 0.2 µm, not 0.2000 µm (:func:`gf180tcad.explain.numbers.shortest`)."""
+    return numbers.shortest(v, unit, most)
 
 
 def _thickness(layer: model.Layer) -> str:
@@ -858,6 +864,54 @@ def cv_parts(palette: str) -> bytes:
         return _svg(cv_parts_figure(palette))
 
 
+# The calibration page (calibration.md): the fitted numbers of both transistors within their limits.
+#: The fitted numbers drawn on a log axis (a doping spans powers of ten).
+LOG_TUNABLES = ("n_ch_cm3",)
+
+
+def calibration_limits_figure(palette: str):
+    """The matplotlib figure of :func:`calibration_limits`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    fits = {d: numbers.fits(d) for d in devices}
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(numbers.TUNABLES), 1)
+        for i, (ax, (name, (words, unit, _most))) in enumerate(
+            zip(axes, numbers.TUNABLES.items(), strict=True)
+        ):
+            if name in LOG_TUNABLES:
+                ax.set_xscale("log")
+            for row, device in enumerate(devices):
+                (f,) = [f for f in fits[device] if f.name == name]
+                ax.plot([f.lower, f.upper], [row, row], color=pal["band"], lw=STYLE["limit_width"],
+                        solid_capstyle="butt", label="limits" if row == 0 else None)  # fmt: skip
+                ax.plot([f.lower, f.upper], [row, row], ls="none", marker="|", color=pal["text"],
+                        ms=STYLE["limit_tick_pt"], mew=STYLE["edge_width"] * 2)  # fmt: skip
+                ax.plot([f.start], [row], ls="none", marker="o", ms=STYLE["marker_pt"], mfc=pal["background"],
+                        mec=pal["text"], mew=STYLE["edge_width"] * 2, label="start" if row == 0 else None)  # fmt: skip
+                ax.plot([f.fitted], [row], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["highlight"],
+                        mec=pal["text"], mew=STYLE["edge_width"], label="fitted" if row == 0 else None)  # fmt: skip
+            ax.set_yticks(range(len(devices)), [d.split("_")[0] for d in devices])
+            ax.set_ylim(-STYLE["row_pad"], len(devices) - 1 + STYLE["row_pad"])
+            ax.margins(x=STYLE["limit_margin"])
+            ax.set_xlabel(f"{words.lower()} ({unit})" if unit else words.lower())
+            ax.grid(True, axis="x")
+            if i == 0:
+                handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
+        return fig
+
+
+def calibration_limits(palette: str) -> bytes:
+    """Each fitted number of the nfet and the pfet (:data:`gf180tcad.explain.numbers.TUNABLES`)
+    on its own axis: a bar from its lower to its upper limit, its start (open circle) and its
+    fitted value (filled diamond), read from the calibration result files
+    (:func:`gf180tcad.explain.numbers.fits`)."""
+    return _svg(calibration_limits_figure(palette))
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -872,13 +926,22 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "cv-regions": cv_regions,
     "band-regimes": band_regimes,
     "cv-parts": cv_parts,
+    "calibration-limits": calibration_limits,
 }
 
 
 # The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
 # computed curves (not drawings of the device) carry no statement.
 _CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell")
-_PLOTS = ("bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes", "cv-parts")
+_PLOTS = (
+    "bands-flat",
+    "junction-panels",
+    "moscap-cv",
+    "cv-regions",
+    "band-regimes",
+    "cv-parts",
+    "calibration-limits",
+)
 
 
 def substitutions() -> dict[str, str]:
