@@ -124,7 +124,8 @@ curve. The idealised voltages come from formulas, without the fitted shift of
 {{ x_dv_fb_nfet_cal }}.
 
 Each crossing check is {term}`Agree` when the two crossings lie within {{ x_dv_tol_l10 }}
-of each other. Here the falling side is {{ x_verdict_dv_dep_l10 }} and the rising side
+of each other. Otherwise it is {term}`Same process` when the simulated crossing lies within the
+spread of the {term}`corners <corner>`, and {term}`Disagree` when not. Here the falling side is {{ x_verdict_dv_dep_l10 }} and the rising side
 {{ x_verdict_dv_inv_l10 }} ({ref}`the checks <cv-agreement-metric>`). The pfet's 1D fit is
 {{ x_verdict_pfet_1d }} ({ref}`the pfet mismatch <cv-agreement-mismatch>`).
 

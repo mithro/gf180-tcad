@@ -1142,7 +1142,10 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         "The largest relative error max |ΔCgg|/Cgg in each region:",
         "",
-        *_table(["Geometry", "Accumulation (%)", "Inversion (%)", "Depletion (%)"], errors),
+        *_table(
+            ["Geometry", "Accumulation (%)", "Inversion (%)", "{term}`Depletion <depletion>` (%)"],
+            errors,
+        ),
         "",
         (
             "ΔV is the shift of the TCAD mid-capacitance crossing from the SPICE one "

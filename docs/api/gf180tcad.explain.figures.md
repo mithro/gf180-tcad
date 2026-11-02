@@ -1,6 +1,8 @@
 # {py:mod}`gf180tcad.explain.figures`
 
-Source: {repo}`src/gf180tcad/explain/figures.py`.
+Source: {repo}`src/gf180tcad/explain/figures.py`. Its figures are drawn with {{ matplotlib }}. Among
+them are the {term}`accumulation`, {term}`depletion`, {term}`inversion` and {term}`flat band`
+figures of {ref}`explained-regions`.
 
 ```{eval-rst}
 .. automodule:: gf180tcad.explain.figures

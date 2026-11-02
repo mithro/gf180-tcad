@@ -266,7 +266,7 @@ effective oxide:
 - strong inversion, polarity·Vg ≥ +2 V.
 
 This window is {py:data}`gf180tcad.tcad.process.PLATEAU_V`, the ±2 V plateau convention of the
-calibration, and each file records it in its `[centroid_allowance]` table. Depletion is left out.
+calibration, and each file records it in its `[centroid_allowance]` table. {term}`Depletion <depletion>` is left out.
 There the accumulation formula saturates near Ldebye/3, and the centroid says nothing about the
 oxide-capacitance plateaus. Counting it would widen the fit's freedom for no physical reason.
 
