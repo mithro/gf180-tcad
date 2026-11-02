@@ -8,9 +8,9 @@ import pytest
 from docutils import nodes
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "docs" / "_ext"))
-import unit_join  # noqa: E402
+import unit_join
 
-NB, WJ = " ", "⁠"
+NB, WJ = "\u00a0", "\u2060"
 
 
 @pytest.mark.parametrize(

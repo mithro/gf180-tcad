@@ -12,14 +12,21 @@ import re
 
 from docutils import nodes
 
-NBSP = " "
-WORD_JOINER = "⁠"
+NBSP = "\u00a0"
+WORD_JOINER = "\u2060"
 # Units that follow a number, longest alternatives first. A letter after the unit means the
 # match is part of a longer word, so the space stays.
 _UNIT = r"(?:%|[kmµnp]?V|eV|K|[fpnµm]?F|[µnpm]?A|[kM]?Ω|nm|µm|um|cm|mm|ps|ns|µs|ms|Hz)"
 _VALUE_UNIT = re.compile(rf"(?<=[\d)]) (?={_UNIT}(?![\w]))")
 _SLASH = re.compile(r"(?<![\w])([fpnµmkM]?[FVA])/(?=[µcnmu])")
-_SKIP = (nodes.literal, nodes.literal_block, nodes.math, nodes.math_block, nodes.raw, nodes.FixedTextElement)
+_SKIP = (
+    nodes.literal,
+    nodes.literal_block,
+    nodes.math,
+    nodes.math_block,
+    nodes.raw,
+    nodes.FixedTextElement,
+)
 
 
 def join_units(text: str) -> str:
