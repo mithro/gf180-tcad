@@ -7,142 +7,151 @@
   "FIGURE": 2
  },
  "docs/_generated/results/nfet_05v0/w10p0_l0p60.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/nfet_05v0/w10p0_l0p70.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/nfet_05v0/w10p0_l10p00.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/nfet_05v0/w10p0_l1p00.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/nfet_05v0/w10p0_l2p00.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/nfet_05v0/w1p6_l0p70.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/pfet_05v0/w10p0_l0p50.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/pfet_05v0/w10p0_l0p70.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/pfet_05v0/w10p0_l10p00.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/pfet_05v0/w10p0_l1p00.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/pfet_05v0/w10p0_l2p00.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/results/pfet_05v0/w1p6_l0p70.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/_generated/tcad/nfet_05v0/index.md": {
-  "FIGURE": 5,
+  "FIGURE": 7,
   "FILELINK": 2
  },
  "docs/_generated/tcad/nfet_05v0/w10p0_l0p60.md": {
-  "FIGURE": 4,
-  "FILELINK": 2
- },
- "docs/_generated/tcad/nfet_05v0/w10p0_l0p70.md": {
-  "FIGURE": 4,
-  "FILELINK": 2
- },
- "docs/_generated/tcad/nfet_05v0/w10p0_l10p00.md": {
-  "FIGURE": 3,
-  "FILELINK": 2
- },
- "docs/_generated/tcad/nfet_05v0/w10p0_l1p00.md": {
-  "FIGURE": 4,
-  "FILELINK": 2
- },
- "docs/_generated/tcad/nfet_05v0/w10p0_l2p00.md": {
-  "FIGURE": 4,
-  "FILELINK": 2
- },
- "docs/_generated/tcad/nfet_05v0/w1p6_l0p70.md": {
-  "FIGURE": 4,
-  "FILELINK": 2
- },
- "docs/_generated/tcad/pfet_05v0/index.md": {
   "FIGURE": 5,
   "FILELINK": 2
  },
- "docs/_generated/tcad/pfet_05v0/w10p0_l0p50.md": {
+ "docs/_generated/tcad/nfet_05v0/w10p0_l0p70.md": {
+  "FIGURE": 5,
+  "FILELINK": 2
+ },
+ "docs/_generated/tcad/nfet_05v0/w10p0_l10p00.md": {
   "FIGURE": 4,
+  "FILELINK": 2
+ },
+ "docs/_generated/tcad/nfet_05v0/w10p0_l1p00.md": {
+  "FIGURE": 5,
+  "FILELINK": 2
+ },
+ "docs/_generated/tcad/nfet_05v0/w10p0_l2p00.md": {
+  "FIGURE": 5,
+  "FILELINK": 2
+ },
+ "docs/_generated/tcad/nfet_05v0/w1p6_l0p70.md": {
+  "FIGURE": 5,
+  "FILELINK": 2
+ },
+ "docs/_generated/tcad/pfet_05v0/index.md": {
+  "FIGURE": 7,
+  "FILELINK": 2
+ },
+ "docs/_generated/tcad/pfet_05v0/w10p0_l0p50.md": {
+  "FIGURE": 5,
   "FILELINK": 2
  },
  "docs/_generated/tcad/pfet_05v0/w10p0_l0p70.md": {
-  "FIGURE": 4,
+  "FIGURE": 5,
   "FILELINK": 2
  },
  "docs/_generated/tcad/pfet_05v0/w10p0_l10p00.md": {
-  "FIGURE": 3,
+  "FIGURE": 4,
   "FILELINK": 2
  },
  "docs/_generated/tcad/pfet_05v0/w10p0_l1p00.md": {
-  "FIGURE": 4,
+  "FIGURE": 5,
   "FILELINK": 2
  },
  "docs/_generated/tcad/pfet_05v0/w10p0_l2p00.md": {
-  "FIGURE": 4,
+  "FIGURE": 5,
   "FILELINK": 2
  },
  "docs/_generated/tcad/pfet_05v0/w1p6_l0p70.md": {
-  "FIGURE": 4,
+  "FIGURE": 5,
   "FILELINK": 2
  },
  "docs/comparison/agreement.md": {
-  "FIGURE": 4,
+  "FIGURE": 6,
   "FILELINK": 1
  },
  "docs/comparison/cv-agreement.md": {
-  "FIGURE": 7,
-  "FILELINK": 3
+  "FIGURE": 9,
+  "FILELINK": 4
  },
  "docs/comparison/pdk-versions.md": {
-  "FIGURE": 2,
+  "FIGURE": 3,
   "FILELINK": 2
  },
  "docs/comparison/process-data.md": {
-  "FIGURE": 2,
+  "FIGURE": 3,
   "FILELINK": 2
  },
  "docs/explained/accumulation-depletion-inversion.md": {
-  "FIGURE": 3
+  "FIGURE": 3,
+  "FIGURE-FORM": 2
  },
  "docs/explained/bands-and-fermi-level.md": {
-  "EQUATION": 2
+  "EQUATION": 2,
+  "FIGURE": 3,
+  "FIGURE-FORM": 2
  },
  "docs/explained/cv-curve.md": {
-  "FIGURE": 5
+  "FIGURE": 5,
+  "FIGURE-FORM": 1
  },
  "docs/explained/index.md": {
-  "FIGURE": 1
+  "FIGURE": 2
  },
  "docs/explained/mos-capacitor.md": {
-  "FIGURE": 4
+  "FIGURE": 4,
+  "FIGURE-FORM": 2
  },
  "docs/explained/oxide-and-poly.md": {
   "EQUATION": 2,
-  "FIGURE": 2
+  "FIGURE": 5,
+  "FIGURE-FORM": 1
  },
  "docs/explained/pn-junction.md": {
   "EQUATION": 4,
-  "FIGURE": 4
+  "FIGURE": 4,
+  "FIGURE-FORM": 2
  },
  "docs/explained/silicon-and-carriers.md": {
   "EQUATION": 2,
-  "FIGURE": 2
+  "FIGURE": 5,
+  "FIGURE-FORM": 1
  },
  "docs/explained/transistor-parts.md": {
-  "FIGURE": 3
+  "FIGURE": 6,
+  "FIGURE-FORM": 2
  },
  "docs/glossary.md": {
   "FILELINK": 1
@@ -157,25 +166,25 @@
   "FIGURE": 6
  },
  "docs/limitations/literature.md": {
-  "FIGURE": 2
+  "FIGURE": 3
  },
  "docs/limitations/mesh-convergence.md": {
   "FIGURE": 6,
   "FILELINK": 1
  },
  "docs/limitations/moscap2d.md": {
-  "FIGURE": 10,
+  "FIGURE": 11,
   "FILELINK": 13
  },
  "docs/limitations/plugin-history.md": {
-  "FIGURE": 8,
+  "FIGURE": 9,
   "FILELINK": 5
  },
  "docs/limitations/silicon-validation.md": {
   "FIGURE": 1
  },
  "docs/reproduce/image.md": {
-  "FIGURE": 5,
+  "FIGURE": 4,
   "FILELINK": 9
  },
  "docs/reproduce/index.md": {
@@ -187,6 +196,7 @@
   "FILELINK": 9
  },
  "docs/reproduce/render-manifest.md": {
+  "FIGURE": 2,
   "FILELINK": 1
  },
  "docs/results/index.md": {
