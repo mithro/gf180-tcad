@@ -1373,6 +1373,8 @@ def test_counts_are_derived(tmp_path):
     fit["per_geometry"]["w10p0_l5p00"] = extra
     (tmp_path / src).parent.mkdir(parents=True)
     (tmp_path / src).write_text(json.dumps(fit), "utf-8")
+    pfet = "results/tcad/calibration/pfet_05v0.result.json"  # counts() also reads the budgets
+    (tmp_path / pfet).write_text((ROOT / pfet).read_text("utf-8"), "utf-8")
     assert numbers.counts(root=tmp_path)["fit_length_count"] == len(lengths) + 1
 
 
