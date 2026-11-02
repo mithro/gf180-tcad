@@ -14,6 +14,9 @@ written by :func:`gf180tcad.io.write_json`). The meta file ties the artefact to 
   (:func:`gf180tcad.meshcut.window.rule_bounds` and its arguments);
 - ``node_count``, ``triangle_count``, ``boundary_line_count``, ``regions``, ``boundaries``:
   what the npz holds;
+- ``region_bounds_um``: each region of the full mesh with the bounds ``x_um`` and ``y_um`` of
+  its nodes in the full mesh, in um (so the lateral extent of the body, and of the source and
+  drain beside the gate, is read from the artefact, not drawn: issue #128);
 - ``npz_sha256`` and ``size_bytes``: the npz's sha256 and its size in bytes (there is no size
   cap: the size is recorded, never refused);
 - ``source`` (``cache`` or ``regenerated``), ``units``, ``net_doping`` (how
@@ -48,6 +51,7 @@ META_KEYS = (
     "net_doping",
     "node_count",
     "npz_sha256",
+    "region_bounds_um",
     "regions",
     "size_bytes",
     "source",
@@ -60,11 +64,19 @@ JOB_KEYS = ("cv_meta_sha256", "device", "geometry_id", "params", "tree")
 """The keys of its ``job`` record, sorted."""
 WINDOW_KEYS = ("rule", "x_um", "y_um")
 """The keys of its ``window`` record, sorted."""
+BOUNDS_KEYS = ("x_um", "y_um")
+"""The keys of each region's record in ``region_bounds_um``, sorted."""
 RULE_KEYS = ("depth_um", "gate_x_um", "kx", "poly_top_um", "surface_um")
 """The keys of the window's ``rule``: the arguments of ``rule_bounds``, sorted."""
 SOURCES = ("cache", "regenerated")
 """Where the full mesh came from: pulled from the output cache, or regenerated in the sandbox."""
-UNITS = {"net_doping_cm3": "cm^-3", "nodes_cm": "cm", "um_per_mesh_unit": 1e4, "window": "um"}
+UNITS = {
+    "net_doping_cm3": "cm^-3",
+    "nodes_cm": "cm",
+    "region_bounds_um": "um",
+    "um_per_mesh_unit": 1e4,
+    "window": "um",
+}
 """The units of the members and of the window bounds."""
 NET_DOPING = (
     "Donors - Acceptors of the 2D job's own profiles (gplugins.devsim.doping, numpy form) at "
@@ -144,6 +156,13 @@ def check_meta(meta: Mapping) -> None:
         _count(meta[k], k)
     _names(meta["regions"], "regions")
     _names(meta["boundaries"], "boundaries")
+    bounds = meta["region_bounds_um"]
+    if not isinstance(bounds, dict) or not set(meta["regions"]) <= set(bounds):
+        _fail(f"region_bounds_um must map every region of {meta['regions']} to its bounds")
+    for name, b in bounds.items():
+        _keys(b, BOUNDS_KEYS, f"region_bounds_um.{name}")
+        _pair(b["x_um"], f"region_bounds_um.{name}.x_um")
+        _pair(b["y_um"], f"region_bounds_um.{name}.y_um")
     if meta["source"] not in SOURCES:
         _fail(f"source must be one of {list(SOURCES)}, is {meta['source']!r}")
     if meta["units"] != UNITS:
@@ -174,9 +193,11 @@ def write(
     full_mesh_triangle_count: int,
     rule: Mapping[str, object],
     source: str,
+    region_bounds_um: Mapping[str, Mapping[str, tuple[float, float]]],
 ) -> dict:
     """Write the artefact of ``win`` (which must carry ``net_doping_cm3``) and its meta into
-    ``out_dir``; return the meta record, checked with :func:`check_meta`."""
+    ``out_dir``; return the meta record, checked with :func:`check_meta`. ``region_bounds_um``
+    is :func:`gf180tcad.meshcut.job.region_bounds` of the full mesh."""
     if win.net_doping_cm3 is None:
         raise ValueError("the window has no net_doping_cm3; set it with with_net_doping")
     out_dir = Path(out_dir)
@@ -192,6 +213,10 @@ def write(
         "net_doping": NET_DOPING,
         "node_count": len(win.node_id),
         "npz_sha256": _sha256(out_dir / meshcut.ARTEFACT),
+        "region_bounds_um": {
+            name: {k: list(v) for k, v in sorted(b.items())}
+            for name, b in sorted(region_bounds_um.items())
+        },
         "regions": list(win.regions),
         "size_bytes": (out_dir / meshcut.ARTEFACT).stat().st_size,
         "source": source,
