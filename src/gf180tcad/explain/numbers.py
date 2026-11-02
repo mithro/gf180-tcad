@@ -190,7 +190,7 @@ VALIDATION = "results/tcad/validation"
 CHECKS = {
     "plateau_acc": "the flat part at the most negative gate voltage",
     "plateau_inv": "the flat part at the most positive gate voltage",
-    "dv_dep": "the gate voltage where the curve falls halfway from its most negative flat part to its minimum",
+    "dv_dep": "the voltage where the curve falls halfway from its negative-voltage flat part to its minimum",
     "dv_inv": "the gate voltage where the curve climbs back through that halfway level",
 }
 
