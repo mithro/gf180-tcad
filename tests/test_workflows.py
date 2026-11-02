@@ -176,3 +176,32 @@ def test_superseded_pull_request_runs_are_cancelled_and_others_never(name):
         f"  group: {prefix}-${{{{ github.event_name == 'pull_request' && github.ref || github.sha }}}}",
         "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
     ]
+
+
+def _linkcheck_text() -> str:
+    return "\n".join(_lines("linkcheck.yml"))
+
+
+def test_linkcheck_steps_run_the_tested_script_not_inline_shell():
+    """The status handling and the number check live in tools/linkcheck_report.py (unit-tested in
+    tests/test_linkcheck_report.py), so the workflow carries no jq, gh loop or heredoc for them."""
+    text = _linkcheck_text()
+    assert "tools/linkcheck_report.py report --status" in text
+    assert "tools/linkcheck_report.py numbers --repo" in text
+    assert "tools/linkcheck_report.py fetch-state" in text
+    assert "jq " not in text
+    assert "gh api" not in text
+
+
+def test_linkcheck_keeps_timeout_counts_only_on_scheduled_runs():
+    lines = _lines("linkcheck.yml")
+    text = "\n".join(lines)
+    # The counts are read, written and uploaded only when the event is "schedule".
+    assert "github.event_name == 'schedule' && '--previous " in text
+    assert "if: github.event_name == 'schedule'" in text
+    assert "if: always() && github.event_name == 'schedule'" in text
+    assert "name: linkcheck-timeouts" in text  # tools/linkcheck_report.py ARTIFACT
+    # Reading the previous run's artifact needs actions: read, granted to the job only.
+    job = "\n".join(_jobs(lines)["linkcheck"])
+    assert "      contents: read\n      actions: read\n" in job
+    assert "actions: read" not in text.split("jobs:")[0]
