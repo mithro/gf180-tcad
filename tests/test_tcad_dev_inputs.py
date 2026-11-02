@@ -369,7 +369,7 @@ def test_build_refuses_a_builder_without_driver_options(tmp_path):
         (BUILDKIT_IMAGE, None),
         (None, BUILDKIT_IMAGE),
         (BUILDKIT_IMAGE, BUILDKIT_IMAGE, None),
-        (None, None),
+        (None, BUILDKIT_IMAGE, BUILDKIT_IMAGE),
     ],
 )
 def test_build_refuses_a_multi_node_builder_with_a_node_without_driver_options(tmp_path, images):
