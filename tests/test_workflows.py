@@ -108,6 +108,21 @@ def test_crosscheck_runs_the_sandbox_card_fidelity_test():
     assert lines.index("      - run: uv sync --locked") < i
 
 
+def test_crosscheck_sandbox_check_waits_for_the_slice():
+    """The sandbox check polls for the slice (0.5 s, up to 20 s) instead of a fixed sleep."""
+    text = "\n".join(_lines("crosscheck.yml"))
+    start = text.index("name: Sandbox check")
+    step = text[start : text.index("      - name:", start + 1)]
+    assert "          sleep 3\n" not in step
+    assert "for _ in $(seq 40); do" in step and "sleep 0.5" in step
+    assert "systemctl show gf180-tcad.slice -p ActiveState --value" in step
+    assert 'compgen -G "$slice/docker-*.scope"' in step
+    assert "gf180-tcad.slice is not active 20 s after the container started" in step
+    # the assertions stay as strict
+    assert "'^slice memory.max=137438953472 memory.swap.max=0 pids.max=32768$'" in step
+    assert "'^memory.max=4294967296$'" in step
+
+
 def test_crosscheck_tcad_job():
     """crosscheck-tcad: submodule checkout, image by digest, temporary tree root, --kind tcad."""
     lines = _lines("crosscheck.yml")

@@ -98,10 +98,17 @@ jobs:
             sh -c 'cat /proc/self/cgroup; for f in memory.max memory.swap.max pids.max cpu.max; do echo "$f=$(cat /sys/fs/cgroup/$f)"; done; python3 -W error -c "import numpy._core._multiarray_umath as m; print(\"numpy dispatch enabled=\" + \",\".join(f for f in m.__cpu_dispatch__ if m.__cpu_features__.get(f)))"; sleep 5' \
             > "$LOGS/sandbox-check.txt" 2>&1 &
           pid=$!
-          sleep 3
+          # Wait up to 20 s (every 0.5 s) for the slice to be active with the container scope in it
           # "gf180-tcad.slice" nests as gf180.slice/gf180-tcad.slice; ask systemd for the path
-          cg="$(systemctl show gf180-tcad.slice -p ControlGroup --value)"
-          slice="/sys/fs/cgroup$cg"
+          cg=""; slice=""
+          for _ in $(seq 40); do
+            state="$(systemctl show gf180-tcad.slice -p ActiveState --value)"
+            cg="$(systemctl show gf180-tcad.slice -p ControlGroup --value)"
+            slice="/sys/fs/cgroup$cg"
+            if [ "$state" = active ] && [ -n "$cg" ] && compgen -G "$slice/docker-*.scope" > /dev/null; then break; fi
+            sleep 0.5
+          done
+          [ "$state" = active ] || echo "::error::gf180-tcad.slice is not active 20 s after the container started (ActiveState=$state)"
           {
             echo "## host: gf180-tcad.slice while a sandbox container runs"
             systemctl show gf180-tcad.slice -p ActiveState -p MemoryMax -p MemorySwapMax -p TasksMax -p ControlGroup
