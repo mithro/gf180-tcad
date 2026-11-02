@@ -1953,3 +1953,82 @@ def test_crossing_gap_is_weighed_by_the_allowed_gap():
                 v = e["verdicts"][check]
                 scaled = e["residuals"][f"{check}_scaled"]
                 assert math.isclose(scaled, v["dv_v"] / v["tolerance_v"]), (device, gid, check)
+
+
+def test_cost_is_half_the_sum_of_the_squared_residuals():
+    """The page's cost equation: the optimiser's cost is half the sum of the squares of every
+    geometry's residuals (flat-part relative errors and crossing gaps over the tolerance)."""
+    for device in _FITS:
+        doc = _fit(device)
+        res = []
+        for e in doc["per_geometry"].values():
+            r = e["residuals"]
+            res += [
+                *r["plateau_acc_rel"],
+                *r["plateau_inv_rel"],
+                r["dv_dep_scaled"],
+                r["dv_inv_scaled"],
+            ]
+        assert len(res) == doc["optimiser"]["residuals"], device
+        assert math.isclose(
+            0.5 * math.fsum(x * x for x in res), doc["optimiser"]["cost"], rel_tol=1e-9
+        )
+
+
+def test_compare_figure_marks_what_the_fit_compares():
+    """The flat parts the fit compares are shaded from the result file's residual voltages, and
+    each curve's crossings are marked at the result file's voltages."""
+    from gf180tcad.explain import figures
+
+    rec = _fit("nfet_05v0")["per_geometry"][figures.REGIONS_GEOMETRY]
+    acc, inv = rec["residuals"]["plateau_acc_u"], rec["residuals"]["plateau_inv_u"]
+    for palette in figures.PALETTES:
+        (ax,) = figures.calibration_compare_figure(palette).axes
+        spans = sorted(
+            (p.get_x(), p.get_x() + p.get_width()) for p in ax.patches if p.get_width() > 0
+        )
+        assert spans == [(min(acc), max(acc)), (min(inv), max(inv))]
+        marks = {line.get_label(): list(line.get_xdata()) for line in ax.get_lines()}
+        sp, tc = rec["spice_regions"], rec["tcad_crossings"]
+        assert marks[figures.COMPARE_MARKS["spice"]] == [sp["u_dep"], sp["u_inv"]]
+        assert marks[figures.COMPARE_MARKS["tcad"]] == [tc["u_dep"], tc["u_inv"]]
+
+
+def test_pfet_figure_draws_the_shortest_and_longest_fit_gates():
+    """One panel per end of the pfet's fit lengths, on the true gate voltage (−u for the pfet),
+    the SPICE typical and the fitted curves read by the shared readers."""
+    from gf180tcad.devices import DEVICES
+    from gf180tcad.explain import figures
+
+    pol = DEVICES["pfet_05v0"].polarity
+    fit = _fit("pfet_05v0")["per_geometry"]
+    by_l = sorted(fit, key=lambda g: fit[g]["geometry"]["l_um"])
+    assert figures.pfet_geometries() == (by_l[0], by_l[-1])
+    for palette in figures.PALETTES:
+        axes = figures.calibration_pfet_figure(palette).axes
+        assert len(axes) == len(figures.pfet_geometries())
+        for ax, gid in zip(axes, figures.pfet_geometries(), strict=True):
+            c = figures.cv_curves("pfet_05v0", "calibrated", gid)
+            xs = [list(line.get_xdata()) for line in ax.get_lines()]
+            assert list(pol * c["u_spice"]) in xs and list(pol * c["u"]) in xs, gid
+            assert ax.get_xlabel() == "gate voltage (V)"
+
+
+def test_calibration_figures_are_registered():
+    from gf180tcad.explain import figures
+
+    for name in ("calibration-compare", "calibration-pfet"):
+        assert name in figures.FIGURES, name
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark")
+        assert f"x_fig_{name.replace('-', '_')}_scale" not in figures.substitutions()
+        assert f"/_generated/explained/{name}-light.svg" in CALIBRATION_PAGE.read_text("utf-8")
+
+
+def test_calibration_page_numbers_its_figures():
+    """Owner rule (2026-11-03): each figure has a name and the text refers to it by number."""
+    text = CALIBRATION_PAGE.read_text("utf-8")
+    names = re.findall(r"^:name: (fig-[\w-]+)$", text, re.MULTILINE)
+    assert len(names) == text.count(":figclass: only-light") and len(set(names)) == len(names)
+    for name in names:
+        assert f"{{numref}}`{name}`" in text or f"<{name}>`" in text, name

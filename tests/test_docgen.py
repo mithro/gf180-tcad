@@ -69,6 +69,8 @@ EXPLAINED_FIGURES = [
     "cv-regions",
     "band-regimes",
     "calibration-limits",
+    "calibration-compare",
+    "calibration-pfet",
     "cv-parts",
 ]
 
