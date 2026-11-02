@@ -404,12 +404,13 @@ def fit_geometries(device: str, root: Path = ROOT) -> dict[str, float]:
 
 def fit_table(device: str, root: Path = ROOT) -> str:
     """A Markdown table of :func:`fits` of ``device``: one row per fitted number, its lower
-    limit, start, fitted value and upper limit."""
+    limit, start, fitted value and upper limit. The unit is in the row label and the cells hold
+    the values alone, so the five columns fit a phone's width."""
     rows = ["| Number | Lower limit | Start | Fitted | Upper limit |", "|---|---|---|---|---|"]
     for f in fits(device, root):
         words, unit, most = TUNABLES[f.name]
-        cells = (shortest(v, unit, most) for v in (f.lower, f.start, f.fitted, f.upper))
-        rows.append(f"| {words} | " + " | ".join(cells) + " |")
+        cells = (shortest(v, "", most) for v in (f.lower, f.start, f.fitted, f.upper))
+        rows.append(f"| {words} ({unit}) | " + " | ".join(cells) + " |")
     return "\n".join(rows)
 
 

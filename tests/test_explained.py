@@ -1788,8 +1788,9 @@ def test_calibration_table_from_result_file():
         for row, name in zip(rows[2:], numbers.TUNABLES, strict=True):
             words, unit, most = numbers.TUNABLES[name]
             lo, hi = doc["bounds"][name]
-            want = [words] + [
-                numbers.shortest(v, unit, most)
+            # The unit sits in the row label, so the cells are narrow enough for a phone.
+            want = [f"{words} ({unit})"] + [
+                numbers.shortest(v, "", most)
                 for v in (lo, doc["start"][name], doc["values"][name], hi)
             ]
             assert [c.strip() for c in row.strip("|").split("|")] == want, (device, name)
@@ -1804,8 +1805,8 @@ def test_fit_table_follows_an_edited_result_file(tmp_path):
     (root / _FITS["pfet_05v0"]).write_text(json.dumps(doc), "utf-8")
     table = numbers.fit_table("pfet_05v0", root=root)
     assert table != numbers.fit_table("pfet_05v0")
-    assert "| 16.25\u00a0nm |" in table and "| −0.3\u00a0V |" in table
-    assert "| 0.3\u00a0V |" in table
+    assert "| Oxide thickness (nm) |" in table and "| 16.25 |" in table
+    assert "| −0.3 |" in table and "| 0.3 |" in table
 
 
 def test_shortest_keeps_the_value():
