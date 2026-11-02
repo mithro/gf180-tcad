@@ -5,9 +5,5 @@ Source: {repo}`src/gf180tcad/imagefig.py`.
 ```{eval-rst}
 .. automodule:: gf180tcad.imagefig
 
-.. autodata:: gf180tcad.imagefig.STAGES
-
-.. autodata:: gf180tcad.imagefig.BOXES
-
 .. autodata:: gf180tcad.imagefig.STYLE
 ```
