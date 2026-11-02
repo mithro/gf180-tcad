@@ -304,6 +304,9 @@ where
 The flat-band shift is in true-sign gate voltage for both transistors. The pfet card sets no
 TOXP, so its TOXP follows TOXE and both oxide bounds move.
 
+**What a fit leaves out.** A 1D C–V fit takes no VSAT, TOXM or binning line of a corner.
+The corner table ({repo}`data/pdk_corners.json`) lists each with its card line.
+
 **What the summary reports.** For each fitted number it gives the typical value and the value at
 each corner. It names the corners of the lowest and the highest value. The spread is given by
 {math:numref}`eq-corner-spread`. A lowest or highest value on a bound of its fit is reported as
