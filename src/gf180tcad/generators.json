@@ -90,6 +90,7 @@
   "trees": {
     "tcad/calibration": "gf180tcad.calibrate.__main__",
     "tcad/meshconv": "gf180tcad.tcad.__main__",
+    "tcad/meshes/stable": "gf180tcad.meshcut.__main__",
     "tcad/moscap1d": "gf180tcad.tcad.__main__",
     "tcad/moscap2d": "gf180tcad.tcad.__main__",
     "tcad/validation": "gf180tcad.calibrate.__main__"

@@ -47,9 +47,11 @@ WRITERS = {
     "tcad/meshconv": TCAD_MAIN,
     "tcad/calibration": CALIBRATE_MAIN,
     "tcad/validation": CALIBRATE_MAIN,
+    "tcad/meshes/stable": MESHCUT_MAIN,
 }
-# The tree roots of the plan's results layout (Global Constraints, "Result files").
-TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation")
+# The tree roots of the plan's results layout (Global Constraints, "Result files"), and the
+# per-image tree of reduced mesh artefacts (renders plan, Task R0).
+TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation", "meshes/stable")
 REGENERATE = (
     "regenerate the tree for each device with `uv run --locked python -m ...`: "
     "moscap1d: `gf180tcad.tcad moscap --device <device> --dim 1 --params start` (and "
@@ -61,7 +63,9 @@ REGENERATE = (
     "results/tcad/meshconv`; "
     "calibration: `gf180tcad.calibrate run --device <device> --out results/tcad/calibration`; "
     "validation (after the calibration is committed): `gf180tcad.calibrate validate --device "
-    "<device> --out results/tcad/validation`; then `make manifest`. A tree whose data are not "
+    "<device> --out results/tcad/validation`; "
+    "meshes/stable: `gf180tcad.meshcut cut --job results/tcad/moscap2d/<device>/calibrated/<gid> "
+    "--out results/tcad/meshes/stable` per committed artefact; then `make manifest`. A tree whose data are not "
     "regenerated is restamped with `uv run --locked python tools/restamp-tcad-provenance "
     "results/tcad/<tree>` and recorded on docs/reproduce/index.md (tcad-provenance)"
 )
@@ -645,16 +649,38 @@ def _result_kinds(root: Path) -> list[str]:
     return sorted(p.name for p in root.iterdir() if p.is_dir() and p.name in tcad.RESULTS_IMAGE)
 
 
+def _expected_images(root: Path) -> dict[str, str]:
+    """The image name of each result kind of a committed tree root: RESULTS_IMAGE for the MOS
+    capacitor kinds; for a reduced mesh artefact tree ``meshes/<image>``, ``<image>`` under the
+    kind ``meshes`` (the image that made its source 2D jobs, in which the cut runs)."""
+    if _key(root).startswith("tcad/meshes/"):
+        return {"meshes": root.name}
+    kinds = _result_kinds(root)
+    assert kinds, root
+    return {k: tcad.RESULTS_IMAGE[k] for k in kinds}
+
+
 def test_committed_results_come_from_the_results_image():
     """Each committed result kind was made by its image of RESULTS_IMAGE: 1D on dev HEAD, 2D on
-    the stable image (docs/reproduce/image.md, "Which image makes which results")."""
+    the stable image (docs/reproduce/image.md, "Which image makes which results"). A reduced
+    mesh artefact tree is cut in the image its tree is named after, which made its 2D jobs."""
     for root in _committed_tree_roots():
         committed = json.loads((root / PROVENANCE_NAME).read_bytes())
-        kinds = _result_kinds(root)
-        assert kinds, root
-        assert {k: v["name"] for k, v in committed["images"].items()} == {
-            k: tcad.RESULTS_IMAGE[k] for k in kinds
-        }, f"{root.relative_to(REPO)}: {REGENERATE}"
+        assert {k: v["name"] for k, v in committed["images"].items()} == _expected_images(
+            root
+        ), f"{root.relative_to(REPO)}: {REGENERATE}"
+
+
+def test_meshes_tree_is_cut_in_the_image_of_its_source_jobs():
+    """results/tcad/meshes/<image>: its artefacts' 2D jobs were made on <image> (the moscap2d
+    tree's recorded image), and the tree records <image> with the pinned reference."""
+    roots = [r for r in _committed_tree_roots() if _key(r).startswith("tcad/meshes/")]
+    assert roots, "no committed reduced mesh artefact tree"
+    source = json.loads((TCAD_RESULTS / "moscap2d" / PROVENANCE_NAME).read_bytes())
+    for root in roots:
+        committed = json.loads((root / PROVENANCE_NAME).read_bytes())
+        assert source["images"]["moscap2d"]["name"] == root.name
+        assert committed["images"]["meshes"]["ref"] == tcad.image_ref(root.name)
 
 
 def test_committed_tcad_provenance_current():
@@ -665,9 +691,7 @@ def test_committed_tcad_provenance_current():
             f"{root.relative_to(REPO)}/provenance.json names generator "
             f"{committed.get('generator')!r}, not its writer {writer}; {REGENERATE}"
         )
-        current = tcad.tree_provenance(
-            root, {k: tcad.RESULTS_IMAGE[k] for k in _result_kinds(root)}, generator=writer
-        )
+        current = tcad.tree_provenance(root, _expected_images(root), generator=writer)
         assert committed == current, (
             f"{root.relative_to(REPO)}/provenance.json differs from what the generator would "
             f"write ({sorted(k for k in current if committed.get(k) != current[k])}); {REGENERATE}"
