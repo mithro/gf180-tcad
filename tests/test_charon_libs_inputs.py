@@ -417,3 +417,20 @@ def test_build_creates_the_16g_builder_in_the_slice(tmp_path):
         f"--driver-opt image={BUILDKIT_IMAGE} --driver-opt memory=16g "
         "--driver-opt memory-swap=16g --driver-opt cgroup-parent=gf180-tcad.slice"
     )
+
+
+def test_interpreter_is_copied_without_rsync():
+    """The base image has no rsync; Charon's Interpreter.cmake ignores the failed rsync and
+    leaves no charonInterpreter, so the probe tests could not convert their decks."""
+    text = (LIBS / "patches" / "0005-interpreter-copy-without-rsync.patch").read_text("utf-8")
+    removed = [ln for ln in text.splitlines() if ln.startswith("-") and not ln.startswith("---")]
+    added = [ln for ln in text.splitlines() if ln.startswith("+") and not ln.startswith("+++")]
+    assert len(removed) == 1 and "rsync" in removed[0]
+    assert not any("rsync" in ln for ln in added)
+    copy = " ".join(added)
+    assert (
+        "file (COPY ${CMAKE_SOURCE_DIR}/scripts/charonInterpreter DESTINATION src/interpreter"
+        in copy
+    )
+    for name in ("generateParserDocumentation", "parsers", "modifiers"):
+        assert f"--exclude {name}" in removed[0] and f"PATTERN {name} EXCLUDE" in copy, name

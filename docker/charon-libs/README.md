@@ -14,9 +14,10 @@ The patches under `patches/` change upstream source code, so each one keeps the 
 the files it changes, not the repository's Apache-2.0 grant. Its first line is the
 `SPDX-License-Identifier`. These patches change Charon and are GPL-3.0-or-later:
 
-- `0001-codata2018-constants.patch`.
+- `0001-codata2018-constants.patch`;
+- `0005-interpreter-copy-without-rsync.patch`.
 
-These patches change Trilinos packages (Kokkos, SEACAS, Teuchos and others) and are
+These patches change the Trilinos packages Kokkos, SEACAS and Teuchos, and are
 BSD-3-Clause, the licence of those packages:
 
 - `0002-kokkos-include-cstdint.patch`;
