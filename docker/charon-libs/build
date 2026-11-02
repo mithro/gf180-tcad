@@ -19,11 +19,14 @@
 set -euo pipefail
 
 BUILDKIT_IMAGE="moby/buildkit:v0.34.0@sha256:b059f8d7226d0b326bc871af489a5dddf65e36af4d20d14251b072974d9ee87c"
-# GF180TCAD_BUILDER: use another (for example a CPU- and memory-limited) docker-container builder
-# of the same BuildKit image on a shared host; the image does not depend on the builder's limits.
-# Either builder, if it exists, must use the docker-container driver and $BUILDKIT_IMAGE (checked
-# below), or the build refuses.
-BUILDER="${GF180TCAD_BUILDER:-buildkit_v0.34.0_gf180tcad}"
+# The Trilinos compile needs a memory-limited builder: the default one, created on first use, is a
+# docker-container builder of $BUILDKIT_IMAGE in the systemd slice gf180-tcad.slice with 16 GiB
+# of memory and no swap. GF180TCAD_BUILDER names another builder of the same BuildKit image; the
+# image does not depend on the builder's limits. Either builder, if it exists, must use the
+# docker-container driver and $BUILDKIT_IMAGE and set a memory limit with no swap above it
+# (checked below), or the build refuses.
+BUILDER="${GF180TCAD_BUILDER:-gf180tcad-charon-16g}"
+BUILDER_MEMORY=16g
 NAME="ghcr.io/mithro/gf180-tcad-charon-libs"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
@@ -56,7 +59,8 @@ fi
 
 if ! INSPECT="$(docker buildx inspect "$BUILDER")"; then
     docker buildx create --name "$BUILDER" --driver docker-container \
-        --driver-opt "image=$BUILDKIT_IMAGE" >&2
+        --driver-opt "image=$BUILDKIT_IMAGE" --driver-opt "memory=$BUILDER_MEMORY" \
+        --driver-opt "memory-swap=$BUILDER_MEMORY" --driver-opt cgroup-parent=gf180-tcad.slice >&2
     INSPECT="$(docker buildx inspect "$BUILDER")"
 fi
 echo "$INSPECT" >&2
@@ -74,8 +78,19 @@ if [ -z "$OPTS" ] || grep -vqF "image=\"$BUILDKIT_IMAGE\"" <<<"$OPTS"; then
     echo "${OPTS:-  (no Driver Options)}" >&2
     exit 2
 fi
+# Every node has a memory limit, and memory-swap equal to it (no swap).
+while IFS= read -r line; do
+    mem="$(sed -n 's/.* memory="\([^"]*\)".*/\1/p' <<<" $line")"
+    swap="$(sed -n 's/.* memory-swap="\([^"]*\)".*/\1/p' <<<" $line")"
+    if [ -z "$mem" ] || [ "$swap" != "$mem" ]; then
+        echo "build: builder $BUILDER: no memory limit, or swap above it (memory='$mem'" \
+            "memory-swap='$swap'); create it as this script does:" >&2
+        echo "$line" >&2
+        exit 2
+    fi
+done <<<"$OPTS"
 
-INPUTS=(docker/charon-libs/Dockerfile docker/charon-libs/upstream.json
+INPUTS=(docker/charon-libs/Dockerfile docker/charon-libs/build docker/charon-libs/upstream.json
         docker/charon-libs/fetch_sources.py docker/charon-libs/inputs.py
         docker/charon-libs/build-charon.sh docker/charon-libs/opts docker/charon-libs/patches
         docker/IMAGE)
