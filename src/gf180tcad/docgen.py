@@ -1297,7 +1297,7 @@ README_PALETTE = "light"
 
 
 def readme_figures() -> dict[str, bytes]:
-    """``{file name: svg bytes}`` of every README figure of :data:`README_FIGURES`."""
+    """``{file name: svg bytes}`` of every README figure of ``README_FIGURES``."""
     from gf180tcad.explain import figures as explained_figures
 
     return {
