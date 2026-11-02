@@ -77,7 +77,7 @@ The pfet's numbers
 
 The {term}`model card` is the {term}`PDK`'s SPICE description of the transistor. Each start and
 limit of {numref}`fig-calibration-limits` is a model-card value, derived from one, or a project
-choice. The process files record which
+choice. The {term}`process files <process file>` record which
 ({repo}`nfet_05v0.toml <data/process/nfet_05v0.toml>`,
 {repo}`pfet_05v0.toml <data/process/pfet_05v0.toml>`; {ref}`the tunables <process-data-tunables>`).
 The two transistors share this table:
