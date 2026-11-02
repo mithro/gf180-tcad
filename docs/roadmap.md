@@ -8,9 +8,12 @@ the issue says what is open and what settles it. The phases are those of the
 
 ## Phase 2: the MOS capacitor
 
-- **2D validation of the calibrated stack**: the pfet W10/L2 cell and the nfet W1.6/L0.7 cell
-  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The 2D cells also move the depletion
-  crossing below the 1D stack's, which sets every 2D {term}`Disagree` verdict ({ref}`cv-agreement-validation`).
+- **2D validation of the calibrated stack** ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): every calibrated 2D cell that solves
+  is committed and compared. Its open parts are the L = 10 µm solve
+  ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)), the L = 2 µm AC solve ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)) and three 2D estimates
+  to measure ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). Every 2D plateau lies below SPICE ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+  The 2D cells also move the depletion crossing below the 1D stack's, which sets every 2D {term}`Disagree`
+  verdict ([issue #108](https://github.com/mithro/gf180-tcad/issues/108), {ref}`cv-agreement-validation`).
 - **2D {term}`MOS capacitor <MOSCAP>` at L = 2 µm**: its small-signal (AC) solve fails
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)).
 - **2D MOS capacitor at L = 10 µm**: its equilibrium solve fails
@@ -53,9 +56,9 @@ the issue says what is open and what settles it. The phases are those of the
   ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
   [issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The format of their
   {doc}`render manifest <reproduce/render-manifest>` is defined and tested.
-- **Explainer pages** on the pn junction, the
-  transistor's parts, the MOS capacitor and the MOSFET
+- **Explainer pages** on the MOS capacitor and the MOSFET
   ({repo}`explainer plan <docs/superpowers/plans/2026-10-27-explainer-docs.md>`,
   [issue #46](https://github.com/mithro/gf180-tcad/issues/46)). The section
-  {doc}`explained/index` holds its pages on silicon, doping and carriers, and on energy bands
-  and the {term}`Fermi level`. It also explains the {term}`gate oxide` and {term}`poly-silicon`.
+  {doc}`explained/index` holds the basics. They cover silicon and carriers, energy bands and the
+  {term}`Fermi level`, and the {term}`pn junction`. They also cover the transistor's parts, the
+  {term}`gate oxide` and {term}`poly-silicon`.

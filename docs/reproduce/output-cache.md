@@ -8,18 +8,19 @@ Some generated files are too large to commit but take hours to regenerate: today
 fetch them instead of rerunning the job. It is effectively a shared cache for everyone
 ({repo}`design spec, section 9.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#91-output-cache-for-large-regenerable-artefacts>`).
 
-The cache holds seven objects, the `mesh.msh` of seven calibrated cells of
+The cache holds eight objects, the `mesh.msh` of ten calibrated cells of
 [issue #35](https://github.com/mithro/gf180-tcad/issues/35):
 
 | Cell | Mesh sha256 |
 |---|---|
 | nfet W10/L0.6 | `8dad0ca787dc…` |
-| nfet W10/L0.7 | `e0437cde0b28…` |
+| nfet W10/L0.7 and W1.6/L0.7 | `e0437cde0b28…` |
 | nfet W10/L1 | `3715e9d78507…` |
 | nfet W10/L2 | `95e3225699ce…` |
 | pfet W10/L0.5 | `1a8513e2d300…` |
 | pfet W10/L0.7 and W1.6/L0.7 | `c3d2585f18a2…` |
 | pfet W10/L1 | `62e0517082a3…` |
+| pfet W10/L2 | `f31e0f46e9bc…` |
 
 The meshes of the four committed 2D start jobs are not in it and are on no disk.
 They have to be regenerated before they can be pushed ({ref}`first population <output-cache-first-population>`).
@@ -35,6 +36,9 @@ They have to be regenerated before they can be pushed ({ref}`first population <o
   `tools/output-cache pull` writes a file only if its sha256 is that hash. Using the cache never
   changes a result or its provenance: {py:mod}`gf180tcad.outcache` is not a generator module,
   so it is not part of any {term}`generator_sha256`.
+- **One generator reads it.** The `cut` command of {py:mod}`gf180tcad.meshcut.__main__` cuts
+  the reduced mesh artefact of a 2D job. It fetches the job's mesh with a `tools/output-cache pull`
+  subprocess, before its sandboxed run, which has no network.
 - **The documentation build never fetches from it.** The build stays offline and uses only
   committed files.
 - No Git Large File Storage (git-LFS): it has bandwidth quotas. Each object is a plain git blob under 95 MB after

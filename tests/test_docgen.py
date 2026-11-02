@@ -56,7 +56,15 @@ _RENDER_EXPLAINED = textwrap.dedent(
 
 
 # Every explainer figure (test_explained_figures_all_deterministic holds the list complete).
-EXPLAINED_FIGURES = ["silicon-doping", "oxide-stack", "bands-stack", "bands-flat"]
+EXPLAINED_FIGURES = [
+    "silicon-doping",
+    "oxide-stack",
+    "bands-stack",
+    "bands-flat",
+    "parts-cell",
+    "junction-cell",
+    "junction-panels",
+]
 
 
 def test_explained_figures_all_deterministic():
