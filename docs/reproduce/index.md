@@ -357,6 +357,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `nfet_05v0` | `w10p0_l1p00` | both | 15169 |
 | `nfet_05v0` | `w10p0_l2p00` | qs | 14755 |
 | `nfet_05v0` | `w10p0_l2p00` | combine-qs | 3 |
+| `nfet_05v0` | `w1p6_l0p70` | both | 11812 |
 | `pfet_05v0` | `w10p0_l0p50` | both | 9701 |
 | `pfet_05v0` | `w10p0_l0p70` | both | 11888 |
 | `pfet_05v0` | `w10p0_l1p00` | both | 15279 |
@@ -369,6 +370,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `nfet_05v0` | `w10p0_l0p70` | 5.93 | 0 | 2026-10-27 15:01 |
 | `nfet_05v0` | `w10p0_l1p00` | 6.09 | 0 | 2026-10-27 19:51 |
 | `nfet_05v0` | `w10p0_l2p00` | 16.00 | 0 | 2026-10-28 00:32 |
+| `nfet_05v0` | `w1p6_l0p70` | 5.54 | 0 | 2026-10-28 18:24 |
 | `pfet_05v0` | `w10p0_l0p50` | 7.43 | 0 | 2026-10-28 03:18 |
 | `pfet_05v0` | `w10p0_l0p70` | 5.43 | 0 | 2026-10-28 06:38 |
 | `pfet_05v0` | `w10p0_l1p00` | 7.75 | 0 | 2026-10-28 10:55 |
@@ -496,7 +498,8 @@ Between the two hashes, two entries of the hashed file list differ.
 Every file on the 2D compute path is byte-identical, including all of `gplugins/devsim`.
 The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `make reproduce-quick` run above.
 
-**The pfet W10/L0.7, W10/L1 and W10/L2 jobs needed no restamp.** They ran at gplugins `0715c81` and `bf8f2dcc…`.
+**These jobs needed no restamp:** pfet W10/L0.7, W10/L1 and W10/L2, and nfet W1.6/L0.7.
+They ran at gplugins `0715c81` and `bf8f2dcc…`.
 Those are the stamps the folder already had, so the jobs left
 {repo}`results/tcad/moscap2d/provenance.json` unchanged.
 
@@ -643,8 +646,8 @@ rerun byte for byte locally by
 
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
 content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
-the sha256 the committed results name. It holds the meshes of the four calibrated nfet cells, W10/L0.6, W10/L0.7, W10/L1 and W10/L2;
-see {doc}`output-cache`.
+the sha256 the committed results name. It holds the meshes of the calibrated 2D nfet and pfet cells,
+W1.6/L0.7 included; {doc}`output-cache` lists them.
 
 ## Render manifest
 
