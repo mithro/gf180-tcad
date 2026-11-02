@@ -1645,8 +1645,9 @@ def test_cv_parts_labels_name_the_parameters_at_the_committed_marks():
     """Each part of the curve carries the parameter that sets it; the dip label points at the
     SPICE minimum and the shift arrow sits on the SPICE falling-side crossing, from the result
     file."""
-    from gf180tcad.explain import figures
     from matplotlib.patches import ArrowStyle
+
+    from gf180tcad.explain import figures
 
     numbers = _numbers()
     (ax,) = figures.cv_parts_figure("light").axes
