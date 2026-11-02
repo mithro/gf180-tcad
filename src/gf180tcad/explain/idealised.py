@@ -156,7 +156,6 @@ def abrupt_junction(x_cm, n_a_cm3, n_d_cm3, vbi_v, eps_r, eps0_f_per_cm, q_c):
     return {"charge_cm3": charge, "field_v_per_cm": field, "potential_v": psi}
 
 
-
 @_formula("ψ_B = V_t·ln(N_A/n_i)", f"{_SZE}, ch. 4 (the ideal MIS capacitor)")
 def bulk_potential(n_a_cm3, n_i_cm3, vt_v):
     """How far the Fermi level of a p-type body lies below the middle of the gap,

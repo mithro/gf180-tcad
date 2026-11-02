@@ -1412,9 +1412,7 @@ def test_regions_follow_the_committed_crossings():
         fig = figures.cv_regions_figure(palette)
         (ax,) = fig.axes
         spans = sorted(
-            (p.get_x(), p.get_x() + p.get_width())
-            for p in ax.patches
-            if p.get_width() > 0
+            (p.get_x(), p.get_x() + p.get_width()) for p in ax.patches if p.get_width() > 0
         )
         assert len(spans) == len(figures.REGIONS)
         edges = [b for _a, b in spans[:-1]]
@@ -1475,7 +1473,9 @@ def test_bulk_potential_is_the_bands_page_value():
     numbers = _numbers()
     from gf180tcad.explain import idealised
 
-    psi_b = idealised.bulk_potential(*(numbers.value(k) for k in ("n_ch_nfet_cal", "n_i_tcad", "vt_tcad")))
+    psi_b = idealised.bulk_potential(
+        *(numbers.value(k) for k in ("n_ch_nfet_cal", "n_i_tcad", "vt_tcad"))
+    )
     assert psi_b == pytest.approx(-numbers.value("fermi_body_nfet"), rel=1e-12)
 
 
