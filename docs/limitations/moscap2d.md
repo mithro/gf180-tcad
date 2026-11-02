@@ -370,13 +370,14 @@ The run record, with the exit code and the image, is on {ref}`tcad-provenance`.
 
 No job had an extended-precision fallback.
 
-One solve was accepted at round-off, on the ramp to the
-first QS point (+5 V) of pfet `w10p0_l0p70`. Its gate was at 4.487 V; the update was 2.6e-16 V, in the body.
-The +5 V point itself converged to the full tolerance, so no committed Cgg comes from that solve.
-Its `cv.meta.json` records it in `qs_roundoff_accepted` ({ref}`moscap2d-solver` gives the conditions).
-That entry's `vg` is a ramp bias, not a grid point ([issue #102](https://github.com/mithro/gf180-tcad/issues/102)).
+Two jobs each accepted one solve at round-off: pfet `w10p0_l0p70` and pfet `w1p6_l0p70`, on the same mesh.
+In each job the solve is on the ramp to the first QS point (+5 V).
+Its gate was at 4.487 V; the update was 2.6e-16 V, in the body.
 
-The pfet `w1p6_l0p70` job, on the same mesh, records the same entry.
+The +5 V point itself converged to the full tolerance, so no committed Cgg comes from that solve.
+Each job's `cv.meta.json` records it in `qs_roundoff_accepted` ({ref}`moscap2d-solver` gives the conditions).
+The two entries are identical ({test}`tests/test_calibrate_cv.py::test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell`).
+The entry's `vg` is a ramp bias, not a grid point ([issue #102](https://github.com/mithro/gf180-tcad/issues/102)).
 
 Each meshed oxide is the calibrated value:
 16.05 nm for the nfet and 15.721 nm for the pfet. The meshes are not committed ({ref}`moscap2d-meshes`); the output cache
@@ -397,11 +398,11 @@ Its comparison is the entry `two_d.w1p6_l0p70` of the
 {repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>`.
 A W-series at fixed L then tests the area scaling and the parasitic model, not the 2D solve.
 
-So the nfet W1.6/L0.7 comparison follows from the committed W10/L0.7 cell, and the job's comparison is the same.
+The nfet W1.6/L0.7 comparison therefore follows from the committed nfet W10/L0.7 cell, and the job's comparison is the same.
 The W10/L0.7 `cgg_per_um`
 ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.csv>`) times 1.6 µm
 is compared with the {term}`TT` {{ ngspice }} target by {py:func}`~gf180tcad.calibrate.cv.compare`.
-For W1.6/L0.7 the result is {term}`Disagree`
+For the nfet W1.6/L0.7 the result is {term}`Disagree`
 ({test}`tests/test_calibrate_cv.py::test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell`):
 
 | Check | Value | Verdict |
