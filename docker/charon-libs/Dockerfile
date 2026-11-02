@@ -73,7 +73,7 @@ USER 1000:1000
 ENV PATH=/opt/charon/bin:${PATH} \
     GF180TCAD_CHARON_BASE_IMAGE=${BASE_IMAGE}
 
-LABEL org.opencontainers.image.source="https://github.com/mithro/gf180-tcad/releases/tag/gf180-tcad/inputs/charon-20261102" \
+LABEL org.opencontainers.image.source="https://github.com/mithro/gf180-tcad" \
       org.opencontainers.image.title="gf180-tcad-charon-libs" \
       org.opencontainers.image.description="gf180-tcad base image plus Charon 2.2.0 and Trilinos built from source in /opt/charon" \
       org.opencontainers.image.licenses="GPL-3.0-or-later AND BSD-3-Clause AND LGPL-2.1-or-later AND Apache-2.0" \

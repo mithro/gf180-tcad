@@ -21,11 +21,11 @@ Every other file in this directory is Apache-2.0, like the rest of gf180-tcad.
 
 ## Corresponding source
 
-The image distributes Charon binaries, so its corresponding source is published with it:
+A published image distributes Charon binaries, so its corresponding source goes with it:
 
-- the input mirror release
-  [`gf180-tcad/inputs/charon-20261102`](https://github.com/mithro/gf180-tcad/releases/tag/gf180-tcad/inputs/charon-20261102)
-  holds the Charon, Trilinos and TriBITS tarballs named in `upstream.json`;
+- `upstream.json` names the Charon, Trilinos and TriBITS tarballs, each with its URL and sha256;
+- every `mirror_url` there points at the input mirror release `gf180-tcad/inputs/charon-20261102`,
+  which holds a copy of each file once the image is published;
 - this directory holds the patches, the opts file and the build scripts;
 - `/opt/charon/share/gf180tcad/SOURCES.json` in the image lists each of those files with its
   sha256, and `/opt/charon/share/doc/charon/` holds Charon's licence.
