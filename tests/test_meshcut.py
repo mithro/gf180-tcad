@@ -864,6 +864,10 @@ def test_host_command_refuses_an_artefact_over_budget(tmp_path, monkeypatch, ins
         meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.1, scratch=tmp_path / "s",
                             results_root=results)  # fmt: skip
     assert not out.exists()
+    # kept in the scratch directory, so M1 can measure its grid with the same command
+    for name in (meshcut.ARTEFACT, meshcut.META):
+        assert (tmp_path / "s" / name).is_file()
+    assert (tmp_path / "s" / meshcut.ARTEFACT).stat().st_size > 100
 
 
 def test_source_image_is_the_tree_s_recorded_image():
