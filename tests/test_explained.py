@@ -1743,3 +1743,41 @@ def test_cv_page_table_rows_are_the_registry():
     for start, fitted in zip(_START_KEYS, _FITTED_KEYS, strict=True):
         row = rf"^\|[^|\n]+\| \{{\{{ x_{start} \}}\}} \| \{{\{{ x_{fitted} \}}\}} \|$"
         assert re.search(row, text, re.MULTILINE), (start, fitted)
+
+
+# --- the SPICE model's quasi-static switches (cv-curve.md) -----------------------------------
+
+MODEL_CARD = ROOT / "data" / "explain" / "model_card.toml"
+
+
+def test_model_card_file_names_the_process_files_card():
+    """data/explain/model_card.toml reads the card that data/process/nfet_05v0.toml names (same
+    file and sha256), with the process file's model among its bins, and every bin holds the
+    values the registry prints. tests/tcad/test_process.py ties the bins to the card's length
+    bins and, in the sandbox, checks each line in the card."""
+    numbers = _numbers()
+    card = tomllib.loads(MODEL_CARD.read_text(encoding="utf-8"))
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text(encoding="utf-8"))
+    assert card["card"] == {k: proc["card"][k] for k in ("file", "sha256")}
+    bins = card["nfet_05v0"]
+    assert bins[proc["card"]["model"]]["model_line"] == proc["card"]["model_line"]
+    assert len(bins) == 2
+    for key in ("acnqsmod", "trnqsmod"):
+        n = numbers.REGISTRY[f"{key}_nfet"]
+        assert (n.kind, n.source) == ("committed", numbers.MODEL_CARD)
+        for model, b in bins.items():
+            assert numbers.value(n.name) == b[key]["value"], (model, key)
+            assert b[key]["card_line"] > b["model_line"], (model, key)
+
+
+def test_cv_page_says_quasi_static_only_when_both_switches_are_off():
+    """The page calls the SPICE capacitance quasi-static because both selectors are 0, which
+    turns BSIM4's non-quasi-static model off (manual section 8.1, appendix A)."""
+    numbers = _numbers()
+    text = CV_PAGE.read_text(encoding="utf-8")
+    assert "{{ x_acnqsmod_nfet }}" in text and "{{ x_trnqsmod_nfet }}" in text
+    assert (
+        "<lit-bsim4>" in text and "{repo}`model_card.toml <data/explain/model_card.toml>`" in text
+    )
+    assert "SPICE capacitance is\nquasi-static" in text
+    assert numbers.value("acnqsmod_nfet") == 0 and numbers.value("trnqsmod_nfet") == 0

@@ -445,6 +445,8 @@ At W10/L0.7 and W10/L1, in both devices, the 2D crossing lies below the 1D cross
 The gap is 241 mV at pfet W10/L0.7 and 149 mV at W10/L1. It is 171 and 104 mV at the same nfet cells.
 
 The shift shrinks with L, but the SPICE pfet edge moves faster with L.
+From L = 0.7 to 1 µm, the SPICE crossing moves +0.134 V and the 2D crossing +0.102 V
+({repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>`).
 The corner envelope also narrows, from 0.33 V wide at L = 0.7 µm to 0.29 V at 1 µm.
 At L = 1 µm the crossing leaves the envelope ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
 

@@ -58,8 +58,8 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
   {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
   `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
 - **The same bytes on another computer: only on some processors.** Byte-identical results are
-  guaranteed only on {term}`x86-64-v2` or newer hosts. The full reference is verified on an
-  Intel Xeon Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
+  guaranteed only on {term}`x86-64-v2` or newer hosts. The full reference is verified on the
+  local machine ([issue #144](https://github.com/mithro/gf180-tcad/issues/144)) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
   ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
   and that run did not have the {{ numpy }} fix described there.
 

@@ -83,13 +83,23 @@ $V_{bi}$ is {{ x_vbi_nfet }}.
 
 The {term}`depletion approximation` treats the region as fully emptied of carriers and the rest
 as neutral. It gives the width $W$ of the region, the {term}`depletion width`
-({ref}`Sze and Ng, ch. 2 <lit-sze>`). Here $q$ is the charge of one electron and
-$\varepsilon_{si}$ the permittivity of silicon. The permittivity sets how much charge a material
-holds at a given voltage, compared with a vacuum gap.
+({ref}`Sze and Ng, ch. 2 <lit-sze>`).
 
 $$
 W = \sqrt{\frac{2 \, \varepsilon_{si} \, V_{bi}}{q} \left( \frac{1}{N_A} + \frac{1}{N_D} \right)}
 $$
+
+where:
+
+- $\varepsilon_{si} = \varepsilon_r \, \varepsilon_0$ is the permittivity of silicon;
+- $\varepsilon_r$ is the relative permittivity of silicon, {{ x_eps_si_tcad }}. Silicon holds that
+  many times the charge of a vacuum gap at the same voltage;
+- $\varepsilon_0$ is the permittivity of vacuum, {{ x_eps0_tcad }};
+- $q$ is the elementary charge, the size of one electron's charge, {{ x_q_tcad }};
+- $V_{bi}$, $N_A$ and $N_D$ are the built-in potential and the two densities of the section above.
+
+The simulations of this repo use these three values
+({repo}`per_area.meta.json <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`).
 
 For the same idealised junction, $W$ is {{ x_w_dep_nfet }}. Both sides carry the same total
 charge. So the region reaches far into the lightly doped side and barely into the heavily doped
