@@ -138,4 +138,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution rules.
 
 ## Licence
 
-[Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0), see [LICENSE](LICENSE).
+[Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0), see [LICENSE](LICENSE), with one
+exception. The patches in [docker/charon-libs/patches/](docker/charon-libs/patches/) change
+Charon source code, so they are licensed GPL-3.0-or-later like Charon. They are not under the
+Apache-2.0 grant. [docker/charon-libs/README.md](docker/charon-libs/README.md) lists them.
