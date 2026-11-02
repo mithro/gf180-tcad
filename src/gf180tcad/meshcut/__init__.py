@@ -16,6 +16,10 @@ docs' mesh figure and the 3D renders draw the job's own mesh elements:
 - :mod:`gf180tcad.meshcut.__main__` is the command line: ``cut`` and ``regenerate`` on the
   host, ``cut-job`` and ``regenerate-job`` in the sandbox.
 
+The artefact has no size cap. Its size in bytes is measured when it is written and recorded in
+its meta file as ``size_bytes``; the design spec §10.1 records the owner's decision
+(2026-11-03). The window rule's defaults are :data:`WINDOW_KX` and :data:`WINDOW_DEPTH_UM`.
+
 The node coordinates stay in the mesh file's own unit, centimetres, so that every kept
 coordinate is the full mesh's double, unconverted. The unit comes from gplugins:
 ``third_party/gplugins/gplugins/devsim/get_simulation.py`` sets ``um_to_cm = 1e-4`` (line 38),
@@ -29,8 +33,11 @@ ARTEFACT = "mesh-window.npz"
 """File name of the reduced mesh artefact (an npz under ``results/tcad/meshes/``)."""
 META = "mesh-window.meta.json"
 """File name of the artefact's metadata (sorted-key JSON) beside it."""
-MAX_BYTES = 2_000_000
-"""Size budget of one artefact in bytes (design spec §10.1: at most 2 MB per job)."""
+WINDOW_KX = 0.25
+"""The window rule's default width: gate lengths kept on each side of the gate
+(:func:`gf180tcad.meshcut.window.rule_bounds`, renders plan Task R0)."""
+WINDOW_DEPTH_UM = 0.1
+"""The window rule's default depth below the silicon surface, in um."""
 FORMAT = 1
 """Version of the artefact's member set and metadata schema."""
 UM_PER_MSH_UNIT = 1e4

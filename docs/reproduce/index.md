@@ -653,6 +653,76 @@ content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a 
 the sha256 the committed results name. It holds the meshes of the calibrated 2D nfet and pfet cells,
 W1.6/L0.7 included; {doc}`output-cache` lists them.
 
+(mesh-artefact)=
+
+## Reduced mesh artefact
+
+A mesh figure of a 2D job is drawn from a committed reduced artefact, not from the full mesh.
+The command line {py:mod}`gf180tcad.meshcut.__main__` cuts a window around the gate out of the
+job's mesh, as {numref}`mesh-window-figure` shows. It writes the window's arrays to
+{py:data}`mesh-window.npz <gf180tcad.meshcut.ARTEFACT>` and their record to
+{py:data}`mesh-window.meta.json <gf180tcad.meshcut.META>`. Every kept element is an element of
+the full mesh, with its node coordinates copied bit for bit.
+
+```{figure} /_generated/explained/mesh-window-light.svg
+:name: mesh-window-figure
+:figclass: only-light
+:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below. A dashed rectangle covers the gate, the gate oxide and a thin strip of silicon under them, and reaches a little past each gate edge into the source and the drain.
+
+The mesh window (dashed) on the 2D cell of the {term}`nfet_05v0` with {term}`geometry id`
+`w10p0_l0p60`, cut along the gate's length. {{ x_fig_mesh_window_scale }}
+```
+
+```{figure} /_generated/explained/mesh-window-dark.svg
+:figclass: only-dark
+:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below. A dashed rectangle covers the gate, the gate oxide and a thin strip of silicon under them, and reaches a little past each gate edge into the source and the drain.
+
+The mesh window (dashed) on the 2D cell of the {term}`nfet_05v0` with {term}`geometry id`
+`w10p0_l0p60`, cut along the gate's length. {{ x_fig_mesh_window_scale }}
+```
+
+The window is set by one rule for every job
+({py:func}`gf180tcad.meshcut.window.rule_bounds`). Across the cell it follows
+{math:numref}`eq-mesh-window-x`, and in height {math:numref}`eq-mesh-window-y`.
+
+$$
+x_\mathrm{min} = x_\mathrm{L} - k_x L, \qquad x_\mathrm{max} = x_\mathrm{R} + k_x L
+$$ (eq-mesh-window-x)
+
+where
+
+- $x_\mathrm{min}$ and $x_\mathrm{max}$ are the left and right edges of the window, in µm;
+- $x_\mathrm{L}$ and $x_\mathrm{R}$ are the left and right edges of the gate, in µm;
+- $L = x_\mathrm{R} - x_\mathrm{L}$ is the gate length, in µm;
+- $k_x = 0.25$ is {py:data}`~gf180tcad.meshcut.WINDOW_KX`, the share of a gate length kept on
+  each side of the gate, dimensionless.
+
+$$
+y_\mathrm{min} = y_\mathrm{s} - d, \qquad y_\mathrm{max} = y_\mathrm{p}
+$$ (eq-mesh-window-y)
+
+where
+
+- $y_\mathrm{min}$ and $y_\mathrm{max}$ are the bottom and top of the window, in µm;
+- $y_\mathrm{s}$ is the height of the silicon surface, with heights growing upwards, in µm;
+- $y_\mathrm{p}$ is the height of the top of the gate polysilicon, in µm;
+- $d = 0.1$ is {py:data}`~gf180tcad.meshcut.WINDOW_DEPTH_UM`, the depth kept below the surface,
+  in µm.
+
+A triangle of the mesh is kept when its centroid lies inside the window
+({py:func}`gf180tcad.meshcut.window.cut`). So the edge of the cut follows the mesh elements.
+
+The artefact has no size cap. `cut` measures the file, records its size in the meta file as
+`size_bytes` and prints it
+({repo}`design spec §10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`).
+The meta file also records the sha256 of the full mesh, which must equal the job's committed
+`mesh_sha256`. No artefact is committed. The command for one job:
+
+```sh
+uv run --locked python -m gf180tcad.meshcut cut \
+  --job results/tcad/moscap2d/<device>/<params>/<gid> --out results/tcad/meshes/<image>
+```
+
 ## Render manifest
 
 A 3D render records the source, value and scale of every number it draws in its render
