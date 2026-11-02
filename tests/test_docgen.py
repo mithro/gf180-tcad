@@ -68,6 +68,7 @@ EXPLAINED_FIGURES = [
     "moscap-cv",
     "cv-regions",
     "band-regimes",
+    "mesh-window",
     "calibration-limits",
     "calibration-compare",
     "calibration-pfet",

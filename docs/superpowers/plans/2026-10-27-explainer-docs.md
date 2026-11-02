@@ -416,6 +416,10 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   the dip and the halfway level.
 - Glossary: accumulation, depletion, inversion, flat band. Their first uses are linked across
   the docs, in README.md (a glossary URL) and in docgen's check labels and Cox sentence.
+- API pages: `docs/_ext/api_links.py` links the first use in the rendered docstrings, in page
+  order (a `doctree-read` pass). No page has a sentence that only carries a link. The
+  `explain.figures`, `tcad.process` and `meshcut.__main__` pages lost theirs. The `REGIMES`
+  comment says "holes" again.
 
 **As built (E2c).**
 
@@ -436,8 +440,16 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   start dip shallower (tested from the committed curves); the sentences on how each curve is
   made sit in the fit section, with no quasi-static contrast (BSIM4's AC non-quasi-static model
   is off unless the card sets ACNQSMOD, manual ch. 8 and appendix A, and the card is not read
-  here). Left out: numbers break from their units at 400 px on every explainer page, a
-  site-wide change to `numbers.format_value` filed as issue #119.
+  here). Numbers broke from their units at 400 px on every explainer page; fixed site-wide in
+  the PR for issue #119: {repo}`src/gf180tcad/explain/numbers.py` `format_value` joins value and unit with U+00A0 and puts
+  U+2060 after the slash of a compound unit, and the Sphinx extension {repo}`docs/_ext/unit_join.py`
+  does the same for values typed by hand and for the generated result pages.
+- Shortcut sweep: the card's ACNQSMOD and TRNQSMOD in both nfet bins (`nfet_06v0.0`, lines
+  37060 and 37316; `nfet_06v0.1`, lines 37398 and 37654; all 0) are read from
+  `data/explain/model_card.toml`, registry entries
+  `acnqsmod_nfet` and `trnqsmod_nfet`; a sandbox test checks each line in the image's card.
+  The page now says, by substitution, that the SPICE capacitance is quasi-static (manual
+  §8.1 and appendix A).
 - The SPICE curve is described as the equations of BSIM4's capacitance model (manual ch. 7);
   the frequency of the `cv` sweep is not printed, since no committed data file holds it.
 - The landing page now has one heading per tier, so each list stays within seven items;
@@ -473,9 +485,11 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   the reused `moscap-cell` for what stays fixed, `calibration-compare` (the flat parts the fit
   compares, shaded from the result file's residual voltages, and both curves' crossings),
   the reused `moscap-cv` for the corner band, and `calibration-pfet` (the pfet at its shortest and
-  longest fit gates, on the true gate voltage). `numfig` is on; `docs/_ext/figure_numbers.py`
-  numbers named figures only (the light twins) and counts from 1 on each page. The cost
-  equation is three short display blocks with a "where" list of every symbol and its unit; a
+  longest fit gates, on the true gate voltage). The site's `docs/_ext/theme_figures.py` (PR
+  #140) merges each light/dark pair into one numbered figure, so each light twin carries the
+  `:name:` and its dark twin follows it with the same caption. The cost equation is three
+  labelled display blocks (`eq-calibration-cost`, `-rc`, `-gap`) in the spec §10.3 house form,
+  each cited with `{math:numref}` and followed by a "where" list of every symbol and its unit; a
   test checks the committed cost is half the sum of the squared committed residuals.
 - The fit verdicts per gate length are a generated table of `per_geometry` of both result files.
   Tests also pin two sentences of the page to the data: the 2D cells reuse the 1D fit

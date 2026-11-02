@@ -58,8 +58,8 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
   {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
   `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
 - **The same bytes on another computer: only on some processors.** Byte-identical results are
-  guaranteed only on {term}`x86-64-v2` or newer hosts. The full reference is verified on an
-  Intel Xeon Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
+  guaranteed only on {term}`x86-64-v2` or newer hosts. The full reference is verified on the
+  local machine ([issue #144](https://github.com/mithro/gf180-tcad/issues/144)) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
   ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
   and that run did not have the {{ numpy }} fix described there.
 
@@ -194,9 +194,11 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)). The spec's
   {repo}`section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`
   draws the mesh pictures as part of the 3D renders of the simulated processes. They come from a
-  committed reduced mesh artefact, with provenance tied to each job's mesh sha256. No render and
-  no mesh picture exists ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The
-  {ref}`output cache <output-cache>` holds none of the committed 2D jobs' meshes.
+  committed {ref}`reduced mesh artefact <mesh-artefact>`, with provenance tied to each job's
+  mesh sha256. No artefact, render or mesh picture is committed
+  ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The
+  {ref}`output cache <output-cache>` holds the meshes of the calibrated 2D cells, not those of
+  the 2D start jobs.
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two

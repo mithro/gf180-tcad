@@ -82,4 +82,6 @@ The method {py:meth}`gf180tcad.render.manifest.Manifest.verify` reports each of 
 - a value read again that differs from the recorded value;
 - a derived value that differs when the function is evaluated again;
 - a scale other than 1 without its exaggeration statement;
-- an exaggeration statement that no entry's scale matches.
+- an exaggeration statement that ends ", not to scale" and that no entry's scale matches.
+
+The check leaves any other statement of the `exaggeration` list alone.

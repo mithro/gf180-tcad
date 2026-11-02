@@ -1,10 +1,8 @@
 # {py:mod}`gf180tcad.explain.figures`
 
-Source: {repo}`src/gf180tcad/explain/figures.py`. Its figures are drawn with {{ matplotlib }}. Among
-them are the {term}`accumulation`, {term}`depletion`, {term}`inversion` and {term}`flat band`
-figures of {ref}`explained-regions`. Another, on {ref}`explained-cv-curve`, names the parameter
-that sets each part of the {term}`C–V` curve. One on {ref}`explained-calibration` draws each
-fitted number within its limits.
+Source: {repo}`src/gf180tcad/explain/figures.py`. Its figures appear on the
+{ref}`explainer pages <explained>`, including {ref}`explained-regions`,
+{ref}`explained-cv-curve` and {ref}`explained-calibration`.
 
 ```{eval-rst}
 .. automodule:: gf180tcad.explain.figures
