@@ -358,20 +358,35 @@ def _run_build(tmp_path, inspect: str | None):
     return res, calls
 
 
+_SLICE = 'cgroup-parent="gf180-tcad.slice" '
+
+
 @pytest.mark.parametrize(
     "opts",
     [
         'image="{img}"',
-        'image="{img}" memory="16g"',
-        'cgroup-parent="gf180-tcad.slice" image="{img}" memory="16g" memory-swap="32g"',
-        'image="{img}" memory-swap="16g"',
+        _SLICE + 'image="{img}" memory="16g"',
+        _SLICE + 'image="{img}" memory="16g" memory-swap="32g"',
+        _SLICE + 'image="{img}" memory-swap="16g"',
+        _SLICE + 'image="{img}" memory="17g" memory-swap="17g"',
+        _SLICE + 'image="{img}" memory="lots" memory-swap="lots"',
+        'image="{img}" memory="16g" memory-swap="16g"',
+        'cgroup-parent="other.slice" image="{img}" memory="16g" memory-swap="16g"',
     ],
 )
-def test_build_refuses_a_builder_without_a_memory_limit(tmp_path, opts):
+def test_build_refuses_a_builder_without_the_limits(tmp_path, opts):
+    """No memory limit, one above 16 GiB, swap above it, or a builder outside gf180-tcad.slice."""
     res, calls = _run_build(tmp_path, _inspect(opts.format(img=BUILDKIT_IMAGE)))
     assert res.returncode == 2, res.stderr
-    assert "no memory limit" in res.stderr
+    assert "no memory limit of at most 16 GiB" in res.stderr
     assert not [c for c in calls if c.startswith("buildx build")]
+
+
+@pytest.mark.parametrize("mem", ["16g", "8G", "16384m", "17179869184"])
+def test_build_accepts_a_limit_of_at_most_16g_in_the_slice(tmp_path, mem):
+    opts = _SLICE + f'image="{BUILDKIT_IMAGE}" memory="{mem}" memory-swap="{mem}"'
+    res, _calls = _run_build(tmp_path, _inspect(opts))
+    assert "build: builder" not in res.stderr, res.stderr
 
 
 def test_build_accepts_the_16g_builder(tmp_path):
