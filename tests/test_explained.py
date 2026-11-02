@@ -145,13 +145,15 @@ def test_value_text_and_labels():
 @pytest.mark.parametrize(
     ("value", "digits", "unit", "text"),
     [
-        (8.813323306821749e16, 3, "cm⁻³", "8.81 × 10¹⁶ cm⁻³"),
-        (1e20, 2, "cm⁻³", "1.0 × 10²⁰ cm⁻³"),
-        (8265841554.853887, 3, "cm⁻³", "8.27 × 10⁹ cm⁻³"),
-        (298.15, 5, "K", "298.15 K"),
-        (775.2, 3, "cm⁻³", "775 cm⁻³"),
-        (0.0371, 2, "V", "0.037 V"),
-        (-0.25, 2, "V", "−0.25 V"),
+        (8.813323306821749e16, 3, "cm⁻³", "8.81\u00a0×\u00a010¹⁶\u00a0cm⁻³"),
+        (1e20, 2, "cm⁻³", "1.0\u00a0×\u00a010²⁰\u00a0cm⁻³"),
+        (8265841554.853887, 3, "cm⁻³", "8.27\u00a0×\u00a010⁹\u00a0cm⁻³"),
+        (298.15, 5, "K", "298.15\u00a0K"),
+        (775.2, 3, "cm⁻³", "775\u00a0cm⁻³"),
+        (0.0371, 2, "V", "0.037\u00a0V"),
+        (-0.25, 2, "V", "−0.25\u00a0V"),
+        (2.15, 3, "fF/µm²", "2.15\u00a0fF/\u2060µm²"),
+        (0.67, 2, "%", "0.67\u00a0%"),
     ],
 )
 def test_format(value, digits, unit, text):
@@ -867,7 +869,7 @@ def test_fermi_levels_against_hand_values():
     assert numbers.REGISTRY["fermi_gate_nfet"].formula == "boltzmann_fermi"
     assert numbers.value("fermi_gate_nfet") == pytest.approx(0.596487, abs=1e-6)
     assert numbers.value("fermi_body_nfet") == pytest.approx(-0.415763, abs=1e-6)
-    assert numbers.text("fermi_body_nfet") == "0.416 eV"
+    assert numbers.text("fermi_body_nfet") == "0.416\u00a0eV"
     meta = json.loads(
         (ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json").read_text("utf-8")
     )
@@ -941,7 +943,7 @@ def test_junction_formulas_against_hand_values():
     assert numbers.value("w_dep_nfet") * numbers.REGISTRY["w_dep_nfet"].factor == pytest.approx(
         0.121925, abs=1e-6
     )
-    assert numbers.text("w_dep_nfet") == "0.122 µm"
+    assert numbers.text("w_dep_nfet") == "0.122\u00a0µm"
 
 
 def test_abrupt_junction_profile_is_consistent():
@@ -1122,7 +1124,7 @@ def test_moscap_values_are_the_files():
     assert (
         rec["verdicts"]["plateau_inv"]["tolerance"] == rec["verdicts"]["plateau_acc"]["tolerance"]
     )
-    assert numbers.text("plateau_tol_l10") == "5 %"
+    assert numbers.text("plateau_tol_l10") == "5\u00a0%"
 
 
 _VERDICT_FILES = {
@@ -1407,7 +1409,7 @@ def test_region_values_are_the_files():
             v = v[k]
         assert numbers.value(name) == v, name
     assert rec["verdicts"]["dv_inv"]["tolerance_v"] == rec["verdicts"]["dv_dep"]["tolerance_v"]
-    assert numbers.text("dv_tol_l10") == "50 mV"
+    assert numbers.text("dv_tol_l10") == "50\u00a0mV"
     for check in ("dv_dep", "dv_inv"):
         assert numbers.word(f"verdict_{check}_l10") == rec["verdicts"][check]["verdict"], check
 
@@ -1615,7 +1617,7 @@ def test_cv_parts_values_are_the_files():
     rec = _l10_record()["metrics"]
     for name, key in _CV_METRICS.items():
         assert numbers.value(name) == rec[key], name
-    assert numbers.text("dv_fb_nfet_start") == "0 V"
+    assert numbers.text("dv_fb_nfet_start") == "0\u00a0V"
 
 
 def test_cv_parts_draws_the_start_and_fitted_curves():
