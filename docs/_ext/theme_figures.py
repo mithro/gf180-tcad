@@ -7,6 +7,10 @@ Sphinx numbers both, so a ``{numref}`` would name the one a dark-theme reader ne
 ``doctree-read``, before the numbers are assigned, :func:`merge_twins` moves the dark image into
 the light figure, gives each image its theme class and drops the dark figure. The figure keeps
 the light one's name, so it is numbered once and shows its caption in either theme.
+
+Sphinx counts figures across the whole site when the toctree is not numbered. Once it has
+assigned its numbers, :func:`renumber_per_page` numbers each page's figures from 1, keeping their
+order, so the first figure on every page is Figure 1.
 """
 
 from docutils import nodes
@@ -50,6 +54,23 @@ def _on_doctree_read(app, doctree):
     merge_twins(doctree)
 
 
+def renumber_per_page(app, env) -> list[str]:
+    """Number each page's figures (and tables and code blocks) from 1 per type, in the order
+    Sphinx gave them; return the pages whose numbers changed, so Sphinx writes them again."""
+    changed = []
+    for docname, types in env.toc_fignumbers.items():
+        new = {
+            figtype: {fid: (n,) for n, fid in enumerate(sorted(ids, key=ids.get), start=1)}
+            for figtype, ids in types.items()
+        }
+        if new != types:
+            env.toc_fignumbers[docname] = new
+            changed.append(docname)
+    return changed
+
+
 def setup(app):
     app.connect("doctree-read", _on_doctree_read)
+    # After Sphinx's own numbering: its toctree collector listens at the default priority, 500.
+    app.connect("env-get-updated", renumber_per_page, priority=900)
     return {"parallel_read_safe": True, "parallel_write_safe": True, "version": "1"}

@@ -130,9 +130,11 @@ _TOOLS = {
 }
 myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.items()}
 
-# Figures with a :name: are numbered, so a page can point at one with {numref}. The light/dark
-# twin of a figure carries no name and so no number: only the light one is referenced.
+# Captioned figures are numbered, so a page can point at one with {numref}.
+# docs/_ext/theme_figures.py
+# merges each light/dark twin pair into one figure (one number) and numbers each page from 1.
 numfig = True
+numfig_format = {"figure": "Figure %s"}
 
 # --- API reference ---------------------------------------------------------------------------
 # autodoc imports gf180tcad from ../src (the sys.path entry below); the docs dependency group is
