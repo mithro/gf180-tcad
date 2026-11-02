@@ -383,7 +383,8 @@ Newton iteration
 MOSCAP
 MOS capacitor
   A poly-gate, oxide and body stack without source and drain, simulated by the {term}`TCAD` to
-  compare its {term}`C–V` with the {term}`SPICE` {term}`Cgg`. See {ref}`plugin-history-latest`.
+  compare its {term}`C–V` with the {term}`SPICE` {term}`Cgg`. See {ref}`explained-moscap` and
+  {ref}`plugin-history-latest`.
 
 Rsd
   Source/drain series resistance (contact, silicide and {term}`LDD`). The {term}`SPICE` {term}`card <model card>` has RDSW
