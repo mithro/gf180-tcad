@@ -22,6 +22,11 @@ calibration files, so a new verdict changes the page's sentence (:func:`word`).
 :func:`two_d_cells` reads every 2D cell with a verdict from the validation files
 (``results/tcad/validation/*.json``), so the page's table of them (:func:`two_d_table`) and
 its sentence on the Disagree cells (:func:`two_d_disagree`) grow with each new cell.
+
+The calibration page's tables are written from the calibration result files and the process
+files: the fitted numbers within their limits (:func:`fit_table`), where each start and limit
+comes from (:func:`limit_kinds_table`), the :term:`SPICE` :term:`corner` spread (:func:`corner_table`) and the
+fit's verdicts (:func:`fit_verdict_table`).
 """
 
 from __future__ import annotations
@@ -294,7 +299,7 @@ def two_d_disagree(root: Path = ROOT) -> str:
 
 
 def counts(root: Path = ROOT) -> dict[str, int]:
-    """Counts a page prints: ``corner_count``, the SPICE corners of
+    """Counts a page prints: ``corner_count``, the :term:`SPICE` :term:`corners <corner>` of
     :data:`gf180tcad.devices.CORNERS`; ``fit_length_count``, the gate lengths of the nfet
     calibration's fit (``per_geometry`` of its result file under ``root``); ``budget`` and
     ``budget_used``, the parameter budget of each transistor and the part its fit uses (the

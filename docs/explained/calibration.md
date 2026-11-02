@@ -96,7 +96,7 @@ A {term}`least-squares fit` finds the three values that make the sum of these di
 squared, smallest. Each evaluation solves the stack once and compares it at every fit gate length.
 The search counted {{ x_nfev_nfet }} evaluations for the nfet and {{ x_nfev_pfet }} for the pfet.
 The count leaves out the extra solves that measure how each number moves the curve
-([scipy `least_squares`, 1.18.0 manual](https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.optimize.least_squares.html)).
+([scipy's `least_squares` manual](https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.optimize.least_squares.html)).
 
 (explained-calibration-corners)=
 
@@ -108,8 +108,9 @@ fitted number. Fits at the other corners give those bounds and the spread
 ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
 
 The spread of the target itself is committed. Over the corners, the SPICE curve of the nfet at
-`w10p0_l10p00` spans these values. The flat parts come from
-{repo}`envelope.json <results/spice/envelope.json>`, the crossings from the nfet's result file:
+`w10p0_l10p00` spans these values. Its flat parts in {term}`accumulation` and {term}`inversion`
+come from {repo}`envelope.json <results/spice/envelope.json>`, the crossings from the nfet's
+result file:
 
 {{ x_corner_table }}
 

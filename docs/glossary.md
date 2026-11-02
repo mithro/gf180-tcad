@@ -164,7 +164,7 @@ parameter budget
 
 least-squares fit
   A search for the parameter values that make the sum of the squared differences between a model
-  and its target smallest. The C–V calibration runs scipy's `least_squares`
+  and its target smallest. The {term}`C–V` calibration runs {{ scipy }}'s `least_squares`
   ([scipy 1.18.0 manual](https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.optimize.least_squares.html)).
   See {ref}`explained-calibration-search`.
 
