@@ -666,9 +666,9 @@ def test_committed_results_come_from_the_results_image():
     mesh artefact tree is cut in the image its tree is named after, which made its 2D jobs."""
     for root in _committed_tree_roots():
         committed = json.loads((root / PROVENANCE_NAME).read_bytes())
-        assert {k: v["name"] for k, v in committed["images"].items()} == _expected_images(
-            root
-        ), f"{root.relative_to(REPO)}: {REGENERATE}"
+        assert {k: v["name"] for k, v in committed["images"].items()} == _expected_images(root), (
+            f"{root.relative_to(REPO)}: {REGENERATE}"
+        )
 
 
 def test_meshes_tree_is_cut_in_the_image_of_its_source_jobs():

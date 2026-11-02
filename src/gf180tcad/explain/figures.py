@@ -21,8 +21,8 @@ from typing import NamedTuple
 import matplotlib
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.figure import Figure
 from matplotlib.collections import LineCollection, PolyCollection
+from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
@@ -641,23 +641,17 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
 
 
 def _parts_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, (), palette)
 
 
 def _mesh_window(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"])
     return cross_section(c, (), palette, window=window_box(c))
 
 
 def _junction_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, ("junction",), palette)
 
 
@@ -718,9 +712,7 @@ def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
 
 
 def _moscap_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, ("gate", "oxide", "body"), palette)
 
 
