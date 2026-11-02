@@ -389,12 +389,15 @@ W1.6/L0.7 therefore gives the per-width solve of W10/L0.7 when the PDK cell has 
 intervals on that line. The committed nfet W1.6/L0.7 job shows it. Its mesh is the W10/L0.7 mesh,
 and its `cgg_per_um` equals the W10/L0.7 cell's at all 201 points
 ({test}`tests/test_calibrate_cv.py::test_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell`).
+Its comparison is the entry `two_d.w1p6_l0p70` of the
+{repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>`.
 A W-series at fixed L then tests the area scaling and the parasitic model, not the 2D solve.
 
-So the W1.6/L0.7 comparison follows from the committed W10/L0.7 cell, and the job's comparison is the same. Its `cgg_per_um`
+So the nfet W1.6/L0.7 comparison follows from the committed W10/L0.7 cell, and the job's comparison is the same.
+The W10/L0.7 `cgg_per_um`
 ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.csv>`) times 1.6 µm
-is compared with the {term}`TT` {{ ngspice }} target of W1.6/L0.7 by
-{py:func}`~gf180tcad.calibrate.cv.compare`. The result is {term}`Disagree`
+is compared with the {term}`TT` {{ ngspice }} target by {py:func}`~gf180tcad.calibrate.cv.compare`.
+For W1.6/L0.7 the result is {term}`Disagree`
 ({test}`tests/test_calibrate_cv.py::test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell`):
 
 | Check | Value | Verdict |
