@@ -16,6 +16,7 @@ gf180tcad.derive
 gf180tcad.devices
 gf180tcad.docgen
 gf180tcad.explain
+gf180tcad.explain.data
 gf180tcad.explain.figures
 gf180tcad.explain.idealised
 gf180tcad.explain.model
