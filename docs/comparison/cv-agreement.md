@@ -464,13 +464,19 @@ The plateau gap shrinks with L, as at the shorter pfet cells ([issue #77](https:
 | Depletion crossing shift (mV) | −193 | Disagree |
 | Inversion crossing shift (mV) | −2 | Agree |
 
-The corner envelope of the depletion crossing runs from −0.820 V to −0.558 V. The 2D crossing is at −0.881 V,
-62 mV past the lower end. It lies 65 mV below the 1D crossing at the same parameters.
-That 2D-only shift keeps shrinking with L: 241, 149 and 65 mV at L = 0.7, 1 and 2 µm ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
+The corner envelope of the depletion crossing runs from −0.820 V (the ff corner) to −0.558 V (ss).
+The 2D crossing is at −0.881 V, 62 mV past the ff end.
+The 1D crossing at the same parameters is at −0.816 V, 3 mV inside the ff end.
+So any shift of more than 3 mV that only the 2D cell has moves the crossing out of the envelope.
+
+That 2D-only shift is 65 mV here. It shrinks with L: 241, 149 and 65 mV at L = 0.7, 1 and 2 µm.
+From L = 1 µm to 2 µm the SPICE TT edge moves by +139 mV and the 2D crossing by +95 mV.
+The envelope narrows from 0.288 V to 0.262 V wide ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
 
 The plateau window is the Cox spec over the 20 µm² gate, 36.0 to 56.0 fF.
 The cell gives 44.24 fF at +5 V and 43.33 fF at −5 V
 ({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l2p00/cv.csv>`). SPICE gives 46.83 and 45.14 fF.
+The plateau gap shrinks with L, as at the shorter pfet cells ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
 in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call
