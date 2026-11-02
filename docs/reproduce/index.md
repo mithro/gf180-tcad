@@ -487,7 +487,8 @@ The `crosscheck-tcad` job on a {{ GitHub_hosted_runner }}
 two calibrated 1D jobs at these stamps. It printed
 `identical: 5 files of 2 jobs … match results/MANIFEST.sha256 under tcad/`, with
 {repo}`results/tcad/moscap1d/provenance.json` among the files. On 2026-10-28, at the same
-stamps, `make reproduce-quick` reran them on this host and printed the same `identical` line.
+stamps, a local `make reproduce-quick` reran them and printed the same `identical` line
+([its output, quoted on PR #85](https://github.com/mithro/gf180-tcad/pull/85#issuecomment-6444796436)).
 The other folders were not rerun, for the reasons listed under the backend-seam record.
 
 **The pfet W10/L0.5 job, restamped after its run.** It ran at gplugins `0715c81`, before the
