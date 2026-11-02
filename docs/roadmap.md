@@ -63,3 +63,6 @@ the issue says what is open and what settles it. The phases are those of the
   {term}`Fermi level`, the {term}`pn junction`, the transistor's parts, the {term}`gate oxide`
   and {term}`poly-silicon`. The second tier covers the {term}`MOS capacitor <MOSCAP>`, its
   regions, what sets each part of its {term}`C–V` curve and what the calibration changes.
+- **The figure, equation and file-link rules** on every page. Each described thing gets a
+  figure, each equation its symbols and units, each file a link. Issues #129 to #134 hold the
+  work, one issue per group of pages.
