@@ -653,8 +653,8 @@ def region_edges() -> tuple[float, float]:
     return numbers.value("u_fb_l10"), numbers.value("u_t_l10")
 
 
-def cv_regions_figure(palette: str) -> Figure:
-    """The figure of :func:`cv_regions`, for the tests to read its spans."""
+def cv_regions_figure(palette: str):
+    """The matplotlib figure of :func:`cv_regions`, for the tests to read its spans."""
     from gf180tcad.devices import DEVICES
 
     if DEVICES[REGIONS_DEVICE].polarity != 1:
@@ -705,8 +705,8 @@ _SHEET = {"accumulation": "hole", "inversion": "electron"}
 _SHEET_LABEL = {"hole": "holes at the surface", "electron": "electrons at the surface"}
 
 
-def band_regimes_figure(palette: str) -> Figure:
-    """The figure of :func:`band_regimes`, for the tests to read its lines."""
+def band_regimes_figure(palette: str):
+    """The matplotlib figure of :func:`band_regimes`, for the tests to read its lines."""
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     n_a, n_i, vt = (numbers.value(k) for k in ("n_ch_nfet_cal", "n_i_tcad", "vt_tcad"))
