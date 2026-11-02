@@ -59,7 +59,11 @@ if [ "$DRIVER" != docker-container ]; then
     exit 2
 fi
 OPTS="$(grep '^Driver Options:' <<<"$INSPECT" || true)"
-if [ -z "$OPTS" ] || grep -vqF "image=\"$BUILDKIT_IMAGE\"" <<<"$OPTS"; then
+# Every node needs its own Driver Options line: count the node "Name:" lines (after "Nodes:")
+# against them, or a node with no options would pass unseen next to nodes with the pinned image.
+NODES="$(awk '/^Nodes:/ {n=1; next} n && /^Name:/ {c++} END {print c+0}' <<<"$INSPECT")"
+NOPTS="$(grep -c '^Driver Options:' <<<"$INSPECT" || true)"
+if [ -z "$OPTS" ] || [ "$NODES" -ne "$NOPTS" ] || grep -vqF "image=\"$BUILDKIT_IMAGE\"" <<<"$OPTS"; then
     echo "build: builder $BUILDER: BuildKit image is not $BUILDKIT_IMAGE:" >&2
     echo "${OPTS:-  (no Driver Options)}" >&2
     exit 2
