@@ -31,7 +31,7 @@ tool = _load()
 
 
 def test_commands_are_the_real_moscap_command_lines(tmp_path):
-    jobs = manifest.load_subset(SUBSET, kind="tcad")
+    jobs = tuple(j for j in manifest.load_subset(SUBSET, kind="tcad") if j.startswith("moscap"))
     cmds = tool.commands(jobs, tmp_path / "out")
     assert len(cmds) == len(jobs) == 2
     for job, cmd in zip(jobs, cmds, strict=True):
@@ -49,16 +49,40 @@ def test_2d_jobs_are_refused(tmp_path):
         tool.commands(("moscap2d/nfet_05v0/start",), tmp_path)
 
 
-def test_images_are_the_1d_results_image():
+def test_images_are_the_1d_results_image_and_the_artefacts_image():
+    """The 1D jobs run in the 1D results image (dev HEAD); the artefact jobs in the image the
+    committed meshes/stable tree records (stable, which made their 2D jobs)."""
     jobs = manifest.load_subset(SUBSET, kind="tcad")
-    assert tool.images(jobs) == [TCAD_DEV_IMAGE] == [image_ref("dev")]
+    one_d = tuple(j for j in jobs if j.startswith("moscap1d/"))
+    assert tool.images(one_d) == [TCAD_DEV_IMAGE] == [image_ref("dev")]
     assert "@sha256:" in TCAD_DEV_IMAGE
+    want = sorted({TCAD_DEV_IMAGE, image_ref("stable")})
+    assert tool.images(jobs) == want
     r = subprocess.run(
         [sys.executable, str(TOOL), str(SUBSET), "--images"],
         check=False, capture_output=True, text=True,
     )  # fmt: skip
     assert r.returncode == 0, r.stderr
-    assert r.stdout.splitlines() == [TCAD_DEV_IMAGE]
+    assert r.stdout.splitlines() == want
+
+
+def test_subset_artefact_jobs_cut_every_committed_artefact(tmp_path):
+    """The subset's meshes jobs cut each committed artefact once, from its 2D job."""
+    jobs = tuple(j for j in manifest.load_subset(SUBSET, kind="tcad") if j.startswith("meshes/"))
+    cmds = tool.commands(jobs, tmp_path / "out")
+    committed = sorted(
+        p.parent.relative_to(REPO / "results" / "tcad" / "meshes" / "stable").as_posix()
+        for p in (REPO / "results" / "tcad" / "meshes" / "stable").glob(
+            "*/*/*/mesh-window.meta.json"
+        )
+    )
+    assert len(committed) == 10
+    got = sorted(c[c.index("--job") + 1].removeprefix("results/tcad/moscap2d/") for c in cmds)
+    assert got == committed
+    for c in cmds:
+        assert c[3] == "cut" and c[c.index("--out") + 1] == str(
+            tmp_path / "out" / "meshes" / "stable"
+        )
 
 
 def test_out_must_not_overlap_results(tmp_path, monkeypatch):

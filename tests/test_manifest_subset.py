@@ -520,10 +520,12 @@ TCAD_SUBSET = REPO / "tests" / "crosscheck_tcad_subset.txt"
 TCAD = REPO / "results" / "tcad"
 
 
-def test_crosscheck_tcad_subset_is_the_calibrated_1d_jobs():
+def test_crosscheck_tcad_subset_is_the_calibrated_1d_jobs_and_artefacts():
     assert manifest.load_subset(TCAD_SUBSET, kind="tcad") == (
         "moscap1d/nfet_05v0/calibrated",
         "moscap1d/pfet_05v0/calibrated",
+        "meshes/stable/nfet_05v0/calibrated",
+        "meshes/stable/pfet_05v0/calibrated",
     )
 
 
@@ -542,8 +544,11 @@ def test_committed_tcad_subset_verifies(tmp_path):
         TCAD_SUBSET,
     )  # fmt: skip
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "identical: 5 files of 2 jobs" in r.stdout
-    assert "partial subset; provenance moscap1d/provenance.json" in r.stdout
+    assert "identical: 26 files of 4 jobs" in r.stdout
+    assert (
+        "partial subset; provenance meshes/stable/provenance.json, moscap1d/provenance.json"
+        in r.stdout
+    )
 
 
 # --- per-image trees of reduced mesh artefacts (renders plan, Task R0) -----------------------
