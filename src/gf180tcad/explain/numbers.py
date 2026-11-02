@@ -15,6 +15,10 @@ A page writes ``{{ x_<name> }}`` and the docs build prints the value: ``docs/con
 The page sentence says which kind a value is; ``x_<name>_label`` gives the words
 (:data:`LABELS`). A value is shown to ``digits`` significant digits in ``unit``, after
 multiplying by ``factor`` (1000 shows a value in V as mV).
+
+:data:`WORDS` holds the words a page prints from a committed file, the verdicts of the
+calibration and validation files, so a new verdict changes the page's sentence
+(:func:`word`).
 """
 
 from __future__ import annotations
@@ -65,6 +69,8 @@ _CM3 = "cm⁻³"
 _CAP = "fF/µm²"
 _RESULT = "results/tcad/calibration/nfet_05v0.result.json"
 _CELL = "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json"
+_SPICE_L10 = "results/spice/ngspice/typical/nfet_05v0/w10p0_l10p00/metrics.json"
+_L10 = ("per_geometry", "w10p0_l10p00")
 _ENTRIES = (
     Number("n_i_tcad", "committed", _CM3, 3, _meta("nfet_05v0"), {"json": ["constants", "n_i_cm3"]}),
     Number("t_tcad", "committed", "K", 5, _meta("nfet_05v0"), {"json": ["constants", "t_k"]}),
@@ -136,8 +142,43 @@ _ENTRIES = (
     Number("node_count_cell", "committed", "", 3, _CELL, {"json": ["node_count"]}),
     # F/m on the card; the page prints fF/µm (1e15 fF/F over 1e6 µm/m).
     Number("cgdl_nfet", "committed", "fF/µm", 2, _proc("nfet_05v0"), {"toml": ["param", "cgdl_f_per_m", "value"]}, factor=1e9),
+    # The MOS capacitor (mos-capacitor.md): the SPICE model and the calibration at w10p0_l10p00.
+    Number("cgg_acc_l10", "committed", "fF", 3, _SPICE_L10, {"json": ["metrics", "cgg_acc_ff"]}),
+    Number("cgg_inv_l10", "committed", "fF", 3, _SPICE_L10, {"json": ["metrics", "cgg_inv_ff"]}),
+    # Fractions in the file; the page prints per cent.
+    Number("plateau_acc_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "plateau_acc_max_rel"]}, factor=100.0),
+    Number("plateau_inv_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "plateau_inv_max_rel"]}, factor=100.0),
+    Number("plateau_tol_l10", "committed", "%", 1, _RESULT, {"json": [*_L10, "verdicts", "plateau_acc", "tolerance"]}, factor=100.0),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
+
+
+@dataclass(frozen=True)
+class Word:
+    """A word a page prints from a committed file, read by key and never typed: a verdict."""
+
+    name: str
+    source: str
+    key: dict
+
+
+_VALIDATION = "results/tcad/validation/nfet_05v0.json"
+_WORDS = (
+    Word("verdict_nfet_1d", _RESULT, {"json": ["verdict"]}),
+    Word("verdict_pfet_1d", "results/tcad/calibration/pfet_05v0.result.json", {"json": ["verdict"]}),
+    Word("verdict_nfet_2d_l0p60", _VALIDATION, {"json": ["two_d", "w10p0_l0p60", "verdict"]}),
+    Word("verdict_nfet_2d_l0p70", _VALIDATION, {"json": ["two_d", "w10p0_l0p70", "verdict"]}),
+)  # fmt: skip
+WORDS: dict[str, Word] = {w.name: w for w in _WORDS}
+
+
+def word(name: str, root: Path = ROOT) -> str:
+    """The word entry ``name`` reads from its file under ``root`` (a copy of the repo in tests)."""
+    w = WORDS[name]
+    v = quantity.read(quantity.Selector.from_dict(w.key), Path(root) / w.source)
+    if not isinstance(v, str) or not v:
+        raise TypeError(f"{name}: {w.source} {w.key} holds {v!r}, not a word")
+    return v
 
 
 def _formula(name: str):
@@ -193,9 +234,12 @@ def text(name: str) -> str:
 
 
 def substitutions() -> dict[str, str]:
-    """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, for MyST."""
+    """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, and ``{"x_<name>":
+    word}`` for every :data:`WORDS` entry, for MyST."""
     out: dict[str, str] = {}
     for name, n in REGISTRY.items():
         out[f"x_{name}"] = text(name)
         out[f"x_{name}_label"] = LABELS[n.kind]
+    for name in WORDS:
+        out[f"x_{name}"] = word(name)
     return out
