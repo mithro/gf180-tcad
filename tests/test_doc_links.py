@@ -1025,11 +1025,10 @@ class _FakeApp:
 
 
 def _linker():
-    app = _FakeApp()
+    _FakeApp()  # puts docs/_ext on sys.path
     import api_links
 
-    app.config.myst_substitutions = app.subs
-    return api_links._Linker(app)
+    return api_links._Linker()
 
 
 def test_linker_rewrites_literals_but_not_prose():
@@ -1065,9 +1064,7 @@ def _xrefs(tree) -> list[tuple[str, str, str]]:
     """(reftype, reftarget, shown text) of every pending_xref, in document order."""
     from sphinx import addnodes
 
-    return [
-        (n["reftype"], n["reftarget"], n.astext()) for n in tree.findall(addnodes.pending_xref)
-    ]
+    return [(n["reftype"], n["reftarget"], n.astext()) for n in tree.findall(addnodes.pending_xref)]
 
 
 def test_first_use_in_prose_is_linked_once():
@@ -1141,7 +1138,7 @@ def test_first_use_leaves_field_names_alone():
     from docutils import nodes
 
     assert not list(next(tree.findall(nodes.field_name)).findall(_pending_xref()))
-    assert ("term", "corner", "corner") in _xrefs(tree)  # the description is prose
+    assert [t[1] for t in _xrefs(tree)] == ["corner"]  # the description is prose
 
 
 def test_first_use_does_not_link_into_a_filename():

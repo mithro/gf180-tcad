@@ -10,15 +10,21 @@ every docstring as it is read (the source files stay byte-identical):
 - an inline literal naming a test function (``test_*``) becomes ``:test:`` (the function must
   exist exactly once under ``tests/``, else the build fails);
 - an inline literal naming a ``gf180tcad`` module or object becomes ``:py:obj:``;
-- the first use on each API page of every glossary term (``docs/glossary.md``) and every tool
-  (``docs/conf.py:_TOOLS``, the same tables the Markdown pages use) becomes a ``:term:`` or an
-  upstream link, matched ignoring case except for the three verdict words;
 - short references to names a module imports from another gf180tcad module are qualified to
   the defining module, where they are documented (plus ``GRID_TOL``, a plain float);
 - standard-library and numpy types in signatures (which intersphinx would resolve, but it needs
   the network) are linked to their upstream documentation from a fixed table;
 - ``|Vgs|``-style magnitudes are escaped (reST would read them as substitutions), and module
   constants without a doc comment lose the docstring of their type (``dict``, ``tuple``).
+
+The first use on each API page of every glossary term (``docs/glossary.md``) and every tool
+(``docs/conf.py:_TOOLS``, the same tables the Markdown pages use) becomes a glossary or an upstream
+link, matched as ``tests/test_doc_links.py`` matches the built HTML: ignoring case except for the
+verdict words and short names with a capital letter. A path inside a command in a code span
+(``tools/output-cache pull``) is linked inside the span. This is a ``doctree-read`` pass over the
+whole page in reading order (:class:`FirstUses`), not part of the docstring hook: autodoc fires
+``autodoc-process-docstring`` while it loads a module's members and only then sorts them into
+source order, so the docstring hook does not see the docstrings in the order of the page.
 """
 
 from __future__ import annotations
@@ -31,6 +37,7 @@ from pathlib import Path
 
 import repo_roles
 from docutils import nodes
+from sphinx import addnodes
 from sphinx.errors import ExtensionError
 
 DOCS = Path(__file__).resolve().parents[1]
@@ -80,14 +87,14 @@ def glossary_entries() -> list[list[str]]:
     return entries
 
 
-def word_regex(names, *, plural: bool, ignore_case: bool) -> re.Pattern:
+def word_regex(names, *, plural: bool, ignore_case: bool, behind: str = r"\w./-") -> re.Pattern:
     alts = []
     for n in sorted(names, key=len, reverse=True):
         suffix = "(?:s|es)?" if plural and re.fullmatch(r"[A-Za-z][A-Za-z -]*", n) else ""
         alts.append(re.escape(n) + suffix)
     flags = re.IGNORECASE if ignore_case else 0
     # Not followed by a word character, nor by "." and one ("provenance.json" is a file name).
-    return re.compile(r"(?<![\w./-])(?:" + "|".join(alts) + r")(?!\w|\.\w)", flags)
+    return re.compile(rf"(?<![{behind}])(?:" + "|".join(alts) + r")(?!\w|\.\w)", flags)
 
 
 @functools.cache
@@ -95,10 +102,12 @@ def tables(substitutions: tuple[tuple[str, str], ...]):
     entries = glossary_entries()
     index = {t.lower(): i for i, e in enumerate(entries) for t in e}
     names = [t for e in entries for t in e]
+    # The HTML check's boundary: a path is code in the HTML, so "/" may precede a term
+    # ("10/Lmin"); "*" may not ("j*2*pi*f*Cgg" is a formula).
     ci = word_regex([n for n in names if not case_sensitive(n)], plural=True,
-                    ignore_case=True)  # fmt: skip
+                    ignore_case=True, behind=r"\w.*-")  # fmt: skip
     cs = word_regex([n for n in names if case_sensitive(n)], plural=True,
-                    ignore_case=False)  # fmt: skip
+                    ignore_case=False, behind=r"\w.*-")  # fmt: skip
     tools = {}
     for _key, value in substitutions:
         m = re.fullmatch(r"\[([^\]]+)\]\((https://[^)]+)\)", value)
@@ -131,10 +140,7 @@ def test_functions() -> dict[str, list[str]]:
 
 
 class _Linker:
-    def __init__(self, app, seen: set):
-        subs = tuple(sorted(app.config.myst_substitutions.items()))
-        self.entries, self.index, self.term_res, self.tools, self.tool_re = tables(subs)
-        self.seen = seen
+    """Rewrites the inline literals of one docstring line into roles (paths, tests, names)."""
 
     def literal(self, body: str, original: str) -> str:
         kind = repo_roles.classify(body.rstrip("/")) if "/" in body or "." in body else None
@@ -147,76 +153,151 @@ class _Linker:
             return f":test:`{where[0]}::{body}`"
         if re.fullmatch(r"gf180tcad(\.\w+)+", body):
             return f":py:obj:`{body}`"
-        if body in {t for e in self.entries for t in e}:  # exact (code is case-sensitive)
-            idx = self.index[body.lower()]
-            if ("term", idx) not in self.seen:
-                self.seen.add(("term", idx))
-                return f":term:`{body}`"
         return original
-
-    def prose(self, text: str, prev: str = " ", nxt: str = " ") -> str:
-        """Link first uses in ``text``; ``prev``/``nxt`` are the characters around it."""
-        events = []
-        for rx in self.term_res:
-            for m in rx.finditer(text):
-                idx = _entry(m.group(0), self.index)
-                if idx is not None:
-                    events.append((m.start(), m.end(), "term", idx, m.group(0)))
-        for m in self.tool_re.finditer(text):
-            name = next(t for t in self.tools if t.lower() == m.group(0).lower())
-            events.append((m.start(), m.end(), "tool", name, m.group(0)))
-        out, pos = [], 0
-        # The longest match at a position wins ("SPICE reference" over "SPICE").
-        for start, end, kind, key, word in sorted(events, key=lambda e: (e[0], -e[1])):
-            if start < pos or (kind, key) in self.seen:
-                continue
-            before = text[start - 1] if start else prev
-            after = text[end] if end < len(text) else nxt
-            if not (before.isspace() or before in "'\"(<[{/:-") or not (
-                after.isspace() or after in "-.,:;!?\\/'\")]}>"
-            ):
-                continue  # reST would not recognise a role here (e.g. "f*Cgg")
-            self.seen.add((kind, key))
-            out.append(text[pos:start])
-            if kind == "term":
-                canonical = self.entries[key][0]
-                out.append(f":term:`{word} <{canonical}>`")
-            else:
-                out.append(f"`{word} <{self.tools[key]}>`__")
-            pos = end
-        out.append(text[pos:])
-        return "".join(out)
 
     def line(self, line: str) -> str:
         if line.lstrip().startswith(".."):
             return line
-        field = _FIELD.match(line)  # ":param corner: ..." -- the field name is not prose
+        field = _FIELD.match(line)  # ":param corner: ..." -- the field name is not a literal
         if field:
             return field.group(0) + self.line(line[field.end() :])
         for a, b in QUALIFY.items():
             line = line.replace(a, b)
         out, pos = [], 0
         for m in _PROTECTED.finditer(line):
-            prev = line[pos - 1] if pos else " "
-            out.append(self.prose(line[pos : m.start()], prev, line[m.start()]))
+            out.append(line[pos : m.start()])
             if m.group("literal"):
                 out.append(self.literal(m.group("lbody"), m.group(0)))
-            elif m.group("strong"):  # *job*: a role cannot nest in emphasis, so it replaces it
-                inner = m.group(0).strip("*")
-                linked = self.prose(inner)
-                out.append(
-                    linked
-                    if linked != inner
-                    and linked.startswith(":")
-                    and linked.endswith("`")
-                    and linked.count("`") == 2
-                    else m.group(0)
-                )
             else:
                 out.append(m.group(0))
             pos = m.end()
-        out.append(self.prose(line[pos:], line[pos - 1] if pos else " "))
+        out.append(line[pos:])
         return _MAGNITUDE.sub(r"\\|\1\\|", "".join(out))
+
+
+# Phrases that contain a glossary term's word but are not the term (the HTML check blanks the
+# same): the journal names "IEEE Trans. Electron Devices" and "IEEE Electron Device Letters".
+NOT_TERM_PHRASES = re.compile(r"\bElectron Devices?\b")
+# Never a use: headings, signatures, code blocks and markup without prose. The HTML check skips
+# the same (h1-h6, the "sig" class, <pre>); a field name is "Parameters", or a parameter's name.
+_SKIP = (
+    nodes.literal_block, nodes.doctest_block, nodes.raw, nodes.comment, nodes.math,
+    nodes.math_block, nodes.field_name, nodes.substitution_definition, nodes.system_message,
+    nodes.target, nodes.subtitle, addnodes.desc_signature, addnodes.toctree,
+    addnodes.literal_strong, addnodes.literal_emphasis,
+)  # fmt: skip
+_COMMAND_WORD = re.compile(r"\S+")
+
+
+class FirstUses:
+    """Link the first use of each glossary term and tool on one page, in reading order.
+
+    A use inside a link (a ``{term}`` written by hand, a ``{repo}`` title, a tool link) counts
+    as the first use and is left as it is; a later use is never linked.
+    """
+
+    def __init__(self, substitutions: dict, docname: str = ""):
+        subs = tuple(sorted(substitutions.items()))
+        self.entries, self.index, self.term_res, self.tools, self.tool_re = tables(subs)
+        self.exact = {t: i for i, e in enumerate(self.entries) for t in e}
+        self.docname = docname
+        self.seen: set = set()
+        self.linked_text: set[str] = set()
+
+    def run(self, tree: nodes.Node) -> None:
+        self._walk(tree, linked=False)
+
+    def _walk(self, node: nodes.Element, linked: bool) -> None:
+        for child in list(node.children):
+            if isinstance(child, nodes.Text):
+                self._text(child, node, linked)
+            elif isinstance(child, _SKIP) or (
+                isinstance(child, nodes.title) and isinstance(node, (nodes.section, nodes.document))
+            ):
+                continue
+            elif isinstance(child, nodes.literal):
+                self._literal(child, linked)
+            else:
+                is_link = isinstance(child, (nodes.reference, addnodes.pending_xref))
+                if is_link:
+                    self.linked_text.add(child.astext().strip())
+                self._walk(child, linked or is_link)
+
+    def _term_xref(self, idx: int, inner: nodes.Node) -> addnodes.pending_xref:
+        return addnodes.pending_xref(
+            "", inner, refdomain="std", reftype="term", refdoc=self.docname,
+            reftarget=self.entries[idx][0].lower(), refexplicit=True, refwarn=True,
+        )  # fmt: skip
+
+    def _literal(self, lit: nodes.literal, linked: bool) -> None:
+        body = lit.astext().strip()
+        if body in self.exact:  # code is case-sensitive and must be the whole span
+            key = ("term", self.exact[body])
+            if key not in self.seen:
+                self.seen.add(key)
+                if not linked:
+                    inner = lit.deepcopy()
+                    inner["classes"] += ["xref", "std", "std-term"]
+                    lit.parent.replace(lit, self._term_xref(key[1], inner))
+            return
+        if linked or " " not in body:
+            return
+        text, out, pos = lit.astext(), [], 0
+        for m in _COMMAND_WORD.finditer(text):  # a command: link the paths it names
+            word = m.group(0).strip("'\"(),;:").rstrip("/")
+            if "/" not in word or word in self.linked_text:
+                continue
+            url = repo_roles.repo_url(word)
+            if url is None:
+                continue
+            at = m.start() + m.group(0).index(word)
+            out += [nodes.Text(text[pos:at])] if at > pos else []
+            out.append(nodes.reference("", "", nodes.Text(word), refuri=url, classes=["repo-link"]))
+            self.linked_text.add(word)
+            pos = at + len(word)
+        if out:
+            out += [nodes.Text(text[pos:])] if pos < len(text) else []
+            lit.children = []
+            lit.extend(out)
+
+    def _text(self, node: nodes.Text, parent: nodes.Element, linked: bool) -> None:
+        text = str(node)
+        scan = NOT_TERM_PHRASES.sub(lambda m: " " * len(m.group(0)), text)
+        events = []
+        for rx in self.term_res:
+            for m in rx.finditer(scan):
+                idx = _entry(m.group(0), self.index)
+                if idx is not None:
+                    events.append((m.start(), m.end(), ("term", idx)))
+        for m in self.tool_re.finditer(text):
+            name = next(t for t in self.tools if t.lower() == m.group(0).lower())
+            events.append((m.start(), m.end(), ("tool", name)))
+        out, pos, end_of_link = [], 0, -1
+        # The longest match at a position wins ("SPICE reference" over "SPICE").
+        for start, end, key in sorted(events, key=lambda e: (e[0], -e[1])):
+            if key in self.seen:
+                continue
+            self.seen.add(key)
+            if linked or start < end_of_link:
+                continue  # inside a link already: this first use is linked
+            word = text[start:end]
+            out += [nodes.Text(text[pos:start])] if start > pos else []
+            if key[0] == "term":
+                inner = nodes.inline(word, word, classes=["xref", "std", "std-term"])
+                out.append(self._term_xref(key[1], inner))
+            else:
+                out.append(nodes.reference(word, word, refuri=self.tools[key[1]]))
+            pos = end_of_link = end
+        if out:
+            out += [nodes.Text(text[pos:])] if pos < len(text) else []
+            parent.replace(node, out)
+
+
+def link_first_uses(app, doctree) -> None:
+    """``doctree-read``: link the first uses on an API page (hand-written pages link their own)."""
+    docname = app.env.docname
+    if docname.startswith("api/"):
+        FirstUses(app.config.myst_substitutions, docname).run(doctree)
 
 
 _PY_ROLE = re.compile(r":(?:py:)?(class|func|data|attr|exc|meth|obj):`(~?)([A-Za-z_][\w.]*)`")
@@ -264,11 +345,10 @@ def process_docstring(app, what, name, obj, options, lines):
     home = getattr(obj, "__module__", None) if what in ("function", "class", "exception") else None
     if isinstance(home, str) and home != page_module:
         # autodoc reads the docstring of an imported member before it decides to leave it out;
-        # it must not use up the page's first uses.
+        # its literals are not checked (a test it names may live in another package's tests).
         lines[:] = [_MAGNITUDE.sub(r"\\|\1\\|", line) for line in lines]
         return
-    seen = app.env.__dict__.setdefault("_api_links_seen", {}).setdefault(docname, set())
-    linker = _Linker(app, seen)
+    linker = _Linker()
     module = _module_of(name)
     lines[:] = [qualify_imported(line, module) for line in lines]
     out, block_indent = [], None
@@ -283,12 +363,6 @@ def process_docstring(app, what, name, obj, options, lines):
         if line.rstrip().endswith("::"):
             block_indent = indent
     lines[:] = out
-
-
-def _reset(app, env, docnames):
-    seen = env.__dict__.setdefault("_api_links_seen", {})
-    for d in docnames:
-        seen.pop(d, None)
 
 
 _PY = "https://docs.python.org/3/library/"
@@ -331,7 +405,7 @@ def resolve_external(app, env, node, contnode):
 def setup(app):
     app.connect("autodoc-process-docstring", process_docstring)
     app.connect("missing-reference", resolve_external)
-    app.connect("env-before-read-docs", _reset)
-    # The first-use state is per document and a document is read in one process, so parallel
-    # reads (Read the Docs uses -j auto) give the same result; nothing needs merging.
+    app.connect("doctree-read", link_first_uses)
+    # The first-use state lives in one FirstUses per document read, so parallel reads (Read the
+    # Docs uses -j auto) give the same result; nothing needs merging.
     return {"parallel_read_safe": True, "parallel_write_safe": True, "version": "1"}
