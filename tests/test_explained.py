@@ -626,12 +626,34 @@ def _explain_modules() -> list[tuple[Path, str]]:
     return out
 
 
+# The one explain module that may read through gf180tcad.tcad, and what it may import: the 1D
+# reader and the process-file reader the results pages use, both standard-library only (plan,
+# task E2 as built). Every other explain module imports nothing from gf180tcad.tcad, and
+# gf180tcad.tcad.stack (gdsfactory, shapely) is forbidden everywhere.
+TCAD_ALLOWED = {"gf180tcad.explain.data": ("gf180tcad.tcad.moscap1d", "gf180tcad.tcad.process")}
+
+
+def tcad_import_violations(path: Path, mod: str) -> set[str]:
+    """The ``gf180tcad.tcad`` imports of module ``mod`` (file ``path``) outside
+    :data:`TCAD_ALLOWED`; the bare package name counts only where nothing else is imported."""
+    tcad = {i for i in _imports(path, mod) if i.split(".")[:2] == ["gf180tcad", "tcad"]}
+    allowed = TCAD_ALLOWED.get(mod, ())
+    bad = {
+        i for i in tcad
+        if i != "gf180tcad.tcad" and not any(i == a or i.startswith(f"{a}.") for a in allowed)
+    }  # fmt: skip
+    if tcad == {"gf180tcad.tcad"}:
+        bad.add("gf180tcad.tcad")
+    return bad
+
+
 def test_explain_imports_nothing_from_tcad():
-    """The explainer redraws the cell from committed data, never from ``gf180tcad.tcad``."""
+    """The explainer redraws the cell from committed data; only ``explain.data`` reads through
+    the two standard-library-only TCAD readers (:data:`TCAD_ALLOWED`)."""
     mods = _explain_modules()
-    assert {m for _, m in mods} >= {"gf180tcad.explain", "gf180tcad.explain.model"}
+    assert {m for _, m in mods} >= {"gf180tcad.explain", "gf180tcad.explain.model", *TCAD_ALLOWED}
     for path, mod in mods:
-        bad = {i for i in _imports(path, mod) if i.split(".")[:2] == ["gf180tcad", "tcad"]}
+        bad = tcad_import_violations(path, mod)
         assert not bad, f"{mod} imports {sorted(bad)}"
 
 
@@ -640,6 +662,18 @@ def test_positive_control_tcad_import_scan(tmp_path):
     f.write_text("import gf180tcad.tcad.stack\nfrom ..tcad import moscap1d\n", "utf-8")
     found = _imports(f, "gf180tcad.explain.m")
     assert "gf180tcad.tcad.stack" in found and "gf180tcad.tcad.moscap1d" in found
+    # Any tcad import outside explain.data fails, even an allowed reader.
+    assert tcad_import_violations(f, "gf180tcad.explain.model") == {
+        "gf180tcad.tcad.stack", "gf180tcad.tcad.moscap1d",
+    }  # fmt: skip
+    # In explain.data the two readers pass and the stack still fails.
+    assert tcad_import_violations(f, "gf180tcad.explain.data") == {"gf180tcad.tcad.stack"}
+    g = tmp_path / "d.py"
+    g.write_text("from gf180tcad.tcad import moscap1d, process\n", "utf-8")
+    assert tcad_import_violations(g, "gf180tcad.explain.data") == set()
+    assert tcad_import_violations(g, "gf180tcad.explain.figures") == {
+        "gf180tcad.tcad.moscap1d", "gf180tcad.tcad.process",
+    }  # fmt: skip
 
 
 _DOCS_GROUP_ONLY = textwrap.dedent(
@@ -984,3 +1018,131 @@ def test_glossary_terms_of_the_junction_page():
     text = (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
     terms = Counter(re.findall(r"^(\S[^\n]*)\n  ", text, re.MULTILINE))
     assert terms["pn junction"] == 1
+
+
+# --- the MOS capacitor page (task E2a) -------------------------------------------------------
+
+MOSCAP_PAGE = EXPLAINED / "mos-capacitor.md"
+_L10 = "w10p0_l10p00"
+_SPICE_L10 = f"results/spice/ngspice/typical/nfet_05v0/{_L10}/metrics.json"
+
+
+def test_docgen_reads_curves_through_explain_data():
+    """The 1D and SPICE curve readers live once, in ``gf180tcad.explain.data``; docgen imports
+    them (plan, task E2) and keeps no copy."""
+    from gf180tcad import docgen
+    from gf180tcad.explain import data
+
+    for name in ("spice_columns", "spice_cv", "tcad_cgg", "u_sorted"):
+        assert getattr(docgen, name) is getattr(data, name), name
+    src = (SRC / "gf180tcad" / "docgen.py").read_text(encoding="utf-8")
+    for gone in ("def _cols(", "def _u_sorted(", "1e15"):
+        assert gone not in src, gone
+
+
+def test_cv_figure_reads_the_committed_curves():
+    """The moscap-cv curves are the committed 1D C per area through the BSIM4 bookkeeping and the
+    committed SPICE cv sweeps, traced here by hand."""
+    from gf180tcad.devices import CORNERS, DEVICES, geometry_id
+    from gf180tcad.explain import figures
+    from gf180tcad.tcad import moscap1d, process
+
+    curves = figures.cv_curves("nfet_05v0", "calibrated", _L10)
+    (geom,) = [g for g in DEVICES["nfet_05v0"].geometries if geometry_id(g) == _L10]
+    m = moscap1d.read(ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated")
+    vg, _i, _p, total = m.area_scaled(geom, process.load("nfet_05v0"))
+    assert list(curves["u"]) == sorted(vg)
+    assert curves["tcad"][0] == pytest.approx(total[vg.index(min(vg))], rel=1e-12)
+    tt = (ROOT / f"results/spice/ngspice/typical/nfet_05v0/{_L10}/cv.csv").read_text("utf-8")
+    rows = [ln.split(",") for ln in tt.splitlines() if ln and not ln.startswith("#")]
+    head, body = rows[0], rows[1:]
+    cgg = [float(r[head.index("cgg")]) * 1e15 for r in body]
+    vgs = [float(r[head.index("vg")]) for r in body]
+    assert list(curves["u_spice"]) == sorted(vgs)
+    assert curves["spice_tt"][0] == pytest.approx(cgg[vgs.index(min(vgs))], rel=1e-12)
+    assert len(CORNERS) == 5
+    assert all(curves["spice_lo"] <= curves["spice_tt"]) and all(
+        curves["spice_tt"] <= curves["spice_hi"]
+    )
+
+
+def test_moscap_figures_are_registered():
+    from gf180tcad.explain import figures
+
+    for name in ("moscap-cell", "moscap-cv"):
+        assert name in figures.FIGURES, name
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark")
+    subs = figures.substitutions()
+    assert "x_fig_moscap_cell_scale" in subs and "x_fig_moscap_cv_scale" not in subs
+
+
+def test_moscap_values_are_the_files():
+    numbers = _numbers()
+    spice = json.loads((ROOT / _SPICE_L10).read_text("utf-8"))["metrics"]
+    rec = json.loads((ROOT / _RESULT).read_text("utf-8"))["per_geometry"][_L10]
+    assert numbers.value("cgg_acc_l10") == spice["cgg_acc_ff"]
+    assert numbers.value("cgg_inv_l10") == spice["cgg_inv_ff"]
+    assert numbers.value("plateau_acc_l10") == rec["metrics"]["plateau_acc_max_rel"]
+    assert numbers.value("plateau_inv_l10") == rec["metrics"]["plateau_inv_max_rel"]
+    assert numbers.value("plateau_tol_l10") == rec["verdicts"]["plateau_acc"]["tolerance"]
+    assert rec["verdicts"]["plateau_inv"]["tolerance"] == rec["verdicts"]["plateau_acc"]["tolerance"]
+    assert numbers.text("plateau_tol_l10") == "5 %"
+
+
+_VERDICT_FILES = {
+    "verdict_nfet_1d": ("results/tcad/calibration/nfet_05v0.result.json", ["verdict"]),
+    "verdict_pfet_1d": ("results/tcad/calibration/pfet_05v0.result.json", ["verdict"]),
+    "verdict_nfet_2d_l0p60": ("results/tcad/validation/nfet_05v0.json", ["two_d", "w10p0_l0p60", "verdict"]),
+    "verdict_nfet_2d_l0p70": ("results/tcad/validation/nfet_05v0.json", ["two_d", "w10p0_l0p70", "verdict"]),
+}  # fmt: skip
+
+
+def test_verdict_words_are_read_from_the_result_files():
+    numbers = _numbers()
+    assert set(numbers.WORDS) == set(_VERDICT_FILES)
+    subs = numbers.substitutions()
+    for name, (path, keys) in _VERDICT_FILES.items():
+        v = json.loads((ROOT / path).read_text("utf-8"))
+        for k in keys:
+            v = v[k]
+        assert numbers.word(name) == v == subs[f"x_{name}"], name
+        assert v in ("Agree", "Same process", "Disagree"), (name, v)
+
+
+def _render(text: str, subs: dict[str, str]) -> str:
+    return _SUBST.sub(lambda m: subs[m.group(1)], text)
+
+
+def test_verdict_sentence_follows_an_edited_result_file(tmp_path):
+    """Plan E2 exit criterion: a copy of the pfet result file with a new verdict changes the
+    page's sentence, so no verdict is a typed word."""
+    numbers = _numbers()
+    src = "results/tcad/calibration/pfet_05v0.result.json"
+    data = json.loads((ROOT / src).read_text("utf-8"))
+    data["verdict"] = "Same process"
+    for path, _keys in _VERDICT_FILES.values():
+        dst = tmp_path / path
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text((ROOT / path).read_text("utf-8"), "utf-8")
+    (tmp_path / src).write_text(json.dumps(data), "utf-8")
+    text = MOSCAP_PAGE.read_text(encoding="utf-8")
+    (line,) = [s for s in _sentences(text) if "{{ x_verdict_pfet_1d }}" in s]
+    before = {f"x_{n}": numbers.word(n) for n in numbers.WORDS}
+    after = {f"x_{n}": numbers.word(n, root=tmp_path) for n in numbers.WORDS}
+    assert after["x_verdict_pfet_1d"] == "Same process"
+    assert _render(line, {**numbers.substitutions(), **before}) != _render(
+        line, {**numbers.substitutions(), **after}
+    )
+    assert "Same process" in _render(line, {**numbers.substitutions(), **after})
+
+
+def test_moscap_page_prints_its_numbers():
+    text = MOSCAP_PAGE.read_text(encoding="utf-8")
+    for key in (*_VERDICT_FILES, "cgg_acc_l10", "cgg_inv_l10", "plateau_acc_l10", "plateau_inv_l10",
+                "plateau_tol_l10"):  # fmt: skip
+        assert "{{ x_" + key + " }}" in text, key
+    for name in ("moscap-cell", "moscap-cv"):
+        assert f"/_generated/explained/{name}-light.svg" in text, name
+    for anchor in ("cv-agreement-mismatch", "cv-agreement-validation"):
+        assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor

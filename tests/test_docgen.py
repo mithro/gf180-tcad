@@ -64,6 +64,8 @@ EXPLAINED_FIGURES = [
     "parts-cell",
     "junction-cell",
     "junction-panels",
+    "moscap-cell",
+    "moscap-cv",
 ]
 
 
