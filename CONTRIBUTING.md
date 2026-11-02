@@ -58,6 +58,28 @@ PRs but is not a merge blocker.
   [`tests/test_doc_measure.py`](tests/test_doc_measure.py)); a PR that fixes pages lowers
   [`tests/doc_measure_baseline.json`](tests/doc_measure_baseline.json) with
   `uv run --locked python tests/test_doc_measure.py --write-baseline`.
+- Three more rules hold on every reader page, set by the owner on 2026-11-03 (spec section 10.3):
+  - A section may describe a physical thing: a cross section, a band diagram, a curve, a
+    process step, a stack or a mesh. It then shows that thing in a figure. The figure has a
+    caption and a `:name:`, and the text cites it with `{numref}`. Of a light/dark pair, the
+    light twin carries the `:name:`; the dark twin follows it with the same caption.
+  - Figure numbers restart on each page, so a `{numref}` to another page's figure names that
+    page in its link text.
+  - A section whose noun is not a physical thing carries
+    `<!-- figure-ok: a reason of six words or more -->`. The check lists each one, and the
+    baseline counts them, so each one shows in the PR's diff for the reviewer.
+  - Every equation is a display block `$$ … $$ (eq-name)`, cited with `{math:numref}`. A line
+    `where` follows it, then one list item per symbol, ending with its unit or `dimensionless`.
+  - Every file or path named is a link: `{repo}` in the docs, a Markdown link in
+    [README.md](README.md) and this file.
+
+  Check a page with
+  `uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules all <page>`
+  ([`tools/docs_lint.py`](tools/docs_lint.py)). The test
+  [`tests/test_doc_style.py`](tests/test_doc_style.py) holds the findings per page in
+  [`tests/doc_rules_baseline.json`](tests/doc_rules_baseline.json). A PR that fixes pages lowers
+  it with `uv run --locked --group docs python tests/test_doc_style.py --write-rules-baseline`.
+  That command refuses to raise a count; `--allow-raise` raises it, and the commit says why.
 - A change to a table, in a page or in [`src/gf180tcad/docgen.py`](src/gf180tcad/docgen.py), needs a
   check at 400 px wide, because no test sees the rendered width. Build the docs, then take a
   screenshot of the page with
@@ -102,7 +124,7 @@ uv run pytest -m "not sandbox"
 clone (it covers every git worktree of it), the pre-push hook
 [`tools/git-hooks/pre-push`](tools/git-hooks/pre-push): each `git push` first runs `make pre-push` (`make lint`, then
 every non-sandbox test except the slow docs build and calibration fits, about a minute) and,
-when a pushed commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), README.md or CONTRIBUTING.md,
+when a pushed commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), [README.md](README.md) or [CONTRIBUTING.md](CONTRIBUTING.md),
 `make pre-push-docs` (the docs-links rule, a few minutes). A failure refuses the push. A push
 can therefore take three minutes or more: an agent runs `git push` in the background or with a
 timeout of at least 300 s, and never with `--no-verify`. The hook only checks what most often
