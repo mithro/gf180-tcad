@@ -89,7 +89,7 @@ The two transistors share this table:
 - The oxide's upper limit is the physical oxide thickness, the thickness of the layer itself. It
   adds an allowance for charge that sits a little below the surface
   ({ref}`BSIM4.5.0 manual, ch. 7 <lit-bsim4>`).
-- The nfet card sets a physical oxide thickness. The pfet card sets none, so the BSIM4 default
+- The nfet card sets a physical oxide thickness. The pfet card sets none, so the {term}`BSIM4` default
   applies, equal to the electrical one ({ref}`BSIM4.5.0 manual, appendix A <lit-bsim4>`).
 - The body doping starts at the card's channel doping. Its lower limit is half the doping
   that the card's {term}`body effect` coefficient implies. Its upper limit is twice the start.
