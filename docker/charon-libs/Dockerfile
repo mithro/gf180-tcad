@@ -90,7 +90,12 @@ RUN --network=none \
     --mount=type=bind,source=build-charon.sh,target=/run/gf180tcad/ctx/build-charon.sh \
     bash /run/gf180tcad/ctx/build-charon.sh check-runtime /opt/charon
 USER 1000:1000
+# Experiment A3: charon_mp.exe runs as one MPI process without mpirun. OpenMPI 4.1's singleton
+# start forks an `orted` daemon and writes PMIx shared-memory files; ess_singleton_isolated=1
+# stops both (tools/sandbox-run has no network and only /tmp writable), and the session
+# directory stays under /tmp. No other OpenMPI setting is needed (tests/test_charon_image.py).
 ENV PATH=/opt/charon/bin:${PATH} \
+    OMPI_MCA_ess_singleton_isolated=1 \
     GF180TCAD_CHARON_BASE_IMAGE=${BASE_IMAGE}
 
 LABEL org.opencontainers.image.source="https://github.com/mithro/gf180-tcad" \

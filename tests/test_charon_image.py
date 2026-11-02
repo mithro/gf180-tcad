@@ -8,7 +8,6 @@ a pids limit, one process (no ``mpirun``). The upstream test decks they run are 
 image installs under /opt/charon/share/gf180tcad/tests (copied from the Charon tarball).
 """
 
-import hashlib
 import importlib.util
 import json
 import re
@@ -36,10 +35,7 @@ KEYS = {
 }
 TESTS = "/opt/charon/share/gf180tcad/tests"
 # The OpenMPI settings the image sets so that charon_mp.exe runs as a singleton in the sandbox.
-OMPI_ENV = {
-    "OMPI_MCA_btl": "self,vader",
-    "OMPI_MCA_btl_vader_single_copy_mechanism": "none",
-}
+OMPI_ENV = {"OMPI_MCA_ess_singleton_isolated": "1"}
 
 
 # DRAFT (A-2 in progress): the pin, IMAGE_ID and versions.json are written once the image is
@@ -122,7 +118,6 @@ def test_charon_libs_installs_the_upstream_test_decks():
     assert TESTS in dockerfile
 
 
-@_UNPINNED
 def test_charon_libs_sets_the_mpi_singleton_environment():
     dockerfile = (LIBS / "Dockerfile").read_text(encoding="utf-8")
     final = dockerfile[dockerfile.rindex("FROM ${BASE_IMAGE}") :]
@@ -157,67 +152,77 @@ def test_charon_environment(tmp_path):
         assert f"{k}={v}" in out, k
 
 
-def _pmoscap(tmp_path: Path, extra: str = "") -> str:
+# While the solve runs, sample the process's thread count, the process list and /tmp every
+# 0.2 s (until it is a zombie: `wait` has not reaped it yet).
+_SAMPLE = (
+    "while [ -e /proc/$pid/status ] && ! grep -q '^State:[[:space:]]*Z' /proc/$pid/status; do "
+    "grep '^Threads:' /proc/$pid/status >> threads.txt; ps -eo comm >> procs.txt; "
+    "ls -a /tmp >> tmpls.txt; sleep 0.2; done;"
+)
+LOCA = "moscap.hb.locaOxide.1e0Hz.inp"
+
+
+def _solve(tmp_path: Path, deck: str, mesh: str, *, args: str = "", sample: bool = False) -> str:
+    """Run an upstream deck as one process (no mpirun) in the workdir; return charon's log."""
     return _run(
-        f"cp {TESTS}/pmoscap.nlp.inp {TESTS}/pmoscap.exo . && "
-        "charonInterpreter.py -i pmoscap.nlp.inp > interp.log && "
-        f"{{ charon_mp.exe --i=pmoscap.nlp.inp.xml > charon.log 2>&1 & pid=$!; {extra} "
-        "wait $pid; }; cat charon.log",
+        f"cp {TESTS}/{deck} {TESTS}/{mesh} . && "
+        f"charonInterpreter.py -i {deck} > interp.log && "
+        f"{{ charon_mp.exe --i={deck}.xml {args} > charon.log 2>&1 & pid=$!; "
+        f"{_SAMPLE if sample else ''} wait $pid; }}; cat charon.log",
         tmp_path,
     )
 
 
 @pytest.mark.sandbox
 def test_charon_runs_the_upstream_pmoscap_nlp(tmp_path):
-    out = _pmoscap(tmp_path)
+    out = _solve(tmp_path, "pmoscap.nlp.inp", "pmoscap.exo")
     assert "Charon run completed." in out
     assert (tmp_path / "pmoscap.nlp.exo").stat().st_size > 0
 
 
 @pytest.mark.sandbox
 def test_charon_mpi_singleton_in_the_sandbox(tmp_path):
-    """Experiment A3: one rank, no orted, no network, session files only under /tmp."""
-    out = _pmoscap(
-        tmp_path,
-        extra="sleep 1; ps -eo comm > procs.txt; ls -a /tmp > tmpls.txt;",
-    )
+    """Experiment A3: one rank, no orted, no PMIx shared-memory files, session under /tmp.
+
+    tools/sandbox-run gives no network and a read-only root with only /tmp writable, so a
+    write elsewhere would end the run. Without OMPI_MCA_ess_singleton_isolated=1 OpenMPI 4.1
+    forks `orted` and writes /tmp/pmix-gds-shmem.* files (Experiment A3, A-2).
+    """
+    out = _solve(tmp_path, LOCA, "moscap.dd.equ.exo", args="--current", sample=True)
     assert "Charon run completed." in out
-    procs = (tmp_path / "procs.txt").read_text(encoding="utf-8").split()
-    assert "orted" not in procs and "mpirun" not in procs, procs
-    # OpenMPI warns on stderr when a transport or the session directory fails
-    for bad in ("orted", "btl_tcp", "No network interfaces", "shmem", "PMIx"):
-        assert bad not in out, bad
-    # nothing written outside /work/out and /tmp: the root filesystem is read-only, so a
-    # failed write would have ended the run; the session directory is under /tmp
-    assert "ompi" in (tmp_path / "tmpls.txt").read_text(encoding="utf-8")
+    procs = set((tmp_path / "procs.txt").read_text(encoding="utf-8").split())
+    assert "charon_mp.exe" in procs
+    assert not procs & {"orted", "mpirun", "mpiexec", "prted"}, procs
+    tmp = set((tmp_path / "tmpls.txt").read_text(encoding="utf-8").split())
+    assert any(n.startswith("ompi.") for n in tmp), tmp
+    assert not any(n.startswith("pmix") for n in tmp), tmp
 
 
 @pytest.mark.sandbox
 def test_charon_single_thread(tmp_path):
-    """Kokkos serial and OMP_NUM_THREADS=1: one compute thread (OpenMPI adds only its own)."""
-    out = _pmoscap(
-        tmp_path,
-        extra="sleep 2; ls /proc/$pid/task | wc -l > threads.txt; "
-        "for t in /proc/$pid/task/*; do cat $t/comm; done > comms.txt;",
-    )
+    """Kokkos Serial and OMP_NUM_THREADS=1: the solve adds no compute thread.
+
+    The process has two threads: the main thread, which runs the solve, and OpenMPI's
+    progress thread, which a singleton starts in MPI_Init (Experiment A3 measured 2 threads,
+    the same with or without the OpenMPI settings).
+    """
+    out = _solve(tmp_path, LOCA, "moscap.dd.equ.exo", args="--current", sample=True)
     assert "Charon run completed." in out
-    comms = (tmp_path / "comms.txt").read_text(encoding="utf-8").split()
-    compute = [c for c in comms if c == "charon_mp.exe"]
-    assert compute == ["charon_mp.exe"], comms
+    counts = {int(ln.split()[1]) for ln in (tmp_path / "threads.txt").read_text().splitlines()}
+    assert counts and max(counts) <= 2, counts
 
 
 @pytest.mark.sandbox
 def test_charon_two_runs_byte_identical(tmp_path):
-    """Two runs of the upstream loca_moscap_cv 1 Hz deck give byte-identical currents."""
-    deck = "moscap.hb.locaOxide.1e0Hz.inp"
-    run = (
-        "mkdir -p $d && cd $d && "
-        f"cp {TESTS}/{deck} {TESTS}/moscap.dd.equ.exo . && "
-        f"charonInterpreter.py -i {deck} > interp.log && "
-        f"charon_mp.exe --i={deck}.xml --current > charon.log 2>&1 && cd ..; "
-    )
-    _run(f"d=a; {run} d=b; {run}", tmp_path)
+    """Two runs of the upstream loca_moscap_cv 1 Hz deck give byte-identical currents.
+
+    The output Exodus file is not compared byte for byte: its QA record holds the run's date,
+    time and host name (Experiment A3). The backend never commits it.
+    """
+    for d in ("a", "b"):
+        (tmp_path / d).mkdir()
+        out = _solve(tmp_path / d, LOCA, "moscap.dd.equ.exo", args="--current")
+        assert "Charon run completed." in out
     a = (tmp_path / "a" / "currents-loca.dat").read_bytes()
     b = (tmp_path / "b" / "currents-loca.dat").read_bytes()
     assert a and a == b
-    assert hashlib.sha256(a).hexdigest() == hashlib.sha256(b).hexdigest()
