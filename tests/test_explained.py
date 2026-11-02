@@ -567,9 +567,12 @@ def test_landing_lists_every_page():
         assert re.search(rf"^- \{{doc\}}`[^`<]+<{re.escape(name)}>`: ", text, re.MULTILINE), name
     prose = [
         ln for ln in text[: toc.start()].splitlines()
-        if ln.strip() and not ln.startswith(("# ", "- ", "(")) and not ln.startswith("  ")
+        if ln.strip() and not ln.startswith(("#", "- ", "(")) and not ln.startswith("  ")
     ]  # fmt: skip
     assert len(prose) <= 2, f"a landing page is one line per destination: {prose}"
+    # One heading per tier keeps each list within the 7-item cap.
+    for head in re.findall(r"^## (.+)$", text[: toc.start()], re.MULTILINE):
+        assert head in ("The basics", "The MOS capacitor", "The MOSFET"), head
 
 
 def test_explained_is_first_in_the_top_toctree():
