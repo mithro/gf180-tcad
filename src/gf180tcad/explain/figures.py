@@ -24,7 +24,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
-from gf180tcad import plots
+from gf180tcad import meshcut, plots
 from gf180tcad.explain import data, idealised, model, numbers
 
 STYLE = {
@@ -70,6 +70,9 @@ STYLE = {
     "junction_width": 4.0,
     # Labels of the cross-section sit this fraction of the drawing's height off their part.
     "cell_label_gap": 0.03,
+    # The reduced mesh artefact's window, outlined on the cross-section: dashed, this wide.
+    "window_width": 2.4,
+    "window_dash": (0, (4, 2)),
     # The junction panels: positions from (1 + pad) widths into the body to pad widths into the
     # source, on this many points; the charge axis spans the dopings with headroom.
     "junction_pad": 0.25,
@@ -427,12 +430,25 @@ _CELL_LABEL = {"gate": "gate", "oxide": "gate oxide", "source": "source", "drain
 _BODY_LABEL = {"n": "body", "p": "n-well (body)"}
 
 
-def cross_section(c: model.Cell, highlight: tuple[str, ...], palette: str) -> bytes:
+def window_box(c: model.Cell) -> Box:
+    """The window that :mod:`gf180tcad.meshcut` cuts with its default rule, in the drawn
+    coordinates of :func:`cell_extents`: :data:`gf180tcad.meshcut.WINDOW_KX` gate lengths
+    either side of the gate, from the drawn poly top down to
+    :data:`gf180tcad.meshcut.WINDOW_DEPTH_UM` below the silicon surface."""
+    gate = cell_extents(c)["gate"]
+    margin = meshcut.WINDOW_KX * c.l_um
+    return Box(gate.x0 - margin, gate.x1 + margin, gate.y0, meshcut.WINDOW_DEPTH_UM)
+
+
+def cross_section(
+    c: model.Cell, highlight: tuple[str, ...], palette: str, window: Box | None = None
+) -> bytes:
     """The 2D cell cut along its length: gate, gate oxide, source, drain and body, each filled
     with its carrier's colour (n-type: electrons, p-type: holes; the oxide its own) and labelled
     on the part, and the contacts of ``c.contacts`` as dark bars. With ``highlight``, the parts
     named there keep their colour and the rest are muted; ``"junction"`` draws the boundary of
-    the source and the drain with the body in the highlight colour."""
+    the source and the drain with the body in the highlight colour. With ``window``, that box
+    is outlined, dashed, in the highlight colour and labelled "mesh window"."""
     pal = PALETTES[palette]
     ext = cell_extents(c)
     carrier = {"donor": "electron", "acceptor": "hole"}
@@ -508,6 +524,14 @@ def cross_section(c: model.Cell, highlight: tuple[str, ...], palette: str) -> by
             ax.fill_between([a, b], y0, y1, color=pal["text"], linewidth=0)
             if name in ("source", "drain"):
                 ax.text((a + b) / 2, y0 - gap / 2, "contact", ha="center", va="bottom")
+        if window is not None:
+            a, b, y0, y1 = window
+            ax.plot([a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["highlight"],
+                    lw=STYLE["window_width"], ls=STYLE["window_dash"])  # fmt: skip
+            # Left of the box, level with the "gate oxide" label on the right: clear of the
+            # parts' boundaries.
+            ax.text(a - pad / 2, top + gap, "mesh window", ha="right", va="center",
+                    color=pal["highlight"], fontweight="bold")  # fmt: skip
         statement = model.exaggeration(c.scales, c.drawn).replace(". ", ".\n")
         ax.set_title(statement, fontsize=STYLE["text_pt"])
         return _svg(fig)
@@ -573,6 +597,13 @@ def _parts_cell(palette: str) -> bytes:
         "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
     )
     return cross_section(c, (), palette)
+
+
+def _mesh_window(palette: str) -> bytes:
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+    )
+    return cross_section(c, (), palette, window=window_box(c))
 
 
 def _junction_cell(palette: str) -> bytes:
@@ -1045,6 +1076,7 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "moscap-cv": _moscap_cv,
     "cv-regions": cv_regions,
     "band-regimes": band_regimes,
+    "mesh-window": _mesh_window,
     "cv-parts": cv_parts,
     "corner-cv": corner_cv,
     "corner-area": corner_area,
@@ -1053,7 +1085,7 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
 
 # The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
 # computed curves (not drawings of the device) carry no statement.
-_CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell")
+_CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell", "mesh-window")
 _PLOTS = (
     "bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes", "cv-parts",
     "corner-cv",

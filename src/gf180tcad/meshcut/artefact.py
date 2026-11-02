@@ -14,11 +14,13 @@ written by :func:`gf180tcad.io.write_json`). The meta file ties the artefact to 
   (:func:`gf180tcad.meshcut.window.rule_bounds` and its arguments);
 - ``node_count``, ``triangle_count``, ``boundary_line_count``, ``regions``, ``boundaries``:
   what the npz holds;
-- ``npz_sha256``, ``source`` (``cache`` or ``regenerated``), ``units``, ``net_doping`` (how
+- ``npz_sha256`` and ``size_bytes``: the npz's sha256 and its size in bytes (there is no size
+  cap: the size is recorded, never refused);
+- ``source`` (``cache`` or ``regenerated``), ``units``, ``net_doping`` (how
   ``net_doping_cm3`` was evaluated) and ``format`` (:data:`gf180tcad.meshcut.FORMAT`).
 
 :func:`check_meta` refuses a meta file with a missing, extra or ill-typed field, and
-:func:`read` refuses an npz whose sha256 or members disagree with its meta.
+:func:`read` refuses an npz whose sha256, size or members disagree with its meta.
 """
 
 from __future__ import annotations
@@ -47,6 +49,7 @@ META_KEYS = (
     "node_count",
     "npz_sha256",
     "regions",
+    "size_bytes",
     "source",
     "triangle_count",
     "units",
@@ -136,7 +139,7 @@ def check_meta(meta: Mapping) -> None:
         _sha(meta[k], k)
     for k in (
         "boundary_line_count", "full_mesh_node_count", "full_mesh_triangle_count", "node_count",
-        "triangle_count",
+        "size_bytes", "triangle_count",
     ):  # fmt: skip
         _count(meta[k], k)
     _names(meta["regions"], "regions")
@@ -190,6 +193,7 @@ def write(
         "node_count": len(win.node_id),
         "npz_sha256": _sha256(out_dir / meshcut.ARTEFACT),
         "regions": list(win.regions),
+        "size_bytes": (out_dir / meshcut.ARTEFACT).stat().st_size,
         "source": source,
         "triangle_count": len(win.triangles),
         "units": dict(UNITS),
@@ -217,9 +221,9 @@ def read(job_dir: Path) -> Window:
     """The :class:`~gf180tcad.meshcut.window.Window` of the artefact in ``job_dir``
     (``results/tcad/meshes/<image>/<device>/<params>/<gid>``), with ``net_doping_cm3``.
 
-    Raises ValueError if the meta is not complete and well typed, if the npz's sha256 is not
-    the meta's ``npz_sha256``, or if a member is missing or has another dtype or shape than
-    the meta's counts give.
+    Raises ValueError if the meta is not complete and well typed, if the npz's sha256 or size
+    is not the meta's ``npz_sha256`` or ``size_bytes``, or if a member is missing or has
+    another dtype or shape than the meta's counts give.
     """
     job_dir = Path(job_dir)
     meta = read_meta(job_dir)
@@ -227,6 +231,9 @@ def read(job_dir: Path) -> Window:
     got = _sha256(path)
     if got != meta["npz_sha256"]:
         raise ValueError(f"{path}: sha256 {got}, the meta's npz_sha256 is {meta['npz_sha256']}")
+    size = path.stat().st_size
+    if size != meta["size_bytes"]:
+        raise ValueError(f"{path}: {size} bytes, the meta's size_bytes is {meta['size_bytes']}")
     arrays = npz.read_npz(path)
     if sorted(arrays) != sorted(_MEMBERS):
         raise ValueError(f"{path}: members {sorted(arrays)}, expected {sorted(_MEMBERS)}")

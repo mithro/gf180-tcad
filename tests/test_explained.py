@@ -1575,6 +1575,36 @@ def test_glossary_terms_of_the_regions_page():
         assert "{ref}`explained-regions" in entry, t
 
 
+# --- the mesh window figure (renders plan Task R0, docs/reproduce/index.md) -------------------
+
+REPRODUCE_PAGE = ROOT / "docs" / "reproduce" / "index.md"
+
+
+def test_mesh_window_figure_draws_the_window_rule():
+    """The reproduce page's figure outlines the window that meshcut cuts with its default rule:
+    a quarter gate length either side of the gate, from the drawn poly top down to
+    WINDOW_DEPTH_UM below the silicon surface (depth grows downwards in the drawing)."""
+    from gf180tcad import meshcut
+    from gf180tcad.explain import figures, model
+
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=figures.STYLE["scales"],
+                   drawn=figures.STYLE["drawn_um"])  # fmt: skip
+    gate = figures.cell_extents(c)["gate"]
+    box = figures.window_box(c)
+    assert box.x0 == pytest.approx(gate.x0 - meshcut.WINDOW_KX * c.l_um)
+    assert box.x1 == pytest.approx(gate.x1 + meshcut.WINDOW_KX * c.l_um)
+    assert box.y0 == pytest.approx(gate.y0)  # the poly top
+    assert box.y1 == pytest.approx(meshcut.WINDOW_DEPTH_UM)
+    assert "mesh-window" in figures.FIGURES
+    light = figures.FIGURES["mesh-window"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["mesh-window"]("dark")
+    assert b"window" in light
+    text = REPRODUCE_PAGE.read_text(encoding="utf-8")
+    for palette in figures.PALETTES:
+        assert f"/_generated/explained/mesh-window-{palette}.svg" in text, palette
+    assert "{numref}`mesh-window-figure`" in text
+
+
 # --- the C-V curve page (task E2c) -----------------------------------------------------------
 
 CV_PAGE = EXPLAINED / "cv-curve.md"

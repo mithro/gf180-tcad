@@ -68,6 +68,7 @@ EXPLAINED_FIGURES = [
     "moscap-cv",
     "cv-regions",
     "band-regimes",
+    "mesh-window",
     "cv-parts",
     "corner-cv",
     "corner-area",
