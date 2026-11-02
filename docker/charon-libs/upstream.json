@@ -20,6 +20,17 @@
     "url": "https://www.sandia.gov/app/uploads/sites/106/2022/06/charon-distrib-v2_2.tar.gz",
     "version": "2.2.0"
   },
+  "gfortran": {
+    "file": "gfortran_13.2.0-7ubuntu1_amd64.deb",
+    "install_order": 41,
+    "kind": "deb",
+    "license": "Ubuntu package; licence in /usr/share/doc/gfortran/copyright",
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/charon-20261102/gfortran_13.2.0-7ubuntu1_amd64.deb",
+    "role": "charon-libs build stage only (Trilinos/Charon build dependency)",
+    "sha256": "55330d590af1fdc77e00659117a5898731bd9368da20f2812ed944685c0996af",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261010T000000Z/pool/main/g/gcc-defaults/gfortran_13.2.0-7ubuntu1_amd64.deb",
+    "version": "4:13.2.0-7ubuntu1"
+  },
   "gfortran-13": {
     "file": "gfortran-13_13.3.0-6ubuntu2~24.04.1_amd64.deb",
     "install_order": 2,
@@ -41,6 +52,17 @@
     "sha256": "82382cb8506616ef7df5b9927694bfaacf97bdfb317b1f995453cc17c96aa071",
     "url": "https://snapshot.ubuntu.com/ubuntu/20261010T000000Z/pool/main/g/gcc-13/gfortran-13-x86-64-linux-gnu_13.3.0-6ubuntu2~24.04.1_amd64.deb",
     "version": "13.3.0-6ubuntu2~24.04.1"
+  },
+  "gfortran-x86-64-linux-gnu": {
+    "file": "gfortran-x86-64-linux-gnu_13.2.0-7ubuntu1_amd64.deb",
+    "install_order": 40,
+    "kind": "deb",
+    "license": "Ubuntu package; licence in /usr/share/doc/gfortran-x86-64-linux-gnu/copyright",
+    "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/charon-20261102/gfortran-x86-64-linux-gnu_13.2.0-7ubuntu1_amd64.deb",
+    "role": "charon-libs build stage only (Trilinos/Charon build dependency)",
+    "sha256": "f83ad19c3255fab79785dac8b9d6710aad24aa2533f2e8ef645446c3e899b42f",
+    "url": "https://snapshot.ubuntu.com/ubuntu/20261010T000000Z/pool/main/g/gcc-defaults/gfortran-x86-64-linux-gnu_13.2.0-7ubuntu1_amd64.deb",
+    "version": "4:13.2.0-7ubuntu1"
   },
   "hdf5-helpers": {
     "file": "hdf5-helpers_1.10.10+repack-3.1ubuntu4_amd64.deb",
