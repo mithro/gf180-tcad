@@ -834,12 +834,13 @@ def cv_parts_figure(palette: str):
                         va=va, arrowprops=arrow, fontweight="bold")  # fmt: skip
         ax.annotate(CV_PARTS["dip"], xy=(u_min, c_min), xytext=(u_min, c_min - gap),
                     ha="center", va="top", arrowprops=arrow, fontweight="bold")  # fmt: skip
-        # The shift: a double arrow across the SPICE curve's falling-side crossing, labelled to
-        # its left.
+        # The shift: an arrow centred on the SPICE curve's falling-side crossing, its one head
+        # towards more positive gate voltages (the way the shift moves the simulated curve),
+        # labelled to its left.
         y = (c_min + tt[0]) / 2
         half = (u[-1] - u[0]) * STYLE["shift_arrow"] / 2
         ax.annotate("", xy=(u_dep + half, y), xytext=(u_dep - half, y),
-                    arrowprops={**arrow, "arrowstyle": "<->"})  # fmt: skip
+                    arrowprops={**arrow, "arrowstyle": "->"})  # fmt: skip
         ax.annotate(CV_PARTS["position"], xy=(u_dep, y), xytext=(u_dep - half, y), ha="right",
                     va="center", fontweight="bold")  # fmt: skip
         ax.set_xlabel("gate voltage (V)")

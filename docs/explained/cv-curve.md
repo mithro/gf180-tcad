@@ -8,7 +8,7 @@ how the fit moves the simulated curve onto the {term}`SPICE` one.
 
 ```{figure} /_generated/explained/cv-parts-light.svg
 :figclass: only-light
-:alt: Gate capacitance against gate voltage: a solid line, a dashed line almost on top of it, and a dotted line with higher flat ends and a shallower dip. Labels name the oxide thickness at both flat ends, the body doping at the dip and a voltage shift with a two-headed arrow on the falling side.
+:alt: Gate capacitance against gate voltage: a solid line, a dashed line almost on top of it, and a dotted line with higher flat ends and a shallower dip. Labels name the oxide thickness at both flat ends, the body doping at the dip and a voltage shift with an arrow on the falling side pointing to more positive gate voltage.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
 the {term}`typical corner`. The dotted line is the simulated stack at the start values, and the
@@ -19,7 +19,7 @@ The places of the labels and the length of the arrow are drawing choices.
 
 ```{figure} /_generated/explained/cv-parts-dark.svg
 :figclass: only-dark
-:alt: Gate capacitance against gate voltage: a solid line, a dashed line almost on top of it, and a dotted line with higher flat ends and a shallower dip. Labels name the oxide thickness at both flat ends, the body doping at the dip and a voltage shift with a two-headed arrow on the falling side.
+:alt: Gate capacitance against gate voltage: a solid line, a dashed line almost on top of it, and a dotted line with higher flat ends and a shallower dip. Labels name the oxide thickness at both flat ends, the body doping at the dip and a voltage shift with an arrow on the falling side pointing to more positive gate voltage.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
 the {term}`typical corner`. The dotted line is the simulated stack at the start values, and the

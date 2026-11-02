@@ -416,9 +416,10 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   bookkeeping (`figures.cv_curves`, the readers of `explain.data`). The labels
   (`figures.CV_PARTS`) name the oxide thickness at both flat parts (with the gate doping at the
   inversion one, poly depletion), the body doping at the dip, pointing at the result file's
-  `spice_regions.u_min` and `c_min`, and the voltage shift on a two-headed arrow at the SPICE
-  curve's falling-side crossing, `spice_regions.u_dep`. The arrow's length is a drawing
-  choice (the fitted shift is about one per cent of the axis); the caption and page say so.
+  `spice_regions.u_min` and `c_min`, and the voltage shift on an arrow centred on the SPICE
+  curve's falling-side crossing, `spice_regions.u_dep`, with one head towards more positive
+  gate voltage (review of #118; tested). The arrow's length is a drawing choice (the fitted
+  shift is about one per cent of the axis); the caption and page say so.
 - The start values are the result file's `start` table, tested equal to the process file's
   values; the fitted ones are its `values`, tested equal to the calibration file. The page
   prints the idealised Cox of the start and fitted thickness, the plateau errors, the

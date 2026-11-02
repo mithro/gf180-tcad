@@ -1646,6 +1646,7 @@ def test_cv_parts_labels_name_the_parameters_at_the_committed_marks():
     SPICE minimum and the shift arrow sits on the SPICE falling-side crossing, from the result
     file."""
     from gf180tcad.explain import figures
+    from matplotlib.patches import ArrowStyle
 
     numbers = _numbers()
     (ax,) = figures.cv_parts_figure("light").axes
@@ -1655,6 +1656,13 @@ def test_cv_parts_labels_name_the_parameters_at_the_committed_marks():
     assert tuple(dip.xy) == (numbers.value("u_min_l10"), numbers.value("c_min_l10"))
     shift = texts[figures.CV_PARTS["position"]]
     assert shift.xy[0] == pytest.approx(numbers.value("u_dep_spice_l10"))
+    # The shift arrow: one head, at its more positive end, centred on the crossing.
+    (arrow,) = [t for t in ax.texts if not t.get_text() and t.arrow_patch is not None]
+    style = arrow.arrow_patch.get_arrowstyle()
+    assert isinstance(style, ArrowStyle.CurveB), style
+    head, tail = arrow.xy, arrow.xyann
+    assert head[0] > tail[0] and head[1] == tail[1]
+    assert (head[0] + tail[0]) / 2 == pytest.approx(numbers.value("u_dep_spice_l10"))
     lo, hi = figures.region_edges()
     acc = texts[figures.CV_PARTS["accumulation"]]
     inv = texts[figures.CV_PARTS["inversion"]]
