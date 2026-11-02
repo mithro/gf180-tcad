@@ -747,6 +747,13 @@ def test_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
     ]
     derived = json.loads(json.dumps(width_scaled_two_d(NFET, "w10p0_l0p70", "w1p6_l0p70")))
     assert committed["status"] == "compared"
+    assert committed["causes"] == ["geometry-2d", "spice-fit"]
+    assert committed["geometry"] == {
+        "geometry_id": "w1p6_l0p70",
+        "l_um": 0.7,
+        "role": "validation",
+        "w_um": 1.6,
+    }
     assert {k: committed[k] for k in derived} == derived
 
 
