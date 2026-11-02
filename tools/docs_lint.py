@@ -681,7 +681,10 @@ def equation_findings(lines):
                                            + ", ".join(sorted(symbols))))
             continue
         defined = set()
-        for line_no, item in items:
+        # One item may hold several definitions: "$E$ is ..., in J; $m$ is ..., in kg."
+        defs = [(n, part if k == 0 else "- " + part)
+                for n, it in items for k, part in enumerate(re.split(r";\s+(?=\$)", it))]
+        for line_no, item in defs:
             m = _WHERE_ITEM.match(item)
             if not m:
                 out.append((line_no, "EQUATION", "a 'where' item that does not start with its "

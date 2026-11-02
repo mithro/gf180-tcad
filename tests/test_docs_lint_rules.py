@@ -698,3 +698,25 @@ def test_review_sections_are_flagged_or_not_situations(rel, heading, reason):
 )  # fmt: skip
 def test_equation_function_names_are_not_symbols(latex, symbols):
     assert lint().latex_symbols(latex) == symbols
+
+
+# --- EQUATION: two symbols defined in one where item -----------------------------------------
+
+TWO_IN_ONE = "# T\n\n$$ E = m c $$ (eq-e)\n\nwhere\n\n- $c$ is the speed of light, in m/s;\n"
+
+
+def test_equation_two_definitions_in_one_item_both_count():
+    page = TWO_IN_ONE + "- $E$ is the energy, in J; $m$ is the mass, in kg.\n"
+    assert found(page, "EQUATION") == []
+
+
+def test_equation_two_definitions_in_one_item_each_needs_a_unit():
+    page = TWO_IN_ONE + "- $E$ is the energy, in J; $m$ is the mass.\n"
+    hits = found(page, "EQUATION")
+    assert len(hits) == 1 and "unit" in hits[0][1] and "$m$" in hits[0][1]
+
+
+def test_equation_symbol_named_inside_an_item_is_not_defined():
+    page = TWO_IN_ONE + "- $E$ is the energy of the mass $m$, in J.\n"
+    hits = found(page, "EQUATION")
+    assert len(hits) == 1 and "does not define m" in hits[0][1]
