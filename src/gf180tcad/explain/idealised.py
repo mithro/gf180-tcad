@@ -156,4 +156,81 @@ def abrupt_junction(x_cm, n_a_cm3, n_d_cm3, vbi_v, eps_r, eps0_f_per_cm, q_c):
     return {"charge_cm3": charge, "field_v_per_cm": field, "potential_v": psi}
 
 
+
+@_formula("ψ_B = V_t·ln(N_A/n_i)", f"{_SZE}, ch. 4 (the ideal MIS capacitor)")
+def bulk_potential(n_a_cm3, n_i_cm3, vt_v):
+    """How far the Fermi level of a p-type body lies below the middle of the gap,
+    ψ_B = V_t·ln(N_A/n_i) (V), under Boltzmann statistics with every acceptor ionised.
+
+    Reference: Sze and Ng 2006 (lit-sze), ch. 4 (the ideal MIS capacitor).
+    """
+    return vt_v * math.log(n_a_cm3 / n_i_cm3)
+
+
+@_formula("V_FB = −V_t·ln(N_gate·N_A / n_i²)", f"{_SZE}, ch. 4 (the work-function difference)")
+def flat_band(n_a_cm3, n_gate_cm3, n_i_cm3, vt_v):
+    """The flat-band voltage of an n-type silicon gate on a p-type body with no charge in the
+    oxide, V_FB = −V_t·ln(N_gate·N_A / n_i²) (V): the work-function difference of the two
+    silicon layers, the sum of their Fermi-level distances from the middle of the gap, negated.
+    Its size is the built-in potential of the two dopings, computed by
+    :func:`built_in_potential`.
+
+    Reference: Sze and Ng 2006 (lit-sze), ch. 4 (the work-function difference).
+    """
+    return -built_in_potential(n_a_cm3, n_gate_cm3, n_i_cm3, vt_v)
+
+
+#: F/cm² per fF/µm² (1e-15 F over 1e-8 cm²).
+_F_PER_CM2_PER_FF_PER_UM2 = 1e-7
+
+
+@_formula(
+    "V_T = V_FB + 2·ψ_B + √(4·ε_r·ε_0·q·N_A·ψ_B) / C_ox",
+    f"{_SZE}, ch. 4 (the ideal MIS capacitor, strong inversion)",
+)
+def threshold(n_a_cm3, n_i_cm3, vt_v, v_fb_v, eps_r, eps0_f_per_cm, q_c, c_ox_ff_per_um2):
+    """The threshold voltage of an ideal MOS capacitor on a p-type body in the
+    :term:`depletion approximation`, V_T = V_FB + 2·ψ_B + √(4·ε_r·ε_0·q·N_A·ψ_B) / C_ox (V):
+    the gate voltage at which the bands at the surface bend by 2·ψ_B (:func:`bulk_potential`),
+    the onset of strong inversion, with C_ox in fF/µm².
+
+    Reference: Sze and Ng 2006 (lit-sze), ch. 4 (the ideal MIS capacitor, strong inversion).
+    """
+    psi_b = bulk_potential(n_a_cm3, n_i_cm3, vt_v)
+    charge = math.sqrt(4 * eps_r * eps0_f_per_cm * q_c * n_a_cm3 * psi_b)
+    return v_fb_v + 2 * psi_b + charge / (c_ox_ff_per_um2 * _F_PER_CM2_PER_FF_PER_UM2)
+
+
+@_formula(
+    "W = √(2·ε_r·ε_0·ψ_s / (q·N_A))",
+    f"{_SZE}, ch. 4 (the depletion approximation, MIS capacitor)",
+)
+def depletion_depth(psi_s_v, n_a_cm3, eps_r, eps0_f_per_cm, q_c):
+    """The depth of the depleted layer under the oxide of a p-type body whose bands bend down by
+    ψ_s ≥ 0 at the surface, in the :term:`depletion approximation`,
+    W = √(2·ε_r·ε_0·ψ_s / (q·N_A)) (cm).
+
+    Reference: Sze and Ng 2006 (lit-sze), ch. 4 (the depletion approximation, MIS capacitor).
+    """
+    return math.sqrt(2 * eps_r * eps0_f_per_cm * psi_s_v / (q_c * n_a_cm3))
+
+
+@_formula(
+    "ψ(x) = ψ_s·(1 − x/W)² for x < W, else 0",
+    f"{_SZE}, ch. 4 (the depletion approximation, MIS capacitor)",
+)
+def surface_bending(x_cm, psi_s_v, n_a_cm3, eps_r, eps0_f_per_cm, q_c):
+    """How far the bands of a p-type body bend down at the depths ``x_cm`` (cm) below the oxide
+    in the :term:`depletion approximation`: ψ(x) = ψ_s·(1 − x/W)² for x < W, else 0 (V), with
+    ψ_s ≥ 0 the bending at the surface and W from :func:`depletion_depth`.
+
+    Reference: Sze and Ng 2006 (lit-sze), ch. 4 (the depletion approximation, MIS capacitor).
+    """
+    x = np.asarray(x_cm, dtype=float)
+    w = depletion_depth(psi_s_v, n_a_cm3, eps_r, eps0_f_per_cm, q_c)
+    if w == 0:
+        return np.zeros_like(x)
+    return np.where(x < w, psi_s_v * (1 - np.minimum(x, w) / w) ** 2, 0.0)
+
+
 FORMULAS: Mapping[str, Formula] = MappingProxyType(dict(sorted(_TABLE.items())))

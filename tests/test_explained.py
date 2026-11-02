@@ -258,7 +258,8 @@ def test_idealised_table_is_closed_and_documented():
 
     assert set(idealised.FORMULAS) == {
         "abrupt_junction", "boltzmann_fermi", "built_in_potential", "degenerate_offset",
-        "depletion_width", "mass_action",
+        "depletion_width", "mass_action", "bulk_potential", "flat_band", "threshold",
+        "depletion_depth", "surface_bending",
     }  # fmt: skip
     for f in idealised.FORMULAS.values():
         doc = " ".join((f.fn.__doc__ or "").split())
@@ -1446,8 +1447,8 @@ def test_flat_band_and_threshold_against_hand_values():
     vth = vfb + 2 * psi_b + math.sqrt(4 * eps * e0 * q * na * psi_b) / (cox * 1e-7)
     assert idealised.threshold(na, ni, vt, vfb, eps, e0, q, cox) == pytest.approx(vth, rel=1e-12)
     # By hand: ψ_B = 0.025 × ln(1e7) = 0.40295; √(4 × 11.7 × 8.854e-14 × 1.602e-19 × 1e17 × ψ_B)
-    # = 1.6403e-7 C/cm², over 2e-7 F/cm² = 0.8201 V.
-    assert vth == pytest.approx(-0.978 + 0.806 + 0.820, abs=2e-3)
+    # = 1.6355e-7 C/cm², over 2e-7 F/cm² = 0.8177 V; V_FB = −0.025 × ln(1e17) = −0.9786 V.
+    assert vth == pytest.approx(-0.9786 + 0.8059 + 0.8177, abs=1e-3)
 
 
 def test_surface_bending_against_hand_values():
