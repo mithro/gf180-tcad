@@ -19,7 +19,7 @@ there.
   ({repo}`calibration plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
   {doc}`/comparison/cv-agreement`). In 1D the nfet is {term}`Agree` at every geometry,
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
-  follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
+  follow the SPICE pfet's {term}`depletion` edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`).
 - **2D validation: {term}`Disagree` at five cells,** nfet W10/L0.6, W10/L0.7 and W1.6/L0.7, pfet W10/L1 and W10/L2.
   All five fail on the depletion crossing, which the 2D cell moves below 1D ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
@@ -58,8 +58,8 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
   {term}`MOS capacitor` is cross-checked on a {{ GitHub_hosted_runner }} ({ref}`cross-host-tcad`);
   `make reproduce-quick` runs the same check locally ({ref}`make reproduce-quick <reproduce-quick>`).
 - **The same bytes on another computer: only on some processors.** Byte-identical results are
-  guaranteed only on {term}`x86-64-v2` or newer hosts. The full reference is verified on an
-  Intel Xeon Gold 6152 (local) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
+  guaranteed only on {term}`x86-64-v2` or newer hosts. The full reference is verified on the
+  local machine ([issue #144](https://github.com/mithro/gf180-tcad/issues/144)) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
   ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
   and that run did not have the {{ numpy }} fix described there.
 
@@ -118,7 +118,7 @@ values are not read as more physical than they are.
 - **Quasi-static, not high-frequency.** The TCAD curve is the {term}`QS` one: the
   equilibrium {term}`Cgg`, the counterpart of the {term}`BSIM4` `capMod=2` Cgg of the
   {{ ngspice }} {term}`cv` sweep it is compared with. A MOS capacitor with only a body contact,
-  measured with a small signal, gives the {term}`HF C–V` curve instead: in inversion it stays
+  measured with a small signal, gives the {term}`HF C–V` curve instead: in {term}`inversion` it stays
   near its depletion minimum. The 2D cells have source and drain, which supply the inversion
   charge: at {term}`Lmin` their committed 1 MHz small-signal Cgg
   ({repo}`nfet cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>`,
@@ -140,7 +140,7 @@ values are not read as more physical than they are.
   doped at {term}`NGATE` (n+ 1e20 cm⁻³ for the nfet, p+ 3.6e19 cm⁻³ for the pfet), so
   {term}`poly depletion` is in the model, not in a fitted term. Its carriers follow
   Boltzmann statistics, which place the {term}`Fermi level` beyond the band edge at these
-  dopings. At the start body doping of 1.7e17 cm⁻³ the Boltzmann flat band is **−1.029 V** for
+  dopings. At the start body doping of 1.7e17 cm⁻³ the Boltzmann {term}`flat band` is **−1.029 V** for
   the nfet and **+1.003 V** for the pfet; at the calibrated body doping (`n_ch_cm3`
   8.81e16 cm⁻³ for the nfet, 2.15e17 cm⁻³ for the pfet,
   {repo}`results/tcad/calibration`) it is −1.012 V and +1.009 V ({py:mod}`gf180tcad.tcad.analytic`).
@@ -155,8 +155,8 @@ values are not read as more physical than they are.
   geometry through fixed BSIM4 values of the {term}`card <model card>`: the capacitance area
   (L − 2·DLC)·(W − 2·{term}`DWC`) and the overlap, fringe and {term}`CGBO` terms
   ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). They are not fitted and not part of
-  the {term}`parameter budget`. At Lmin they are a large part of Cgg: 3.97 of 14.36 fF for the
-  calibrated nfet at Vg = −5 V, in accumulation. So Lmin tests the bookkeeping as much as the
+  the {term}`parameter budget`. At Lmin they are a large part of Cgg. For the
+  calibrated nfet in {term}`accumulation`, at Vg = −5 V, they are 3.97 of 14.36 fF. So Lmin tests the bookkeeping as much as the
   TCAD. The split is plotted on each generated geometry page ({doc}`/_generated/tcad/index`).
 - **{{ Xyce }} has no C–V analysis.** Cgg has one SPICE engine, ngspice, and the 0.5 %
   {term}`engine cross-check` cannot apply to it ({ref}`results-layout`).
@@ -194,9 +194,11 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)). The spec's
   {repo}`section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`
   draws the mesh pictures as part of the 3D renders of the simulated processes. They come from a
-  committed reduced mesh artefact, with provenance tied to each job's mesh sha256. No render and
-  no mesh picture exists ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The
-  {ref}`output cache <output-cache>` holds none of the committed 2D jobs' meshes.
+  committed {ref}`reduced mesh artefact <mesh-artefact>`, with provenance tied to each job's
+  mesh sha256. No artefact, render or mesh picture is committed
+  ([issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The
+  {ref}`output cache <output-cache>` holds the meshes of the calibrated 2D cells, not those of
+  the 2D start jobs.
 - **{term}`Cgg` in depletion is not held to 5 %.** The design spec sets {term}`Cgg` ≤ 5 % in
   accumulation, depletion and inversion. The {term}`TCAD` calibration holds the two plateaus
   to 5 % and replaces the depletion-region 5 % with the voltage shifts of the two

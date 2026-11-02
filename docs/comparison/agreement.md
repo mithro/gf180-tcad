@@ -166,7 +166,7 @@ means that the design spec sets no bias or no stretch goal for that metric:
 | Cgd | none | 5 | 5 | none |
 | Effective {term}`Rsd` | none | none | 10 | none |
 
-The Cgg-Vg {term}`sweep` covers accumulation, depletion and inversion. The effective Rsd is
+The Cgg-Vg {term}`sweep` covers {term}`accumulation`, {term}`depletion` and {term}`inversion`. The effective Rsd is
 extracted from 1/Id versus L.
 
 The other metrics:

@@ -1025,33 +1025,207 @@ class _FakeApp:
 
 
 def _linker():
-    app = _FakeApp()
+    _FakeApp()  # puts docs/_ext on sys.path
     import api_links
 
-    app.config.myst_substitutions = app.subs
-    return api_links._Linker(app, set())
+    return api_links._Linker()
 
 
-def test_linker_short_names_are_case_sensitive():
-    lk = _linker()
-    line = lk.line("Capacitance in fF; the ss and tt corners are named in lower case.")
-    assert not re.search(r":term:`(fF|ss|tt)\b", line), line  # fF, ss, tt are not FF, SS, TT
-    lk = _linker()
-    assert ":term:`FF <FF>`" in lk.line("The FF corner is fast.")
-
-
-def test_linker_leaves_field_names_alone():
-    lk = _linker()
-    line = lk.line(":param corner: the process corner to run")
-    assert line.startswith(":param corner: "), line
-    assert ":term:" in line.removeprefix(":param corner: "), line  # the description is prose
+def test_linker_rewrites_literals_but_not_prose():
+    """The docstring pass turns literals into roles; first uses are left to the page pass."""
+    line = _linker().line("The TCAD run reads ``tools/sandbox-run`` and ``gf180tcad.devices``.")
+    assert line == "The TCAD run reads :repo:`tools/sandbox-run` and :py:obj:`gf180tcad.devices`."
     assert _linker().line(":class:`gf180tcad.devices.Device` sweeps").startswith(":class:`")
 
 
-def test_linker_does_not_link_into_a_filename():
-    lk = _linker()
-    assert ":term:" not in lk.line("It writes provenance.json next to the CSVs.")
-    assert ":term:`provenance <provenance>`" in _linker().line("The provenance of a run.")
+# --- first uses on an API page (docs/_ext/api_links.py, the doctree pass) ---------------------
+
+
+def _first_uses(rst: str):
+    """Parse ``rst`` with docutils, link its first uses as on an API page; (before, after)."""
+    from docutils.core import publish_doctree
+
+    app = _FakeApp()
+    import api_links
+
+    tree = publish_doctree(textwrap.dedent(rst), settings_overrides={"report_level": 5})
+    before = tree.pformat()
+    api_links.FirstUses(app.subs).run(tree)
+    return before, tree
+
+
+def _pending_xref():
+    from sphinx import addnodes
+
+    return addnodes.pending_xref
+
+
+def _xrefs(tree) -> list[tuple[str, str, str]]:
+    """(reftype, reftarget, shown text) of every pending_xref, in document order."""
+    from sphinx import addnodes
+
+    return [(n["reftype"], n["reftarget"], n.astext()) for n in tree.findall(addnodes.pending_xref)]
+
+
+def test_first_use_in_prose_is_linked_once():
+    _, tree = _first_uses("The TCAD run.\n\nA second TCAD run, and TCAD again.\n")
+    assert _xrefs(tree) == [("term", "tcad", "TCAD")]
+    assert tree.astext() == "The TCAD run.\n\nA second TCAD run, and TCAD again."
+
+
+def test_first_use_in_a_code_span_stays_unlinked():
+    """A term inside a longer code span is code, not a use; the prose use after it is linked."""
+    _, tree = _first_uses("Run ``make TCAD=1``, then read the TCAD log.\n")
+    from docutils import nodes
+
+    lit = next(tree.findall(nodes.literal))
+    assert lit.astext() == "make TCAD=1" and lit.parent.tagname == "paragraph"
+    assert not list(lit.findall(_pending_xref()))
+    assert _xrefs(tree) == [("term", "tcad", "TCAD")]
+
+
+def test_code_span_that_is_a_term_is_its_first_use():
+    """``sweep`` alone is the term (the HTML checker counts it), so it is the linked use."""
+    _, tree = _first_uses("The ``sweep`` field; every sweep runs.\n")
+    from docutils import nodes
+
+    assert _xrefs(tree) == [("term", "sweep", "sweep")]
+    assert isinstance(next(tree.findall(_pending_xref())).children[0], nodes.literal)
+
+
+def test_page_with_no_terms_is_unchanged():
+    before, tree = _first_uses("Reads a file and returns ``None``.\n\n* one\n* two\n")
+    assert tree.pformat() == before
+
+
+def test_first_use_already_linked_is_not_linked_again():
+    _, tree = _first_uses("The `TCAD <https://example.org/>`__ run; the TCAD output.\n")
+    assert _xrefs(tree) == []
+
+
+def test_first_use_skips_titles_and_literal_blocks():
+    rst = """\
+    TCAD title
+    ==========
+
+    ::
+
+        TCAD in a block
+
+    The TCAD run.
+    """
+    _, tree = _first_uses(rst)
+    assert _xrefs(tree) == [("term", "tcad", "TCAD")]
+    assert next(tree.findall(_pending_xref())).parent.tagname == "paragraph"
+
+
+def test_first_use_inside_emphasis_is_linked():
+    """reST cannot nest a role in emphasis; the doctree can."""
+    _, tree = _first_uses("A *TCAD* run.\n")
+    xref = next(tree.findall(_pending_xref()))
+    assert xref.parent.tagname == "emphasis" and _xrefs(tree) == [("term", "tcad", "TCAD")]
+
+
+def test_first_use_short_names_are_case_sensitive():
+    _, tree = _first_uses("Capacitance in fF; the ss and tt corners are named in lower case.\n")
+    assert [t for t in _xrefs(tree) if t[2] in ("fF", "ss", "tt")] == []
+    _, tree = _first_uses("The FF corner is fast.\n")
+    assert ("term", "ff", "FF") in _xrefs(tree)
+
+
+def test_first_use_leaves_field_names_alone():
+    _, tree = _first_uses(":param corner: the process corner to run\n")
+    from docutils import nodes
+
+    assert not list(next(tree.findall(nodes.field_name)).findall(_pending_xref()))
+    assert [t[1] for t in _xrefs(tree)] == ["corner"]  # the description is prose
+
+
+def test_first_use_does_not_link_into_a_filename():
+    _, tree = _first_uses("It writes provenance.json next to the CSVs.\n")
+    assert [t for t in _xrefs(tree) if t[1] == "provenance"] == []
+    _, tree = _first_uses("The provenance of a run.\n")
+    assert ("term", "provenance", "provenance") in _xrefs(tree)
+
+
+def test_first_use_skips_the_journal_name():
+    _, tree = _first_uses("IEEE Trans. Electron Devices 30(7), 1983. Electrons move.\n")
+    assert [t[2] for t in _xrefs(tree)] == ["Electrons"]
+
+
+def test_first_use_links_a_tool():
+    from docutils import nodes
+
+    _, tree = _first_uses("Drawn with matplotlib, twice: matplotlib.\n")
+    refs = [r for r in tree.findall(nodes.reference) if r.astext() == "matplotlib"]
+    assert len(refs) == 1 and refs[0]["refuri"].startswith("https://")
+
+
+def test_first_use_links_the_path_inside_a_command():
+    """`tools/output-cache pull`: the checker wants the path linked somewhere on the page."""
+    from docutils import nodes
+
+    _, tree = _first_uses("Pulls with ``tools/output-cache pull``; ``tools/output-cache push``.\n")
+    lits = list(tree.findall(nodes.literal))
+    assert [lit.astext() for lit in lits] == ["tools/output-cache pull", "tools/output-cache push"]
+    refs = list(lits[0].findall(nodes.reference))
+    assert [r.astext() for r in refs] == ["tools/output-cache"]
+    assert "/tools/output-cache" in refs[0]["refuri"]
+    assert not list(lits[1].findall(nodes.reference))  # linked once is enough
+
+
+def _api_entry():
+    """An autodoc-shaped entry: a signature naming TCAD, then a field list whose parameter name
+    is the term "corner" (Sphinx renders it as a bare <strong>, as the description's prose)."""
+    from docutils import nodes
+    from docutils.frontend import get_default_settings
+    from docutils.parsers.rst import Parser
+    from docutils.utils import new_document
+    from sphinx import addnodes
+
+    tree = new_document("api", get_default_settings(Parser))
+    sig = addnodes.desc_signature("", "", addnodes.desc_name("TCAD_RUN", "TCAD_RUN"))
+    sig += nodes.Text(" (TCAD corner)")
+    item = nodes.paragraph("", "", addnodes.literal_strong("corner", "corner"))
+    item += nodes.Text(" – the corner of the TCAD run")
+    body = nodes.field_body("", item)
+    fields = nodes.field_list("", nodes.field("", nodes.field_name("", "Parameters"), body))
+    tree += addnodes.desc("", sig, addnodes.desc_content("", fields))
+    return tree
+
+
+def test_first_use_skips_the_signature():
+    """The HTML check skips the "sig" class: a use there is neither linked nor the first use."""
+    from sphinx import addnodes
+
+    _app = _FakeApp()
+    import api_links
+
+    tree = _api_entry()
+    api_links.FirstUses(_app.subs).run(tree)
+    sig = next(tree.findall(addnodes.desc_signature))
+    assert not list(sig.findall(_pending_xref()))
+    assert ("term", "tcad", "TCAD") in _xrefs(tree)  # the description's use is the first
+
+
+def test_first_use_parameter_name_is_a_use():
+    """A parameter name renders as <strong>, which the HTML check reads as prose; the pass
+    agrees: the name is the first use and carries the link, the description's use does not."""
+    from sphinx import addnodes
+
+    _app = _FakeApp()
+    import api_links
+
+    tree = _api_entry()
+    api_links.FirstUses(_app.subs).run(tree)
+    name = next(tree.findall(addnodes.literal_strong))
+    assert [n["reftarget"] for n in name.findall(_pending_xref())] == ["corner"]
+    assert [t[1] for t in _xrefs(tree)].count("corner") == 1
+    html = (
+        '<html><body><div id="furo-main-content"><dl class="field-list"><dt>Parameters</dt>'
+        "<dd><p><strong>corner</strong> – the corner</p></dd></dl></div></body></html>"
+    )
+    assert [q.kind for q in check_html("u.html", html)] == ["html-term"]
 
 
 def test_html_scan_short_names_are_case_sensitive():
@@ -1076,3 +1250,17 @@ def test_journal_name_is_not_the_electron_term():
     )
     found = [str(q) for q in check_html("u.html", prose) if q.kind == "html-term"]
     assert any("Electrons" in f for f in found), found
+
+
+def test_site_figures_are_numbered_as_figure_n(built_html):
+    """numfig is on and numfig_format is "Figure %s" in docs/conf.py: every numbered figure of
+    the built site reads "Figure N", and every {numref} citation names it the same way."""
+    captions, cited = [], []
+    for page in _html_pages(built_html):
+        html = page.read_text(encoding="utf-8")
+        captions += re.findall(r'<span class="caption-number">([^<]*)</span>', html)
+        cited += re.findall(r'<span class="std std-numref">([^<]*)</span>', html)
+    assert captions, "no numbered figure in the built site: is numfig on in docs/conf.py?"
+    assert cited, "no {numref} citation in the built site"
+    bad = [c for c in captions + cited if not re.fullmatch(r"Figure \d+\s*", c)]
+    assert not bad, f"figure numbers not in the form 'Figure N': {sorted(set(bad))}"

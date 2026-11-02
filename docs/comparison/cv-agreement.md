@@ -18,7 +18,7 @@ The code is {py:mod}`gf180tcad.calibrate.cv`; the results are
 
 The TCAD gate stack has three free numbers: how thick the oxide looks electrically, how
 heavily the silicon under it is doped, and a small offset of the voltage at which the surface
-turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
+turns from {term}`accumulation` to {term}`depletion`. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are fixed, and the TCAD is compared with SPICE at gate lengths it never
 saw.
@@ -45,7 +45,7 @@ process files.
   modelled: classical {term}`drift-diffusion` without a {term}`density-gradient` term);
 - `n_ch_cm3`, the uniform body doping, between half the doping K1 implies and 2 × NDEP;
 - `dv_fb_v`, a lumped flat-band offset of ±0.2 V, applied as a rigid gate-bias shift. It
-  absorbs the {term}`Boltzmann statistics` of the degenerate gate, SPICE's empirical flat band
+  absorbs the {term}`Boltzmann statistics` of the degenerate gate, SPICE's empirical {term}`flat band`
   and any interface charge.
 
 The model is the 1D MOS capacitor ({py:func}`gf180tcad.tcad.moscap1d.simulate`) on its selected
@@ -91,7 +91,7 @@ SPICE TT curve of each geometry ({py:func}`~gf180tcad.calibrate.cv.regions`):
 
 - u_fb is where SPICE C falls to 0.9 × C_acc, C_acc = C(u = −5 V); u_t is where SPICE C, rising
   from its minimum C_min, reaches (C_min + C_inv)/2, C_inv = C(u = +5 V);
-- the **accumulation plateau** is u ≤ u_fb − 1 V and the **inversion plateau** u ≥ u_t + 1 V.
+- the **accumulation plateau** is u ≤ u_fb − 1 V and the **{term}`inversion` plateau** u ≥ u_t + 1 V.
   On each, the maximum |ΔCgg|/Cgg_SPICE must be ≤ 5 % (the {ref}`tolerance <tolerances>` of
   the design spec);
 - the **mid-capacitance crossings**: each curve, TCAD and SPICE, crosses its own level
@@ -334,11 +334,11 @@ Lmin with `spice-fit`.
 All five fail on the depletion crossing alone ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The
 {repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each calibrated 2D
 cell with the TT ngspice Cgg; W10/L1 and W10/L2 are {term}`Same process`. The
-{repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>` does the same for the pfet cells. W10/L0.5 and W10/L0.7 are Same process.
+{repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>` does the same for the pfet cells. W10/L0.5, W10/L0.7 and W1.6/L0.7 are Same process.
 
 A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh and the SPICE
 grid ({ref}`moscap2d-calibrated`). The committed nfet cells are W10/L0.6, W10/L0.7,
-W10/L1, W10/L2 and W1.6/L0.7. The pfet cells are W10/L0.5, W10/L0.7, W10/L1 and W10/L2. The other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
+W10/L1, W10/L2 and W1.6/L0.7. The pfet cells are W10/L0.5, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7 ({ref}`moscap2d-calibrated`). The other geometries are "not run" ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
 
 A plateau row is its worst difference from SPICE. At W10/L0.6, a calibration geometry of the 1D fit:
 
@@ -445,6 +445,8 @@ At W10/L0.7 and W10/L1, in both devices, the 2D crossing lies below the 1D cross
 The gap is 241 mV at pfet W10/L0.7 and 149 mV at W10/L1. It is 171 and 104 mV at the same nfet cells.
 
 The shift shrinks with L, but the SPICE pfet edge moves faster with L.
+From L = 0.7 to 1 µm, the SPICE crossing moves +0.134 V and the 2D crossing +0.102 V
+({repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>`).
 The corner envelope also narrows, from 0.33 V wide at L = 0.7 µm to 0.29 V at 1 µm.
 At L = 1 µm the crossing leaves the envelope ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
 

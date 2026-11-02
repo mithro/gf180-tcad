@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Hand-written numbers on the docs pages match the committed SPICE reference.
+"""Hand-written numbers on the docs pages match the committed SPICE reference (and, where a
+case says so, the TCAD validation files).
 
 The generated results pages are computed from ``results/spice`` at build time; these prose
 pages are not, so each number they quote from the results is listed here with where it comes
@@ -27,7 +28,20 @@ RESULTS = ROOT / "results" / "spice"
 ENGINE_PAGE = ROOT / "docs" / "limitations" / "engine-cross-check.md"
 SPEC_PAGE = ROOT / "docs" / "comparison" / "pdk-spec-check.md"
 LIMITS_PAGE = ROOT / "docs" / "limitations" / "index.md"
+CV_PAGE = ROOT / "docs" / "comparison" / "cv-agreement.md"
+PFET_VALIDATION = ROOT / "results" / "tcad" / "validation" / "pfet_05v0.json"
 NUM = r"(-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?)"
+
+
+@cache
+def _pfet_validation() -> dict:
+    return json.loads(PFET_VALIDATION.read_text(encoding="utf-8"))
+
+
+def _pfet_dep(gid: str, where: str) -> float:
+    """The depletion crossing u_dep (V) of a pfet 2D cell, SPICE (``spice_regions``) or
+    simulated (``tcad_crossings``), from the validation file."""
+    return _pfet_validation()["two_d"][gid][where]["u_dep"]
 
 
 @cache
@@ -157,7 +171,7 @@ CASES = [
         ENGINE_PAGE,
         (
             rf"current is a nearly constant {NUM} % higher\. That is\na gate-voltage shift of "
-            rf"{NUM} to {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
+            rf"{NUM} to {NUM} mV, and its effect fades in strong\n\{{term\}}`inversion` \({NUM} at Vgs = 5 V\)"
         ),
         lambda: [
             100 * subthreshold_excess(),
@@ -206,6 +220,16 @@ CASES = [
         LIMITS_PAGE,
         rf"disagree by {NUM} % on the nfet",
         lambda: [100 * max(diffs(N, ("idvg_lin", "idvg_sat")))],
+    ),
+    # comparison/cv-agreement.md: how far the pfet depletion crossing moves from L0.7 to L1,
+    # SPICE then the 2D cell (the TCAD validation file, not results/spice)
+    (
+        CV_PAGE,
+        rf"the SPICE crossing moves \+{NUM} V and the 2D crossing \+{NUM} V",
+        lambda: [
+            _pfet_dep("w10p0_l1p00", "spice_regions") - _pfet_dep("w10p0_l0p70", "spice_regions"),
+            _pfet_dep("w10p0_l1p00", "tcad_crossings") - _pfet_dep("w10p0_l0p70", "tcad_crossings"),
+        ],
     ),
 ]
 

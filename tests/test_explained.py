@@ -145,13 +145,15 @@ def test_value_text_and_labels():
 @pytest.mark.parametrize(
     ("value", "digits", "unit", "text"),
     [
-        (8.813323306821749e16, 3, "cm⁻³", "8.81 × 10¹⁶ cm⁻³"),
-        (1e20, 2, "cm⁻³", "1.0 × 10²⁰ cm⁻³"),
-        (8265841554.853887, 3, "cm⁻³", "8.27 × 10⁹ cm⁻³"),
-        (298.15, 5, "K", "298.15 K"),
-        (775.2, 3, "cm⁻³", "775 cm⁻³"),
-        (0.0371, 2, "V", "0.037 V"),
-        (-0.25, 2, "V", "−0.25 V"),
+        (8.813323306821749e16, 3, "cm⁻³", "8.81\u00a0×\u00a010¹⁶\u00a0cm⁻³"),
+        (1e20, 2, "cm⁻³", "1.0\u00a0×\u00a010²⁰\u00a0cm⁻³"),
+        (8265841554.853887, 3, "cm⁻³", "8.27\u00a0×\u00a010⁹\u00a0cm⁻³"),
+        (298.15, 5, "K", "298.15\u00a0K"),
+        (775.2, 3, "cm⁻³", "775\u00a0cm⁻³"),
+        (0.0371, 2, "V", "0.037\u00a0V"),
+        (-0.25, 2, "V", "−0.25\u00a0V"),
+        (2.15, 3, "fF/µm²", "2.15\u00a0fF/\u2060µm²"),
+        (0.67, 2, "%", "0.67\u00a0%"),
     ],
 )
 def test_format(value, digits, unit, text):
@@ -258,7 +260,8 @@ def test_idealised_table_is_closed_and_documented():
 
     assert set(idealised.FORMULAS) == {
         "abrupt_junction", "boltzmann_fermi", "built_in_potential", "degenerate_offset",
-        "depletion_width", "mass_action",
+        "depletion_width", "mass_action", "bulk_potential", "flat_band", "threshold",
+        "depletion_depth", "surface_bending",
     }  # fmt: skip
     for f in idealised.FORMULAS.values():
         doc = " ".join((f.fn.__doc__ or "").split())
@@ -566,9 +569,12 @@ def test_landing_lists_every_page():
         assert re.search(rf"^- \{{doc\}}`[^`<]+<{re.escape(name)}>`: ", text, re.MULTILINE), name
     prose = [
         ln for ln in text[: toc.start()].splitlines()
-        if ln.strip() and not ln.startswith(("# ", "- ", "(")) and not ln.startswith("  ")
+        if ln.strip() and not ln.startswith(("# ", "## ", "### ", "- ", "(")) and not ln.startswith("  ")
     ]  # fmt: skip
     assert len(prose) <= 2, f"a landing page is one line per destination: {prose}"
+    # One heading per tier keeps each list within the 7-item cap.
+    for head in re.findall(r"^## (.+)$", text[: toc.start()], re.MULTILINE):
+        assert head in ("The basics", "The MOS capacitor", "The MOSFET"), head
 
 
 def test_explained_is_first_in_the_top_toctree():
@@ -863,7 +869,7 @@ def test_fermi_levels_against_hand_values():
     assert numbers.REGISTRY["fermi_gate_nfet"].formula == "boltzmann_fermi"
     assert numbers.value("fermi_gate_nfet") == pytest.approx(0.596487, abs=1e-6)
     assert numbers.value("fermi_body_nfet") == pytest.approx(-0.415763, abs=1e-6)
-    assert numbers.text("fermi_body_nfet") == "0.416 eV"
+    assert numbers.text("fermi_body_nfet") == "0.416\u00a0eV"
     meta = json.loads(
         (ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json").read_text("utf-8")
     )
@@ -937,7 +943,7 @@ def test_junction_formulas_against_hand_values():
     assert numbers.value("w_dep_nfet") * numbers.REGISTRY["w_dep_nfet"].factor == pytest.approx(
         0.121925, abs=1e-6
     )
-    assert numbers.text("w_dep_nfet") == "0.122 µm"
+    assert numbers.text("w_dep_nfet") == "0.122\u00a0µm"
 
 
 def test_abrupt_junction_profile_is_consistent():
@@ -1118,20 +1124,26 @@ def test_moscap_values_are_the_files():
     assert (
         rec["verdicts"]["plateau_inv"]["tolerance"] == rec["verdicts"]["plateau_acc"]["tolerance"]
     )
-    assert numbers.text("plateau_tol_l10") == "5 %"
+    assert numbers.text("plateau_tol_l10") == "5\u00a0%"
 
 
 _VERDICT_FILES = {
     "verdict_nfet_1d": ("results/tcad/calibration/nfet_05v0.result.json", ["verdict"]),
     "verdict_pfet_1d": ("results/tcad/calibration/pfet_05v0.result.json", ["verdict"]),
 }  # fmt: skip
+# The crossing checks' verdicts at w10p0_l10p00, printed by the regions page.
+_CROSSING_VERDICTS = {
+    f"verdict_{c}_l10": ("results/tcad/calibration/nfet_05v0.result.json",
+                         ["per_geometry", "w10p0_l10p00", "verdicts", c, "verdict"])
+    for c in ("dv_dep", "dv_inv")
+}  # fmt: skip
 
 
 def test_verdict_words_are_read_from_the_result_files():
     numbers = _numbers()
-    assert set(numbers.WORDS) == set(_VERDICT_FILES)
+    assert set(numbers.WORDS) == set(_VERDICT_FILES) | set(_CROSSING_VERDICTS)
     subs = numbers.substitutions()
-    for name, (path, keys) in _VERDICT_FILES.items():
+    for name, (path, keys) in {**_VERDICT_FILES, **_CROSSING_VERDICTS}.items():
         v = json.loads((ROOT / path).read_text("utf-8"))
         for k in keys:
             v = v[k]
@@ -1226,14 +1238,15 @@ def test_two_d_table_grows_with_a_new_cell(tmp_path):
     numbers = _numbers()
     dst = _validation_copy(tmp_path)
     doc = json.loads((dst / "pfet_05v0.json").read_text("utf-8"))
+    assert "w5p0_l0p70" not in doc["two_d"]  # a cell no validation file has
     new = json.loads(json.dumps(doc["two_d"]["w10p0_l0p70"]))
-    new["geometry"] = {**new["geometry"], "geometry_id": "w1p6_l0p70", "w_um": 1.6}
-    doc["two_d"]["w1p6_l0p70"] = new
+    new["geometry"] = {**new["geometry"], "geometry_id": "w5p0_l0p70", "w_um": 5.0}
+    doc["two_d"]["w5p0_l0p70"] = new
     (dst / "pfet_05v0.json").write_text(json.dumps(doc), "utf-8")
     before = numbers.two_d_table().splitlines()
     after = numbers.two_d_table(root=tmp_path).splitlines()
     assert len(after) == len(before) + 1
-    assert _row("pfet_05v0", 1.6, 0.7, new["verdict"]) in after
+    assert _row("pfet_05v0", 5.0, 0.7, new["verdict"]) in after
 
 
 def test_disagree_clause_follows_the_checks(tmp_path):
@@ -1251,11 +1264,72 @@ def test_disagree_clause_follows_the_checks(tmp_path):
     assert numbers.CHECKS["plateau_acc"] in two and two.startswith("The Disagree cells fail on ")
 
 
+def _u_sign(verdict: dict) -> int:
+    """The sign of u where a committed check is measured: a crossing's ``u_tcad``, or the u of
+    a plateau's tightest point."""
+    u = verdict["u_tcad"] if "u_tcad" in verdict else verdict["window"]["tightest"]["u"]
+    return 1 if u > 0 else -1
+
+
+def check_side_problems(checks: dict[str, str]) -> list[str]:
+    """Each check's words must name, for each device, the gate-voltage sign where the check is
+    measured: the sign of u in that device's committed result file times its polarity
+    (u = polarity × Vg). Returns the mismatches."""
+    from gf180tcad.devices import DEVICES
+
+    problems = []
+    for device in ("nfet_05v0", "pfet_05v0"):
+        path = ROOT / f"results/tcad/calibration/{device}.result.json"
+        verdicts = json.loads(path.read_text("utf-8"))["per_geometry"][_L10]["verdicts"]
+        short = device.split("_")[0]
+        for key, words in checks.items():
+            sign = DEVICES[device].polarity * _u_sign(verdicts[key])
+            want = ["positive" if sign > 0 else "negative"]
+            got = re.findall(rf"{short}'s (negative|positive) side", words)
+            if got != want:
+                problems.append(f"{key} {device}: words say {got}, the result file gives {want}")
+    return problems
+
+
 def test_check_words_name_both_signs():
-    """The checks run in u = polarity × Vg: a side named by its sign names it for both devices."""
-    for key, words in _numbers().CHECKS.items():
-        if "negative" in words or "positive" in words:
-            assert "nfet" in words and "pfet" in words, key
+    """The checks run in u = polarity × Vg: each device's side is named with its own sign."""
+    numbers = _numbers()
+    assert set(numbers.CHECKS) == {"plateau_acc", "plateau_inv", "dv_dep", "dv_inv"}
+    assert not check_side_problems(numbers.CHECKS)
+
+
+def test_positive_control_check_sides():
+    """A swapped pair (nfet and pfet signs exchanged) and a one-device wording both fail."""
+    checks = dict(_numbers().CHECKS)
+    swap = {"negative": "positive", "positive": "negative"}
+    swapped = {
+        k: re.sub(r"negative|positive", lambda m: swap[m.group(0)], v) for k, v in checks.items()
+    }
+    assert len(check_side_problems(swapped)) == 2 * len(checks)
+    one = {**checks, "dv_dep": "the halfway-level crossing on the nfet's negative side"}
+    assert check_side_problems(one) == [
+        "dv_dep pfet_05v0: words say [], the result file gives ['positive']"
+    ]
+
+
+def test_crossing_words_name_one_level():
+    """Both crossing checks use one level definition, (C_min + C_acc)/2 of each curve on its own
+    (``calibrate.cv.crossings``): their words name the same level and differ only in the sides,
+    so neither suggests a level between the minimum and the inversion flat part. The regions
+    page defines that level per curve, and describes the start of inversion, (C_min + C_inv)/2
+    of the SPICE curve, without the word "halfway", so a reader does not take the two as one."""
+    numbers = _numbers()
+    dep, inv = numbers.CHECKS["dv_dep"], numbers.CHECKS["dv_inv"]
+    swap = {"negative": "positive", "positive": "negative"}
+    assert re.sub(r"negative|positive", lambda m: swap[m.group(0)], dep) == inv
+    assert "halfway-level crossing" in dep and " up " not in inv and " down " not in dep
+    page = REGIONS_PAGE.read_text(encoding="utf-8")
+    dip = page[page.index("(explained-regions-dip)=") : page.index("(explained-regions-bands)=")]
+    flat = " ".join(dip.split())
+    assert "halfway level of each curve lies midway between its own minimum and its" in flat
+    assert "crosses its own halfway level" in flat
+    start = flat[flat.index("Inversion starts") :]
+    assert "halfway" not in start[: start.index(".")]
 
 
 def test_disagree_cells_are_the_issue_on_the_page():
@@ -1301,3 +1375,409 @@ def test_counts_are_derived(tmp_path):
     (tmp_path / src).parent.mkdir(parents=True)
     (tmp_path / src).write_text(json.dumps(fit), "utf-8")
     assert numbers.counts(root=tmp_path)["fit_length_count"] == len(lengths) + 1
+
+
+# --- the regions page (task E2b) -------------------------------------------------------------
+
+REGIONS_PAGE = EXPLAINED / "accumulation-depletion-inversion.md"
+_REGIONS_KEYS = {
+    "u_fb_l10": ["spice_regions", "u_fb"],
+    "u_t_l10": ["spice_regions", "u_t"],
+    "u_min_l10": ["spice_regions", "u_min"],
+    "c_min_l10": ["spice_regions", "c_min"],
+    "u_dep_spice_l10": ["spice_regions", "u_dep"],
+    "u_inv_spice_l10": ["spice_regions", "u_inv"],
+    "u_dep_tcad_l10": ["tcad_crossings", "u_dep"],
+    "u_inv_tcad_l10": ["tcad_crossings", "u_inv"],
+    "dv_tol_l10": ["verdicts", "dv_dep", "tolerance_v"],
+}
+
+
+def _l10_record() -> dict:
+    return json.loads((ROOT / _RESULT).read_text("utf-8"))["per_geometry"][_L10]
+
+
+def test_region_values_are_the_files():
+    from gf180tcad.devices import DEVICES
+
+    numbers = _numbers()
+    assert DEVICES["nfet_05v0"].polarity == 1  # the nfet's u is its gate voltage
+    rec = _l10_record()
+    for name, keys in _REGIONS_KEYS.items():
+        v = rec
+        for k in keys:
+            v = v[k]
+        assert numbers.value(name) == v, name
+    assert rec["verdicts"]["dv_inv"]["tolerance_v"] == rec["verdicts"]["dv_dep"]["tolerance_v"]
+    assert numbers.text("dv_tol_l10") == "50\u00a0mV"
+    for check in ("dv_dep", "dv_inv"):
+        assert numbers.word(f"verdict_{check}_l10") == rec["verdicts"][check]["verdict"], check
+
+
+def test_regions_follow_the_committed_crossings():
+    """Plan E2 test: the shaded region edges of the C-V figure are the result file's marks."""
+    from gf180tcad.explain import figures
+
+    rec = _l10_record()["spice_regions"]
+    assert figures.region_edges() == (rec["u_fb"], rec["u_t"])
+    for palette in figures.PALETTES:
+        fig = figures.cv_regions_figure(palette)
+        (ax,) = fig.axes
+        spans = sorted(
+            (p.get_x(), p.get_x() + p.get_width()) for p in ax.patches if p.get_width() > 0
+        )
+        assert len(spans) == len(figures.REGIONS)
+        edges = [b for _a, b in spans[:-1]]
+        assert edges == [rec["u_fb"], rec["u_t"]]
+        assert [a for a, _b in spans[1:]] == edges
+        labels = [t.get_text() for t in ax.texts]
+        assert labels == list(figures.REGIONS)
+
+
+def test_regions_follow_an_edited_result_file(monkeypatch):
+    """A new mark in the result file moves the shading: the edges are read, never typed."""
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    real = numbers.value
+    moved = {"u_fb_l10": real("u_fb_l10") - 0.25, "u_t_l10": real("u_t_l10") + 0.25}
+    monkeypatch.setattr(numbers, "value", lambda name: moved.get(name, real(name)))
+    assert figures.region_edges() == (moved["u_fb_l10"], moved["u_t_l10"])
+    (ax,) = figures.cv_regions_figure("light").axes
+    starts = sorted(p.get_x() for p in ax.patches if p.get_width() > 0)
+    assert starts[1:] == [moved["u_fb_l10"], moved["u_t_l10"]]
+
+
+def test_flat_band_and_threshold_against_hand_values():
+    """V_FB = −V_t·ln(N_gate·N_A/n_i²); V_T = V_FB + 2ψ_B + √(4 ε q N_A ψ_B)/C_ox, worked here
+    with plain arithmetic (C_ox in F/cm²: 1 fF/µm² = 1e-7 F/cm²)."""
+    from gf180tcad.explain import idealised
+
+    vt, ni, na, ng = 0.025, 1.0e10, 1.0e17, 1.0e20
+    vfb = -vt * math.log(ng * na / ni**2)
+    assert idealised.flat_band(na, ng, ni, vt) == pytest.approx(vfb, rel=1e-12)
+    assert vfb == pytest.approx(-0.978, abs=1e-3)
+    psi_b = vt * math.log(na / ni)
+    assert idealised.bulk_potential(na, ni, vt) == pytest.approx(psi_b, rel=1e-12)
+    eps, e0, q, cox = 11.7, 8.854e-14, 1.602e-19, 2.0
+    vth = vfb + 2 * psi_b + math.sqrt(4 * eps * e0 * q * na * psi_b) / (cox * 1e-7)
+    assert idealised.threshold(na, ni, vt, vfb, eps, e0, q, cox) == pytest.approx(vth, rel=1e-12)
+    # By hand: ψ_B = 0.025 × ln(1e7) = 0.40295; √(4 × 11.7 × 8.854e-14 × 1.602e-19 × 1e17 × ψ_B)
+    # = 1.6355e-7 C/cm², over 2e-7 F/cm² = 0.8177 V; V_FB = −0.025 × ln(1e17) = −0.9786 V.
+    assert vth == pytest.approx(-0.9786 + 0.8059 + 0.8177, abs=1e-3)
+
+
+def test_surface_bending_against_hand_values():
+    from gf180tcad.explain import idealised
+
+    eps, e0, q, na, psi_s = 11.7, 8.854e-14, 1.602e-19, 1.0e17, 0.8
+    w = math.sqrt(2 * eps * e0 * psi_s / (q * na))
+    assert idealised.depletion_depth(psi_s, na, eps, e0, q) == pytest.approx(w, rel=1e-12)
+    assert w == pytest.approx(1.0175e-5, rel=1e-3)  # 0.102 µm by hand
+    x = [0.0, w / 2, w, 2 * w]
+    got = idealised.surface_bending(x, psi_s, na, eps, e0, q)
+    assert list(got) == pytest.approx([psi_s, psi_s / 4, 0.0, 0.0])
+    assert list(idealised.surface_bending(x, 0.0, na, eps, e0, q)) == [0.0] * 4
+
+
+def test_bulk_potential_is_the_bands_page_value():
+    """ψ_B of the regions page is the body's Fermi-level distance the bands page prints."""
+    numbers = _numbers()
+    from gf180tcad.explain import idealised
+
+    psi_b = idealised.bulk_potential(
+        *(numbers.value(k) for k in ("n_ch_nfet_cal", "n_i_tcad", "vt_tcad"))
+    )
+    assert psi_b == pytest.approx(-numbers.value("fermi_body_nfet"), rel=1e-12)
+
+
+def test_band_regimes_draw_the_idealised_bending():
+    """Each panel's middle of the gap is ψ_B minus the bending of its state, from the formula."""
+    from gf180tcad.explain import figures, idealised
+
+    numbers = _numbers()
+    na = numbers.value("n_ch_nfet_cal")
+    consts = (numbers.value("eps_si_tcad"), numbers.value("eps0_tcad"), numbers.value("q_tcad"))
+    psi_b = idealised.bulk_potential(na, numbers.value("n_i_tcad"), numbers.value("vt_tcad"))
+    half = numbers.value("band_gap_si") / 2
+    fig = figures.band_regimes_figure("light")
+    axes = fig.axes
+    assert [ax.get_title() for ax in axes] == list(figures.REGIMES)
+    for ax, k in zip(axes, figures.REGIMES.values(), strict=True):
+        lines = {ln.get_label(): ln for ln in ax.get_lines()}
+        x_um, mid = lines["middle of the gap"].get_data()
+        assert mid[0] == pytest.approx(psi_b - k * psi_b, abs=1e-12)
+        assert mid[-1] == pytest.approx(psi_b, abs=1e-12)
+        x_cm = x_um / figures.UNITS["um_per_cm"]
+        want = psi_b - idealised.surface_bending(x_cm, k * psi_b, na, *consts)
+        assert list(mid) == pytest.approx(list(want))
+        _x, top = lines["conduction band edge"].get_data()
+        assert list(top - mid) == pytest.approx([half] * len(mid))
+    # Inversion: the surface is as n-type as the body is p-type.
+    assert axes[-1].get_lines()[1].get_data()[1][0] == pytest.approx(-psi_b)
+
+
+def test_band_regimes_sheets_stand_apart_from_the_band_edges():
+    """The carrier sheets (holes in accumulation, electrons in inversion) are circles edged in the
+    text colour beyond their band edge, so at 400 px the accumulation panel differs from the
+    flat-band panel, whose bands are the same."""
+    from gf180tcad.explain import figures
+
+    for palette in figures.PALETTES:
+        pal = figures.PALETTES[palette]
+        axes = figures.band_regimes_figure(palette).axes
+        for ax in axes:
+            lines = {ln.get_label(): ln for ln in ax.get_lines()}
+            sheets = [lab for lab in lines if lab.endswith("at the surface")]
+            want = {"accumulation": ["holes at the surface"],
+                    "inversion": ["electrons at the surface"]}.get(ax.get_title(), [])  # fmt: skip
+            assert sheets == want, ax.get_title()
+            for lab in sheets:
+                sheet = lines[lab]
+                edge_name = "valence" if lab.startswith("holes") else "conduction"
+                edge = lines[f"{edge_name} band edge"]
+                assert sheet.get_marker() == "o" and sheet.get_linestyle() == "None"
+                assert sheet.get_markeredgecolor() == pal["text"] != edge.get_color()
+                e0 = edge.get_ydata()[0]
+                gap = sheet.get_ydata() - e0
+                assert all(gap < 0) if lab.startswith("holes") else all(gap > 0)
+
+
+def test_regions_figures_are_registered():
+    from gf180tcad.explain import figures
+
+    for name in ("cv-regions", "band-regimes"):
+        assert name in figures.FIGURES, name
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark")
+    subs = figures.substitutions()
+    assert "x_fig_cv_regions_scale" not in subs and "x_fig_band_regimes_scale" not in subs
+
+
+def test_regions_page_prints_its_numbers():
+    text = REGIONS_PAGE.read_text(encoding="utf-8")
+    for key in (*_REGIONS_KEYS, "v_fb_nfet", "v_t_nfet", "verdict_dv_dep_l10",
+                "verdict_dv_inv_l10", "verdict_pfet_1d", "two_d_disagree"):  # fmt: skip
+        assert "{{ x_" + key + " }}" in text, key
+    for name in ("cv-regions", "band-regimes"):
+        assert f"/_generated/explained/{name}-light.svg" in text, name
+    for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-metric"):
+        assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor
+    assert not _COUNT_WORDS.findall(text)
+
+
+def test_glossary_terms_of_the_regions_page():
+    text = (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
+    terms = Counter(re.findall(r"^(\S[^\n]*)\n  ", text, re.MULTILINE))
+    for t in ("accumulation", "depletion", "inversion", "flat band"):
+        assert terms[t] == 1, t
+        entry = text[text.index(f"\n{t}\n") :].split("\n\n", 1)[0]
+        assert "{ref}`explained-regions" in entry, t
+
+
+# --- the mesh window figure (renders plan Task R0, docs/reproduce/index.md) -------------------
+
+REPRODUCE_PAGE = ROOT / "docs" / "reproduce" / "index.md"
+
+
+def test_mesh_window_figure_draws_the_window_rule():
+    """The reproduce page's figure outlines the window that meshcut cuts with its default rule:
+    a quarter gate length either side of the gate, from the drawn poly top down to
+    WINDOW_DEPTH_UM below the silicon surface (depth grows downwards in the drawing)."""
+    from gf180tcad import meshcut
+    from gf180tcad.explain import figures, model
+
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=figures.STYLE["scales"],
+                   drawn=figures.STYLE["drawn_um"])  # fmt: skip
+    gate = figures.cell_extents(c)["gate"]
+    box = figures.window_box(c)
+    assert box.x0 == pytest.approx(gate.x0 - meshcut.WINDOW_KX * c.l_um)
+    assert box.x1 == pytest.approx(gate.x1 + meshcut.WINDOW_KX * c.l_um)
+    assert box.y0 == pytest.approx(gate.y0)  # the poly top
+    assert box.y1 == pytest.approx(meshcut.WINDOW_DEPTH_UM)
+    assert "mesh-window" in figures.FIGURES
+    light = figures.FIGURES["mesh-window"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["mesh-window"]("dark")
+    assert b"window" in light
+    text = REPRODUCE_PAGE.read_text(encoding="utf-8")
+    for palette in figures.PALETTES:
+        assert f"/_generated/explained/mesh-window-{palette}.svg" in text, palette
+    assert "{numref}`mesh-window-figure`" in text
+
+
+# --- the C-V curve page (task E2c) -----------------------------------------------------------
+
+CV_PAGE = EXPLAINED / "cv-curve.md"
+# The calibration's start and fitted values of the three tunables, as the result file records
+# them, and the registry entries that print them.
+_START_KEYS = {
+    "t_ox_nfet_start": "t_ox_eff_nm",
+    "n_ch_nfet_start": "n_ch_cm3",
+    "dv_fb_nfet_start": "dv_fb_v",
+}
+_FITTED_KEYS = {
+    "t_ox_nfet_cal": "t_ox_eff_nm",
+    "n_ch_nfet_cal": "n_ch_cm3",
+    "dv_fb_nfet_cal": "dv_fb_v",
+}
+# The fit's errors at w10p0_l10p00, from the result file's metrics.
+_CV_METRICS = {
+    "dv_dep_l10": "dv_dep_v",
+    "dv_inv_l10": "dv_inv_v",
+    "depletion_l10": "depletion_max_rel",
+}
+
+
+def test_cv_parts_values_are_the_files():
+    """The start and fitted values the page prints are the result file's ``start`` and
+    ``values``; the fitted ones are also the calibration file's and the 1D stack's."""
+    numbers = _numbers()
+    result = json.loads((ROOT / _RESULT).read_text("utf-8"))
+    cal = json.loads((ROOT / "results/tcad/calibration/nfet_05v0.json").read_text("utf-8"))
+    for name, key in _START_KEYS.items():
+        assert numbers.value(name) == result["start"][key], name
+    for name, key in _FITTED_KEYS.items():
+        assert numbers.value(name) == result["values"][key] == cal["values"][key], name
+    # The start values are the process file's values (the card's TOXE and NDEP, and 0 V).
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))["param"]
+    for name, key in _START_KEYS.items():
+        assert numbers.value(name) == proc[key]["value"], name
+    assert numbers.value("t_ox_nfet_start") == numbers.value("toxe_nfet")
+    assert numbers.value("n_ch_nfet_start") == numbers.value("ndep_nfet")
+    rec = _l10_record()["metrics"]
+    for name, key in _CV_METRICS.items():
+        assert numbers.value(name) == rec[key], name
+    assert numbers.text("dv_fb_nfet_start") == "0\u00a0V"
+
+
+def test_cv_parts_draws_the_start_and_fitted_curves():
+    """The cv-parts figure draws the committed start and calibrated 1D curves through the BSIM4
+    bookkeeping, and the SPICE typical curve, read by the readers the results pages use."""
+    from gf180tcad.explain import figures
+
+    for palette in figures.PALETTES:
+        (ax,) = figures.cv_parts_figure(palette).axes
+        lines = {ln.get_label(): ln for ln in ax.get_lines()}
+        assert set(figures.CV_PARTS_LINES.values()) <= set(lines)
+        for params, label in figures.CV_PARTS_LINES.items():
+            want = figures.cv_curves(
+                "nfet_05v0", "calibrated" if params == "spice" else params, _L10
+            )
+            x, y = lines[label].get_data()
+            if params == "spice":
+                assert list(x) == list(want["u_spice"]) and list(y) == list(want["spice_tt"])
+            else:
+                assert list(x) == list(want["u"]) and list(y) == list(want["tcad"])
+    start = figures.cv_curves("nfet_05v0", "start", _L10)["tcad"]
+    fitted = figures.cv_curves("nfet_05v0", "calibrated", _L10)["tcad"]
+    assert list(start) != list(fitted)
+
+
+def test_cv_parts_labels_name_the_parameters_at_the_committed_marks():
+    """Each part of the curve carries the parameter that sets it; the dip label points at the
+    SPICE minimum and the shift arrow sits on the SPICE falling-side crossing, from the result
+    file."""
+    from matplotlib.patches import ArrowStyle
+
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    (ax,) = figures.cv_parts_figure("light").axes
+    texts = {t.get_text(): t for t in ax.texts}
+    assert set(figures.CV_PARTS.values()) <= set(texts)
+    dip = texts[figures.CV_PARTS["dip"]]
+    assert tuple(dip.xy) == (numbers.value("u_min_l10"), numbers.value("c_min_l10"))
+    shift = texts[figures.CV_PARTS["position"]]
+    assert shift.xy[0] == pytest.approx(numbers.value("u_dep_spice_l10"))
+    # The shift arrow: one head, at its more positive end, centred on the crossing.
+    (arrow,) = [t for t in ax.texts if not t.get_text() and t.arrow_patch is not None]
+    style = arrow.arrow_patch.get_arrowstyle()
+    assert isinstance(style, ArrowStyle.CurveB), style
+    head, tail = arrow.xy, arrow.xyann
+    assert head[0] > tail[0] and head[1] == tail[1]
+    assert (head[0] + tail[0]) / 2 == pytest.approx(numbers.value("u_dep_spice_l10"))
+    lo, hi = figures.region_edges()
+    acc = texts[figures.CV_PARTS["accumulation"]]
+    inv = texts[figures.CV_PARTS["inversion"]]
+    assert acc.xy[0] < lo and inv.xy[0] > hi
+
+
+def test_cv_page_dip_order_is_the_curves():
+    """The page says the start curve's dip is shallower than the SPICE minimum it prints and the
+    fitted curve's dip is deeper: the committed curves' minima, in that order."""
+    from gf180tcad.explain import figures
+
+    c_min = _numbers().value("c_min_l10")
+    fitted = figures.cv_curves("nfet_05v0", "calibrated", _L10)
+    start = figures.cv_curves("nfet_05v0", "start", _L10)
+    assert min(fitted["spice_tt"]) == pytest.approx(c_min)
+    assert min(fitted["tcad"]) < c_min < min(start["tcad"])
+
+
+def test_cv_parts_figure_is_registered():
+    from gf180tcad.explain import figures
+
+    assert "cv-parts" in figures.FIGURES
+    light = figures.FIGURES["cv-parts"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["cv-parts"]("dark")
+    assert "x_fig_cv_parts_scale" not in figures.substitutions()
+
+
+def test_cv_page_prints_its_numbers():
+    text = CV_PAGE.read_text(encoding="utf-8")
+    for key in (*_START_KEYS, *_FITTED_KEYS, *_CV_METRICS, "plateau_acc_l10", "plateau_inv_l10",
+                "plateau_tol_l10", "dv_tol_l10", "cox_toxe_nfet", "cox_nfet_cal",
+                "verdict_nfet_1d", "verdict_pfet_1d", "two_d_disagree",
+                "fit_length_count", "c_min_l10"):  # fmt: skip
+        assert "{{ x_" + key + " }}" in text, key
+    assert "/_generated/explained/cv-parts-light.svg" in text
+    for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-deviation",
+                   "explained-regions-dip"):  # fmt: skip
+        assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor
+    assert not _COUNT_WORDS.findall(text)
+
+
+def test_cv_page_table_rows_are_the_registry():
+    """The page's table of tunables has one row per tunable, start then fitted, by substitution."""
+    text = CV_PAGE.read_text(encoding="utf-8")
+    for start, fitted in zip(_START_KEYS, _FITTED_KEYS, strict=True):
+        row = rf"^\|[^|\n]+\| \{{\{{ x_{start} \}}\}} \| \{{\{{ x_{fitted} \}}\}} \|$"
+        assert re.search(row, text, re.MULTILINE), (start, fitted)
+
+
+# --- the SPICE model's quasi-static switches (cv-curve.md) -----------------------------------
+
+MODEL_CARD = ROOT / "data" / "explain" / "model_card.toml"
+
+
+def test_model_card_file_names_the_process_files_card():
+    """data/explain/model_card.toml reads the card that data/process/nfet_05v0.toml names (same
+    file and sha256), with the process file's model among its bins, and every bin holds the
+    values the registry prints. tests/tcad/test_process.py ties the bins to the card's length
+    bins and, in the sandbox, checks each line in the card."""
+    numbers = _numbers()
+    card = tomllib.loads(MODEL_CARD.read_text(encoding="utf-8"))
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text(encoding="utf-8"))
+    assert card["card"] == {k: proc["card"][k] for k in ("file", "sha256")}
+    bins = card["nfet_05v0"]
+    assert bins[proc["card"]["model"]]["model_line"] == proc["card"]["model_line"]
+    assert len(bins) == 2
+    for key in ("acnqsmod", "trnqsmod"):
+        n = numbers.REGISTRY[f"{key}_nfet"]
+        assert (n.kind, n.source) == ("committed", numbers.MODEL_CARD)
+        for model, b in bins.items():
+            assert numbers.value(n.name) == b[key]["value"], (model, key)
+            assert b[key]["card_line"] > b["model_line"], (model, key)
+
+
+def test_cv_page_says_quasi_static_only_when_both_switches_are_off():
+    """The page calls the SPICE capacitance quasi-static because both selectors are 0, which
+    turns BSIM4's non-quasi-static model off (manual section 8.1, appendix A)."""
+    numbers = _numbers()
+    text = CV_PAGE.read_text(encoding="utf-8")
+    assert "{{ x_acnqsmod_nfet }}" in text and "{{ x_trnqsmod_nfet }}" in text
+    assert (
+        "<lit-bsim4>" in text and "{repo}`model_card.toml <data/explain/model_card.toml>`" in text
+    )
+    assert "SPICE capacitance is\nquasi-static" in text
+    assert numbers.value("acnqsmod_nfet") == 0 and numbers.value("trnqsmod_nfet") == 0

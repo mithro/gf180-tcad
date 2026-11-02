@@ -865,7 +865,7 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
   - Target: both plateaus ≤ 5 %, and both ΔV crossings ≤ 50 mV.
   - If the target is not reached within budget, publish the best fit with its verdict and the §6 mismatch analysis. Never raise the budget silently.
 - [ ] **Step 4:** Commit `results/tcad/calibration/*.json` in a results-only commit. **Only then** run `validate_cv` and commit `results/tcad/validation/*.json` in a separate later commit. Regenerate the calibrated 1D and 2D result trees (`results/tcad/moscap{1d,2d}/<device>/calibrated/`), and run `make manifest`. Then open the PR, get it reviewed and merge.
-  - *Progress (2026-10-28):* calibration, validation (1D) and the calibrated 1D trees are committed (PR #33). The calibrated 2D trees run under [issue #35](https://github.com/mithro/gf180-tcad/issues/35), one job per PR: nfet `w10p0_l0p60` and `w10p0_l0p70` (both Disagree in 2D) and `w10p0_l1p00` and `w10p0_l2p00` (both Same process; L = 2 µm QS only) and `w1p6_l0p70` (Disagree, equal to the width-scaled W10/L0.7) committed, and pfet `w10p0_l0p50` and `w10p0_l0p70` (both Same process) and `w10p0_l1p00` and `w10p0_l2p00` (both Disagree; L = 2 µm QS only), validation regenerated; the other cells follow, L = 10 µm does not solve in 2D.
+  - *Progress (2026-10-28):* calibration, validation (1D) and the calibrated 1D trees are committed (PR #33). The calibrated 2D trees run under [issue #35](https://github.com/mithro/gf180-tcad/issues/35), one job per PR: nfet `w10p0_l0p60` and `w10p0_l0p70` (both Disagree in 2D) and `w10p0_l1p00` and `w10p0_l2p00` (both Same process; L = 2 µm QS only) and `w1p6_l0p70` (Disagree, equal to the width-scaled W10/L0.7) committed, and pfet `w10p0_l0p50` and `w10p0_l0p70` (both Same process) and `w10p0_l1p00` and `w10p0_l2p00` (both Disagree; L = 2 µm QS only) and `w1p6_l0p70` (Same process, equal to the width-scaled W10/L0.7), validation regenerated; every cell is committed except L = 10 µm, which does not solve in 2D.
 - [ ] **Budget note (Phase 3 carry-over).** These 3 parameters use 3 of the 8 per device type for all later phases. A Phase 3 channel profile may replace the uniform `n_ch` and must re-justify it.
 
 ### Task 13a: TCAD results and docs pages
@@ -873,6 +873,8 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
 > **Done** in PR #38 (merged 2026-10-26).
 
 Requires the docs-links infrastructure on main.
+
+The pages `docgen` writes follow the rules of spec §10.3, owner 2026-11-03: a named, captioned `{figure}` cited with `{numref}` for every described situation; every equation as `$$ … $$ (eq-name)` with a `where` list giving each symbol and its unit; every file a `{repo}` link. `uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules all <page>` checks a page, and `tests/doc_rules_baseline.json` may only fall. Their findings are the work order of [#134](https://github.com/mithro/gf180-tcad/issues/134).
 
 **Files:**
 - `src/gf180tcad/docgen.py` (not a generator module). It renders MOSCAP pages from the committed `results/tcad/**` only:

@@ -44,6 +44,8 @@ LABELS = {
 }
 DISPLAY = "data/render/display.toml"
 TEXTBOOK = "data/explain/textbook.toml"
+#: The model card's selector values the pages print, each with its card line.
+MODEL_CARD = "data/explain/model_card.toml"
 
 
 @dataclass(frozen=True)
@@ -153,6 +155,42 @@ _ENTRIES = (
     Number("plateau_acc_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "plateau_acc_max_rel"]}, factor=100.0),
     Number("plateau_inv_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "plateau_inv_max_rel"]}, factor=100.0),
     Number("plateau_tol_l10", "committed", "%", 1, _RESULT, {"json": [*_L10, "verdicts", "plateau_acc", "tolerance"]}, factor=100.0),
+    # The regions (accumulation-depletion-inversion.md): the calibration's marks on the SPICE
+    # curve and the crossings of both curves at w10p0_l10p00. The nfet's u is its gate voltage.
+    Number("u_fb_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "spice_regions", "u_fb"]}),
+    Number("u_t_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "spice_regions", "u_t"]}),
+    Number("u_min_l10", "committed", "V", 2, _RESULT, {"json": [*_L10, "spice_regions", "u_min"]}),
+    Number("c_min_l10", "committed", "fF", 3, _RESULT, {"json": [*_L10, "spice_regions", "c_min"]}),
+    Number("u_dep_spice_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "spice_regions", "u_dep"]}),
+    Number("u_inv_spice_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "spice_regions", "u_inv"]}),
+    Number("u_dep_tcad_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "tcad_crossings", "u_dep"]}),
+    Number("u_inv_tcad_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "tcad_crossings", "u_inv"]}),
+    # V in the file; the page prints mV.
+    Number("dv_tol_l10", "committed", "mV", 2, _RESULT, {"json": [*_L10, "verdicts", "dv_dep", "tolerance_v"]}, factor=1000.0),
+    Number(
+        "v_fb_nfet", "idealised", "V", 3,
+        formula="flat_band", inputs=("n_ch_nfet_cal", "ngate_nfet", "n_i_tcad", "vt_tcad"),
+    ),
+    Number(
+        "v_t_nfet", "idealised", "V", 3,
+        formula="threshold",
+        inputs=("n_ch_nfet_cal", "n_i_tcad", "vt_tcad", "v_fb_nfet", "eps_si_tcad", "eps0_tcad",
+                "q_tcad", "cox_nfet_cal"),
+    ),
+    # What sets each part of the C-V curve (cv-curve.md): the calibration's start values of the
+    # three tunables, as the result file records them, and the fit's errors at w10p0_l10p00.
+    Number("t_ox_nfet_start", "committed", "nm", 3, _RESULT, {"json": ["start", "t_ox_eff_nm"]}),
+    Number("n_ch_nfet_start", "committed", _CM3, 2, _RESULT, {"json": ["start", "n_ch_cm3"]}),
+    Number("dv_fb_nfet_start", "committed", "V", 1, _RESULT, {"json": ["start", "dv_fb_v"]}),
+    # V in the file; the page prints mV. Simulated crossing minus the SPICE one.
+    Number("dv_dep_l10", "committed", "mV", 2, _RESULT, {"json": [*_L10, "metrics", "dv_dep_v"]}, factor=1000.0),
+    Number("dv_inv_l10", "committed", "mV", 2, _RESULT, {"json": [*_L10, "metrics", "dv_inv_v"]}, factor=1000.0),
+    # A fraction in the file; the page prints per cent.
+    Number("depletion_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "depletion_max_rel"]}, factor=100.0),
+    # The card's non-quasi-static model selectors (BSIM4 manual section 8.1), bin nfet_06v0.0;
+    # tests/test_explained.py checks that every bin of the nfet has the same values.
+    Number("acnqsmod_nfet", "committed", "", 1, MODEL_CARD, {"toml": ["nfet_05v0", "nfet_06v0.0", "acnqsmod", "value"]}),
+    Number("trnqsmod_nfet", "committed", "", 1, MODEL_CARD, {"toml": ["nfet_05v0", "nfet_06v0.0", "trnqsmod", "value"]}),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
 
@@ -169,6 +207,8 @@ class Word:
 _WORDS = (
     Word("verdict_nfet_1d", _RESULT, {"json": ["verdict"]}),
     Word("verdict_pfet_1d", "results/tcad/calibration/pfet_05v0.result.json", {"json": ["verdict"]}),
+    Word("verdict_dv_dep_l10", _RESULT, {"json": [*_L10, "verdicts", "dv_dep", "verdict"]}),
+    Word("verdict_dv_inv_l10", _RESULT, {"json": [*_L10, "verdicts", "dv_inv", "verdict"]}),
 )  # fmt: skip
 #: The verdict words of the pages, by name (see :class:`Word`).
 WORDS: dict[str, Word] = {w.name: w for w in _WORDS}
@@ -189,11 +229,15 @@ VALIDATION = "results/tcad/validation"
 #: The checks of a validated cell (``verdicts`` of a ``two_d`` entry), in plain words
 #: (``docs/comparison/cv-agreement.md``, "The agreement metric"). The checks run in
 #: u = polarity × Vg, so each side is named for the nfet and the pfet, whose signs are reversed.
+#: Both crossings are of one level, (C_min + C_acc)/2, each curve of its own
+#: (:func:`gf180tcad.calibrate.cv.crossings`), which
+#: ``docs/explained/accumulation-depletion-inversion.md`` names the halfway level: midway between
+#: the curve's own minimum and accumulation flat part, on either side of the dip.
 CHECKS = {
     "plateau_acc": "the flat part on the nfet's negative side, the pfet's positive side",
     "plateau_inv": "the flat part on the nfet's positive side, the pfet's negative side",
-    "dv_dep": "the voltage halfway down the dip on the nfet's negative side, the pfet's positive side",
-    "dv_inv": "the voltage halfway up the dip on the nfet's positive side, the pfet's negative side",
+    "dv_dep": "the halfway-level crossing on the nfet's negative side, the pfet's positive side",
+    "dv_inv": "the halfway-level crossing on the nfet's positive side, the pfet's negative side",
 }
 
 
@@ -295,10 +339,20 @@ def citation(name: str) -> str:
 _SUP = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 
 
+#: The non-breaking space (U+00A0) that joins a value to its unit and the parts of "a × 10ⁿ"
+#: (issue #119).
+NBSP = "\u00a0"
+#: The word joiner (U+2060) put after the "/" of a compound unit such as fF/µm², so the line
+#: never breaks at the slash (issue #119).
+WORD_JOINER = "\u2060"
+
+
 def format_value(v: float, digits: int, unit: str) -> str:
     """``v`` to ``digits`` significant digits with its unit: plain from 0.001 to 9999, else as
     a mantissa times a power of ten; a typographic minus sign; no space when ``unit`` is
-    empty (a pure number)."""
+    empty (a pure number). The value and its unit are joined by a non-breaking space
+    (``NBSP``) and a "/" in the unit is followed by a word joiner (``WORD_JOINER``),
+    so a page never breaks a number from its unit across lines."""
     if not math.isfinite(v):
         raise ValueError(f"{v!r} is not a finite number")
     sign = "−" if v < 0 else ""
@@ -307,8 +361,9 @@ def format_value(v: float, digits: int, unit: str) -> str:
     if -3 <= e < 4:
         body = f"{abs(v):.{max(digits - 1 - e, 0)}f}"
     else:
-        body = f"{mant} × 10{str(e).translate(_SUP)}"
-    return f"{sign}{body} {unit}" if unit else f"{sign}{body}"
+        body = f"{mant}{NBSP}×{NBSP}10{str(e).translate(_SUP)}"
+    unit = unit.replace("/", "/" + WORD_JOINER)
+    return f"{sign}{body}{NBSP}{unit}" if unit else f"{sign}{body}"
 
 
 def text(name: str) -> str:

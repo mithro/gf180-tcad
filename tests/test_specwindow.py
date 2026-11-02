@@ -122,6 +122,7 @@ def test_envelope_tree_skips_incomplete_corner_sets(tmp_path):
 def test_spec_file_matches_the_published_page():
     spec = specwindow.load_spec()
     assert spec["source_url"].endswith("/elec_specs_3.html") and spec["retrieved"]
+    assert spec["source_csv_url"] == SECTION_3_CSV
     by = {(e["device"], e["symbol"]): e for e in spec["entries"]}
     ne, pe = "nfet_05v0", "pfet_05v0"
     assert [by[ne, "VT0"][k] for k in ("min", "typ", "max")] == [0.58, 0.7, 0.82]
@@ -139,7 +140,16 @@ def test_spec_file_matches_the_published_page():
         if e.get("per_area"):
             continue  # its own page (test_cox_entry_is_tcad_only)
         assert e["source_url"] == spec["source_url"] and e["retrieved"] == spec["retrieved"]
+        assert e["source_csv_url"] == spec["source_csv_url"]
 
+
+# The CSV tables the readthedocs pages are built from, at a pinned commit of the PDK repo.
+PDK_CSV = (
+    "https://github.com/fossi-foundation/gf180mcu-pdk/blob/"
+    "25ed9c64b64b8e1b93cc4d2d5cade4cd82383a9a/docs/analog/spice/elec_specs/tables_clear/"
+)
+SECTION_3_CSV = PDK_CSV + "3_Medium_Voltage_Devices5v.csv"
+COX_CSV = PDK_CSV + "5_General_Specification3.csv"
 
 COX_PAGE = (
     "https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_3.html"
@@ -158,6 +168,7 @@ def test_cox_entry_is_tcad_only():
         assert e["metric"] == "cox_ff_per_um2" and e["units"] == "fF/um^2"
         assert [e[k] for k in ("min", "typ", "max")] == [1.8, 2.3, 2.8]
         assert e["source_url"] == COX_PAGE and e["section"] == "5.3 Gate oxide capacitance"
+        assert e["source_csv_url"] == COX_CSV
         assert e["retrieved"]
         assert e not in _compared_entries()
     tt = _metrics("ngspice", "typical", "nfet_05v0", "w10p0_l10p00")

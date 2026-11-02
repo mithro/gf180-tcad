@@ -50,7 +50,7 @@ The 1D MOS capacitor is calibrated against the SPICE
 [`results/tcad/validation`](results/tcad/validation),
 [C–V calibration page](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html)):
 three tunables, 3 of the 8-parameter budget. In 1D the nfet agrees with SPICE at every geometry,
-fitted and held out. The pfet is published as a disagreement: the SPICE pfet's depletion edge
+fitted and held out. The pfet is published as a disagreement: the SPICE pfet's [depletion](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-depletion) edge
 moves by 0.57 V between L = 10 µm and the minimum length, which one length-independent 1D stack
 cannot follow. The calibrated 1D curves are in
 [`results/tcad/moscap1d`](results/tcad/moscap1d).
@@ -69,7 +69,7 @@ The 2D validation of the calibrated stack is in progress ([issue #35](https://gi
 The calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7 are committed. They disagree with SPICE
 at L = 0.6 and 0.7 µm and are
 [Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) at W10/L1 and W10/L2.
-Four calibrated 2D pfet cells are committed: W10/L0.5 and W10/L0.7 are Same process, and W10/L1 and W10/L2 disagree.
+Five calibrated 2D pfet cells are committed. W10/L0.5, W10/L0.7 and W1.6/L0.7 are Same process, and W10/L1 and W10/L2 disagree.
 
 Planned work, each item with its issue, is on the
 [roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html), among it a

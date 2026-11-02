@@ -363,6 +363,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w10p0_l1p00` | both | 15279 |
 | `pfet_05v0` | `w10p0_l2p00` | qs | 14176 |
 | `pfet_05v0` | `w10p0_l2p00` | combine-qs | 3 |
+| `pfet_05v0` | `w1p6_l0p70` | both | 11602 |
 
 | Device | Geometry | Peak memory (GiB) | Exit code | Finished (ACDT) |
 |---|---|---|---|---|
@@ -375,6 +376,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w10p0_l0p70` | 5.43 | 0 | 2026-10-28 06:38 |
 | `pfet_05v0` | `w10p0_l1p00` | 7.75 | 0 | 2026-10-28 10:55 |
 | `pfet_05v0` | `w10p0_l2p00` | 9.83 | 0 | 2026-10-28 14:59 |
+| `pfet_05v0` | `w1p6_l0p70` | 5.35 | 0 | 2026-10-28 21:45 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 
@@ -485,7 +487,8 @@ The `crosscheck-tcad` job on a {{ GitHub_hosted_runner }}
 two calibrated 1D jobs at these stamps. It printed
 `identical: 5 files of 2 jobs … match results/MANIFEST.sha256 under tcad/`, with
 {repo}`results/tcad/moscap1d/provenance.json` among the files. On 2026-10-28, at the same
-stamps, `make reproduce-quick` reran them on this host and printed the same `identical` line.
+stamps, a local `make reproduce-quick` reran them and printed the same `identical` line
+([its output, quoted on PR #85](https://github.com/mithro/gf180-tcad/pull/85#issuecomment-6444796436)).
 The other folders were not rerun, for the reasons listed under the backend-seam record.
 
 **The pfet W10/L0.5 job, restamped after its run.** It ran at gplugins `0715c81`, before the
@@ -498,7 +501,7 @@ Between the two hashes, two entries of the hashed file list differ.
 Every file on the 2D compute path is byte-identical, including all of `gplugins/devsim`.
 The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `make reproduce-quick` run above.
 
-**These jobs needed no restamp:** pfet W10/L0.7, W10/L1 and W10/L2, and nfet W1.6/L0.7.
+**These jobs needed no restamp:** pfet W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7, and nfet W1.6/L0.7.
 They ran at gplugins `0715c81` and `bf8f2dcc…`.
 Those are the stamps the folder already had, so the jobs left
 {repo}`results/tcad/moscap2d/provenance.json` unchanged.
@@ -507,8 +510,10 @@ Those are the stamps the folder already had, so the jobs left
 
 ## The same bytes on another computer
 
-The committed reference is generated on the project's own machine, whose CPUs
-are Intel Xeon Gold 6152. To show that the same bytes come out on a different
+The committed reference is generated on the project's own machine. Recording that machine's
+CPU model with each run is [issue #144](https://github.com/mithro/gf180-tcad/issues/144).
+
+To show that the same bytes come out on a different
 host, the `crosscheck` {{ GitHub_Actions }} workflow
 ({repo}`.github/workflows/crosscheck.yml`) regenerates it on a {{ GitHub_hosted_runner }}
 (`ubuntu-latest`) and requires every file to be byte-identical, by sha256, to the
@@ -538,8 +543,7 @@ AMD EPYC 7763) failed. Every raw simulator CSV was identical, but five
 the {term}`DIBL` derived from them. The cause was numpy's run-time {term}`SIMD dispatch`.
 numpy picks a kernel for each operation by CPU feature level, and its
 `log10` kernels for AVX-512 and for AVX2 differ by one {term}`ulp` on some inputs.
-The local Xeon and an earlier EPYC 9V45 runner both have AVX-512; the
-EPYC 7763 has only AVX2.
+An earlier EPYC 9V45 runner had AVX-512; the EPYC 7763 has only AVX2.
 
 The sandbox ({repo}`tools/sandbox-run`) now pins numpy to its
 baseline ({term}`x86-64-v2`) kernels by disabling every dispatch target with
@@ -648,6 +652,76 @@ Large regenerable files that are not committed, such as the 2D meshes, go into a
 content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
 the sha256 the committed results name. It holds the meshes of the calibrated 2D nfet and pfet cells,
 W1.6/L0.7 included; {doc}`output-cache` lists them.
+
+(mesh-artefact)=
+
+## Reduced mesh artefact
+
+A mesh figure of a 2D job is drawn from a committed reduced artefact, not from the full mesh.
+The command line {py:mod}`gf180tcad.meshcut.__main__` cuts a window around the gate out of the
+job's mesh, as {numref}`mesh-window-figure` shows. It writes the window's arrays to
+{py:data}`mesh-window.npz <gf180tcad.meshcut.ARTEFACT>` and their record to
+{py:data}`mesh-window.meta.json <gf180tcad.meshcut.META>`. Every kept element is an element of
+the full mesh, with its node coordinates copied bit for bit.
+
+```{figure} /_generated/explained/mesh-window-light.svg
+:name: mesh-window-figure
+:figclass: only-light
+:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below. A dashed rectangle covers the gate, the gate oxide and a thin strip of silicon under them, and reaches a little past each gate edge into the source and the drain.
+
+The mesh window (dashed) on the 2D cell of the {term}`nfet_05v0` with {term}`geometry id`
+`w10p0_l0p60`, cut along the gate's length. {{ x_fig_mesh_window_scale }}
+```
+
+```{figure} /_generated/explained/mesh-window-dark.svg
+:figclass: only-dark
+:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below. A dashed rectangle covers the gate, the gate oxide and a thin strip of silicon under them, and reaches a little past each gate edge into the source and the drain.
+
+The mesh window (dashed) on the 2D cell of the {term}`nfet_05v0` with {term}`geometry id`
+`w10p0_l0p60`, cut along the gate's length. {{ x_fig_mesh_window_scale }}
+```
+
+The window is set by one rule for every job
+({py:func}`gf180tcad.meshcut.window.rule_bounds`). Across the cell it follows
+{math:numref}`eq-mesh-window-x`, and in height {math:numref}`eq-mesh-window-y`.
+
+$$
+x_\mathrm{min} = x_\mathrm{L} - k_x L, \qquad x_\mathrm{max} = x_\mathrm{R} + k_x L
+$$ (eq-mesh-window-x)
+
+where
+
+- $x_\mathrm{min}$ and $x_\mathrm{max}$ are the left and right edges of the window, in µm;
+- $x_\mathrm{L}$ and $x_\mathrm{R}$ are the left and right edges of the gate, in µm;
+- $L = x_\mathrm{R} - x_\mathrm{L}$ is the gate length, in µm;
+- $k_x = 0.25$ is {py:data}`~gf180tcad.meshcut.WINDOW_KX`, the share of a gate length kept on
+  each side of the gate, dimensionless.
+
+$$
+y_\mathrm{min} = y_\mathrm{s} - d, \qquad y_\mathrm{max} = y_\mathrm{p}
+$$ (eq-mesh-window-y)
+
+where
+
+- $y_\mathrm{min}$ and $y_\mathrm{max}$ are the bottom and top of the window, in µm;
+- $y_\mathrm{s}$ is the height of the silicon surface, with heights growing upwards, in µm;
+- $y_\mathrm{p}$ is the height of the top of the gate polysilicon, in µm;
+- $d = 0.1$ is {py:data}`~gf180tcad.meshcut.WINDOW_DEPTH_UM`, the depth kept below the surface,
+  in µm.
+
+A triangle of the mesh is kept when its centroid lies inside the window
+({py:func}`gf180tcad.meshcut.window.cut`). So the edge of the cut follows the mesh elements.
+
+The artefact has no size cap. `cut` measures the file, records its size in the meta file as
+`size_bytes` and prints it
+({repo}`design spec §10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`).
+The meta file also records the sha256 of the full mesh, which must equal the job's committed
+`mesh_sha256`. No artefact is committed. The command for one job:
+
+```sh
+uv run --locked python -m gf180tcad.meshcut cut \
+  --job results/tcad/moscap2d/<device>/<params>/<gid> --out results/tcad/meshes/<image>
+```
 
 ## Render manifest
 

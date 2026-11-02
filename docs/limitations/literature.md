@@ -34,6 +34,14 @@ Each annotation names what the project uses the item for.
 - {{ BSIM4_site }} manual (UC Berkeley): the meaning of TOXE, TOXP, {term}`NGATE` and LPE0.
   Its §7.1 and §7.5.2 give the gate-bias-dependent overlap capacitance with the lightly doped
   source and drain region, CGDL.
+- Its ch. 7, "Capacitance Model", gives the equations of the {term}`SPICE` gate capacitance that
+  {ref}`explained-cv-curve` compares with the simulated stack.
+- The BSIM4.5.0 manual, in the
+  [BSIM450.zip package](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip)
+  (archived copy), matches the {term}`model card`'s
+  [`version=4.5`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37330).
+  Its §8.1 and appendix A give the switches
+  ACNQSMOD and TRNQSMOD of the non-quasi-static model: the value 0, the default, turns it off.
 
 ## Physics models
 
@@ -47,6 +55,8 @@ Each annotation names what the project uses the item for.
   ({repo}`data/render/display.toml`).
 - Its ch. 1, "Physics and Properties of Semiconductors—A Review": the explainer pages'
   carriers, {term}`dopants <dopant>`, the mass-action law and Fermi–Dirac statistics ({ref}`explained-silicon`).
+- Its ch. 4, the ideal MIS capacitor: {term}`accumulation`, {term}`depletion`, {term}`inversion`,
+  {term}`flat band` and the threshold of strong inversion ({ref}`explained-regions`).
 
 (lit-ioffe)=
 
@@ -65,7 +75,7 @@ Each annotation names what the project uses the item for.
 
 - Sah, Noyce and Shockley, "Carrier generation and recombination in p-n junctions and p-n
   junction characteristics", Proc. IRE 45(9), 1228-1243, 1957,
-  {doi}`10.1109/JRPROC.1957.278528`: recombination in the depletion region, {term}`ideality factor`
+  {doi}`10.1109/JRPROC.1957.278528`: recombination in the {term}`depletion` region, {term}`ideality factor`
   near 2.
 
 (lit-caughey)=

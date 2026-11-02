@@ -73,7 +73,7 @@ the simulated stack, with the oxide thickness, body doping and voltage shift fit
 model.
 ```
 
-At both ends the curve is flat. At the most negative gate voltage the SPICE model gives
+At both ends the curve is flat, and between them it dips ({ref}`the dip <explained-regions-dip>`). At the most negative gate voltage the SPICE model gives
 {{ x_cgg_acc_l10 }} for this gate. At the most positive it gives {{ x_cgg_inv_l10 }}
 ({repo}`metrics.json <results/spice/ngspice/typical/nfet_05v0/w10p0_l10p00/metrics.json>`).
 Under the gate, the ceiling is the {term}`oxide capacitance <Cox>` times the gate's area
@@ -129,5 +129,6 @@ The 2D simulation of a whole cell uses the fitted stack of its transistor. The t
 
 {{ x_two_d_table }}
 
-{{ x_two_d_disagree }} ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The 2D cell and its other
+{{ x_two_d_disagree }} ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The halfway level is
+defined with {ref}`the dip <explained-regions-dip>`. The 2D cell and its other
 differences are on {doc}`/limitations/moscap2d`.

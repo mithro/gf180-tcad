@@ -38,6 +38,7 @@ All Phase 2 Global Constraints apply where they touch the docs (licences, git ru
 - **Light and dark are one figure.** Each figure is written as `<name>-light.svg` and `<name>-dark.svg` from one palette table (Okabe–Ito categories, cividis for magnitudes, a diverging map for signed quantities, the renders' material colours once `render/style.toml` exists), and embedded with the `{image}` directive twice, classes `only-light` and `only-dark` (Furo shows the one that matches the reader's theme). The reader never chooses between links.
 - **Phone first.** Explainer figures are 6.4 × 4.8 in with 12 pt text. `gf180tcad.plots.figure_svg` is fixed at 10 × 4 in today (`plots.py` lines 37 and 94), so E0 adds a `size` parameter whose default keeps every existing generated SVG byte-identical. An SVG is scaled to the content width, so at 400 px the text is 12 pt × 400 / (6.4 × 72 pt) ≈ 10.4 px high, independent of dpi; `tests/test_explained.py::test_figures_legible_at_400px` computes that from `STYLE` and requires at least 9 px. Tables follow spec §10.3 (one value per cell, at most 5 columns of numbers or 3 with prose) and are checked at 400 px by screenshot.
 - **One page type per page.** Every page in `docs/explained/` is an explanation (noun title, the one question in the opening sentences, at most seven headings, no numbered steps, a diagram where it replaces the longest paragraph, and each concept in plain words first, then its equation as `$$` display math with the literature reference, as spec §10.2 requires), except `docs/explained/index.md`, a landing page (one line per page). A page that starts to instruct links a how-to in `docs/reproduce/` instead.
+- **Figures, equations and file links.** The rules of spec §10.3, owner 2026-11-03: a named, captioned `{figure}` cited with `{numref}` for every described situation; every equation as `$$ … $$ (eq-name)` with a `where` list giving each symbol and its unit; every file a `{repo}` link. `uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules all <page>` checks a page, and `tests/doc_rules_baseline.json` may only fall. The explainer pages' findings are the work order of [#129](https://github.com/mithro/gf180-tcad/issues/129).
 - **Present state, no hedges, no future.** Spec §10.3: no hedge word, no "not yet", no history phrase, no promise. A missing render is not mentioned; the page shows the plain diagram. A missing TCAD MOSFET result is stated as the present state in one sentence linking the roadmap, never as "coming".
 - **Honest about the gap** (spec §10.2). Each page ends with a section "Where this repo's results differ" that links the results and limitations pages of the same device and states, with its evidence, where the simple picture and the simulated or SPICE result differ.
 - **No provenance change.** `gf180tcad.explain` is imported by no module in any hashed closure (`tests/test_explained.py::test_explain_in_no_generator_closure`: the TCAD entry points, `gf180tcad.reference.GENERATOR_MODULES` and the render closure); no committed tree is restamped; `tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` and `tests/test_results_provenance.py` stay green. A reader moved out of `gf180tcad.docgen` goes to `gf180tcad.explain.data`, never into a hashed module (`gf180tcad.io`, `gf180tcad.metrics`, `gf180tcad.devices` or any other name in those closures), because moving code into a hashed module changes its hash and restamps its trees. `gf180tcad.quantity` is in the render closure only (Decisions); no SPICE or TCAD closure imports it.
@@ -328,7 +329,23 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - [x] **E2a Step 2:** the gap section states the 1D nfet and pfet verdicts by substitution and
   every committed 2D verdict in a generated table, linking `cv-agreement-windows`,
   `cv-agreement-mismatch`, `cv-agreement-validation` and `cv-agreement-metric`.
-- [ ] **E2a Step 3:** PR; review by use, audit; merge.
+- [x] **E2a Step 3:** PR #115; review by use, audit; merged (97d743a).
+- [x] **E2b Step 1:** tests first (red commit `9067d6b`); the idealised formulas, the registry
+  entries and words, the `cv-regions` and `band-regimes` figures; the page
+  `accumulation-depletion-inversion.md`; the four glossary entries with first-use links across
+  the site; lint, measure, build, screenshots.
+- [x] **E2b Step 2:** the gap section states the crossing verdicts at `w10p0_l10p00`, the pfet 1D
+  verdict and the 2D Disagree clause by substitution, linking `cv-agreement-metric`,
+  `cv-agreement-mismatch` and `cv-agreement-validation`.
+- [x] **E2b Step 3:** PR #117; review by use, audit; merged (1c06186).
+- [x] **E2c Step 1:** tests first (red commit `d6a0893`); the registry entries (start values
+  from the result file's `start`, the fit's crossing shifts and depletion error at
+  `w10p0_l10p00`), the `cv-parts` figure; the page `cv-curve.md`; the landing page's tier
+  headings; lint, measure, build, screenshots.
+- [x] **E2c Step 2:** the gap section states the 1D nfet and pfet verdicts and the 2D Disagree
+  clause by substitution, linking `cv-agreement-deviation`, `cv-agreement-mismatch` and
+  `cv-agreement-validation`.
+- [ ] **E2c Step 3:** PR; review by use, audit; merge.
 
 **As built (E2a).**
 
@@ -358,6 +375,79 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - No glossary entry is added: the page avoids the region names (accumulation, depletion,
   inversion, flat band), which land with `accumulation-depletion-inversion.md`. The MOSCAP entry
   points to the new page.
+
+**As built (E2b).**
+
+- `explain.idealised` gains `bulk_potential` (ψ_B), `flat_band` (the negated
+  `built_in_potential` of the gate and body dopings), `threshold` (onset of strong inversion,
+  ψ_s = 2ψ_B), `depletion_depth` and `surface_bending` (the depletion approximation under the
+  oxide), all Sze and Ng ch. 4. The page prints V_FB and V_T of the calibrated nfet stack as
+  idealised values; ψ_B equals the bands page's `fermi_body_nfet` (tested).
+- The region shading is the calibration's own marks on the SPICE typical curve,
+  `spice_regions.u_fb` and `u_t` of the nfet result file at `w10p0_l10p00`, read by the
+  registry (`u_fb_l10`, `u_t_l10`); `test_regions_follow_the_committed_crossings` reads the
+  spans of the drawn figure, and a second test moves the values and sees the spans move. The
+  fixed fraction of u_fb is not printed: it is a code constant, linked as
+  `calibrate.cv.FB_FRACTION`.
+- The band panels show accumulation, flat band, depletion (surface at the middle of the gap,
+  ψ_s = ψ_B) and inversion (ψ_s = 2ψ_B). The accumulation panel keeps the bands flat and draws
+  the extra holes as a sheet of no thickness, a drawing choice outside the depletion
+  approximation (which covers depletion and inversion only); the page says so and links the
+  "differs" section, where the simulation's bands bend up a little. The hole and electron sheets
+  are circles edged in the text colour beyond their band edge, so at 400 px the accumulation
+  panel differs from the flat-band panel (`test_band_regimes_sheets_stand_apart_from_the_band_edges`).
+- The idealised flat band, −V_t·ln(N_gate·N_A/n_i²), is the non-degenerate (Boltzmann) gate form,
+  the same counting as the simulation; the page says so and links `explained-bands-differs`.
+- `numbers.CHECKS`: both crossing checks are of one level definition, (C_min + C_acc)/2, which
+  each curve, SPICE or simulated, takes from its own minimum and accumulation flat part
+  (`calibrate.cv.crossings`); the page names it the halfway level and says each curve crosses its
+  own. The start of inversion, (C_min + C_inv)/2 of the SPICE curve, is described without the
+  word "halfway", so the two levels (both at the same voltage here) are not read as one. The
+  words of `dv_dep` and `dv_inv` ("halfway-level crossing") differ only in their sides. `test_check_words_name_both_signs`
+  now reads, for each device, the sign of u where each check is measured in the committed result
+  file times the polarity, with a swapped-pair positive control. The MOS capacitor page links
+  the dip and the halfway level.
+- Glossary: accumulation, depletion, inversion, flat band. Their first uses are linked across
+  the docs, in README.md (a glossary URL) and in docgen's check labels and Cox sentence.
+- API pages: `docs/_ext/api_links.py` links the first use in the rendered docstrings, in page
+  order (a `doctree-read` pass). No page has a sentence that only carries a link. The
+  `explain.figures`, `tcad.process` and `meshcut.__main__` pages lost theirs. The `REGIMES`
+  comment says "holes" again.
+
+**As built (E2c).**
+
+- The figure `cv-parts` is the nfet at `w10p0_l10p00`, the regions page's geometry: the SPICE
+  typical curve, and the committed 1D curves at `start` and `calibrated` through the BSIM4
+  bookkeeping (`figures.cv_curves`, the readers of `explain.data`). The labels
+  (`figures.CV_PARTS`) name the oxide thickness at both flat parts (with the gate doping at the
+  inversion one, poly depletion), the body doping at the dip, pointing at the result file's
+  `spice_regions.u_min` and `c_min`, and the voltage shift on an arrow centred on the SPICE
+  curve's falling-side crossing, `spice_regions.u_dep`, with one head towards more positive
+  gate voltage (review of #118; tested). The arrow's length is a drawing choice (the fitted
+  shift is about one per cent of the axis); the caption and page say so.
+- The start values are the result file's `start` table, tested equal to the process file's
+  values; the fitted ones are its `values`, tested equal to the calibration file. The page
+  prints the idealised Cox of the start and fitted thickness, the plateau errors, the
+  crossing shifts (simulated minus SPICE) and the depletion error, which enters no verdict.
+- Review of #118: the page prints the SPICE minimum and says the fitted dip is deeper and the
+  start dip shallower (tested from the committed curves); the sentences on how each curve is
+  made sit in the fit section, with no quasi-static contrast (BSIM4's AC non-quasi-static model
+  is off unless the card sets ACNQSMOD, manual ch. 8 and appendix A, and the card is not read
+  here). Numbers broke from their units at 400 px on every explainer page; fixed site-wide in
+  the PR for issue #119: {repo}`src/gf180tcad/explain/numbers.py` `format_value` joins value and unit with U+00A0 and puts
+  U+2060 after the slash of a compound unit, and the Sphinx extension {repo}`docs/_ext/unit_join.py`
+  does the same for values typed by hand and for the generated result pages.
+- Shortcut sweep: the card's ACNQSMOD and TRNQSMOD in both nfet bins (`nfet_06v0.0`, lines
+  37060 and 37316; `nfet_06v0.1`, lines 37398 and 37654; all 0) are read from
+  `data/explain/model_card.toml`, registry entries
+  `acnqsmod_nfet` and `trnqsmod_nfet`; a sandbox test checks each line in the image's card.
+  The page now says, by substitution, that the SPICE capacitance is quasi-static (manual
+  §8.1 and appendix A).
+- The SPICE curve is described as the equations of BSIM4's capacitance model (manual ch. 7);
+  the frequency of the `cv` sweep is not printed, since no committed data file holds it.
+- The landing page now has one heading per tier, so each list stays within seven items;
+  `test_landing_lists_every_page` allows the three tier headings.
+- No glossary entry is added: the page uses existing terms only.
 
 **Exit criteria.** The four pages are on `main` and linked from the landing page; the docgen reader move left `docs/_generated/` byte-identical (log in the PR); the region shading and the calibration tables are read from the result files (tests green); the verdict sentences change when a result file's verdict changes (a test edits a copy of the file and sees the sentence change); the four new glossary terms are defined; the docs tools report nothing for `docs/explained/**`; the review by use has no open stop.
 
