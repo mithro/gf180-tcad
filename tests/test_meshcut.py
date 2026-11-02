@@ -832,7 +832,8 @@ def test_regenerate_without_cut_only_reports(tmp_path, inside, monkeypatch):
 def test_host_command_pulls_by_subprocess_only(tmp_path, monkeypatch):
     """The host command fetches the mesh with a ``tools/output-cache pull`` subprocess before the
     ``--network none`` sandbox run, and gf180tcad.outcache is in no meshcut module's import
-    closure (spec §9.1; the AST half is test_meshcut_closure_has_no_outcache)."""
+    closure (spec §9.1; the AST half is test_meshcut_never_imports_outcache, and every entry
+    point's static import closure is test_outcache.py::test_no_entry_point_imports_outcache)."""
     calls = []
     monkeypatch.setattr(
         meshcut_cli.subprocess, "run", lambda cmd, **kw: calls.append(("pull", cmd, kw))
