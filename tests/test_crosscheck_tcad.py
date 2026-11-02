@@ -116,3 +116,45 @@ def test_cli_refuses_before_running_anything(tmp_path):
     )  # fmt: skip
     assert r.returncode != 0 and "not empty" in r.stderr
     assert (full / "keep").read_text() == "x"
+
+
+def _meshes_tree(tmp_path, image="dev"):
+    """A results/ with a meshes/<image> tree: two committed artefacts and their provenance."""
+    results = tmp_path / "results"
+    root = results / "tcad" / "meshes" / image
+    for gid in ("w10p0_l0p70", "w10p0_l0p60"):
+        d = root / "nfet_05v0" / "calibrated" / gid
+        d.mkdir(parents=True)
+        (d / "mesh-window.meta.json").write_bytes(b"{}\n")
+    (root / "provenance.json").write_text(
+        '{"images": {"meshes": {"name": "%s", "ref": "x"}}}\n' % image, encoding="utf-8"
+    )
+    return results
+
+
+def test_registry_tree_uses_its_recorded_image(tmp_path, monkeypatch):
+    """A meshes job runs in the image its tree's committed provenance.json records (not a
+    RESULTS_IMAGE lookup), and runs `meshcut cut` once per committed artefact."""
+    monkeypatch.setattr(tool, "RESULTS", _meshes_tree(tmp_path, "dev"))
+    job = "meshes/dev/nfet_05v0/calibrated"
+    assert tool.images((job,)) == [image_ref("dev")]
+    monkeypatch.setattr(tool, "RESULTS", _meshes_tree(tmp_path / "s", "stable"))
+    assert tool.images(("meshes/stable/nfet_05v0/calibrated",)) == [image_ref("stable")]
+    cmds = tool.commands(("meshes/stable/nfet_05v0/calibrated",), tmp_path / "out")
+    assert cmds == [
+        [sys.executable, "-m", "gf180tcad.meshcut", "cut", "--job",
+         f"results/tcad/moscap2d/nfet_05v0/calibrated/{gid}", "--out",
+         str(tmp_path / "out" / "meshes" / "stable")]
+        for gid in ("w10p0_l0p60", "w10p0_l0p70")
+    ]  # fmt: skip
+    from gf180tcad.meshcut import __main__ as meshcut_cli
+
+    for cmd in cmds:  # the real `cut` command line, default window and cache
+        a = meshcut_cli._parser().parse_args(cmd[3:])
+        assert (a.command, a.kx, a.depth_um, a.cache, a.scratch) == ("cut", 0.25, 0.1, None, None)
+
+
+def test_meshes_job_without_artefacts_is_refused(tmp_path, monkeypatch):
+    monkeypatch.setattr(tool, "RESULTS", _meshes_tree(tmp_path, "stable"))
+    with pytest.raises(ValueError, match="no committed reduced mesh artefact"):
+        tool.commands(("meshes/stable/pfet_05v0/calibrated",), tmp_path / "out")
