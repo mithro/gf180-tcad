@@ -857,6 +857,7 @@ def cv_parts(palette: str) -> bytes:
     with matplotlib.rc_context(_rc(palette)):
         return _svg(cv_parts_figure(palette))
 
+
 # The corner-fit figure of docs/reproduce/index.md (Task 16a): the nfet at the longest
 # calibration gate, the geometry of the MOS capacitor page's C-V figure.
 CORNER_DEVICE, CORNER_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
@@ -901,7 +902,6 @@ def corner_cv(palette: str) -> bytes:
         ax.set_ylabel("gate capacitance (fF)")
         fig.legend(loc="outside lower center", ncols=len(curves), frameon=False)
         return _svg(fig)
-
 
 
 # name -> function of the palette name; each is written in both palettes by write_all.
