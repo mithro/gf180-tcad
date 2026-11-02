@@ -552,7 +552,7 @@ project stays Apache-2.0.
 
 {repo}`docker/charon-libs/build` works like {repo}`docker/tcad-dev/build`, with one more rule.
 The Trilinos compile runs in a BuildKit builder limited to 16 GiB of memory with no swap. The
-script creates that builder in `gf180-tcad.slice` on first use. It refuses a builder with no
+script creates that builder in {term}`gf180-tcad.slice` on first use. It refuses a builder with no
 memory limit, or with swap above the limit.
 
 The Dockerfile has three stages:
@@ -568,7 +568,7 @@ The four tests of the build check are these, by their CTest names:
 
 - `Charon_charon_mp_pmoscap.nlp`, a p-type MOS capacitor;
 - `Charon_charon_mp.hb.loca-moscap-cv.ox` and `Charon_charon_mp.hb.loca-moscap-cv.sub`, two
-  small-signal C-V sweeps of a MOS capacitor;
+  small-signal C-V {term}`sweeps <sweep>` of a MOS capacitor;
 - `Charon_charon_mp_pndiode.nlp`, a pn diode with uniform doping.
 
 The build writes `/opt/charon/share/gf180tcad/charon-build.json`. It records the inputs by
