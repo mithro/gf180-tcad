@@ -604,9 +604,9 @@ The Trilinos compile runs in a BuildKit builder limited to 16 GiB of memory with
 The script creates that builder on first use. It refuses a builder unless every node's
 running container has a memory limit of at most 16 GiB and no swap, as docker applied them.
 
-The builder runs outside {term}`gf180-tcad.slice`, with that limit of its own. Docker's buildx
-places a builder in a given cgroup only when docker uses the cgroupfs driver, and the project's
-host runs docker with systemd.
+The builder runs outside {term}`gf180-tcad.slice`, with that limit of its own. Docker's
+buildx places a builder in a given {term}`cgroup` only when docker uses the cgroupfs driver,
+and the project's host runs docker with {{ systemd }}.
 
 {numref}`charon-stages` shows the three stages of {repo}`docker/charon-libs/Dockerfile`:
 
@@ -665,8 +665,8 @@ builder, with other jobs sharing its 8 CPUs. Both gave the same digests. The rec
 
 | Quantity | GitHub runner | Project's host |
 |---|---|---|
-| Wall time of the whole build | 1 h 11 min | 3 h 36 min |
-| Wall time of `make` | 1 h 5 min | 3 h 29 min |
+| Wall time of the whole build (min) | 71 | 216 |
+| Wall time of `make` (min) | 65 | 209 |
 
 On the project's host the builder's memory peaked at 6.35 GB. The install in `/opt/charon` is
 353 MB, and the layer it adds to the base image is 91.7 MB compressed.
