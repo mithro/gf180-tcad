@@ -118,8 +118,8 @@ the most negative gate voltage. At the most positive it lies within {{ x_plateau
 
 A verdict says whether the simulation matches the SPICE model: {term}`Agree`,
 {term}`Same process` or {term}`Disagree` ({ref}`the verdicts <agreement-verdicts>`). Each check
-of a curve gets a verdict, and a geometry's verdict is the worst of them
-({ref}`the verdict rule <cv-agreement-windows>`).
+of a curve gets a verdict ({ref}`the checks <cv-agreement-metric>`). A geometry's verdict is the
+worst of them ({ref}`the verdict rule <cv-agreement-windows>`).
 
 The 1D fit is {{ x_verdict_nfet_1d }} for the nfet and {{ x_verdict_pfet_1d }} for the
 {term}`pfet_05v0` ({ref}`the pfet mismatch <cv-agreement-mismatch>`).
@@ -129,6 +129,5 @@ The 2D simulation of a whole cell uses the fitted stack of its transistor. The t
 
 {{ x_two_d_table }}
 
-{{ x_two_d_disagree }} ({ref}`the checks <cv-agreement-metric>`,
-[issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The 2D cell and its other
+{{ x_two_d_disagree }} ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The 2D cell and its other
 differences are on {doc}`/limitations/moscap2d`.

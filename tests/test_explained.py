@@ -1241,7 +1241,7 @@ def test_disagree_clause_follows_the_checks(tmp_path):
     assert numbers.two_d_disagree(root=tmp_path / "missing") == "No 2D cell is Disagree"
     dst = _validation_copy(tmp_path)
     one = numbers.two_d_disagree(root=tmp_path)
-    assert one.startswith("Every Disagree cell fails on one check alone: ")
+    assert one.startswith("Every Disagree cell fails only one check: ")
     doc = json.loads((dst / "nfet_05v0.json").read_text("utf-8"))
     cell = doc["two_d"]["w10p0_l0p60"]
     assert cell["verdict"] == "Disagree"
@@ -1249,6 +1249,13 @@ def test_disagree_clause_follows_the_checks(tmp_path):
     (dst / "nfet_05v0.json").write_text(json.dumps(doc), "utf-8")
     two = numbers.two_d_disagree(root=tmp_path)
     assert numbers.CHECKS["plateau_acc"] in two and two.startswith("The Disagree cells fail on ")
+
+
+def test_check_words_name_both_signs():
+    """The checks run in u = polarity × Vg: a side named by its sign names it for both devices."""
+    for key, words in _numbers().CHECKS.items():
+        if "negative" in words or "positive" in words:
+            assert "nfet" in words and "pfet" in words, key
 
 
 def test_disagree_cells_are_the_issue_on_the_page():

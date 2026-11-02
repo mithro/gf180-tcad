@@ -187,12 +187,13 @@ def word(name: str, root: Path = ROOT) -> str:
 VALIDATION = "results/tcad/validation"
 
 #: The checks of a validated cell (``verdicts`` of a ``two_d`` entry), in plain words
-#: (``docs/comparison/cv-agreement.md``, "The agreement metric").
+#: (``docs/comparison/cv-agreement.md``, "The agreement metric"). The checks run in
+#: u = polarity × Vg, so each side is named for the nfet and the pfet, whose signs are reversed.
 CHECKS = {
-    "plateau_acc": "the flat part at the most negative gate voltage",
-    "plateau_inv": "the flat part at the most positive gate voltage",
-    "dv_dep": "the voltage where the curve falls halfway from its negative-voltage flat part to its minimum",
-    "dv_inv": "the gate voltage where the curve climbs back through that halfway level",
+    "plateau_acc": "the flat part on the nfet's negative side, the pfet's positive side",
+    "plateau_inv": "the flat part on the nfet's positive side, the pfet's negative side",
+    "dv_dep": "the voltage halfway down the dip on the nfet's negative side, the pfet's positive side",
+    "dv_inv": "the voltage halfway up the dip on the nfet's positive side, the pfet's negative side",
 }
 
 
@@ -249,7 +250,7 @@ def two_d_disagree(root: Path = ROOT) -> str:
         return "No 2D cell is Disagree"
     failing = sorted({k for c in bad for k in c.failing}, key=list(CHECKS).index)
     if len(failing) == 1:
-        return f"Every Disagree cell fails on one check alone: {CHECKS[failing[0]]}"
+        return f"Every Disagree cell fails only one check: {CHECKS[failing[0]]}"
     return "The Disagree cells fail on " + "; and on ".join(CHECKS[k] for k in failing)
 
 
