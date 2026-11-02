@@ -301,6 +301,10 @@ where
 - $b$ is the same bound or start value at the typical corner, in nm or V;
 - $\Delta_c$ is the corner's TOXE offset for the oxide, in nm, or its VTH0 offset for the {term}`flat band`, in V.
 
+The typical oxide upper bound is TOXP plus the charge-centroid allowance of the typical fit
+({py:func}`~gf180tcad.tcad.process.centroid_allowance_nm`). A corner fit moves that bound by its
+TOXE offset and keeps the typical allowance, not recomputed at the corner's TOXP and VTH0.
+
 The flat-band shift is in true-sign gate voltage for both transistors. The pfet card sets no
 TOXP, so its TOXP follows TOXE and both oxide bounds move.
 

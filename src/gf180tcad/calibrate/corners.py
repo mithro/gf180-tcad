@@ -16,7 +16,10 @@ this module and its generator hash). A corner fit applies the corner's XL, XW, o
 and the BSIM4 default CF of its TOXE to the area and overlap bookkeeping as fixed inputs
 (:func:`corner_bookkeeping`, :func:`with_corner_card`). It moves the oxide bounds and start by
 the corner's TOXE offset and the flat-band bounds and start by its VTH0 offset, in true-sign
-gate bias for both devices (:func:`corner_bounds`). The doping bounds stay as at TT.
+gate bias for both devices (:func:`corner_bounds`). The doping bounds stay as at TT. The TT
+oxide upper bound is TOXP plus the charge-centroid allowance Δ (:mod:`gf180tcad.tcad.process`);
+a corner fit moves that bound by the TOXE offset and keeps the TT Δ, not recomputed at the
+corner's TOXP and VTH0.
 
 **Guards** (:class:`~gf180tcad.calibrate.cv.CalibrationLeak`, anti-goal A1): the typical
 corner, a validation geometry, a target that is not the corner's own ngspice ``cv`` sweep, and
