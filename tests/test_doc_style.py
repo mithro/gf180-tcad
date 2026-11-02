@@ -269,11 +269,15 @@ def _docs_lint():
     return mod
 
 
-def rule_counts(generated: Path | None = None) -> dict[str, dict[str, int]]:
-    """{page: {check: count}} of the docs_lint --rules findings: the reader pages, and the
-    pages docgen writes when ``generated`` is given."""
+def rule_counts(
+    generated: Path | None = None, pages: list[tuple[str, Path]] | None = None
+) -> dict[str, dict[str, int]]:
+    """{page: {check: count}} of the docs_lint --rules findings and FIGURE-OK opt-outs: the
+    reader pages (or ``pages``, as (name, path)), and the pages docgen writes when
+    ``generated`` is given."""
     lint = _docs_lint()
-    pages = [(p.relative_to(ROOT).as_posix(), p) for p in source_pages()]
+    if pages is None:
+        pages = [(p.relative_to(ROOT).as_posix(), p) for p in source_pages()]
     if generated is not None:
         pages += [
             ("docs/_generated/" + p.relative_to(generated).as_posix(), p)
@@ -359,10 +363,17 @@ def test_write_rules_baseline_lowers_without_a_flag(tmp_path):
     assert json.loads(base.read_text("utf-8")) == {"a.md": {"FIGURE": 1}}
 
 
-def test_rule_counts_count_opt_outs():
-    lint = _docs_lint()
-    page = "# T\n\n<!-- figure-ok: the mesh here is a file name -->\n\nThe mesh file is 9 MB.\n"
-    assert len(lint.figure_opt_outs(page)) == 1 and not lint.rule_findings(page)
+def test_rule_counts_count_opt_outs(tmp_path):
+    """The baseline counts each opt-out, so an added figure-ok shows in the baseline diff."""
+    opted = tmp_path / "opted.md"
+    opted.write_text(
+        "# T\n\n<!-- figure-ok: the mesh here is a file name -->\n\nThe mesh file is 9 MB.\n",
+        "utf-8",
+    )
+    short = tmp_path / "short.md"
+    short.write_text("# T\n\n<!-- figure-ok: a file -->\n\nThe mesh file is 9 MB.\n", "utf-8")
+    counts = rule_counts(pages=[("opted.md", opted), ("short.md", short)])
+    assert counts == {"opted.md": {"FIGURE-OK": 1}, "short.md": {"FIGURE": 1}}
 
 
 if __name__ == "__main__" and sys.argv[1:2] == ["--write-rules-baseline"]:
