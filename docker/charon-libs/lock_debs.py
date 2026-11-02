@@ -12,8 +12,10 @@ docker/tcad-dev/upstream.json uses for its GCC 14 packages). INSTALLED is the ou
 universe, amd64) of that snapshot, resolves the Depends and Pre-Depends of every PACKAGE (not
 Recommends or Suggests), and keeps what the base image does not already satisfy. A dependency
 that the base image has installed at a version that does not satisfy the constraint is an error:
-the build stage never upgrades a package of the base image. OUT_JSON (upstream.json) keeps its
-other entries; its ``deb`` entries are replaced by one per resolved .deb (``url`` in the snapshot
+the build stage never upgrades a package of the base image. The tool reads no Breaks,
+Conflicts or Replaces field: ``dpkg -i`` refuses a package that Breaks or Conflicts with an
+installed one, but a package that Replaces files of a base image package is not detected.
+OUT_JSON (upstream.json) keeps its other entries; its ``deb`` entries are replaced by one per resolved .deb (``url`` in the snapshot
 pool, ``sha256`` from the index, ``install_order`` its place in dependency order, so that
 ``dpkg -i`` in that order sees each package after its dependencies).
 """
@@ -63,7 +65,8 @@ def _cmp_part(a: str, b: str) -> int:
 
 
 def _split(v: str) -> tuple[int, str, str]:
-    epoch, _, rest = v.rpartition(":") if ":" in v else ("0", "", v)
+    # The epoch ends at the first colon; the upstream version may hold more colons.
+    epoch, _, rest = v.partition(":") if ":" in v else ("0", "", v)
     upstream, _, rev = rest.rpartition("-") if "-" in rest else (rest, "", "0")
     return int(epoch or 0), upstream, rev
 
