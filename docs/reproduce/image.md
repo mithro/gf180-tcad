@@ -472,7 +472,7 @@ inputs are:
 On a shared host, `GF180TCAD_BUILDER` (read by {repo}`docker/tcad-dev/build`) selects another
 builder of the same {{ BuildKit }} image, for example one created with CPU and memory limits
 ([`docker buildx create`](https://docs.docker.com/reference/cli/docker/buildx/create/)
-`--driver-opt cpuset-cpus=...,memory=...`). The image does not depend on the builder's limits. The script refuses a builder in which any
+`--driver-opt cpuset-cpus=...,memory=...`). The image does not depend on the builder's limits, but the script refuses a builder in which any
 node lacks the pinned {{ BuildKit }} image option. `--load` also loads the result into the local Docker image store (same
 image ID), so it can be run before it is pushed. The `image` workflow builds, checks and
 publishes it as its third matrix entry, `tcad-dev`, on {{ GitHub_hosted_runner }}s, exactly as
