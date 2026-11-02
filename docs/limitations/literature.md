@@ -36,8 +36,12 @@ Each annotation names what the project uses the item for.
   source and drain region, CGDL.
 - Its ch. 7, "Capacitance Model", gives the equations of the {term}`SPICE` gate capacitance that
   {ref}`explained-cv-curve` compares with the simulated stack.
-- Its §8.1 and appendix A give the switches ACNQSMOD and TRNQSMOD of the non-quasi-static model:
-  the value 0, the default, turns the model off.
+- The BSIM4.5.0 manual, in the
+  [BSIM450.zip package](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip)
+  (archived copy), matches the card's
+  [`version=4.5`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37330).
+  Its §8.1 and appendix A give the switches
+  ACNQSMOD and TRNQSMOD of the non-quasi-static model: the value 0, the default, turns it off.
 
 ## Physics models
 
