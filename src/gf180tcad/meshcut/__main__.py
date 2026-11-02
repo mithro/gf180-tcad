@@ -4,7 +4,7 @@
 Host commands:
 
 - ``cut --job results/tcad/moscap2d/<device>/<params>/<gid> --out results/tcad/meshes/<image>
-  --kx K --depth-um D [--cache URL|DIR] [--scratch DIR]`` reads the job's ``mesh_sha256`` from
+  [--kx K] [--depth-um D] [--cache URL|DIR] [--scratch DIR]`` reads the job's ``mesh_sha256`` from
   its ``cv.meta.json`` and pulls that mesh into the scratch directory with a
   ``tools/output-cache pull`` **subprocess** (:func:`pull`), so :mod:`gf180tcad.outcache` is in
   no generator's import closure (design spec §9.1). Then ``cut-job`` runs in the image that
@@ -12,10 +12,10 @@ Host commands:
   and :data:`gf180tcad.meshcut.job.JOB_MEM`. The host installs the artefact into
   ``<out>/<device>/<params>/<gid>/`` and writes ``<out>/provenance.json``
   (:func:`gf180tcad.tcad.tree_provenance`, generator :data:`MESHCUT_MAIN`, image kind
-  :data:`IMAGE_KIND`). It refuses an ``--out`` named after another image than the job's,
-  and an artefact over :data:`gf180tcad.meshcut.MAX_BYTES` (:class:`OverBudget`), which
-  it leaves in the scratch directory.
-- ``regenerate --job ... [--cut --out ... --kx K --depth-um D] [--scratch DIR]`` runs
+  :data:`IMAGE_KIND`) and prints the artefact's size in bytes, which its meta records as
+  ``size_bytes``. There is no size cap. It refuses an ``--out`` named after another image
+  than the job's, and an artefact whose meta does not match its npz or its job.
+- ``regenerate --job ... [--cut --out ... [--kx K] [--depth-um D]] [--scratch DIR]`` runs
   ``regenerate-job`` with :data:`gf180tcad.meshcut.job.REGENERATE_MEM`, alone, like a 2D job.
   It prints the committed and the regenerated sha256. A regenerated mesh that matches is
   copied beside the job's ``cv.meta.json`` (git-ignored), where ``tools/output-cache push``
@@ -27,8 +27,8 @@ In-image commands (inside the sandbox only): ``cut-job --job J --out /work/out -
 read-only.
 
 ``--kx`` and ``--depth-um`` are the window rule's arguments
-(:func:`gf180tcad.meshcut.window.rule_bounds`). They are required until Experiment M1 of the
-renders plan fixes them as constants.
+(:func:`gf180tcad.meshcut.window.rule_bounds`). They default to
+:data:`gf180tcad.meshcut.WINDOW_KX` and :data:`gf180tcad.meshcut.WINDOW_DEPTH_UM`.
 
 A sandbox workdir may not lie inside the repository (:func:`gf180tcad.sandbox.check_workdir`),
 so the default scratch directory is a new temporary directory, as for the TCAD jobs. ``cut``
@@ -58,10 +58,6 @@ OUTPUT_CACHE = sandbox.REPO_ROOT / "tools" / "output-cache"
 """The output cache's command line tool, run as a subprocess."""
 JOB_CPUS = 1
 """CPUs of a sandbox job (the cut and the meshing are single-threaded)."""
-
-
-class OverBudget(ValueError):
-    """The artefact is larger than :data:`gf180tcad.meshcut.MAX_BYTES`."""
 
 
 def source_image(job_dir: Path) -> str:
@@ -124,14 +120,8 @@ def _sandbox(cmd: list[str], scratch: Path, image: str, mem: str) -> str:
 
 def install(scratch: Path, out: Path, key: dict, image: str) -> Path:
     """Copy the artefact that a job wrote into ``scratch`` to ``<out>/<device>/<params>/<gid>``
-    and write ``<out>/provenance.json``; refuse one over budget (:class:`OverBudget`)."""
-    size = (Path(scratch) / meshcut.ARTEFACT).stat().st_size
-    if size > meshcut.MAX_BYTES:
-        raise OverBudget(
-            f"{scratch / meshcut.ARTEFACT} is {size} bytes, over the budget of "
-            f"{meshcut.MAX_BYTES} bytes (2 MB); kept in {scratch}, nothing installed"
-        )
-    artefact.read(scratch)  # the meta is complete and the npz is the meta's
+    and write ``<out>/provenance.json``. Any size is installed: the meta records it."""
+    artefact.read(scratch)  # the meta is complete and the npz (sha256, size) is the meta's
     meta = artefact.read_meta(scratch)
     if {k: v for k, v in meta["job"].items() if k != "cv_meta_sha256"} != key:
         raise ValueError(f"{scratch}: the artefact is of {meta['job']}, not of {key}")
@@ -153,8 +143,8 @@ def run_cut(
     job_dir: Path,
     out: Path,
     *,
-    kx: float,
-    depth_um: float,
+    kx: float = meshcut.WINDOW_KX,
+    depth_um: float = meshcut.WINDOW_DEPTH_UM,
     cache: str | None = None,
     scratch: Path | None = None,
     results_root: Path | None = None,
@@ -178,7 +168,9 @@ def run_cut(
     dest = install(scratch, out, key, image)
     if made:
         shutil.rmtree(scratch)
-    print(f"{key['device']}/{key['params']}/{key['geometry_id']}: {dest}", flush=True)
+    size = (dest / meshcut.ARTEFACT).stat().st_size
+    print(f"{key['device']}/{key['params']}/{key['geometry_id']}: {dest} ({size} bytes)",
+          flush=True)  # fmt: skip
     return dest
 
 
@@ -197,16 +189,16 @@ def run_regenerate(
     *,
     cut: bool = False,
     out: Path | None = None,
-    kx: float | None = None,
-    depth_um: float | None = None,
+    kx: float = meshcut.WINDOW_KX,
+    depth_um: float = meshcut.WINDOW_DEPTH_UM,
     scratch: Path | None = None,
     results_root: Path | None = None,
 ) -> dict:
     """``regenerate``: mesh the job again in the sandbox and compare its sha256 with the
     committed one; return the report. With ``cut``, install the artefact on a match."""
     job_dir = Path(job_dir)
-    if cut and (out is None or kx is None or depth_um is None):
-        raise ValueError("regenerate --cut needs --out, --kx and --depth-um")
+    if cut and out is None:
+        raise ValueError("regenerate --cut needs --out")
     image = _check_out(job_dir, out) if cut else source_image(job_dir)
     key = job.job_key(job_dir, results_root)
     scratch = _scratch(scratch, "gf180tcad-meshcut-regenerate-")
@@ -242,13 +234,14 @@ def _parser() -> argparse.ArgumentParser:
         p = sub.add_parser(name, help=help_)
         p.add_argument("--job", type=Path, required=True,
                        help="the 2D job, e.g. results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60")  # fmt: skip
-        cut_required = name in ("cut", "cut-job")
         p.add_argument("--out", type=Path, required=name != "regenerate",
                        help="results/tcad/meshes/<image> (host) or /work/out (in the sandbox)")  # fmt: skip
-        p.add_argument("--kx", type=float, required=cut_required, default=None,
-                       help="window: gate lengths added on each side of the gate")  # fmt: skip
-        p.add_argument("--depth-um", type=float, required=cut_required, default=None,
-                       help="window: depth below the silicon surface (um)")  # fmt: skip
+        p.add_argument("--kx", type=float, default=meshcut.WINDOW_KX,
+                       help="window: gate lengths added on each side of the gate "
+                            "(default %(default)s)")  # fmt: skip
+        p.add_argument("--depth-um", type=float, default=meshcut.WINDOW_DEPTH_UM,
+                       help="window: depth below the silicon surface in um "
+                            "(default %(default)s)")  # fmt: skip
         if name.startswith("regenerate"):
             p.add_argument("--cut", action="store_true", help="cut the artefact on a match")
         if name in ("cut", "regenerate"):
@@ -273,8 +266,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif a.command == "cut-job":
             job.run_cut_job(_repo_path(a.job), a.out, kx=a.kx, depth_um=a.depth_um)
         else:
-            if a.cut and (a.kx is None or a.depth_um is None):
-                raise ValueError("regenerate-job --cut needs --kx and --depth-um")
             job.run_regenerate_job(_repo_path(a.job), a.out, cut=a.cut, kx=a.kx,
                                    depth_um=a.depth_um)  # fmt: skip
     except (ValueError, FileNotFoundError) as e:

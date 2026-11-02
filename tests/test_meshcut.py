@@ -968,6 +968,7 @@ def test_host_command_installs_any_size_and_prints_it(tmp_path, monkeypatch, ins
         meshcut.WINDOW_KX, meshcut.WINDOW_DEPTH_UM,
     )  # fmt: skip
     assert f"{size} bytes" in capsys.readouterr().out
+    assert not auto.exists()  # its own scratch, removed after the install
 
 
 def test_host_command_keeps_its_own_scratch_on_refusal(tmp_path, monkeypatch, inside):
