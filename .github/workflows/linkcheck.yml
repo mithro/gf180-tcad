@@ -30,38 +30,36 @@ jobs:
     name: linkcheck
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # actions: read lets a scheduled run list and download the previous scheduled run's artifact.
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.1"
+      # A scheduled run also keeps how many scheduled runs in a row each URL has timed out: the
+      # counts travel as the "linkcheck-timeouts" artifact of the run, and the next scheduled run
+      # downloads them (tools/linkcheck_report.py). A URL that times out in 3 runs in a row fails.
+      - name: Previous timeout counts
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --no-project python -I tools/linkcheck_report.py fetch-state --workflow linkcheck.yml --out docs/_build/previous/timeouts.json
       - name: Sphinx linkcheck
         # Sphinx exits 1 for a timeout as well as for a dead link. A slow external site is not a
-        # defect of the change (issue #93), so the exit code is replaced by a count of the
-        # "broken" entries in output.json; timeouts are shown as warnings.
+        # defect of the change (issue #93), so tools/linkcheck_report.py replaces the exit code by
+        # the "broken" entries of output.json; timeouts are shown as warnings.
+        env:
+          STATE_ARGS: ${{ github.event_name == 'schedule' && '--previous docs/_build/previous/timeouts.json --state-out docs/_build/state/timeouts.json' || '' }}
         run: |
           set +e
           uv run --locked --group docs sphinx-build -b linkcheck docs docs/_build/linkcheck
           status=$?
           set -e
-          json=docs/_build/linkcheck/output.json
-          if [ "$status" -eq 0 ]; then
-            exit 0
-          fi
-          if [ ! -f "$json" ]; then
-            echo "sphinx-build failed (exit $status) before writing $json"
-            exit "$status"
-          fi
-          jq -r 'select(.status == "timeout") | "::warning::linkcheck timeout: \(.uri) (\(.filename):\(.lineno))"' "$json"
-          broken=$(jq -s '[.[] | select(.status == "broken")] | length' "$json")
-          echo "sphinx-build exit $status; broken links: $broken"
-          if [ "$broken" -gt 0 ]; then
-            exit 1
-          fi
-          if ! jq -e 'select(.status == "timeout")' "$json" > /dev/null; then
-            echo "sphinx-build failed (exit $status) with no broken link and no timeout"
-            exit "$status"
-          fi
+          # STATE_ARGS is unquoted on purpose: it holds two options or nothing.
+          uv run --no-project python -I tools/linkcheck_report.py report --status "$status" --json docs/_build/linkcheck/output.json $STATE_ARGS
       - name: Show the linkcheck report
         if: always()
         run: |
@@ -69,27 +67,20 @@ jobs:
             cat docs/_build/linkcheck/output.txt
             cat docs/_build/linkcheck/output.txt >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Keep the timeout counts for the next scheduled run
+        if: always() && github.event_name == 'schedule'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linkcheck-timeouts
+          path: docs/_build/state/timeouts.json
+          if-no-files-found: ignore
       # Sphinx ignores links to this repository's issues and pull requests because github.com
       # answers them with HTTP 429 (issue #87). This step checks the numbers through the API.
       - name: Issue and pull request links exist
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -o pipefail
-          numbers=$(grep -rhoE 'github\.com/mithro/gf180-tcad/(issues|pull)/[0-9]+' \
-            docs src README.md CONTRIBUTING.md --exclude-dir=_build --exclude-dir=_generated \
-            | sed -E 's#.*/##' | sort -un)
-          bad=0
-          for n in $numbers; do
-            if gh api "repos/${GITHUB_REPOSITORY}/issues/$n" --jq '.number' > /dev/null; then
-              echo "OK #$n"
-            else
-              echo "BROKEN #$n"
-              bad=1
-            fi
-          done
-          exit $bad
+        run: uv run --no-project python -I tools/linkcheck_report.py numbers --repo "${GITHUB_REPOSITORY}"
       - name: README.md and CONTRIBUTING.md links
         if: always()
         run: |

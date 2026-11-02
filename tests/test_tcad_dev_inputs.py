@@ -239,7 +239,7 @@ case "$1 $2" in
                 *) shift ;;
             esac
         done
-        printf 'Name: x\nDriver:        %s\n\nNodes:\nDriver Options:        image="%s"\n' \
+        printf 'Name: x\nDriver:        %s\n\nNodes:\nName:                  b0\nDriver Options:        image="%s"\n' \
             "$driver" "$image" > "$FAKE_STATE/inspect.txt" ;;
     "buildx build")
         while [ $# -gt 0 ]; do
@@ -363,14 +363,15 @@ def test_build_refuses_a_builder_without_driver_options(tmp_path):
     assert not [c for c in calls if c.startswith("buildx build")]
 
 
-# Known bug in docker/tcad-dev/build, not fixed here because the script is an input of the image:
-# its check greps the "Driver Options:" lines, so a multi-node builder where only some nodes have
-# one passes if the others carry the pinned image. Fix it at the next re-pin (for example, count
-# the nodes' "Name:" lines against the "Driver Options:" lines), then drop the xfail.
-@pytest.mark.xfail(
-    strict=True, reason="docker/tcad-dev/build accepts a node with no Driver Options"
+@pytest.mark.parametrize(
+    "images",
+    [
+        (BUILDKIT_IMAGE, None),
+        (None, BUILDKIT_IMAGE),
+        (BUILDKIT_IMAGE, BUILDKIT_IMAGE, None),
+        (None, BUILDKIT_IMAGE, BUILDKIT_IMAGE),
+    ],
 )
-@pytest.mark.parametrize("images", [(BUILDKIT_IMAGE, None), (None, BUILDKIT_IMAGE)])
 def test_build_refuses_a_multi_node_builder_with_a_node_without_driver_options(tmp_path, images):
     res, calls = _run_build(tmp_path, _multi_inspect(*images))
     assert res.returncode == 2, res.stderr
