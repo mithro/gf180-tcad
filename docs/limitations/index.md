@@ -154,8 +154,8 @@ values are not read as more physical than they are.
   geometry through fixed BSIM4 values of the {term}`card <model card>`: the capacitance area
   (L − 2·DLC)·(W − 2·{term}`DWC`) and the overlap, fringe and {term}`CGBO` terms
   ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). They are not fitted and not part of
-  the {term}`parameter budget`. At Lmin they are a large part of Cgg: 3.97 of 14.36 fF for the
-  calibrated nfet at Vg = −5 V, in {term}`accumulation`. So Lmin tests the bookkeeping as much as the
+  the {term}`parameter budget`. At Lmin they are a large part of Cgg. For the
+  calibrated nfet in {term}`accumulation`, at Vg = −5 V, they are 3.97 of 14.36 fF. So Lmin tests the bookkeeping as much as the
   TCAD. The split is plotted on each generated geometry page ({doc}`/_generated/tcad/index`).
 - **{{ Xyce }} has no C–V analysis.** Cgg has one SPICE engine, ngspice, and the 0.5 %
   {term}`engine cross-check` cannot apply to it ({ref}`results-layout`).

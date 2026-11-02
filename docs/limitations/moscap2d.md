@@ -168,7 +168,8 @@ plateaus but not at the C–V minimum, and at the finest level it gets worse.
 
 Here is the uniform nfet stack with the grading held fixed, 2D/1D − 1 by level (these results are not
 committed). Levels 0 to 3 have 101k, 154k, 239k and 381k nodes. In the gate-bias column,
-−5 V is accumulation, +0.5 V the C–V minimum, +1 V the onset of {term}`inversion` and +5 V inversion.
+−5 V is accumulation and +0.5 V the C–V minimum. The onset of {term}`inversion` is at +1 V, and
++5 V is inversion.
 The last row is the worst of 21 biases.
 
 | Gate bias | Level 0 | Level 1 | Level 2 | Level 3 |
