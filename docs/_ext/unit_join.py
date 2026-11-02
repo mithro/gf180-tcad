@@ -11,6 +11,7 @@ fF/µm² is followed by U+2060 (word joiner), so the browser has no place to bre
 import re
 
 from docutils import nodes
+from sphinx.transforms import SphinxTransform
 
 NBSP = "\u00a0"
 WORD_JOINER = "\u2060"
@@ -35,9 +36,19 @@ def join_units(text: str) -> str:
     return _SLASH.sub(lambda m: m.group(1) + "/" + WORD_JOINER, text)
 
 
+class JoinUnits(SphinxTransform):
+    """Runs while the page is read, before the title collector copies the titles, so the
+    table of contents, the sidebar and the page titles carry the joined text too."""
+
+    default_priority = 100
+
+    def apply(self, **kwargs):
+        join_doctree(None, self.document, self.env.docname)
+
+
 def join_doctree(app, doctree, docname):
     for node in list(doctree.findall(nodes.Text)):
-        if isinstance(node.parent, _SKIP) or node.parent is None:
+        if node.parent is None or isinstance(node.parent, _SKIP):
             continue
         new = join_units(node.astext())
         if new != node.astext():
@@ -45,5 +56,5 @@ def join_doctree(app, doctree, docname):
 
 
 def setup(app):
-    app.connect("doctree-resolved", join_doctree)
-    return {"parallel_read_safe": True, "parallel_write_safe": True, "version": "1"}
+    app.add_transform(JoinUnits)
+    return {"parallel_read_safe": True, "parallel_write_safe": True, "version": "2"}
