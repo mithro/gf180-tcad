@@ -2,7 +2,7 @@
 
 # The MOS capacitor
 
-What is a MOS capacitor, and why does this project simulate it before the transistor? This page
+What is a {term}`MOS capacitor <MOSCAP>`, and why does this project simulate it before the transistor? This page
 answers that for a reader who knows basic circuits and has read {doc}`oxide-and-poly`. It leaves
 out why the capacitance changes with the gate voltage.
 
@@ -37,7 +37,7 @@ transistor, with the source and the drain left out.
 
 The gate and the body are the two plates of a capacitor, and the oxide is the insulator between
 them ({ref}`Taur and Ning, ch. 4 <lit-taur>`). This repo's 1D
-{term}`MOS capacitor <MOSCAP>` is one column through that stack. It has a contact on the top of
+MOS capacitor is one column through that stack. It has a contact on the top of
 the gate and one on the bottom of the body ({py:mod}`gf180tcad.tcad.moscap1d`).
 
 (explained-moscap-cgg)=
@@ -53,8 +53,9 @@ volts ({ref}`Sze and Ng, ch. 4 <lit-sze>`). Its curve against the gate voltage i
 :figclass: only-light
 :alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
-The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the PDK's SPICE
-model at the typical {term}`corner`, and the grey band spans its five corners. The dashed line is
+The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`PDK`'s
+SPICE model at the {term}`typical corner`, and the grey band spans its five
+{term}`corners <corner>`. The dashed line is
 the simulated stack, with the oxide thickness, body doping and voltage shift fitted to the SPICE
 model.
 ```
@@ -63,8 +64,9 @@ model.
 :figclass: only-dark
 :alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
-The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the PDK's SPICE
-model at the typical {term}`corner`, and the grey band spans its five corners. The dashed line is
+The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`PDK`'s
+SPICE model at the {term}`typical corner`, and the grey band spans its five
+{term}`corners <corner>`. The dashed line is
 the simulated stack, with the oxide thickness, body doping and voltage shift fitted to the SPICE
 model.
 ```
@@ -109,8 +111,8 @@ At `w10p0_l10p00` the simulated curve lies within {{ x_plateau_acc_l10 }} of the
 the left flat part. On the right it lies within {{ x_plateau_inv_l10 }}. The allowed error is
 {{ x_plateau_tol_l10 }} ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 
-A verdict says whether the simulation matches the SPICE model
-({ref}`the verdicts <agreement-verdicts>`). The 1D fit is {{ x_verdict_nfet_1d }} for the nfet
+A verdict says whether the simulation matches the SPICE model: {term}`Agree`,
+{term}`Same process` or {term}`Disagree` ({ref}`the verdicts <agreement-verdicts>`). The 1D fit is {{ x_verdict_nfet_1d }} for the nfet
 and {{ x_verdict_pfet_1d }} for the {term}`pfet_05v0` ({ref}`the pfet mismatch <cv-agreement-mismatch>`).
 
 The 2D simulation of the whole cell uses the fitted nfet stack. It is

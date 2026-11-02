@@ -565,8 +565,9 @@ TYPICAL = "typical"
 def cv_curves(device: str, params: str, gid: str) -> dict[str, np.ndarray]:
     """The curves of :func:`cv_against_spice`, read by the readers the results pages use
     (:mod:`gf180tcad.explain.data`): the simulated gate capacitance of ``gid`` from the committed
-    1D C per area at ``params`` with the BSIM4 bookkeeping, and the SPICE ``cv`` sweep at the
-    typical corner with the lowest and highest of the five corners at each voltage. Keys ``u``,
+    1D C per area at ``params`` with the BSIM4 bookkeeping, and the :term:`SPICE` ``cv`` sweep at
+    the :term:`typical corner` with the lowest and highest of the five :term:`corners <corner>` at
+    each voltage. Keys ``u``,
     ``tcad``, ``u_spice``, ``spice_tt``, ``spice_lo``, ``spice_hi`` (V and fF)."""
     from gf180tcad.devices import CORNERS, DEVICES, geometry_id
 
@@ -588,8 +589,8 @@ def cv_curves(device: str, params: str, gid: str) -> dict[str, np.ndarray]:
 
 
 def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
-    """The gate capacitance against the gate voltage of one geometry: the SPICE model at the
-    typical corner (solid) inside the band of its five corners, and the simulated curve of the
+    """The gate capacitance against the gate voltage of one geometry: the :term:`SPICE` model at
+    the :term:`typical corner` (solid) inside the band of its five :term:`corners <corner>`, and the simulated curve of the
     committed 1D stack at ``params`` (dashed, on top), from :func:`cv_curves`."""
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
