@@ -200,6 +200,27 @@ data, so they carry the role `reference-bookkeeping`. They are used only in the 
 where the 1D structure has no source or drain. In 2D, the source/drain geometry gives the overlap
 physically. They are fixed and are not part of the {term}`parameter budget`.
 
+{numref}`process-data-split-figure` shows the two parts for the fitted nfet at its shortest gate.
+
+```{figure} /_generated/comparison/cgg-split-light.svg
+:name: process-data-split-figure
+:figclass: only-light
+:alt: Gate capacitance against voltage: a solid total, a dashed intrinsic part with a deep dip, and a low, flatter dotted part.
+
+The fitted 1D {term}`Cgg` of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm, split by the BSIM4
+bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). The dashed line is the intrinsic part.
+The dotted line is the overlap, fringe and gate-bulk part.
+```
+
+```{figure} /_generated/comparison/cgg-split-dark.svg
+:figclass: only-dark
+:alt: Gate capacitance against voltage: a solid total, a dashed intrinsic part with a deep dip, and a low, flatter dotted part.
+
+The fitted 1D {term}`Cgg` of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm, split by the BSIM4
+bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). The dashed line is the intrinsic part.
+The dotted line is the overlap, fringe and gate-bulk part.
+```
+
 (process-data-tunables)=
 
 ## The three tunables
@@ -209,7 +230,24 @@ tagged `calibrated`, never `spice-card`. Instead of a `source`, each has a `star
 `bounds_source`, and a structured `start_kind` and `bounds_kind` (one kind per bound). A kind is
 `card`, `derived` or `project-choice`
 ({py:data}`gf180tcad.tcad.process.KINDS`). Their starts and bounds are written into the files
-before any fit.
+before any fit. {numref}`process-data-stack-figure` shows the nfet stack at the start values.
+
+```{figure} /_generated/comparison/start-stack-light.svg
+:name: process-data-stack-figure
+:figclass: only-light
+:alt: Three stacked layers: a muted gate on top, a thin shaded oxide and a tall shaded body, each labelled with its material, thickness and doping.
+
+The 1D stack of the {term}`nfet_05v0` at the start values, gate on top. The oxide thickness and the
+body doping, shaded, are two of the three tunables. {{ x_fig_oxide_stack_scale }}
+```
+
+```{figure} /_generated/comparison/start-stack-dark.svg
+:figclass: only-dark
+:alt: Three stacked layers: a muted gate on top, a thin shaded oxide and a tall shaded body, each labelled with its material, thickness and doping.
+
+The 1D stack of the {term}`nfet_05v0` at the start values, gate on top. The oxide thickness and the
+body doping, shaded, are two of the three tunables. {{ x_fig_oxide_stack_scale }}
+```
 
 The start values and bounds:
 
@@ -269,6 +307,28 @@ This window is {py:data}`gf180tcad.tcad.process.PLATEAU_V`, the ±2 V plateau co
 calibration, and each file records it in its `[centroid_allowance]` table. The window leaves out {term}`depletion`.
 There the accumulation formula saturates near Ldebye/3, and the centroid says nothing about the
 oxide-capacitance plateaus. Counting it would widen the fit's freedom for no physical reason.
+{numref}`process-data-centroid-figure` shows X_DC over the sweep and the two windows.
+
+```{figure} /_generated/comparison/centroid-light.svg
+:name: process-data-centroid-figure
+:figclass: only-light
+:alt: Charge-centroid depth against voltage, nfet and pfet: two rising lines on the left with a dot each at -2 V, two short dotted lines on the right.
+
+The charge-centroid depth X_DC of both devices against u = polarity × Vg
+({py:func}`gf180tcad.tcad.process.ctm_x_dc_acc_m`). The shaded spans are the two plateau windows.
+Each dot is the largest X_DC in the accumulation window. The dotted lines are the inversion upper
+bounds ({py:func}`gf180tcad.tcad.process.ctm_x_dc_inv_sup_m`).
+```
+
+```{figure} /_generated/comparison/centroid-dark.svg
+:figclass: only-dark
+:alt: Charge-centroid depth against voltage, nfet and pfet: two rising lines on the left with a dot each at -2 V, two short dotted lines on the right.
+
+The charge-centroid depth X_DC of both devices against u = polarity × Vg
+({py:func}`gf180tcad.tcad.process.ctm_x_dc_acc_m`). The shaded spans are the two plateau windows.
+Each dot is the largest X_DC in the accumulation window. The dotted lines are the inversion upper
+bounds ({py:func}`gf180tcad.tcad.process.ctm_x_dc_inv_sup_m`).
+```
 
 - **Accumulation**, eqs. 7.3.2 and 7.3.3: X_DC = Ldebye/3·exp(ACDE·(NDEP/2e16)^−0.25·E),
   where E = (Vg − Vfbzb)/TOXP in MV/cm. It is smoothed to stay below Xmax = Ldebye/3. X_DC grows
@@ -281,8 +341,10 @@ oxide-capacitance plateaus. Counting it would widen the fit's freedom for no phy
   eq. 7.2.14. VFB is derived as in the manual's Appendix A when the card does not set it.
 
 Δ = max X_DC · EPSROX/ε_si over the plateaus, rounded up to 0.01 nm. In three places the manual's
-text and the reference C code of the same release ([`src/b4ld.c` and `src/b4temp.c` in the
-BSIM4.5.0 release](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), the code {{ ngspice }} runs) differ. Each is settled by the code:
+text and the reference C code of the same release differ. That code is
+[`src/b4ld.c`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) and
+[`src/b4temp.c`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) in the
+BSIM4.5.0 release, the code {{ ngspice }} runs. Each is settled by the code:
 - Eq. 7.3.2 prints VFBeff in the exponent; `b4ld.c` uses Vfbzb. VFBeff tracks Vgb in
   accumulation, so with it X_DC could not change with bias there.
 - The manual gives no formula for Ldebye; `b4temp.c` uses √(ε_si·vt/(q·NDEP)).
