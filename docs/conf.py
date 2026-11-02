@@ -25,6 +25,7 @@ extensions = [
     "repo_roles",
     "api_links",
     "table_cells",
+    "theme_figures",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
@@ -128,6 +129,10 @@ _TOOLS = {
     "DMT_core": ("DMT-core", "https://gitlab.com/dmt-development/dmt-core"),
 }
 myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.items()}
+
+# Figures with a :name: are numbered, so a page can point at one with {numref}. The light/dark
+# twin of a figure carries no name and so no number: only the light one is referenced.
+numfig = True
 
 # --- API reference ---------------------------------------------------------------------------
 # autodoc imports gf180tcad from ../src (the sys.path entry below); the docs dependency group is

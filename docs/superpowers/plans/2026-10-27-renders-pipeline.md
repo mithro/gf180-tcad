@@ -194,6 +194,9 @@ Nothing is resampled, smoothed or decimated: every kept element is a mesh elemen
     - `WINDOW_KX = 0.25` and `WINDOW_DEPTH_UM = 0.1` are the defaults of `--kx` and `--depth-um`.
     - The meshcut entry point's hash moves. It has no committed tree, so no restamp is needed.
     - `docs/reproduce/index.md` has a section on the artefact. Spec §10.1 is amended.
+    - That section shows the window on the cell in a numbered figure, `mesh-window` of
+      `gf180tcad.explain.figures`, and gives the rule as an equation. `numfig` is on;
+      `docs/_ext/theme_figures.py` merges each light/dark figure pair so it gets one number.
 - [ ] **Step 3: Experiment M1, the default window in the sandbox.** The window is fixed ("What M1 decided"); M1 measures it:
   - It waits until no 16 GiB job runs: a 4 GiB cut job never runs beside one.
   - It cuts the #35 calibrated nfet `w10p0_l0p60` mesh with `cut --scratch DIR`, DIR outside the repository. `cut` pulls the mesh from the output cache; `cut-job` runs in the sandbox with 4 GiB.

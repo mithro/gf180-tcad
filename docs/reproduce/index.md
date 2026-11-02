@@ -657,18 +657,51 @@ W1.6/L0.7 included; {doc}`output-cache` lists them.
 
 A mesh figure of a 2D job is drawn from a committed reduced artefact, not from the full mesh.
 The command line {py:mod}`gf180tcad.meshcut.__main__` cuts a window around the gate out of the
-job's mesh. It writes `mesh-window.npz` and `mesh-window.meta.json` under
-`results/tcad/meshes/<image>/`.
-Every kept element is an element of the full mesh, with its node coordinates copied bit for bit.
+job's mesh, as {numref}`mesh-window-figure` shows. It writes the window's arrays to
+{py:data}`mesh-window.npz <gf180tcad.meshcut.ARTEFACT>` and their record to
+{py:data}`mesh-window.meta.json <gf180tcad.meshcut.META>`. Every kept element is an element of
+the full mesh, with its node coordinates copied bit for bit.
 
-The window rule is the same for every job ({py:mod}`gf180tcad.meshcut`):
+```{figure} /_generated/explained/mesh-window-light.svg
+:name: mesh-window-figure
+:figclass: only-light
+:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below. A dashed rectangle covers the gate, the gate oxide and a thin strip of silicon under them, and reaches a little past each gate edge into the source and the drain.
 
-| bound | where | constant |
-|---|---|---|
-| left | gate's left edge minus 0.25 gate lengths | `WINDOW_KX` |
-| right | gate's right edge plus 0.25 gate lengths | `WINDOW_KX` |
-| top | top of the gate polysilicon | none |
-| bottom | 0.1 µm below the silicon surface | `WINDOW_DEPTH_UM` |
+The mesh window (dashed) on the 2D cell of the {term}`nfet_05v0` with {term}`geometry id`
+`w10p0_l0p60`, cut along the gate's length. {{ x_fig_mesh_window_scale }}
+```
+
+```{figure} /_generated/explained/mesh-window-dark.svg
+:figclass: only-dark
+:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below. A dashed rectangle covers the gate, the gate oxide and a thin strip of silicon under them, and reaches a little past each gate edge into the source and the drain.
+
+The mesh window (dashed) on the 2D cell of the {term}`nfet_05v0` with {term}`geometry id`
+`w10p0_l0p60`, cut along the gate's length. {{ x_fig_mesh_window_scale }}
+```
+
+The window is set by one rule for every job ({py:func}`gf180tcad.meshcut.window.rule_bounds`):
+
+```{math}
+x_\mathrm{min} = x_\mathrm{L} - k_x L, \qquad x_\mathrm{max} = x_\mathrm{R} + k_x L, \qquad
+y_\mathrm{min} = y_\mathrm{s} - d, \qquad y_\mathrm{max} = y_\mathrm{p}
+```
+
+where:
+
+- $x_\mathrm{min}$ to $x_\mathrm{max}$ is the window across the cell,
+  $y_\mathrm{min}$ to $y_\mathrm{max}$ its height;
+- $x_\mathrm{L}$ and $x_\mathrm{R}$ are the left and right edges of the gate, in µm;
+- $L = x_\mathrm{R} - x_\mathrm{L}$ is the gate length;
+- $k_x = 0.25$ is {py:data}`~gf180tcad.meshcut.WINDOW_KX`, the share of a gate length kept on
+  each side of the gate;
+- $y$ is the height in µm, growing upwards;
+- $y_\mathrm{s}$ is the height of the silicon surface, and $y_\mathrm{p}$ that of the top of the
+  gate polysilicon;
+- $d = 0.1$ µm is {py:data}`~gf180tcad.meshcut.WINDOW_DEPTH_UM`, the depth kept below the
+  surface.
+
+A triangle of the mesh is kept when its centroid lies inside the window
+({py:func}`gf180tcad.meshcut.window.cut`). So the edge of the cut follows the mesh elements.
 
 The artefact has no size cap. `cut` measures the file, records its size in the meta file as
 `size_bytes` and prints it
