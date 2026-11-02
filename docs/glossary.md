@@ -574,15 +574,21 @@ Fermi level
   the {term}`valence band`, the more {term}`holes <hole>` ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`).
   See {ref}`explained-bands-fermi`.
 
+pn junction
+  The boundary inside silicon where n-type material meets p-type material. Carriers cross it and
+  leave a layer of fixed charge with no free carriers on each side, held by the
+  {term}`built-in potential` ({ref}`Sze and Ng 2006, ch. 2 <lit-sze>`). See
+  {ref}`explained-junction`.
+
 gate oxide
   The thin insulating layer of silicon dioxide between a transistor's gate and the silicon under
   it. The gate voltage acts on the silicon through it, as across the plates of a capacitor
-  ({ref}`Taur and Ning, the chapter on MOS capacitors <lit-taur>`). See {ref}`explained-oxide-layer`.
+  ({ref}`Taur and Ning, ch. 4 <lit-taur>`). See {ref}`explained-oxide-layer`.
 
 poly-silicon
   Silicon made of many small crystals instead of one. Heavily doped, it is the gate of the
   {term}`GF180MCU` transistors; its doping is the {term}`NGATE` of the {term}`model card`
-  ({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). See {ref}`explained-poly`.
+  ({ref}`Taur and Ning, ch. 5 <lit-taur>`). See {ref}`explained-poly`.
 
 n-well
   The region of n-type silicon that forms the body of a p-channel transistor, here the

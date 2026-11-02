@@ -198,10 +198,10 @@ These pages are grounded in the committed SPICE reference, which exists for ever
 
 **Files:** `docs/explained/{bands-and-fermi-level,pn-junction,transistor-parts,oxide-and-poly}.md`; `explain/idealised.py` (`built_in_potential`, `depletion_width`, `degenerate_offset`; the oxide capacitance C_ox = ε_ox·ε_0/t_ox is `gf180tcad.derive.oxide_capacitance`, added by renders Task R1a, and E1 imports it from there, because `test_no_formula_twice` fails on a second copy), `explain/model.py` (the 2D cell from `cv.meta.json`, the process file and `moscap1d.POLY_UM`/`BODY_UM` only, as the Architecture says; never `gf180tcad.tcad.stack`), `explain/figures.py` (`band_flat`, `junction_panels`, `cross_section`); `data/render/display.toml` or `data/explain/textbook.toml` (band gap, per Decisions); `docs/glossary.md` (conduction band, valence band, band gap, Fermi level, pn junction, well, gate oxide, polysilicon); `docs/explained/index.md`; `tests/test_explained.py` (the new derive hand values; `::test_cross_section_matches_cell`, every drawn dimension equals the model's before its stated scale factor).
 
-- [ ] **Step 1:** tests first (FAIL), then `idealised` and figures, committed per function.
-- [ ] **Step 2:** the photo search for `transistor-parts.md` (public GF180MCU die photos or cross-sections with a stated licence; record URL, licence, date in the PR body). Use one only with a licence that allows it; otherwise list it as a wanted photo in the PR body and file an issue.
-- [ ] **Step 3:** the four pages, each with its highlighted view of the one model; lint, measure, build, screenshots as in E0.
-- [ ] **Step 4:** PR (one PR, or two if the review is long: bands and junction, then parts and oxide); review by use, audit; merge.
+- [x] **Step 1:** tests first (FAIL), then `idealised` and figures, committed per function.
+- [x] **Step 2:** the photo search for `transistor-parts.md` (public GF180MCU die photos or cross-sections with a stated licence; record URL, licence, date in the PR body). Use one only with a licence that allows it; otherwise list it as a wanted photo in the PR body and file an issue.
+- [x] **Step 3:** the four pages, each with its highlighted view of the one model; lint, measure, build, screenshots as in E0.
+- [ ] **Step 4:** PR (one PR, or two if the review is long: bands and junction, then parts and oxide); review by use, audit; merge. (As built: three PRs, #101, #103 and the E1b-2 PR.)
 
 E1 ships in two PRs. E1a (branch `task/p5-e1-explainer-oxide`) is `oxide-and-poly.md` with
 the PR #95 re-review nits; E1b is the other three pages, with Steps 1–4 above for them.
@@ -239,7 +239,15 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   (gate and body highlighted, oxide muted), then the flat band diagram; the four glossary terms;
   lint, measure, build, screenshots as in E0.
 - [ ] **E1b-1 Step 3:** PR; review by use, audit; merge.
-- [ ] **E1b-2:** Steps 1–4 above for `pn-junction.md` and `transistor-parts.md`.
+- [x] **E1b-2 Step 1:** tests first (red commit `b3f4890`), then `idealised.built_in_potential`,
+  `depletion_width` and `abrupt_junction`, `model.cell`, `figures.cell_extents`, `cross_section`
+  and `junction_panels`, committed per unit.
+- [x] **E1b-2 Step 2:** the photo search (below); the PDK's plan-view drawing is used, and the
+  wanted photo is #104.
+- [x] **E1b-2 Step 3:** `pn-junction.md` (opening with the cell, its junctions highlighted) and
+  `transistor-parts.md` (opening with the labelled cell); the glossary term; lint, measure, build,
+  screenshots.
+- [ ] **E1b-2 Step 4:** PR; review by use, audit; merge.
 
 **As built (E1b-1).**
 
@@ -267,6 +275,37 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   Fermi level stays several times a carrier's heat energy from the band edges); the flat-band
   caption names the card's gate doping, the fitted body doping and the idealised level; a
   highlighted silicon layer of `stack_1d` takes its majority carrier's colour.
+
+**As built (E1b-2).**
+
+- `model.cell(device, params, geometry, *, scales, drawn)` reads the committed `cv.meta.json`
+  (gate length and width, `meshed_t_ox_nm`, `sd_peak_cm3`, the calibrated `n_ch_cm3`, `contacts`),
+  the process file (`xj_um`, `ngate_cm3`) and the 1D meta's `stack` (`poly_um`, `body_um`, the same
+  values as `moscap1d.POLY_UM` and `BODY_UM`, read from a committed file instead of imported).
+  No `gf180tcad.explain` module imports `gf180tcad.tcad`
+  (`test_explain_imports_nothing_from_tcad`; both review mutations in `model.py` fail it).
+- The lateral width of the source and drain has no committed source until renders Task R0: it is
+  `STYLE["drawn_um"]`, and `model.exaggeration(scales, drawn)` names it ("Source and drain width
+  chosen for the drawing, not to scale"), and the cell captions call it a project choice. The callouts are labels on the parts (pictures rule 6), not numbers,
+  because a digit in a heading fails `test_no_bare_numbers`.
+- `idealised.abrupt_junction` gives the charge, field and potential of the depletion
+  approximation; `junction_panels` draws them on a log charge axis, where the n side's charge,
+  a layer 0.1 nm thin, is a vertical line at the junction, drawn wider than the junction line
+  and above it. The axis label names its sides (source < 0 < body). `vt_tcad`, `eps_si_tcad`, `q_tcad` and
+  `eps0_tcad` are committed constants, inputs of `vbi_nfet` and `w_dep_nfet`.
+- Photo search (2026-10-28): the Crowd Supply die photo of a GF180MCU shuttle chip states no
+  licence, and its Silicon Prawn page answers 403. No cross-section photo turned up. The page uses
+  the design manual's PMOS matched-pair drawing (`google/gf180mcu-pdk` at `de3240d7`,
+  Apache-2.0), committed with its source, author and licence beside it
+  (`docs/explained/images/*.licence.txt`). The wanted photo is #104.
+- The glossary gains "pn junction" only. "Well" is not an entry: the link checkers would demand a
+  link at every use of the common word, so the pages use the existing `n-well` and name the
+  PDK's LVPWELL layer. "Gate oxide" and "poly-silicon" landed in E0 (#99 comment).
+- The LDD section states only what the BSIM4.5.0 manual (§7.1, §7.5.2) and the card give: the
+  bias-dependent overlap capacitance with the lightly doped region, CGDL. What an LDD is for is
+  left out (#99 comment).
+- Taur and Ning is cited by chapter number (ch. 2, 4 and 5), read from the Crossref chapter
+  records (`10.1017/9781108847087.005`, `.007`, `.008`).
 
 **Exit criteria.** The four pages are on `main` and in the landing page and toctree; every number on them is a substitution (`test_no_bare_numbers` green); each opens with its highlighted view of the one model, in both themes; the eight new glossary terms are defined and linked on first use; the docs tools report nothing for `docs/explained/**`; the photo search result (used, or filed as a wanted photo with its issue number) is in the PR body; the review by use has no open stop.
 
