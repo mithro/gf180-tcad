@@ -303,8 +303,9 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   `mpw18h1` analog front-end die from the Crowd Supply OpenFASoC update
   (`images/gf180mcu-afe-die-photo.jpg`, 1265 x 741 px, copied unchanged) below the cross-section,
   with its licence note. Silicon Prawn still answered 403 (Cloudflare challenge), so the caption
-  links it as the full-resolution source and credits wafer.space; the photographer named there is
-  not recorded. A photo has no dark twin: it reads the same on both themes.
+  links it as the full-resolution source and credits wafer.space. No readable source names the
+  photographer (the update, its source post, the tapeout README); recording the name from the
+  Silicon Prawn page is #122. A photo has no dark twin: it reads the same on both themes.
   `test_every_copied_image_has_a_licence_note` and `test_every_copied_image_is_on_a_page` hold
   `docs/explained/images/` to its notes. The chip is from the efabless `mpw18h1` shuttle (the
   Silicon Prawn path), not from a wafer.space run, so the caption does not say it is.

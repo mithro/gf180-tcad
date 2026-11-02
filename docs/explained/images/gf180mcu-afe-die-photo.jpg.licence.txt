@@ -13,8 +13,11 @@ Full resolution:
          https://siliconprawn.org/archive/doku.php?id=mcmaster:efabless:gf180mcu-mpw18h1-18100004
          (linked from the update as "View high-resolution die photography on Silicon Prawn").
          That page answered HTTP 403 (a Cloudflare challenge) on 2026-10-28 and again on
-         2026-11-03, so the photographer's name as given there could not be read. The update
-         names no photographer.
+         2026-11-03 (curl, and the web-fetch agent), so the photographer's name as given there
+         could not be read. The update, its source post (wafer-space/wafer-space.github.io
+         _posts/2025-11-05-openfasoc-sensor.md) and the tapeout README
+         (idea-fasoc/openfasoc-tapeouts mpw18h1/README.md) name no photographer.
+         Recording the photographer: https://github.com/mithro/gf180-tcad/issues/122
 Author:  wafer.space (the Crowd Supply update's author, Tim "mithro" Ansell), with the
          full-resolution photography on Silicon Prawn.
 Licence: CC BY (Creative Commons Attribution). No version is stated on the update.
