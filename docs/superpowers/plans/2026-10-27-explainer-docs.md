@@ -325,9 +325,9 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - [x] **E2a Step 1:** tests first (red commit `763ac3d`); `explain.data`, the docgen import, the
   registry entries and words, the `moscap-cell` and `moscap-cv` figures; the page; lint, measure,
   build, screenshots.
-- [x] **E2a Step 2:** the gap section states the 1D nfet and pfet verdicts and the 2D nfet
-  verdicts at `w10p0_l0p60` and `w10p0_l0p70` by substitution, linking `cv-agreement-mismatch`
-  and `cv-agreement-validation`.
+- [x] **E2a Step 2:** the gap section states the 1D nfet and pfet verdicts by substitution and
+  every committed 2D verdict in a generated table, linking `cv-agreement-windows`,
+  `cv-agreement-mismatch`, `cv-agreement-validation` and `cv-agreement-metric`.
 - [ ] **E2a Step 3:** PR; review by use, audit; merge.
 
 **As built (E2a).**
@@ -342,11 +342,17 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   nothing from `gf180tcad.tcad`, and `tcad.stack` is forbidden everywhere.
   `test_explain_imports_nothing_from_tcad` is that allow-list (`TCAD_ALLOWED`), with positive
   controls for a forbidden module in `data.py` and an allowed reader elsewhere.
-- Verdicts are `numbers.WORDS` entries, read by key from the calibration result and validation
-  files (`numbers.word(name, root)`). A test edits a copy of the pfet result file and sees the
+- The 1D verdicts are `numbers.WORDS` entries, read by key from the calibration result files
+  (`numbers.word(name, root)`). A test edits a copy of the pfet result file and sees the
   page's sentence change.
+- Review of PR #115: the 2D verdicts are `x_two_d_table`, every `two_d` entry with a verdict in
+  `results/tcad/validation/*.json` (`numbers.two_d_cells`), and `x_two_d_disagree`, the checks
+  the Disagree cells fail on, read from their `verdicts` (the `causes` lists do not name the
+  check). Tests: every committed 2D verdict is a row; a new cell in a copied file adds one.
+  Counts (`x_corner_count`, `x_fit_length_count`) come from `devices.CORNERS` and the result
+  file. The C–V band has its own opaque colour per palette (`band`).
 - The C–V figure is the nfet at `w10p0_l10p00`, the longest calibration gate, so the per-area
-  stack dominates: the SPICE typical curve, the band of the five corners and the calibrated 1D
+  stack dominates: the SPICE typical curve, the band of all the corners and the calibrated 1D
   curve through the card's overlap terms. The page cites BSIM4 §7.1 for the separate effective
   length and width of the capacitance model and for the overlap capacitance.
 - No glossary entry is added: the page avoids the region names (accumulation, depletion,
