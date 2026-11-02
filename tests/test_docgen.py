@@ -71,6 +71,7 @@ EXPLAINED_FIGURES = [
     "calibration-limits",
     "calibration-compare",
     "calibration-pfet",
+    "calibration-stack",
     "cv-parts",
 ]
 

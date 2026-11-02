@@ -2032,3 +2032,18 @@ def test_calibration_page_numbers_its_figures():
     assert len(names) == text.count(":figclass: only-light") and len(set(names)) == len(names)
     for name in names:
         assert f"{{numref}}`{name}`" in text or f"<{name}>`" in text, name
+
+
+def test_calibration_stack_highlights_the_fitted_layers(monkeypatch):
+    """The opening drawing highlights the oxide and the body, the two layers the fit changes."""
+    from gf180tcad.explain import figures
+
+    seen = []
+    real = figures.stack_1d
+    monkeypatch.setattr(
+        figures, "stack_1d", lambda dev, hl, pal: seen.append((dev, hl)) or real(dev, hl, pal)
+    )
+    assert figures.FIGURES["calibration-stack"]("light").startswith(b"<?xml")
+    ((dev, hl),) = seen
+    assert set(hl) == {"oxide", "body"} and dev.name == "nfet_05v0"
+    assert "x_fig_calibration_stack_scale" in figures.substitutions()
