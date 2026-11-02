@@ -161,6 +161,11 @@ viewcode_follow_imported_members = False
 
 # --- linkcheck (the linkcheck workflow; never part of the offline html build) ---------------
 linkcheck_ignore = [
+    # siliconprawn.org answers every automated client with a Cloudflare challenge (HTTP 403),
+    # from this host and from GitHub-hosted runners (2026-10-28, 2026-11-03). The die-photo page
+    # it links is itself linked from the wafer.space Crowd Supply update and its source post
+    # (wafer-space/wafer-space.github.io); reading it in a browser is issue #122.
+    r"https://siliconprawn\.org/",
     # {repo}/{test} links are validated offline against the checkout by docs/_ext/repo_roles.py,
     # and pinned to the commit being built; checking them again would only hit GitHub's rate
     # limit.
