@@ -1291,13 +1291,16 @@ def generate_tcad(out_dir: Path, tcad_root: Path = TCAD_RESULTS, spice_root: Pat
 # is an explainer figure (gf180tcad.explain.figures) in the light palette, whose opaque white
 # background reads in GitHub's light and dark themes. tests/test_docgen.py fails when a committed
 # file differs from what this draws: rerun `make readme-figures` after the results change.
+#: The folder of README.md's committed figures.
 README_FIGURES_DIR = REPO_ROOT / "docs" / "images" / "readme"
+#: README figure file name -> the explainer figure (:data:`gf180tcad.explain.figures.FIGURES`).
 README_FIGURES = {"cell.svg": "parts-cell", "cv.svg": "cv-overview"}
+#: The palette of the README figures: light, whose opaque background reads in both themes.
 README_PALETTE = "light"
 
 
 def readme_figures() -> dict[str, bytes]:
-    """``{file name: svg bytes}`` of every README figure of ``README_FIGURES``."""
+    """``{file name: svg bytes}`` of every README figure of :data:`README_FIGURES`."""
     from gf180tcad.explain import figures as explained_figures
 
     return {
