@@ -15,7 +15,8 @@ the files it changes, not the repository's Apache-2.0 grant. Its first line is t
 `SPDX-License-Identifier`. These patches change Charon and are GPL-3.0-or-later:
 
 - `0001-codata2018-constants.patch`;
-- `0005-interpreter-copy-without-rsync.patch`.
+- `0005-interpreter-copy-without-rsync.patch`;
+- `0006-interpreter-sorted-listings.patch`.
 
 These patches change the Trilinos packages Kokkos, SEACAS and Teuchos, and are
 BSD-3-Clause, the licence of those packages:

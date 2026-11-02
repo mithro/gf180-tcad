@@ -486,3 +486,22 @@ def test_interpreter_is_copied_without_rsync():
     )
     for name in ("generateParserDocumentation", "parsers", "modifiers"):
         assert f"--exclude {name}" in removed[0] and f"PATTERN {name} EXCLUDE" in copy, name
+
+
+def test_interpreter_generator_lists_its_inputs_sorted():
+    """The generated interpreter libraries differed between the host and a GitHub runner
+    (directory order); patch 0006 sorts every listing the generator iterates over."""
+    text = (LIBS / "patches" / "0006-interpreter-sorted-listings.patch").read_text("utf-8")
+    added = [ln[1:].strip() for ln in text.splitlines() if ln[:1] == "+" and ln[:3] != "+++"]
+    removed = [ln[1:].strip() for ln in text.splitlines() if ln[:1] == "-" and ln[:3] != "---"]
+    assert sorted(removed) == [
+        "for filename in filenames:",
+        "for filename in listdir(sourcePath):",
+        "for filename in listdir(subLineSource):",
+    ]
+    assert sorted(added) == [
+        "dirnames.sort()",
+        "for filename in sorted(filenames):",
+        "for filename in sorted(listdir(sourcePath)):",
+        "for filename in sorted(listdir(subLineSource)):",
+    ]
