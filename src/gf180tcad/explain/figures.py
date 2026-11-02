@@ -81,6 +81,17 @@ STYLE = {
     "junction_line_zorder": 1,
     # The C-V plot: the simulated line is drawn dashed on top of the SPICE curves.
     "cv_zorder": 3,
+    # The regions plot: shading opacity, and room above the highest curve for the region names.
+    "region_alpha": 0.2,
+    "region_headroom": 1.25,
+    # The band panels: a taller figure for the two rows; depths to (1 + pad) times the deepest
+    # depleted layer on this many points; the carrier sheet drawn over this fraction of the
+    # depth, this wide.
+    "regimes_size_in": (6.4, 6.4),
+    "regime_pad": 0.5,
+    "regime_points": 601,
+    "sheet_frac": 0.06,
+    "sheet_width": 7.0,
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -625,6 +636,130 @@ def _moscap_cv(palette: str) -> bytes:
     return cv_against_spice("nfet_05v0", "calibrated", "w10p0_l10p00", palette)
 
 
+# The regions page (accumulation-depletion-inversion.md): the calibrated nfet at the longest
+# calibration gate, the geometry of the MOS capacitor page's C-V figure.
+REGIONS_DEVICE, REGIONS_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
+#: The three regions of the C-V curve, by rising gate voltage of the nfet, and the colour of
+#: each: the carrier that gathers at the surface, none (muted) in depletion.
+REGIONS = ("accumulation", "depletion", "inversion")
+_REGION_COLOUR = {"accumulation": "hole", "depletion": "muted", "inversion": "electron"}
+
+
+def region_edges() -> tuple[float, float]:
+    """The two gate voltages (V) where the calibration marks the end of accumulation and the start
+    of inversion on the :term:`SPICE` curve at the :term:`typical corner`: ``u_fb`` and ``u_t``
+    of the nfet result file's ``spice_regions`` (registry entries ``u_fb_l10``, ``u_t_l10``;
+    the nfet's u is its gate voltage)."""
+    return numbers.value("u_fb_l10"), numbers.value("u_t_l10")
+
+
+def cv_regions_figure(palette: str) -> Figure:
+    """The figure of :func:`cv_regions`, for the tests to read its spans."""
+    from gf180tcad.devices import DEVICES
+
+    if DEVICES[REGIONS_DEVICE].polarity != 1:
+        raise ValueError(f"{REGIONS_DEVICE}: u is not the gate voltage")
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    c = cv_curves(REGIONS_DEVICE, "calibrated", REGIONS_GEOMETRY)
+    lo, hi = region_edges()
+    u = c["u_spice"]
+    spans = dict(zip(REGIONS, ((u[0], lo), (lo, hi), (hi, u[-1])), strict=True))
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.set_xlim(u[0], u[-1])
+        top = max(c["spice_tt"].max(), c["tcad"].max()) * STYLE["region_headroom"]
+        ax.set_ylim(0, top)
+        for name, (a, b) in spans.items():
+            ax.axvspan(a, b, color=pal[_REGION_COLOUR[name]], alpha=STYLE["region_alpha"], lw=0)
+            narrow = (b - a) < STYLE["narrow"] * (u[-1] - u[0])
+            ax.text((a + b) / 2, top * (1 - STYLE["label_drop"] / 2), name, ha="center",
+                    va="top" if narrow else "center", rotation=STYLE["upright_deg"] if narrow else 0,
+                    color=pal["text"], fontweight="bold")  # fmt: skip
+        ax.plot(u, c["spice_tt"], color=pal["text"], lw=lw, label="SPICE, typical")
+        ax.plot(c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
+                zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
+        ax.set_xlabel("gate voltage (V)")
+        ax.set_ylabel("gate capacitance (fF)")
+        fig.legend(loc="outside lower center", ncols=2, frameon=False)
+        return fig
+
+
+def cv_regions(palette: str) -> bytes:
+    """The gate capacitance of the nfet at ``w10p0_l10p00`` against the gate voltage, the
+    :term:`SPICE` curve at the :term:`typical corner` (solid) and the fitted simulation (dashed),
+    with the three regions shaded between the calibration's marks (:func:`region_edges`)."""
+    return _svg(cv_regions_figure(palette))
+
+
+#: The four states of the band panels, by rising gate voltage, and the surface bending of each
+#: in units of ψ_B, the body's Fermi-level distance below the middle of the gap: none at
+#: accumulation (the depletion approximation keeps the bands flat there) and flat band; ψ_B for
+#: depletion (the surface at the middle of the gap); 2·ψ_B at the onset of strong inversion.
+REGIMES = {"accumulation": 0, "flat band": 0, "depletion": 1, "inversion": 2}
+_SHEET = {"accumulation": "hole", "inversion": "electron"}
+_SHEET_LABEL = {"hole": "holes at the surface", "electron": "electrons at the surface"}
+
+
+def band_regimes_figure(palette: str) -> Figure:
+    """The figure of :func:`band_regimes`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    n_a, n_i, vt = (numbers.value(k) for k in ("n_ch_nfet_cal", "n_i_tcad", "vt_tcad"))
+    consts = (numbers.value("eps_si_tcad"), numbers.value("eps0_tcad"), numbers.value("q_tcad"))
+    half = numbers.value("band_gap_si") / 2
+    psi_b = idealised.bulk_potential(n_a, n_i, vt)
+    deepest = max(REGIMES.values()) * psi_b
+    w_max = idealised.depletion_depth(deepest, n_a, *consts)
+    x = np.linspace(0, (1 + STYLE["regime_pad"]) * w_max, STYLE["regime_points"])
+    x_um = x * UNITS["um_per_cm"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["regimes_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(2, 2, sharex=True, sharey=True).ravel()
+        for ax, (name, k) in zip(axes, REGIMES.items(), strict=True):
+            psi_s = k * psi_b
+            mid = psi_b - idealised.surface_bending(x, psi_s, n_a, *consts)
+            if psi_s > 0:
+                w = idealised.depletion_depth(psi_s, n_a, *consts) * UNITS["um_per_cm"]
+                ax.axvspan(0, w, color=pal["muted"], alpha=STYLE["fill_alpha"], lw=0,
+                           label="no free carriers")  # fmt: skip
+            ax.plot(x_um, mid + half, color=pal["electron"], lw=lw, label="conduction band edge")
+            ax.plot(x_um, mid, color=pal["intrinsic"], lw=lw, ls=":", label="middle of the gap")
+            ax.plot(x_um, mid - half, color=pal["hole"], lw=lw, label="valence band edge")
+            ax.axhline(0, color=pal["highlight"], lw=lw, ls="--", label="Fermi level")
+            if name in _SHEET:
+                carrier = _SHEET[name]
+                edge = mid + half if carrier == "electron" else mid - half
+                n = max(round(len(x_um) * STYLE["sheet_frac"]), 2)
+                ax.plot(x_um[:n], edge[:n], color=pal[carrier], lw=STYLE["sheet_width"],
+                        solid_capstyle="butt", label=_SHEET_LABEL[carrier])  # fmt: skip
+            ax.set_title(name, fontsize=STYLE["text_pt"])
+            ax.set_xlim(x_um[0], x_um[-1])
+        for ax in axes[2:]:
+            ax.set_xlabel("depth below the oxide (µm)")
+        for ax in axes[::2]:
+            ax.set_ylabel("energy (eV)")
+        handles = {}
+        for ax in axes:
+            for h, lab in zip(*ax.get_legend_handles_labels(), strict=True):
+                handles.setdefault(lab, h)
+        fig.legend(handles.values(), handles.keys(), loc="outside lower center", ncols=2,
+                   frameon=False)  # fmt: skip
+        return fig
+
+
+def band_regimes(palette: str) -> bytes:
+    """The bands of the nfet's p-type body against the depth below the oxide, in the four states
+    of :data:`REGIMES`, for the idealised stack in the :term:`depletion approximation`
+    (:func:`gf180tcad.explain.idealised.surface_bending`): the band edges, the middle of the gap
+    and the :term:`Fermi level` (the zero of energy), from the calibrated body doping, the
+    simulations' constants and the textbook band gap."""
+    return _svg(band_regimes_figure(palette))
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -636,13 +771,15 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "junction-panels": junction_panels,
     "moscap-cell": _moscap_cell,
     "moscap-cv": _moscap_cv,
+    "cv-regions": cv_regions,
+    "band-regimes": band_regimes,
 }
 
 
 # The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
 # computed curves (not drawings of the device) carry no statement.
 _CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell")
-_PLOTS = ("bands-flat", "junction-panels", "moscap-cv")
+_PLOTS = ("bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes")
 
 
 def substitutions() -> dict[str, str]:
