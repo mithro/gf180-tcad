@@ -585,7 +585,7 @@ TYPICAL = "typical"
 def cv_curves(device: str, params: str, gid: str) -> dict[str, np.ndarray]:
     """The curves of :func:`cv_against_spice`, read by the readers the results pages use
     (:mod:`gf180tcad.explain.data`): the simulated gate capacitance of ``gid`` from the committed
-    1D C per area at ``params`` with the BSIM4 bookkeeping, and the :term:`SPICE` ``cv`` sweep at
+    1D C per area at ``params`` with the BSIM4 bookkeeping, and the :term:`SPICE` :term:`cv` sweep at
     the :term:`typical corner` with the lowest and highest of the five :term:`corners <corner>` at
     each voltage. Keys ``u``,
     ``tcad``, ``u_spice``, ``spice_tt``, ``spice_lo``, ``spice_hi`` (V and fF)."""
@@ -866,7 +866,7 @@ CORNER_HIGHLIGHT = {"ss": "hole", "ff": "electron"}
 
 
 def corner_cv_curves(device: str, gid: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """``{corner: (u, cgg_ff)}``: the committed :term:`SPICE` ``cv`` sweep of ``gid`` at each of
+    """``{corner: (u, cgg_ff)}``: the committed :term:`SPICE` :term:`cv` sweep of ``gid`` at each of
     the five :term:`corners <corner>`, u = polarity × gate voltage (V), Cgg in fF."""
     from gf180tcad.devices import CORNERS, DEVICES
 

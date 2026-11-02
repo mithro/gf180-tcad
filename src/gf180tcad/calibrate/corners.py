@@ -10,8 +10,8 @@
 against that corner's ngspice ``cv`` sweeps. The typical corner is the committed Task 12 fit,
 read from :repo:`results/tcad/calibration` and never refitted here.
 
-**The corner card.** :repo:`data/pdk_corners.json` holds each corner's values from the pinned
-``sm141064.ngspice`` (its sha256 is :data:`PDK_CORNERS_SHA256`, so a change to the table changes
+**The corner values.** :repo:`data/pdk_corners.json` holds each corner's values from the pinned
+:term:`card` ``sm141064.ngspice`` (its sha256 is :data:`PDK_CORNERS_SHA256`, so a change to the table changes
 this module and its generator hash). A corner fit applies the corner's XL, XW, overlap factors
 and the BSIM4 default CF of its TOXE to the area and overlap bookkeeping as fixed inputs
 (:func:`corner_bookkeeping`, :func:`with_corner_card`). It moves the oxide bounds and start by
@@ -140,7 +140,7 @@ def _kind(device: str, key: str) -> str:
 def corner_bookkeeping(device: str, corner: str) -> dict[str, float]:
     """The corner's area and overlap bookkeeping values: ``xl_nm``, ``xw_nm`` (card value plus
     offset), ``cgso/cgdo/cgsl/cgdl_f_per_m`` (card value times factor) and ``cf_f_per_m`` (the
-    BSIM4 default CF of the corner's TOXE). At ``typical`` they are the process file's values."""
+    BSIM4 default CF of the corner's TOXE). At ``typical`` they are the :term:`process file`'s values."""
     proc = process.load(device)
     v = proc.values()
     out = {}
@@ -163,7 +163,7 @@ def corner_bookkeeping(device: str, corner: str) -> dict[str, float]:
 
 def tunable_shifts(device: str, corner: str) -> dict[str, float]:
     """How far the corner moves each tunable's start and bounds: the TOXE offset (nm) for the
-    oxide, the VTH0 offset (V, true-sign gate bias) for the flat band, 0 for the doping."""
+    oxide, the VTH0 offset (V, true-sign gate bias) for the :term:`flat band`, 0 for the doping."""
     return {
         n: card_shift(device, corner, k) * _SHIFT_SCALE[k] if k else 0.0
         for n, k in _SHIFT_KEY.items()
