@@ -236,7 +236,7 @@ folder (`generator`) and a {term}`generator_sha256`.
 The hash is **per results folder**
 ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)). It covers the import closure of
 the entry point that writes the folder, one module list per entry point in
-{py:data}`gf180tcad.tcad.TCAD_GENERATORS`. It also covers the inputs both entry points share: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
+{py:data}`gf180tcad.tcad.TCAD_GENERATORS`. It also covers the inputs every entry point shares: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
 {repo}`tools/sandbox-run`. The closure is the static one, so an import inside a function counts
 too ({test}`tests/tcad/test_tcad_provenance.py::test_registry_lists_match_the_import_graph`
 runs once per entry point). {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties each results folder
@@ -260,13 +260,20 @@ calibration that `provenance.json` records. Its keys:
 | `plugin_excludes` | each entry point's plugin files left out of its hash |
 | `calibration_dirs` | each backend's calibration folder |
 
-Both entry points leave the plugin's `gplugins/devsim/backends/charon/` out of their hash
+Every entry point leaves the plugin's `gplugins/devsim/backends/charon/` out of its hash
 ({py:data}`gf180tcad.tcad.PLUGIN_EXCLUDES`), and
 {test}`tests/tcad/test_tcad_provenance.py::test_excluded_plugin_files_are_not_imported_by_the_hashed_ones`
 checks that no hashed plugin file imports it. An entry point, a results folder or an image for
 another simulator is a row in the file. Adding one leaves every committed hash as it is.
 {test}`tests/tcad/test_tcad_provenance.py::test_registry_trees_cover_every_committed_root`
 requires every results folder under `results/tcad*/` to be a row of `trees`.
+
+The registry's entry points:
+
+- {py:mod}`gf180tcad.tcad.__main__` writes the MOS capacitor and mesh-convergence folders;
+- {py:mod}`gf180tcad.calibrate.__main__` writes the calibration and validation folders;
+- {py:mod}`gf180tcad.meshcut.__main__` cuts the reduced mesh artefact of a 2D job and writes
+  no committed folder.
 
 A change to a module that a folder's writer never imports therefore leaves the folder's hash alone.
 The calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in
@@ -354,6 +361,8 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w10p0_l0p50` | both | 9701 |
 | `pfet_05v0` | `w10p0_l0p70` | both | 11888 |
 | `pfet_05v0` | `w10p0_l1p00` | both | 15279 |
+| `pfet_05v0` | `w10p0_l2p00` | qs | 14176 |
+| `pfet_05v0` | `w10p0_l2p00` | combine-qs | 3 |
 
 | Device | Geometry | Peak memory (GiB) | Exit code | Finished (ACDT) |
 |---|---|---|---|---|
@@ -365,6 +374,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w10p0_l0p50` | 7.43 | 0 | 2026-10-28 03:18 |
 | `pfet_05v0` | `w10p0_l0p70` | 5.43 | 0 | 2026-10-28 06:38 |
 | `pfet_05v0` | `w10p0_l1p00` | 7.75 | 0 | 2026-10-28 10:55 |
+| `pfet_05v0` | `w10p0_l2p00` | 9.83 | 0 | 2026-10-28 14:59 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 
@@ -488,7 +498,7 @@ Between the two hashes, two entries of the hashed file list differ.
 Every file on the 2D compute path is byte-identical, including all of `gplugins/devsim`.
 The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `make reproduce-quick` run above.
 
-**The pfet W10/L0.7 and W10/L1 jobs needed no restamp.** They ran at gplugins `0715c81` and `bf8f2dcc…`.
+**The pfet W10/L0.7, W10/L1 and W10/L2 jobs needed no restamp.** They ran at gplugins `0715c81` and `bf8f2dcc…`.
 Those are the stamps the folder already had, so the jobs left
 {repo}`results/tcad/moscap2d/provenance.json` unchanged.
 

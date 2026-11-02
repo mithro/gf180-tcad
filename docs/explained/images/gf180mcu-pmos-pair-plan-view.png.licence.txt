@@ -1,0 +1,11 @@
+gf180mcu-pmos-pair-plan-view.png
+
+What:    "PMOS Matched pair" drawing (file images/mos2.png) of the GF180MCU PDK design manual,
+         section 10.6.1 "Devices required to be laid out as matched pair", copied unchanged.
+Source:  https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/images/mos2.png
+Page:    https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_10_6_1.rst
+Author:  GlobalFoundries and Google, the GF180MCU PDK authors (google/gf180mcu-pdk).
+Licence: Apache License 2.0, the licence of the google/gf180mcu-pdk repository:
+         https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/LICENSE
+Fetched: 2026-10-28, HTTP 200, 38963 bytes,
+         sha256 07e4de792439b9291a185d66b8f4c790c426ad684a6a2060830f793959ab1e89.

@@ -33,9 +33,9 @@ doping is the {term}`model card`'s value, and the gate and body depths are proje
 
 The gate, the gate oxide and the body form a capacitor, with the gate and the body underneath
 as its plates. The oxide between them is the insulator
-({ref}`Taur and Ning, the chapter on MOS capacitors <lit-taur>`). A voltage on the gate draws
+({ref}`Taur and Ning, ch. 4 <lit-taur>`). A voltage on the gate draws
 charge into the silicon under the oxide. That charge lets the gate switch the transistor
-({ref}`Taur and Ning, the chapter on MOSFETs <lit-taur>`). This repo simulates the stack on its
+({ref}`Taur and Ning, ch. 5 <lit-taur>`). This repo simulates the stack on its
 own, without a source or drain, as a {term}`MOS capacitor <MOSCAP>`.
 
 (explained-oxide-layer)=
