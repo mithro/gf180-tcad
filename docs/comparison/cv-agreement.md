@@ -330,7 +330,7 @@ Lmin with `spice-fit`.
   L = 0.7 µm and 1.6/0.7, both from the depletion-side crossing (+124 and +132 mV, inside the
   corner window) and, at 1.6/0.7, the accumulation plateau (6.12 %).
 
-**2D: {term}`Disagree` at five cells.** They are nfet W10/L0.6, W10/L0.7 and W1.6/L0.7, and pfet W10/L1 and W10/L2.
+**2D: {term}`Disagree` at five cells:** nfet W10/L0.6, W10/L0.7 and W1.6/L0.7, pfet W10/L1 and W10/L2.
 All five fail on the depletion crossing alone ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The
 {repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each calibrated 2D
 cell with the TT ngspice Cgg; W10/L1 and W10/L2 are {term}`Same process`. The

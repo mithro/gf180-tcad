@@ -22,7 +22,7 @@ there.
   follow the SPICE pfet's depletion edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`).
 - **2D validation: {term}`Disagree` at five cells,** nfet W10/L0.6, W10/L0.7 and W1.6/L0.7, pfet W10/L1 and W10/L2.
-  All five fail on the depletion crossing, which the 2D cell moves below the 1D one ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
+  All five fail on the depletion crossing, which the 2D cell moves below 1D ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
   Every 2D plateau lies below SPICE ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
   The L = 2 µm AC solve and the L = 10 µm equilibrium solve fail
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59), [issue #58](https://github.com/mithro/gf180-tcad/issues/58);
