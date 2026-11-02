@@ -323,3 +323,45 @@ def test_figure_outside_sphinx_accepts_an_image():
     page = "# T\n\n![The 2D cell](docs/a.png)\n\nThe stack of the cell.\n"
     assert lint().rule_findings(page, sphinx=False) == []
     assert found(page, "FIGURE")  # in Sphinx an image is not a numbered figure
+
+
+# --- the house forms build in Sphinx with the docs' MyST settings ---------------------------
+
+
+def test_house_forms_build_and_number(tmp_path):
+    """The figure and equation forms of spec §10.3 build under -W with docs/conf.py's MyST
+    extensions, and {numref} and {math:numref} resolve to numbers."""
+    pytest.importorskip("sphinx")
+    pytest.importorskip("myst_parser")
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "conf.py").write_text(
+        "extensions = ['myst_parser']\n"
+        "myst_enable_extensions = ['colon_fence', 'dollarmath', 'substitution']\n"
+        "numfig = True\n",
+        encoding="utf-8",
+    )
+    (src / "pic.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>', "utf-8"
+    )
+    page = textwrap.dedent(GOOD_EQUATION).lstrip("\n") + textwrap.dedent(
+        """
+        The stack is drawn in {numref}`fig-stack`.
+
+        ```{figure} pic.svg
+        :name: fig-stack
+        :alt: The stack.
+
+        The stack.
+        ```
+        """
+    )
+    assert lint().rule_findings(page) == []
+    (src / "index.md").write_text(page, "utf-8")
+    r = subprocess.run(
+        [sys.executable, "-m", "sphinx", "-W", "-q", "-b", "html", str(src), str(tmp_path / "o")],
+        capture_output=True, text=True, check=False, timeout=300,
+    )  # fmt: skip
+    assert r.returncode == 0, r.stdout + r.stderr
+    html = (tmp_path / "o" / "index.html").read_text(encoding="utf-8")
+    assert 'href="#equation-eq-cox"' in html and "Fig. 1" in html
