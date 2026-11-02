@@ -1118,13 +1118,12 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
 
   Done in PR 16a part 1 (branch `task/p2-16a-corner-fits`). What differs from the text above:
   - The table was written from the upstream copy of the card, byte-identical to the image's
-    (sha256 `69a7ab87…`, `test_upstream_card_is_the_image_card`). The sandbox test
-    `test_corner_table_matches_pinned_pdk` checks it against the card in the image; its check,
-    `check_corner_table`, passed on the host copy. It runs under the docker lock with part 2.
-    The pinned values equal the upstream ones spec §5.3 quotes, so the spec tables stand.
-  - `with_corner_card` is a function of `gf180tcad.calibrate.corners`, not a method of
-    `ProcessDescription`: `tcad/process.py` is in every entry point's closure, so a change to it
-    would move every committed tree's `generator_sha256`. The same holds for `calibrate/cv.py`
+    (`test_upstream_card_is_the_image_card`). Its check, `check_corner_table`, passed on that
+    copy. The sandbox test runs it on the image's card under the docker lock in part 2.
+  - The pinned values equal the upstream ones spec §5.3 quotes, so the spec tables stand.
+  - `with_corner_card` is a function of `gf180tcad.calibrate.corners`, not a
+    `ProcessDescription` method. `tcad/process.py` is in every entry point's closure, so a change
+    to it would move every committed tree's `generator_sha256`. The same holds for `calibrate/cv.py`
     (calibration and validation trees), so `calibrate_corner` imports `cv`'s residuals
     (`_compare_1d`), settings (`LSQ`) and result type rather than generalising `calibrate_cv`.
     No committed hash moved.
