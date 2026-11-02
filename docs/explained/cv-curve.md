@@ -48,7 +48,7 @@ The start thickness and doping are the model card's own. The start shift is a pr
 {{ x_fit_length_count }} gate lengths. It compares their flat parts, and where each curve crosses
 its own halfway level ({ref}`the dip <explained-regions-dip>`).
 
-The {term}`pfet_05v0`'s curve is the mirror image, with the signs of the gate voltages reversed
+The {term}`pfet_05v0`'s curve runs the other way, with the signs of the gate voltages reversed
 ({ref}`explained-regions-three`).
 
 (explained-cv-curve-flat)=
@@ -117,9 +117,9 @@ solves the stack at rest at each gate voltage, the {term}`quasi-static` curve
 curve is steep, a small shift gives a large relative error, so the checks leave the dip out
 ({ref}`the deviation <cv-agreement-deviation>`).
 
-The 1D fit is {{ x_verdict_nfet_1d }} for the nfet and {{ x_verdict_pfet_1d }} for the pfet
-({ref}`the pfet mismatch <cv-agreement-mismatch>`). The pfet's SPICE curve leaves accumulation
-at a gate voltage that moves with the gate length. One simulated stack has one flat band for
+The 1D fit's {ref}`verdict <agreement-verdicts>` is {{ x_verdict_nfet_1d }} for the nfet and
+{{ x_verdict_pfet_1d }} for the pfet ({ref}`the pfet mismatch <cv-agreement-mismatch>`). The
+pfet's SPICE curve leaves {term}`accumulation` at a gate voltage that moves with the gate length. One simulated stack has one flat band for
 every length.
 
 {{ x_two_d_disagree }} ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The
