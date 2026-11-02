@@ -14,8 +14,10 @@ validation and mesh convergence. Every TCAD-vs-SPICE number and verdict on them 
 the committed calibration and validation files, which were computed in the TCAD image; this
 module never compares TCAD with SPICE itself. For the plots it applies the fixed BSIM4
 bookkeeping (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`, the function the
-calibration uses) to the committed 1D C per area. No mesh picture is drawn: the 2D meshes are
-not committed, and the pages say so.
+calibration uses) to the committed 1D C per area. A geometry page draws the mesh of each 2D
+cell from its committed reduced mesh artefact (``results/tcad/meshes/<image>/...``,
+:mod:`gf180tcad.meshcut`), never from a full mesh, which is not committed; a 2D cell without an
+artefact gets a sentence that says why.
 
 Plots are drawn against sign-flipped axes (|Vgs|, |Vds|, |Id|) so the nfet and the pfet
 look alike. Numbers in tables use :func:`fmt` (fixed significant figures, locale independent),
@@ -537,13 +539,22 @@ _URL_ALIASES = {
         "https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip"
     ),
 }
-_NO_MESH = (
-    "No mesh picture: the 2D meshes (`mesh.msh`) are not committed (git-ignored, "
-    "{ref}`for their size <moscap2d-meshes>`), and this page renders only committed files. A "
-    "{term}`job`'s `cv.meta.json` records the sha256 of its mesh, from which it regenerates "
-    "byte for byte. The design spec asks for mesh pictures here: a recorded "
-    "{ref}`deviation <limitations-spec-deviations>`, "
-    "[issue #39](https://github.com/mithro/gf180-tcad/issues/39)."
+# Why a committed 2D cell has no reduced mesh artefact, by its parameter set.
+_NO_ARTEFACT = {
+    "start": (
+        "The 2D cell at the start values has no mesh picture. Its full mesh (`mesh.msh`) is not "
+        "committed and is in no cache, so no reduced mesh artefact is cut from it "
+        "({ref}`moscap2d-mesh-artefact`)."
+    ),
+    "calibrated": (
+        "The 2D cell at the calibrated values has no mesh picture: no reduced mesh artefact is "
+        "committed for it ({ref}`moscap2d-mesh-artefact`)."
+    ),
+}
+_MESH_ALT = (
+    "The mesh around the gate of the 2D cell: thousands of small triangles, densest in a thin "
+    "band at the silicon surface under the gate, coloured by region: the gate on top, the gate "
+    "oxide under it, the insulator beside the gate and the silicon body below."
 )
 
 
@@ -988,10 +999,44 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
             "",
         ]
         (ddir / f"{gid}_2d.svg").write_bytes(_two_d_svg(d, job))
-    lines += ["### Mesh picture", "", _NO_MESH, ""]
-    if job is None and cal_job is None:
-        lines += ["No 2D result exists for this geometry, so there is no mesh either.", ""]
+    lines += _mesh_section(d, gid, ddir)
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
+
+
+def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
+    """The geometry page's mesh pictures: for each committed 2D cell, the figure of its reduced
+    mesh artefact in a light and a dark twin (written into ``ddir``), or why it has none."""
+    from gf180tcad import meshcut
+    from gf180tcad.explain import figures
+
+    name = d.device.name
+    lines = ["### Mesh picture", ""]
+    cells = [p for p in ("calibrated", "start") if d.two_d(gid, p) is not None]
+    if not cells:
+        return [*lines, "No 2D result exists for this geometry, so there is no mesh either.", ""]
+    for params in cells:
+        found = sorted((d.root / "meshes").glob(f"*/{name}/{params}/{gid}/{meshcut.META}"))
+        if not found:
+            lines += [_NO_ARTEFACT[params], ""]
+            continue
+        adir = found[0].parent
+        meta = _read_json(adir / meshcut.META)
+        rel = adir.relative_to(d.root.parent).as_posix()
+        caption = (
+            f"The mesh of the 2D cell at the {params} values, around the gate: "
+            f"{meta['triangle_count']} of the full mesh's {meta['full_mesh_triangle_count']} "
+            "triangles, kept by the window rule ({ref}`mesh-artefact`). Drawn to scale from "
+            f"{{repo}}`results/{rel}`; full mesh sha256 `{meta['full_mesh_sha256']}`."
+        )
+        for palette in figures.PALETTES:
+            svg = f"{gid}_mesh_{params}-{palette}.svg"
+            (ddir / svg).write_bytes(figures.mesh_artefact(adir, palette))
+            head = [f"```{{figure}} {svg}"]
+            if palette == "light":
+                head.append(f":name: mesh-{name}-{gid}-{params}")
+            lines += [*head, f":figclass: only-{palette}", f":alt: {_MESH_ALT}", "", caption,
+                      "```", ""]  # fmt: skip
+    return lines
 
 
 def _param_rows(d: _Device) -> list[str]:
@@ -1196,7 +1241,9 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
                 (
                     f"The 2D study runs at the geometry {{doc}}`{study} <{study}>`, "
                     "where the 2D C per area exceeds {term}`Cox` by the fringe and the source/drain "
-                    "overlap at the gate edges ({doc}`/limitations/moscap2d`). " + _NO_MESH
+                    "overlap at the gate edges ({doc}`/limitations/moscap2d`). The 2D cells "
+                    "use the selected level's mesh; each geometry page draws the mesh of its "
+                    "cells from their reduced mesh artefacts."
                 ),
                 "",
             ]
