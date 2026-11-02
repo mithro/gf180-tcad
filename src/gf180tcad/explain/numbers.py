@@ -213,14 +213,15 @@ VALIDATION = "results/tcad/validation"
 #: The checks of a validated cell (``verdicts`` of a ``two_d`` entry), in plain words
 #: (``docs/comparison/cv-agreement.md``, "The agreement metric"). The checks run in
 #: u = polarity × Vg, so each side is named for the nfet and the pfet, whose signs are reversed.
-#: Both crossings are of one level, (C_min + C_acc)/2 (:func:`gf180tcad.calibrate.cv.crossings`),
-#: which ``docs/explained/accumulation-depletion-inversion.md`` names the halfway level: midway
-#: between the minimum and the accumulation flat part, on either side of the dip.
+#: Both crossings are of one level, (C_min + C_acc)/2, each curve of its own
+#: (:func:`gf180tcad.calibrate.cv.crossings`), which
+#: ``docs/explained/accumulation-depletion-inversion.md`` names the halfway level: midway between
+#: the curve's own minimum and accumulation flat part, on either side of the dip.
 CHECKS = {
     "plateau_acc": "the flat part on the nfet's negative side, the pfet's positive side",
     "plateau_inv": "the flat part on the nfet's positive side, the pfet's negative side",
-    "dv_dep": "the halfway level crossing on the nfet's negative side, the pfet's positive side",
-    "dv_inv": "the halfway level crossing on the nfet's positive side, the pfet's negative side",
+    "dv_dep": "the halfway-level crossing on the nfet's negative side, the pfet's positive side",
+    "dv_inv": "the halfway-level crossing on the nfet's positive side, the pfet's negative side",
 }
 
 

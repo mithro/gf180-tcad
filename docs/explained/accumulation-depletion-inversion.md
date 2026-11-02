@@ -57,13 +57,14 @@ Between its two flat parts the SPICE curve dips to a minimum of {{ x_c_min_l10 }
 {{ x_u_min_l10 }} ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 This repo marks the regions on that curve ({py:func}`~gf180tcad.calibrate.cv.regions`).
 
-- Accumulation ends at {{ x_u_fb_l10 }}, where the curve has fallen a set fraction below its
+- Accumulation ends at {{ x_u_fb_l10 }}, where the curve has fallen to a set fraction of its
   flat part ({py:data}`~gf180tcad.calibrate.cv.FB_FRACTION`).
-- Inversion starts at {{ x_u_t_l10 }}, where the curve has climbed halfway from the minimum back
-  to its other flat part.
+- Inversion starts at {{ x_u_t_l10 }}. There the rising curve reaches the average of its minimum
+  and its inversion flat part.
 
-The halfway level lies midway between the minimum and the accumulation flat part. The
-{ref}`checks <cv-agreement-metric>` compare where each curve crosses it, on either side of the dip. On
+The halfway level of each curve lies midway between its own minimum and its accumulation flat
+part. The {ref}`checks <cv-agreement-metric>` compare where each curve crosses its own halfway
+level, on either side of the dip. On
 the falling side, the SPICE curve crosses at {{ x_u_dep_spice_l10 }} and the simulated one at
 {{ x_u_dep_tcad_l10 }}. On the rising side, they cross at {{ x_u_inv_spice_l10 }} and
 {{ x_u_inv_tcad_l10 }}.

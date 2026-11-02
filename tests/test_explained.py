@@ -1307,17 +1307,23 @@ def test_positive_control_check_sides():
 
 
 def test_crossing_words_name_one_level():
-    """Both crossing checks use one level, (C_min + C_acc)/2 (``calibrate.cv.crossings``): their
-    words name the same level and differ only in the sides, so neither suggests a level between
-    the minimum and the inversion flat part. The regions page defines that level."""
+    """Both crossing checks use one level definition, (C_min + C_acc)/2 of each curve on its own
+    (``calibrate.cv.crossings``): their words name the same level and differ only in the sides,
+    so neither suggests a level between the minimum and the inversion flat part. The regions
+    page defines that level per curve, and describes the start of inversion, (C_min + C_inv)/2
+    of the SPICE curve, without the word "halfway", so a reader does not take the two as one."""
     numbers = _numbers()
     dep, inv = numbers.CHECKS["dv_dep"], numbers.CHECKS["dv_inv"]
     swap = {"negative": "positive", "positive": "negative"}
     assert re.sub(r"negative|positive", lambda m: swap[m.group(0)], dep) == inv
-    assert "halfway level" in dep and " up " not in inv and " down " not in dep
+    assert "halfway-level crossing" in dep and " up " not in inv and " down " not in dep
     page = REGIONS_PAGE.read_text(encoding="utf-8")
-    dip = page[page.index("(explained-regions-dip)=") :]
-    assert "halfway level lies midway between the minimum and the accumulation flat part" in dip
+    dip = page[page.index("(explained-regions-dip)=") : page.index("(explained-regions-bands)=")]
+    flat = " ".join(dip.split())
+    assert "halfway level of each curve lies midway between its own minimum and its" in flat
+    assert "crosses its own halfway level" in flat
+    start = flat[flat.index("Inversion starts") :]
+    assert "halfway" not in start[: start.index(".")]
 
 
 def test_disagree_cells_are_the_issue_on_the_page():
