@@ -428,8 +428,10 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   start dip shallower (tested from the committed curves); the sentences on how each curve is
   made sit in the fit section, with no quasi-static contrast (BSIM4's AC non-quasi-static model
   is off unless the card sets ACNQSMOD, manual ch. 8 and appendix A, and the card is not read
-  here). Left out: numbers break from their units at 400 px on every explainer page, a
-  site-wide change to `numbers.format_value` filed as issue #119.
+  here). Numbers broke from their units at 400 px on every explainer page; fixed site-wide in
+  the PR for issue #119: `numbers.format_value` joins value and unit with U+00A0 and puts
+  U+2060 after the slash of a compound unit, and the Sphinx extension `docs/_ext/unit_join.py`
+  does the same for values typed by hand and for the generated result pages.
 - The SPICE curve is described as the equations of BSIM4's capacitance model (manual ch. 7);
   the frequency of the `cv` sweep is not printed, since no committed data file holds it.
 - The landing page now has one heading per tier, so each list stays within seven items;

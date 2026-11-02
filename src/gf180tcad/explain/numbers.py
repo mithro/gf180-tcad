@@ -333,10 +333,18 @@ def citation(name: str) -> str:
 _SUP = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 
 
+#: A non-breaking space joins a value to its unit and the parts of "a × 10ⁿ"; a word joiner
+#: after "/" stops a compound unit such as fF/µm² breaking at the slash (issue #119).
+NBSP = "\u00a0"
+WORD_JOINER = "\u2060"
+
+
 def format_value(v: float, digits: int, unit: str) -> str:
     """``v`` to ``digits`` significant digits with its unit: plain from 0.001 to 9999, else as
     a mantissa times a power of ten; a typographic minus sign; no space when ``unit`` is
-    empty (a pure number)."""
+    empty (a pure number). The value and its unit are joined by a non-breaking space
+    (:data:`NBSP`) and a "/" in the unit is followed by a word joiner (:data:`WORD_JOINER`),
+    so a page never breaks a number from its unit across lines."""
     if not math.isfinite(v):
         raise ValueError(f"{v!r} is not a finite number")
     sign = "−" if v < 0 else ""
@@ -345,8 +353,9 @@ def format_value(v: float, digits: int, unit: str) -> str:
     if -3 <= e < 4:
         body = f"{abs(v):.{max(digits - 1 - e, 0)}f}"
     else:
-        body = f"{mant} × 10{str(e).translate(_SUP)}"
-    return f"{sign}{body} {unit}" if unit else f"{sign}{body}"
+        body = f"{mant}{NBSP}×{NBSP}10{str(e).translate(_SUP)}"
+    unit = unit.replace("/", "/" + WORD_JOINER)
+    return f"{sign}{body}{NBSP}{unit}" if unit else f"{sign}{body}"
 
 
 def text(name: str) -> str:
