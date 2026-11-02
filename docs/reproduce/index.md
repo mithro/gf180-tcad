@@ -498,7 +498,8 @@ Between the two hashes, two entries of the hashed file list differ.
 Every file on the 2D compute path is byte-identical, including all of `gplugins/devsim`.
 The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `make reproduce-quick` run above.
 
-**The pfet W10/L0.7, W10/L1 and W10/L2 jobs needed no restamp.** They ran at gplugins `0715c81` and `bf8f2dcc…`.
+**These jobs needed no restamp:** pfet W10/L0.7, W10/L1 and W10/L2, and nfet W1.6/L0.7.
+They ran at gplugins `0715c81` and `bf8f2dcc…`.
 Those are the stamps the folder already had, so the jobs left
 {repo}`results/tcad/moscap2d/provenance.json` unchanged.
 
@@ -645,8 +646,8 @@ rerun byte for byte locally by
 
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
 content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
-the sha256 the committed results name. It holds the meshes of the four calibrated nfet cells, W10/L0.6, W10/L0.7, W10/L1 and W10/L2;
-see {doc}`output-cache`.
+the sha256 the committed results name. It holds the meshes of the calibrated 2D nfet and pfet cells,
+W1.6/L0.7 included; {doc}`output-cache` lists them.
 
 ## Render manifest
 
