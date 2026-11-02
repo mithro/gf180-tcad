@@ -14,8 +14,8 @@ the TCAD agrees with the PDK SPICE models, quantitatively, reproducibly and in p
 ![Cross-section of the simulated transistor: a gate on a thin oxide in the middle, a source and a drain either side at the surface, a large body below.](docs/images/readme/cell.svg)
 
 *Figure 1. The simulated 2D cell of the `nfet_05v0` at W = 10 µm and L = 0.7 µm, cut along the
-gate's length. Blue parts are n-type and the orange body is p-type.
-[`gf180tcad.docgen`](src/gf180tcad/docgen.py) draws it from the committed results.*
+gate's length. Blue parts are n-type and the orange body is p-type. `make readme-figures` draws
+it from the committed results.*
 
 The PDK's SPICE models are the [reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE-reference-results);
 the TCAD is what is being tested. Each mismatch is documented with its cause and the evidence
@@ -44,10 +44,11 @@ uncalibrated start values:
   transistor cells ([`results/tcad/moscap2d`](results/tcad/moscap2d)). It runs at the minimum
   gate length (nfet 0.60 µm, pfet 0.50 µm) and at L = 2 µm, on the
   [stable TCAD image](#images). Its own mesh convergence is in
-  [`results/tcad/meshconv/moscap2d`](results/tcad/meshconv/moscap2d). The L = 2 µm cell has no small-signal (AC) result: the
-  AC solve fails in the direct solver at that size. The L = 10 µm cell is not run in 2D, because
-  its equilibrium solve fails there too; see the
-  [2D MOS capacitor page](https://gf180-tcad.readthedocs.io/en/latest/limitations/moscap2d.html).
+  [`results/tcad/meshconv/moscap2d`](results/tcad/meshconv/moscap2d).
+
+In 2D the L = 2 µm cell has no small-signal (AC) result: the AC solve fails in the direct solver
+at that size. The L = 10 µm cell is not run in 2D, because its equilibrium solve fails there too;
+see the [2D MOS capacitor page](https://gf180-tcad.readthedocs.io/en/latest/limitations/moscap2d.html).
 
 The 1D MOS capacitor is calibrated against the SPICE
 [Cgg](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Cgg)–Vg
