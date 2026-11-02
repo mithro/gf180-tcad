@@ -663,6 +663,18 @@ def test_load_params_refuses_a_job_from_other_parameters(tmp_path):
         job.load_params(d, cv_meta)
 
 
+def test_load_params_refuses_a_job_of_another_geometry(tmp_path):
+    """The param_sha256 matches, but the job recorded another SPICE geometry than its
+    geometry id gives today."""
+    d = tmp_path / "nfet_05v0" / "calibrated" / "w10p0_l0p60"
+    d.mkdir(parents=True)
+    cv_meta = json.loads((L0P60 / "cv.meta.json").read_bytes())
+    job.load_params(d, cv_meta)  # the control: the job's own record passes
+    cv_meta["geometry"] = {**cv_meta["geometry"], "w_um": 5}
+    with pytest.raises(job.JobMismatch, match="geometry"):
+        job.load_params(d, cv_meta)
+
+
 def test_check_cross_section_refuses_another_structure():
     cv_meta = {"l_um": 0.6, "t_ox_nm": 16.0, "sd_peak_cm3": 1e20, "with_sd": True}
     ok = SimpleNamespace(l_um=0.6, t_ox_nm=16.0, sd_peak_cm3=1e20, with_sd=True)
