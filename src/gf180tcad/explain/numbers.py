@@ -187,9 +187,10 @@ _ENTRIES = (
     Number("dv_inv_l10", "committed", "mV", 2, _RESULT, {"json": [*_L10, "metrics", "dv_inv_v"]}, factor=1000.0),
     # A fraction in the file; the page prints per cent.
     Number("depletion_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "depletion_max_rel"]}, factor=100.0),
-    # The card's non-quasi-static model selectors (BSIM4 manual section 8.1): 0 turns each off.
-    Number("acnqsmod_nfet", "committed", "", 1, MODEL_CARD, {"toml": ["nfet_05v0", "acnqsmod", "value"]}),
-    Number("trnqsmod_nfet", "committed", "", 1, MODEL_CARD, {"toml": ["nfet_05v0", "trnqsmod", "value"]}),
+    # The card's non-quasi-static model selectors (BSIM4 manual section 8.1), bin nfet_06v0.0;
+    # tests/test_explained.py checks that every bin of the nfet has the same values.
+    Number("acnqsmod_nfet", "committed", "", 1, MODEL_CARD, {"toml": ["nfet_05v0", "nfet_06v0.0", "acnqsmod", "value"]}),
+    Number("trnqsmod_nfet", "committed", "", 1, MODEL_CARD, {"toml": ["nfet_05v0", "nfet_06v0.0", "trnqsmod", "value"]}),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
 

@@ -651,25 +651,49 @@ def test_card_values_and_lines(card_lines, device):
     assert "dtox" not in keys
 
 
+MODEL_CARD = REPO_ROOT / "data" / "explain" / "model_card.toml"
+
+
+def _model_card() -> dict:
+    return tomllib.loads(MODEL_CARD.read_text(encoding="utf-8"))
+
+
+def test_explain_model_card_covers_every_card_bin():
+    """data/explain/model_card.toml records each length bin of each device it names, so a
+    statement about the device holds at every gate length the fit uses."""
+    raw = _model_card()
+    assert raw["card"]["sha256"] == process.load("nfet_05v0").card.sha256
+    devices = {k: v for k, v in raw.items() if k not in ("schema", "card")}
+    assert devices
+    for device, bins in devices.items():
+        assert set(bins) == {m for m, _, _ in process.CARD_BINS[device]}, device
+    # docs/explained/cv-curve.md: the nfet fit uses both models (its lengths span both bins)
+    result = json.loads(
+        (REPO_ROOT / "results/tcad/calibration/nfet_05v0.result.json").read_text(encoding="utf-8")
+    )
+    used = {m for g in result["geometries"] for m in process.card_bins("nfet_05v0", g["l_um"])}
+    assert used == set(devices["nfet_05v0"])
+
+
 @pytest.mark.sandbox
 def test_explain_model_card_lines(card_lines):
     """Every selector of data/explain/model_card.toml is the card's own ``+ key=value`` line,
     inside the model it names, with the value the file records."""
-    raw = tomllib.loads((REPO_ROOT / "data/explain/model_card.toml").read_text(encoding="utf-8"))
-    assert raw["card"]["sha256"] == process.load("nfet_05v0").card.sha256
+    raw = _model_card()
     devices = {k: v for k, v in raw.items() if k not in ("schema", "card")}
     assert devices
-    for device, entry in devices.items():
-        start = entry["model_line"]
-        assert card_lines[start - 1].split()[:2] == [".model", entry["model"]], device
-        model = _section(card_lines, start, r"\.model |\.endl")
-        selectors = {k: v for k, v in entry.items() if isinstance(v, dict)}
-        assert selectors, device
-        for key, sel in selectors.items():
-            assert sel["card_line"] in model, (device, key)
-            k, expr = process.parse_card_assignment(card_lines[sel["card_line"] - 1])
-            assert k == key, (device, key, k)
-            assert process.eval_card_expr(expr, {}) == sel["value"], (device, key, expr)
+    for device, bins in devices.items():
+        for model, entry in bins.items():
+            start = entry["model_line"]
+            assert card_lines[start - 1].split()[:2] == [".model", model], (device, model)
+            lines = _section(card_lines, start, r"\.model |\.endl")
+            selectors = {k: v for k, v in entry.items() if isinstance(v, dict)}
+            assert selectors, (device, model)
+            for key, sel in selectors.items():
+                assert sel["card_line"] in lines, (model, key)
+                k, expr = process.parse_card_assignment(card_lines[sel["card_line"] - 1])
+                assert k == key, (model, key, k)
+                assert process.eval_card_expr(expr, {}) == sel["value"], (model, key, expr)
 
 
 # The upstream ngspice card (primitives library at the commit the docs link) and the image's card

@@ -430,8 +430,9 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   is off unless the card sets ACNQSMOD, manual ch. 8 and appendix A, and the card is not read
   here). Left out: numbers break from their units at 400 px on every explainer page, a
   site-wide change to `numbers.format_value` filed as issue #119.
-- Shortcut sweep: the card's ACNQSMOD and TRNQSMOD (`nfet_06v0.0`, card lines 37060 and
-  37316, both 0) are read from `data/explain/model_card.toml`, registry entries
+- Shortcut sweep: the card's ACNQSMOD and TRNQSMOD in both nfet bins (`nfet_06v0.0`, lines
+  37060 and 37316; `nfet_06v0.1`, lines 37398 and 37654; all 0) are read from
+  `data/explain/model_card.toml`, registry entries
   `acnqsmod_nfet` and `trnqsmod_nfet`; a sandbox test checks each line in the image's card.
   The page now says, by substitution, that the SPICE capacitance is quasi-static (manual
   §8.1 and appendix A).

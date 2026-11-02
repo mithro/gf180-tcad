@@ -1720,22 +1720,22 @@ MODEL_CARD = ROOT / "data" / "explain" / "model_card.toml"
 
 def test_model_card_file_names_the_process_files_card():
     """data/explain/model_card.toml reads the card that data/process/nfet_05v0.toml names (same
-    file, sha256 and model), and the registry reads each selector from it. The sandbox test
-    tests/tcad/test_process.py::test_explain_model_card_lines checks each line in the card."""
+    file and sha256), with the process file's model among its bins, and every bin holds the
+    values the registry prints. tests/tcad/test_process.py ties the bins to the card's length
+    bins and, in the sandbox, checks each line in the card."""
     numbers = _numbers()
     card = tomllib.loads(MODEL_CARD.read_text(encoding="utf-8"))
     proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text(encoding="utf-8"))
     assert card["card"] == {k: proc["card"][k] for k in ("file", "sha256")}
-    nfet = card["nfet_05v0"]
-    assert (nfet["model"], nfet["model_line"]) == (
-        proc["card"]["model"],
-        proc["card"]["model_line"],
-    )
+    bins = card["nfet_05v0"]
+    assert bins[proc["card"]["model"]]["model_line"] == proc["card"]["model_line"]
+    assert len(bins) == 2
     for key in ("acnqsmod", "trnqsmod"):
         n = numbers.REGISTRY[f"{key}_nfet"]
         assert (n.kind, n.source) == ("committed", numbers.MODEL_CARD)
-        assert numbers.value(n.name) == nfet[key]["value"]
-        assert nfet[key]["card_line"] > nfet["model_line"]
+        for model, b in bins.items():
+            assert numbers.value(n.name) == b[key]["value"], (model, key)
+            assert b[key]["card_line"] > b["model_line"], (model, key)
 
 
 def test_cv_page_says_quasi_static_only_when_both_switches_are_off():
