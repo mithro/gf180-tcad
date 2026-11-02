@@ -10,8 +10,9 @@ out why the capacitance changes with the gate voltage.
 :figclass: only-light
 :alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey, with dark contact bars on the gate, the source, the drain and the bottom of the body.
 
-The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`: the gate, the {term}`gate oxide` and the
-body in colour, the source and the drain muted. The oxide thickness and the body doping are fitted
+The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`. The 1D stack is the column under the
+gate: the gate, the {term}`gate oxide` and the body, in colour. The source and the drain, muted,
+are the parts the MOS capacitor leaves out. The oxide thickness and the body doping are fitted
 to the {term}`SPICE` model. The junction depth is the {term}`model card`'s value. The gate and
 body depths and the source and drain width are project choices. {{ x_fig_moscap_cell_scale }}
 ```
@@ -20,8 +21,9 @@ body depths and the source and drain width are project choices. {{ x_fig_moscap_
 :figclass: only-dark
 :alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey, with dark contact bars on the gate, the source, the drain and the bottom of the body.
 
-The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`: the gate, the {term}`gate oxide` and the
-body in colour, the source and the drain muted. The oxide thickness and the body doping are fitted
+The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`. The 1D stack is the column under the
+gate: the gate, the {term}`gate oxide` and the body, in colour. The source and the drain, muted,
+are the parts the MOS capacitor leaves out. The oxide thickness and the body doping are fitted
 to the {term}`SPICE` model. The junction depth is the {term}`model card`'s value. The gate and
 body depths and the source and drain width are project choices. {{ x_fig_moscap_cell_scale }}
 ```
@@ -110,8 +112,8 @@ that sum.
 
 ## Where this repo's results differ
 
-At `w10p0_l10p00` the simulated curve lies within {{ x_plateau_acc_l10 }} of the SPICE curve on
-the left flat part. On the right it lies within {{ x_plateau_inv_l10 }}. The allowed error is
+At `w10p0_l10p00` the simulated curve lies within {{ x_plateau_acc_l10 }} of the SPICE curve at
+the most negative gate voltage. At the most positive it lies within {{ x_plateau_inv_l10 }}. The allowed error is
 {{ x_plateau_tol_l10 }} ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 
 A verdict says whether the simulation matches the SPICE model: {term}`Agree`,
