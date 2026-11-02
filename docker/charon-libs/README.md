@@ -10,22 +10,24 @@ The build recipe and the image description are on the
 Charon is licensed GPL-3.0-or-later (`LICENSE/Charon_LICENSE` in the tarball). Trilinos and
 TriBITS are BSD-3-Clause, with some Trilinos packages under LGPL-2.1-or-later.
 
-Two kinds of file here quote Charon and are therefore GPL-3.0-or-later, not under the
-repository's Apache-2.0 grant. Each carries `SPDX-License-Identifier: GPL-3.0-or-later`:
+The patches under `patches/` change Charon source code. They are therefore licensed
+GPL-3.0-or-later, not under the repository's Apache-2.0 grant. Each carries
+`SPDX-License-Identifier: GPL-3.0-or-later`:
 
-- `opts/gf180.opts` (Charon's `General.opts` and `Linux.opts`, then the project's lines);
-- every patch under `patches/`:
-  - `0001-codata2018-constants.patch`.
+- `0001-codata2018-constants.patch`.
 
-Every other file in this directory is Apache-2.0, like the rest of gf180-tcad.
+Every other file in this directory is Apache-2.0, like the rest of gf180-tcad. The opts file
+`opts/gf180.opts` holds only the project's own CMake options. The build reads Charon's
+`General.opts` and `Linux.opts` from the tarball itself.
 
 ## Corresponding source
 
 A published image distributes Charon binaries, so its corresponding source goes with it:
 
 - `upstream.json` names the Charon, Trilinos and TriBITS tarballs, each with its URL and sha256;
-- every `mirror_url` there points at the input mirror release `gf180-tcad/inputs/charon-20261102`,
-  which holds a copy of each file once the image is published;
+- every `mirror_url` there points at the input mirror release `gf180-tcad/inputs/charon-20261102`;
 - this directory holds the patches, the opts file and the build scripts;
 - `/opt/charon/share/gf180tcad/SOURCES.json` in the image lists each of those files with its
-  sha256, and `/opt/charon/share/doc/charon/` holds Charon's licence.
+  sha256. The build scripts it lists are `Dockerfile`, `build`, `build-charon.sh`,
+  `fetch_sources.py`, `inputs.py` and `upstream.json`;
+- `/opt/charon/share/doc/charon/` in the image holds Charon's licence.
