@@ -711,7 +711,7 @@ def cv_regions(palette: str) -> bytes:
 
 #: The four states of the band panels, by rising gate voltage, and the surface bending of each
 #: in units of ψ_B, the body's Fermi-level distance below the middle of the gap: none at flat
-#: band, and none at accumulation, where the drawing puts the extra carriers in a sheet of no
+#: band, and none at accumulation, where the drawing puts the extra holes in a sheet of no
 #: thickness and keeps the bands flat (a drawing choice: the depletion approximation covers
 #: depletion and inversion only, and the real bands bend up by a few thermal voltages); ψ_B for
 #: depletion (the surface at the middle of the gap); 2·ψ_B at the onset of strong inversion.

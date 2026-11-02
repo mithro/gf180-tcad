@@ -111,8 +111,10 @@ the run of a superseded commit when a newer one is pushed to the same pull reque
 `main` are never cancelled).
 
 The [linkcheck workflow](.github/workflows/linkcheck.yml) fails a pull request when an external link answers with an error
-such as 404. It also fails when an issue or pull request number in the docs does not exist. A site that
-only times out shows as a warning annotation and in the report, and does not fail the check.
+such as 404. It also fails when a linked issue or pull request number does not exist. A site that
+only times out shows as a warning and does not fail a pull request. The weekly scheduled run fails when
+a URL times out in three runs in a row, so a dead site is caught. The checks are in
+[`tools/linkcheck_report.py`](tools/linkcheck_report.py), tested by [`tests/test_linkcheck_report.py`](tests/test_linkcheck_report.py).
 
 By design, the hook also refuses a push of several branches that are not all the checked-out
 one, and, when `push.default` is `matching`, any push of a branch other than the checked-out
