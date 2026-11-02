@@ -117,7 +117,8 @@ solves the stack at rest at each gate voltage, the {term}`quasi-static` curve
 curve is steep, a small shift gives a large relative error, so the checks leave the dip out
 ({ref}`the deviation <cv-agreement-deviation>`).
 
-The 1D fit's {ref}`verdict <agreement-verdicts>` is {{ x_verdict_nfet_1d }} for the nfet and
+A {ref}`verdict <agreement-verdicts>` is {term}`Agree`, {term}`Same process` or
+{term}`Disagree`. The 1D fit is {{ x_verdict_nfet_1d }} for the nfet and
 {{ x_verdict_pfet_1d }} for the pfet ({ref}`the pfet mismatch <cv-agreement-mismatch>`). The
 pfet's SPICE curve leaves {term}`accumulation` at a gate voltage that moves with the gate length. One simulated stack has one flat band for
 every length.
