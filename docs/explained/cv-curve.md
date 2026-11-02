@@ -59,13 +59,15 @@ The {term}`pfet_05v0`'s curve runs the other way, with the signs of the gate vol
 
 ## The flat parts: the oxide
 
-At both ends a layer of carriers sits right under the oxide. So the oxide alone sets the
-capacitance there ({ref}`Sze and Ng, ch. 4 <lit-sze>`). The {term}`oxide capacitance <Cox>` per
-area is the oxide's permittivity over its thickness, so a thicker oxide lowers both flat parts.
+At both ends a layer of carriers sits right under the oxide. At the negative end the oxide
+alone sets the capacitance, and at the positive end the gate's doping also lowers it
+({ref}`Sze and Ng, ch. 4 <lit-sze>`). The {term}`oxide capacitance <Cox>` per area is the
+oxide's {ref}`permittivity <explained-oxide-cox>` over its thickness. So a thicker oxide lowers
+both flat parts.
 
-As idealised examples from the thickness alone, the oxide gives {{ x_cox_toxe_nfet }} at the start and
-{{ x_cox_nfet_cal }} when fitted. The start curve's flat parts lie above the SPICE ones, and the
-fit thickens the oxide to bring them down.
+From the thickness alone, the idealised oxide capacitance is {{ x_cox_toxe_nfet }} at the start
+and {{ x_cox_nfet_cal }} when fitted. The start curve's flat parts lie above the SPICE ones, and
+the fit thickens the oxide to bring them down.
 
 The gate is silicon too, n-type at the model card's doping. At the positive end the gate voltage
 pushes its {term}`electrons <electron>` away from the oxide. That {term}`poly depletion` lowers
@@ -122,8 +124,10 @@ steep, a small shift gives a large relative error, so the checks leave the dip o
 A {ref}`verdict <agreement-verdicts>` is {term}`Agree`, {term}`Same process` or
 {term}`Disagree`. The 1D fit is {{ x_verdict_nfet_1d }} for the nfet and
 {{ x_verdict_pfet_1d }} for the pfet ({ref}`the pfet mismatch <cv-agreement-mismatch>`). The
-pfet's SPICE curve leaves {term}`accumulation` at a gate voltage that moves with the gate length. One simulated stack has one flat band for
-every length.
+pfet's SPICE curve leaves {term}`accumulation` at a gate voltage that moves with the gate
+length. One simulated stack has one flat band for every length.
 
-{{ x_two_d_disagree }} ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The
-checks of each 2D cell are on {ref}`cv-agreement-validation`.
+The 2D simulation of a whole cell uses the fitted stack of its transistor
+({ref}`the table of 2D cells <explained-moscap-differs>`). {{ x_two_d_disagree }}
+([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The checks of each 2D cell
+are on {ref}`cv-agreement-validation`.
