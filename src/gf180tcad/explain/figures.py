@@ -917,7 +917,8 @@ def calibration_limits(palette: str) -> bytes:
     on its own axis: a bar from its lower to its upper limit, its start (open circle) and its
     fitted value (filled diamond), read from the calibration result files
     (:func:`gf180tcad.explain.numbers.fits`)."""
-    return _svg(calibration_limits_figure(palette))
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_limits_figure(palette))
 
 
 #: The legend words of the crossing marks of :func:`calibration_compare`, by curve.
@@ -974,7 +975,8 @@ def calibration_compare(palette: str) -> bytes:
     fitted simulated curve, the flat parts the fit compares shaded (the voltages of the result
     file's residuals) and each curve's halfway-level crossings marked (``spice_regions`` and
     ``tcad_crossings``)."""
-    return _svg(calibration_compare_figure(palette))
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_compare_figure(palette))
 
 
 #: The transistor of :func:`calibration_pfet`.
@@ -1025,7 +1027,8 @@ def calibration_pfet(palette: str) -> bytes:
     """The pfet's gate capacitance at the shortest and the longest gate of its fit
     (:func:`pfet_geometries`), on the true gate voltage: the :term:`SPICE` band of all
     :term:`corners <corner>`, the typical curve and the fitted simulated curve."""
-    return _svg(calibration_pfet_figure(palette))
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_pfet_figure(palette))
 
 
 # name -> function of the palette name; each is written in both palettes by write_all.
