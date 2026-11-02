@@ -130,9 +130,9 @@ _TOOLS = {
 }
 myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.items()}
 
-# Captioned figures are numbered, so a page can point at one with {numref}.
-# docs/_ext/theme_figures.py
-# merges each light/dark twin pair into one figure (one number) and numbers each page from 1.
+# Captioned figures are numbered, so a page can point at one with {numref}. theme_figures
+# (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure with one number,
+# and numbers each page's figures from 1.
 numfig = True
 numfig_format = {"figure": "Figure %s"}
 
