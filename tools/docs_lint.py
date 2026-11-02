@@ -300,11 +300,13 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             subscript); every one must be defined, and no item may define a symbol the equation
             does not use. A {math} directive is reported too.
   FILELINK  a file or path that is not a link: inline code that is a path (under results/,
-            tools/, data/, docs/, src/, tests/, docker/, third_party/, bin/, logs/ or ~/), a
+            tools/, data/, docs/, src/, tests/, docker/, third_party/, bin/ or logs/), a
             file name with an extension (.py, .json, .toml, .md, .csv and similar, with an
-            optional :line suffix) or Makefile, Dockerfile, README and similar; and the same
-            names in bare prose. A role ({repo}, {test}) or [text](url) is a link. Code blocks
+            optional :line suffix) or Makefile, Dockerfile, README and similar. In bare prose:
+            repository paths, file names with an extension, Makefile, Dockerfile and
+            Containerfile. A role ({repo}, {test}) or [text](url) is a link. Code blocks
             are skipped; figure captions and tables are checked; `np.log` is code, not a file.
+            A path under ~/ is on the reader's own computer, with nothing to link: not reported.
 Each finding prints PATH:LINE: FAIL CHECK message.
 """
 
@@ -337,13 +339,16 @@ _PATH_DIRS = r"(results|tools|data|docs|src|tests|docker|third_party|bin|logs)"
 _PATH_EXTS = r"(py|json|toml|md|csv|tsv|yml|yaml|txt|svg|png|sh|cfg|ini|lock|gds|tcl|ipynb|log|pdf|msh|exo)"
 _PLAIN_NAMES = r"(Makefile|Dockerfile|Containerfile|README|LICENSE|CONTRIBUTING|CHANGELOG)"
 _LINE_NO = r"(:\d+(-\d+)?)"
-_PATHLIKE = re.compile(rf"^(\./)?{_PATH_DIRS}/\S*$|^~/\S+$"
+_PATHLIKE = re.compile(rf"^(\./)?{_PATH_DIRS}/\S*$"
                        rf"|^[^\s/]*(/[^\s/]+)*\.{_PATH_EXTS}(#\S*|::\S*|{_LINE_NO})?$"
                        rf"|^([^\s/]+/)*{_PLAIN_NAMES}{_LINE_NO}?$")
 # A file name in prose, outside code, roles and links: a path under a repository folder, a path
 # under ~/, or a name with a file extension.
-_PROSE_PATH = re.compile(rf"(?<![\w/.~-])((\./)?{_PATH_DIRS}/[\w./-]*[\w/]|~/[\w./-]*\w"
+_PROSE_PATH = re.compile(rf"(?<![\w/.~-])((\./)?{_PATH_DIRS}/[\w./-]*[\w/]"
+                         rf"|([\w.-]+/)*(Makefile|Dockerfile|Containerfile)"
                          rf"|[\w-]+(/[\w.-]+)*\.{_PATH_EXTS}{_LINE_NO}?)(?![\w/-])")
+# A path under ~/ is a file on the reader's own computer: there is nothing to link to, so
+# FILELINK does not report it (link the code that writes it where the text needs one).
 # `np.log`, `logger.log`, `self.md`: Python names, not files.
 _CODE_NAMES = {"np", "numpy", "math", "logger", "logging", "log", "self", "cls", "os", "sys", "re",
                "sp", "scipy", "plt", "pd", "json"}
@@ -725,7 +730,8 @@ def filelink_findings(lines):
         linked = [m.span() for m in _ROLE.finditer(line)] + [m.span() for m in _MD_LINK.finditer(line)]
         for m in _CODE.finditer(line):
             body = m.group("body").strip()
-            if "://" in body or not _PATHLIKE.match(body) or _is_code_name(body):
+            if ("://" in body or body.startswith("~/") or not _PATHLIKE.match(body)
+                    or _is_code_name(body)):
                 continue
             if any(a <= m.start() < b for a, b in linked):
                 continue

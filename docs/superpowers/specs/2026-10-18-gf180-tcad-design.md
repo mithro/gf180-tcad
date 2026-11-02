@@ -616,6 +616,9 @@ The three rules apply to every reader page. That is everything under `docs/` exc
   GitHub, use Markdown links, and a figure there is a Markdown image. A text about a kind of
   file, such as every `cv.meta.json`, links one example or the folder.
 
+A path under `~/` is on the reader's own computer and has no link target. The text links the
+code that writes it instead, and FILELINK does not report it.
+
 *House decision (equation form)*. The house form is MyST `dollarmath`, enabled in
 `docs/conf.py`. A label follows the closing `$$`, and the text cites it with `{math:numref}`:
 

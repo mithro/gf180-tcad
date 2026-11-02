@@ -549,7 +549,8 @@ def test_rules_output_lists_opt_outs(tmp_path):
         "See `README` for the setup.",
         "See `plots.py:37` for the colour.",
         "See `src/gf180tcad/docgen.py:120-140` for the table.",
-        "The cache is `~/.cache/gf180-tcad/out`.",
+        "Run make with the Makefile in the root.",
+        "The image is built from docker/tcad-dev/Dockerfile here.",
         "The cv.csv files are committed.",
         "The fit is in results/tcad/calibration/nfet_05v0.result.json today.",
     ],
@@ -568,6 +569,9 @@ def test_filelink_fires_on_the_review_gaps(line):
         "See [cv.csv](https://github.com/mithro/gf180-tcad/blob/main/cv.csv).",
         "See {repo}`results/a.json` and https://example.org/b.json too.",
         "The site devsim.org hosts it.",
+        "The cache is `~/.cache/gf180-tcad/out`.",
+        "The cache holds `~/.cache/gf180-tcad/out/a.json` and ~/.cache/gf180-tcad/b.json.",
+        "A makefile is a list of rules.",
     ],
 )  # fmt: skip
 def test_filelink_quiet_on_code_names(line):
