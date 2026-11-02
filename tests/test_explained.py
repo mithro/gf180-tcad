@@ -494,8 +494,8 @@ def test_model_reads_the_committed_stack():
 NOT_COUNTED = ("inline URL not in any footnote definition", "number with no marker")
 
 
-def test_explained_pages_meet_every_cap():
-    files = [str(p) for p in pages()]
+def _cap_findings(files: list[str]) -> list[str]:
+    """The findings of both docs linters on ``files`` that the house rules count."""
     m = subprocess.run(
         [sys.executable, "-I", str(ROOT / "tools" / "measure_docs.py"), *files],
         capture_output=True, text=True, check=False,
@@ -511,7 +511,36 @@ def test_explained_pages_meet_every_cap():
     found += [
         ln for ln in (lint.stdout + lint.stderr).splitlines() if re.search(r": (FAIL|warn) ", ln)
     ]
+    return found
+
+
+def test_explained_pages_meet_every_cap():
+    found = _cap_findings([str(p) for p in pages()])
     assert not found, "\n".join(found)
+
+
+def test_explained_pages_meet_every_cap_with_substitutions_filled_in(tmp_path):
+    """The linters see only ``{{ x_name }}`` in the source, so a long generated clause would
+    pass them: lint each page again with every substitution filled in."""
+    from gf180tcad import explain
+
+    subs = explain.substitutions()
+    files = []
+    for page in pages():
+        out = tmp_path / page.name
+        out.write_text(_render(page.read_text(encoding="utf-8"), subs), "utf-8")
+        files.append(str(out))
+    found = _cap_findings(files)
+    assert not found, "\n".join(found)
+
+
+def test_positive_control_filled_in_caps(tmp_path):
+    long = "The clause " + " ".join(["word"] * 30) + " ends here."
+    page = tmp_path / "long.md"
+    page.write_text("# Title\n\n{{ x_long }}\n", "utf-8")
+    assert not _cap_findings([str(page)])
+    page.write_text(_render(page.read_text("utf-8"), {"x_long": long}), "utf-8")
+    assert _cap_findings([str(page)])
 
 
 @pytest.mark.parametrize("page", explanation_pages(), ids=lambda p: p.name)
