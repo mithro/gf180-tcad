@@ -386,6 +386,16 @@ def fits(device: str, root: Path = ROOT) -> list[Fit]:
     return out
 
 
+def fit_record(device: str, gid: str, root: Path = ROOT) -> dict:
+    """The ``per_geometry`` entry ``gid`` of the result file of ``device`` under ``root``."""
+    return _fit_doc(device, root)["per_geometry"][gid]
+
+
+def fit_geometries(device: str, root: Path = ROOT) -> dict[str, float]:
+    """The gate length (µm) of each geometry of the fit of ``device``, by geometry id."""
+    return {g: e["geometry"]["l_um"] for g, e in _fit_doc(device, root)["per_geometry"].items()}
+
+
 def fit_table(device: str, root: Path = ROOT) -> str:
     """A Markdown table of :func:`fits` of ``device``: one row per fitted number, its lower
     limit, start, fitted value and upper limit."""
