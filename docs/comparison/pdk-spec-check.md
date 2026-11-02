@@ -11,7 +11,9 @@ own public electrical specification. It also defines the {term}`"Same process" w
 The spec values are copied as published from
 [section "3.0 Medium Voltage Devices (5V)" of the {term}`GF180MCU` PDK documentation](https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_3.html)
 (public page, retrieved 2026-10-18), into {repo}`data/pdk_elec_spec.json`. Only this public
-page is used. The devices are NE2 ({term}`nfet_05v0`, W/L 10/0.6) and PE2 ({term}`pfet_05v0`,
+page is used. The page is built from a
+[table of the PDK repository](https://github.com/fossi-foundation/gf180mcu-pdk/blob/25ed9c64b64b8e1b93cc4d2d5cade4cd82383a9a/docs/analog/spice/elec_specs/tables_clear/3_Medium_Voltage_Devices5v.csv),
+which the file also records, at a fixed commit. The devices are NE2 ({term}`nfet_05v0`, W/L 10/0.6) and PE2 ({term}`pfet_05v0`,
 W/L 10/0.5). Our values are the {{ ngspice }} {term}`TT` (typical, 25 C) results in
 {repo}`results/spice/ngspice/typical`.
 

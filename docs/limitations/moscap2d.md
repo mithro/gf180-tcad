@@ -363,7 +363,6 @@ The sweep times are the last `elapsed` of each sweep's progress log, meshing inc
 
 Neither L = 2 µm cell has an AC sweep ({ref}`moscap2d-l2`).
 The nfet L = 2 µm QS time is the sum over its three attempts. Its first two attempts reached the 16 GiB cap and were killed.
-The pfet L = 2 µm cell ran in one attempt, with a peak of 9.8 GiB.
 
 The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
 The run record, with the exit code and the image, is on {ref}`tcad-provenance`.

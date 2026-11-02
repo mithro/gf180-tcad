@@ -436,6 +436,12 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   the PR for issue #119: {repo}`src/gf180tcad/explain/numbers.py` `format_value` joins value and unit with U+00A0 and puts
   U+2060 after the slash of a compound unit, and the Sphinx extension {repo}`docs/_ext/unit_join.py`
   does the same for values typed by hand and for the generated result pages.
+- Shortcut sweep: the card's ACNQSMOD and TRNQSMOD in both nfet bins (`nfet_06v0.0`, lines
+  37060 and 37316; `nfet_06v0.1`, lines 37398 and 37654; all 0) are read from
+  `data/explain/model_card.toml`, registry entries
+  `acnqsmod_nfet` and `trnqsmod_nfet`; a sandbox test checks each line in the image's card.
+  The page now says, by substitution, that the SPICE capacitance is quasi-static (manual
+  §8.1 and appendix A).
 - The SPICE curve is described as the equations of BSIM4's capacitance model (manual ch. 7);
   the frequency of the `cv` sweep is not printed, since no committed data file holds it.
 - The landing page now has one heading per tier, so each list stays within seven items;
