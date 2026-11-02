@@ -187,6 +187,10 @@ Nothing is resampled, smoothed or decimated: every kept element is a mesh elemen
     - `MAX_BYTES` and the `OverBudget` refusal are gone.
     - The meta gains `size_bytes`. `check_meta` requires it, and `read` refuses an npz of another size.
     - `cut` prints the installed size. Every other refusal stays.
+    - `regenerate` removes its own scratch directory after a match, as `cut` does. After a
+      mismatch it keeps it, with the regenerated mesh, and prints its path.
+    - `regenerate --meshconv-level` is not built: issue #123 tracks it. It needs the
+      per-level `mesh_sha256`s of the meshconv rerun (#67).
     - `WINDOW_KX = 0.25` and `WINDOW_DEPTH_UM = 0.1` are the defaults of `--kx` and `--depth-um`.
     - The meshcut entry point's hash moves. It has no committed tree, so no restamp is needed.
     - `docs/reproduce/index.md` has a section on the artefact. Spec §10.1 is amended.
