@@ -283,7 +283,7 @@ def _run(*args: str) -> subprocess.CompletedProcess:
 
 def test_help_documents_the_three_checks():
     out = _run("--help").stdout
-    for check in ("FIGURE", "EQUATION", "FILELINK", "--rules"):
+    for check in ("FIGURE", "FIGURE-FORM", "FIGURE-OK", "EQUATION", "FILELINK", "--rules"):
         assert check in out
 
 

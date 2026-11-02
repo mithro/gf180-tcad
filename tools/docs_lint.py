@@ -281,22 +281,30 @@ OPT_OUT_WORDS = 6  # a figure-ok reason has six words or more
 RULES_HELP = """\
 house rules (--rules all, or a comma-separated subset of figure,equation,filelink):
   FIGURE    a section (the text from one heading to the next) whose prose names a physical
-            situation (a word of SITUATION_NOUNS: curve, mesh, stack, profile, cross-section,
-            region, sweep, layout, die, junction, or a plural) has no {figure} directive and no
-            {numref} role. Tables, headings, code, comments, glossary bodies and role targets
-            are not prose; a {term} role's text is; a software stack is not a stack. In
-            README.md and CONTRIBUTING.md (read on GitHub) a Markdown image counts as a figure.
-            Opt-out for a section whose noun is not a physical thing (a mesh file, a sweep
-            command): <!-- figure-ok: reason of three words or more --> in the section.
+            situation (a word of SITUATION_NOUNS: curve, mesh, stack, profile, cross section,
+            region, band, band diagram, gate, oxide, channel, doping, depletion, fringe, plan
+            view, drawing, plot, geometry and others, or a plural; "the well", "n-well",
+            "electric field") or "the figure above" has no {figure} directive and no {numref}
+            role. Tables, headings, code, comments, glossary bodies and role targets are not
+            prose; a {term} role's text is; a software stack is not a stack. In README.md and
+            CONTRIBUTING.md (read on GitHub) a Markdown image counts as a figure. Opt-out for a
+            section whose noun is not a physical thing (a mesh file, a sweep command):
+            <!-- figure-ok: a reason of six words or more --> in the section. Each opt-out
+            prints PATH:LINE: NOTE FIGURE-OK reason.
+  FIGURE-FORM  a {figure} with no :name:, no caption, or no {numref} on the page citing it.
+            The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
   EQUATION  a display math block that is not in the house form: $$ ... $$ (label), then a line
             "where", then a list with one item per symbol, each starting with the symbol in
-            $...$ and ending with ", in <unit>" or ", dimensionless". The symbols are parsed
-            from the LaTeX (a letter or Greek letter with its subscript); every one must be
-            defined. A {math} directive is reported too: the house form is $$ ... $$ (label).
-  FILELINK  inline code that names a file or path (a path under results/, tools/, data/, docs/,
-            src/, tests/, docker/ or third_party/, or a file name ending .py, .json, .toml, .md,
-            .csv and similar) and is not the text of a link ({repo}, {test} or another role, or
-            [text](url)). Code blocks are skipped; figure captions and tables are checked.
+            $...$ and ending with ", in <SI unit symbols>" (F/m², cm⁻³) or ", dimensionless".
+            The symbols are parsed from the LaTeX (a letter or Greek letter with its
+            subscript); every one must be defined, and no item may define a symbol the equation
+            does not use. A {math} directive is reported too.
+  FILELINK  a file or path that is not a link: inline code that is a path (under results/,
+            tools/, data/, docs/, src/, tests/, docker/, third_party/, bin/, logs/ or ~/), a
+            file name with an extension (.py, .json, .toml, .md, .csv and similar, with an
+            optional :line suffix) or Makefile, Dockerfile, README and similar; and the same
+            names in bare prose. A role ({repo}, {test}) or [text](url) is a link. Code blocks
+            are skipped; figure captions and tables are checked; `np.log` is code, not a file.
 Each finding prints PATH:LINE: FAIL CHECK message.
 """
 
