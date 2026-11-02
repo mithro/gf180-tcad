@@ -333,9 +333,11 @@ def citation(name: str) -> str:
 _SUP = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 
 
-#: A non-breaking space joins a value to its unit and the parts of "a × 10ⁿ"; a word joiner
-#: after "/" stops a compound unit such as fF/µm² breaking at the slash (issue #119).
+#: The non-breaking space (U+00A0) that joins a value to its unit and the parts of "a × 10ⁿ"
+#: (issue #119).
 NBSP = "\u00a0"
+#: The word joiner (U+2060) put after the "/" of a compound unit such as fF/µm², so the line
+#: never breaks at the slash (issue #119).
 WORD_JOINER = "\u2060"
 
 
