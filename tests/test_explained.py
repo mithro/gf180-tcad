@@ -1362,8 +1362,17 @@ def test_counts_are_derived(tmp_path):
     src = "results/tcad/calibration/nfet_05v0.result.json"
     fit = json.loads((ROOT / src).read_text("utf-8"))
     lengths = {g["geometry"]["l_um"] for g in fit["per_geometry"].values()}
-    c = numbers.counts()
-    assert (c["corner_count"], c["fit_length_count"]) == (len(CORNERS), len(lengths))
+    pfet_fit = json.loads(
+        (ROOT / "results/tcad/calibration/pfet_05v0.result.json").read_text("utf-8")
+    )
+    assert numbers.counts() == {
+        "corner_count": len(CORNERS),
+        "fit_length_count": len(lengths),
+        "budget": fit["budget"],
+        "budget_used": fit["budget_used"],
+        "nfev_nfet": fit["optimiser"]["nfev"],
+        "nfev_pfet": pfet_fit["optimiser"]["nfev"],
+    }
     subs = numbers.substitutions()
     assert subs["x_corner_count"] == str(len(CORNERS))
     assert subs["x_fit_length_count"] == str(len(lengths))
@@ -1780,7 +1789,9 @@ def test_limit_kinds_are_the_process_files(tmp_path):
     want = {}
     for device in _FITS:
         params = tomllib.loads((ROOT / f"data/process/{device}.toml").read_text("utf-8"))["param"]
-        want[device] = {n: (params[n]["start_kind"], *params[n]["bounds_kind"]) for n in numbers.TUNABLES}
+        want[device] = {
+            n: (params[n]["start_kind"], *params[n]["bounds_kind"]) for n in numbers.TUNABLES
+        }
     assert want["nfet_05v0"] == want["pfet_05v0"] == numbers.limit_kinds()
     rows = numbers.limit_kinds_table().splitlines()[2:]
     for row, (name, kinds) in zip(rows, want["nfet_05v0"].items(), strict=True):
@@ -1845,13 +1856,19 @@ def test_corner_spread_is_the_committed_corners():
     env = json.loads((ROOT / "results/spice/envelope.json").read_text("utf-8"))
     rec = _fit("nfet_05v0")["per_geometry"][gid]
     got = {s.words: s for s in numbers.corner_spread()}
-    for key, words in (("cgg_acc_ff", "Accumulation flat part"), ("cgg_inv_ff", "Inversion flat part")):
+    for key, words in (
+        ("cgg_acc_ff", "Accumulation flat part"),
+        ("cgg_inv_ff", "Inversion flat part"),
+    ):
         vals = [m[key] for m in metrics.values()]
         s = got[words]
         assert (s.typical, s.lowest, s.highest) == (metrics["typical"][key], min(vals), max(vals))
         assert [s.lowest, s.highest] == env["ngspice"]["nfet_05v0"][gid][key]
         assert s.lowest < s.typical < s.highest
-    for check, key, words in (("dv_dep", "u_dep", "Falling crossing"), ("dv_inv", "u_inv", "Rising crossing")):
+    for check, key, words in (
+        ("dv_dep", "u_dep", "Falling crossing"),
+        ("dv_inv", "u_inv", "Rising crossing"),
+    ):
         w = rec["verdicts"][check]["window"]
         s = got[words]
         assert (s.typical, s.lowest, s.highest) == (rec["spice_regions"][key], w["lo"], w["hi"])
