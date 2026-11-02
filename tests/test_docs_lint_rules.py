@@ -694,6 +694,9 @@ def test_review_sections_are_flagged_or_not_situations(rel, heading, reason):
         (r"y = \exp(-E / kT) + ln x + log x + cos x + tanh x", {"y", "E", "k", "T", "x"}),
         (r"V = max(a, b) - min(a, b)", {"V", "a", "b"}),
         (r"n = s i", {"n", "s", "i"}),
+        # A function name inside a longer run of letters is not one: T m a x, not T and max.
+        (r"x = Tmax", {"x", "T", "m", "a"}),
+        (r"y = a\,sin x + Texp", {"y", "a", "x", "T", "e", "p"}),
     ],
 )  # fmt: skip
 def test_equation_function_names_are_not_symbols(latex, symbols):
