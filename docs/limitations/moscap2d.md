@@ -235,9 +235,9 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
 
 (moscap2d-l2)=
 
-## The L = 2 µm cell: QS only, resumed, with a memory growth that is not fixed
+## The L = 2 µm cells: QS only, resumed, with a memory growth that is not fixed
 
-- **QS only.** The L = 2 µm cell (501k nodes for the nfet) has no AC result (no `cgx.csv`). Its AC
+- **QS only.** The L = 2 µm cells (501k nodes for the nfet, 504k for the pfet) have no AC result (no `cgx.csv`). Their AC
   sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
   solver ({term}`UMFPACK` 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
@@ -252,7 +252,7 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
   The restart counts in these job files were written after the runs, from the progress logs.
 - **The calibrated nfet cell is resumed too.** Its job file records 2 restarts, after points 67
   and 147 ({ref}`moscap2d-calibrated`). The same command was rerun on the same `--resume`,
-  three attempts in all ({ref}`tcad-provenance`). The calibrated pfet cell finished in one attempt,
+  three attempts in all ({ref}`tcad-provenance`). The calibrated pfet L = 2 µm cell finished in one attempt,
   with a peak of 9.8 GiB.
 - **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
   every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
@@ -357,8 +357,9 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
 
-The L = 2 µm cell has no AC sweep ({ref}`moscap2d-l2`). Its QS time is the sum over its three attempts.
-Its first two attempts reached the 16 GiB cap and were killed.
+Neither L = 2 µm cell has an AC sweep ({ref}`moscap2d-l2`).
+The nfet L = 2 µm QS time is the sum over its three attempts. Its first two attempts reached the 16 GiB cap and were killed.
+The pfet L = 2 µm cell ran in one attempt, with a peak of 9.8 GiB.
 
 The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
 The run record, with the exit code and the image, is on {ref}`tcad-provenance`.
