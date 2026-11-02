@@ -20,7 +20,8 @@ Full resolution:
          Recording the photographer: https://github.com/mithro/gf180-tcad/issues/122
 Author:  wafer.space (the Crowd Supply update's author, Tim "mithro" Ansell), with the
          full-resolution photography on Silicon Prawn.
-Licence: CC BY (Creative Commons Attribution). No version is stated on the update.
+Licence: CC BY (Creative Commons Attribution), https://creativecommons.org/licenses/by/
+         (the unversioned deed: no version is stated on the update).
          The repository owner confirmed the licence on 2026-11-03 01:45 ACDT, verbatim:
          "The silicon prawn images and the die photos on the cs updates are all CC-BY."
          (issue https://github.com/mithro/gf180-tcad/issues/104)
