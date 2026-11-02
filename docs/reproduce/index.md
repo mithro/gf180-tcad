@@ -268,12 +268,12 @@ another simulator is a row in the file. Adding one leaves every committed hash a
 {test}`tests/tcad/test_tcad_provenance.py::test_registry_trees_cover_every_committed_root`
 requires every results folder under `results/tcad*/` to be a row of `trees`.
 
-The registry has three entry points:
+The registry's entry points:
 
 - {py:mod}`gf180tcad.tcad.__main__` writes the MOS capacitor and mesh-convergence folders;
 - {py:mod}`gf180tcad.calibrate.__main__` writes the calibration and validation folders;
-- {py:mod}`gf180tcad.meshcut.__main__` cuts the reduced mesh artefact of a 2D job
-  ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)). It writes no committed folder.
+- {py:mod}`gf180tcad.meshcut.__main__` cuts the reduced mesh artefact of a 2D job and writes
+  no committed folder.
 
 A change to a module that a folder's writer never imports therefore leaves the folder's hash alone.
 The calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in
