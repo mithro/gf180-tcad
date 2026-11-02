@@ -28,6 +28,17 @@ body doping are fitted to the {term}`SPICE` model. The junction depth is the
 project choices. {{ x_fig_parts_cell_scale }}
 ```
 
+```{figure} images/gf180mcu-afe-die-photo.jpg
+:alt: A photo of a black tray holding a grid of small chips. One chip is enlarged at the left, outlined in red, with red labels on its blocks: OPAMP, SAR ADC, Switched-Capacitance and a second OPAMP.
+
+A real {term}`GF180MCU` chip, photographed. It is an analog front end for sensors from the
+OpenFASoC project's `mpw18h1` tapeout. The enlarged chip shows two op-amps, a SAR ADC and a
+switched-capacitor block, labelled in red. The tray holds more chips. Each block holds many
+transistors like the cell above, too small for the photo to show one. {{ wafer_space }} published
+the photo under the CC BY licence in its [OpenFASoC update on Crowd Supply](https://www.crowdsupply.com/wafer-space/gf180mcu-run-1/updates/openfasoc).
+The [full-resolution photo is on Silicon Prawn](https://siliconprawn.org/archive/doku.php?id=mcmaster:efabless:gf180mcu-mpw18h1-18100004).
+```
+
 (explained-parts-gate)=
 
 ## The gate
