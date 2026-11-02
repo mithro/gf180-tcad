@@ -413,7 +413,7 @@ on the depletion crossing. The 2D cell is Same process:
 | Accumulation plateau (%) | 13.7 | Same process |
 | Inversion plateau (%) | 13.0 | Same process |
 | Depletion crossing shift (mV) | −117 | Same process |
-| Inversion crossing shift (mV) | −6 | Agree |
+| Inversion crossing shift (mV) | −5 | Agree |
 
 The plateau window combines the Cox spec over the 7 µm² gate with the corner envelope.
 Here the envelope lies inside the spec at every plateau point, so the window is 12.6 to 19.6 fF.
@@ -462,7 +462,7 @@ The plateau gap shrinks with L, as at the shorter pfet cells ([issue #77](https:
 | Accumulation plateau (%) | 6.9 | Same process |
 | Inversion plateau (%) | 4.2 | Agree |
 | Depletion crossing shift (mV) | −193 | Disagree |
-| Inversion crossing shift (mV) | −2 | Agree |
+| Inversion crossing shift (mV) | −3 | Agree |
 
 The corner envelope of the depletion crossing runs from −0.820 V (the ff corner) to −0.558 V (ss).
 The 2D crossing is at −0.881 V, 62 mV past the ff end.
