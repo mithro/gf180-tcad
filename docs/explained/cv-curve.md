@@ -32,6 +32,10 @@ The places of the labels and the length of the arrow are drawing choices.
 
 ## Three numbers to fit
 
+The simulation solves the equations of the stack at each gate voltage
+({py:mod}`gf180tcad.tcad.moscap1d`). The SPICE curve comes from the equations of
+{term}`BSIM4`'s capacitance model ({ref}`BSIM4 manual, ch. 7 <lit-bsim4>`).
+
 The simulated stack has three free numbers: the oxide thickness, the body doping and a shift of
 the gate voltage ({ref}`cv-agreement`). The fit searches for the values that bring the simulated
 curve closest to the SPICE one. It starts from the values below and stays within limits set
@@ -111,11 +115,8 @@ halfway-level crossings differ by {{ x_dv_dep_l10 }} on the falling side and {{ 
 the rising side, simulated minus SPICE. The allowed difference is {{ x_dv_tol_l10 }}
 ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 
-Between the flat parts the two curves differ by up to {{ x_depletion_l10 }}. The simulation
-solves the stack at rest at each gate voltage, the {term}`quasi-static` curve
-({py:mod}`gf180tcad.tcad.moscap1d`). The SPICE curve comes from the equations of
-{term}`BSIM4`'s capacitance model instead ({ref}`BSIM4 manual, ch. 7 <lit-bsim4>`). Where the
-curve is steep, a small shift gives a large relative error, so the checks leave the dip out
+Between the flat parts the two curves differ by up to {{ x_depletion_l10 }}. Where the curve is
+steep, a small shift gives a large relative error, so the checks leave the dip out
 ({ref}`the deviation <cv-agreement-deviation>`).
 
 A {ref}`verdict <agreement-verdicts>` is {term}`Agree`, {term}`Same process` or
