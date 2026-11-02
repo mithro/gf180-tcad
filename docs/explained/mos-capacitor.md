@@ -112,10 +112,18 @@ the left flat part. On the right it lies within {{ x_plateau_inv_l10 }}. The all
 {{ x_plateau_tol_l10 }} ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 
 A verdict says whether the simulation matches the SPICE model: {term}`Agree`,
-{term}`Same process` or {term}`Disagree` ({ref}`the verdicts <agreement-verdicts>`). The 1D fit is {{ x_verdict_nfet_1d }} for the nfet
-and {{ x_verdict_pfet_1d }} for the {term}`pfet_05v0` ({ref}`the pfet mismatch <cv-agreement-mismatch>`).
+{term}`Same process` or {term}`Disagree` ({ref}`the verdicts <agreement-verdicts>`). Each check
+of a curve gets a verdict, and a geometry's verdict is the worst of them
+({ref}`the verdict rule <cv-agreement-windows>`).
 
-The 2D simulation of the whole cell uses the fitted nfet stack. It is
-{{ x_verdict_nfet_2d_l0p60 }} at `w10p0_l0p60` and {{ x_verdict_nfet_2d_l0p70 }} at `w10p0_l0p70`
-({ref}`cv-agreement-validation`). The 2D cell and its other differences are on
-{doc}`/limitations/moscap2d`.
+The 1D fit is {{ x_verdict_nfet_1d }} for the nfet and {{ x_verdict_pfet_1d }} for the
+{term}`pfet_05v0` ({ref}`the pfet mismatch <cv-agreement-mismatch>`).
+
+The 2D simulation of a whole cell uses the fitted stack of its transistor. The table lists every
+2D cell with a verdict ({ref}`cv-agreement-validation`).
+
+{{ x_two_d_table }}
+
+{{ x_two_d_disagree }} ({ref}`the checks <cv-agreement-metric>`,
+[issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The 2D cell and its other
+differences are on {doc}`/limitations/moscap2d`.

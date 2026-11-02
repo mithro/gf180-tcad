@@ -1095,8 +1095,6 @@ def test_moscap_values_are_the_files():
 _VERDICT_FILES = {
     "verdict_nfet_1d": ("results/tcad/calibration/nfet_05v0.result.json", ["verdict"]),
     "verdict_pfet_1d": ("results/tcad/calibration/pfet_05v0.result.json", ["verdict"]),
-    "verdict_nfet_2d_l0p60": ("results/tcad/validation/nfet_05v0.json", ["two_d", "w10p0_l0p60", "verdict"]),
-    "verdict_nfet_2d_l0p70": ("results/tcad/validation/nfet_05v0.json", ["two_d", "w10p0_l0p70", "verdict"]),
 }  # fmt: skip
 
 
@@ -1142,9 +1140,92 @@ def test_verdict_sentence_follows_an_edited_result_file(tmp_path):
 def test_moscap_page_prints_its_numbers():
     text = MOSCAP_PAGE.read_text(encoding="utf-8")
     for key in (*_VERDICT_FILES, "cgg_acc_l10", "cgg_inv_l10", "plateau_acc_l10", "plateau_inv_l10",
-                "plateau_tol_l10"):  # fmt: skip
+                "plateau_tol_l10", "two_d_table", "two_d_disagree"):  # fmt: skip
         assert "{{ x_" + key + " }}" in text, key
     for name in ("moscap-cell", "moscap-cv"):
         assert f"/_generated/explained/{name}-light.svg" in text, name
-    for anchor in ("cv-agreement-mismatch", "cv-agreement-validation"):
+    for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-windows",
+                   "cv-agreement-metric"):  # fmt: skip
         assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor
+
+
+# --- the 2D verdicts: every committed one on the page ----------------------------------------
+
+_VALIDATION = ROOT / "results" / "tcad" / "validation"
+
+
+def _committed_two_d(root: Path = ROOT) -> list[tuple[str, float, float, str]]:
+    """(device, W, L, verdict) of every ``two_d`` entry with a verdict, read here by hand."""
+    out = []
+    for path in sorted((root / "results" / "tcad" / "validation").glob("*.json")):
+        doc = json.loads(path.read_text("utf-8"))
+        for e in doc.get("two_d", {}).values():
+            if e.get("verdict") is not None:
+                out.append(
+                    (doc["device"], e["geometry"]["w_um"], e["geometry"]["l_um"], e["verdict"])
+                )
+    return out
+
+
+def _row(device: str, w: float, length: float, verdict: str) -> str:
+    return f"| {{term}}`{device}` | {w:g} µm | {length:g} µm | {{term}}`{verdict}` |"
+
+
+def test_every_two_d_verdict_is_on_the_page():
+    """Each committed 2D verdict is a row of the page's table, and the table has no other row,
+    so a new validated cell adds its row with no edit of the page."""
+    from gf180tcad import explain
+
+    cells = _committed_two_d()
+    assert cells and {d for d, *_ in cells} == {"nfet_05v0", "pfet_05v0"}
+    page = _render(MOSCAP_PAGE.read_text(encoding="utf-8"), explain.substitutions())
+    rows = [ln for ln in page.splitlines() if ln.startswith("| {term}`")]
+    assert sorted(rows) == sorted(_row(*c) for c in cells)
+    assert rows == [_row(*c) for c in sorted(cells)]  # grouped by device, then W, then L
+
+
+def _validation_copy(tmp_path: Path) -> Path:
+    dst = tmp_path / "results" / "tcad" / "validation"
+    dst.mkdir(parents=True)
+    for f in _VALIDATION.glob("*.json"):
+        (dst / f.name).write_text(f.read_text("utf-8"), "utf-8")
+    return dst
+
+
+def test_two_d_table_grows_with_a_new_cell(tmp_path):
+    numbers = _numbers()
+    dst = _validation_copy(tmp_path)
+    doc = json.loads((dst / "pfet_05v0.json").read_text("utf-8"))
+    new = json.loads(json.dumps(doc["two_d"]["w10p0_l0p70"]))
+    new["geometry"] = {**new["geometry"], "geometry_id": "w1p6_l0p70", "w_um": 1.6}
+    doc["two_d"]["w1p6_l0p70"] = new
+    (dst / "pfet_05v0.json").write_text(json.dumps(doc), "utf-8")
+    before = numbers.two_d_table().splitlines()
+    after = numbers.two_d_table(root=tmp_path).splitlines()
+    assert len(after) == len(before) + 1
+    assert _row("pfet_05v0", 1.6, 0.7, new["verdict"]) in after
+
+
+def test_disagree_clause_follows_the_checks(tmp_path):
+    numbers = _numbers()
+    assert numbers.two_d_disagree(root=tmp_path / "missing") == "No 2D cell is Disagree"
+    dst = _validation_copy(tmp_path)
+    one = numbers.two_d_disagree(root=tmp_path)
+    assert one.startswith("Every Disagree cell fails on one check alone: ")
+    doc = json.loads((dst / "nfet_05v0.json").read_text("utf-8"))
+    cell = doc["two_d"]["w10p0_l0p60"]
+    assert cell["verdict"] == "Disagree"
+    cell["verdicts"]["plateau_acc"]["verdict"] = "Disagree"
+    (dst / "nfet_05v0.json").write_text(json.dumps(doc), "utf-8")
+    two = numbers.two_d_disagree(root=tmp_path)
+    assert numbers.CHECKS["plateau_acc"] in two and two.startswith("The Disagree cells fail on ")
+
+
+def test_disagree_cells_are_the_issue_on_the_page():
+    """The page links issue #108 (the depletion crossing) beside the Disagree clause: while a 2D
+    cell is Disagree, that check is among the failing ones."""
+    numbers = _numbers()
+    bad = [c for c in numbers.two_d_cells() if c.verdict == "Disagree"]
+    if bad:
+        assert all("dv_dep" in c.failing for c in bad)
+    assert "issues/108" in MOSCAP_PAGE.read_text(encoding="utf-8")

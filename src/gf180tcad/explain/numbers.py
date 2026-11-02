@@ -17,12 +17,16 @@ The page sentence says which kind a value is; ``x_<name>_label`` gives the words
 multiplying by ``factor`` (1000 shows a value in V as mV).
 
 :data:`WORDS` holds the words a page prints from a committed file, the verdicts of the
-calibration and validation files, so a new verdict changes the page's sentence
-(:func:`word`).
+calibration files, so a new verdict changes the page's sentence (:func:`word`).
+
+:func:`two_d_cells` reads every 2D cell with a verdict from the validation files
+(``results/tcad/validation/*.json``), so the page's table of them (:func:`two_d_table`) and
+its sentence on the Disagree cells (:func:`two_d_disagree`) grow with each new cell.
 """
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass
 from functools import cache
@@ -162,12 +166,9 @@ class Word:
     key: dict
 
 
-_VALIDATION = "results/tcad/validation/nfet_05v0.json"
 _WORDS = (
     Word("verdict_nfet_1d", _RESULT, {"json": ["verdict"]}),
     Word("verdict_pfet_1d", "results/tcad/calibration/pfet_05v0.result.json", {"json": ["verdict"]}),
-    Word("verdict_nfet_2d_l0p60", _VALIDATION, {"json": ["two_d", "w10p0_l0p60", "verdict"]}),
-    Word("verdict_nfet_2d_l0p70", _VALIDATION, {"json": ["two_d", "w10p0_l0p70", "verdict"]}),
 )  # fmt: skip
 #: The verdict words of the pages, by name (see :class:`Word`).
 WORDS: dict[str, Word] = {w.name: w for w in _WORDS}
@@ -180,6 +181,75 @@ def word(name: str, root: Path = ROOT) -> str:
     if not isinstance(v, str) or not v:
         raise TypeError(f"{name}: {w.source} {w.key} holds {v!r}, not a word")
     return v
+
+
+VALIDATION = "results/tcad/validation"
+
+#: The checks of a validated cell (``verdicts`` of a ``two_d`` entry), in plain words
+#: (``docs/comparison/cv-agreement.md``, "The agreement metric").
+CHECKS = {
+    "plateau_acc": "the flat part at the most negative gate voltage",
+    "plateau_inv": "the flat part at the most positive gate voltage",
+    "dv_dep": "the gate voltage where the curve falls halfway from its most negative flat part to its minimum",
+    "dv_inv": "the gate voltage where the curve climbs back through that halfway level",
+}
+
+
+@dataclass(frozen=True)
+class Cell:
+    """One 2D cell with a verdict in a validation file; ``failing``: its Disagree checks."""
+
+    device: str
+    geometry_id: str
+    w_um: float
+    l_um: float
+    verdict: str
+    failing: tuple[str, ...]
+
+
+def two_d_cells(root: Path = ROOT) -> list[Cell]:
+    """Every ``two_d`` entry with a verdict in ``results/tcad/validation/*.json`` under ``root``,
+    by device, then gate width, then gate length. Entries without one ("not run") are left out."""
+    cells = []
+    for path in sorted((Path(root) / VALIDATION).glob("*.json")):
+        doc = json.loads(path.read_text("utf-8"))
+        if "two_d" not in doc:  # provenance.json
+            continue
+        for gid, e in doc["two_d"].items():
+            if e.get("verdict") is None:
+                continue
+            failing = tuple(k for k, v in e["verdicts"].items() if v["verdict"] == "Disagree")
+            unknown = [k for k in e["verdicts"] if k not in CHECKS]
+            if unknown:
+                raise KeyError(f"{path.name} {gid}: checks {unknown} have no plain words in CHECKS")
+            g = e["geometry"]
+            cells.append(Cell(doc["device"], gid, g["w_um"], g["l_um"], e["verdict"], failing))
+    return sorted(cells, key=lambda c: (c.device, c.w_um, c.l_um))
+
+
+def _um(v: float) -> str:
+    return f"{v:g} µm"
+
+
+def two_d_table(root: Path = ROOT) -> str:
+    """A Markdown table of :func:`two_d_cells`: transistor, gate width, gate length, verdict."""
+    rows = ["| Transistor | Gate width | Gate length | Verdict |", "|---|---|---|---|"]
+    rows += [
+        f"| {{term}}`{c.device}` | {_um(c.w_um)} | {_um(c.l_um)} | {{term}}`{c.verdict}` |"
+        for c in two_d_cells(root)
+    ]
+    return "\n".join(rows)
+
+
+def two_d_disagree(root: Path = ROOT) -> str:
+    """A clause on what the Disagree cells of :func:`two_d_cells` fail on, from their checks."""
+    bad = [c for c in two_d_cells(root) if c.verdict == "Disagree"]
+    if not bad:
+        return "No 2D cell is Disagree"
+    failing = sorted({k for c in bad for k in c.failing}, key=list(CHECKS).index)
+    if len(failing) == 1:
+        return f"Every Disagree cell fails on one check alone: {CHECKS[failing[0]]}"
+    return "The Disagree cells fail on " + "; and on ".join(CHECKS[k] for k in failing)
 
 
 def _formula(name: str):
@@ -236,11 +306,14 @@ def text(name: str) -> str:
 
 def substitutions() -> dict[str, str]:
     """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, and ``{"x_<name>":
-    word}`` for every :data:`WORDS` entry, for MyST."""
+    word}`` for every :data:`WORDS` entry, and the 2D cells' table and Disagree clause
+    (``x_two_d_table``, ``x_two_d_disagree``), for MyST."""
     out: dict[str, str] = {}
     for name, n in REGISTRY.items():
         out[f"x_{name}"] = text(name)
         out[f"x_{name}_label"] = LABELS[n.kind]
     for name in WORDS:
         out[f"x_{name}"] = word(name)
+    out["x_two_d_table"] = two_d_table()
+    out["x_two_d_disagree"] = two_d_disagree()
     return out
