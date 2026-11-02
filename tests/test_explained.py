@@ -464,7 +464,6 @@ def test_figures_legible_at_400px():
     assert px >= 9, f"{px:.1f} px at 400 px"
 
 
-
 # --- copied images and their licence notes ---------------------------------------------------
 
 IMAGES = EXPLAINED / "images"
@@ -502,8 +501,12 @@ def test_every_copied_image_has_a_licence_note():
 def test_positive_control_licence_notes(tmp_path):
     (tmp_path / "a.png").write_bytes(b"x")
     (tmp_path / "b.jpg").write_bytes(b"x")
-    (tmp_path / "b.jpg.licence.txt").write_text("Source: https://example.org/b\nLicence:\n", encoding="utf-8")
-    (tmp_path / "c.png.licence.txt").write_text("Source: https://x\nLicence: CC BY\n", encoding="utf-8")
+    (tmp_path / "b.jpg.licence.txt").write_text(
+        "Source: https://example.org/b\nLicence:\n", encoding="utf-8"
+    )
+    (tmp_path / "c.png.licence.txt").write_text(
+        "Source: https://x\nLicence: CC BY\n", encoding="utf-8"
+    )
     assert licence_problems(tmp_path) == [
         "a.png: no licence note",
         "b.jpg.licence.txt: no 'Licence:' line",
