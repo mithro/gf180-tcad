@@ -302,9 +302,18 @@ def test_npz_refuses_bad_members(tmp_path, bad):
 def test_constants():
     assert meshcut.ARTEFACT == "mesh-window.npz"
     assert meshcut.META == "mesh-window.meta.json"
-    assert meshcut.MAX_BYTES == 2_000_000
     assert meshcut.FORMAT == 1
     assert meshcut.UM_PER_MSH_UNIT == 1e4
+    # the window rule's default (renders plan, "What M1 must decide"): a quarter gate length
+    # on each side of the gate, from the poly top to 0.1 um below the silicon surface
+    assert (meshcut.WINDOW_KX, meshcut.WINDOW_DEPTH_UM) == (0.25, 0.1)
+
+
+def test_no_size_cap():
+    """The owner, 2026-11-03 01:15 ACDT: "no budget is fixed". The size is recorded, never
+    refused."""
+    assert not hasattr(meshcut, "MAX_BYTES")
+    assert not hasattr(meshcut_cli, "OverBudget")
 
 
 def _imports(path):
@@ -468,6 +477,7 @@ def test_meta_schema_sorted_and_complete(tmp_path):
     assert on_disk["full_mesh_sha256"] == _sha(FIXTURE)
     assert (on_disk["full_mesh_node_count"], on_disk["full_mesh_triangle_count"]) == (30, 40)
     assert on_disk["npz_sha256"] == _sha(out / meshcut.ARTEFACT)
+    assert on_disk["size_bytes"] == (out / meshcut.ARTEFACT).stat().st_size
     assert on_disk["regions"] == ["body", "oxide", "gate_poly"]
     assert on_disk["boundaries"] == ["body___oxide", "gate_poly___oxide"]
     assert on_disk["source"] == "cache"
@@ -496,6 +506,8 @@ def test_meta_schema_sorted_and_complete(tmp_path):
         lambda m: m["units"].update(nodes_cm="um"),
         lambda m: m.update(full_mesh_sha256="abc"),
         lambda m: m.update(regions="body"),
+        lambda m: m.update(size_bytes=-1),
+        lambda m: m.update(size_bytes="3 MB"),
     ],
 )
 def test_meta_schema_refuses_a_bad_meta(tmp_path, spoil):
@@ -526,12 +538,21 @@ def test_read_refuses_an_npz_that_is_not_the_meta_s(tmp_path):
         meshcut.read(out)
 
 
+def test_read_refuses_a_size_that_is_not_the_npz_s(tmp_path):
+    meta, out, _ = _cut_fixture(tmp_path)
+    meta["size_bytes"] += 1
+    (out / meshcut.META).write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n", "utf-8")
+    with pytest.raises(ValueError, match="size_bytes"):
+        meshcut.read(out)
+
+
 def test_read_refuses_members_that_disagree_with_the_meta(tmp_path):
     meta, out, _ = _cut_fixture(tmp_path)
     a = npz.read_npz(out / meshcut.ARTEFACT)
     a["region"] = a["region"].astype(np.int64)  # wrong dtype
     npz.write_npz(out / meshcut.ARTEFACT, a)
     meta["npz_sha256"] = _sha(out / meshcut.ARTEFACT)
+    meta["size_bytes"] = (out / meshcut.ARTEFACT).stat().st_size
     (out / meshcut.META).write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n", "utf-8")
     with pytest.raises(ValueError, match="region"):
         meshcut.read(out)
@@ -542,6 +563,7 @@ def _rewrite_members(out, meta, change):
     change(a)
     npz.write_npz(out / meshcut.ARTEFACT, a)
     meta["npz_sha256"] = _sha(out / meshcut.ARTEFACT)
+    meta["size_bytes"] = (out / meshcut.ARTEFACT).stat().st_size
     (out / meshcut.META).write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n", "utf-8")
 
 
@@ -893,31 +915,6 @@ def test_host_command_end_to_end_without_docker(tmp_path, monkeypatch, inside):
     assert meshcut.read(dest).node_id.tolist() == list(range(1, 31))
 
 
-def test_host_command_refuses_an_artefact_over_budget(tmp_path, monkeypatch, inside):
-    results, d = _fixture_job(tmp_path)
-    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
-    monkeypatch.setattr(meshcut_cli, "source_image", lambda job_dir: "stable")
-    monkeypatch.setattr(meshcut, "MAX_BYTES", 100)
-    monkeypatch.setattr(
-        meshcut_cli.subprocess, "run",
-        lambda cmd, **kw: Path(cmd[cmd.index("--out") + 1]).write_bytes(FIXTURE.read_bytes()),
-    )  # fmt: skip
-    monkeypatch.setattr(
-        meshcut_cli.sandbox, "run",
-        lambda cmd, *, out_dir, **kw: job.run_cut_job(d, out_dir, kx=0.0, depth_um=0.1,
-                                                      results_root=results),
-    )  # fmt: skip
-    out = tmp_path / "meshes" / "stable"
-    with pytest.raises(ValueError, match="2 MB|budget|100"):
-        meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.1, scratch=tmp_path / "s",
-                            results_root=results)  # fmt: skip
-    assert not out.exists()
-    # kept in the scratch directory, so M1 can measure its grid with the same command
-    for name in (meshcut.ARTEFACT, meshcut.META):
-        assert (tmp_path / "s" / name).is_file()
-    assert (tmp_path / "s" / meshcut.ARTEFACT).stat().st_size > 100
-
-
 def _fake_host_cut(tmp_path, monkeypatch):
     """The host command with the pull and the sandbox faked, and its own scratch directory
     (no ``--scratch``) made at ``<tmp>/auto``: returns ``(job_dir, results, auto)``."""
@@ -959,12 +956,34 @@ def test_host_command_removes_its_own_scratch_after_install(tmp_path, monkeypatc
     assert (tmp_path / "s" / job.MESH_NAME).is_file()
 
 
+def test_host_command_installs_any_size_and_prints_it(tmp_path, monkeypatch, inside, capsys):
+    """No size is refused: the artefact's size is recorded in its meta and printed."""
+    d, results, auto = _fake_host_cut(tmp_path, monkeypatch)
+    out = tmp_path / "meshes" / "stable"
+    dest = meshcut_cli.run_cut(d, out, results_root=results)  # the default window rule
+    meta = artefact.read_meta(dest)
+    size = (dest / meshcut.ARTEFACT).stat().st_size
+    assert meta["size_bytes"] == size
+    assert (meta["window"]["rule"]["kx"], meta["window"]["rule"]["depth_um"]) == (
+        meshcut.WINDOW_KX, meshcut.WINDOW_DEPTH_UM,
+    )  # fmt: skip
+    assert f"{size} bytes" in capsys.readouterr().out
+
+
 def test_host_command_keeps_its_own_scratch_on_refusal(tmp_path, monkeypatch, inside):
     d, results, auto = _fake_host_cut(tmp_path, monkeypatch)
-    monkeypatch.setattr(meshcut, "MAX_BYTES", 100)
+    cut_job = meshcut_cli.sandbox.run
+
+    def spoiled(cmd, *, out_dir, **kw):  # the job writes an npz that is not its meta's
+        cut_job(cmd, out_dir=out_dir, **kw)
+        with (Path(out_dir) / meshcut.ARTEFACT).open("ab") as f:
+            f.write(b"\0")
+
+    monkeypatch.setattr(meshcut_cli.sandbox, "run", spoiled)
     out = tmp_path / "meshes" / "stable"
-    with pytest.raises(meshcut_cli.OverBudget):
+    with pytest.raises(ValueError, match="npz_sha256"):
         meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.1, results_root=results)
+    assert not out.exists()
     for name in (job.MESH_NAME, meshcut.ARTEFACT, meshcut.META):
         assert (auto / name).is_file()
 
@@ -977,6 +996,9 @@ def test_cli_parses_every_command():
     p = meshcut_cli._parser()
     a = p.parse_args(["cut", "--job", "j", "--out", "o", "--kx", "0.25", "--depth-um", "0.1"])
     assert (a.command, a.kx, a.depth_um, a.cache) == ("cut", 0.25, 0.1, None)
+    for cmd in (["cut", "--out", "o"], ["cut-job", "--out", "/work/out"], ["regenerate"]):
+        a = p.parse_args([cmd[0], "--job", "j", *cmd[1:]])  # the window rule's default
+        assert (a.kx, a.depth_um) == (meshcut.WINDOW_KX, meshcut.WINDOW_DEPTH_UM), cmd
     a = p.parse_args(["regenerate", "--job", "j"])
     assert a.command == "regenerate" and not a.cut
     a = p.parse_args(
@@ -998,7 +1020,7 @@ def _committed_metas():
 
 def test_committed_artefacts_match_their_jobs():
     """Every committed artefact names its job's committed mesh_sha256 and cv.meta.json, and its
-    own npz. None is committed before Experiment M1 fixes the window (renders plan, Step 3)."""
+    own npz."""
     metas = _committed_metas()
     assert bool(metas) == MESHES.is_dir()
     for path in metas:
@@ -1015,9 +1037,11 @@ def test_committed_artefacts_match_their_jobs():
         )  # fmt: skip
 
 
-def test_committed_artefacts_within_budget():
+def test_committed_artefacts_record_their_size():
+    """No size cap (the owner, 2026-11-03): each meta records its npz's size in bytes."""
     for path in _committed_metas():
-        assert (path.parent / meshcut.ARTEFACT).stat().st_size <= meshcut.MAX_BYTES, path
+        meta = json.loads(path.read_bytes())
+        assert meta["size_bytes"] == (path.parent / meshcut.ARTEFACT).stat().st_size, path
 
 
 # --- the real mesh (pulled from the output cache) ---------------------------------------------
