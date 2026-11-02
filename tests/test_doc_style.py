@@ -1,10 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 """The documentation writing rules of spec §10.3: tables hold data, present state only, short
-glossary definitions, every term defined. The checks themselves are in tests/doc_style.py."""
+glossary definitions, every term defined, and the house rules FIGURE, EQUATION and FILELINK of
+tools/docs_lint.py --rules. The checks themselves are in tests/doc_style.py and tools/docs_lint.py."""
 
 from __future__ import annotations
 
+import importlib.util
+import json
 import re
+import sys
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -248,3 +253,83 @@ def test_positive_control_hedges(line):
 )  # fmt: skip
 def test_positive_control_not_hedges(line):
     assert not hedge_lines(line)
+
+
+# --- the house rules FIGURE, EQUATION and FILELINK (spec §10.3, owner 2026-11-03 02:00) -------
+
+RULES_BASELINE = Path(__file__).with_name("doc_rules_baseline.json")
+OUTSIDE_SPHINX = ("README.md", "CONTRIBUTING.md")
+
+
+def _docs_lint():
+    spec = importlib.util.spec_from_file_location("docs_lint", ROOT / "tools" / "docs_lint.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def rule_counts(generated: Path | None = None) -> dict[str, dict[str, int]]:
+    """{page: {check: count}} of the docs_lint --rules findings: the reader pages, and the
+    pages docgen writes when ``generated`` is given."""
+    lint = _docs_lint()
+    pages = [(p.relative_to(ROOT).as_posix(), p) for p in source_pages()]
+    if generated is not None:
+        pages += [
+            ("docs/_generated/" + p.relative_to(generated).as_posix(), p)
+            for p in sorted(generated.rglob("*.md"))
+        ]
+    out = {}
+    for rel, p in pages:
+        text = p.read_text(encoding="utf-8")
+        found = lint.rule_findings(text, sphinx=p.name not in OUTSIDE_SPHINX)
+        counts = Counter(check for _, check, _ in found)
+        if counts:
+            out[rel] = dict(sorted(counts.items()))
+    return out
+
+
+def _rules_grown(now: dict[str, dict[str, int]], prefix: str) -> list[str]:
+    base = json.loads(RULES_BASELINE.read_text(encoding="utf-8"))
+    grown = []
+    for page, counts in now.items():
+        for check, n in counts.items():
+            was = base.get(page, {}).get(check, 0)
+            if page.startswith(prefix) and n > was:
+                grown.append(f"{page}: {check} {was} -> {n}")
+    return grown
+
+
+def test_house_rules_do_not_grow():
+    """A figure for each described situation, every equation explained, every file a link
+    (spec §10.3). The baseline lists the findings the pages had when the rules came in; a count
+    may only fall. Lower it when pages are fixed:
+    ``uv run --locked --group docs python tests/test_doc_style.py --write-rules-baseline``.
+    Each finding: ``uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules
+    all <page>``."""
+    grown = _rules_grown(rule_counts(), "")
+    assert not grown, "house-rule findings grew (see spec §10.3):\n" + "\n".join(grown)
+
+
+def test_generated_pages_house_rules_do_not_grow(generated):
+    grown = _rules_grown(rule_counts(generated), "docs/_generated/")
+    assert not grown, "house-rule findings grew on docgen pages:\n" + "\n".join(grown)
+
+
+def test_house_rules_fire_on_a_bad_page():
+    """Positive control: the three checks fire through the same entry point the tests use."""
+    lint = _docs_lint()
+    bad = "# T\n\nThe mesh is in `results/a.json`.\n\n$$\nW = L\n$$\n"
+    assert {c for _, c, _ in lint.rule_findings(bad)} == {"FIGURE", "EQUATION", "FILELINK"}
+
+
+if __name__ == "__main__" and sys.argv[1:] == ["--write-rules-baseline"]:
+    import tempfile
+
+    from gf180tcad import docgen
+
+    (ROOT / "tmp").mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=ROOT / "tmp") as d:
+        docgen.generate(Path(d))
+        counts = rule_counts(Path(d))
+    RULES_BASELINE.write_text(json.dumps(counts, indent=1, sort_keys=True) + "\n", "utf-8")
+    print(RULES_BASELINE.read_text(encoding="utf-8"))

@@ -308,7 +308,7 @@ _ROLE = re.compile(r"\{(?P<name>[\w:.-]+)\}`(?P<body>[^`]*)`")
 _MD_LINK = re.compile(r"\[(?:[^\[\]]|\[[^\]]*\])*\]\([^)]*\)")
 _CODE = re.compile(r"(?<!`)`(?P<body>[^`]+)`(?!`)")
 _PATH_DIRS = r"(results|tools|data|docs|src|tests|docker|third_party|bin|logs)"
-_PATH_EXTS = r"(py|json|toml|md|csv|tsv|yml|yaml|txt|svg|png|sh|cfg|ini|lock|gds|tcl|ipynb|log|pdf)"
+_PATH_EXTS = r"(py|json|toml|md|csv|tsv|yml|yaml|txt|svg|png|sh|cfg|ini|lock|gds|tcl|ipynb|log|pdf|msh|exo)"
 _PATHLIKE = re.compile(rf"^(\./)?{_PATH_DIRS}/\S*$|^[^\s/]*(/[^\s/]+)*\.{_PATH_EXTS}(#\S*|::\S*)?$")
 GREEK = {"alpha", "beta", "gamma", "delta", "epsilon", "varepsilon", "zeta", "eta", "theta",
          "vartheta", "iota", "kappa", "lambda", "mu", "nu", "xi", "pi", "rho", "varrho", "sigma",

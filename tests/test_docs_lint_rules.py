@@ -235,6 +235,7 @@ def test_inline_math_is_not_an_equation():
     [
         "See `results/tcad/calibration/nfet_05v0.result.json` for the fit.",
         "The card is `nfet_05v0.toml`.",
+        "The mesh file `mesh.msh` is large.",
         "Run `tools/sandbox-run` first.",
         "The page `docs/explained/cv-curve.md` explains it.",
         "Data in `data/process/` and `sweep.csv`.",
