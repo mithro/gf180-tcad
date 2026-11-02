@@ -261,7 +261,7 @@ against −1 nm at ff and +1 nm at ss ({repo}`data/pdk_corners.json`).
 **What a corner fit changes.** Its targets are the corner's ngspice curves at the three
 calibration geometries, as {ref}`the corner curves <fig-corner-cv>` shows. Its fixed inputs come from the
 corner's section of the {term}`model card`, read into {repo}`data/pdk_corners.json` with each
-line number. The table also holds the card's second nfet bin, `nfet_06v0.1`, which has
+line number. The table also holds the card's second nfet {term}`bin`, `nfet_06v0.1`, which has
 the shortest calibration gate. Its lines for these inputs equal the first bin's. The 1D stack is the same; the residuals and the optimiser settings are the typical
 fit's ({py:mod}`gf180tcad.calibrate.corners`).
 
