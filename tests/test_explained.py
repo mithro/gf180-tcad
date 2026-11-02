@@ -1147,6 +1147,7 @@ def test_verdict_words_are_read_from_the_result_files():
             v = v[k]
         assert numbers.word(name) == v == subs[f"x_{name}"], name
         assert v in ("Agree", "Same process", "Disagree"), (name, v)
+        assert subs[f"x_{name}_term"] == f"{{term}}`{v}`", name
 
 
 def _render(text: str, subs: dict[str, str]) -> str:
@@ -1924,7 +1925,7 @@ def test_calibration_page_prints_its_numbers():
     text = CALIBRATION_PAGE.read_text(encoding="utf-8")
     for key in ("fit_table_nfet", "fit_table_pfet", "limit_kinds_table", "bound_hits",
                 "fit_verdict_table", "corner_table", "corner_count", "fit_length_count",
-                "budget", "budget_used", "nfev_nfet", "nfev_pfet", "verdict_pfet_1d",
+                "budget", "budget_used", "nfev_nfet", "nfev_pfet", "verdict_pfet_1d_term",
                 "two_d_disagree"):  # fmt: skip
         assert "{{ x_" + key + " }}" in text, key
     assert "/_generated/explained/calibration-limits-light.svg" in text

@@ -272,7 +272,7 @@ fit gate length gets its own {ref}`verdict <agreement-verdicts>`:
 
 {{ x_fit_verdict_table }}
 
-The pfet's whole fit is {{ x_verdict_pfet_1d }}. {numref}`fig-calibration-pfet` shows the pfet
+The pfet's whole fit is {{ x_verdict_pfet_1d_term }}. {numref}`fig-calibration-pfet` shows the pfet
 at its shortest and longest fit gates.
 
 ```{figure} /_generated/explained/calibration-pfet-light.svg

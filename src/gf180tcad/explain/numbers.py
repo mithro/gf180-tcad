@@ -578,7 +578,8 @@ def text(name: str) -> str:
 
 def substitutions() -> dict[str, str]:
     """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, and ``{"x_<name>":
-    word}`` for every :data:`WORDS` entry, and the 2D cells' table and Disagree clause
+    word}`` and ``{"x_<name>_term": word linked to the glossary}`` for every :data:`WORDS`
+    entry, and the 2D cells' table and Disagree clause
     (``x_two_d_table``, ``x_two_d_disagree``), the :func:`counts`, and the calibration page's
     tables and sentence (``x_fit_table_nfet``, ``x_fit_table_pfet``, ``x_limit_kinds_table``,
     ``x_bound_hits``, ``x_fit_verdict_table``, ``x_corner_table``), for MyST."""
@@ -588,6 +589,7 @@ def substitutions() -> dict[str, str]:
         out[f"x_{name}_label"] = LABELS[n.kind]
     for name in WORDS:
         out[f"x_{name}"] = word(name)
+        out[f"x_{name}_term"] = f"{{term}}`{word(name)}`"
     out.update({f"x_{k}": str(v) for k, v in counts().items()})
     out["x_two_d_table"] = two_d_table()
     out["x_two_d_disagree"] = two_d_disagree()
