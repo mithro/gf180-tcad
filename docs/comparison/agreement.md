@@ -275,7 +275,8 @@ in µm. So par_vth is A_Vt in the Pelgrom convention for the Vt difference of a 
 ### Numerical acceptance
 
 These are prerequisites: no comparison counts unless they pass.
-{numref}`agreement-meshconv-figure` shows the mesh convergence of the MOS capacitors.
+{numref}`agreement-meshconv-figure` shows the {term}`mesh convergence` of the
+{term}`MOS capacitors <MOSCAP>`.
 
 ```{figure} /_generated/comparison/meshconv-light.svg
 :name: agreement-meshconv-figure
@@ -334,8 +335,8 @@ The tags and the metrics each one is expected to show up in:
 | `thermal` | Idsat at high power |
 | `numerics` | fails the {ref}`numerical acceptance checks <numerical-acceptance>` |
 
-The cause behind each tag, in three groups. The channel is the body's surface under the gate oxide
-in {numref}`agreement-cell-figure`. The process and structure of the device:
+The cause behind each tag, in three groups. The channel is the body's surface under the
+{term}`gate oxide` in {numref}`agreement-cell-figure`. The process and structure of the device:
 
 - `doping`: the channel, {term}`LDD`, {term}`S/D` and well profiles are unknown, and analytic
   stand-ins replace them.

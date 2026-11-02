@@ -62,16 +62,16 @@ STYLE = {
     "tick_deg": 90,
 }
 
-#: Unit conversions: m to µm and nm, A to µA.
+# Unit conversions: m to µm and nm, A to µA.
 UNITS = {"um_per_m": 1e6, "nm_per_m": 1e9, "ua_per_a": 1e6}
 
-#: The committed SPICE reference.
+# The committed SPICE reference.
 SPICE_ROOT = REPO_ROOT / "results" / "spice"
-#: The committed rerun of the SPICE reference with the open_pdks d658698 models.
+# The committed rerun of the SPICE reference with the open_pdks d658698 models.
 OLDER_PDK_ROOT = REPO_ROOT / "results" / "spice-pdk-d658698"
-#: The committed TCAD results: 1D and 2D C-V, calibration, validation, mesh convergence.
+# The committed TCAD results: 1D and 2D C-V, calibration, validation, mesh convergence.
 TCAD_ROOT = REPO_ROOT / "results" / "tcad"
-#: The corner of the SPICE reference that the TCAD is compared with.
+# The corner of the SPICE reference that the TCAD is compared with.
 TYPICAL = "typical"
 
 _DEVICES = ("nfet_05v0", "pfet_05v0")
@@ -109,9 +109,9 @@ def process_cell(palette: str) -> bytes:
     return ef.cross_section(c, (), palette)
 
 
-#: The device of the plan view.
+# The device of the plan view.
 PLAN_DEVICE = "nfet_05v0"
-#: The geometry of the plan view: the narrow test-device geometry, the one closest to square.
+# The geometry of the plan view: the narrow test-device geometry, the one closest to square.
 PLAN_GEOMETRY = "w1p6_l0p70"
 
 
@@ -300,9 +300,9 @@ def cv_validation(palette: str) -> bytes:
     return _cv_grid("validation", palette)
 
 
-#: The device of the curve the metric figure marks.
+# The device of the curve the metric figure marks.
 METRIC_DEVICE = "nfet_05v0"
-#: The geometry of the curve the metric figure marks: the longest calibration gate.
+# The geometry of the curve the metric figure marks: the longest calibration gate.
 METRIC_GEOMETRY = "w10p0_l10p00"
 
 
@@ -412,10 +412,10 @@ def start_stack(palette: str) -> bytes:
     return ef.stack_1d(dev, ("oxide", "body"), palette)
 
 
-#: The device of the split plot.
+# The device of the split plot.
 SPLIT_DEVICE = "nfet_05v0"
-#: The geometry of the split plot: the nfet's shortest gate, where the extrinsic part of Cgg is
-#: the largest share.
+# The geometry of the split plot: the nfet's shortest gate, where the extrinsic part of Cgg is
+# the largest share.
 SPLIT_GEOMETRY = "w10p0_l0p60"
 
 
@@ -492,7 +492,7 @@ def centroid(palette: str) -> bytes:
 
 # --- the PDK versions ------------------------------------------------------------------------
 
-#: The geometry of the Id-Vg plot of the two PDKs: the longest gate.
+# The geometry of the Id-Vg plot of the two PDKs: the longest gate.
 PDK_GEOMETRY = "w10p0_l10p00"
 
 
@@ -535,7 +535,7 @@ def pdk_sweeps(palette: str) -> bytes:
         return ef._svg(fig)
 
 
-#: name -> function of the palette name; each is written in both palettes by write_all.
+# name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "process-cell": process_cell,
     "instance-plan": instance_plan,
