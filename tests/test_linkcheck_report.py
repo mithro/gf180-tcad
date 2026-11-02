@@ -81,7 +81,9 @@ def test_timeouts_count_up_and_fail_at_the_threshold(tmp_path, capsys):
         assert code == (1 if run == 3 else 0)
         prev = new
     text = capsys.readouterr().out
-    assert "::error::linkcheck: https://slow.example/ timed out in 3 scheduled runs in a row" in text
+    assert (
+        "::error::linkcheck: https://slow.example/ timed out in 3 scheduled runs in a row" in text
+    )
     assert text.count("::error::") == 1
 
 
