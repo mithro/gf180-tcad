@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import subprocess
 import sys
 import textwrap
@@ -70,6 +71,8 @@ EXPLAINED_FIGURES = [
     "band-regimes",
     "mesh-window",
     "cv-parts",
+    "cv-overview",
+    "spice-sweeps",
 ]
 
 
@@ -665,3 +668,23 @@ def test_moscap_missing_result_raises(tmp_path):
     (tcad / "validation" / "pfet_05v0.json").unlink()
     with pytest.raises(FileNotFoundError, match="pfet_05v0.json"):
         docgen.generate(tmp_path / "out", tcad_root=tcad)
+
+
+def test_readme_figures_are_current():
+    """README.md's committed figures are what docgen draws from the committed results now (run
+    `make readme-figures` when this fails after a results change)."""
+    drawn = docgen.readme_figures()
+    assert sorted(drawn) == sorted(docgen.README_FIGURES)
+    for name, svg in drawn.items():
+        committed = (docgen.README_FIGURES_DIR / name).read_bytes()
+        assert committed == svg, f"{name} is stale: run make readme-figures"
+    assert sorted(p.name for p in docgen.README_FIGURES_DIR.iterdir()) == sorted(drawn)
+
+
+def test_readme_shows_each_figure():
+    """Each README figure is a Markdown image of README.md, numbered in order and cited."""
+    text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    rel = docgen.README_FIGURES_DIR.relative_to(REPO_ROOT).as_posix()
+    for n, name in enumerate(docgen.README_FIGURES, start=1):
+        assert re.search(rf"!\[[^\]]+\]\({re.escape(rel)}/{re.escape(name)}\)", text), name
+        assert f"*Figure {n}. " in text and text.count(f"Figure {n}") >= 2, name
