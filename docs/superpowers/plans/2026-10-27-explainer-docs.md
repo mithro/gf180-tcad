@@ -302,7 +302,7 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   in the wafer.space Crowd Supply updates are CC BY. [`transistor-parts.md`](../../explained/transistor-parts.md) shows the OpenFASoC
   `mpw18h1` analog front-end die from the Crowd Supply OpenFASoC update
   ([`gf180mcu-afe-die-photo.jpg`](../../explained/images/gf180mcu-afe-die-photo.jpg), 1265 x 741 px, copied unchanged) below the cross-section,
-  with [its licence note](../../explained/images/gf180mcu-afe-die-photo.jpg.licence.txt). The page cites it as a numbered figure (`numfig = True` in [`docs/conf.py`](../../conf.py)); [`docs/_ext/figure_numbers.py`](../../_ext/figure_numbers.py) numbers each page from 1 and gives a light and dark twin pair one number ([`tests/test_figure_numbers.py`](../../../tests/test_figure_numbers.py)). Silicon Prawn still answered 403 (Cloudflare challenge), so the caption
+  with [its licence note](../../explained/images/gf180mcu-afe-die-photo.jpg.licence.txt). The page cites it with `{numref}`; [`docs/_ext/theme_figures.py`](../../_ext/theme_figures.py) (#140) numbers the figures. Silicon Prawn still answered 403 (Cloudflare challenge), so the caption
   links it as the full-resolution source and credits wafer.space. No readable source names the
   photographer (the update, its source post, the tapeout README); recording the name from the
   Silicon Prawn page is #122. A photo has no dark twin: it reads the same on both themes.
@@ -419,6 +419,10 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   the dip and the halfway level.
 - Glossary: accumulation, depletion, inversion, flat band. Their first uses are linked across
   the docs, in README.md (a glossary URL) and in docgen's check labels and Cox sentence.
+- API pages: `docs/_ext/api_links.py` links the first use in the rendered docstrings, in page
+  order (a `doctree-read` pass). No page has a sentence that only carries a link. The
+  `explain.figures`, `tcad.process` and `meshcut.__main__` pages lost theirs. The `REGIMES`
+  comment says "holes" again.
 
 **As built (E2c).**
 
@@ -439,8 +443,16 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   start dip shallower (tested from the committed curves); the sentences on how each curve is
   made sit in the fit section, with no quasi-static contrast (BSIM4's AC non-quasi-static model
   is off unless the card sets ACNQSMOD, manual ch. 8 and appendix A, and the card is not read
-  here). Left out: numbers break from their units at 400 px on every explainer page, a
-  site-wide change to `numbers.format_value` filed as issue #119.
+  here). Numbers broke from their units at 400 px on every explainer page; fixed site-wide in
+  the PR for issue #119: {repo}`src/gf180tcad/explain/numbers.py` `format_value` joins value and unit with U+00A0 and puts
+  U+2060 after the slash of a compound unit, and the Sphinx extension {repo}`docs/_ext/unit_join.py`
+  does the same for values typed by hand and for the generated result pages.
+- Shortcut sweep: the card's ACNQSMOD and TRNQSMOD in both nfet bins (`nfet_06v0.0`, lines
+  37060 and 37316; `nfet_06v0.1`, lines 37398 and 37654; all 0) are read from
+  `data/explain/model_card.toml`, registry entries
+  `acnqsmod_nfet` and `trnqsmod_nfet`; a sandbox test checks each line in the image's card.
+  The page now says, by substitution, that the SPICE capacitance is quasi-static (manual
+  §8.1 and appendix A).
 - The SPICE curve is described as the equations of BSIM4's capacitance model (manual ch. 7);
   the frequency of the `cv` sweep is not printed, since no committed data file holds it.
 - The landing page now has one heading per tier, so each list stays within seven items;

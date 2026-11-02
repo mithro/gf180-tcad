@@ -25,14 +25,12 @@ extensions = [
     "repo_roles",
     "api_links",
     "table_cells",
-    "figure_numbers",
+    "theme_figures",
+    "unit_join",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
 root_doc = "index"
-# Number the figures, so the text can cite one with {numref}; docs/_ext/figure_numbers.py numbers
-# them per page and gives a light and dark twin pair one number.
-numfig = True
 
 # Internal design spec and plans are not reader-facing; _build is output; _ext is code.
 exclude_patterns = ["_build", "_ext", "superpowers", "superpowers/**"]
@@ -132,6 +130,12 @@ _TOOLS = {
     "DMT_core": ("DMT-core", "https://gitlab.com/dmt-development/dmt-core"),
 }
 myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.items()}
+
+# Captioned figures are numbered, so a page can point at one with {numref}. theme_figures
+# (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure with one number,
+# and numbers each page's figures from 1.
+numfig = True
+numfig_format = {"figure": "Figure %s"}
 
 # --- API reference ---------------------------------------------------------------------------
 # autodoc imports gf180tcad from ../src (the sys.path entry below); the docs dependency group is

@@ -21,16 +21,12 @@ from gf180tcad.meshcut import job
 
 REPO = Path(__file__).resolve().parents[2]
 L0P60 = REPO / "results" / "tcad" / "moscap2d" / "nfet_05v0" / "calibrated" / "w10p0_l0p60"
-# A window the M1 grid has (renders plan, Step 3): its artefact is over the 2 MB budget, so the
-# test keeps the job's scratch output and does not install it.
-KX, DEPTH_UM = 0.25, 0.1
 
 
 def _cut(scratch: Path) -> dict[str, bytes]:
-    with pytest.raises(ValueError, match="budget"):
-        cli.run_cut(L0P60, scratch / "meshes" / "stable", kx=KX, depth_um=DEPTH_UM,
-                    scratch=scratch / "job")  # fmt: skip
-    return {n: (scratch / "job" / n).read_bytes() for n in (meshcut.ARTEFACT, meshcut.META)}
+    """Cut with the default window rule and install into ``scratch`` (outside the repository)."""
+    dest = cli.run_cut(L0P60, scratch / "meshes" / "stable", scratch=scratch / "job")
+    return {n: (dest / n).read_bytes() for n in (meshcut.ARTEFACT, meshcut.META)}
 
 
 @pytest.mark.sandbox
@@ -41,6 +37,7 @@ def test_cut_job_byte_identical_twice(tmp_path):
     cv_meta = json.loads((L0P60 / "cv.meta.json").read_bytes())
     assert meta["full_mesh_sha256"] == cv_meta["mesh_sha256"]
     assert meta["npz_sha256"] == hashlib.sha256(one[meshcut.ARTEFACT]).hexdigest()
+    assert meta["size_bytes"] == len(one[meshcut.ARTEFACT])
 
 
 @pytest.mark.sandbox

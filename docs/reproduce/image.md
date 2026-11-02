@@ -479,6 +479,8 @@ the other two. After the first push of a new package on the {{ ghcr }}, check th
 anonymous pull of {repo}`docker/TCAD_DEV_IMAGE` works; if it does not, make the package public
 ({ref}`as for the stable image <tcad-image>`).
 
+The build script refuses a builder in which any node lacks the pinned {{ BuildKit }} image option.
+
 ### Moving to a newer dev HEAD
 
 1. Read the new HEAD commits with [`git ls-remote`](https://git-scm.com/docs/git-ls-remote) (anonymous https; never through an API
