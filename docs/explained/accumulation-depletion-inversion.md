@@ -12,8 +12,8 @@ the three regions of the {term}`C–V` curve and shows the energy bands in each.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`SPICE`
 model at the {term}`typical corner`. The dashed line is the simulated stack, with the oxide
-thickness, body doping and voltage shift fitted to the SPICE model. The shading edges are this
-repo's marks on the SPICE curve ({py:func}`~gf180tcad.calibrate.cv.regions`).
+thickness, body doping and voltage shift fitted to the SPICE model. The shading edges are marks
+this project chose on the SPICE curve ({py:func}`~gf180tcad.calibrate.cv.regions`).
 ```
 
 ```{figure} /_generated/explained/cv-regions-dark.svg
@@ -22,8 +22,8 @@ repo's marks on the SPICE curve ({py:func}`~gf180tcad.calibrate.cv.regions`).
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`SPICE`
 model at the {term}`typical corner`. The dashed line is the simulated stack, with the oxide
-thickness, body doping and voltage shift fitted to the SPICE model. The shading edges are this
-repo's marks on the SPICE curve ({py:func}`~gf180tcad.calibrate.cv.regions`).
+thickness, body doping and voltage shift fitted to the SPICE model. The shading edges are marks
+this project chose on the SPICE curve ({py:func}`~gf180tcad.calibrate.cv.regions`).
 ```
 
 (explained-regions-three)=
@@ -82,7 +82,8 @@ stays flat, because no current flows ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
 The bands of the nfet's body in an idealised stack, in the {term}`depletion approximation`.
 The body doping is fitted to the SPICE model. The {term}`band gap` is a textbook value. The
-intrinsic density and the thermal voltage are the simulation's constants.
+intrinsic density and the thermal voltage are the simulation's constants. The depth shown is a
+project choice.
 ```
 
 ```{figure} /_generated/explained/band-regimes-dark.svg
@@ -91,7 +92,8 @@ intrinsic density and the thermal voltage are the simulation's constants.
 
 The bands of the nfet's body in an idealised stack, in the {term}`depletion approximation`.
 The body doping is fitted to the SPICE model. The {term}`band gap` is a textbook value. The
-intrinsic density and the thermal voltage are the simulation's constants.
+intrinsic density and the thermal voltage are the simulation's constants. The depth shown is a
+project choice.
 ```
 
 A positive gate bends the bands down at the surface. The depletion panel is drawn where the
