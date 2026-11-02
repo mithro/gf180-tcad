@@ -21,7 +21,7 @@ from typing import NamedTuple
 import matplotlib
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.collections import LineCollection, PolyCollection
+from matplotlib.collections import PolyCollection
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
@@ -622,9 +622,11 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
             xy[win.triangles], facecolors=faces, edgecolors=pal["text"], alpha=STYLE["mesh_alpha"],
             linewidths=STYLE["mesh_edge_pt"], rasterized=True,
         ))  # fmt: skip
-        ax.add_collection(LineCollection(
-            xy[win.boundary_lines], colors=pal["text"], linewidths=STYLE["edge_width"]
-        ))  # fmt: skip
+        # the boundary lines as one path, NaN between segments, so the SVG holds one element
+        seg = xy[win.boundary_lines]
+        gaps = np.full((len(seg), 1, 2), np.nan)
+        path = np.concatenate([seg, gaps], axis=1).reshape(-1, 2)
+        ax.plot(path[:, 0], path[:, 1], color=pal["text"], lw=STYLE["edge_width"])
         ax.set_xlim(x0, x1)
         ax.set_ylim(y0, y1)
         ax.set_aspect("equal")
