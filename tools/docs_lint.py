@@ -312,7 +312,8 @@ SITUATION_NOUNS = ("curve", "mesh", "stack", "profile", "cross section", "region
                    "layout", "die", "junction", "band", "band diagram", "band gap", "bandgap",
                    "gate", "oxide", "channel", "body", "bodies", "doping", "dopant", "depletion",
                    "depleted layer", "fringe", "plan view", "drawing", "diagram", "plot", "graph",
-                   "geometry", "geometries")
+                   "crystal", "bond")
+# Not "geometry": in these docs it names a W/L size ({term}`geometry id`), not a shape.
 # A space in a noun matches a space or a hyphen ("cross-section", "plan-view"). Longer nouns
 # first, so "band diagram" wins over "band".
 _NOUN = re.compile(r"(?<![\w-])(" + "|".join(
@@ -520,7 +521,8 @@ def _visible(line):
 
 
 _SOFTWARE_STACK = re.compile(r"\b(software|TCAD|tool|image|latest|stable|dev|2023|Sept-2023|two|both)"
-                             r"\s+stacks?\b|\bstacks?\s+of\s+20\d\d\b|\bstacks?\s+of\s+(?:the\s+)?(?:\w+\s+)?results\b",
+                             r"\s+stacks?\b|\bstacks?\s+of\s+20\d\d\b|\bstacks?\s+of\s+(?:the\s+)?(?:\w+\s+)?results\b"
+                             r"|\b(?:entry|quality|review|merge)\s+gates?\b",
                              flags=re.I)
 _FIGURE_OK = re.compile(r"<!--\s*figure-ok:\s*(?P<reason>[^>]*?)\s*-->")
 _IMAGE_LINE = re.compile(r"^\s*!\[[^\]]+\]\([^)]+\)")
@@ -697,10 +699,18 @@ def equation_findings(lines):
 
 
 def filelink_findings(lines):
-    out = []
+    out, open_code = [], False
     for i, line, kind in lines:
         if kind not in ("prose", "table", "heading", "caption"):
+            open_code = False
             continue
+        # A code span that a line break splits: the text up to its closing backtick is code.
+        bare = line
+        if open_code:
+            bare = " " + line.split("`", 1)[1] if "`" in line else ""
+        open_code = (open_code and "`" not in line) or bool(bare.count("`") % 2)
+        if bare.count("`") % 2:
+            bare = bare[: bare.rindex("`")]
         linked = [m.span() for m in _ROLE.finditer(line)] + [m.span() for m in _MD_LINK.finditer(line)]
         for m in _CODE.finditer(line):
             body = m.group("body").strip()
@@ -711,7 +721,7 @@ def filelink_findings(lines):
             out.append((i, "FILELINK", f"`{body}` is not a link: link the file "
                                        "({repo} for a file of this repository, a GitHub URL at a "
                                        "pinned commit otherwise)"))
-        for m in _PROSE_PATH.finditer(_bare_prose(line)):
+        for m in _PROSE_PATH.finditer(_bare_prose(bare)):
             body = m.group(1)
             if _is_code_name(body):
                 continue

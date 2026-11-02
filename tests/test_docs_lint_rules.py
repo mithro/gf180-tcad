@@ -433,9 +433,10 @@ def test_house_forms_build_and_number(tmp_path):
         "The gate sits on the oxide.",
         "The channel forms under the gate.",
         "The n-well holds the PMOS devices.",
-        "The geometry of the cell is fixed.",
         "The drawing shows the two contacts.",
         "The electric field is largest at the surface.",
+        "Each atom of the crystal shares its electrons.",
+        "Each shared pair is a bond.",
     ],
 )  # fmt: skip
 def test_figure_fires_on_the_review_nouns(line):
@@ -448,6 +449,8 @@ def test_figure_fires_on_the_review_nouns(line):
         "The run works well on one core.",
         "As well as the tests, the build checks links.",
         "It is the stack of the final results.",
+        "Each geometry runs in one sandbox job.",
+        "The Phase 3 entry gate must be closed first.",
         "The field `t_ox_eff_nm` holds the thickness.",
     ],
 )  # fmt: skip
@@ -602,3 +605,79 @@ def test_equation_fires_on_extra_where_item():
     )
     hits = found(page, "EQUATION")
     assert len(hits) == 1 and "H" in hits[0][1] and "not" in hits[0][1]
+
+
+def test_filelink_quiet_in_a_code_span_across_lines():
+    page = "# T\n\nRun `python -m gf180tcad.manifest verify --against\nresults/MANIFEST.sha256 --subset tests/a.txt` once.\n"
+    assert found(page, "FILELINK") == []
+    page = "# T\n\nRun `make\nall` then read results/MANIFEST.sha256 by hand.\n"
+    assert [line for line, _ in found(page, "FILELINK")] == [4]
+
+
+# --- the 28 sections the review of PR #143 found unflagged --------------------------------
+# Each is a section of a reader page with physical words and, at the head of PR #143, no FIGURE
+# finding. Each is now flagged (None) or is not a described situation (the reason).
+REVIEW_SECTIONS = [
+    ("docs/comparison/agreement.md", "In plain language", None),
+    ("docs/comparison/agreement.md", "Comparison space",
+     "a list of W/L sizes, bias ranges and engines, not a physical arrangement"),
+    ("docs/comparison/agreement.md", "Calibration and validation are kept apart", None),
+    ("docs/comparison/cv-agreement.md", "C–V calibration of the TCAD MOS capacitor", None),
+    ("docs/comparison/cv-agreement.md", 'Verdicts and the "Same process" windows', None),
+    ("docs/comparison/index.md", "Comparison with the PDK",
+     "a landing paragraph naming the comparison pages and their summary matrix"),
+    ("docs/comparison/pdk-versions.md", "Which model files differ",
+     "a line-by-line diff of two SPICE model files"),
+    ("docs/comparison/pdk-versions.md", "Card values re-checked", None),
+    ("docs/comparison/process-data.md", "Card values", None),
+    ("docs/explained/bands-and-fermi-level.md", "Two bands of energy", None),
+    ("docs/explained/bands-and-fermi-level.md", "The Fermi level", None),
+    ("docs/explained/bands-and-fermi-level.md", "Where this repo's results differ", None),
+    ("docs/explained/index.md", "The basics", None),
+    ("docs/explained/oxide-and-poly.md", "The oxide", None),
+    ("docs/explained/oxide-and-poly.md", "Oxide capacitance", None),
+    ("docs/explained/oxide-and-poly.md", "The poly-silicon gate", None),
+    ("docs/explained/silicon-and-carriers.md", "Atoms and bonds", None),
+    ("docs/explained/silicon-and-carriers.md", "Electrons and holes", None),
+    ("docs/explained/silicon-and-carriers.md", "How many carriers", None),
+    ("docs/explained/transistor-parts.md", "The gate oxide", None),
+    ("docs/explained/transistor-parts.md", "The body and the wells", None),
+    ("docs/explained/transistor-parts.md", "The lightly doped drain", None),
+    ("docs/limitations/literature.md",
+     "Inverse modelling of doping from I-V and C-V (the calibration method)", None),
+    ("docs/limitations/moscap2d.md", "The 2D cell at L = 10 µm: the equilibrium solve fails",
+     "a solver failure and the issue that tracks it, with no arrangement described"),
+    ("docs/limitations/moscap2d.md", "C/Cox > 1 that is physics: the fringe", None),
+    ("docs/reproduce/image.md", "What the build uses",
+     "a list of physical constants and their units, not an arrangement"),
+    ("docs/reproduce/render-manifest.md", "Display-only values", None),
+    ("docs/roadmap.md", "Phase 3: the MOSFET", "the entry gate is a project step, not a gate"),
+]  # fmt: skip
+
+
+def _section(rel: str, heading: str):
+    rows = lint()._rule_lines((ROOT / rel).read_text(encoding="utf-8"))
+    sec = None
+    for row in rows:
+        if row[2] == "heading":
+            if sec is not None:
+                break
+            if row[1].lstrip("#").strip() == heading:
+                sec = []
+        if sec is not None:
+            sec.append(row)
+    assert sec, f"{rel}: no heading {heading!r}"
+    return sec
+
+
+@pytest.mark.parametrize(("rel", "heading", "reason"), REVIEW_SECTIONS)
+def test_review_sections_are_flagged_or_not_situations(rel, heading, reason):
+    sec = _section(rel, heading)
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    first, last = sec[0][0], sec[-1][0]
+    flagged = any(first <= n <= last and c == "FIGURE" for n, c, _ in lint().rule_findings(text))
+    drawn = any(k == "figure" or "{numref}" in ln or "figure-ok:" in ln for _, ln, k in sec)
+    if reason is None:
+        assert flagged or drawn, f"{rel} '{heading}' describes a situation: FIGURE must see it"
+    else:
+        assert not flagged, f"{rel} '{heading}' is listed as not a situation ({reason})"
