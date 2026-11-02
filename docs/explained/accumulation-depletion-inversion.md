@@ -64,10 +64,9 @@ This repo marks the regions on that curve ({py:func}`~gf180tcad.calibrate.cv.reg
 
 The halfway level of each curve lies midway between its own minimum and its accumulation flat
 part. The {ref}`checks <cv-agreement-metric>` compare where each curve crosses its own halfway
-level, on either side of the dip. On
-the falling side, the SPICE curve crosses at {{ x_u_dep_spice_l10 }} and the simulated one at
-{{ x_u_dep_tcad_l10 }}. On the rising side, they cross at {{ x_u_inv_spice_l10 }} and
-{{ x_u_inv_tcad_l10 }}.
+level, on either side of the dip. On the falling side, the SPICE curve crosses at
+{{ x_u_dep_spice_l10 }} and the simulated one at {{ x_u_dep_tcad_l10 }}. On the rising side,
+they cross at {{ x_u_inv_spice_l10 }} and {{ x_u_inv_tcad_l10 }}.
 
 (explained-regions-bands)=
 
@@ -110,8 +109,9 @@ p-type. That is the textbook start of strong inversion ({ref}`Sze and Ng, ch. 4 
 
 For this idealised stack, with no charge in the oxide, the formulas put flat band at
 {{ x_v_fb_nfet }}. They count the gate's carriers with {term}`Boltzmann statistics`, as the
-simulation does ({ref}`the gate's error <explained-bands-differs>`). They put the {term}`threshold voltage`, the start of strong inversion, at
-{{ x_v_t_nfet }}, also an idealised value. The inputs are the {term}`model card`'s gate doping
+simulation does ({ref}`the gate's error <explained-bands-differs>`). They put the
+{term}`threshold voltage`, the start of strong inversion, at {{ x_v_t_nfet }}, also an
+idealised value. The inputs are the {term}`model card`'s gate doping
 and the fitted body doping and oxide thickness.
 
 (explained-regions-differs)=
