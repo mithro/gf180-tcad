@@ -8,8 +8,8 @@ the issue says what is open and what settles it. The phases are those of the
 
 ## Phase 2: the MOS capacitor
 
-- **2D validation of the calibrated stack** ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): the stack is the column under the gate
-  of the 2D cell in {numref}`roadmap-cell-figure`. Every calibrated 2D cell that solves is committed. Two 2D solves fail; the next two items name them.
+- **2D validation of the calibrated stack** ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): every calibrated 2D cell that solves
+  is committed. Two 2D solves fail; the next two items name them.
   The 2D plateaus lie below {term}`SPICE` (issue #77). The 2D {term}`depletion` crossing lies below 1D
   (issue #108, {ref}`cv-agreement-validation`). The memory grows with every 2D point (issue #78).
 - **2D {term}`MOS capacitor <MOSCAP>` at L = 2 µm**: its small-signal (AC) solve fails
@@ -22,6 +22,8 @@ the issue says what is open and what settles it. The phases are those of the
   ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
 - **Mesh pictures** on the TCAD results pages
   ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
+
+The calibrated stack is the column under the gate of the 2D cell in {numref}`roadmap-cell-figure`.
 
 ```{figure} /_generated/explained/moscap-cell-light.svg
 :figclass: only-light
