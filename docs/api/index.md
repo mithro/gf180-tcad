@@ -12,6 +12,7 @@ gf180tcad.__main__
 gf180tcad.calibrate
 gf180tcad.calibrate.__main__
 gf180tcad.calibrate.cv
+gf180tcad.comparison_figures
 gf180tcad.derive
 gf180tcad.devices
 gf180tcad.docgen
