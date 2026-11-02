@@ -120,3 +120,56 @@ def test_each_page_numbers_its_figures_from_one(tmp_path):
         assert f'src="_images/{prefix}-dark.svg"' in html
         cited = re.findall(r'<span class="std std-numref">(Figure \d+)</span>', html)
         assert cited == ["Figure 1", "Figure 2"], prefix
+
+
+def _warnings(doc: nodes.Node) -> list[str]:
+    seen = []
+    theme_figures.merge_twins(doc, warn=lambda node, msg: seen.append(msg))
+    return seen
+
+
+def test_a_merged_pair_warns_nothing():
+    light = _figure("a-light.svg", "only-light", "The cell.", ["x"])
+    dark = _figure("a-dark.svg", "only-dark", "The cell.", ["y"])
+    assert _warnings(_section(light, dark)) == []
+
+
+def test_a_pair_with_other_captions_warns():
+    light = _figure("a-light.svg", "only-light", "One.", ["x"])
+    dark = _figure("a-dark.svg", "only-dark", "Another.", ["y"])
+    (msg,) = _warnings(_section(light, dark))
+    assert "caption" in msg
+
+
+def test_a_pair_with_two_images_warns():
+    light = _figure("a-light.svg", "only-light", "The cell.", ["x"])
+    light.insert(1, nodes.image(uri="b-light.svg", alt="alt"))
+    dark = _figure("a-dark.svg", "only-dark", "The cell.", ["y"])
+    (msg,) = _warnings(_section(light, dark))
+    assert "image" in msg
+
+
+def test_a_pair_with_a_gap_warns():
+    light = _figure("a-light.svg", "only-light", "The cell.", ["x"])
+    dark = _figure("a-dark.svg", "only-dark", "The cell.", ["y"])
+    msgs = _warnings(_section(light, nodes.paragraph(text="between"), dark))
+    assert len(msgs) == 2
+    assert "directly after" in msgs[0] and "directly before" in msgs[1]
+
+
+def test_an_unmerged_pair_fails_the_build_under_w(tmp_path):
+    """A pair whose captions differ is a Sphinx warning, so -W fails the build."""
+    build_main = importorskip("sphinx.cmd.build").build_main
+    src, out = tmp_path / "src", tmp_path / "out"
+    _site(src)
+    page = (
+        (src / "one.rst")
+        .read_text()
+        .replace(
+            "   The pair on Page one.\n\n.. figure:: one-plain.svg",
+            "   The other pair on Page one.\n\n.. figure:: one-plain.svg",
+        )
+    )
+    assert "The other pair" in page
+    (src / "one.rst").write_text(page)
+    assert build_main(["-W", "-q", "-b", "html", str(src), str(out)]) != 0
