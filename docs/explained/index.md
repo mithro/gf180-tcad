@@ -12,6 +12,8 @@
   and the contacts of the simulated cell, beside the {term}`PDK`'s drawing.
 - {doc}`Gate oxide and poly-silicon <oxide-and-poly>`: what the {term}`gate oxide` and the
   {term}`poly-silicon` gate are, and how their thickness and doping set the {term}`oxide capacitance <Cox>`.
+- {doc}`The MOS capacitor <mos-capacitor>`: the transistor without its source and drain, and
+  why this project fits it to the {term}`SPICE` model first.
 
 ```{toctree}
 :hidden:
@@ -21,4 +23,5 @@ bands-and-fermi-level
 pn-junction
 transistor-parts
 oxide-and-poly
+mos-capacitor
 ```

@@ -15,10 +15,18 @@ A page writes ``{{ x_<name> }}`` and the docs build prints the value: ``docs/con
 The page sentence says which kind a value is; ``x_<name>_label`` gives the words
 (:data:`LABELS`). A value is shown to ``digits`` significant digits in ``unit``, after
 multiplying by ``factor`` (1000 shows a value in V as mV).
+
+:data:`WORDS` holds the words a page prints from a committed file, the verdicts of the
+calibration files, so a new verdict changes the page's sentence (:func:`word`).
+
+:func:`two_d_cells` reads every 2D cell with a verdict from the validation files
+(``results/tcad/validation/*.json``), so the page's table of them (:func:`two_d_table`) and
+its sentence on the Disagree cells (:func:`two_d_disagree`) grow with each new cell.
 """
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass
 from functools import cache
@@ -65,6 +73,8 @@ _CM3 = "cm⁻³"
 _CAP = "fF/µm²"
 _RESULT = "results/tcad/calibration/nfet_05v0.result.json"
 _CELL = "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json"
+_SPICE_L10 = "results/spice/ngspice/typical/nfet_05v0/w10p0_l10p00/metrics.json"
+_L10 = ("per_geometry", "w10p0_l10p00")
 _ENTRIES = (
     Number("n_i_tcad", "committed", _CM3, 3, _meta("nfet_05v0"), {"json": ["constants", "n_i_cm3"]}),
     Number("t_tcad", "committed", "K", 5, _meta("nfet_05v0"), {"json": ["constants", "t_k"]}),
@@ -136,8 +146,123 @@ _ENTRIES = (
     Number("node_count_cell", "committed", "", 3, _CELL, {"json": ["node_count"]}),
     # F/m on the card; the page prints fF/µm (1e15 fF/F over 1e6 µm/m).
     Number("cgdl_nfet", "committed", "fF/µm", 2, _proc("nfet_05v0"), {"toml": ["param", "cgdl_f_per_m", "value"]}, factor=1e9),
+    # The MOS capacitor (mos-capacitor.md): the SPICE model and the calibration at w10p0_l10p00.
+    Number("cgg_acc_l10", "committed", "fF", 3, _SPICE_L10, {"json": ["metrics", "cgg_acc_ff"]}),
+    Number("cgg_inv_l10", "committed", "fF", 3, _SPICE_L10, {"json": ["metrics", "cgg_inv_ff"]}),
+    # Fractions in the file; the page prints per cent.
+    Number("plateau_acc_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "plateau_acc_max_rel"]}, factor=100.0),
+    Number("plateau_inv_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "plateau_inv_max_rel"]}, factor=100.0),
+    Number("plateau_tol_l10", "committed", "%", 1, _RESULT, {"json": [*_L10, "verdicts", "plateau_acc", "tolerance"]}, factor=100.0),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
+
+
+@dataclass(frozen=True)
+class Word:
+    """A word a page prints from a committed file, read by key and never typed: a verdict."""
+
+    name: str
+    source: str
+    key: dict
+
+
+_WORDS = (
+    Word("verdict_nfet_1d", _RESULT, {"json": ["verdict"]}),
+    Word("verdict_pfet_1d", "results/tcad/calibration/pfet_05v0.result.json", {"json": ["verdict"]}),
+)  # fmt: skip
+#: The verdict words of the pages, by name (see :class:`Word`).
+WORDS: dict[str, Word] = {w.name: w for w in _WORDS}
+
+
+def word(name: str, root: Path = ROOT) -> str:
+    """The word entry ``name`` reads from its file under ``root`` (a copy of the repo in tests)."""
+    w = WORDS[name]
+    v = quantity.read(quantity.Selector.from_dict(w.key), Path(root) / w.source)
+    if not isinstance(v, str) or not v:
+        raise TypeError(f"{name}: {w.source} {w.key} holds {v!r}, not a word")
+    return v
+
+
+#: The validation files of the 2D cells, relative to the repo root (:func:`two_d_cells`).
+VALIDATION = "results/tcad/validation"
+
+#: The checks of a validated cell (``verdicts`` of a ``two_d`` entry), in plain words
+#: (``docs/comparison/cv-agreement.md``, "The agreement metric"). The checks run in
+#: u = polarity × Vg, so each side is named for the nfet and the pfet, whose signs are reversed.
+CHECKS = {
+    "plateau_acc": "the flat part on the nfet's negative side, the pfet's positive side",
+    "plateau_inv": "the flat part on the nfet's positive side, the pfet's negative side",
+    "dv_dep": "the voltage halfway down the dip on the nfet's negative side, the pfet's positive side",
+    "dv_inv": "the voltage halfway up the dip on the nfet's positive side, the pfet's negative side",
+}
+
+
+@dataclass(frozen=True)
+class Cell:
+    """One 2D cell with a verdict in a validation file; ``failing``: its Disagree checks."""
+
+    device: str
+    geometry_id: str
+    w_um: float
+    l_um: float
+    verdict: str
+    failing: tuple[str, ...]
+
+
+def two_d_cells(root: Path = ROOT) -> list[Cell]:
+    """Every ``two_d`` entry with a verdict in ``results/tcad/validation/*.json`` under ``root``,
+    by device, then gate width, then gate length. Entries without one ("not run") are left out."""
+    cells = []
+    for path in sorted((Path(root) / VALIDATION).glob("*.json")):
+        doc = json.loads(path.read_text("utf-8"))
+        if "two_d" not in doc:  # provenance.json
+            continue
+        for gid, e in doc["two_d"].items():
+            if e.get("verdict") is None:
+                continue
+            failing = tuple(k for k, v in e["verdicts"].items() if v["verdict"] == "Disagree")
+            unknown = [k for k in e["verdicts"] if k not in CHECKS]
+            if unknown:
+                raise KeyError(f"{path.name} {gid}: checks {unknown} have no plain words in CHECKS")
+            g = e["geometry"]
+            cells.append(Cell(doc["device"], gid, g["w_um"], g["l_um"], e["verdict"], failing))
+    return sorted(cells, key=lambda c: (c.device, c.w_um, c.l_um))
+
+
+def _um(v: float) -> str:
+    return f"{v:g} µm"
+
+
+def two_d_table(root: Path = ROOT) -> str:
+    """A Markdown table of :func:`two_d_cells`: transistor, gate width, gate length, verdict."""
+    rows = ["| Transistor | Gate width | Gate length | Verdict |", "|---|---|---|---|"]
+    rows += [
+        f"| {{term}}`{c.device}` | {_um(c.w_um)} | {_um(c.l_um)} | {{term}}`{c.verdict}` |"
+        for c in two_d_cells(root)
+    ]
+    return "\n".join(rows)
+
+
+def two_d_disagree(root: Path = ROOT) -> str:
+    """A clause on what the Disagree cells of :func:`two_d_cells` fail on, from their checks."""
+    bad = [c for c in two_d_cells(root) if c.verdict == "Disagree"]
+    if not bad:
+        return "No 2D cell is Disagree"
+    failing = sorted({k for c in bad for k in c.failing}, key=list(CHECKS).index)
+    if len(failing) == 1:
+        return f"Every Disagree cell fails only one check: {CHECKS[failing[0]]}"
+    return "The Disagree cells fail on " + "; and on ".join(CHECKS[k] for k in failing)
+
+
+def counts(root: Path = ROOT) -> dict[str, int]:
+    """Counts a page prints: ``corner_count``, the SPICE corners of
+    :data:`gf180tcad.devices.CORNERS`; ``fit_length_count``, the gate lengths of the nfet
+    calibration's fit (``per_geometry`` of its result file under ``root``)."""
+    from gf180tcad.devices import CORNERS
+
+    fit = json.loads((Path(root) / _RESULT).read_text("utf-8"))["per_geometry"]
+    lengths = {g["geometry"]["l_um"] for g in fit.values()}
+    return {"corner_count": len(CORNERS), "fit_length_count": len(lengths)}
 
 
 def _formula(name: str):
@@ -193,9 +318,16 @@ def text(name: str) -> str:
 
 
 def substitutions() -> dict[str, str]:
-    """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, for MyST."""
+    """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, and ``{"x_<name>":
+    word}`` for every :data:`WORDS` entry, and the 2D cells' table and Disagree clause
+    (``x_two_d_table``, ``x_two_d_disagree``) and the :func:`counts`, for MyST."""
     out: dict[str, str] = {}
     for name, n in REGISTRY.items():
         out[f"x_{name}"] = text(name)
         out[f"x_{name}_label"] = LABELS[n.kind]
+    for name in WORDS:
+        out[f"x_{name}"] = word(name)
+    out.update({f"x_{k}": str(v) for k, v in counts().items()})
+    out["x_two_d_table"] = two_d_table()
+    out["x_two_d_disagree"] = two_d_disagree()
     return out

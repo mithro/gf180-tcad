@@ -319,6 +319,46 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
 - [ ] **Step 2:** the gap sections link `cv-agreement-mismatch` and `cv-agreement-validation` and state the pfet 1D and 2D nfet verdicts as the committed result files give them, read by substitution so a new verdict changes the sentence (a verdict substitution reads `verdicts` from the result or validation file, never a typed word).
 - [ ] **Step 3:** PR; review by use, audit; merge.
 
+E2 ships one page per PR. E2a (branch `task/p5-e2-explainer`) is `mos-capacitor.md` with the
+docgen reader move and the verdict words; E2b to E2d are the other three pages.
+
+- [x] **E2a Step 1:** tests first (red commit `763ac3d`); `explain.data`, the docgen import, the
+  registry entries and words, the `moscap-cell` and `moscap-cv` figures; the page; lint, measure,
+  build, screenshots.
+- [x] **E2a Step 2:** the gap section states the 1D nfet and pfet verdicts by substitution and
+  every committed 2D verdict in a generated table, linking `cv-agreement-windows`,
+  `cv-agreement-mismatch`, `cv-agreement-validation` and `cv-agreement-metric`.
+- [ ] **E2a Step 3:** PR; review by use, audit; merge.
+
+**As built (E2a).**
+
+- `gf180tcad.explain.data` holds `u_sorted`, `spice_columns`, `spice_cv`, `read_moscap` and
+  `tcad_cgg`; docgen imports the first four names in place of its `_cols` and `_u_sorted` and its
+  inline cv conversion. `docs/_generated/` built before and after is byte-identical
+  (`tmp/e2-generated-diff.log` empty).
+- Import guard (coordinator's decision, 2026-11-02): `explain.data` alone may import
+  `gf180tcad.tcad.moscap1d` and `gf180tcad.tcad.process`, both standard-library only, for the 1D
+  curve and the BSIM4 bookkeeping. `model.py`, `figures.py` and every other explain module import
+  nothing from `gf180tcad.tcad`, and `tcad.stack` is forbidden everywhere.
+  `test_explain_imports_nothing_from_tcad` is that allow-list (`TCAD_ALLOWED`), with positive
+  controls for a forbidden module in `data.py` and an allowed reader elsewhere.
+- The 1D verdicts are `numbers.WORDS` entries, read by key from the calibration result files
+  (`numbers.word(name, root)`). A test edits a copy of the pfet result file and sees the
+  page's sentence change.
+- Review of PR #115: the 2D verdicts are `x_two_d_table`, every `two_d` entry with a verdict in
+  `results/tcad/validation/*.json` (`numbers.two_d_cells`), and `x_two_d_disagree`, the checks
+  the Disagree cells fail on, read from their `verdicts` (the `causes` lists do not name the
+  check). Tests: every committed 2D verdict is a row; a new cell in a copied file adds one.
+  Counts (`x_corner_count`, `x_fit_length_count`) come from `devices.CORNERS` and the result
+  file. The C–V band has its own opaque colour per palette (`band`).
+- The C–V figure is the nfet at `w10p0_l10p00`, the longest calibration gate, so the per-area
+  stack dominates: the SPICE typical curve, the band of all the corners and the calibrated 1D
+  curve through the card's overlap terms. The page cites BSIM4 §7.1 for the separate effective
+  length and width of the capacitance model and for the overlap capacitance.
+- No glossary entry is added: the page avoids the region names (accumulation, depletion,
+  inversion, flat band), which land with `accumulation-depletion-inversion.md`. The MOSCAP entry
+  points to the new page.
+
 **Exit criteria.** The four pages are on `main` and linked from the landing page; the docgen reader move left `docs/_generated/` byte-identical (log in the PR); the region shading and the calibration tables are read from the result files (tests green); the verdict sentences change when a result file's verdict changes (a test edits a copy of the file and sees the sentence change); the four new glossary terms are defined; the docs tools report nothing for `docs/explained/**`; the review by use has no open stop.
 
 **Provenance impact.** None. **Calendar:** 2–3 days.
