@@ -183,6 +183,7 @@ def word(name: str, root: Path = ROOT) -> str:
     return v
 
 
+#: The validation files of the 2D cells, relative to the repo root (:func:`two_d_cells`).
 VALIDATION = "results/tcad/validation"
 
 #: The checks of a validated cell (``verdicts`` of a ``two_d`` entry), in plain words
