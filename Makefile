@@ -18,11 +18,12 @@ TCAD_SUBSET = tests/crosscheck_tcad_subset.txt
 OUTPUT_CACHE ?= tmp/output-cache
 
 .PHONY: reproduce reproduce-quick manifest spice-reference \
-	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate \
+	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate tcad-meshes \
 	cache-status cache-push lint pre-push pre-push-docs
 
 # Everything, in dependency order: the SPICE reference, then the TCAD trees (mesh convergence,
-# start values, calibration, calibrated values, validation), then the manifest check. Hours:
+# start values, calibration, calibrated values, validation, the reduced mesh artefacts of the
+# calibrated 2D cells), then the manifest check. Hours:
 # the 2D jobs (16 GiB each) run one at a time.
 reproduce:
 	$(MAKE) spice-reference
@@ -31,6 +32,7 @@ reproduce:
 	$(MAKE) tcad-calibrate
 	$(MAKE) tcad-calibrated
 	$(MAKE) tcad-validate
+	$(MAKE) tcad-meshes
 	$(PYTHON) -m gf180tcad.manifest verify results/
 
 # The SPICE reference (both engines, all corners) into results/spice.
@@ -109,6 +111,30 @@ tcad-calibrated:
 tcad-validate:
 	$(CALIBRATE) validate --device nfet_05v0 --out results/tcad/validation
 	$(CALIBRATE) validate --device pfet_05v0 --out results/tcad/validation
+
+# 6. The reduced mesh artefact of each calibrated 2D cell (renders plan, Task R0): the full mesh
+# pulled from the output cache by its mesh_sha256, cut in a 4 GiB sandbox, under a minute each.
+tcad-meshes:
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l1p00 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l2p00 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/nfet_05v0/calibrated/w1p6_l0p70 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p50 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p70 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l1p00 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l2p00 \
+		--out results/tcad/meshes/stable
+	$(PYTHON) -m gf180tcad.meshcut cut --job results/tcad/moscap2d/pfet_05v0/calibrated/w1p6_l0p70 \
+		--out results/tcad/meshes/stable
 
 # The cross-checked TCAD subset only (as the crosscheck-tcad workflow job): its jobs into
 # $(QUICK_OUT), then compared byte for byte with results/MANIFEST.sha256. Minutes.
