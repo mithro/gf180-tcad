@@ -494,8 +494,8 @@ def test_model_reads_the_committed_stack():
 NOT_COUNTED = ("inline URL not in any footnote definition", "number with no marker")
 
 
-def test_explained_pages_meet_every_cap():
-    files = [str(p) for p in pages()]
+def _cap_findings(files: list[str]) -> list[str]:
+    """The findings of both docs linters on ``files`` that the house rules count."""
     m = subprocess.run(
         [sys.executable, "-I", str(ROOT / "tools" / "measure_docs.py"), *files],
         capture_output=True, text=True, check=False,
@@ -511,7 +511,36 @@ def test_explained_pages_meet_every_cap():
     found += [
         ln for ln in (lint.stdout + lint.stderr).splitlines() if re.search(r": (FAIL|warn) ", ln)
     ]
+    return found
+
+
+def test_explained_pages_meet_every_cap():
+    found = _cap_findings([str(p) for p in pages()])
     assert not found, "\n".join(found)
+
+
+def test_explained_pages_meet_every_cap_with_substitutions_filled_in(tmp_path):
+    """The linters see only ``{{ x_name }}`` in the source, so a long generated clause would
+    pass them: lint each page again with every substitution filled in."""
+    from gf180tcad import explain
+
+    subs = explain.substitutions()
+    files = []
+    for page in pages():
+        out = tmp_path / page.name
+        out.write_text(_render(page.read_text(encoding="utf-8"), subs), "utf-8")
+        files.append(str(out))
+    found = _cap_findings(files)
+    assert not found, "\n".join(found)
+
+
+def test_positive_control_filled_in_caps(tmp_path):
+    long = "The clause " + " ".join(["word"] * 30) + " ends here."
+    page = tmp_path / "long.md"
+    page.write_text("# Title\n\n{{ x_long }}\n", "utf-8")
+    assert not _cap_findings([str(page)])
+    page.write_text(_render(page.read_text("utf-8"), {"x_long": long}), "utf-8")
+    assert _cap_findings([str(page)])
 
 
 @pytest.mark.parametrize("page", explanation_pages(), ids=lambda p: p.name)
@@ -626,12 +655,34 @@ def _explain_modules() -> list[tuple[Path, str]]:
     return out
 
 
+# The one explain module that may read through gf180tcad.tcad, and what it may import: the 1D
+# reader and the process-file reader the results pages use, both standard-library only (plan,
+# task E2 as built). Every other explain module imports nothing from gf180tcad.tcad, and
+# gf180tcad.tcad.stack (gdsfactory, shapely) is forbidden everywhere.
+TCAD_ALLOWED = {"gf180tcad.explain.data": ("gf180tcad.tcad.moscap1d", "gf180tcad.tcad.process")}
+
+
+def tcad_import_violations(path: Path, mod: str) -> set[str]:
+    """The ``gf180tcad.tcad`` imports of module ``mod`` (file ``path``) outside
+    :data:`TCAD_ALLOWED`; the bare package name counts only where nothing else is imported."""
+    tcad = {i for i in _imports(path, mod) if i.split(".")[:2] == ["gf180tcad", "tcad"]}
+    allowed = TCAD_ALLOWED.get(mod, ())
+    bad = {
+        i for i in tcad
+        if i != "gf180tcad.tcad" and not any(i == a or i.startswith(f"{a}.") for a in allowed)
+    }  # fmt: skip
+    if tcad == {"gf180tcad.tcad"}:
+        bad.add("gf180tcad.tcad")
+    return bad
+
+
 def test_explain_imports_nothing_from_tcad():
-    """The explainer redraws the cell from committed data, never from ``gf180tcad.tcad``."""
+    """The explainer redraws the cell from committed data; only ``explain.data`` reads through
+    the two standard-library-only TCAD readers (:data:`TCAD_ALLOWED`)."""
     mods = _explain_modules()
-    assert {m for _, m in mods} >= {"gf180tcad.explain", "gf180tcad.explain.model"}
+    assert {m for _, m in mods} >= {"gf180tcad.explain", "gf180tcad.explain.model", *TCAD_ALLOWED}
     for path, mod in mods:
-        bad = {i for i in _imports(path, mod) if i.split(".")[:2] == ["gf180tcad", "tcad"]}
+        bad = tcad_import_violations(path, mod)
         assert not bad, f"{mod} imports {sorted(bad)}"
 
 
@@ -640,6 +691,18 @@ def test_positive_control_tcad_import_scan(tmp_path):
     f.write_text("import gf180tcad.tcad.stack\nfrom ..tcad import moscap1d\n", "utf-8")
     found = _imports(f, "gf180tcad.explain.m")
     assert "gf180tcad.tcad.stack" in found and "gf180tcad.tcad.moscap1d" in found
+    # Any tcad import outside explain.data fails, even an allowed reader.
+    assert tcad_import_violations(f, "gf180tcad.explain.model") == {
+        "gf180tcad.tcad.stack", "gf180tcad.tcad.moscap1d",
+    }  # fmt: skip
+    # In explain.data the two readers pass and the stack still fails.
+    assert tcad_import_violations(f, "gf180tcad.explain.data") == {"gf180tcad.tcad.stack"}
+    g = tmp_path / "d.py"
+    g.write_text("from gf180tcad.tcad import moscap1d, process\n", "utf-8")
+    assert tcad_import_violations(g, "gf180tcad.explain.data") == set()
+    assert tcad_import_violations(g, "gf180tcad.explain.figures") == {
+        "gf180tcad.tcad.moscap1d", "gf180tcad.tcad.process",
+    }  # fmt: skip
 
 
 _DOCS_GROUP_ONLY = textwrap.dedent(
@@ -984,3 +1047,257 @@ def test_glossary_terms_of_the_junction_page():
     text = (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
     terms = Counter(re.findall(r"^(\S[^\n]*)\n  ", text, re.MULTILINE))
     assert terms["pn junction"] == 1
+
+
+# --- the MOS capacitor page (task E2a) -------------------------------------------------------
+
+MOSCAP_PAGE = EXPLAINED / "mos-capacitor.md"
+_L10 = "w10p0_l10p00"
+_SPICE_L10 = f"results/spice/ngspice/typical/nfet_05v0/{_L10}/metrics.json"
+
+
+def test_docgen_reads_curves_through_explain_data():
+    """The 1D and SPICE curve readers live once, in ``gf180tcad.explain.data``; docgen imports
+    them (plan, task E2) and keeps no copy."""
+    from gf180tcad import docgen
+    from gf180tcad.explain import data
+
+    for name in ("spice_columns", "spice_cv", "tcad_cgg", "u_sorted"):
+        assert getattr(docgen, name) is getattr(data, name), name
+    src = (SRC / "gf180tcad" / "docgen.py").read_text(encoding="utf-8")
+    for gone in ("def _cols(", "def _u_sorted(", "1e15"):
+        assert gone not in src, gone
+
+
+def test_cv_figure_reads_the_committed_curves():
+    """The moscap-cv curves are the committed 1D C per area through the BSIM4 bookkeeping and the
+    committed SPICE cv sweeps, traced here by hand."""
+    from gf180tcad.devices import CORNERS, DEVICES, geometry_id
+    from gf180tcad.explain import figures
+    from gf180tcad.tcad import moscap1d, process
+
+    curves = figures.cv_curves("nfet_05v0", "calibrated", _L10)
+    (geom,) = [g for g in DEVICES["nfet_05v0"].geometries if geometry_id(g) == _L10]
+    m = moscap1d.read(ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated")
+    vg, _i, _p, total = m.area_scaled(geom, process.load("nfet_05v0"))
+    assert list(curves["u"]) == sorted(vg)
+    assert curves["tcad"][0] == pytest.approx(total[vg.index(min(vg))], rel=1e-12)
+    tt = (ROOT / f"results/spice/ngspice/typical/nfet_05v0/{_L10}/cv.csv").read_text("utf-8")
+    rows = [ln.split(",") for ln in tt.splitlines() if ln and not ln.startswith("#")]
+    head, body = rows[0], rows[1:]
+    cgg = [float(r[head.index("cgg")]) * 1e15 for r in body]
+    vgs = [float(r[head.index("vg")]) for r in body]
+    assert list(curves["u_spice"]) == sorted(vgs)
+    assert curves["spice_tt"][0] == pytest.approx(cgg[vgs.index(min(vgs))], rel=1e-12)
+    assert len(CORNERS) == 5
+    assert all(curves["spice_lo"] <= curves["spice_tt"]) and all(
+        curves["spice_tt"] <= curves["spice_hi"]
+    )
+
+
+def test_moscap_figures_are_registered():
+    from gf180tcad.explain import figures
+
+    for name in ("moscap-cell", "moscap-cv"):
+        assert name in figures.FIGURES, name
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark")
+    subs = figures.substitutions()
+    assert "x_fig_moscap_cell_scale" in subs and "x_fig_moscap_cv_scale" not in subs
+
+
+def test_moscap_values_are_the_files():
+    numbers = _numbers()
+    spice = json.loads((ROOT / _SPICE_L10).read_text("utf-8"))["metrics"]
+    rec = json.loads((ROOT / _RESULT).read_text("utf-8"))["per_geometry"][_L10]
+    assert numbers.value("cgg_acc_l10") == spice["cgg_acc_ff"]
+    assert numbers.value("cgg_inv_l10") == spice["cgg_inv_ff"]
+    assert numbers.value("plateau_acc_l10") == rec["metrics"]["plateau_acc_max_rel"]
+    assert numbers.value("plateau_inv_l10") == rec["metrics"]["plateau_inv_max_rel"]
+    assert numbers.value("plateau_tol_l10") == rec["verdicts"]["plateau_acc"]["tolerance"]
+    assert (
+        rec["verdicts"]["plateau_inv"]["tolerance"] == rec["verdicts"]["plateau_acc"]["tolerance"]
+    )
+    assert numbers.text("plateau_tol_l10") == "5 %"
+
+
+_VERDICT_FILES = {
+    "verdict_nfet_1d": ("results/tcad/calibration/nfet_05v0.result.json", ["verdict"]),
+    "verdict_pfet_1d": ("results/tcad/calibration/pfet_05v0.result.json", ["verdict"]),
+}  # fmt: skip
+
+
+def test_verdict_words_are_read_from_the_result_files():
+    numbers = _numbers()
+    assert set(numbers.WORDS) == set(_VERDICT_FILES)
+    subs = numbers.substitutions()
+    for name, (path, keys) in _VERDICT_FILES.items():
+        v = json.loads((ROOT / path).read_text("utf-8"))
+        for k in keys:
+            v = v[k]
+        assert numbers.word(name) == v == subs[f"x_{name}"], name
+        assert v in ("Agree", "Same process", "Disagree"), (name, v)
+
+
+def _render(text: str, subs: dict[str, str]) -> str:
+    return _SUBST.sub(lambda m: subs[m.group(1)], text)
+
+
+def test_verdict_sentence_follows_an_edited_result_file(tmp_path):
+    """Plan E2 exit criterion: a copy of the pfet result file with a new verdict changes the
+    page's sentence, so no verdict is a typed word."""
+    numbers = _numbers()
+    src = "results/tcad/calibration/pfet_05v0.result.json"
+    data = json.loads((ROOT / src).read_text("utf-8"))
+    data["verdict"] = "Same process"
+    for path, _keys in _VERDICT_FILES.values():
+        dst = tmp_path / path
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text((ROOT / path).read_text("utf-8"), "utf-8")
+    (tmp_path / src).write_text(json.dumps(data), "utf-8")
+    text = MOSCAP_PAGE.read_text(encoding="utf-8")
+    (line,) = [s for s in _sentences(text) if "{{ x_verdict_pfet_1d }}" in s]
+    before = {f"x_{n}": numbers.word(n) for n in numbers.WORDS}
+    after = {f"x_{n}": numbers.word(n, root=tmp_path) for n in numbers.WORDS}
+    assert after["x_verdict_pfet_1d"] == "Same process"
+    assert _render(line, {**numbers.substitutions(), **before}) != _render(
+        line, {**numbers.substitutions(), **after}
+    )
+    assert "Same process" in _render(line, {**numbers.substitutions(), **after})
+
+
+def test_moscap_page_prints_its_numbers():
+    text = MOSCAP_PAGE.read_text(encoding="utf-8")
+    for key in (*_VERDICT_FILES, "cgg_acc_l10", "cgg_inv_l10", "plateau_acc_l10", "plateau_inv_l10",
+                "plateau_tol_l10", "two_d_table", "two_d_disagree", "corner_count",
+                "fit_length_count", "dv_fb_nfet_cal"):  # fmt: skip
+        assert "{{ x_" + key + " }}" in text, key
+    for name in ("moscap-cell", "moscap-cv"):
+        assert f"/_generated/explained/{name}-light.svg" in text, name
+    for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-windows",
+                   "cv-agreement-metric"):  # fmt: skip
+        assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor
+
+
+# --- the 2D verdicts: every committed one on the page ----------------------------------------
+
+_VALIDATION = ROOT / "results" / "tcad" / "validation"
+
+
+def _committed_two_d(root: Path = ROOT) -> list[tuple[str, float, float, str]]:
+    """(device, W, L, verdict) of every ``two_d`` entry with a verdict, read here by hand."""
+    out = []
+    for path in sorted((root / "results" / "tcad" / "validation").glob("*.json")):
+        doc = json.loads(path.read_text("utf-8"))
+        for e in doc.get("two_d", {}).values():
+            if e.get("verdict") is not None:
+                out.append(
+                    (doc["device"], e["geometry"]["w_um"], e["geometry"]["l_um"], e["verdict"])
+                )
+    return out
+
+
+def _row(device: str, w: float, length: float, verdict: str) -> str:
+    return f"| {{term}}`{device}` | {w:g} µm | {length:g} µm | {{term}}`{verdict}` |"
+
+
+def test_every_two_d_verdict_is_on_the_page():
+    """Each committed 2D verdict is a row of the page's table, and the table has no other row,
+    so a new validated cell adds its row with no edit of the page."""
+    from gf180tcad import explain
+
+    cells = _committed_two_d()
+    assert cells and {d for d, *_ in cells} == {"nfet_05v0", "pfet_05v0"}
+    page = _render(MOSCAP_PAGE.read_text(encoding="utf-8"), explain.substitutions())
+    rows = [ln for ln in page.splitlines() if ln.startswith("| {term}`")]
+    assert sorted(rows) == sorted(_row(*c) for c in cells)
+    assert rows == [_row(*c) for c in sorted(cells)]  # grouped by device, then W, then L
+
+
+def _validation_copy(tmp_path: Path) -> Path:
+    dst = tmp_path / "results" / "tcad" / "validation"
+    dst.mkdir(parents=True)
+    for f in _VALIDATION.glob("*.json"):
+        (dst / f.name).write_text(f.read_text("utf-8"), "utf-8")
+    return dst
+
+
+def test_two_d_table_grows_with_a_new_cell(tmp_path):
+    numbers = _numbers()
+    dst = _validation_copy(tmp_path)
+    doc = json.loads((dst / "pfet_05v0.json").read_text("utf-8"))
+    new = json.loads(json.dumps(doc["two_d"]["w10p0_l0p70"]))
+    new["geometry"] = {**new["geometry"], "geometry_id": "w1p6_l0p70", "w_um": 1.6}
+    doc["two_d"]["w1p6_l0p70"] = new
+    (dst / "pfet_05v0.json").write_text(json.dumps(doc), "utf-8")
+    before = numbers.two_d_table().splitlines()
+    after = numbers.two_d_table(root=tmp_path).splitlines()
+    assert len(after) == len(before) + 1
+    assert _row("pfet_05v0", 1.6, 0.7, new["verdict"]) in after
+
+
+def test_disagree_clause_follows_the_checks(tmp_path):
+    numbers = _numbers()
+    assert numbers.two_d_disagree(root=tmp_path / "missing") == "No 2D cell is Disagree"
+    dst = _validation_copy(tmp_path)
+    one = numbers.two_d_disagree(root=tmp_path)
+    assert one.startswith("Every Disagree cell fails only one check: ")
+    doc = json.loads((dst / "nfet_05v0.json").read_text("utf-8"))
+    cell = doc["two_d"]["w10p0_l0p60"]
+    assert cell["verdict"] == "Disagree"
+    cell["verdicts"]["plateau_acc"]["verdict"] = "Disagree"
+    (dst / "nfet_05v0.json").write_text(json.dumps(doc), "utf-8")
+    two = numbers.two_d_disagree(root=tmp_path)
+    assert numbers.CHECKS["plateau_acc"] in two and two.startswith("The Disagree cells fail on ")
+
+
+def test_check_words_name_both_signs():
+    """The checks run in u = polarity × Vg: a side named by its sign names it for both devices."""
+    for key, words in _numbers().CHECKS.items():
+        if "negative" in words or "positive" in words:
+            assert "nfet" in words and "pfet" in words, key
+
+
+def test_disagree_cells_are_the_issue_on_the_page():
+    """The page links issue #108 (the depletion crossing) beside the Disagree clause: while a 2D
+    cell is Disagree, that check is among the failing ones."""
+    numbers = _numbers()
+    bad = [c for c in numbers.two_d_cells() if c.verdict == "Disagree"]
+    if bad:
+        assert all("dv_dep" in c.failing for c in bad)
+    assert "issues/108" in MOSCAP_PAGE.read_text(encoding="utf-8")
+
+
+_COUNT_WORDS = re.compile(
+    r"\b(two|three|four|five|six|seven|eight|nine|ten)\s+(\{term\}`)?"
+    r"(corners?|gate lengths?|cells?|geometries)",
+    re.IGNORECASE,
+)
+
+
+def test_moscap_page_types_no_count():
+    """Counts that can drift (corners, fit lengths, cells) come from substitutions; the fixed
+    ones (the three layers of the stack, the two plates of a capacitor) are words."""
+    assert not _COUNT_WORDS.findall(MOSCAP_PAGE.read_text(encoding="utf-8"))
+    for bad in ("spans its five corners", "at three gate lengths", "Disagree at three cells"):
+        assert _COUNT_WORDS.search(bad), bad
+
+
+def test_counts_are_derived(tmp_path):
+    from gf180tcad.devices import CORNERS
+
+    numbers = _numbers()
+    src = "results/tcad/calibration/nfet_05v0.result.json"
+    fit = json.loads((ROOT / src).read_text("utf-8"))
+    lengths = {g["geometry"]["l_um"] for g in fit["per_geometry"].values()}
+    assert numbers.counts() == {"corner_count": len(CORNERS), "fit_length_count": len(lengths)}
+    subs = numbers.substitutions()
+    assert subs["x_corner_count"] == str(len(CORNERS))
+    assert subs["x_fit_length_count"] == str(len(lengths))
+    # A copy of the result file with one more fit length: the count follows it.
+    extra = json.loads(json.dumps(next(iter(fit["per_geometry"].values()))))
+    extra["geometry"] = {**extra["geometry"], "geometry_id": "w10p0_l5p00", "l_um": 5.0}
+    fit["per_geometry"]["w10p0_l5p00"] = extra
+    (tmp_path / src).parent.mkdir(parents=True)
+    (tmp_path / src).write_text(json.dumps(fit), "utf-8")
+    assert numbers.counts(root=tmp_path)["fit_length_count"] == len(lengths) + 1

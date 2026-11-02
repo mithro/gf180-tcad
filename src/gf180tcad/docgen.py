@@ -33,6 +33,7 @@ import numpy as np
 
 from gf180tcad import io, metrics, plots, specwindow
 from gf180tcad.devices import CORNERS, DEVICES, Device, Geometry, geometry_id
+from gf180tcad.explain.data import spice_columns, spice_cv, tcad_cgg, u_sorted
 from gf180tcad.known import KNOWN_ENGINE_DIFFS
 from gf180tcad.layout import METRICS_NAME
 from gf180tcad.reference import engine_sweeps
@@ -113,14 +114,6 @@ def _has_sweep(engine: str, sweep: str) -> bool:
     return sweep in engine_sweeps(engine)
 
 
-def _cols(root: Path, engine: str, corner: str, device: str, gid: str, sweep: str) -> dict:
-    """Columns of one committed CSV; FileNotFoundError if it is missing (never a silent gap)."""
-    path = Path(root) / engine / corner / device / gid / f"{sweep}.csv"
-    if not path.is_file():
-        raise FileNotFoundError(f"missing result file {path}")
-    return io.read_csv(path)[0]
-
-
 def _metrics(root: Path, engine: str, corner: str, device: str, gid: str) -> dict:
     """The metrics of one committed ``metrics.json``; FileNotFoundError if it is missing."""
     path = Path(root) / engine / corner / device / gid / METRICS_NAME
@@ -135,8 +128,7 @@ def _metrics(root: Path, engine: str, corner: str, device: str, gid: str) -> dic
 def _series(cols: dict, sweep: str, pol: int) -> list[tuple[str | None, np.ndarray, np.ndarray]]:
     """Polarity-stripped ``(group label, x, y)``: |Id| in A against |Vgs| or |Vds|; cv in fF."""
     if sweep == "cv":
-        order = np.argsort(pol * cols["vg"], kind="stable")
-        return [(None, (pol * cols["vg"])[order], (cols["cgg"] * 1e15)[order])]
+        return [(None, *spice_cv(cols, pol))]
     if sweep in ("idvg_lin", "idvg_sat"):
         m = cols["vb"] == 0.0
         return [(None, pol * cols["vg"][m], np.abs(cols["id"][m]))]
@@ -155,12 +147,12 @@ def _curves(root: Path, device: Device, gid: str, sweep: str, scale: float, floo
     pol = device.polarity
     per_corner = []
     for corner in CORNERS:
-        cols = _cols(root, "ngspice", corner, device.name, gid, sweep)
+        cols = spice_columns(root, "ngspice", corner, device.name, gid, sweep)
         per_corner.append(_series(cols, sweep, pol))
     tt = per_corner[CORNERS.index(TT)]
     xs = None
     if _has_sweep("xyce", sweep):
-        xs = _series(_cols(root, "xyce", TT, device.name, gid, sweep), sweep, pol)
+        xs = _series(spice_columns(root, "xyce", TT, device.name, gid, sweep), sweep, pol)
 
     def y(a):
         a = a * scale
@@ -413,8 +405,8 @@ def _engine_table(root) -> list[str]:
             gid = geometry_id(g)
             cells = [f"{{doc}}`{gid} <{device.name}/{gid}>`"]
             for sweep in DIFF_SWEEPS:
-                a = _cols(root, "ngspice", TT, device.name, gid, sweep)
-                b = _cols(root, "xyce", TT, device.name, gid, sweep)
+                a = spice_columns(root, "ngspice", TT, device.name, gid, sweep)
+                b = spice_columns(root, "xyce", TT, device.name, gid, sweep)
                 d = engine_diff(a, b)
                 cell = num(100 * d, 3)
                 if d > ENGINE_DIFF_THRESHOLD:
@@ -623,13 +615,6 @@ class _Device:
         return job if (job / "cv.meta.json").is_file() else None
 
 
-def _u_sorted(vg, pol: int, *ys) -> list[np.ndarray]:
-    """``u = polarity * vg`` ascending, and each of ``ys`` in the same order."""
-    u = pol * np.asarray(vg, dtype=float)
-    order = np.argsort(u, kind="stable")
-    return [u[order], *(np.asarray(y, dtype=float)[order] for y in ys)]
-
-
 def _spice_cv(spice_root: Path, device: Device, gid: str) -> list[plots.Curve]:
     """ngspice corner envelope (band) and TT (line) of the cv sweep, against u."""
     curves, _ = _curves(spice_root, device, gid, "cv", 1.0, None)
@@ -638,8 +623,7 @@ def _spice_cv(spice_root: Path, device: Device, gid: str) -> list[plots.Curve]:
 
 def _tcad_total(d: _Device, g: Geometry, which: str):
     m = d.calibrated if which == "calibrated" else d.start
-    vg, intrinsic, parasitic, total = m.area_scaled(g, d.proc)
-    return _u_sorted(vg, d.device.polarity, intrinsic, parasitic, total)
+    return tcad_cgg(m, g, d.proc, d.device.polarity)
 
 
 _U_LABEL = "u = polarity x Vg (V)"
@@ -725,8 +709,8 @@ def _split_svg(spice_root: Path, d: _Device, g: Geometry) -> bytes:
 def _two_d_svg(d: _Device, job: Path) -> bytes:
     cols, _ = io.read_csv(job / "cv.csv")
     pol = d.device.polarity
-    u2, c2 = _u_sorted(cols["vg"], pol, cols["c_per_area"])
-    u1, c1 = _u_sorted(d.start.vg, pol, d.start.c_per_area_ff_um2)
+    u2, c2 = u_sorted(cols["vg"], pol, cols["c_per_area"])
+    u1, c1 = u_sorted(d.start.vg, pol, d.start.c_per_area_ff_um2)
     panel = plots.Panel(
         "C per area at the start values: 2D cell against the 1D stack",
         _U_LABEL,
@@ -746,10 +730,10 @@ def _meshconv_svg(d: _Device, report: dict) -> bytes:
     vals, changes, keys = [], [], []
     for i, lv in enumerate(report["levels"]):
         color = plots.FAMILY[i % len(plots.FAMILY)]
-        u, c = _u_sorted(report["vg"], pol, lv["c_per_area_ff_um2"])
+        u, c = u_sorted(report["vg"], pol, lv["c_per_area_ff_um2"])
         vals.append(plots.Curve(u, c, color, dashed=i != sel))
         if lv["rel_change"] is not None:
-            u, r = _u_sorted(report["vg"], pol, lv["rel_change"])
+            u, r = u_sorted(report["vg"], pol, lv["rel_change"])
             changes.append(plots.Curve(u, np.maximum(np.abs(r), 1e-12), color, dashed=i != sel))
         mark = ", selected" if i == sel else ""
         keys.append(

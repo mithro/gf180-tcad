@@ -25,7 +25,7 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
 from gf180tcad import plots
-from gf180tcad.explain import idealised, model, numbers
+from gf180tcad.explain import data, idealised, model, numbers
 
 STYLE = {
     # 6.4 in wide with 12 pt text: 10.4 px text when the SVG is scaled to a 400 px column.
@@ -79,6 +79,8 @@ STYLE = {
     "spike_width": 3.5,
     "spike_zorder": 3,
     "junction_line_zorder": 1,
+    # The C-V plot: the simulated line is drawn dashed on top of the SPICE curves.
+    "cv_zorder": 3,
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -90,6 +92,8 @@ PALETTES = {
         "background": "#ffffff",
         "text": "#222222",
         "grid": "#c8c8c8",
+        # The SPICE corner band of the C-V plot: opaque, lighter than the grid lines in dark.
+        "band": "#e4e4e4",
         "highlight": "#009E73",
         "highlight_oxide": "#CC79A7",
         "muted": "#8c8c8c",
@@ -101,6 +105,7 @@ PALETTES = {
         "background": "#131416",
         "text": "#e4e4e4",
         "grid": "#4a4a4a",
+        "band": "#5e5e5e",
         "highlight": "#2fbf8f",
         "highlight_oxide": "#e09bc4",
         "muted": "#9a9a9a",
@@ -553,6 +558,73 @@ def _junction_cell(palette: str) -> bytes:
     return cross_section(c, ("junction",), palette)
 
 
+# The committed SPICE reference tree, and its typical corner (the line; all the corners give
+# the band).
+SPICE_ROOT = numbers.ROOT / "results" / "spice"
+TYPICAL = "typical"
+
+
+def cv_curves(device: str, params: str, gid: str) -> dict[str, np.ndarray]:
+    """The curves of :func:`cv_against_spice`, read by the readers the results pages use
+    (:mod:`gf180tcad.explain.data`): the simulated gate capacitance of ``gid`` from the committed
+    1D C per area at ``params`` with the BSIM4 bookkeeping, and the :term:`SPICE` ``cv`` sweep at
+    the :term:`typical corner` with the lowest and highest of the five :term:`corners <corner>` at
+    each voltage. Keys ``u``,
+    ``tcad``, ``u_spice``, ``spice_tt``, ``spice_lo``, ``spice_hi`` (V and fF)."""
+    from gf180tcad.devices import CORNERS, DEVICES, geometry_id
+
+    dev = DEVICES[device]
+    (geom,) = [g for g in dev.geometries if geometry_id(g) == gid]
+    moscap, proc = data.read_moscap(numbers.ROOT / "results" / "tcad", device, params)
+    u, _intrinsic, _parasitic, total = data.tcad_cgg(moscap, geom, proc, dev.polarity)
+    spice = {}
+    for corner in CORNERS:
+        cols = data.spice_columns(SPICE_ROOT, "ngspice", corner, device, gid, "cv")
+        spice[corner] = data.spice_cv(cols, dev.polarity)
+    u_s, tt = spice[TYPICAL]
+    for corner, (uc, _c) in spice.items():
+        if not np.array_equal(uc, u_s):
+            raise ValueError(f"{device} {gid} cv: the {corner} grid differs from {TYPICAL}")
+    stack = np.array([c for _u, c in spice.values()])
+    return {"u": u, "tcad": total, "u_spice": u_s, "spice_tt": tt,
+            "spice_lo": stack.min(axis=0), "spice_hi": stack.max(axis=0)}  # fmt: skip
+
+
+def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
+    """The gate capacitance against the gate voltage of one geometry: the :term:`SPICE` model at
+    the :term:`typical corner` (solid) inside the band of its five :term:`corners <corner>`, and the simulated curve of the
+    committed 1D stack at ``params`` (dashed, on top), from :func:`cv_curves`."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    c = cv_curves(device, params, gid)
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.fill_between(c["u_spice"], c["spice_lo"], c["spice_hi"], color=pal["band"],
+                        linewidth=0, label="SPICE, all corners")  # fmt: skip
+        ax.plot(c["u_spice"], c["spice_tt"], color=pal["text"], lw=lw, label="SPICE, typical")
+        ax.plot(c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
+                zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
+        ax.set_ylim(bottom=0)
+        ax.grid(True)
+        ax.set_xlabel("gate voltage (V)")
+        ax.set_ylabel("gate capacitance (fF)")
+        fig.legend(loc="outside lower center", ncols=2, frameon=False)
+        return _svg(fig)
+
+
+def _moscap_cell(palette: str) -> bytes:
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+    )
+    return cross_section(c, ("gate", "oxide", "body"), palette)
+
+
+def _moscap_cv(palette: str) -> bytes:
+    return cv_against_spice("nfet_05v0", "calibrated", "w10p0_l10p00", palette)
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -562,13 +634,15 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "parts-cell": _parts_cell,
     "junction-cell": _junction_cell,
     "junction-panels": junction_panels,
+    "moscap-cell": _moscap_cell,
+    "moscap-cv": _moscap_cv,
 }
 
 
 # The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
 # computed curves (not drawings of the device) carry no statement.
-_CELL_FIGURES = ("parts-cell", "junction-cell")
-_PLOTS = ("bands-flat", "junction-panels")
+_CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell")
+_PLOTS = ("bands-flat", "junction-panels", "moscap-cv")
 
 
 def substitutions() -> dict[str, str]:
