@@ -70,6 +70,7 @@ EXPLAINED_FIGURES = [
     "band-regimes",
     "cv-parts",
     "corner-cv",
+    "corner-area",
 ]
 
 

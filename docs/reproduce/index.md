@@ -265,8 +265,34 @@ line number. The table also holds the card's second nfet {term}`bin`, `nfet_06v0
 the shortest calibration gate. Its lines for these inputs equal the first bin's. The 1D stack is the same; the residuals and the optimiser settings are the typical
 fit's ({py:mod}`gf180tcad.calibrate.corners`).
 
+```{figure} /_generated/explained/corner-area-light.svg
+:figclass: only-light
+:name: fig-corner-area
+:alt: The gate seen from above: a solid drawn outline, a dashed corner outline longer and narrower than it, a filled capacitance area inside the dashed outline, and two thin strips at its left and right ends labelled source overlap and drain overlap, with the lengths L, L plus X_L, L_c, D_L and the widths W, W plus X_W, W_c, D_W dimensioned.
+
+The gate seen from above at a corner $c$, drawn with the signs of the nfet's ss offsets: longer
+and narrower. The solid outline is the drawn gate, $L$ by $W$. The dashed outline adds the
+corner's $X_{L,c}$ and $X_{W,c}$. The filled middle is the capacitance area, $L_c$ by $W_c$, of
+{math:numref}`eq-corner-area`. The two strips at the source and drain ends, $D_L$ long and $W_c$
+wide, carry the overlap capacitances of {math:numref}`eq-corner-overlap`.
+{{ x_fig_corner_area_scale }}
+```
+
+```{figure} /_generated/explained/corner-area-dark.svg
+:figclass: only-dark
+:name: fig-corner-area-dark
+:alt: The gate seen from above: a solid drawn outline, a dashed corner outline longer and narrower than it, a filled capacitance area inside the dashed outline, and two thin strips at its left and right ends labelled source overlap and drain overlap, with the lengths L, L plus X_L, L_c, D_L and the widths W, W plus X_W, W_c, D_W dimensioned.
+
+The gate seen from above at a corner $c$, drawn with the signs of the nfet's ss offsets: longer
+and narrower. The solid outline is the drawn gate, $L$ by $W$. The dashed outline adds the
+corner's $X_{L,c}$ and $X_{W,c}$. The filled middle is the capacitance area, $L_c$ by $W_c$, of
+{math:numref}`eq-corner-area`. The two strips at the source and drain ends, $D_L$ long and $W_c$
+wide, carry the overlap capacitances of {math:numref}`eq-corner-overlap`.
+{{ x_fig_corner_area_scale }}
+```
+
 The capacitance area uses the corner's length and width offsets, as {math:numref}`eq-corner-area`
-gives:
+gives and {ref}`the gate-area figure <fig-corner-area>` shows:
 
 $$
 L_c = L + X_{L,c} - 2 D_L, \qquad W_c = W + X_{W,c} - 2 D_W
@@ -280,7 +306,7 @@ where
 - $D_L$, $D_W$ are the card's {term}`DLC` and {term}`DWC`, in µm.
 
 The four overlap capacitances scale by the corner's factor, as {math:numref}`eq-corner-overlap`
-gives. The fringe capacitance CF is the {{ BSIM4_site }} default at the corner's oxide thickness TOXE.
+gives. They sit on the source and drain strips of {ref}`the gate-area figure <fig-corner-area>`. The fringe capacitance CF is the {{ BSIM4_site }} default at the corner's oxide thickness TOXE.
 
 $$
 C_{o,c} = f_c \, C_o

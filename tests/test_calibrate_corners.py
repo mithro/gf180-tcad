@@ -667,3 +667,41 @@ def test_corner_figure_reads_the_committed_curves():
     assert set(figures.CORNER_HIGHLIGHT) <= set(corners.FIT_CORNERS)
     light, dark = figures.corner_cv("light"), figures.corner_cv("dark")
     assert light.startswith(b"<?xml") and light != dark
+
+
+def test_corner_area_figure_follows_the_equations():
+    """The gate-area figure: the corner outline is the drawn gate plus X_L and X_W with the signs
+    of the nfet's AREA_CORNER values; the capacitance area is that outline less D_L at each end
+    and D_W at each side (eq-corner-area); the overlap strips are the D_L ends, W_c wide
+    (eq-corner-overlap). Its statement says it is not to scale."""
+    from gf180tcad.explain import figures
+
+    ext = figures.corner_area_extents()
+    length, width = figures.STYLE["area_drawn"]["gate length and width"]
+    x, d = figures.STYLE["area_drawn"]["length and width offsets"]
+    xl = corners.card_shift(figures.CORNER_DEVICE, figures.AREA_CORNER, "xl")
+    xw = corners.card_shift(figures.CORNER_DEVICE, figures.AREA_CORNER, "xw")
+    assert xl > 0 > xw  # the nfet ss corner: a longer, narrower gate (spec §5.3)
+
+    def size(b):
+        return b.x1 - b.x0, b.y1 - b.y0
+
+    assert size(ext["drawn"]) == (pytest.approx(length), pytest.approx(width))
+    lc, wc = size(ext["corner"])
+    assert (lc, wc) == (pytest.approx(length + x), pytest.approx(width - x))
+    area = ext["area"]
+    assert size(area) == (pytest.approx(lc - 2 * d), pytest.approx(wc - 2 * d))
+    assert (area.y0, area.y1) == (
+        pytest.approx(ext["corner"].y0 + d),
+        pytest.approx(ext["corner"].y1 - d),
+    )
+    src, drn = ext["source overlap"], ext["drain overlap"]
+    assert (src.x0, src.x1) == (pytest.approx(ext["corner"].x0), pytest.approx(area.x0))
+    assert (drn.x0, drn.x1) == (pytest.approx(area.x1), pytest.approx(ext["corner"].x1))
+    for strip in (src, drn):
+        assert (strip.y0, strip.y1) == (pytest.approx(area.y0), pytest.approx(area.y1))
+    statement = figures.substitutions()["x_fig_corner_area_scale"]
+    assert statement.count("chosen for the drawing, not to scale.") == 2
+    assert "Oxide thickness" not in statement
+    light, dark = figures.corner_area("light"), figures.corner_area("dark")
+    assert light.startswith(b"<?xml") and light != dark
