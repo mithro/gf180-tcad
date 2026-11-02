@@ -166,10 +166,22 @@ def test_patches_are_named_and_hashed():
     for i, p in enumerate(patches, start=1):
         assert re.fullmatch(rf"{i:04d}-[a-z0-9-]+\.patch", p.name), p.name
         head = p.read_text(encoding="utf-8").splitlines()[:3]
-        assert head[0] == "# SPDX-License-Identifier: GPL-3.0-or-later", p.name
-        assert re.fullmatch(r"# Patches: tcad-charon/\S+ \(Charon 2\.2\.0\)\.", head[1]), p.name
+        m = re.fullmatch(
+            r"# Patches: tcad-charon/(\S+) \((Charon 2\.2\.0|Trilinos 81e9581a)\)\.", head[1]
+        )
+        assert m, p.name
+        # A patch carries the licence of the files it changes: Charon's GPL, or the Trilinos
+        # package's own licence (Kokkos, Teuchos, SEACAS ...: BSD-3-Clause).
+        trilinos = m.group(2).startswith("Trilinos")
+        assert trilinos == m.group(1).startswith("Trilinos/"), p.name
+        spdx = "BSD-3-Clause" if trilinos else "GPL-3.0-or-later"
+        assert head[0] == f"# SPDX-License-Identifier: {spdx}", p.name
         assert head[2].startswith("# Reason: ") and len(head[2]) > 20, p.name
         assert f"`{p.name}`" in readme, f"{p.name} missing from the licence note"
+        # every file the patch changes is under the directory its header names
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.startswith(("--- a/", "+++ b/")):
+                assert line[6:].startswith(m.group(1)), (p.name, line)
     # The build records each patch with its sha256 in SOURCES.json.
     src = inputs.sources(UPSTREAM, LIBS)
     for p in patches:
