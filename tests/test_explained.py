@@ -1126,13 +1126,19 @@ _VERDICT_FILES = {
     "verdict_nfet_1d": ("results/tcad/calibration/nfet_05v0.result.json", ["verdict"]),
     "verdict_pfet_1d": ("results/tcad/calibration/pfet_05v0.result.json", ["verdict"]),
 }  # fmt: skip
+# The crossing checks' verdicts at w10p0_l10p00, printed by the regions page.
+_CROSSING_VERDICTS = {
+    f"verdict_{c}_l10": ("results/tcad/calibration/nfet_05v0.result.json",
+                         ["per_geometry", "w10p0_l10p00", "verdicts", c, "verdict"])
+    for c in ("dv_dep", "dv_inv")
+}  # fmt: skip
 
 
 def test_verdict_words_are_read_from_the_result_files():
     numbers = _numbers()
-    assert set(numbers.WORDS) == set(_VERDICT_FILES)
+    assert set(numbers.WORDS) == set(_VERDICT_FILES) | set(_CROSSING_VERDICTS)
     subs = numbers.substitutions()
-    for name, (path, keys) in _VERDICT_FILES.items():
+    for name, (path, keys) in {**_VERDICT_FILES, **_CROSSING_VERDICTS}.items():
         v = json.loads((ROOT / path).read_text("utf-8"))
         for k in keys:
             v = v[k]
