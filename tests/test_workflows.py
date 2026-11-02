@@ -114,6 +114,7 @@ def test_crosscheck_sandbox_check_waits_for_the_slice():
     start = text.index("name: Sandbox check")
     step = text[start : text.index("      - name:", start + 1)]
     assert "          sleep 3\n" not in step
+    assert "; sleep 30' \\\n" in step  # the container outlives the 20 s wait
     assert "for _ in $(seq 40); do" in step and "sleep 0.5" in step
     assert "systemctl show gf180-tcad.slice -p ActiveState --value" in step
     assert 'compgen -G "$slice/docker-*.scope"' in step
