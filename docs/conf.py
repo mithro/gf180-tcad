@@ -25,6 +25,7 @@ extensions = [
     "repo_roles",
     "api_links",
     "table_cells",
+    "unit_join",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
