@@ -3,7 +3,7 @@
 The {term}`SPICE reference <SPICE reference results>` dataset ({term}`Phase 1`) is published
 here as generated pages, one per device and geometry (2 devices x 6 geometries). Each has Id-Vg
 (linear and log), Id-Vd and {term}`Cgg`-Vg plots and a table of extracted metrics.
-Three of the sweeps of one geometry are drawn in {numref}`results-sweeps-figure`. A summary
+Three of the {term}`sweeps <sweep>` of one geometry are drawn in {numref}`results-sweeps-figure`. A summary
 compares the {term}`TT` (typical corner) values with the
 {doc}`PDK spec </comparison/pdk-spec-check>` and lists the {{ ngspice }}-versus-{{ Xyce }}
 differences ({doc}`/limitations/engine-cross-check`).
@@ -13,7 +13,7 @@ differences ({doc}`/limitations/engine-cross-check`).
 :name: results-sweeps-figure
 :alt: Three stacked plots of the nfet: drain current against gate voltage, a family of drain current against drain voltage, and gate capacitance against gate voltage.
 
-Three sweeps of the SPICE reference of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm,
+Three sweeps of the {term}`SPICE` reference of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm,
 with the body at 0 V. Top, the drain current against the gate voltage at a drain voltage of
 0.1 V. Middle, the drain current against the drain voltage, one line per gate voltage. Bottom,
 the gate capacitance against the gate voltage. The black lines are the {term}`typical corner`,
@@ -24,7 +24,7 @@ and the grey bands span the {{ x_corner_count }} {term}`corners <corner>`.
 :figclass: only-dark
 :alt: Three stacked plots of the nfet: drain current against gate voltage, a family of drain current against drain voltage, and gate capacitance against gate voltage.
 
-Three sweeps of the SPICE reference of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm,
+Three sweeps of the {term}`SPICE` reference of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm,
 with the body at 0 V. Top, the drain current against the gate voltage at a drain voltage of
 0.1 V. Middle, the drain current against the drain voltage, one line per gate voltage. Bottom,
 the gate capacitance against the gate voltage. The black lines are the {term}`typical corner`,
@@ -38,7 +38,7 @@ the dataset. Builds of one checkout serialise on a lock file, also git-ignored, 
 finished folder in atomically. So two docs builds can run at the same time without corrupting
 each other.
 
-```{admonition} The TCAD results
+```{admonition} The simulated results
 :class: warning
 The generated pages below are the {term}`SPICE reference <SPICE reference results>` that {term}`TCAD` is
 compared against. The TCAD results are {term}`MOS capacitors <MOSCAP>` of both devices. They

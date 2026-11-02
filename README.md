@@ -13,7 +13,7 @@ the TCAD agrees with the PDK SPICE models, quantitatively, reproducibly and in p
 
 ![Cross-section of the simulated transistor: a gate on a thin oxide in the middle, a source and a drain either side at the surface, a large body below.](docs/images/readme/cell.svg)
 
-*Figure 1. The simulated 2D cell of the `nfet_05v0` at W = 10 µm and L = 0.7 µm, cut along the
+*Figure 1. The simulated 2D cell of the [`nfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0) at W = 10 µm and L = 0.7 µm, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type. `make readme-figures` draws
 it from the committed results.*
 
@@ -68,7 +68,8 @@ are in [`results/tcad/moscap1d`](results/tcad/moscap1d).
 ![Gate capacitance against gate voltage for the nfet and the pfet: SPICE curves in a grey band, with a dotted and a dashed simulated line on each.](docs/images/readme/cv.svg)
 
 *Figure 2. Gate capacitance against gate voltage at the minimum gate length. The solid line is the
-SPICE model at the typical corner, inside the grey band of its five corners. The dotted line is
+SPICE model at the [typical corner](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-typical-corner), inside the grey band of its five
+[corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner). The dotted line is
 the 1D TCAD at the start values, the dashed line after calibration. It is drawn the same way
 as Figure 1.*
 
