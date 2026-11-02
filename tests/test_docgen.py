@@ -69,6 +69,7 @@ EXPLAINED_FIGURES = [
     "cv-regions",
     "band-regimes",
     "mesh-window",
+    "cv-parts",
 ]
 
 

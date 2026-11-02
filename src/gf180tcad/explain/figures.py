@@ -97,6 +97,11 @@ STYLE = {
     "sheet_frac": 0.04,
     "sheet_steps_ev": (0.12, 0.27, 0.42),
     "sheet_marker_pt": 7.0,
+    # The C-V parts plot: part labels sit this fraction of the axis height off the point they
+    # name; the voltage-shift arrow is this fraction of the axis
+    # width long, a drawing choice (the fitted shift is too small to see at its true length).
+    "part_offset": 0.14,
+    "shift_arrow": 0.1,
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -800,6 +805,88 @@ def band_regimes(palette: str) -> bytes:
         return _svg(band_regimes_figure(palette))
 
 
+# The C-V curve page (cv-curve.md): the same nfet geometry as the regions page.
+#: The curves of the C-V parts plot: the SPICE typical curve and the simulated stack at the
+#: calibration's start values and at its fitted values, by their legend labels.
+CV_PARTS_LINES = {
+    "spice": "SPICE, typical",
+    "start": "simulated, start values",
+    "calibrated": "simulated, fitted",
+}
+#: The parts of the C-V curve and the label of each, the parameter that sets it: the two flat
+#: parts, the dip and the position on the voltage axis.
+CV_PARTS = {
+    "accumulation": "oxide thickness",
+    "dip": "body doping",
+    "inversion": "oxide thickness\nand gate doping",
+    "position": "voltage shift",
+}
+
+
+def cv_parts_figure(palette: str):
+    """The matplotlib figure of :func:`cv_parts`, for the tests to read its lines and labels."""
+    from gf180tcad.devices import DEVICES
+
+    if DEVICES[REGIONS_DEVICE].polarity != 1:
+        raise ValueError(f"{REGIONS_DEVICE}: u is not the gate voltage")
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    fitted = cv_curves(REGIONS_DEVICE, "calibrated", REGIONS_GEOMETRY)
+    start = cv_curves(REGIONS_DEVICE, "start", REGIONS_GEOMETRY)
+    u, tt = fitted["u_spice"], fitted["spice_tt"]
+    lo, hi = region_edges()
+    u_min, c_min = numbers.value("u_min_l10"), numbers.value("c_min_l10")
+    u_dep = numbers.value("u_dep_spice_l10")
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.set_xlim(u[0], u[-1])
+        top = max(tt.max(), fitted["tcad"].max(), start["tcad"].max()) * STYLE["region_headroom"]
+        ax.set_ylim(0, top)
+        ax.grid(True)
+        ax.plot(u, tt, color=pal["text"], lw=lw, label=CV_PARTS_LINES["spice"])
+        ax.plot(start["u"], start["tcad"], color=pal["muted"], lw=lw, ls=":",
+                label=CV_PARTS_LINES["start"])  # fmt: skip
+        ax.plot(fitted["u"], fitted["tcad"], color=pal["highlight"], lw=lw, ls="--",
+                zorder=STYLE["cv_zorder"], label=CV_PARTS_LINES["calibrated"])  # fmt: skip
+        gap = top * STYLE["part_offset"]
+        arrow = {"arrowstyle": "-", "color": pal["text"], "lw": STYLE["edge_width"]}
+        # The flat parts: midway between the axis end and the calibration's mark; the
+        # accumulation label above the curve, clear of the shift label, the two-line inversion
+        # label below it, inside the axes.
+        flats = (("accumulation", (u[0] + lo) / 2, 1, "bottom"),
+                 ("inversion", (hi + u[-1]) / 2, -1, "top"))  # fmt: skip
+        for part, x, side, va in flats:
+            y = float(np.interp(x, u, tt))
+            ax.annotate(CV_PARTS[part], xy=(x, y), xytext=(x, y + side * gap), ha="center",
+                        va=va, arrowprops=arrow, fontweight="bold")  # fmt: skip
+        ax.annotate(CV_PARTS["dip"], xy=(u_min, c_min), xytext=(u_min, c_min - gap),
+                    ha="center", va="top", arrowprops=arrow, fontweight="bold")  # fmt: skip
+        # The shift: an arrow centred on the SPICE curve's falling-side crossing, its one head
+        # towards more positive gate voltages (the way the shift moves the simulated curve),
+        # labelled to its left.
+        y = (c_min + tt[0]) / 2
+        half = (u[-1] - u[0]) * STYLE["shift_arrow"] / 2
+        ax.annotate("", xy=(u_dep + half, y), xytext=(u_dep - half, y),
+                    arrowprops={**arrow, "arrowstyle": "->"})  # fmt: skip
+        ax.annotate(CV_PARTS["position"], xy=(u_dep, y), xytext=(u_dep - half, y), ha="right",
+                    va="center", fontweight="bold")  # fmt: skip
+        ax.set_xlabel("gate voltage (V)")
+        ax.set_ylabel("gate capacitance (fF)")
+        fig.legend(loc="outside lower center", ncols=2, frameon=False)
+        return fig
+
+
+def cv_parts(palette: str) -> bytes:
+    """The gate capacitance of the nfet at ``w10p0_l10p00`` against the gate voltage: the
+    :term:`SPICE` curve at the :term:`typical corner` and the simulated stack at the
+    calibration's start and fitted values, each part of the curve labelled with the parameter
+    that sets it (:data:`CV_PARTS`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(cv_parts_figure(palette))
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -814,13 +901,14 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "cv-regions": cv_regions,
     "band-regimes": band_regimes,
     "mesh-window": _mesh_window,
+    "cv-parts": cv_parts,
 }
 
 
 # The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
 # computed curves (not drawings of the device) carry no statement.
 _CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell", "mesh-window")
-_PLOTS = ("bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes")
+_PLOTS = ("bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes", "cv-parts")
 
 
 def substitutions() -> dict[str, str]:

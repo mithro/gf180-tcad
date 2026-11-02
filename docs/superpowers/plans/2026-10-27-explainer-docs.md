@@ -336,7 +336,15 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - [x] **E2b Step 2:** the gap section states the crossing verdicts at `w10p0_l10p00`, the pfet 1D
   verdict and the 2D Disagree clause by substitution, linking `cv-agreement-metric`,
   `cv-agreement-mismatch` and `cv-agreement-validation`.
-- [ ] **E2b Step 3:** PR; review by use, audit; merge.
+- [x] **E2b Step 3:** PR #117; review by use, audit; merged (1c06186).
+- [x] **E2c Step 1:** tests first (red commit `d6a0893`); the registry entries (start values
+  from the result file's `start`, the fit's crossing shifts and depletion error at
+  `w10p0_l10p00`), the `cv-parts` figure; the page `cv-curve.md`; the landing page's tier
+  headings; lint, measure, build, screenshots.
+- [x] **E2c Step 2:** the gap section states the 1D nfet and pfet verdicts and the 2D Disagree
+  clause by substitution, linking `cv-agreement-deviation`, `cv-agreement-mismatch` and
+  `cv-agreement-validation`.
+- [ ] **E2c Step 3:** PR; review by use, audit; merge.
 
 **As built (E2a).**
 
@@ -400,6 +408,33 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   the dip and the halfway level.
 - Glossary: accumulation, depletion, inversion, flat band. Their first uses are linked across
   the docs, in README.md (a glossary URL) and in docgen's check labels and Cox sentence.
+
+**As built (E2c).**
+
+- The figure `cv-parts` is the nfet at `w10p0_l10p00`, the regions page's geometry: the SPICE
+  typical curve, and the committed 1D curves at `start` and `calibrated` through the BSIM4
+  bookkeeping (`figures.cv_curves`, the readers of `explain.data`). The labels
+  (`figures.CV_PARTS`) name the oxide thickness at both flat parts (with the gate doping at the
+  inversion one, poly depletion), the body doping at the dip, pointing at the result file's
+  `spice_regions.u_min` and `c_min`, and the voltage shift on an arrow centred on the SPICE
+  curve's falling-side crossing, `spice_regions.u_dep`, with one head towards more positive
+  gate voltage (review of #118; tested). The arrow's length is a drawing choice (the fitted
+  shift is about one per cent of the axis); the caption and page say so.
+- The start values are the result file's `start` table, tested equal to the process file's
+  values; the fitted ones are its `values`, tested equal to the calibration file. The page
+  prints the idealised Cox of the start and fitted thickness, the plateau errors, the
+  crossing shifts (simulated minus SPICE) and the depletion error, which enters no verdict.
+- Review of #118: the page prints the SPICE minimum and says the fitted dip is deeper and the
+  start dip shallower (tested from the committed curves); the sentences on how each curve is
+  made sit in the fit section, with no quasi-static contrast (BSIM4's AC non-quasi-static model
+  is off unless the card sets ACNQSMOD, manual ch. 8 and appendix A, and the card is not read
+  here). Left out: numbers break from their units at 400 px on every explainer page, a
+  site-wide change to `numbers.format_value` filed as issue #119.
+- The SPICE curve is described as the equations of BSIM4's capacitance model (manual ch. 7);
+  the frequency of the `cv` sweep is not printed, since no committed data file holds it.
+- The landing page now has one heading per tier, so each list stays within seven items;
+  `test_landing_lists_every_page` allows the three tier headings.
+- No glossary entry is added: the page uses existing terms only.
 
 **Exit criteria.** The four pages are on `main` and linked from the landing page; the docgen reader move left `docs/_generated/` byte-identical (log in the PR); the region shading and the calibration tables are read from the result files (tests green); the verdict sentences change when a result file's verdict changes (a test edits a copy of the file and sees the sentence change); the four new glossary terms are defined; the docs tools report nothing for `docs/explained/**`; the review by use has no open stop.
 
