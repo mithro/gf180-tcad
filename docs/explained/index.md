@@ -14,6 +14,8 @@
   {term}`poly-silicon` gate are, and how their thickness and doping set the {term}`oxide capacitance <Cox>`.
 - {doc}`The MOS capacitor <mos-capacitor>`: the transistor without its source and drain, and
   why this project fits it to the {term}`SPICE` model first.
+- {doc}`Accumulation, depletion and inversion <accumulation-depletion-inversion>`: what gathers
+  under the gate as its voltage changes, and the bands of each region.
 
 ```{toctree}
 :hidden:
@@ -24,4 +26,5 @@ pn-junction
 transistor-parts
 oxide-and-poly
 mos-capacitor
+accumulation-depletion-inversion
 ```
