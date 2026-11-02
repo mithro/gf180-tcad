@@ -467,6 +467,16 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   `budget_used`, the same in both result files or a ValueError) and scipy's evaluation counts
   (`optimiser.nfev`; the page says they leave out the slope solves, as the scipy 1.18.0 manual
   states; 1.18.1, the version in the TCAD image, has no published manual).
+- Owner rules of 2026-11-03 (a marked figure for every description, equations explained, every
+  file a link): each section has a named figure referred to with `{numref}`: the opening
+  `calibration-stack` (the 1D stack, the fitted oxide and body highlighted), `calibration-limits`,
+  the reused `moscap-cell` for what stays fixed, `calibration-compare` (the flat parts the fit
+  compares, shaded from the result file's residual voltages, and both curves' crossings),
+  the reused `moscap-cv` for the corner band, and `calibration-pfet` (the pfet at its shortest and
+  longest fit gates, on the true gate voltage). `numfig` is on; `docs/_ext/figure_numbers.py`
+  numbers named figures only (the light twins) and counts from 1 on each page. The cost
+  equation is three short display blocks with a "where" list of every symbol and its unit; a
+  test checks the committed cost is half the sum of the squared committed residuals.
 - The fit verdicts per gate length are a generated table of `per_geometry` of both result files.
   Tests also pin two sentences of the page to the data: the 2D cells reuse the 1D fit
   (validation `values` equal calibration `values`) and the crossing residuals are the gaps over
