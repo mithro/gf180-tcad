@@ -596,22 +596,25 @@ The three rules apply to every reader page. That is everything under `docs/` exc
 `docs/superpowers/` and the API pages autodoc generates, plus `README.md` and the `docgen` pages.
 
 - **A figure for every described situation**. Some sections describe a physical situation: a
-  geometry, a curve, a process step, a result, a stack or a mesh. Such a section carries a
-  figure of that item: a `{figure}` directive with a caption and a `:name:`, cited from the text
-  with `{numref}`.
-- **README.md**. On `README.md`, read on GitHub, the figure is a Markdown image.
-- **Numbered figures need `numfig`**. A `{numref}` with Sphinx's `numfig` off fails the `-W`
-  build. The first PR that adds a `{numref}` sets `numfig = True` in `docs/conf.py`.
+  cross section, a band diagram, a curve, a process step, a stack or a mesh. Such a section
+  carries a figure of that item: a `{figure}` directive with a caption and a `:name:`, cited
+  from the text with `{numref}`.
+- **Figure numbers**. `numfig` is on in `docs/conf.py`. A figure extension in `docs/_ext/`
+  numbers the figures of each page from 1, as "Figure N".
+- **Light/dark pairs**. A pair is two adjacent `{figure}` directives with the same caption,
+  `only-light` first. The extension merges them into one figure with one number. Only the light
+  twin carries the `:name:` that the text cites.
 - **Every equation explained, in one form**. Every equation is a display block in the house
   form below. A line `where` follows it, then a list with one item per symbol. Each item starts
-  with the symbol in `$…$` and says what it is. It ends with the unit (`, in F/m²`) or
-  `, dimensionless`.
+  with the symbol in `$…$` and says in words what it is. It ends with the unit in SI symbols
+  (`, in F/m²`, not "farads per square metre") or `, dimensionless`.
+- **No extra symbols**. No `where` item names a symbol that the equation does not use.
 - **Every file a link**. Every mention of a file or path is a link. A file of this repository
   takes the `{repo}` role, which pins the link to the commit and fails the build on a wrong
   path. A file of another repository takes a GitHub URL at a pinned commit.
-- **Kinds of file and pages outside Sphinx**. `README.md` and `CONTRIBUTING.md` use Markdown
-  links. A text about a kind of file, such as every `cv.meta.json`, links one example or the
-  folder.
+- **Kinds of file and pages outside Sphinx**. `README.md` and `CONTRIBUTING.md`, read on
+  GitHub, use Markdown links, and a figure there is a Markdown image. A text about a kind of
+  file, such as every `cv.meta.json`, links one example or the folder.
 
 *House decision (equation form)*. The house form is MyST `dollarmath`, enabled in
 `docs/conf.py`. A label follows the closing `$$`, and the text cites it with `{math:numref}`:
@@ -636,7 +639,7 @@ equation.
 
 *House decision (the two skills on figures)*. The docs-writing skill asks that every physical
 thing named be pictured at first mention. The writing-sourced-docs skill asks for a generated
-figure of a geometry, a flow or a to-scale stack, and forbids a `{numref}` with `numfig` off.
+figure of a cross section, a flow or a to-scale stack, and forbids a `{numref}` with `numfig` off.
 The `{figure}` form above meets all three. Figures come from committed inputs:
 
 - explainer figures from `gf180tcad.explain.figures`, written by `docgen`;
@@ -644,13 +647,14 @@ The `{figure}` form above meets all three. Figures come from committed inputs:
 - the 3D renders from the §10.1 pipeline.
 
 Some sections name a noun that is not a physical thing: a mesh file, a software stack, a sweep
-command. Such a section carries `<!-- figure-ok: reason -->` instead, and a reviewer reads the
-reason.
+command. Such a section carries `<!-- figure-ok: reason -->` instead, with a reason of six words
+or more. `docs_lint.py --rules` prints each one as a NOTE line. The baseline counts them per
+page, so each added opt-out shows in the PR's diff.
 
 Issues #129 to #134 are the work orders for the pages that broke these rules when they came in.
 They cover the explainer pages (#129), comparison (#130), limitations (#131) and reproduce
 (#132). The other two are README with the index pages (#133) and the `docgen` pages (#134).
-They also list the existing figures that have no `:name:`.
+They also list the figures that break the form: no `:name:`, no caption, or no `{numref}`.
 
 **What enforces it.** The docs style pass that follows this amendment adds:
 - `tools/measure_docs.py` and `tools/docs_lint.py`, the two skills' scripts, vendored with
@@ -664,12 +668,13 @@ They also list the existing figures that have no `:name:`.
   `test_generated_terms_are_defined`; `test_no_history_phrases`, which fails on narrative
   phrases ("previously", "no longer", "before PR", "was changed") outside the places listed
   above, with a per-line opt-out `<!-- history-ok: reason -->`.
-- `tools/docs_lint.py --rules all` (2026-11-03): FIGURE, EQUATION and FILELINK, the three rules
-  of the owner's amendment above, each documented in `docs_lint.py --help` and tested in
-  `tests/test_docs_lint_rules.py`. `test_house_rules_do_not_grow` and
-  `test_generated_pages_house_rules_do_not_grow` in `tests/test_doc_style.py` run them over the
-  reader pages and the `docgen` pages against `tests/doc_rules_baseline.json`, whose counts may
-  only fall.
+- `tools/docs_lint.py --rules all` (2026-11-03): FIGURE, FIGURE-FORM, EQUATION and FILELINK,
+  the three rules of the owner's amendment above, each documented in `docs_lint.py --help` and
+  tested in `tests/test_docs_lint_rules.py`.
+- `test_house_rules_do_not_grow` and `test_generated_pages_house_rules_do_not_grow` in
+  `tests/test_doc_style.py`: the checks above over the reader pages, `CONTRIBUTING.md` and the
+  `docgen` pages, against `tests/doc_rules_baseline.json`. Its counts, FIGURE-OK included, may
+  only fall. Its writer refuses to raise a count without `--allow-raise`.
 
 The evidence rules, the 400 px check and the review protocol are checked by review, not by a
 test.
