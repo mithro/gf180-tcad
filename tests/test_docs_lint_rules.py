@@ -408,11 +408,7 @@ def test_house_forms_build_and_number(tmp_path):
         return int(m.group(1))
 
     assert number("fig-stack") == 1
-    if not site.get("numfig"):
-        pytest.skip(
-            "twin numbering: docs/conf.py has no numfig yet; it arrives with PR #140 "
-            "(docs/_ext/theme_figures.py merges each light/dark pair into one figure)"
-        )
+    assert "theme_figures" in site["extensions"]  # docs/_ext/theme_figures.py, PR #140
     assert number("fig-two") == 2  # the dark twin takes no number
 
 
