@@ -53,9 +53,9 @@ the issue says what is open and what settles it. The phases are those of the
   ({repo}`renders plan <docs/superpowers/plans/2026-10-27-renders-pipeline.md>`,
   [issue #43](https://github.com/mithro/gf180-tcad/issues/43)). The format of their
   {doc}`render manifest <reproduce/render-manifest>` is defined and tested.
-- **Explainer pages** on the pn junction, the
-  transistor's parts, the MOS capacitor and the MOSFET
+- **Explainer pages** on the MOS capacitor and the MOSFET
   ({repo}`explainer plan <docs/superpowers/plans/2026-10-27-explainer-docs.md>`,
   [issue #46](https://github.com/mithro/gf180-tcad/issues/46)). The section
-  {doc}`explained/index` holds its pages on silicon, doping and carriers, and on energy bands
-  and the {term}`Fermi level`. It also explains the {term}`gate oxide` and {term}`poly-silicon`.
+  {doc}`explained/index` holds the basics. They cover silicon and carriers, energy bands and the
+  {term}`Fermi level`, and the {term}`pn junction`. They also cover the transistor's parts, the
+  {term}`gate oxide` and {term}`poly-silicon`.
