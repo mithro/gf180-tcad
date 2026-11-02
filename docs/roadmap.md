@@ -9,7 +9,7 @@ the issue says what is open and what settles it. The phases are those of the
 ## Phase 2: the MOS capacitor
 
 - **2D validation of the calibrated stack**: the pfet W1.6/L0.7 cell
-  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The 2D cells also move the depletion
+  ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)). The 2D cells also move the {term}`depletion`
   crossing below the 1D stack's, which sets every 2D {term}`Disagree` verdict ({ref}`cv-agreement-validation`).
 - **2D {term}`MOS capacitor <MOSCAP>` at L = 2 µm**: its small-signal (AC) solve fails
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)).
@@ -59,4 +59,5 @@ the issue says what is open and what settles it. The phases are those of the
   {doc}`explained/index` holds the basics. They cover silicon and carriers, energy bands and the
   {term}`Fermi level`, and the {term}`pn junction`. They also cover the transistor's parts, the
   {term}`gate oxide` and {term}`poly-silicon`. A page on the {term}`MOS capacitor <MOSCAP>` opens
-  the second tier.
+  the second tier, and a page on {term}`accumulation`, {term}`depletion` and {term}`inversion`
+  follows it.
