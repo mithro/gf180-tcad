@@ -328,7 +328,15 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - [x] **E2a Step 2:** the gap section states the 1D nfet and pfet verdicts by substitution and
   every committed 2D verdict in a generated table, linking `cv-agreement-windows`,
   `cv-agreement-mismatch`, `cv-agreement-validation` and `cv-agreement-metric`.
-- [ ] **E2a Step 3:** PR; review by use, audit; merge.
+- [x] **E2a Step 3:** PR #115; review by use, audit; merged (97d743a).
+- [x] **E2b Step 1:** tests first (red commit `9067d6b`); the idealised formulas, the registry
+  entries and words, the `cv-regions` and `band-regimes` figures; the page
+  `accumulation-depletion-inversion.md`; the four glossary entries with first-use links across
+  the site; lint, measure, build, screenshots.
+- [x] **E2b Step 2:** the gap section states the crossing verdicts at `w10p0_l10p00`, the pfet 1D
+  verdict and the 2D Disagree clause by substitution, linking `cv-agreement-metric`,
+  `cv-agreement-mismatch` and `cv-agreement-validation`.
+- [ ] **E2b Step 3:** PR; review by use, audit; merge.
 
 **As built (E2a).**
 
@@ -358,6 +366,40 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - No glossary entry is added: the page avoids the region names (accumulation, depletion,
   inversion, flat band), which land with `accumulation-depletion-inversion.md`. The MOSCAP entry
   points to the new page.
+
+**As built (E2b).**
+
+- `explain.idealised` gains `bulk_potential` (ψ_B), `flat_band` (the negated
+  `built_in_potential` of the gate and body dopings), `threshold` (onset of strong inversion,
+  ψ_s = 2ψ_B), `depletion_depth` and `surface_bending` (the depletion approximation under the
+  oxide), all Sze and Ng ch. 4. The page prints V_FB and V_T of the calibrated nfet stack as
+  idealised values; ψ_B equals the bands page's `fermi_body_nfet` (tested).
+- The region shading is the calibration's own marks on the SPICE typical curve,
+  `spice_regions.u_fb` and `u_t` of the nfet result file at `w10p0_l10p00`, read by the
+  registry (`u_fb_l10`, `u_t_l10`); `test_regions_follow_the_committed_crossings` reads the
+  spans of the drawn figure, and a second test moves the values and sees the spans move. The
+  fixed fraction of u_fb is not printed: it is a code constant, linked as
+  `calibrate.cv.FB_FRACTION`.
+- The band panels show accumulation, flat band, depletion (surface at the middle of the gap,
+  ψ_s = ψ_B) and inversion (ψ_s = 2ψ_B). The accumulation panel keeps the bands flat and draws
+  the extra holes as a sheet of no thickness, a drawing choice outside the depletion
+  approximation (which covers depletion and inversion only); the page says so and links the
+  "differs" section, where the simulation's bands bend up a little. The hole and electron sheets
+  are circles edged in the text colour beyond their band edge, so at 400 px the accumulation
+  panel differs from the flat-band panel (`test_band_regimes_sheets_stand_apart_from_the_band_edges`).
+- The idealised flat band, −V_t·ln(N_gate·N_A/n_i²), is the non-degenerate (Boltzmann) gate form,
+  the same counting as the simulation; the page says so and links `explained-bands-differs`.
+- `numbers.CHECKS`: both crossing checks are of one level definition, (C_min + C_acc)/2, which
+  each curve, SPICE or simulated, takes from its own minimum and accumulation flat part
+  (`calibrate.cv.crossings`); the page names it the halfway level and says each curve crosses its
+  own. The start of inversion, (C_min + C_inv)/2 of the SPICE curve, is described without the
+  word "halfway", so the two levels (both at the same voltage here) are not read as one. The
+  words of `dv_dep` and `dv_inv` ("halfway-level crossing") differ only in their sides. `test_check_words_name_both_signs`
+  now reads, for each device, the sign of u where each check is measured in the committed result
+  file times the polarity, with a swapped-pair positive control. The MOS capacitor page links
+  the dip and the halfway level.
+- Glossary: accumulation, depletion, inversion, flat band. Their first uses are linked across
+  the docs, in README.md (a glossary URL) and in docgen's check labels and Cox sentence.
 
 **Exit criteria.** The four pages are on `main` and linked from the landing page; the docgen reader move left `docs/_generated/` byte-identical (log in the PR); the region shading and the calibration tables are read from the result files (tests green); the verdict sentences change when a result file's verdict changes (a test edits a copy of the file and sees the sentence change); the four new glossary terms are defined; the docs tools report nothing for `docs/explained/**`; the review by use has no open stop.
 

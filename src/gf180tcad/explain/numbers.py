@@ -153,6 +153,28 @@ _ENTRIES = (
     Number("plateau_acc_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "plateau_acc_max_rel"]}, factor=100.0),
     Number("plateau_inv_l10", "committed", "%", 2, _RESULT, {"json": [*_L10, "metrics", "plateau_inv_max_rel"]}, factor=100.0),
     Number("plateau_tol_l10", "committed", "%", 1, _RESULT, {"json": [*_L10, "verdicts", "plateau_acc", "tolerance"]}, factor=100.0),
+    # The regions (accumulation-depletion-inversion.md): the calibration's marks on the SPICE
+    # curve and the crossings of both curves at w10p0_l10p00. The nfet's u is its gate voltage.
+    Number("u_fb_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "spice_regions", "u_fb"]}),
+    Number("u_t_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "spice_regions", "u_t"]}),
+    Number("u_min_l10", "committed", "V", 2, _RESULT, {"json": [*_L10, "spice_regions", "u_min"]}),
+    Number("c_min_l10", "committed", "fF", 3, _RESULT, {"json": [*_L10, "spice_regions", "c_min"]}),
+    Number("u_dep_spice_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "spice_regions", "u_dep"]}),
+    Number("u_inv_spice_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "spice_regions", "u_inv"]}),
+    Number("u_dep_tcad_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "tcad_crossings", "u_dep"]}),
+    Number("u_inv_tcad_l10", "committed", "V", 3, _RESULT, {"json": [*_L10, "tcad_crossings", "u_inv"]}),
+    # V in the file; the page prints mV.
+    Number("dv_tol_l10", "committed", "mV", 2, _RESULT, {"json": [*_L10, "verdicts", "dv_dep", "tolerance_v"]}, factor=1000.0),
+    Number(
+        "v_fb_nfet", "idealised", "V", 3,
+        formula="flat_band", inputs=("n_ch_nfet_cal", "ngate_nfet", "n_i_tcad", "vt_tcad"),
+    ),
+    Number(
+        "v_t_nfet", "idealised", "V", 3,
+        formula="threshold",
+        inputs=("n_ch_nfet_cal", "n_i_tcad", "vt_tcad", "v_fb_nfet", "eps_si_tcad", "eps0_tcad",
+                "q_tcad", "cox_nfet_cal"),
+    ),
 )  # fmt: skip
 REGISTRY: dict[str, Number] = {n.name: n for n in _ENTRIES}
 
@@ -169,6 +191,8 @@ class Word:
 _WORDS = (
     Word("verdict_nfet_1d", _RESULT, {"json": ["verdict"]}),
     Word("verdict_pfet_1d", "results/tcad/calibration/pfet_05v0.result.json", {"json": ["verdict"]}),
+    Word("verdict_dv_dep_l10", _RESULT, {"json": [*_L10, "verdicts", "dv_dep", "verdict"]}),
+    Word("verdict_dv_inv_l10", _RESULT, {"json": [*_L10, "verdicts", "dv_inv", "verdict"]}),
 )  # fmt: skip
 #: The verdict words of the pages, by name (see :class:`Word`).
 WORDS: dict[str, Word] = {w.name: w for w in _WORDS}
@@ -189,11 +213,15 @@ VALIDATION = "results/tcad/validation"
 #: The checks of a validated cell (``verdicts`` of a ``two_d`` entry), in plain words
 #: (``docs/comparison/cv-agreement.md``, "The agreement metric"). The checks run in
 #: u = polarity × Vg, so each side is named for the nfet and the pfet, whose signs are reversed.
+#: Both crossings are of one level, (C_min + C_acc)/2, each curve of its own
+#: (:func:`gf180tcad.calibrate.cv.crossings`), which
+#: ``docs/explained/accumulation-depletion-inversion.md`` names the halfway level: midway between
+#: the curve's own minimum and accumulation flat part, on either side of the dip.
 CHECKS = {
     "plateau_acc": "the flat part on the nfet's negative side, the pfet's positive side",
     "plateau_inv": "the flat part on the nfet's positive side, the pfet's negative side",
-    "dv_dep": "the voltage halfway down the dip on the nfet's negative side, the pfet's positive side",
-    "dv_inv": "the voltage halfway up the dip on the nfet's positive side, the pfet's negative side",
+    "dv_dep": "the halfway-level crossing on the nfet's negative side, the pfet's positive side",
+    "dv_inv": "the halfway-level crossing on the nfet's positive side, the pfet's negative side",
 }
 
 

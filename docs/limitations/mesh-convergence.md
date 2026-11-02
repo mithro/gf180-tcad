@@ -4,7 +4,7 @@
 
 The {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
 requires that {term}`uniform refinement` of the mesh changes every metric by less than 1 %. The
-mesh does matter. In an early prototype the depletion capacitance moved by 2 % between two meshes
+mesh does matter. In an early prototype the {term}`depletion` capacitance moved by 2 % between two meshes
 (see the {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-10-mesh-convergence-tooling>`).
 Convergence is therefore checked, not assumed.
 This page shows how much the simulated capacitance changes as the mesh is made finer, and which
@@ -99,7 +99,7 @@ The median {term}`observed order of convergence` of each triple of neighbouring 
 
 ## C/Cox in 1D
 
-Classical accumulation and inversion layers add a capacitance in series with the
+Classical {term}`accumulation` and {term}`inversion` layers add a capacitance in series with the
 {term}`oxide capacitance <Cox>`, so C/Cox > 1 is impossible in 1D. The committed 1D results at
 |Vg| = 5 V confirm it ({test}`tests/tcad/test_meshconv.py::test_1d_c_over_cox_below_one_at_5v`):
 

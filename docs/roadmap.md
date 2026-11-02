@@ -10,7 +10,7 @@ the issue says what is open and what settles it. The phases are those of the
 
 - **2D validation of the calibrated stack** ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): every calibrated 2D cell that solves
   is committed. Two 2D solves fail; the next two items name them.
-  The 2D plateaus lie below {term}`SPICE` (issue #77). The 2D depletion crossing lies below 1D
+  The 2D plateaus lie below {term}`SPICE` (issue #77). The 2D {term}`depletion` crossing lies below 1D
   (issue #108, {ref}`cv-agreement-validation`). The memory grows with every 2D point (issue #78).
 - **2D {term}`MOS capacitor <MOSCAP>` at L = 2 µm**: its small-signal (AC) solve fails
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)).
@@ -61,5 +61,5 @@ the issue says what is open and what settles it. The phases are those of the
   [issue #46](https://github.com/mithro/gf180-tcad/issues/46)). The section
   {doc}`explained/index` holds the basics. They cover silicon and carriers, energy bands and the
   {term}`Fermi level`, and the {term}`pn junction`. They also cover the transistor's parts, the
-  {term}`gate oxide` and {term}`poly-silicon`. A page on the {term}`MOS capacitor <MOSCAP>` opens
-  the second tier.
+  {term}`gate oxide` and {term}`poly-silicon`. Pages on the {term}`MOS capacitor <MOSCAP>` and its
+  regions open the second tier.

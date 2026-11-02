@@ -240,8 +240,8 @@ gds_at_5v_s
 Cgg
 cgg_inv_ff
 cgg_acc_ff
-  Total gate capacitance, from the {term}`cv` sweep at 1 MHz: `cgg_inv_ff` at +5 V (inversion) and
-  `cgg_acc_ff` at -5 V (accumulation), in {term}`fF <FF>`. Only ngspice runs the `cv` sweep. See
+  Total gate capacitance, from the {term}`cv` sweep at 1 MHz: `cgg_inv_ff` at +5 V ({term}`inversion`) and
+  `cgg_acc_ff` at -5 V ({term}`accumulation`), in {term}`fF <FF>`. Only ngspice runs the `cv` sweep. See
   {py:mod}`gf180tcad.metrics`.
 
 C–V
@@ -249,13 +249,13 @@ quasi-static
 QS
   Capacitance–voltage: the gate capacitance {term}`Cgg` against the gate bias. The quasi-static
   (QS, low-frequency) curve is the equilibrium one and rises back towards the {term}`oxide capacitance <Cox>` in
-  inversion; {term}`BSIM4` [`capMod=2`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) gives it. A {term}`MOSCAP` solved by small-signal AC with only
+  {term}`inversion`; {term}`BSIM4` [`capMod=2`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) gives it. A {term}`MOSCAP` solved by small-signal AC with only
   a body contact gives the high-frequency curve instead. See {ref}`plugin-history-latest`.
 
 HF C–V
 high-frequency C–V
-  The {term}`C–V` measured with a small signal too fast for the inversion layer to follow: in inversion
-  the capacitance stays near its depletion minimum instead of recovering to {term}`Cox`.
+  The {term}`C–V` measured with a small signal too fast for the {term}`inversion` layer to follow: in inversion
+  the capacitance stays near its {term}`depletion` minimum instead of recovering to {term}`Cox`.
   Technically, {term}`minority carriers <minority carrier>` are generated thermally in a time of order 2τ·N/n_i, so above that rate
   only the depletion edge responds; a 1D {term}`MOSCAP` with only a body contact gives this
   curve at any practical frequency ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329)). See {ref}`plugin-history-latest`.
@@ -268,15 +268,15 @@ oxide capacitance
 
 effective oxide thickness
 t_ox_eff
-  The oxide thickness that gives the measured (or {term}`SPICE`) accumulation and inversion
+  The oxide thickness that gives the measured (or {term}`SPICE`) {term}`accumulation` and {term}`inversion`
   capacitance, so it lumps the charge centroids in the silicon with the physical oxide.
   Technically t_ox_eff = ε_ox·ε0/C_plateau; {term}`BSIM4` separates TOXE (electrical) from TOXP
   (physical) for this reason ([BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), section 7.3). Here it is the tunable
   `t_ox_eff_nm`. See {ref}`process-data-tunables`.
 
 poly depletion
-  The depletion of the {term}`poly-silicon` gate next to the oxide, which adds a capacitance in series
-  with {term}`Cox` and lowers the inversion capacitance. Technically the gate is a second
+  The {term}`depletion` of the {term}`poly-silicon` gate next to the oxide, which adds a capacitance in series
+  with {term}`Cox` and lowers the {term}`inversion` capacitance. Technically the gate is a second
   semiconductor at {term}`NGATE`, whose space charge follows the same charge function as the
   body ([Sze & Ng, ch. 4](https://doi.org/10.1002/0470068329); [BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), the poly-depletion model). See
   {ref}`process-data`.
@@ -532,11 +532,11 @@ built-in potential
 ideality factor
   How closely a diode follows the ideal exponential law. In detail: n in
   I = I0 (exp(V / (n V_t)) − 1), with V_t = k_B T / q. It is 1 for pure diffusion current
-  ({ref}`Shockley 1949 <lit-shockley>`) and near 2 when recombination in the depletion region
+  ({ref}`Shockley 1949 <lit-shockley>`) and near 2 when recombination in the {term}`depletion` region
   dominates ({ref}`Sah, Noyce and Shockley 1957 <lit-sah>`). See {ref}`plugin-history-latest-junction`.
 
 depletion approximation
-  The textbook model of a p-n junction: free carriers are absent inside the depletion region
+  The textbook model of a p-n junction: free carriers are absent inside the {term}`depletion` region
   and the doping is exactly neutralised outside it. In detail: the space charge is
   ±q N up to the depletion edges, and Poisson's equation then gives the {term}`depletion widths <depletion width>` from
   the {term}`built-in potential` and the doping, x_d = √(2 ε V_bi N_A / (q N_D (N_A + N_D)))
@@ -637,6 +637,28 @@ Boltzmann statistics
   p = n_i exp((φ_p − ψ) / V_t). It holds while the {term}`Fermi level` stays a few k_B T away from the
   band edges, and fails in degenerately doped regions ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`).
   See {ref}`the junction probe <plugin-history-junction>`.
+
+accumulation
+  Under the gate of a {term}`MOS capacitor <MOSCAP>`, the range of gate voltage that draws extra
+  {term}`majority carriers <majority carrier>` into a thin layer at the silicon surface: {term}`holes <hole>` under the
+  gate of an nfet ({ref}`Sze and Ng 2006, ch. 4 <lit-sze>`). See {ref}`explained-regions-three`.
+
+flat band
+  The gate voltage of a {term}`MOS capacitor <MOSCAP>` at which the body holds no charge at its
+  surface, so its energy bands run flat up to the oxide ({ref}`Sze and Ng 2006, ch. 4 <lit-sze>`).
+  See {ref}`explained-regions-three`.
+
+depletion
+  A layer of silicon emptied of its free carriers, which holds the fixed charge of its
+  {term}`dopants <dopant>`: at a {term}`pn junction`, and under the gate of a
+  {term}`MOS capacitor <MOSCAP>` between {term}`flat band` and {term}`inversion`
+  ({ref}`Sze and Ng 2006, ch. 2 and ch. 4 <lit-sze>`). See {ref}`explained-regions-three`.
+
+inversion
+  Under the gate of a {term}`MOS capacitor <MOSCAP>`, the range of gate voltage that draws so
+  many {term}`minority carriers <minority carrier>` to the surface that they outnumber the majority ones: the
+  surface of a p-type body turns n-type ({ref}`Sze and Ng 2006, ch. 4 <lit-sze>`). See
+  {ref}`explained-regions-three`.
 
 drift-diffusion
 density-gradient

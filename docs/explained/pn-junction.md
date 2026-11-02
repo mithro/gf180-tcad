@@ -51,7 +51,7 @@ cross the boundary and fill holes on the p side, and holes cross the other way
 Each carrier that leaves uncovers the {term}`dopant` atom it came from. That atom becomes an ion, an atom
 with a net charge: positive on the n side, negative on the p side. The ions cannot move, so a
 layer of fixed charge forms on each side, with no free carriers in it. That layer is the
-depletion region.
+{term}`depletion` region.
 
 The two layers of charge set up an electric field, which pushes the carriers back. The carriers
 stop crossing when the push of the field balances their spread

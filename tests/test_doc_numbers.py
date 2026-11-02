@@ -157,7 +157,7 @@ CASES = [
         ENGINE_PAGE,
         (
             rf"current is a nearly constant {NUM} % higher\. That is\na gate-voltage shift of "
-            rf"{NUM} to {NUM} mV, and its effect fades in strong\ninversion \({NUM} at Vgs = 5 V\)"
+            rf"{NUM} to {NUM} mV, and its effect fades in strong\n\{{term\}}`inversion` \({NUM} at Vgs = 5 V\)"
         ),
         lambda: [
             100 * subthreshold_excess(),

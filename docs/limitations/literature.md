@@ -47,6 +47,8 @@ Each annotation names what the project uses the item for.
   ({repo}`data/render/display.toml`).
 - Its ch. 1, "Physics and Properties of Semiconductors—A Review": the explainer pages'
   carriers, {term}`dopants <dopant>`, the mass-action law and Fermi–Dirac statistics ({ref}`explained-silicon`).
+- Its ch. 4, the ideal MIS capacitor: {term}`accumulation`, {term}`depletion`, {term}`inversion`,
+  {term}`flat band` and the threshold of strong inversion ({ref}`explained-regions`).
 
 (lit-ioffe)=
 
@@ -65,7 +67,7 @@ Each annotation names what the project uses the item for.
 
 - Sah, Noyce and Shockley, "Carrier generation and recombination in p-n junctions and p-n
   junction characteristics", Proc. IRE 45(9), 1228-1243, 1957,
-  {doi}`10.1109/JRPROC.1957.278528`: recombination in the depletion region, {term}`ideality factor`
+  {doi}`10.1109/JRPROC.1957.278528`: recombination in the {term}`depletion` region, {term}`ideality factor`
   near 2.
 
 (lit-caughey)=
