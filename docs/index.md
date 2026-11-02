@@ -1,7 +1,7 @@
 # gf180-tcad
 
 Open-source {term}`TCAD` for the GlobalFoundries {term}`GF180MCU` 5 V transistors
-({{ gf180mcu_pdk }}), compared quantitatively, reproducibly and in public against the
+({{ gf180mcu_pdk }}). It is compared quantitatively, reproducibly and in public against the
 {term}`PDK`'s own {term}`SPICE` models.
 
 **The PDK's SPICE models are the {term}`reference <SPICE reference results>`; the TCAD is what is
@@ -25,11 +25,12 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
 - the calibrated 2D pfet cells at W10/L0.5, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7, in the same folder;
 - their {term}`mesh convergence`, 1D and 2D, in {repo}`results/tcad/meshconv`
   ({doc}`limitations/mesh-convergence`);
-- the 1D calibration against the SPICE {term}`Cgg`–Vg, in {repo}`results/tcad/calibration`,
-  and its validation at the {term}`held-out geometries <held-out geometry>`, in
-  {repo}`results/tcad/validation`, with the calibrated 1D curves in
+- the 1D calibration against the SPICE {term}`Cgg`–Vg, in {repo}`results/tcad/calibration`.
+  Its validation at the {term}`held-out geometries <held-out geometry>` is in
+  {repo}`results/tcad/validation`, and the calibrated 1D curves are in
   {repo}`results/tcad/moscap1d` ({doc}`comparison/cv-agreement`). In 1D the nfet is
   {term}`Agree` at every geometry and the pfet is published as {term}`Disagree`.
+  Both are shown at the minimum gate length in {numref}`index-cv-figure`.
 
 The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation
 ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)) is {term}`Disagree` at five committed cells
@@ -38,8 +39,31 @@ Planned work, each item with its issue, is on the {doc}`roadmap`. No measured si
 exists ({doc}`limitations/silicon-validation`). See {doc}`limitations/index`.
 ```
 
+```{figure} /_generated/explained/cv-overview-light.svg
+:figclass: only-light
+:name: index-cv-figure
+:alt: Gate capacitance against gate voltage in two panels, nfet above and pfet below: SPICE curves in a grey band, a dotted and a dashed simulated line on each.
+
+The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
+{term}`pfet_05v0` at the minimum gate length. The solid line is the {term}`SPICE` model at the
+{term}`typical corner`, and the grey band spans its {{ x_corner_count }}
+{term}`corners <corner>`. The dotted line is the 1D stack at the start values, and the dashed
+line is the stack at the fitted values.
+```
+
+```{figure} /_generated/explained/cv-overview-dark.svg
+:figclass: only-dark
+:alt: Gate capacitance against gate voltage in two panels, nfet above and pfet below: SPICE curves in a grey band, a dotted and a dashed simulated line on each.
+
+The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
+{term}`pfet_05v0` at the minimum gate length. The solid line is the {term}`SPICE` model at the
+{term}`typical corner`, and the grey band spans its {{ x_corner_count }}
+{term}`corners <corner>`. The dotted line is the 1D stack at the start values, and the dashed
+line is the stack at the fitted values.
+```
+
 No published {{ DEVSIM }}- or {{ Charon }}-versus-{term}`BSIM` comparison for any open PDK was
-found, and no gf180mcu TCAD paper was found ({doc}`limitations/literature`), so this work is
+found. No gf180mcu TCAD paper was found either ({doc}`limitations/literature`). So this work is
 novel and should be read with that in mind.
 
 The documentation has five sections, plus a glossary and the API reference. The first,
