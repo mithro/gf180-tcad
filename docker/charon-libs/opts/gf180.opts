@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# gf180-tcad: the project's CMake options for the Charon build (docker/charon-libs/build-charon.sh).
+# build_charon.py reads Charon's own General.opts and Linux.opts from the tarball first
+# (-c scripts/build/all), then this file (-f), and a later option wins.
+tcad-charon_ENABLE_DAKOTA_DRIVERS:BOOL=OFF
+Charon_ENABLE_DEBUG:BOOL=OFF
+CMAKE_INSTALL_PREFIX:PATH=/opt/charon
+TPL_BLAS_LIBRARIES:FILEPATH=/usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so
+TPL_LAPACK_LIBRARIES:FILEPATH=/usr/lib/x86_64-linux-gnu/openblas-pthread/liblapack.so

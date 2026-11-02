@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Patches: tcad-charon/src/Charon_Physical_Constants.cpp (Charon 2.2.0).
+# Reason: k_B/q, q and eps0 set to the CODATA 2018 values that the DEVSIM backend uses, so both backends compute with the same constants.
+#
+--- a/src/Charon_Physical_Constants.cpp
++++ b/src/Charon_Physical_Constants.cpp
+@@ -11,9 +11,9 @@
+ 
+ //========================================================================
+ charon::PhysicalConstants::PhysicalConstants() :
+-  kb(8.617343e-05),
+-  q(1.602176487e-19),
+-  eps0(8.854187817e-12*0.01),
++  kb(1.380649e-23/1.602176634e-19),
++  q(1.602176634e-19),
++  eps0(8.8541878128e-12*0.01),
+ 
+   m0(9.10938215e-31),
+   h(6.62606957e-34),
