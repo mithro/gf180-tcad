@@ -1250,3 +1250,17 @@ def test_journal_name_is_not_the_electron_term():
     )
     found = [str(q) for q in check_html("u.html", prose) if q.kind == "html-term"]
     assert any("Electrons" in f for f in found), found
+
+
+def test_site_figures_are_numbered_as_figure_n(built_html):
+    """numfig is on and numfig_format is "Figure %s" in docs/conf.py: every numbered figure of
+    the built site reads "Figure N", and every {numref} citation names it the same way."""
+    captions, cited = [], []
+    for page in _html_pages(built_html):
+        html = page.read_text(encoding="utf-8")
+        captions += re.findall(r'<span class="caption-number">([^<]*)</span>', html)
+        cited += re.findall(r'<span class="std std-numref">([^<]*)</span>', html)
+    assert captions, "no numbered figure in the built site: is numfig on in docs/conf.py?"
+    assert cited, "no {numref} citation in the built site"
+    bad = [c for c in captions + cited if not re.fullmatch(r"Figure \d+\s*", c)]
+    assert not bad, f"figure numbers not in the form 'Figure N': {sorted(set(bad))}"
