@@ -1017,7 +1017,7 @@ def calibration_pfet_figure(palette: str):
                 f"gate length {numbers.fit_geometries(PFET)[gid]:g} µm", fontsize=STYLE["text_pt"]
             )
             ax.set_xlabel("gate voltage (V)")
-            ax.set_ylabel("capacitance (fF)")
+            ax.set_ylabel("gate capacitance (fF)")
         handles, labels = axes[0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
         return fig

@@ -40,7 +40,7 @@ limits, set before the fit. {numref}`fig-calibration-limits` shows each number w
 ```{figure} /_generated/explained/calibration-limits-light.svg
 :figclass: only-light
 :name: fig-calibration-limits
-:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor between two tick marks, an open circle at the start and a green diamond at the fitted value.
+:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor between two tick marks, an open circle at the start and a filled diamond at the fitted value.
 
 Each fitted number of both transistors on its own axis. The bar runs between the two limits.
 The open circle is the start value. The diamond is the value fitted to the SPICE model at the
@@ -50,7 +50,7 @@ table in the next section says.
 
 ```{figure} /_generated/explained/calibration-limits-dark.svg
 :figclass: only-dark
-:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor between two tick marks, an open circle at the start and a green diamond at the fitted value.
+:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor between two tick marks, an open circle at the start and a filled diamond at the fitted value.
 
 Each fitted number of both transistors on its own axis. The bar runs between the two limits.
 The open circle is the start value. The diamond is the value fitted to the SPICE model at the
@@ -151,7 +151,7 @@ nfet's longest gate.
 ```{figure} /_generated/explained/calibration-compare-light.svg
 :figclass: only-light
 :name: fig-calibration-compare
-:alt: Gate capacitance against gate voltage: a solid and a dashed curve almost on top of each other, both ends shaded green, and a ring with a diamond inside on each side of the dip.
+:alt: Gate capacitance against gate voltage: a solid and a dashed curve almost on top of each other, both ends shaded, and a ring with a diamond inside on each side of the dip.
 
 What the fit compares on the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
 the typical corner, the dashed line the simulated stack with its fitted values. The shading
@@ -162,7 +162,7 @@ crossings and the diamonds the simulated ones.
 
 ```{figure} /_generated/explained/calibration-compare-dark.svg
 :figclass: only-dark
-:alt: Gate capacitance against gate voltage: a solid and a dashed curve almost on top of each other, both ends shaded green, and a ring with a diamond inside on each side of the dip.
+:alt: Gate capacitance against gate voltage: a solid and a dashed curve almost on top of each other, both ends shaded, and a ring with a diamond inside on each side of the dip.
 
 What the fit compares on the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
 the typical corner, the dashed line the simulated stack with its fitted values. The shading
@@ -234,7 +234,7 @@ grey band round the typical SPICE curve.
 ```{figure} /_generated/explained/moscap-cv-light.svg
 :figclass: only-light
 :name: fig-calibration-corners
-:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
+:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip a little above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
 the typical corner, and the grey band spans its {{ x_corner_count }} corners. The dashed line
@@ -244,7 +244,7 @@ typical corner.
 
 ```{figure} /_generated/explained/moscap-cv-dark.svg
 :figclass: only-dark
-:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
+:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip a little above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
 the typical corner, and the grey band spans its {{ x_corner_count }} corners. The dashed line
