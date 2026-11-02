@@ -6,11 +6,9 @@
     "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/charon-20261102/charon-distrib-v2_2.tar.gz",
     "opts_files": {
       "scripts/build/all/General.opts": {
-        "lines": 96,
         "sha256": "db8065236c7c8e63c00b1b93f713b3700c97576083b237dd1dd740363d4c7a69"
       },
       "scripts/build/all/Linux.opts": {
-        "lines": 4,
         "sha256": "03255ebb2562e907a5e409a2d98e8b5177287cfd4be2edd2484428af26a466be"
       }
     },

@@ -4,20 +4,23 @@
 - upstream.json pins every input (Charon 2.2.0 by the sha256 of Sandia's tarball, Trilinos and
   TriBITS by the commits Charon's user manual names, the build-only .debs of one Ubuntu snapshot
   in a dependency order);
-- opts/gf180.opts is Charon's General.opts and Linux.opts byte for byte (their sha256s are
-  recorded in upstream.json and checked against the tarball in the build) plus allow-listed
-  project lines;
+- opts/gf180.opts holds only allow-listed project lines (the build reads Charon's own
+  General.opts and Linux.opts from the tarball, whose sha256s upstream.json records and the
+  build checks);
 - every patch carries the GPL SPDX header, the file it patches and a reason, and is listed in the
   licence note;
 - the helper scripts: the fetch script is the dev image's, the deb resolver compares Debian
   versions and resolves dependencies as dpkg would, the build script's SOURCE_DATE_EPOCH inputs
-  cover every file the Dockerfile reads.
+  cover every file the Dockerfile reads, and the build script refuses a builder without a
+  memory limit.
 """
 
 import hashlib
 import importlib.util
 import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -86,36 +89,74 @@ def test_debs_come_from_one_snapshot_in_install_order():
 
 
 def test_inputs_names_lists_sources_then_debs():
-    names = inputs.debs(UPSTREAM)
-    assert set(names) == {n for n, e in UPSTREAM.items() if e["kind"] == "deb"}
-
-
-def _opts_parts() -> tuple[list[str], list[str]]:
-    lines = (LIBS / "opts" / "gf180.opts").read_text(encoding="utf-8").splitlines(keepends=True)
-    at = inputs.opts_header_len(lines)
-    assert at >= 1 and lines[0] == "# SPDX-License-Identifier: GPL-3.0-or-later\n"
-    copies = []
-    for want in UPSTREAM["charon"]["opts_files"].values():
-        copies.append("".join(lines[at : at + want["lines"]]))
-        at += want["lines"]
-    return copies, lines[at:]
+    names = inputs.names(UPSTREAM)
+    sources = sorted(n for n, e in UPSTREAM.items() if e["kind"] != "deb")
+    assert sources == ["charon", "tribits", "trilinos"]
+    assert names == sources + inputs.debs(UPSTREAM)
+    assert set(inputs.debs(UPSTREAM)) == {n for n, e in UPSTREAM.items() if e["kind"] == "deb"}
 
 
 def test_opts_file_is_upstreams_plus_project_lines():
+    """gf180.opts holds the allow-listed project lines and nothing of Charon's: the build reads
+    General.opts and Linux.opts from the tarball (build_charon.py -c) before it (-f), and checks
+    them against the sha256s recorded here."""
     opts_files = UPSTREAM["charon"]["opts_files"]
     assert list(opts_files) == ["scripts/build/all/General.opts", "scripts/build/all/Linux.opts"]
-    copies, project = _opts_parts()
-    for copy, want in zip(copies, opts_files.values(), strict=True):
-        assert hashlib.sha256(copy.encode("utf-8")).hexdigest() == want["sha256"]
+    for want in opts_files.values():
+        assert re.fullmatch(r"[0-9a-f]{64}", want["sha256"])
+    lines = (LIBS / "opts" / "gf180.opts").read_text(encoding="utf-8").splitlines()
+    assert lines[0] == "# SPDX-License-Identifier: Apache-2.0"
     seen = {}
-    for line in project:
+    for line in lines:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         key, _, value = line.partition("=")
         assert key in PROJECT_LINES, f"project line not allow-listed: {line}"
+        assert key not in seen, f"repeated: {key}"
         seen[key] = value
     assert seen == PROJECT_LINES
+    build = (LIBS / "build-charon.sh").read_text(encoding="utf-8")
+    assert '-c "$optdir" -f "$ctx/opts/gf180.opts"' in build
+
+
+def _fake_charon(tmp_path: Path) -> tuple[dict, Path]:
+    """A tarball tree with its own General.opts and Linux.opts, and an upstream.json for it."""
+    d = tmp_path / "tcad-charon" / "scripts" / "build" / "all"
+    d.mkdir(parents=True)
+    (d / "General.opts").write_text("A:BOOL=ON\n", encoding="utf-8")
+    (d / "Linux.opts").write_text("B:BOOL=ON\n", encoding="utf-8")
+    up = {
+        "charon": {
+            "opts_files": {
+                f"scripts/build/all/{n}": {
+                    "sha256": hashlib.sha256((d / n).read_bytes()).hexdigest()
+                }
+                for n in ("General.opts", "Linux.opts")
+            }
+        }
+    }
+    return up, tmp_path / "tcad-charon"
+
+
+@pytest.mark.parametrize("name", ["General.opts", "Linux.opts"])
+def test_check_opts_refuses_a_changed_upstream_opts_file(tmp_path, capsys, name):
+    up, charon = _fake_charon(tmp_path)
+    inputs.check_opts(up, charon, hostname="buildkitsandbox")
+    assert capsys.readouterr().out.count(" ok (") == 2
+    f = charon / "scripts" / "build" / "all" / name
+    f.write_bytes(f.read_bytes().replace(b"ON", b"OF"))
+    with pytest.raises(SystemExit, match=f"{name}: tarball has sha256"):
+        inputs.check_opts(up, charon, hostname="buildkitsandbox")
+
+
+def test_check_opts_refuses_a_host_opts_file(tmp_path):
+    """build_charon.py -c also reads <hostname>.opts from that directory when one exists."""
+    up, charon = _fake_charon(tmp_path)
+    (charon / "scripts" / "build" / "all" / "chama.opts").write_text("C=1\n", encoding="utf-8")
+    inputs.check_opts(up, charon, hostname="buildkitsandbox")
+    with pytest.raises(SystemExit, match="would also read"):
+        inputs.check_opts(up, charon, hostname="chama.example")
 
 
 def test_patches_are_named_and_hashed():
@@ -134,6 +175,35 @@ def test_patches_are_named_and_hashed():
     for p in patches:
         assert src[f"patches/{p.name}"]["sha256"] == hashlib.sha256(p.read_bytes()).hexdigest()
     assert src["charon-distrib-v2_2.tar.gz"]["sha256"] == CHARON_SHA256
+
+
+def test_sources_json_lists_the_build_scripts():
+    """GPL corresponding source includes the scripts that control the build."""
+    src = inputs.sources(UPSTREAM, LIBS)
+    for name in ("Dockerfile", "build", "build-charon.sh", "fetch_sources.py", "inputs.py"):
+        assert src[name]["sha256"] == hashlib.sha256((LIBS / name).read_bytes()).hexdigest()
+    assert src["opts/gf180.opts"]["sha256"]
+
+
+def test_build_record_names_the_inputs_and_the_probe():
+    build = (LIBS / "build-charon.sh").read_text(encoding="utf-8")
+    block = re.search(r"^PROBE_TESTS=\((.*?)\)$", build, re.MULTILINE | re.DOTALL).group(1)
+    tests = block.split()
+    assert tests == [
+        "Charon_charon_mp_pmoscap.nlp",
+        "Charon_charon_mp.hb.loca-moscap-cv.ox",
+        "Charon_charon_mp.hb.loca-moscap-cv.sub",
+        "Charon_charon_mp_pndiode.nlp",
+    ]
+    assert "--no-tests=error" in build
+    rec = inputs.record(UPSTREAM, LIBS, tests)
+    assert rec["charon"] == {"version": "2.2.0", "sha256": CHARON_SHA256}
+    assert rec["trilinos"]["commit"] == TRILINOS_COMMIT
+    assert rec["probe"] == {"tests": sorted(tests), "result": "passed"}
+    assert set(rec["opts"]) == {*UPSTREAM["charon"]["opts_files"], "opts/gf180.opts"}
+    assert set(rec["patches"]) == {p.name for p in (LIBS / "patches").iterdir()}
+    with pytest.raises(SystemExit):
+        inputs.record(UPSTREAM, LIBS, [])
 
 
 def test_constants_patch_sets_codata_2018():
@@ -168,6 +238,8 @@ def test_build_inputs_cover_what_the_dockerfile_reads():
     dockerfile = (LIBS / "Dockerfile").read_text(encoding="utf-8")
     sources = set(re.findall(r"source=([\w./-]+),", dockerfile))
     assert sources == {
+        "Dockerfile",
+        "build",
         "upstream.json",
         "fetch_sources.py",
         "inputs.py",
@@ -178,6 +250,9 @@ def test_build_inputs_cover_what_the_dockerfile_reads():
     for s in sources:
         assert f"docker/charon-libs/{s}" in listed, s
     assert {"docker/charon-libs/Dockerfile", "docker/IMAGE"} <= listed
+    # SOURCES.json hashes every build script, so each is mounted into the build step.
+    for name in inputs.SCRIPTS:
+        assert name in sources, name
 
 
 @pytest.mark.parametrize(
@@ -190,6 +265,7 @@ def test_build_inputs_cover_what_the_dockerfile_reads():
         ("13.3.0-6ubuntu2~24.04.1", "13.3.0-6ubuntu2", -1),
         ("1.83.0.1ubuntu2", "1.83.0-2.1ubuntu3.2", 1),
         ("1.0a", "1.0+", -1),
+        ("1:2.0:1-1", "1:2.0:0-1", 1),
     ],
 )
 def test_debian_version_order(a, b, want):
@@ -228,3 +304,89 @@ def test_resolve_refuses_to_replace_a_base_package():
     pkgs = {"a-dev": [_pkg("a-dev", "1", "liba (= 2)")], "liba": [_pkg("liba", "2")]}
     with pytest.raises(SystemExit, match="the base image has 1"):
         lock_debs.resolve(["a-dev"], pkgs, {"liba": "1"})
+
+
+# --- docker/charon-libs/build: the memory-limited builder ------------------------------------
+
+BUILD = LIBS / "build"
+_BUILD_TEXT = BUILD.read_text(encoding="utf-8")
+BUILDKIT_IMAGE = re.search(r'^BUILDKIT_IMAGE="([^"]+)"$', _BUILD_TEXT, re.MULTILINE).group(1)
+DEFAULT_BUILDER = re.search(r'BUILDER="\$\{GF180TCAD_BUILDER:-([^}]+)\}"', _BUILD_TEXT).group(1)
+
+# A ``docker`` stand-in: logs every call; ``buildx inspect`` prints $FAKE_STATE/inspect.txt (or
+# fails if there is none), ``buildx create`` writes it from its own --driver-opt options, and
+# ``buildx build`` fails (these tests stop before or at the build).
+_FAKE_DOCKER = r"""#!/usr/bin/env bash
+echo "$*" >> "$FAKE_STATE/calls.log"
+case "$1 $2" in
+    "buildx inspect") [ -f "$FAKE_STATE/inspect.txt" ] || exit 1; cat "$FAKE_STATE/inspect.txt" ;;
+    "buildx create")
+        shift 2; opts=""
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --driver-opt) k="${2%%=*}"; opts+=" $k=\"${2#*=}\""; shift 2 ;;
+                *) shift ;;
+            esac
+        done
+        printf 'Name: x\nDriver:        docker-container\n\nNodes:\nDriver Options:      %s\n' \
+            "$opts" > "$FAKE_STATE/inspect.txt" ;;
+    *) exit 3 ;;
+esac
+"""
+
+
+def _inspect(opts: str) -> str:
+    return (
+        "Name:          b\nDriver:        docker-container\n\nNodes:\nName:                  b0\n"
+        f"Driver Options:        {opts}\nStatus:                stopped\n"
+    )
+
+
+def _run_build(tmp_path, inspect: str | None):
+    bindir, state = tmp_path / "bin", tmp_path / "state"
+    bindir.mkdir()
+    state.mkdir()
+    docker = bindir / "docker"
+    docker.write_text(_FAKE_DOCKER, encoding="utf-8")
+    docker.chmod(0o755)
+    if inspect is not None:
+        (state / "inspect.txt").write_text(inspect, encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k != "GF180TCAD_BUILDER"}
+    env |= {"PATH": f"{bindir}:{env['PATH']}", "FAKE_STATE": str(state)}
+    res = subprocess.run([str(BUILD)], capture_output=True, text=True, env=env, check=False)
+    calls = (state / "calls.log").read_text(encoding="utf-8").splitlines()
+    return res, calls
+
+
+@pytest.mark.parametrize(
+    "opts",
+    [
+        'image="{img}"',
+        'image="{img}" memory="16g"',
+        'cgroup-parent="gf180-tcad.slice" image="{img}" memory="16g" memory-swap="32g"',
+        'image="{img}" memory-swap="16g"',
+    ],
+)
+def test_build_refuses_a_builder_without_a_memory_limit(tmp_path, opts):
+    res, calls = _run_build(tmp_path, _inspect(opts.format(img=BUILDKIT_IMAGE)))
+    assert res.returncode == 2, res.stderr
+    assert "no memory limit" in res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]
+
+
+def test_build_accepts_the_16g_builder(tmp_path):
+    opts = (
+        f'cgroup-parent="gf180-tcad.slice" image="{BUILDKIT_IMAGE}" memory="16g" memory-swap="16g"'
+    )
+    res, _calls = _run_build(tmp_path, _inspect(opts))
+    assert "build: builder" not in res.stderr, res.stderr
+
+
+def test_build_creates_the_16g_builder_in_the_slice(tmp_path):
+    res, calls = _run_build(tmp_path, None)
+    assert "build: builder" not in res.stderr, res.stderr
+    assert calls[1] == (
+        f"buildx create --name {DEFAULT_BUILDER} --driver docker-container "
+        f"--driver-opt image={BUILDKIT_IMAGE} --driver-opt memory=16g "
+        "--driver-opt memory-swap=16g --driver-opt cgroup-parent=gf180-tcad.slice"
+    )
