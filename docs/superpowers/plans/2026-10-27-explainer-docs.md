@@ -429,8 +429,8 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   made sit in the fit section, with no quasi-static contrast (BSIM4's AC non-quasi-static model
   is off unless the card sets ACNQSMOD, manual ch. 8 and appendix A, and the card is not read
   here). Numbers broke from their units at 400 px on every explainer page; fixed site-wide in
-  the PR for issue #119: `numbers.format_value` joins value and unit with U+00A0 and puts
-  U+2060 after the slash of a compound unit, and the Sphinx extension `docs/_ext/unit_join.py`
+  the PR for issue #119: {repo}`src/gf180tcad/explain/numbers.py` `format_value` joins value and unit with U+00A0 and puts
+  U+2060 after the slash of a compound unit, and the Sphinx extension {repo}`docs/_ext/unit_join.py`
   does the same for values typed by hand and for the generated result pages.
 - The SPICE curve is described as the equations of BSIM4's capacitance model (manual ch. 7);
   the frequency of the `cv` sweep is not printed, since no committed data file holds it.
