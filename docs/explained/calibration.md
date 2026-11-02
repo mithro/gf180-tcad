@@ -4,27 +4,28 @@
 
 What does the calibration change, and what does it leave alone? This page answers that for the
 {term}`nfet_05v0` and the {term}`pfet_05v0`, for a reader who has read {doc}`cv-curve`. It shows
-the three fitted numbers within their limits, what stays fixed and what the
-{term}`corners <corner>` add.
+the three fitted numbers, what stays fixed and what the {term}`corners <corner>` add.
+{numref}`fig-calibration-stack` shows the stack the fit changes.
 
-```{figure} /_generated/explained/calibration-limits-light.svg
+```{figure} /_generated/explained/calibration-stack-light.svg
 :figclass: only-light
-:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor between two tick marks, an open circle at the start and a green diamond at the fitted value.
+:name: fig-calibration-stack
+:alt: Three stacked layers: a muted gate on top, a thin shaded oxide below it and a tall shaded body at the bottom, each labelled with its material, thickness and doping.
 
-Each fitted number of both transistors on its own axis. The bar runs between the two limits.
-The open circle is the start value. The diamond is the value fitted to the {term}`SPICE` model
-at the {term}`typical corner`. The starts and limits are model-card values or project choices,
-as the second table says.
+The 1D stack of the nfet_05v0: the gate on top, the {term}`gate oxide` and the body. The fit
+changes the two shaded layers. The oxide thickness and the body doping are fitted to the
+{term}`SPICE` model. The gate doping is the {term}`model card`'s value, and the gate and body
+depths are project choices. {{ x_fig_calibration_stack_scale }}
 ```
 
-```{figure} /_generated/explained/calibration-limits-dark.svg
+```{figure} /_generated/explained/calibration-stack-dark.svg
 :figclass: only-dark
-:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor between two tick marks, an open circle at the start and a green diamond at the fitted value.
+:alt: Three stacked layers: a muted gate on top, a thin shaded oxide below it and a tall shaded body at the bottom, each labelled with its material, thickness and doping.
 
-Each fitted number of both transistors on its own axis. The bar runs between the two limits.
-The open circle is the start value. The diamond is the value fitted to the {term}`SPICE` model
-at the {term}`typical corner`. The starts and limits are model-card values or project choices,
-as the second table says.
+The 1D stack of the nfet_05v0: the gate on top, the {term}`gate oxide` and the body. The fit
+changes the two shaded layers. The oxide thickness and the body doping are fitted to the
+{term}`SPICE` model. The gate doping is the {term}`model card`'s value, and the gate and body
+depths are project choices. {{ x_fig_calibration_stack_scale }}
 ```
 
 (explained-calibration-fitted)=
@@ -34,7 +35,28 @@ as the second table says.
 The calibration fits three numbers of the simulated stack: the oxide thickness, the body doping
 and a shift of the gate voltage ({ref}`explained-cv-curve-fit`). The fit moves them until the
 simulated {term}`C–V` curve comes closest to the SPICE one. Each number stays between two
-limits, set before the fit.
+limits, set before the fit. {numref}`fig-calibration-limits` shows each number within its limits.
+
+```{figure} /_generated/explained/calibration-limits-light.svg
+:figclass: only-light
+:name: fig-calibration-limits
+:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor between two tick marks, an open circle at the start and a green diamond at the fitted value.
+
+Each fitted number of both transistors on its own axis. The bar runs between the two limits.
+The open circle is the start value. The diamond is the value fitted to the SPICE model at the
+{term}`typical corner`. The starts and limits are model-card values or project choices, as the
+table in the next section says.
+```
+
+```{figure} /_generated/explained/calibration-limits-dark.svg
+:figclass: only-dark
+:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor between two tick marks, an open circle at the start and a green diamond at the fitted value.
+
+Each fitted number of both transistors on its own axis. The bar runs between the two limits.
+The open circle is the start value. The diamond is the value fitted to the SPICE model at the
+{term}`typical corner`. The starts and limits are model-card values or project choices, as the
+table in the next section says.
+```
 
 The nfet's numbers
 ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`):
@@ -54,8 +76,11 @@ The pfet's numbers
 ## Where the starts and limits come from
 
 The {term}`model card` is the {term}`PDK`'s SPICE description of the transistor. Each start and
-limit is a model-card value, derived from one, or a project choice
-({ref}`the tunables <process-data-tunables>`). The two transistors share this table:
+limit of {numref}`fig-calibration-limits` is a model-card value, derived from one, or a project
+choice. The process files record which
+({repo}`nfet_05v0.toml <data/process/nfet_05v0.toml>`,
+{repo}`pfet_05v0.toml <data/process/pfet_05v0.toml>`; {ref}`the tunables <process-data-tunables>`).
+The two transistors share this table:
 
 {{ x_limit_kinds_table }}
 
@@ -71,7 +96,31 @@ limit is a model-card value, derived from one, or a project choice
 ## What stays fixed
 
 The fit changes nothing else. These stay as the model card gives them, or as this project chose
-them ({repo}`nfet_05v0.toml <data/process/nfet_05v0.toml>`):
+them. {numref}`fig-calibration-cell` shows the gate whose area they
+scale to.
+
+```{figure} /_generated/explained/moscap-cell-light.svg
+:figclass: only-light
+:name: fig-calibration-cell
+:alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey, with dark contact bars on the gate, the source, the drain and the bottom of the body.
+
+The 2D cell `w10p0_l0p70` of the nfet_05v0. The 1D stack is the column under the gate, in
+colour. The fit compares a capacitance per area of that column. Fixed card terms scale it to the
+gate's whole length and width and add the overlap at the gate's ends. The junction depth is the
+model card's value. The gate and body depths and the source and drain width are project
+choices. {{ x_fig_moscap_cell_scale }}
+```
+
+```{figure} /_generated/explained/moscap-cell-dark.svg
+:figclass: only-dark
+:alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey, with dark contact bars on the gate, the source, the drain and the bottom of the body.
+
+The 2D cell `w10p0_l0p70` of the nfet_05v0. The 1D stack is the column under the gate, in
+colour. The fit compares a capacitance per area of that column. Fixed card terms scale it to the
+gate's whole length and width and add the overlap at the gate's ends. The junction depth is the
+model card's value. The gate and body depths and the source and drain width are project
+choices. {{ x_fig_moscap_cell_scale }}
+```
 
 - The gate doping ({term}`NGATE`), the oxide's permittivity ({term}`EPSROX`) and the
   temperature: model-card values.
@@ -89,13 +138,62 @@ Each transistor's fit uses {{ x_budget_used }} of the {{ x_budget }} numbers its
 ## How the fit searches
 
 The fit compares the curves on their flat parts and at their halfway-level crossings
-({ref}`the dip <explained-regions-dip>`). On a flat part it takes the relative error at each
-voltage step. At a crossing it takes the voltage gap over the allowed gap, {{ x_dv_tol_l10 }}.
+({ref}`the dip <explained-regions-dip>`). {numref}`fig-calibration-compare` marks both on the
+nfet's longest gate.
 
-A {term}`least-squares fit` finds the three values that make the sum of these differences,
-squared, smallest. Each evaluation solves the stack once and compares it at every fit gate length.
-The search counted {{ x_nfev_nfet }} evaluations for the nfet and {{ x_nfev_pfet }} for the pfet.
-The count leaves out the extra solves that measure how each number moves the curve
+```{figure} /_generated/explained/calibration-compare-light.svg
+:figclass: only-light
+:name: fig-calibration-compare
+:alt: Gate capacitance against gate voltage: a solid and a dashed curve almost on top of each other, both ends shaded green, and a ring with a diamond inside on each side of the dip.
+
+What the fit compares on the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
+the typical corner, the dashed line the simulated stack with its fitted values. The shading
+marks the flat parts' voltage steps, read from
+{repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`. The rings mark the SPICE
+crossings and the diamonds the simulated ones.
+```
+
+```{figure} /_generated/explained/calibration-compare-dark.svg
+:figclass: only-dark
+:alt: Gate capacitance against gate voltage: a solid and a dashed curve almost on top of each other, both ends shaded green, and a ring with a diamond inside on each side of the dip.
+
+What the fit compares on the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
+the typical corner, the dashed line the simulated stack with its fitted values. The shading
+marks the flat parts' voltage steps, read from
+{repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`. The rings mark the SPICE
+crossings and the diamonds the simulated ones.
+```
+
+A {term}`least-squares fit` finds the three values that make this cost smallest
+({py:meth}`~gf180tcad.calibrate.cv.Metrics.residuals`):
+
+$$
+F=\tfrac{1}{2}\sum_{g}\Big[\sum_{V}r_C(V)^2+r_\mathrm{dep}^2+r_\mathrm{inv}^2\Big]
+$$
+
+$$
+r_C(V)=\frac{C_\mathrm{sim}(V)-C_\mathrm{SPICE}(V)}{C_\mathrm{SPICE}(V)}
+$$
+
+$$
+r_\mathrm{dep}=\frac{\Delta V_\mathrm{dep}}{\Delta V_\mathrm{tol}},\quad r_\mathrm{inv}=\frac{\Delta V_\mathrm{inv}}{\Delta V_\mathrm{tol}}
+$$
+
+where:
+
+- $F$ is the cost, a pure number;
+- $g$ runs over the fit's {{ x_fit_length_count }} gate lengths;
+- $V$ runs over the voltage steps of both flat parts, in volts;
+- $r_C(V)$ is the relative error of the capacitance at $V$, a pure number;
+- $C_\mathrm{sim}(V)$ and $C_\mathrm{SPICE}(V)$ are the simulated and SPICE gate capacitances, in fF;
+- $r_\mathrm{dep}$ and $r_\mathrm{inv}$ are each crossing gap over the allowed gap
+  $\Delta V_\mathrm{tol}$, {{ x_dv_tol_l10 }};
+- $\Delta V_\mathrm{dep}$ and $\Delta V_\mathrm{inv}$ are the simulated minus the SPICE crossing
+  voltage, falling and rising side, in volts.
+
+Each evaluation solves the stack once and compares it at every fit gate length. The search
+counted {{ x_nfev_nfet }} evaluations for the nfet and {{ x_nfev_pfet }} for the pfet. The count
+leaves out the extra solves that measure how each number moves the curve
 ([scipy's `least_squares` manual](https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.optimize.least_squares.html)).
 
 (explained-calibration-corners)=
@@ -107,10 +205,34 @@ them. This repo fits the typical corner alone, so this page shows no lower or up
 fitted number. Fits at the other corners give those bounds and the spread
 (issues [#57](https://github.com/mithro/gf180-tcad/issues/57) and [#121](https://github.com/mithro/gf180-tcad/issues/121)).
 
-The spread of the target itself is committed. Over the corners, the SPICE curve of the nfet at
-`w10p0_l10p00` spans these values. Its flat parts in {term}`accumulation` and {term}`inversion`
-come from {repo}`envelope.json <results/spice/envelope.json>`, the crossings from the nfet's
-result file:
+The spread of the target itself is committed. {numref}`fig-calibration-corners` shows it as the
+grey band round the typical SPICE curve.
+
+```{figure} /_generated/explained/moscap-cv-light.svg
+:figclass: only-light
+:name: fig-calibration-corners
+:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
+
+The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
+the typical corner, and the grey band spans its {{ x_corner_count }} corners. The dashed line
+is the simulated stack, with the oxide thickness, body doping and voltage shift fitted to the
+typical corner.
+```
+
+```{figure} /_generated/explained/moscap-cv-dark.svg
+:figclass: only-dark
+:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
+
+The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
+the typical corner, and the grey band spans its {{ x_corner_count }} corners. The dashed line
+is the simulated stack, with the oxide thickness, body doping and voltage shift fitted to the
+typical corner.
+```
+
+Over the corners, the curve's flat parts in {term}`accumulation` and {term}`inversion` and its
+crossings span these values. The flat parts come from
+{repo}`envelope.json <results/spice/envelope.json>`, the crossings from
+{repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`:
 
 {{ x_corner_table }}
 
@@ -127,8 +249,30 @@ fit gate length gets its own {ref}`verdict <agreement-verdicts>`:
 
 {{ x_fit_verdict_table }}
 
-The pfet's whole fit is {{ x_verdict_pfet_1d }}. Its SPICE curve leaves {term}`accumulation` at a
-gate voltage that moves with the gate length. One stack cannot follow that
+The pfet's whole fit is {{ x_verdict_pfet_1d }}. {numref}`fig-calibration-pfet` shows the pfet
+at its shortest and longest fit gates.
+
+```{figure} /_generated/explained/calibration-pfet-light.svg
+:figclass: only-light
+:name: fig-calibration-pfet
+:alt: Two panels of gate capacitance against gate voltage, for the pfet's shortest and longest fit gates, each with a solid line in a grey band and a dashed line.
+
+The gate capacitance of the pfet_05v0 at its shortest and longest fit gates, against the true
+gate voltage. The solid line is the SPICE model at the typical corner, inside the band of all
+its corners. The dashed line is the simulated stack with the values fitted to the typical corner.
+```
+
+```{figure} /_generated/explained/calibration-pfet-dark.svg
+:figclass: only-dark
+:alt: Two panels of gate capacitance against gate voltage, for the pfet's shortest and longest fit gates, each with a solid line in a grey band and a dashed line.
+
+The gate capacitance of the pfet_05v0 at its shortest and longest fit gates, against the true
+gate voltage. The solid line is the SPICE model at the typical corner, inside the band of all
+its corners. The dashed line is the simulated stack with the values fitted to the typical corner.
+```
+
+The pfet's SPICE curve leaves accumulation at a gate voltage that moves with the gate length.
+One stack has one flat band for every length, so it cannot follow that
 ({ref}`the pfet mismatch <cv-agreement-mismatch>`).
 
 The 2D cells reuse the 1D fit unchanged. {{ x_two_d_disagree }}

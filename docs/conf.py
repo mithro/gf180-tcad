@@ -27,6 +27,11 @@ extensions = [
     "table_cells",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
+# Figures with a :name: are numbered and referred to with {numref}. A page names the light twin
+# of each figure only, so its dark twin takes no number and the numbers run 1, 2, 3 in both
+# themes (Sphinx numbers a figure only when it has an id).
+numfig = True
+numfig_format = {"figure": "Figure %s"}
 source_suffix = {".md": "markdown"}
 root_doc = "index"
 
