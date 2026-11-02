@@ -29,6 +29,7 @@ project choices. {{ x_fig_parts_cell_scale }}
 ```
 
 ```{figure} images/gf180mcu-afe-die-photo.jpg
+:name: fig-parts-die-photo
 :alt: A photo of a black tray holding a grid of small chips. One chip is enlarged at the left, outlined in red, with red labels on its blocks: OPAMP, SAR ADC, Switched-Capacitance and a second OPAMP.
 
 A real {term}`GF180MCU` chip, photographed. It is an analog front end for sensors from the
@@ -37,7 +38,11 @@ switched-capacitor block, labelled in red. The tray holds more chips. Each block
 transistors like the cell above, too small for the photo to show one. {{ wafer_space }} published
 the photo under the CC BY licence in its [OpenFASoC update on Crowd Supply](https://www.crowdsupply.com/wafer-space/gf180mcu-run-1/updates/openfasoc).
 The [full-resolution photo is on Silicon Prawn](https://siliconprawn.org/archive/doku.php?id=mcmaster:efabless:gf180mcu-mpw18h1-18100004).
+Its source and licence are in {repo}`its licence note <docs/explained/images/gf180mcu-afe-die-photo.jpg.licence.txt>`.
 ```
+
+{numref}`fig-parts-die-photo` shows a whole GF180MCU chip. Each of its labelled blocks is built
+from many transistors with the parts that this page names.
 
 (explained-parts-gate)=
 

@@ -299,15 +299,15 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   Apache-2.0), committed with its source, author and licence beside it
   (`docs/explained/images/*.licence.txt`). The wanted photo was #104.
 - Die photo (#104, 2026-11-03): the owner confirmed the Silicon Prawn images and the die photos
-  in the wafer.space Crowd Supply updates are CC BY. `transistor-parts.md` shows the OpenFASoC
+  in the wafer.space Crowd Supply updates are CC BY. [`transistor-parts.md`](../../explained/transistor-parts.md) shows the OpenFASoC
   `mpw18h1` analog front-end die from the Crowd Supply OpenFASoC update
-  (`images/gf180mcu-afe-die-photo.jpg`, 1265 x 741 px, copied unchanged) below the cross-section,
-  with its licence note. Silicon Prawn still answered 403 (Cloudflare challenge), so the caption
+  ([`gf180mcu-afe-die-photo.jpg`](../../explained/images/gf180mcu-afe-die-photo.jpg), 1265 x 741 px, copied unchanged) below the cross-section,
+  with [its licence note](../../explained/images/gf180mcu-afe-die-photo.jpg.licence.txt). The page cites it as a numbered figure (`numfig = True` in [`docs/conf.py`](../../conf.py)); [`docs/_ext/figure_numbers.py`](../../_ext/figure_numbers.py) numbers each page from 1 and gives a light and dark twin pair one number ([`tests/test_figure_numbers.py`](../../../tests/test_figure_numbers.py)). Silicon Prawn still answered 403 (Cloudflare challenge), so the caption
   links it as the full-resolution source and credits wafer.space. No readable source names the
   photographer (the update, its source post, the tapeout README); recording the name from the
   Silicon Prawn page is #122. A photo has no dark twin: it reads the same on both themes.
-  `test_every_copied_image_has_a_licence_note` and `test_every_copied_image_is_on_a_page` hold
-  `docs/explained/images/` to its notes. The chip is from the efabless `mpw18h1` shuttle (the
+  `test_every_copied_image_has_a_licence_note` and `test_every_copied_image_is_on_a_page` ([`tests/test_explained.py`](../../../tests/test_explained.py)) hold
+  [`docs/explained/images/`](../../explained/images) to its notes. The chip is from the efabless `mpw18h1` shuttle (the
   Silicon Prawn path), not from a wafer.space run, so the caption does not say it is.
 - The glossary gains "pn junction" only. "Well" is not an entry: the link checkers would demand a
   link at every use of the common word, so the pages use the existing `n-well` and name the
