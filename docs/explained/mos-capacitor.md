@@ -74,8 +74,9 @@ model.
 At both ends the curve is flat. At the most negative gate voltage the SPICE model gives
 {{ x_cgg_acc_l10 }} for this gate. At the most positive it gives {{ x_cgg_inv_l10 }}
 ({repo}`metrics.json <results/spice/ngspice/typical/nfet_05v0/w10p0_l10p00/metrics.json>`).
-The ceiling of both is the {term}`oxide capacitance <Cox>` times the gate's area
-({ref}`Sze and Ng, ch. 4 <lit-sze>`).
+Under the gate, the ceiling is the {term}`oxide capacitance <Cox>` times the gate's area
+({ref}`Sze and Ng, ch. 4 <lit-sze>`). The SPICE model adds the overlap capacitance to it
+({ref}`explained-moscap-area`).
 
 (explained-moscap-first)=
 
