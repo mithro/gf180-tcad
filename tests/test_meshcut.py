@@ -989,6 +989,51 @@ def test_host_command_keeps_its_own_scratch_on_refusal(tmp_path, monkeypatch, in
         assert (auto / name).is_file()
 
 
+def _fake_host_regenerate(tmp_path, monkeypatch, content):
+    """The host ``regenerate`` with the sandbox faked (the in-image job run in-process, meshing
+    ``content``) and its own scratch directory made at ``<tmp>/auto``."""
+    results, d = _fixture_job(tmp_path)
+    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
+    monkeypatch.setattr(meshcut_cli, "source_image", lambda job_dir: "stable")
+
+    def fake_sandbox(cmd, *, out_dir, **kw):
+        a = meshcut_cli._parser().parse_args(cmd[3:])
+        job.run_regenerate_job(d, out_dir, cut=a.cut, kx=a.kx, depth_um=a.depth_um,
+                               results_root=results, mesh_it=_fake_regenerate(content))  # fmt: skip
+
+    auto = tmp_path / "auto"
+
+    def mkdtemp(prefix):
+        auto.mkdir()
+        return str(auto)
+
+    monkeypatch.setattr(meshcut_cli.sandbox, "run", fake_sandbox)
+    monkeypatch.setattr(meshcut_cli.tempfile, "mkdtemp", mkdtemp)
+    return d, results, auto
+
+
+def test_host_regenerate_removes_its_own_scratch_on_a_match(tmp_path, monkeypatch, inside):
+    d, results, auto = _fake_host_regenerate(tmp_path, monkeypatch, FIXTURE.read_bytes())
+    report = meshcut_cli.run_regenerate(d, results_root=results)
+    assert report["match"] is True
+    assert (d / job.MESH_NAME).read_bytes() == FIXTURE.read_bytes()  # beside cv.meta.json
+    assert not auto.exists()
+    # a --scratch the caller named is the caller's: it stays
+    meshcut_cli.run_regenerate(d, scratch=tmp_path / "s", results_root=results)
+    assert (tmp_path / "s" / job.REGENERATE_REPORT).is_file()
+
+
+def test_host_regenerate_keeps_its_own_scratch_on_a_mismatch(tmp_path, monkeypatch, inside,
+                                                              capsys):  # fmt: skip
+    d, results, auto = _fake_host_regenerate(tmp_path, monkeypatch, b"another mesh\n")
+    report = meshcut_cli.run_regenerate(d, results_root=results)
+    assert report["match"] is False
+    assert not (d / job.MESH_NAME).exists()
+    # the regenerated mesh is the evidence of the mismatch: kept, and its place printed
+    assert (auto / job.MESH_NAME).read_bytes() == b"another mesh\n"
+    assert str(auto) in capsys.readouterr().out
+
+
 def test_source_image_is_the_tree_s_recorded_image():
     assert meshcut_cli.source_image(L0P60) == "stable"
 
