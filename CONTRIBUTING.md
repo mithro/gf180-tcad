@@ -58,6 +58,21 @@ PRs but is not a merge blocker.
   [`tests/test_doc_measure.py`](tests/test_doc_measure.py)); a PR that fixes pages lowers
   [`tests/doc_measure_baseline.json`](tests/doc_measure_baseline.json) with
   `uv run --locked python tests/test_doc_measure.py --write-baseline`.
+- Three more rules hold on every reader page, set by the owner on 2026-11-03 (spec section 10.3):
+  - A section may describe a physical thing: a geometry, a curve, a process step, a result, a
+    stack or a mesh. It then shows that thing in a figure. The figure has a caption and a
+    `:name:`, and the text cites it with `{numref}`.
+  - Every equation is a display block `$$ … $$ (eq-name)`, cited with `{math:numref}`. A line
+    `where` follows it, then one list item per symbol, ending with its unit or `dimensionless`.
+  - Every file or path named is a link: `{repo}` in the docs, a Markdown link in README.md and
+    this file.
+
+  Check a page with
+  `uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules all <page>`
+  ([`tools/docs_lint.py`](tools/docs_lint.py)). The test
+  [`tests/test_doc_style.py`](tests/test_doc_style.py) holds the findings per page in
+  [`tests/doc_rules_baseline.json`](tests/doc_rules_baseline.json). A PR that fixes pages lowers
+  it with `uv run --locked --group docs python tests/test_doc_style.py --write-rules-baseline`.
 - A change to a table, in a page or in [`src/gf180tcad/docgen.py`](src/gf180tcad/docgen.py), needs a
   check at 400 px wide, because no test sees the rendered width. Build the docs, then take a
   screenshot of the page with
