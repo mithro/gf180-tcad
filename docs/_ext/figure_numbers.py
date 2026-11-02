@@ -2,31 +2,32 @@
 """Number only named figures, from 1 on each page.
 
 A page names the light twin of a figure (``:name:``) and refers to it with ``{numref}``. Sphinx
-numbers every figure that has an id, and MyST gives unnamed figures one, so the dark twin would
-take a number of its own and the reader would see every other number. Sphinx also counts across
-the whole site when the toctree is not numbered. This extension removes the ids of unnamed
-figures as each page is read, and renumbers the figures of each page from 1 once Sphinx has
-assigned its numbers.
+numbers every captioned figure that has an id, and MyST gives unnamed figures one, so the dark
+twin would take a number of its own and the reader would see every other number. Sphinx also
+counts across the whole site when the toctree is not numbered. Once Sphinx has assigned its
+numbers, this extension drops the unnamed figures from them and renumbers the rest of each page
+from 1. (The ids stay: the HTML writer requires one on every figure when numfig is on.)
 """
 
 from docutils import nodes
 
 
-def drop_unnamed_figure_ids(app, doctree):
-    for fig in doctree.findall(nodes.figure):
-        if not fig["names"]:
-            fig["ids"] = []
+def unnamed_figure_ids(doctree) -> set[str]:
+    """The ids of the figures of ``doctree`` that have no ``:name:``."""
+    return {i for fig in doctree.findall(nodes.figure) if not fig["names"] for i in fig["ids"]}
 
 
 def renumber_per_page(app, env):
-    """Renumber ``env.toc_fignumbers`` from 1 per page and type, keeping the order; return the
-    pages whose numbers changed (Sphinx writes them again)."""
+    """Drop unnamed figures from ``env.toc_fignumbers`` and renumber the rest from 1 per page
+    and type, keeping their order; return the pages whose numbers changed (Sphinx writes them
+    again)."""
     changed = []
     for docname, types in env.toc_fignumbers.items():
-        new = {
-            figtype: {fid: (i,) for i, fid in enumerate(sorted(ids, key=ids.get), start=1)}
-            for figtype, ids in types.items()
-        }
+        skip = unnamed_figure_ids(env.get_doctree(docname))
+        new = {}
+        for figtype, ids in types.items():
+            kept = sorted((i for i in ids if i not in skip), key=ids.get)
+            new[figtype] = {fid: (n,) for n, fid in enumerate(kept, start=1)}
         if new != types:
             env.toc_fignumbers[docname] = new
             changed.append(docname)
@@ -34,7 +35,6 @@ def renumber_per_page(app, env):
 
 
 def setup(app):
-    app.connect("doctree-read", drop_unnamed_figure_ids)
     # After Sphinx's own numbering (its toctree collector listens at the default priority).
     app.connect("env-get-updated", renumber_per_page, priority=900)
     return {"parallel_read_safe": True, "parallel_write_safe": True, "version": "1"}

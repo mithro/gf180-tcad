@@ -34,20 +34,28 @@ def _figure(name: str | None, ident: str) -> nodes.figure:
     return fig
 
 
-def test_unnamed_figures_lose_their_ids(ext):
+def _doc(*figs: nodes.figure) -> nodes.document:
     doc = nodes.document(None, None)
-    named, twin = _figure("fig-a", "fig-a"), _figure(None, "id1")
-    doc += [named, twin]
-    ext.drop_unnamed_figure_ids(None, doc)
-    assert named["ids"] == ["fig-a"] and twin["ids"] == []
+    doc += list(figs)
+    return doc
 
 
-def test_numbers_start_at_one_on_each_page(ext):
+def test_unnamed_figure_ids(ext):
+    doc = _doc(_figure("fig-a", "fig-a"), _figure(None, "id1"))
+    assert ext.unnamed_figure_ids(doc) == {"id1"}
+
+
+def test_named_figures_numbered_from_one_on_each_page(ext):
+    docs = {
+        "a": _doc(_figure("fig-x", "fig-x"), _figure(None, "id1"), _figure("fig-y", "fig-y")),
+        "b": _doc(_figure("fig-z", "fig-z"), _figure(None, "id2")),
+    }
     env = SimpleNamespace(
         toc_fignumbers={
-            "a": {"figure": {"fig-x": (26,), "fig-y": (28,)}},
-            "b": {"figure": {"fig-z": (30,)}, "table": {"t": (4,)}},
-        }
+            "a": {"figure": {"fig-x": (26,), "id1": (27,), "fig-y": (28,)}},
+            "b": {"figure": {"fig-z": (30,), "id2": (31,)}, "table": {"t": (4,)}},
+        },
+        get_doctree=docs.__getitem__,
     )
     changed = ext.renumber_per_page(None, env)
     assert env.toc_fignumbers == {
