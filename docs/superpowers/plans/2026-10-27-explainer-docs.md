@@ -408,6 +408,10 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   the dip and the halfway level.
 - Glossary: accumulation, depletion, inversion, flat band. Their first uses are linked across
   the docs, in README.md (a glossary URL) and in docgen's check labels and Cox sentence.
+- API pages: `docs/_ext/api_links.py` links the first use in the rendered docstrings, in page
+  order (a `doctree-read` pass). No page has a sentence that only carries a link. The
+  `explain.figures`, `tcad.process` and `meshcut.__main__` pages lost theirs. The `REGIMES`
+  comment says "holes" again.
 
 **As built (E2c).**
 
