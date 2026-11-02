@@ -601,6 +601,32 @@ def test_net_doping_uses_the_job_s_frames_and_region_bounds(tmp_path):
     assert got == {(0.0, 0.5, 0.0, 0.2), (0.0, 0.5, 0.0, 0.1)}
 
 
+@pytest.mark.parametrize("depth_um", [0.05, 0.1])
+def test_net_doping_binds_a_shallow_window_to_the_full_region(tmp_path, depth_um):
+    """A window shallower than the body (0.2 um deep on the fixture) still binds each profile
+    to the whole region's bounds in the full mesh, not to the window's own nodes."""
+    _BOUNDS.clear()
+    _, out, _ = _cut_fixture(tmp_path, depth_um=depth_um)
+    w = meshcut.read(out)
+    depth = -w.nodes_cm[:, 1] * meshcut.UM_PER_MSH_UNIT
+    assert depth.max() < 0.2  # the window does not reach the body's bottom
+    got = {tuple(round(v, 9) for v in xr + yr) for xr, yr in _BOUNDS}
+    assert got == {(0.0, 0.5, 0.0, 0.2), (0.0, 0.5, 0.0, 0.1)}
+
+
+def test_net_doping_binds_a_window_narrow_in_x_to_the_full_region():
+    """A window inside the body and narrower than it in x: the body's profiles keep the
+    region's bounds."""
+    mesh = msh.read(FIXTURE)
+    w = window.cut(mesh, x_um=(0.15, 0.35), y_um=(-0.2, 0.0))
+    x = w.nodes_cm[:, 0] * meshcut.UM_PER_MSH_UNIT
+    assert x.min() > 0.0 and x.max() < 0.5  # narrower than the body
+    _BOUNDS.clear()
+    job.net_doping(mesh, w, _fixture_xs())
+    got = {tuple(round(v, 9) for v in xr + yr) for xr, yr in _BOUNDS}
+    assert got == {(0.0, 0.5, 0.0, 0.2), (0.0, 0.5, 0.0, 0.1)}  # poly: bound, no window node
+
+
 def test_net_doping_is_zero_off_silicon(tmp_path):
     mesh = msh.read(FIXTURE)
     w = window.cut(mesh, x_um=(0.0, 0.5), y_um=(0.01, 0.09))  # the oxide row only
