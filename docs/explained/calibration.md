@@ -164,32 +164,48 @@ marks the flat parts' voltage steps, read from
 crossings and the diamonds the simulated ones.
 ```
 
-A {term}`least-squares fit` finds the three values that make this cost smallest
+A {term}`least-squares fit` finds the three values that make the cost
+{math:numref}`eq-calibration-cost` smallest
 ({py:meth}`~gf180tcad.calibrate.cv.Metrics.residuals`):
 
 $$
-F=\tfrac{1}{2}\sum_{g}\Big[\sum_{V}r_C(V)^2+r_\mathrm{dep}^2+r_\mathrm{inv}^2\Big]
-$$
+F=\tfrac{1}{2}\sum_{g}\Big[\sum_{V}r_C(V)^2+r_{\mathrm{dep}}^2+r_{\mathrm{inv}}^2\Big]
+$$ (eq-calibration-cost)
+
+where
+
+- $F$ is the cost, dimensionless;
+- $g$ is one of the fit's {{ x_fit_length_count }} gate lengths, in µm;
+- $V$ is one voltage step of the two flat parts, in V;
+- $r_C(V)$ is the relative error {math:numref}`eq-calibration-rc` at $V$, dimensionless;
+- $r_{\mathrm{dep}}$ and $r_{\mathrm{inv}}$ are the scaled crossing gaps
+  {math:numref}`eq-calibration-gap`, dimensionless.
+
+Each relative error compares the simulated gate capacitance with the SPICE one:
 
 $$
-r_C(V)=\frac{C_\mathrm{sim}(V)-C_\mathrm{SPICE}(V)}{C_\mathrm{SPICE}(V)}
-$$
+r_C(V)=\frac{C_{\mathrm{sim}}(V)-C_{\mathrm{SPICE}}(V)}{C_{\mathrm{SPICE}}(V)}
+$$ (eq-calibration-rc)
+
+where
+
+- $r_C(V)$ is the relative error at $V$, dimensionless;
+- $V$ is the gate voltage, in V;
+- $C_{\mathrm{sim}}(V)$ is the simulated gate capacitance, in fF;
+- $C_{\mathrm{SPICE}}(V)$ is the SPICE gate capacitance, in fF.
+
+Each crossing gap is scaled by the allowed gap:
 
 $$
-r_\mathrm{dep}=\frac{\Delta V_\mathrm{dep}}{\Delta V_\mathrm{tol}},\quad r_\mathrm{inv}=\frac{\Delta V_\mathrm{inv}}{\Delta V_\mathrm{tol}}
-$$
+r_{s}=\frac{\Delta V_{s}}{\Delta V_{\mathrm{tol}}},\quad s\in\{\mathrm{dep},\mathrm{inv}\}
+$$ (eq-calibration-gap)
 
-where:
+where
 
-- $F$ is the cost, a pure number;
-- $g$ runs over the fit's {{ x_fit_length_count }} gate lengths;
-- $V$ runs over the voltage steps of both flat parts, in volts;
-- $r_C(V)$ is the relative error of the capacitance at $V$, a pure number;
-- $C_\mathrm{sim}(V)$ and $C_\mathrm{SPICE}(V)$ are the simulated and SPICE gate capacitances, in fF;
-- $r_\mathrm{dep}$ and $r_\mathrm{inv}$ are each crossing gap over the allowed gap
-  $\Delta V_\mathrm{tol}$, {{ x_dv_tol_l10 }};
-- $\Delta V_\mathrm{dep}$ and $\Delta V_\mathrm{inv}$ are the simulated minus the SPICE crossing
-  voltage, falling and rising side, in volts.
+- $r_{s}$ is the scaled gap on side $s$, dimensionless;
+- $s$ is the side of the dip, dep the falling one and inv the rising one, dimensionless;
+- $\Delta V_{s}$ is the simulated minus the SPICE crossing voltage on side $s$, in V;
+- $\Delta V_{\mathrm{tol}}$ is the allowed gap of {{ x_dv_tol_l10 }}, in mV.
 
 Each evaluation solves the stack once and compares it at every fit gate length. The search
 counted {{ x_nfev_nfet }} evaluations for the nfet and {{ x_nfev_pfet }} for the pfet. The count
