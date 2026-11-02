@@ -9,10 +9,9 @@ the issue says what is open and what settles it. The phases are those of the
 ## Phase 2: the MOS capacitor
 
 - **2D validation of the calibrated stack** ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): every calibrated 2D cell that solves
-  is committed. The L = 2 µm and L = 10 µm solves fail (next two items).
-  The 2D plateaus lie below SPICE ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)). The 2D depletion crossing lies below 1D and
-  sets every 2D {term}`Disagree` ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
-  Three 2D estimates have no measurement ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)).
+  is committed. Two 2D solves fail; the next two items name them.
+  The 2D plateaus lie below SPICE (issue #77). The 2D depletion crossing lies below 1D
+  (issue #108, {ref}`cv-agreement-validation`). The memory grows with every 2D point (issue #78).
 - **2D {term}`MOS capacitor <MOSCAP>` at L = 2 µm**: its small-signal (AC) solve fails
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)).
 - **2D MOS capacitor at L = 10 µm**: its equilibrium solve fails
