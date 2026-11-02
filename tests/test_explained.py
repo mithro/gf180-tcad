@@ -1804,17 +1804,18 @@ def test_fit_table_follows_an_edited_result_file(tmp_path):
     (root / _FITS["pfet_05v0"]).write_text(json.dumps(doc), "utf-8")
     table = numbers.fit_table("pfet_05v0", root=root)
     assert table != numbers.fit_table("pfet_05v0")
-    assert "| 16.25 nm |" in table and "| −0.3 V |" in table and "| 0.3 V |" in table
+    assert "| 16.25\u00a0nm |" in table and "| −0.3\u00a0V |" in table
+    assert "| 0.3\u00a0V |" in table
 
 
 def test_shortest_keeps_the_value():
     numbers = _numbers()
-    assert numbers.shortest(0.2, "V", 3) == "0.2 V"
-    assert numbers.shortest(-0.2, "V", 3) == "−0.2 V"
-    assert numbers.shortest(0.0, "V", 3) == "0 V"
-    assert numbers.shortest(16.050483616382458, "nm", 4) == "16.05 nm"
-    assert numbers.shortest(1.7e17, "cm⁻³", 3) == "1.7 × 10¹⁷ cm⁻³"
-    assert numbers.shortest(6.2967947909822296e16, "cm⁻³", 3) == "6.3 × 10¹⁶ cm⁻³"
+    assert numbers.shortest(0.2, "V", 3) == "0.2\u00a0V"
+    assert numbers.shortest(-0.2, "V", 3) == "−0.2\u00a0V"
+    assert numbers.shortest(0.0, "V", 3) == "0\u00a0V"
+    assert numbers.shortest(16.050483616382458, "nm", 4) == "16.05\u00a0nm"
+    assert numbers.shortest(1.7e17, "cm⁻³", 3) == "1.7\u00a0×\u00a010¹⁷\u00a0cm⁻³"
+    assert numbers.shortest(6.2967947909822296e16, "cm⁻³", 3) == "6.3\u00a0×\u00a010¹⁶\u00a0cm⁻³"
 
 
 def test_limit_kinds_are_the_process_files(tmp_path):
