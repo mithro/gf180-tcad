@@ -10,5 +10,10 @@ Source: {repo}`src/gf180tcad/explain/figures.py`.
 .. autodata:: gf180tcad.explain.figures.PALETTES
 
 .. autodata:: gf180tcad.explain.figures.FIGURES
+
+.. autodata:: gf180tcad.explain.figures.SPICE_ROOT
+   :no-value:
+
+.. autodata:: gf180tcad.explain.figures.TYPICAL
    :no-value:
 ```
