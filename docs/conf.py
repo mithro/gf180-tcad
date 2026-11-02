@@ -25,10 +25,14 @@ extensions = [
     "repo_roles",
     "api_links",
     "table_cells",
+    "figure_numbers",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
 root_doc = "index"
+# Number the figures, so the text can cite one with {numref}; docs/_ext/figure_numbers.py numbers
+# them per page and gives a light and dark twin pair one number.
+numfig = True
 
 # Internal design spec and plans are not reader-facing; _build is output; _ext is code.
 exclude_patterns = ["_build", "_ext", "superpowers", "superpowers/**"]
