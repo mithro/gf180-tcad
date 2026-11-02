@@ -26,3 +26,9 @@ def test_charon_stages_match_the_dockerfile():
     for lines in imagefig.BOXES.values():
         for line in lines:
             assert line.replace("&", "&amp;") in text, line
+
+
+def test_image_page_names_the_figure():
+    page = (REPO / "docs" / "reproduce" / "image.md").read_text(encoding="utf-8")
+    assert "```{figure} /_generated/reproduce/charon-stages.svg\n:name: charon-stages\n" in page
+    assert "{numref}`charon-stages`" in page

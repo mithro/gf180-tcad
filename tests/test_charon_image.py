@@ -38,13 +38,6 @@ TESTS = "/opt/charon/share/gf180tcad/tests"
 OMPI_ENV = {"OMPI_MCA_ess_singleton_isolated": "1"}
 
 
-# DRAFT (A-2 in progress): the pin, IMAGE_ID and versions.json are written once the image is
-# built; until then the tests that read them are expected to fail. Remove with the pin.
-_UNPINNED = pytest.mark.xfail(
-    not PIN.exists(), reason="docker/CHARON_LIBS_IMAGE not written yet (A-2)", strict=True
-)
-
-
 def _load(name: str):
     spec = importlib.util.spec_from_file_location(f"charon_libs_{name}", LIBS / f"{name}.py")
     mod = importlib.util.module_from_spec(spec)
@@ -73,13 +66,11 @@ def _run(script: str, tmp_path: Path) -> str:
 # --- committed files (no Docker) -------------------------------------------------------------
 
 
-@_UNPINNED
 def test_charon_libs_image_pinned_by_digest():
     text = PIN.read_text(encoding="utf-8")
     assert re.fullmatch(r"ghcr\.io/mithro/gf180-tcad-charon-libs@sha256:[0-9a-f]{64}\n", text)
 
 
-@_UNPINNED
 def test_charon_libs_image_id_is_a_digest():
     text = (LIBS / "IMAGE_ID").read_text(encoding="utf-8")
     assert re.fullmatch(r"sha256:[0-9a-f]{64}\n", text)
@@ -87,7 +78,6 @@ def test_charon_libs_image_id_is_a_digest():
         assert text != (DOCKER / other / "IMAGE_ID").read_text(encoding="utf-8"), other
 
 
-@_UNPINNED
 def test_charon_libs_versions_json_shape():
     text = VERSIONS.read_text(encoding="utf-8")
     data = json.loads(text)
