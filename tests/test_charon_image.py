@@ -130,9 +130,14 @@ def test_charon_libs_versions_json_matches_image(tmp_path):
 
 @pytest.mark.sandbox
 def test_charon_environment(tmp_path):
+    """PATH, one OpenMP thread, the singleton setting, and charon_mp.exe starting without mpirun.
+
+    charon_mp.exe has no ``--version``; ``--help`` prints the usage and then ends through
+    MPI_Abort (exit 14), so the test reads the usage text, not the exit code.
+    """
     out = _run(
         "echo PATH=$PATH; echo OMP=$OMP_NUM_THREADS; command -v charon_mp.exe; "
-        "env | grep ^OMPI_MCA_ | sort; charon_mp.exe --version",
+        "env | grep ^OMPI_MCA_ | sort; { charon_mp.exe --help 2>&1 || echo help-exit=$?; }",
         tmp_path,
     )
     assert "PATH=/opt/charon/bin:" in out
@@ -140,6 +145,8 @@ def test_charon_environment(tmp_path):
     assert "/opt/charon/bin/charon_mp.exe" in out
     for k, v in OMPI_ENV.items():
         assert f"{k}={v}" in out, k
+    assert "Usage: charon_mp.exe [options]" in out
+    assert re.search(r"^\s*--i\s+string\s+Charon input xml/yaml filename", out, re.MULTILINE)
 
 
 # While the solve runs, sample the process's thread count, the process list and /tmp every
