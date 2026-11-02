@@ -94,6 +94,9 @@ class Page:
         for line, check, msg in rule_findings(self.text, rules, not outside_sphinx):  # LOCAL
             self.failed = True  # LOCAL
             print(f"{self.path}:{line}: FAIL {check} {msg}")  # LOCAL
+        if "figure" in rules:  # LOCAL
+            for line, reason in figure_opt_outs(self.text):  # LOCAL
+                print(f"{self.path}:{line}: NOTE FIGURE-OK {reason}")  # LOCAL
 
     def front_matter(self):
         fm = re.match(r"---\n(.*?)\n---\n", self.text, flags=re.S)
@@ -274,6 +277,7 @@ class Page:
 # are unchanged without it.
 
 RULES = ("figure", "equation", "filelink")
+OPT_OUT_WORDS = 6  # a figure-ok reason has six words or more
 RULES_HELP = """\
 house rules (--rules all, or a comma-separated subset of figure,equation,filelink):
   FIGURE    a section (the text from one heading to the next) whose prose names a physical
@@ -296,10 +300,23 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
 Each finding prints PATH:LINE: FAIL CHECK message.
 """
 
-SITUATION_NOUNS = ("curve", "mesh", "stack", "profile", "cross-section", "region", "sweep",
-                   "layout", "die", "junction")
-_NOUN = re.compile(r"(?<![\w-])(" + "|".join(re.escape(n) for n in SITUATION_NOUNS)
-                   + r")(e?s)?(?![\w-])", flags=re.I)
+SITUATION_NOUNS = ("curve", "mesh", "stack", "profile", "cross section", "region", "sweep",
+                   "layout", "die", "junction", "band", "band diagram", "band gap", "bandgap",
+                   "gate", "oxide", "channel", "body", "bodies", "doping", "dopant", "depletion",
+                   "depleted layer", "fringe", "plan view", "drawing", "diagram", "plot", "graph",
+                   "geometry", "geometries")
+# A space in a noun matches a space or a hyphen ("cross-section", "plan-view"). Longer nouns
+# first, so "band diagram" wins over "band".
+_NOUN = re.compile(r"(?<![\w-])(" + "|".join(
+    re.escape(n).replace(r"\ ", r"[\s-]+") for n in sorted(SITUATION_NOUNS, key=len, reverse=True))
+    + r")(e?s)?(?![\w-])", flags=re.I)
+# Nouns with a common non-physical sense count only with a qualifier: "the well" or "n-well",
+# not "works well"; "electric field", not "the field `t_ox`".
+_QUALIFIED_NOUN = re.compile(
+    r"(?:\b[np][-+]?-|\bdeep\s+|\bthe\s+|\beach\s+|\bone\s+|\ba\s+)(wells?)(?![\w-])|\b(wells)\b"
+    r"|\b(?:electric|fringe|fringing|lateral|vertical|surface)\s+(fields?)\b", flags=re.I)
+_ABOVE = re.compile(r"\b((?:figure|drawing|plot|graph|diagram|picture|image)s?\s+(?:above|below))\b",
+                    flags=re.I)
 _FENCE_OPEN = re.compile(r"^(\s*)(`{3,}|~{3,}|:{3,})\s*(.*)$")
 _PROSE_DIRECTIVES = CALLOUT_DIRECTIVES | {"dropdown", "card", "tab-item", "tab-set"}
 _MATH_OPEN = re.compile(r"^\s*\$\$(.*)$")
@@ -309,7 +326,18 @@ _MD_LINK = re.compile(r"\[(?:[^\[\]]|\[[^\]]*\])*\]\([^)]*\)")
 _CODE = re.compile(r"(?<!`)`(?P<body>[^`]+)`(?!`)")
 _PATH_DIRS = r"(results|tools|data|docs|src|tests|docker|third_party|bin|logs)"
 _PATH_EXTS = r"(py|json|toml|md|csv|tsv|yml|yaml|txt|svg|png|sh|cfg|ini|lock|gds|tcl|ipynb|log|pdf|msh|exo)"
-_PATHLIKE = re.compile(rf"^(\./)?{_PATH_DIRS}/\S*$|^[^\s/]*(/[^\s/]+)*\.{_PATH_EXTS}(#\S*|::\S*)?$")
+_PLAIN_NAMES = r"(Makefile|Dockerfile|Containerfile|README|LICENSE|CONTRIBUTING|CHANGELOG)"
+_LINE_NO = r"(:\d+(-\d+)?)"
+_PATHLIKE = re.compile(rf"^(\./)?{_PATH_DIRS}/\S*$|^~/\S+$"
+                       rf"|^[^\s/]*(/[^\s/]+)*\.{_PATH_EXTS}(#\S*|::\S*|{_LINE_NO})?$"
+                       rf"|^([^\s/]+/)*{_PLAIN_NAMES}{_LINE_NO}?$")
+# A file name in prose, outside code, roles and links: a path under a repository folder, a path
+# under ~/, or a name with a file extension.
+_PROSE_PATH = re.compile(rf"(?<![\w/.~-])((\./)?{_PATH_DIRS}/[\w./-]*[\w/]|~/[\w./-]*\w"
+                         rf"|[\w-]+(/[\w.-]+)*\.{_PATH_EXTS}{_LINE_NO}?)(?![\w/-])")
+# `np.log`, `logger.log`, `self.md`: Python names, not files.
+_CODE_NAMES = {"np", "numpy", "math", "logger", "logging", "log", "self", "cls", "os", "sys", "re",
+               "sp", "scipy", "plt", "pd", "json"}
 GREEK = {"alpha", "beta", "gamma", "delta", "epsilon", "varepsilon", "zeta", "eta", "theta",
          "vartheta", "iota", "kappa", "lambda", "mu", "nu", "xi", "pi", "rho", "varrho", "sigma",
          "varsigma", "tau", "upsilon", "phi", "varphi", "chi", "psi", "omega", "Gamma", "Delta",
@@ -317,7 +345,19 @@ GREEK = {"alpha", "beta", "gamma", "delta", "epsilon", "varepsilon", "zeta", "et
 _TEXT_COMMANDS = {"mathrm", "text", "textrm", "operatorname", "mbox", "hbox", "label", "tag"}
 _WHERE_ITEM = re.compile(r"^\s*[-*]\s+(?P<syms>\$[^$]+\$(?:\s*(?:,|and)\s*\$[^$]+\$)*)(?P<rest>.*)$",
                          flags=re.S)
-_UNIT = re.compile(r",\s*(in\s+\S.*|dimensionless)[.;]?\s*$", flags=re.S)
+_UNIT = re.compile(r",\s*(in\s+(?P<unit>[^,;]+?)|dimensionless)[.;]?\s*$", flags=re.S)
+# An SI unit written with symbols: m, cm⁻³, F/m², m²/(V·s), eV, cm^-3, 1/cm³.
+_UNIT_ONE = (r"(?:(?:[YZEPTGMkhdcmµμunpfa]?(?:mol|cd|Hz|Pa|eV|rad|sr|Wb|Ω|m|s|g|A|K|V|F|C|J|W|S|H|T|N|L))"
+             r"|1)(?:\^\{?[-−]?\d+\}?|[⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)?")
+_UNIT_EXPR = re.compile(rf"{_UNIT_ONE}(?:\s*[·⋅*/ ]\s*{_UNIT_ONE})*")
+
+
+def _is_unit(m):
+    """True when a 'where' item ends with ', dimensionless' or ', in <SI unit symbols>'."""
+    if not m:
+        return False
+    unit = m.group("unit")
+    return unit is None or bool(_UNIT_EXPR.fullmatch(re.sub(r"[()]", "", unit.strip())))
 
 
 def _group(s, i):
@@ -472,7 +512,8 @@ def _visible(line):
 
 
 _SOFTWARE_STACK = re.compile(r"\b(software|TCAD|tool|image|latest|stable|dev|2023|Sept-2023|two|both)"
-                             r"\s+stacks?\b|\bstacks?\s+of\s+20\d\d\b", flags=re.I)
+                             r"\s+stacks?\b|\bstacks?\s+of\s+20\d\d\b|\bstacks?\s+of\s+(?:the\s+)?(?:\w+\s+)?results\b",
+                             flags=re.I)
 _FIGURE_OK = re.compile(r"<!--\s*figure-ok:\s*(?P<reason>[^>]*?)\s*-->")
 _IMAGE_LINE = re.compile(r"^\s*!\[[^\]]+\]\([^)]+\)")
 
@@ -487,19 +528,85 @@ def figure_findings(lines, sphinx=True):
         has_figure = any(k == "figure" or "{numref}" in ln for _, ln, k in sec)
         if not sphinx:
             has_figure = has_figure or any(_IMAGE_LINE.match(ln) for _, ln, _k in sec)
-        opt_out = any(len((m.group("reason") or "").split()) >= 3
+        opt_out = any(len((m.group("reason") or "").split()) >= OPT_OUT_WORDS
                       for _, ln, _k in sec for m in _FIGURE_OK.finditer(ln))
         if has_figure or opt_out:
             continue
+        title = sec[0][1].lstrip("# ").strip() if sec and sec[0][2] == "heading" else "(page top)"
         for i, line, kind in sec:
             if kind != "prose":
                 continue
-            m = _NOUN.search(_SOFTWARE_STACK.sub(" ", _visible(line)))
+            text = _SOFTWARE_STACK.sub(" ", _visible(line))
+            above = _ABOVE.search(text)
+            if above:
+                out.append((i, "FIGURE", f"section '{title}' refers to the {above.group(1).lower()} "
+                                         "with no {numref}: cite the figure by its name"))
+                break
+            m = _NOUN.search(text) or _QUALIFIED_NOUN.search(text)
             if m:
-                title = sec[0][1].lstrip("# ").strip() if sec[0][2] == "heading" else "(page top)"
-                out.append((i, "FIGURE", f"section '{title}' describes a {m.group(1).lower()} with no "
+                noun = next(g for g in m.groups() if g and g.lower() not in ("s", "es"))
+                out.append((i, "FIGURE", f"section '{title}' describes a {noun.lower()} with no "
                                          "{figure} and no {numref} in it"))
                 break
+    return out
+
+
+def figure_opt_outs(text):
+    """(line, reason) of each <!-- figure-ok: reason --> whose reason has OPT_OUT_WORDS words or
+    more; --rules prints each as a NOTE, and the baseline counts them as FIGURE-OK."""
+    out = []
+    for i, line, kind in _rule_lines(text):
+        if kind != "comment":
+            continue
+        for m in _FIGURE_OK.finditer(line):
+            reason = " ".join((m.group("reason") or "").split())
+            if len(reason.split()) >= OPT_OUT_WORDS:
+                out.append((i, reason))
+    return out
+
+
+def _figure_blocks(lines):
+    """(line, options, caption lines) of each {figure} directive."""
+    out, k, n = [], 0, len(lines)
+    while k < n:
+        i, line, kind = lines[k]
+        k += 1
+        if kind != "figure":
+            continue
+        opts, caption = {}, []
+        while k < n and lines[k][2] in ("option", "caption", "blank"):
+            _, ln, kd = lines[k]
+            if kd == "option":
+                o = re.match(r"^\s*:([\w-]+):\s*(.*)$", ln)
+                opts[o.group(1)] = o.group(2).strip()
+            elif kd == "caption":
+                caption.append(ln.strip())
+            k += 1
+        out.append((i, opts, caption))
+    return out
+
+
+def figure_form_findings(lines):
+    """FIGURE-FORM: a {figure} needs a :name:, a caption and a {numref} on the page that cites
+    it. The dark twin of a light/dark pair (:figclass: only-dark) carries no name and is exempt."""
+    cited = set()
+    for _, line, kind in lines:
+        if kind in ("prose", "table", "caption", "heading"):
+            for m in re.finditer(r"\{numref\}`(?:[^`<]*<)?\s*([^`<>]+?)\s*>?`", line):
+                cited.add(m.group(1))
+    out = []
+    for i, opts, caption in _figure_blocks(lines):
+        if "only-dark" in opts.get("figclass", "").split():
+            continue
+        name = opts.get("name")
+        if not name:
+            out.append((i, "FIGURE-FORM", "this {figure} has no :name:, so the text cannot cite it "
+                                          "with {numref}: name it (the light twin of a pair)"))
+        elif not any(caption):
+            out.append((i, "FIGURE-FORM", f"the {{figure}} '{name}' has no caption: write one"))
+        elif name not in cited:
+            out.append((i, "FIGURE-FORM", f"no {{numref}} on the page cites the {{figure}} '{name}': "
+                                          "cite it in the text"))
     return out
 
 
@@ -562,11 +669,18 @@ def equation_findings(lines):
                 out.append((line_no, "EQUATION", "a 'where' item that does not start with its "
                                                  "symbol in $...$"))
                 continue
+            item_syms = set()
             for span in re.findall(r"\$([^$]+)\$", m.group("syms")):
-                defined |= latex_symbols(span)
-            if not _UNIT.search(m.group("rest")):
+                item_syms |= latex_symbols(span)
+            defined |= item_syms
+            extra = item_syms - symbols
+            if extra:
+                out.append((line_no, "EQUATION", "the 'where' list defines " + ", ".join(sorted(extra))
+                                                 + ", which the equation does not use"))
+            if not _is_unit(_UNIT.search(m.group("rest"))):
                 out.append((line_no, "EQUATION", f"the 'where' item for {m.group('syms')} gives no "
-                                                 "unit: end it with ', in <unit>' or ', dimensionless'"))
+                                                 "unit: end it with ', in <SI unit symbol>' (F/m², "
+                                                 "cm⁻³) or ', dimensionless'"))
         missing = symbols - defined
         if missing:
             out.append((start, "EQUATION", "the 'where' list does not define "
@@ -582,14 +696,37 @@ def filelink_findings(lines):
         linked = [m.span() for m in _ROLE.finditer(line)] + [m.span() for m in _MD_LINK.finditer(line)]
         for m in _CODE.finditer(line):
             body = m.group("body").strip()
-            if "://" in body or not _PATHLIKE.match(body):
+            if "://" in body or not _PATHLIKE.match(body) or _is_code_name(body):
                 continue
             if any(a <= m.start() < b for a, b in linked):
                 continue
             out.append((i, "FILELINK", f"`{body}` is not a link: link the file "
                                        "({repo} for a file of this repository, a GitHub URL at a "
                                        "pinned commit otherwise)"))
+        for m in _PROSE_PATH.finditer(_bare_prose(line)):
+            body = m.group(1)
+            if _is_code_name(body):
+                continue
+            out.append((i, "FILELINK", f"`{body}` (in the prose) is not a link: link the file "
+                                       "({repo} for a file of this repository, a GitHub URL at a "
+                                       "pinned commit otherwise)"))
     return out
+
+
+def _is_code_name(body):
+    """`np.log`, `logger.log`, `self.md`: a Python name and an attribute, not a file."""
+    m = re.fullmatch(r"([A-Za-z_]\w*)\.(\w+)", body)
+    return bool(m) and m.group(1) in _CODE_NAMES
+
+
+def _bare_prose(line):
+    """The text of a line outside code, roles, links (their text too), math, URLs and comments,
+    each replaced by a space: where a file name is not a link."""
+    line = re.sub(r"<!--.*?-->", " ", line)
+    line = _ROLE.sub(" ", line)
+    line = _MD_LINK.sub(" ", line)
+    line = re.sub(r"`[^`]*`|\$[^$]*\$|\{\{[^}]*\}\}|<[^>]*>|https?://\S+", " ", line)
+    return line
 
 
 def rule_findings(text, rules=RULES, sphinx=True):
@@ -599,6 +736,7 @@ def rule_findings(text, rules=RULES, sphinx=True):
     out = []
     if "figure" in rules:
         out += figure_findings(lines, sphinx)
+        out += figure_form_findings(lines)
     if "equation" in rules:
         out += equation_findings(lines)
     if "filelink" in rules:
