@@ -54,7 +54,7 @@ volts ({ref}`Sze and Ng, ch. 4 <lit-sze>`). Its curve against the gate voltage i
 :alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`PDK`'s
-SPICE model at the {term}`typical corner`, and the grey band spans its five
+SPICE model at the {term}`typical corner`, and the grey band spans its {{ x_corner_count }}
 {term}`corners <corner>`. The dashed line is
 the simulated stack, with the oxide thickness, body doping and voltage shift fitted to the SPICE
 model.
@@ -65,7 +65,7 @@ model.
 :alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`PDK`'s
-SPICE model at the {term}`typical corner`, and the grey band spans its five
+SPICE model at the {term}`typical corner`, and the grey band spans its {{ x_corner_count }}
 {term}`corners <corner>`. The dashed line is
 the simulated stack, with the oxide thickness, body doping and voltage shift fitted to the SPICE
 model.
@@ -85,9 +85,11 @@ The oxide is an insulator, so no current flows through the stack. The simulation
 rest, with the body at zero volts ({py:mod}`gf180tcad.tcad.moscap1d`). Its capacitance is then
 set by the oxide and by the doping of the gate and the body ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
-So the stack is where this repo fits the oxide thickness, the body doping and a small shift of
-the gate voltage. The fit matches the simulated gate capacitance to the SPICE model's at three
-gate lengths ({ref}`cv-agreement`). The fitted values are then held fixed and checked at gate
+So the stack is where this repo fits the oxide thickness, the body doping and a shift of the
+gate voltage. The fitted shift is {{ x_dv_fb_nfet_cal }} for the nfet
+({repo}`nfet_05v0.json <results/tcad/calibration/nfet_05v0.json>`). The fit matches the
+simulated gate capacitance to the SPICE model's at {{ x_fit_length_count }} gate lengths
+({ref}`cv-agreement`). The fitted values are then held fixed and checked at gate
 lengths the fit did not use.
 
 (explained-moscap-area)=

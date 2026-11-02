@@ -252,6 +252,17 @@ def two_d_disagree(root: Path = ROOT) -> str:
     return "The Disagree cells fail on " + "; and on ".join(CHECKS[k] for k in failing)
 
 
+def counts(root: Path = ROOT) -> dict[str, int]:
+    """Counts a page prints: ``corner_count``, the SPICE corners of
+    :data:`gf180tcad.devices.CORNERS`; ``fit_length_count``, the gate lengths of the nfet
+    calibration's fit (``per_geometry`` of its result file under ``root``)."""
+    from gf180tcad.devices import CORNERS
+
+    fit = json.loads((Path(root) / _RESULT).read_text("utf-8"))["per_geometry"]
+    lengths = {g["geometry"]["l_um"] for g in fit.values()}
+    return {"corner_count": len(CORNERS), "fit_length_count": len(lengths)}
+
+
 def _formula(name: str):
     if name in idealised.FORMULAS:
         return idealised.FORMULAS[name]
@@ -307,13 +318,14 @@ def text(name: str) -> str:
 def substitutions() -> dict[str, str]:
     """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, and ``{"x_<name>":
     word}`` for every :data:`WORDS` entry, and the 2D cells' table and Disagree clause
-    (``x_two_d_table``, ``x_two_d_disagree``), for MyST."""
+    (``x_two_d_table``, ``x_two_d_disagree``) and the :func:`counts`, for MyST."""
     out: dict[str, str] = {}
     for name, n in REGISTRY.items():
         out[f"x_{name}"] = text(name)
         out[f"x_{name}_label"] = LABELS[n.kind]
     for name in WORDS:
         out[f"x_{name}"] = word(name)
+    out.update({f"x_{k}": str(v) for k, v in counts().items()})
     out["x_two_d_table"] = two_d_table()
     out["x_two_d_disagree"] = two_d_disagree()
     return out

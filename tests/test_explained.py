@@ -1140,7 +1140,8 @@ def test_verdict_sentence_follows_an_edited_result_file(tmp_path):
 def test_moscap_page_prints_its_numbers():
     text = MOSCAP_PAGE.read_text(encoding="utf-8")
     for key in (*_VERDICT_FILES, "cgg_acc_l10", "cgg_inv_l10", "plateau_acc_l10", "plateau_inv_l10",
-                "plateau_tol_l10", "two_d_table", "two_d_disagree"):  # fmt: skip
+                "plateau_tol_l10", "two_d_table", "two_d_disagree", "corner_count",
+                "fit_length_count", "dv_fb_nfet_cal"):  # fmt: skip
         assert "{{ x_" + key + " }}" in text, key
     for name in ("moscap-cell", "moscap-cv"):
         assert f"/_generated/explained/{name}-light.svg" in text, name
@@ -1229,3 +1230,38 @@ def test_disagree_cells_are_the_issue_on_the_page():
     if bad:
         assert all("dv_dep" in c.failing for c in bad)
     assert "issues/108" in MOSCAP_PAGE.read_text(encoding="utf-8")
+
+
+_COUNT_WORDS = re.compile(
+    r"\b(two|three|four|five|six|seven|eight|nine|ten)\s+(\{term\}`)?"
+    r"(corners?|gate lengths?|cells?|geometries)",
+    re.IGNORECASE,
+)
+
+
+def test_moscap_page_types_no_count():
+    """Counts that can drift (corners, fit lengths, cells) come from substitutions; the fixed
+    ones (the three layers of the stack, the two plates of a capacitor) are words."""
+    assert not _COUNT_WORDS.findall(MOSCAP_PAGE.read_text(encoding="utf-8"))
+    for bad in ("spans its five corners", "at three gate lengths", "Disagree at three cells"):
+        assert _COUNT_WORDS.search(bad), bad
+
+
+def test_counts_are_derived(tmp_path):
+    from gf180tcad.devices import CORNERS
+
+    numbers = _numbers()
+    src = "results/tcad/calibration/nfet_05v0.result.json"
+    fit = json.loads((ROOT / src).read_text("utf-8"))
+    lengths = {g["geometry"]["l_um"] for g in fit["per_geometry"].values()}
+    assert numbers.counts() == {"corner_count": len(CORNERS), "fit_length_count": len(lengths)}
+    subs = numbers.substitutions()
+    assert subs["x_corner_count"] == str(len(CORNERS))
+    assert subs["x_fit_length_count"] == str(len(lengths))
+    # A copy of the result file with one more fit length: the count follows it.
+    extra = json.loads(json.dumps(next(iter(fit["per_geometry"].values()))))
+    extra["geometry"] = {**extra["geometry"], "geometry_id": "w10p0_l5p00", "l_um": 5.0}
+    fit["per_geometry"]["w10p0_l5p00"] = extra
+    (tmp_path / src).parent.mkdir(parents=True)
+    (tmp_path / src).write_text(json.dumps(fit), "utf-8")
+    assert numbers.counts(root=tmp_path)["fit_length_count"] == len(lengths) + 1
