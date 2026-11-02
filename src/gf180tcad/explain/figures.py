@@ -79,8 +79,7 @@ STYLE = {
     "spike_width": 3.5,
     "spike_zorder": 3,
     "junction_line_zorder": 1,
-    # The C-V plot: the SPICE corner band's opacity, and the simulated line drawn dashed on top.
-    "corner_alpha": 0.35,
+    # The C-V plot: the simulated line is drawn dashed on top of the SPICE curves.
     "cv_zorder": 3,
 }
 
@@ -93,6 +92,8 @@ PALETTES = {
         "background": "#ffffff",
         "text": "#222222",
         "grid": "#c8c8c8",
+        # The SPICE corner band of the C-V plot: opaque, lighter than the grid lines in dark.
+        "band": "#e4e4e4",
         "highlight": "#009E73",
         "highlight_oxide": "#CC79A7",
         "muted": "#8c8c8c",
@@ -104,6 +105,7 @@ PALETTES = {
         "background": "#131416",
         "text": "#e4e4e4",
         "grid": "#4a4a4a",
+        "band": "#5e5e5e",
         "highlight": "#2fbf8f",
         "highlight_oxide": "#e09bc4",
         "muted": "#9a9a9a",
@@ -556,7 +558,7 @@ def _junction_cell(palette: str) -> bytes:
     return cross_section(c, ("junction",), palette)
 
 
-# The committed SPICE reference tree, and its typical corner (the line; the five corners give
+# The committed SPICE reference tree, and its typical corner (the line; all the corners give
 # the band).
 SPICE_ROOT = numbers.ROOT / "results" / "spice"
 TYPICAL = "typical"
@@ -599,8 +601,8 @@ def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
-        ax.fill_between(c["u_spice"], c["spice_lo"], c["spice_hi"], color=pal["grid"],
-                        alpha=STYLE["corner_alpha"], linewidth=0, label="SPICE, five corners")  # fmt: skip
+        ax.fill_between(c["u_spice"], c["spice_lo"], c["spice_hi"], color=pal["band"],
+                        linewidth=0, label="SPICE, all corners")  # fmt: skip
         ax.plot(c["u_spice"], c["spice_tt"], color=pal["text"], lw=lw, label="SPICE, typical")
         ax.plot(c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
                 zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
