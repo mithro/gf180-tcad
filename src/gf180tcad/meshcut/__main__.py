@@ -19,7 +19,8 @@ Host commands:
   ``regenerate-job`` with :data:`gf180tcad.meshcut.job.REGENERATE_MEM`, alone, like a 2D job.
   It prints the committed and the regenerated sha256. A regenerated mesh that matches is
   copied beside the job's ``cv.meta.json`` (git-ignored), where ``tools/output-cache push``
-  finds it. With ``--cut`` the artefact is cut and installed only on a match.
+  finds it. With ``--cut`` the artefact is cut and installed only on a match. Its own
+  scratch directory is removed after a match and kept, with its path printed, otherwise.
 
 In-image commands (inside the sandbox only): ``cut-job --job J --out /work/out --kx K
 --depth-um D`` and ``regenerate-job --job J --out /work/out [--cut --kx K --depth-um D]``
@@ -195,12 +196,17 @@ def run_regenerate(
     results_root: Path | None = None,
 ) -> dict:
     """``regenerate``: mesh the job again in the sandbox and compare its sha256 with the
-    committed one; return the report. With ``cut``, install the artefact on a match."""
+    committed one; return the report. With ``cut``, install the artefact on a match.
+
+    A scratch directory that this command made (no ``scratch``) is removed after a match, once
+    the mesh is beside the job; after a mismatch or a failure it is kept, with the regenerated
+    mesh and the job's log, and its path is printed."""
     job_dir = Path(job_dir)
     if cut and out is None:
         raise ValueError("regenerate --cut needs --out")
     image = _check_out(job_dir, out) if cut else source_image(job_dir)
     key = job.job_key(job_dir, results_root)
+    made = scratch is None
     scratch = _scratch(scratch, "gf180tcad-meshcut-regenerate-")
     cmd = ["python3", "-m", "gf180tcad.meshcut", "regenerate-job", "--job", _job_arg(job_dir),
            "--out", "/work/out"]  # fmt: skip
@@ -218,6 +224,10 @@ def run_regenerate(
             shutil.copyfile(scratch / job.MESH_NAME, mesh)
     if cut:
         install(scratch, out, key, image)
+    if made and report["match"]:
+        shutil.rmtree(scratch)
+    else:
+        print(f"kept: {scratch}", flush=True)
     return report
 
 
