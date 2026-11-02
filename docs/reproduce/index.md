@@ -340,9 +340,27 @@ The flat-band shift is in true-sign gate voltage for both transistors. The pfet 
 TOXP, so its TOXP follows TOXE and both oxide bounds move.
 
 **What a fit leaves out.** A 1D C–V fit takes no VSAT, VSAT binning or TOXM line of a corner.
-The pfet's PVTH0 binning line is also left out. By its row in {repo}`data/pdk_corners.json`, it
-adds 8.47 × 10⁻³ V·µm² times DVTH0, over the effective gate area. That is 0.31 mV of VTH0 or less,
-the most at ff on the L = 0.5 µm gate.
+The pfet's PVTH0 binning line is also left out. It moves the SPICE VTH0 of a corner as
+{math:numref}`eq-corner-pvth0` gives, a binning term of {{ ngspice }}
+([`b4temp.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c), `Inv_LW`):
+
+$$
+\Delta V_{\mathrm{th0}} = \frac{\Delta P_{\mathrm{VTH0}}}{L_{\mathrm{eff}} \, W_{\mathrm{eff}}}
+$$ (eq-corner-pvth0)
+
+where
+
+- $\Delta V_{\mathrm{th0}}$ is the change of the pfet's VTH0 at the corner, in V;
+- $\Delta P_{\mathrm{VTH0}}$ is the corner's change of PVTH0, in V·µm². It is 8.47 × 10⁻³
+  times the corner's DVTH0 (the `pvth0` row of {repo}`data/pdk_corners.json`; BINUNIT = 1).
+- $L_{\mathrm{eff}}$, $W_{\mathrm{eff}}$ are the effective channel length and width, in µm.
+
+$L_{\mathrm{eff}}$ and $W_{\mathrm{eff}}$ follow equations 1.3.1 to 1.3.4 of the
+[BSIM4.5.0 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), §1.3. They take the card's [LINT and LL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38173-L38174),
+[LWL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38187), [WINT](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38278) and [WW and WWL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38288-L38289). Our arithmetic
+puts the largest shift at ff on the L = 0.5 µm gate, where DVTH0 is 0.1245 V
+({repo}`data/pdk_corners.json`). There our arithmetic, by [§1.3](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), gives $L_{\mathrm{eff}}$ = 0.345 µm
+and $W_{\mathrm{eff}}$ = 9.955 µm. So $\Delta V_{\mathrm{th0}}$ is 0.31 mV by our arithmetic.
 
 **What the summary reports.** For each fitted number it gives the typical value and the value at
 each corner. It names the corners of the lowest and the highest value. The spread is given by
