@@ -515,7 +515,16 @@ anonymous pull of {repo}`docker/TCAD_DEV_IMAGE` works; if it does not, make the 
 
 {{ Charon }} is the second TCAD simulator of {term}`Phase 4`. It is built from source in
 {repo}`docker/charon-libs/`, with the [Charon user manual](https://www.sandia.gov/app/uploads/sites/106/2022/08/Charon_UserManual-v2_2.pdf)'s
-own recipe. No Charon image is pinned, and no TCAD job runs Charon.
+own recipe. {repo}`docker/CHARON_LIBS_IMAGE` pins the image by digest. No TCAD job runs Charon.
+
+```{figure} /_generated/reproduce/charon-stages.svg
+:name: charon-stages
+:alt: Five boxes joined by arrows. The inputs box at the top feeds the deps stage, which feeds the build stage, which feeds the charon-libs image at the bottom. A base image box on the left feeds both the deps stage and the image.
+
+How the charon-libs image is built, from the stages of {repo}`docker/charon-libs/Dockerfile`.
+The inputs come from {repo}`docker/charon-libs/upstream.json`, and the base image is
+{repo}`docker/IMAGE`. Only `/opt/charon` passes from the build stage into the image.
+```
 
 ### What the build uses
 
@@ -526,7 +535,9 @@ own recipe. No Charon image is pinned, and no TCAD job runs Charon.
 - the build-only Ubuntu packages, such as the OpenMPI, netCDF and Boost headers.
 
 {repo}`docker/charon-libs/lock_debs.py` chooses those packages from one Ubuntu snapshot. It
-stops when a package needs a different version of a package that the base image has.
+stops when a package needs a different version of a package that the base image has. It also
+stops when a package's Breaks, Conflicts or Replaces field names a package that the base image
+has, at the installed version.
 
 The build reads Charon's own `General.opts` and `Linux.opts` from the tarball and checks their
 sha256. It then reads {repo}`docker/charon-libs/opts/gf180.opts`, which holds five project lines:
@@ -535,32 +546,73 @@ sha256. It then reads {repo}`docker/charon-libs/opts/gf180.opts`, which holds fi
 - the install prefix `/opt/charon`;
 - the base image's OpenBLAS as the BLAS and LAPACK library.
 
-The build applies one patch to Charon, {repo}`docker/charon-libs/patches/0001-codata2018-constants.patch`.
-It sets three constants to the CODATA 2018 values that the {{ DEVSIM }} jobs use:
+### The input mirror
+
+The [release `gf180-tcad/inputs/charon-20261102`](https://github.com/mithro/gf180-tcad/releases/tag/gf180-tcad/inputs/charon-20261102)
+holds a copy of every input that {repo}`docker/charon-libs/upstream.json` names. Each entry
+there records the mirror URL, the original URL and the sha256. The fetch script,
+{repo}`docker/charon-libs/fetch_sources.py`, tries the mirror first and the original URL second,
+and checks the sha256 either way. The policy of the dev-HEAD image's mirror applies: assets of a
+release are never replaced, and changed files go to another dated tag.
+
+### Patches
+
+The build applies six patches from {repo}`docker/charon-libs/patches/`. The first sets
+constants. Four let 2022 sources build with the base image's GCC 13, netCDF 4.9 and tools. The
+last makes the build reproducible across hosts.
+
+| Patch | What it changes | Licence |
+|---|---|---|
+| {repo}`0001 <docker/charon-libs/patches/0001-codata2018-constants.patch>` | Charon's `kb`, `q` and `eps0` | GPL-3.0-or-later |
+| {repo}`0002 <docker/charon-libs/patches/0002-kokkos-include-cstdint.patch>` | Kokkos: adds `<cstdint>` | BSD-3-Clause |
+| {repo}`0003 <docker/charon-libs/patches/0003-exodus-netcdf-szip-macro.patch>` | Exodus: skips a constant netCDF defines | BSD-3-Clause |
+| {repo}`0004 <docker/charon-libs/patches/0004-teuchos-include-cstdint.patch>` | Teuchos: adds `<cstdint>` | BSD-3-Clause |
+| {repo}`0005 <docker/charon-libs/patches/0005-interpreter-copy-without-rsync.patch>` | Charon's configure: copies without `rsync` | GPL-3.0-or-later |
+| {repo}`0006 <docker/charon-libs/patches/0006-interpreter-sorted-listings.patch>` | Charon's interpreter generator: sorted file lists | GPL-3.0-or-later |
+
+The constants patch sets three values to the CODATA 2018 values that the {{ DEVSIM }} jobs use:
 
 - `kb`, the Boltzmann constant divided by the elementary charge, in eV/K;
 - `q`, the elementary charge;
 - `eps0`, the vacuum permittivity.
 
+The five other patches change no computation:
+
+- GCC 13 no longer includes `<cstdint>` through other standard headers, so two files lacked
+  `uint32_t`.
+- netCDF 4.9 defines `NC_SZIP_NN` as a macro with the value 32. An Exodus file declares a
+  constant of that name and value, which no longer compiles.
+- Charon's configure step copies its input-deck interpreter with `rsync`, which the base image
+  lacks. The copy failed without stopping the build, and the build check then stopped on the
+  missing interpreter. The patch copies with CMake's `file(COPY)` and the same three exclusions.
+- The generator of that interpreter lists its input files in directory order, which differs
+  between filesystems. The generated modules then differed between the project's host and a
+  GitHub runner, and so did the image digest. The patch sorts the lists.
+
 ### Licence
 
-Charon is licensed GPL-3.0-or-later. The patches change Charon source code, so they are
-GPL-3.0-or-later too; {repo}`docker/charon-libs/README.md` lists them. Every other file of the
+Charon is licensed GPL-3.0-or-later. Each patch keeps the licence of the files it changes, as
+the table above lists; {repo}`docker/charon-libs/README.md` names them. Every other file of the
 project stays Apache-2.0.
 
 ### Build steps
 
 {repo}`docker/charon-libs/build` works like {repo}`docker/tcad-dev/build`, with one more rule.
-The Trilinos compile runs in a BuildKit builder limited to 16 GiB of memory with no swap. The
-script creates that builder in {term}`gf180-tcad.slice` on first use. It refuses a builder outside
-that slice, with a memory limit above 16 GiB or none, or with swap.
+The Trilinos compile runs in a BuildKit builder limited to 16 GiB of memory with no swap.
+The script creates that builder on first use. It refuses a builder unless every node's
+running container has a memory limit of at most 16 GiB and no swap, as docker applied them.
 
-The Dockerfile has three stages:
+The builder runs outside {term}`gf180-tcad.slice`, with that limit of its own. Docker's buildx
+places a builder in a given cgroup only when docker uses the cgroupfs driver, and the project's
+host runs docker with systemd.
+
+{numref}`charon-stages` shows the three stages of {repo}`docker/charon-libs/Dockerfile`:
 
 1. `deps` fetches every input, checks its sha256, installs the build packages and applies the
    patches. This is the only step with a network.
-2. `build` runs Charon's `build_charon.py`, then `make` and `make install`. Four upstream
-   nightly tests then run as the build check, and every one must run and pass.
+2. `build` runs Charon's `build_charon.py` through {repo}`docker/charon-libs/build-charon.sh`,
+   then `make` and `make install`. Four upstream nightly tests then run as the build check, and
+   every one must run and pass.
 3. The image is the base image plus `/opt/charon`, with no compiler or source tree left in it.
    Every program and library in `/opt/charon` must find its shared libraries there.
 
@@ -569,12 +621,62 @@ The four tests of the build check are these, by their CTest names:
 - `Charon_charon_mp_pmoscap.nlp`, a p-type MOS capacitor;
 - `Charon_charon_mp.hb.loca-moscap-cv.ox` and `Charon_charon_mp.hb.loca-moscap-cv.sub`, two
   small-signal C-V {term}`sweeps <sweep>` of a MOS capacitor;
-- `Charon_charon_mp_pndiode.nlp`, an abrupt {term}`pn junction`, as
-  `test/nightlyTests/capability/pndiode.nlp.inp` in the Charon tarball defines it.
+- `Charon_charon_mp_pndiode.nlp`, an abrupt {term}`pn junction`, as the deck
+  [`pndiode.nlp.inp`](https://charon.sandia.gov/charon-downloads/source-code/) of the Charon
+  tarball defines it.
 
-The build writes `/opt/charon/share/gf180tcad/charon-build.json`. It records the inputs by
-sha256, the opts files, the patches and the tests of the build check.
+The build writes two records into the image, both produced by
+{repo}`docker/charon-libs/inputs.py`:
+
+- {repo}`charon-build.json <docker/charon-libs/inputs.py>` lists the inputs by sha256, the opts
+  files, the patches and the tests of the build check;
+- {repo}`SOURCES.json <docker/charon-libs/inputs.py>` lists the corresponding source by sha256.
+
+{repo}`docker/charon-libs/probe_versions.py` reads both records, the compiler of
+`charon_mp.exe` and the runtime packages, and its output is
+{repo}`docker/charon-libs/versions.json`. {repo}`docker/charon-libs/IMAGE_ID` holds the
+config digest.
 
 `--target deps --load` loads the first stage as a local image. A developer can then run the
 compile in {repo}`tools/sandbox-run` and keep the build tree between attempts. `--jobs N` sets
 the number of compile jobs.
+
+### One MPI process in the sandbox
+
+Charon is an MPI program. Every TCAD job runs `charon_mp.exe` as one process, without
+`mpirun`, under the rules of {repo}`tools/sandbox-run`: no network, and only `/tmp` writable.
+Started that way, OpenMPI 4.1 forks a helper daemon, `orted`, and writes shared-memory files
+under `/tmp`. {repo}`docker/charon-libs/Dockerfile` sets `OMPI_MCA_ess_singleton_isolated=1`,
+which stops both. The solve then runs in one process with two threads: the main thread, which
+computes, and OpenMPI's progress thread.
+
+The Exodus output file holds the date, time and host of the run in its QA record. Two runs of
+the same deck therefore differ in that record only. The text output `currents-loca.dat` is
+byte-identical between runs.
+
+### Build cost
+
+The pinned image was built twice from the same commit, with two compile jobs both times. One
+build ran on a GitHub runner with 4 CPUs. The other ran on the project's host in the 16 GiB
+builder, with other jobs sharing its 8 CPUs. Both gave the same digests. The record of both builds is in
+[pull request #120](https://github.com/mithro/gf180-tcad/pull/120).
+
+| Quantity | GitHub runner | Project's host |
+|---|---|---|
+| Wall time of the whole build | 1 h 11 min | 3 h 36 min |
+| Wall time of `make` | 1 h 5 min | 3 h 29 min |
+
+On the project's host the builder's memory peaked at 6.35 GB. The install in `/opt/charon` is
+353 MB, and the layer it adds to the base image is 91.7 MB compressed.
+
+### Checks on GitHub
+
+{repo}`.github/workflows/image.yml` builds this image only when it changes. Its build job runs
+on a pull request or a push that changes {repo}`docker/charon-libs/`, {repo}`docker/IMAGE` or
+{repo}`docker/CHARON_LIBS_IMAGE`, and on a manual run. It allows 350 minutes. The rebuild from
+scratch, which proves the digests reproducible, runs on the weekly schedule and on a manual
+run. Every other pull request skips both and passes.
+
+{repo}`tests/test_charon_image.py` runs the image's checks. Its sandbox tests run the upstream
+`pmoscap.nlp` and `loca_moscap_cv` decks in the pinned image, which installs them under
+`/opt/charon/share/gf180tcad/tests`.

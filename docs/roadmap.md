@@ -36,8 +36,8 @@ the issue says what is open and what settles it. The phases are those of the
 - **{{ Charon }} beside {{ DEVSIM }} on every {term}`job`**, and the comparison of the two
   ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)). No Charon job has run.
-  The Charon image recipe is in {repo}`docker/charon-libs/` ({ref}`charon-images`); no Charon
-  image is pinned.
+  The charon-libs image, built from {repo}`docker/charon-libs/`, is pinned
+  ({ref}`charon-images`). The Charon backend and the thin `charon` image come next.
 
 ## Phase 5: temperature and silicon
 
