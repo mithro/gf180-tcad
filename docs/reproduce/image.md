@@ -526,35 +526,53 @@ own recipe. No Charon image is pinned, and no TCAD job runs Charon.
 - the build-only Ubuntu packages, such as the OpenMPI, netCDF and Boost headers.
 
 {repo}`docker/charon-libs/lock_debs.py` chooses those packages from one Ubuntu snapshot. It
-refuses any package that would replace one the base image already has.
+stops when a package needs a different version of a package that the base image has.
 
-The CMake options are {repo}`docker/charon-libs/opts/gf180.opts`. It holds Charon's own
-`General.opts` and `Linux.opts` unchanged, then five project lines:
+The build reads Charon's own `General.opts` and `Linux.opts` from the tarball and checks their
+sha256. It then reads {repo}`docker/charon-libs/opts/gf180.opts`, which holds five project lines:
 
 - no Dakota drivers and no debug build;
 - the install prefix `/opt/charon`;
 - the base image's OpenBLAS as the BLAS and LAPACK library.
 
 The build applies one patch to Charon, {repo}`docker/charon-libs/patches/0001-codata2018-constants.patch`.
-It sets Boltzmann's constant, the elementary charge and the vacuum permittivity to the CODATA 2018
-values that the {{ DEVSIM }} jobs use.
+It sets three constants to the CODATA 2018 values that the {{ DEVSIM }} jobs use:
+
+- `kb`, the Boltzmann constant divided by the elementary charge, in eV/K;
+- `q`, the elementary charge;
+- `eps0`, the vacuum permittivity.
 
 ### Licence
 
-Charon is licensed GPL-3.0-or-later. The opts file and the patches quote Charon, so they are
+Charon is licensed GPL-3.0-or-later. The patches change Charon source code, so they are
 GPL-3.0-or-later too; {repo}`docker/charon-libs/README.md` lists them. Every other file of the
 project stays Apache-2.0.
 
 ### Build steps
 
-{repo}`docker/charon-libs/build` works like {repo}`docker/tcad-dev/build`. Its Dockerfile has
-three stages:
+{repo}`docker/charon-libs/build` works like {repo}`docker/tcad-dev/build`, with one more rule.
+The Trilinos compile runs in a BuildKit builder limited to 16 GiB of memory with no swap. The
+script creates that builder in `gf180-tcad.slice` on first use. It refuses a builder with no
+memory limit, or with swap above the limit.
+
+The Dockerfile has three stages:
 
 1. `deps` fetches every input, checks its sha256, installs the build packages and applies the
    patches. This is the only step with a network.
-2. `build` runs Charon's `build_charon.py`, then `make` and `make install`. The upstream
-   nightly tests `pmoscap`, `loca-moscap-cv` and `pndiode` then run as the build check.
+2. `build` runs Charon's `build_charon.py`, then `make` and `make install`. Four upstream
+   nightly tests then run as the build check, and every one must run and pass.
 3. The image is the base image plus `/opt/charon`, with no compiler or source tree left in it.
+   Every program and library in `/opt/charon` must find its shared libraries there.
+
+The four tests of the build check are these, by their CTest names:
+
+- `Charon_charon_mp_pmoscap.nlp`, a p-type MOS capacitor;
+- `Charon_charon_mp.hb.loca-moscap-cv.ox` and `Charon_charon_mp.hb.loca-moscap-cv.sub`, two
+  small-signal C-V sweeps of a MOS capacitor;
+- `Charon_charon_mp_pndiode.nlp`, a pn diode with uniform doping.
+
+The build writes `/opt/charon/share/gf180tcad/charon-build.json`. It records the inputs by
+sha256, the opts files, the patches and the tests of the build check.
 
 `--target deps --load` loads the first stage as a local image. A developer can then run the
 compile in {repo}`tools/sandbox-run` and keep the build tree between attempts. `--jobs N` sets
