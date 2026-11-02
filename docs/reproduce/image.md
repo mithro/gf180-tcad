@@ -569,7 +569,7 @@ The four tests of the build check are these, by their CTest names:
 - `Charon_charon_mp_pmoscap.nlp`, a p-type MOS capacitor;
 - `Charon_charon_mp.hb.loca-moscap-cv.ox` and `Charon_charon_mp.hb.loca-moscap-cv.sub`, two
   small-signal C-V {term}`sweeps <sweep>` of a MOS capacitor;
-- `Charon_charon_mp_pndiode.nlp`, an abrupt pn junction, as
+- `Charon_charon_mp_pndiode.nlp`, an abrupt {term}`pn junction`, as
   `test/nightlyTests/capability/pndiode.nlp.inp` in the Charon tarball defines it.
 
 The build writes `/opt/charon/share/gf180tcad/charon-build.json`. It records the inputs by
