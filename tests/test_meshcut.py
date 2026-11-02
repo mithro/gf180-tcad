@@ -537,6 +537,28 @@ def test_read_refuses_members_that_disagree_with_the_meta(tmp_path):
         meshcut.read(out)
 
 
+def _rewrite_members(out, meta, change):
+    a = npz.read_npz(out / meshcut.ARTEFACT)
+    change(a)
+    npz.write_npz(out / meshcut.ARTEFACT, a)
+    meta["npz_sha256"] = _sha(out / meshcut.ARTEFACT)
+    (out / meshcut.META).write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n", "utf-8")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        pytest.param(lambda a: a.pop("net_doping_cm3"), id="missing"),
+        pytest.param(lambda a: a.update(extra=np.zeros(3)), id="extra"),
+    ],
+)
+def test_read_refuses_a_missing_or_an_extra_member(tmp_path, change):
+    meta, out, _ = _cut_fixture(tmp_path)
+    _rewrite_members(out, meta, change)
+    with pytest.raises(ValueError, match="members"):
+        meshcut.read(out)
+
+
 def test_cut_is_byte_identical_twice(tmp_path):
     _cut_fixture(tmp_path / "one")
     _cut_fixture(tmp_path / "two")
