@@ -80,7 +80,7 @@ Nothing is resampled, smoothed or decimated: every kept element is a mesh elemen
 **What M1 decided (the owner, 2026-11-03 01:15 ACDT).** The artefact has no fixed size cap. The owner's words: "Go ahead with changing the budget, no budget is fixed." Spec §10.1 and its §16 change log record it.
 - The window rule above is the committed default: poly top, `kx = 0.25`, 0.1 µm below the surface.
 - The reason: the smallest exact artefact was already over the old 2 MB cap. On the #35 calibrated nfet `w10p0_l0p60` mesh the gate footprint alone (`kx = 0`, 0.05 µm deep) is 2,536,922 bytes.
-- The default window on that mesh is 109,188 nodes and 3,275,405 bytes without `net_doping_cm3`. That member adds about 170 kB after deflate.
+- The default window on that mesh is 109,188 nodes and 3,275,405 bytes without `net_doping_cm3`. Step 3 measures it with that member, which needs the real cross-section in the sandbox.
 - So the cap was wrong, not the window.
 - The meta records the npz's size as `size_bytes`; `cut` prints it, and the reproduce page lists it per committed artefact.
 - The two-window fallback (`edge` and `overview`) is dropped: it existed only to meet the cap.
@@ -98,7 +98,7 @@ Nothing is resampled, smoothed or decimated: every kept element is a mesh elemen
 
   The scratch directory lies outside the repository: `sandbox.check_workdir` refuses a workdir inside it. Without `--scratch`, `cut` makes a temporary directory. It removes that directory after a successful install and keeps it after a refusal.
   `--kx` and `--depth-um` are the window rule's arguments. They default to `WINDOW_KX` and `WINDOW_DEPTH_UM`.
-- Produces: `… regenerate --job … [--cut --out … --kx K --depth-um D] [--scratch DIR]` (host: 16 GiB, alone). The job prints the committed and the regenerated sha256. It refuses to cut unless they are equal.
+- Produces: `… regenerate --job … [--cut --out … [--kx K] [--depth-um D]] [--scratch DIR]` (host: 16 GiB, alone). The job prints the committed and the regenerated sha256. It refuses to cut unless they are equal.
 - Produces: `… regenerate --meshconv-level <device> <k> [--cut]`. It takes no job directory. It builds the mesh-convergence structure at level `k`'s `spec` from `report.json` and writes `<scratch>/mesh.msh`. It cuts only when that sha equals a committed sha:
   - a per-level `mesh_sha256`, once #35's meshconv rerun records them;
   - for the selected level, the committed `mesh_sha256` of the job built from the same cell and spec.
