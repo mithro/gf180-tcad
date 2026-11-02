@@ -508,3 +508,54 @@ anonymous pull of {repo}`docker/TCAD_DEV_IMAGE` works; if it does not, make the 
    - the tag named in this page.
 4. Rebuild twice (`--no-cache`), commit {repo}`docker/tcad-dev/IMAGE_ID` and
    {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.
+
+(charon-images)=
+
+## Charon images
+
+{{ Charon }} is the second TCAD simulator of {term}`Phase 4`. It is built from source in
+{repo}`docker/charon-libs/`, with the [Charon user manual](https://www.sandia.gov/app/uploads/sites/106/2022/08/Charon_UserManual-v2_2.pdf)'s
+own recipe. No Charon image is pinned, and no TCAD job runs Charon.
+
+### What the build uses
+
+{repo}`docker/charon-libs/upstream.json` pins every input by sha256:
+
+- the Charon 2.2.0 source tarball from Sandia's [download page](https://charon.sandia.gov/charon-downloads/source-code/);
+- {{ Trilinos }} and {{ TriBITS }} at the commits that Table 2-1 of the user manual names;
+- the build-only Ubuntu packages, such as the OpenMPI, netCDF and Boost headers.
+
+{repo}`docker/charon-libs/lock_debs.py` chooses those packages from one Ubuntu snapshot. It
+refuses any package that would replace one the base image already has.
+
+The CMake options are {repo}`docker/charon-libs/opts/gf180.opts`. It holds Charon's own
+`General.opts` and `Linux.opts` unchanged, then five project lines:
+
+- no Dakota drivers and no debug build;
+- the install prefix `/opt/charon`;
+- the base image's OpenBLAS as the BLAS and LAPACK library.
+
+The build applies one patch to Charon, {repo}`docker/charon-libs/patches/0001-codata2018-constants.patch`.
+It sets Boltzmann's constant, the elementary charge and the vacuum permittivity to the CODATA 2018
+values that the {{ DEVSIM }} jobs use.
+
+### Licence
+
+Charon is licensed GPL-3.0-or-later. The opts file and the patches quote Charon, so they are
+GPL-3.0-or-later too; {repo}`docker/charon-libs/README.md` lists them. Every other file of the
+project stays Apache-2.0.
+
+### Build steps
+
+{repo}`docker/charon-libs/build` works like {repo}`docker/tcad-dev/build`. Its Dockerfile has
+three stages:
+
+1. `deps` fetches every input, checks its sha256, installs the build packages and applies the
+   patches. This is the only step with a network.
+2. `build` runs Charon's `build_charon.py`, then `make` and `make install`. The upstream
+   nightly tests `pmoscap`, `loca-moscap-cv` and `pndiode` then run as the build check.
+3. The image is the base image plus `/opt/charon`, with no compiler or source tree left in it.
+
+`--target deps --load` loads the first stage as a local image. A developer can then run the
+compile in {repo}`tools/sandbox-run` and keep the build tree between attempts. `--jobs N` sets
+the number of compile jobs.
