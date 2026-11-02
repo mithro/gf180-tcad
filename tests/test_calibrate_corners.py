@@ -16,7 +16,14 @@ from pathlib import Path
 from types import MappingProxyType
 
 import pytest
-from test_calibrate_cv import CORNER_SHAPE, GRID, Recorder, analytic_cv, cal_geometries
+from test_calibrate_cv import (
+    CORNER_SHAPE,
+    GRID,
+    Recorder,
+    analytic_cv,
+    cal_geometries,
+    val_geometries,
+)
 
 from gf180tcad import sandbox
 from gf180tcad.calibrate import corners, cv
@@ -219,11 +226,12 @@ SS_TRUTH = {"t_ox_eff_nm": 16.9, "n_ch_cm3": 2.1e17, "dv_fb_v": 0.06 + 0.1193}
 @pytest.fixture(scope="module")
 def ss_fit():
     targets = corner_targets(NFET, "ss", SS_TRUTH, cal_geometries())
+    held = corner_targets(NFET, "ss", SS_TRUTH, val_geometries())
     sim = Recorder()
     res = corners.calibrate_corner(
-        NFET, "ss", geometries=cal_geometries(), targets=targets, simulate=sim
+        NFET, "ss", geometries=cal_geometries(), targets=targets, held_out=held, simulate=sim
     )
-    return res, sim, targets
+    return res, sim, (targets, held)
 
 
 def test_typical_refused():
@@ -275,7 +283,8 @@ def test_recovers_known_params_at_a_corner(ss_fit):
     assert r.bounds == corners.corner_bounds(NFET, "ss")
     assert r.start == {n: corners.corner_process(NFET, "ss").params[n].value
                        for n in process.TUNABLES}  # fmt: skip
-    assert sim.calls[0] == r.start
+    for n, v in r.start.items():  # least_squares moves a start on a bound just inside it
+        assert math.isclose(sim.calls[0][n], v, rel_tol=1e-9), n
     assert {k: r.optimiser[k] for k in cv.LSQ} == dict(cv.LSQ)
     d = res.to_dict()
     assert d["reference"] == {"corner": "ss", "engine": "ngspice", "sweep": "cv"}
@@ -299,9 +308,14 @@ def test_never_simulated_outside_the_corner_bounds(ss_fit):
 
 
 def test_corner_fits_deterministic(ss_fit, tmp_path):
-    res, _, targets = ss_fit
+    res, _, (targets, held) = ss_fit
     again = corners.calibrate_corner(
-        NFET, "ss", geometries=cal_geometries(), targets=targets, simulate=Recorder()
+        NFET,
+        "ss",
+        geometries=cal_geometries(),
+        targets=targets,
+        held_out=held,
+        simulate=Recorder(),
     )
     res.write(tmp_path / "a")
     again.write(tmp_path / "b")
@@ -371,8 +385,10 @@ def test_summary_min_max_and_corner(tmp_path):
     assert tox["max"] == fits["ss"]["values"]["t_ox_eff_nm"]
     assert tox["spread"] == tox["max"] - tox["min"]
     assert tox["min_at_bound"] is None and tox["max_at_bound"] is None
-    assert tox["values"] == {"typical": tt["t_ox_eff_nm"],
-                             **{c: fits[c]["values"]["t_ox_eff_nm"] for c in corners.FIT_CORNERS}}
+    assert tox["values"] == {
+        "typical": tt["t_ox_eff_nm"],
+        **{c: fits[c]["values"]["t_ox_eff_nm"] for c in corners.FIT_CORNERS},
+    }
     nch = s["tunables"]["n_ch_cm3"]
     assert nch["min_corner"] == "ff" and nch["card_shift"] is None
     fb = s["tunables"]["dv_fb_v"]  # nfet: ff lowers the flat band, ss raises it
