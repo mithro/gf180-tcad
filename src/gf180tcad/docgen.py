@@ -525,10 +525,10 @@ PARASITIC_COLOR = "#CC79A7"
 TOL_COLOR = "#555555"
 # The four checks of a geometry, in page order (gf180tcad.calibrate.cv.verdicts).
 CHECKS = (
-    ("plateau_acc", "Accumulation plateau"),
-    ("plateau_inv", "Inversion plateau"),
-    ("dv_dep", "ΔV_dep (depletion-side crossing)"),
-    ("dv_inv", "ΔV_inv (inversion-side crossing)"),
+    ("plateau_acc", "{term}`Accumulation <accumulation>` plateau"),
+    ("plateau_inv", "{term}`Inversion <inversion>` plateau"),
+    ("dv_dep", "ΔV_dep ({term}`depletion`-side crossing)"),
+    ("dv_inv", "ΔV_inv ({term}`inversion`-side crossing)"),
 )
 # Sources the process files cite on a host that has refused automated clients since
 # 2026-10-24: linked to the web.archive.org snapshot the rest of the docs use (docs/conf.py).
@@ -1101,7 +1101,7 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         (
             f"{{term}}`Cox` check: the oxide's own Cox is {fmt(cox['c_ox_ff_per_um2'])} "
             f"fF/µm² and the 1D C per area is {fmt(cox['c_per_area_acc_ff_per_um2'])} "
-            f"(accumulation) and {fmt(cox['c_per_area_inv_ff_per_um2'])} fF/µm² (inversion), "
+            f"({{term}}`accumulation`) and {fmt(cox['c_per_area_inv_ff_per_um2'])} fF/µm² ({{term}}`inversion`), "
             f"against the public spec {_interval(cox['spec']['min'], cox['spec']['max'])} "
             f"fF/µm² ([{cox['spec']['section']}]({cox['spec']['source_url']})): "
             f"{'inside' if cox['inside'] else 'OUTSIDE'}."

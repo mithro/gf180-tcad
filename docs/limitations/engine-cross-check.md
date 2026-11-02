@@ -55,7 +55,7 @@ the drain current Id reaches each level:
 
 In subthreshold, Xyce's current is a nearly constant 0.59 % higher. That is
 a gate-voltage shift of 0.229 to 0.254 mV, and its effect fades in strong
-inversion (7e-5 at Vgs = 5 V).
+{term}`inversion` (7e-5 at Vgs = 5 V).
 
 These model-card changes were tried as a bisection. Each was applied
 identically to scratch copies of both libraries.

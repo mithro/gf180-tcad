@@ -105,7 +105,7 @@ widest depleted layer, so the far side of the gate stays neutral silicon
 The calibration fits the oxide thickness between TOXE and an upper bound. That bound is TOXP
 plus an allowance of {{ x_delta_nfet }}, so {{ x_t_ox_upper_nfet }}. The fit ends at
 {{ x_t_ox_nfet_cal }}, thicker than TOXE. The allowance stands for the depth at which the SPICE
-model places the charge, a little below the oxide face. Poly depletion is not part of it,
+model places the charge, a little below the oxide face. Poly {term}`depletion` is not part of it,
 because the simulated gate is poly-silicon and shows it directly
 ({doc}`/comparison/process-data`).
 

@@ -638,6 +638,28 @@ Boltzmann statistics
   band edges, and fails in degenerately doped regions ({ref}`Sze and Ng 2006, ch. 1 <lit-sze>`).
   See {ref}`the junction probe <plugin-history-junction>`.
 
+accumulation
+  Under the gate of a {term}`MOS capacitor <MOSCAP>`, the range of gate voltage that draws extra
+  {term}`majority carriers <majority carrier>` into a thin layer at the silicon surface: {term}`holes <hole>` under the
+  gate of an nfet ({ref}`Sze and Ng 2006, ch. 4 <lit-sze>`). See {ref}`explained-regions-three`.
+
+flat band
+  The gate voltage of a {term}`MOS capacitor <MOSCAP>` at which the body holds no charge at its
+  surface, so its energy bands run flat up to the oxide ({ref}`Sze and Ng 2006, ch. 4 <lit-sze>`).
+  See {ref}`explained-regions-three`.
+
+depletion
+  A layer of silicon emptied of its free carriers, which holds the fixed charge of its
+  {term}`dopants <dopant>`: at a {term}`pn junction`, and under the gate of a
+  {term}`MOS capacitor <MOSCAP>` between {term}`flat band` and {term}`inversion`
+  ({ref}`Sze and Ng 2006, ch. 2 and ch. 4 <lit-sze>`). See {ref}`explained-regions-three`.
+
+inversion
+  Under the gate of a {term}`MOS capacitor <MOSCAP>`, the range of gate voltage that draws so
+  many {term}`minority carriers <minority carrier>` to the surface that they outnumber the majority ones: the
+  surface of a p-type body turns n-type ({ref}`Sze and Ng 2006, ch. 4 <lit-sze>`). See
+  {ref}`explained-regions-three`.
+
 drift-diffusion
 density-gradient
   The classical carrier-transport model, and its quantum correction ({ref}`Ancona and Iafrate 1989 <lit-ancona>`). See {ref}`mismatch-taxonomy`.

@@ -245,14 +245,14 @@ Where each comes from (the same for both devices):
   profile exists.
 - **`dv_fb_v` is a lumped flat-band offset.** Its start of 0 and its ±0.2 V bounds are project
   choices. It is applied as a rigid gate-bias shift. It lumps together {term}`Boltzmann statistics` in
-  the degenerate gate, SPICE's empirical flat band, and interface and fixed charge. It is not a
+  the degenerate gate, SPICE's empirical {term}`flat band`, and interface and fixed charge. It is not a
   fixed-oxide-charge parameter.
 
 ## The charge-centroid allowance Δ
 
 The upper bound of `t_ox_eff_nm` is TOXP + Δ, and {py:func}`gf180tcad.tcad.process.load`
 checks that equality against the file's `[centroid_allowance]` table. Δ allows for the charge
-centroid only: the inversion or accumulation charge sits a distance X_DC below the interface.
+centroid only: the {term}`inversion` or {term}`accumulation` charge sits a distance X_DC below the interface.
 {term}`Poly depletion <poly depletion>` is never part of Δ, because the poly-gate region of the {term}`TCAD` structure
 simulates it.
 
@@ -302,7 +302,7 @@ The gate bias is used in place of Vgse, so the poly-depletion drop is ignored. T
 | Δ (nm) | **0.95** | **0.79** |
 | TOXP (pfet: = TOXE) (nm) | 16.0 | 15.6 |
 | `t_ox_eff_nm` upper bound, TOXP + Δ (nm) | **16.95** | **16.39** |
-| X_DC at the depletion end (not used) (nm) | 3.278 | 3.291 |
+| X_DC at the {term}`depletion` end (not used) (nm) | 3.278 | 3.291 |
 | Δ if the whole sweep counted (not used) (nm) | 1.10 | 1.10 |
 
 The pfet Vfbzb is given with the NMOS-equivalent sign. The last two rows show what Δ would be if

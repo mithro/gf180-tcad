@@ -18,7 +18,7 @@ The code is {py:mod}`gf180tcad.calibrate.cv`; the results are
 
 The TCAD gate stack has three free numbers: how thick the oxide looks electrically, how
 heavily the silicon under it is doped, and a small offset of the voltage at which the surface
-turns from accumulation to depletion. They are adjusted, within limits fixed beforehand, until
+turns from {term}`accumulation` to {term}`depletion`. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are fixed, and the TCAD is compared with SPICE at gate lengths it never
 saw.
@@ -45,7 +45,7 @@ process files.
   modelled: classical {term}`drift-diffusion` without a {term}`density-gradient` term);
 - `n_ch_cm3`, the uniform body doping, between half the doping K1 implies and 2 × NDEP;
 - `dv_fb_v`, a lumped flat-band offset of ±0.2 V, applied as a rigid gate-bias shift. It
-  absorbs the {term}`Boltzmann statistics` of the degenerate gate, SPICE's empirical flat band
+  absorbs the {term}`Boltzmann statistics` of the degenerate gate, SPICE's empirical {term}`flat band`
   and any interface charge.
 
 The model is the 1D MOS capacitor ({py:func}`gf180tcad.tcad.moscap1d.simulate`) on its selected
@@ -91,7 +91,7 @@ SPICE TT curve of each geometry ({py:func}`~gf180tcad.calibrate.cv.regions`):
 
 - u_fb is where SPICE C falls to 0.9 × C_acc, C_acc = C(u = −5 V); u_t is where SPICE C, rising
   from its minimum C_min, reaches (C_min + C_inv)/2, C_inv = C(u = +5 V);
-- the **accumulation plateau** is u ≤ u_fb − 1 V and the **inversion plateau** u ≥ u_t + 1 V.
+- the **accumulation plateau** is u ≤ u_fb − 1 V and the **{term}`inversion` plateau** u ≥ u_t + 1 V.
   On each, the maximum |ΔCgg|/Cgg_SPICE must be ≤ 5 % (the {ref}`tolerance <tolerances>` of
   the design spec);
 - the **mid-capacitance crossings**: each curve, TCAD and SPICE, crosses its own level

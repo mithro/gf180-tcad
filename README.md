@@ -50,7 +50,7 @@ The 1D MOS capacitor is calibrated against the SPICE
 [`results/tcad/validation`](results/tcad/validation),
 [C–V calibration page](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html)):
 three tunables, 3 of the 8-parameter budget. In 1D the nfet agrees with SPICE at every geometry,
-fitted and held out. The pfet is published as a disagreement: the SPICE pfet's depletion edge
+fitted and held out. The pfet is published as a disagreement: the SPICE pfet's [depletion](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-depletion) edge
 moves by 0.57 V between L = 10 µm and the minimum length, which one length-independent 1D stack
 cannot follow. The calibrated 1D curves are in
 [`results/tcad/moscap1d`](results/tcad/moscap1d).

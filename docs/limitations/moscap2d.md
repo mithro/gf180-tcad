@@ -41,7 +41,7 @@ doping. {py:func}`gf180tcad.tcad.moscap2d.simulate` meshes the cross-section wit
 ## The C/Cox > 1 artefact
 
 **The symptom.** At the {{ meshwell }} defaults, an oxide off the 1 nm grid (15.2 nm) gives
-C/{term}`Cox` above 1 in accumulation. An early {term}`Phase 2` prototype gave 1.0039 at −5 V with a 15.2 nm oxide.
+C/{term}`Cox` above 1 in {term}`accumulation`. An early {term}`Phase 2` prototype gave 1.0039 at −5 V with a 15.2 nm oxide.
 With the same structure at 16 nm it gave 0.9909 (see the
 {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
 
@@ -134,7 +134,7 @@ study sees them ({ref}`mesh-convergence-2d`).
 
 **The 2D-equals-1D criterion selects the mesh.** The extruded stack at `DEFAULT_2D` itself, the
 coarsest level, is within 0.38 % of 1D on both plateaus but +0.55 % at the minimum of the
-{term}`C–V` (nfet +0.5 V, pfet −0.5 V), where the depletion region sets C. A bisection on the
+{term}`C–V` (nfet +0.5 V, pfet −0.5 V), where the {term}`depletion` region sets C. A bisection on the
 uniform nfet stack (worst 2D/1D − 1 over −5, 0, +0.5, +1, +5 V) shows that the grading of the
 body mesh through the depletion region sets it, not the oxide or the bulk spacing. `DEFAULT_2D`
 has 0.5 nm interfaces, a 1 nm oxide spacing, a 100 nm bulk spacing and grading 1.2:
@@ -168,7 +168,7 @@ plateaus but not at the C–V minimum, and at the finest level it gets worse.
 
 Here is the uniform nfet stack with the grading held fixed, 2D/1D − 1 by level (these results are not
 committed). Levels 0 to 3 have 101k, 154k, 239k and 381k nodes. In the gate-bias column,
-−5 V is accumulation, +0.5 V the C–V minimum, +1 V the onset of inversion and +5 V inversion.
+−5 V is accumulation, +0.5 V the C–V minimum, +1 V the onset of {term}`inversion` and +5 V inversion.
 The last row is the worst of 21 biases.
 
 | Gate bias | Level 0 | Level 1 | Level 2 | Level 3 |
