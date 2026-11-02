@@ -162,7 +162,8 @@ model file (`google/globalfoundries-pdk-libs-gf180mcu_fd_pr` commit `9f992d5`,
 file is not the pinned one: the pinned PDK's copy (sha256 `69a7ab87…`, recorded in
 `results/spice/provenance.json`) differs from it, and only the pinned copy has the
 `nfet_05v0`/`pfet_05v0` wrappers. The first step of the implementing task re-reads every value
-from the pinned copy and corrects these tables where they differ.
+from the pinned copy and corrects these tables where they differ. Task 16a re-read them into
+`data/pdk_corners.json` (2026-11-03): the pinned copy has the same values for these sections.
 
 Offsets added to the card value:
 

@@ -564,3 +564,21 @@ def test_corner_table_matches_pinned_pdk(tmp_path):
     out.mkdir()
     sandbox.run(["sh", "-c", f'cp "{CARD_IN_IMAGE}" /work/out/card'], out_dir=out, mem="1g", cpus=1)
     check_corner_table((out / "card").read_bytes())
+
+
+# --- the figure of the corner-fit section (docs/reproduce/index.md) --------------------------
+
+
+def test_corner_figure_reads_the_committed_curves():
+    """The figure draws the five committed ngspice cv curves of its geometry, unaltered."""
+    from gf180tcad.explain import figures
+
+    curves = figures.corner_cv_curves(figures.CORNER_DEVICE, figures.CORNER_GEOMETRY)
+    assert list(curves) == list(CORNERS)
+    g = next(x for x in DEVICES[NFET].geometries if geometry_id(x) == figures.CORNER_GEOMETRY)
+    for c, (u, cgg) in curves.items():
+        ref = cv.load_curve(NFET, geometry_id(g), c)
+        assert sorted(zip(u.tolist(), cgg.tolist())) == sorted(zip(ref.vg, ref.cgg_ff)), c
+    assert set(figures.CORNER_HIGHLIGHT) <= set(corners.FIT_CORNERS)
+    light, dark = figures.corner_cv("light"), figures.corner_cv("dark")
+    assert light.startswith(b"<?xml") and light != dark

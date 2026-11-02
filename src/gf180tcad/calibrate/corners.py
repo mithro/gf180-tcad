@@ -62,25 +62,33 @@ from gf180tcad.tcad import (
     tree_provenance,
 )
 
-# This entry point, as the generator registry names it.
+#: This entry point, as the generator registry names it.
 CORNERS_MAIN = "gf180tcad.calibrate.corners"
 
-# The corner table and its sha256 (a change to the table must change this line).
+#: The corner table, ``data/pdk_corners.json``.
 PDK_CORNERS_FILE = REPO_ROOT / "data" / "pdk_corners.json"
+#: The table's sha256; a change to the table must change this line.
 PDK_CORNERS_SHA256 = "27a8ec1954f180064017b2bbd0cf00404bad2f55eddc2ce29e6eaff918b632c0"
 
-# The tree root of the corner fits; nothing else under results/ is written.
+#: The tree root of the corner fits, ``results/tcad/corners``.
 CORNERS_ROOT = REPO_ROOT / "results" / "tcad" / "corners"
+#: ``results/``: nothing in it but :data:`CORNERS_ROOT` is written.
 RESULTS_ROOT = REPO_ROOT / "results"
 
-# The corners fitted here; typical is the Task 12 fit.
+#: The corners fitted here; typical is the Task 12 fit.
 FIT_CORNERS = tuple(c for c in CORNERS if c != cv.TT)
 
+#: Schema of the summary file.
 SCHEMA = 1
+#: File name of a device's summary, ``<device>/summary.json``.
 SUMMARY_NAME = "summary.json"
+#: Memory of one corner job (one 1D sweep at a time).
 JOB_MEM = "2g"
+#: CPUs of one corner job.
 JOB_CPUS = 1
+#: The image of the corner jobs: the 1D results image.
 IMAGE = RESULTS_IMAGE["moscap1d"]
+#: The progress log a corner job appends one line per evaluation to.
 PROGRESS_NAME = "progress.log"
 
 # Card keys applied to the bookkeeping, by process parameter; kind from the table.
@@ -280,6 +288,7 @@ class CornerFit:
         return path
 
 
+#: A 1D simulator: the process description and the gate biases to a C-V.
 Simulate = Callable[[process.ProcessDescription, Sequence[float]], object]
 
 

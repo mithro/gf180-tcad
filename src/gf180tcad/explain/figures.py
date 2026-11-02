@@ -857,6 +857,52 @@ def cv_parts(palette: str) -> bytes:
     with matplotlib.rc_context(_rc(palette)):
         return _svg(cv_parts_figure(palette))
 
+# The corner-fit figure of docs/reproduce/index.md (Task 16a): the nfet at the longest
+# calibration gate, the geometry of the MOS capacitor page's C-V figure.
+CORNER_DEVICE, CORNER_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
+#: The corners drawn in colour: the slow and the fast nfet, the two ends of its corner range.
+CORNER_HIGHLIGHT = {"ss": "hole", "ff": "electron"}
+
+
+def corner_cv_curves(device: str, gid: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """``{corner: (u, cgg_ff)}``: the committed :term:`SPICE` ``cv`` sweep of ``gid`` at each of
+    the five :term:`corners <corner>`, u = polarity × gate voltage (V), Cgg in fF."""
+    from gf180tcad.devices import CORNERS, DEVICES
+
+    pol = DEVICES[device].polarity
+    return {
+        c: data.spice_cv(data.spice_columns(SPICE_ROOT, "ngspice", c, device, gid, "cv"), pol)
+        for c in CORNERS
+    }
+
+
+def corner_cv(palette: str) -> bytes:
+    """The five SPICE corner curves of one geometry: the typical corner (solid, text colour),
+    the slow and fast corners in colour, the two mixed corners muted. A corner fit takes one of
+    the coloured curves as its target instead of the typical one."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    curves = corner_cv_curves(CORNER_DEVICE, CORNER_GEOMETRY)
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        for corner, (u, c) in curves.items():
+            if corner == TYPICAL:
+                ax.plot(u, c, color=pal["text"], lw=lw, label="typical",
+                        zorder=STYLE["cv_zorder"])  # fmt: skip
+            elif corner in CORNER_HIGHLIGHT:
+                ax.plot(u, c, color=pal[CORNER_HIGHLIGHT[corner]], lw=lw, ls="--", label=corner)
+            else:
+                ax.plot(u, c, color=pal["muted"], lw=STYLE["edge_width"], label=corner)
+        ax.set_ylim(bottom=0)
+        ax.grid(True)
+        ax.set_xlabel("gate voltage (V)")
+        ax.set_ylabel("gate capacitance (fF)")
+        fig.legend(loc="outside lower center", ncols=len(curves), frameon=False)
+        return _svg(fig)
+
+
 
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
@@ -872,13 +918,17 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "cv-regions": cv_regions,
     "band-regimes": band_regimes,
     "cv-parts": cv_parts,
+    "corner-cv": corner_cv,
 }
 
 
 # The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
 # computed curves (not drawings of the device) carry no statement.
 _CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell")
-_PLOTS = ("bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes", "cv-parts")
+_PLOTS = (
+    "bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes", "cv-parts",
+    "corner-cv",
+)  # fmt: skip
 
 
 def substitutions() -> dict[str, str]:

@@ -224,6 +224,119 @@ published as they are; the ngspice/Xyce cross-check is a separate test
 ({test}`tests/spice/test_xyce.py::test_engines_agree`), described in
 {doc}`../limitations/engine-cross-check`.
 
+(reproduce-corners)=
+
+## The corner fits
+
+A corner fit repeats the {ref}`C–V calibration <cv-agreement>` against one SPICE {term}`corner`
+instead of the {term}`typical corner`. Over the corners, each fitted number gets a lowest and a
+highest value, and the spread between them (design spec §5.3,
+[issue #57](https://github.com/mithro/gf180-tcad/issues/57)). The typical value is the committed
+calibration, never refitted.
+
+```{figure} /_generated/explained/corner-cv-light.svg
+:figclass: only-light
+:name: fig-corner-cv
+:alt: Gate capacitance against gate voltage for five model corners: a solid black typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, and two thin grey curves between.
+
+The gate capacitance of the {term}`nfet_05v0` at `w10p0_l10p00` in the five SPICE corners
+({repo}`results/spice/ngspice`). A corner fit takes one corner's curve as its target, here the
+dashed ss or ff curve instead of the solid typical one.
+```
+
+```{figure} /_generated/explained/corner-cv-dark.svg
+:figclass: only-dark
+:name: fig-corner-cv-dark
+:alt: Gate capacitance against gate voltage for five model corners: a solid light typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, and two thin grey curves between.
+
+The gate capacitance of the {term}`nfet_05v0` at `w10p0_l10p00` in the five SPICE corners
+({repo}`results/spice/ngspice`). A corner fit takes one corner's curve as its target, here the
+dashed ss or ff curve instead of the solid typical one.
+```
+
+**What a corner fit changes.** Its targets are the corner's ngspice curves at the three
+calibration geometries, as {ref}`the corner curves <fig-corner-cv>` shows. Its fixed inputs come from the
+corner's section of the {term}`model card`, read into {repo}`data/pdk_corners.json` with each
+line number. The 1D stack is the same; the residuals and the optimiser settings are the typical
+fit's ({py:mod}`gf180tcad.calibrate.corners`).
+
+The capacitance area uses the corner's length and width offsets, as {math:numref}`eq-corner-area`
+gives:
+
+$$
+L_c = L + X_{L,c} - 2 D_L, \qquad W_c = W + X_{W,c} - 2 D_W
+$$ (eq-corner-area)
+
+where
+
+- $L_c$, $W_c$ are the capacitance length and width at corner $c$, in µm;
+- $L$, $W$ are the drawn gate length and width, in µm;
+- $X_{L,c}$, $X_{W,c}$ are the card's {term}`XL` and {term}`XW` at that corner, in µm;
+- $D_L$, $D_W$ are the card's {term}`DLC` and {term}`DWC`, in µm.
+
+The four overlap capacitances scale by the corner's factor, as {math:numref}`eq-corner-overlap`
+gives. The fringe capacitance CF is the {{ BSIM4_site }} default at the corner's oxide thickness TOXE.
+
+$$
+C_{o,c} = f_c \, C_o
+$$ (eq-corner-overlap)
+
+where
+
+- $C_{o,c}$ is CGSO, CGDO, CGSL or CGDL at corner $c$, in F/m;
+- $f_c$ is the corner's overlap factor, dimensionless;
+- $C_o$ is the same capacitance at the typical corner, in F/m.
+
+The oxide and flat-band bounds and start values move by the corner's own shift of the same
+quantity, as {math:numref}`eq-corner-bounds` gives. The doping bounds stay as at the typical
+corner.
+
+$$
+b_c = b + \Delta_c
+$$ (eq-corner-bounds)
+
+where
+
+- $b_c$ is a bound or the start value at corner $c$, in nm or V;
+- $b$ is the same bound or start value at the typical corner, in nm or V;
+- $\Delta_c$ is the corner's TOXE offset for the oxide, in nm, or its VTH0 offset for the {term}`flat band`, in V.
+
+The flat-band shift is in true-sign gate voltage for both transistors. The pfet card sets no
+TOXP, so its TOXP follows TOXE and both oxide bounds move.
+
+**What the summary reports.** For each fitted number it gives the typical value and the value at
+each corner. It names the corners of the lowest and the highest value. The spread is given by
+{math:numref}`eq-corner-spread`. A lowest or highest value on a bound of its fit is reported as
+that bound.
+
+$$
+s = p_{\max} - p_{\min}
+$$ (eq-corner-spread)
+
+where
+
+- $s$ is the spread of one fitted number, in its unit;
+- $p_{\max}$, $p_{\min}$ are its highest and lowest value over the five corners, in its unit.
+
+For the oxide and the flat band it also sets the fit's shift from the typical value beside the
+card's shift, and their difference.
+
+**Run them.** `make -j4 tcad-corners` runs the eight fits, four at a time, then the summary of
+each device. Each fit is one {term}`job` of one CPU and 2 GiB in the 1D results image, through
+the sandbox ({doc}`sandbox`). One fit and one summary alone:
+
+```sh
+uv run --locked python -m gf180tcad.calibrate.corners run --device nfet_05v0 --corner ss --out results/tcad/corners
+uv run --locked python -m gf180tcad.calibrate.corners summary --device nfet_05v0 --out results/tcad/corners
+```
+
+The fits write a corners folder beside {repo}`results/tcad/calibration`. It holds one result file
+per device and corner, a summary file per device and a provenance file.
+
+The job prints the path of its progress log when it starts. The summary needs the four corner
+files of the device and runs on the host. Both commands refuse an output folder under
+{repo}`results` other than the corners folder.
+
 (tcad-provenance)=
 
 ## Provenance of the TCAD results
@@ -272,6 +385,7 @@ The registry's entry points:
 
 - {py:mod}`gf180tcad.tcad.__main__` writes the MOS capacitor and mesh-convergence folders;
 - {py:mod}`gf180tcad.calibrate.__main__` writes the calibration and validation folders;
+- {py:mod}`gf180tcad.calibrate.corners` writes the corner fits ({ref}`reproduce-corners`);
 - {py:mod}`gf180tcad.meshcut.__main__` cuts the reduced mesh artefact of a 2D job and writes
   no committed folder.
 

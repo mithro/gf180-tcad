@@ -27,9 +27,12 @@ there.
   The L = 2 µm AC solve and the L = 10 µm equilibrium solve fail
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59), [issue #58](https://github.com/mithro/gf180-tcad/issues/58);
   {ref}`cv-agreement-validation`, {doc}`moscap2d`).
-- **No {term}`corner` bounds.** The spec asks for a typical value of each physical input.
+- **No {term}`corner` bounds in the results.** The spec asks for a typical value of each physical input.
   It also asks for its bounds across the {term}`PDK`'s SPICE corners and a Monte Carlo spread.
-  These are not computed ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
+  The corner fits of the three 1D numbers ({ref}`reproduce-corners`) have no committed results,
+  and the Monte Carlo spread has no code ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
+  The corner fits apply the {term}`model card`'s {term}`XL`, {term}`XW`, overlap, TOXE and VTH0 shifts only. VSAT and the
+  corners' binning and TOXM terms do not enter a 1D C–V fit ({repo}`data/pdk_corners.json`).
 - **One TCAD backend.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
   for {{ Charon }} in parallel on every {term}`job`, with a per-job cross-comparison
   ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
