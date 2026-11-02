@@ -759,13 +759,22 @@ def test_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
 
 def test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
     """The committed pfet W1.6/L0.7 2D job gives what the derivation from W10/L0.7 gives: the
-    same mesh, the same per-width Cgg, and the same comparison in the validation file."""
+    same mesh, the same cv.meta.json apart from the width (so the same round-off entry), the same
+    per-width Cgg, and the same comparison in the validation file."""
     root = cv.MOSCAP2D_ROOT / PFET / "calibrated"
     metas = [
         json.loads((root / gid / "cv.meta.json").read_bytes())
         for gid in ("w10p0_l0p70", "w1p6_l0p70")
     ]
     assert metas[0]["mesh_sha256"] == metas[1]["mesh_sha256"]
+    # The metas differ only in the width, so both jobs record the same round-off entry
+    # (docs/limitations/moscap2d.md).
+    assert (metas[0]["w_um"], metas[1]["w_um"]) == (10.0, 1.6)
+    assert (metas[0]["geometry"]["w_um"], metas[1]["geometry"]["w_um"]) == (10.0, 1.6)
+    for m in metas:
+        del m["w_um"], m["geometry"]["w_um"]
+    assert metas[0] == metas[1]
+    assert len(metas[1]["sweep"]["qs_roundoff_accepted"]) == 1
     a, _ = io.read_csv(root / "w10p0_l0p70" / "cv.csv")
     b, _ = io.read_csv(root / "w1p6_l0p70" / "cv.csv")
     assert list(a["cgg_per_um"]) == list(b["cgg_per_um"])
