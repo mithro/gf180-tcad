@@ -12,9 +12,9 @@ how the fit moves the simulated curve onto the {term}`SPICE` one.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
 the {term}`typical corner`. The dotted line is the simulated stack at the start values, and the
-dashed line at the fitted ones. The start oxide thickness and body doping are the
-{term}`model card`'s values. The start shift and the gate doping's role are described below. The
-places of the labels and the length of the arrow are drawing choices.
+dashed line at the values fitted to the SPICE model. The start oxide thickness and body doping
+and the gate doping are the {term}`model card`'s values. The start shift is a project choice.
+The places of the labels and the length of the arrow are drawing choices.
 ```
 
 ```{figure} /_generated/explained/cv-parts-dark.svg
@@ -23,9 +23,9 @@ places of the labels and the length of the arrow are drawing choices.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
 the {term}`typical corner`. The dotted line is the simulated stack at the start values, and the
-dashed line at the fitted ones. The start oxide thickness and body doping are the
-{term}`model card`'s values. The start shift and the gate doping's role are described below. The
-places of the labels and the length of the arrow are drawing choices.
+dashed line at the values fitted to the SPICE model. The start oxide thickness and body doping
+and the gate doping are the {term}`model card`'s values. The start shift is a project choice.
+The places of the labels and the length of the arrow are drawing choices.
 ```
 
 (explained-cv-curve-fit)=

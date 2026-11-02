@@ -61,5 +61,5 @@ the issue says what is open and what settles it. The phases are those of the
   [issue #46](https://github.com/mithro/gf180-tcad/issues/46)). The section
   {doc}`explained/index` holds the basics. They cover silicon and carriers, energy bands and the
   {term}`Fermi level`, and the {term}`pn junction`. They also cover the transistor's parts, the
-  {term}`gate oxide` and {term}`poly-silicon`. Pages on the {term}`MOS capacitor <MOSCAP>` and its
-  regions open the second tier.
+  {term}`gate oxide` and {term}`poly-silicon`. Pages on the {term}`MOS capacitor <MOSCAP>`, its
+  regions and what sets each part of its {term}`C–V` curve open the second tier.
