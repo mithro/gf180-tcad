@@ -86,8 +86,9 @@ The two transistors share this table:
 
 - The oxide starts at its lower limit, the card's electrical oxide thickness. That is the
   thickness most of the model's equations use ({ref}`BSIM4.5.0 manual, §1.1 <lit-bsim4>`).
-- The oxide's upper limit is the physical oxide thickness, the thickness of the layer itself. It
-  adds an allowance for charge that sits a little below the surface
+- The oxide's upper limit is the physical oxide thickness plus an allowance for charge that sits
+  a little below the surface. The physical thickness is that of the layer itself. For the nfet
+  the limit is {{ x_toxp_nfet }} plus {{ x_delta_nfet }}, so {{ x_t_ox_upper_nfet }}
   ({ref}`BSIM4.5.0 manual, ch. 7 <lit-bsim4>`).
 - The nfet card sets a physical oxide thickness. The pfet card sets none, so the {term}`BSIM4` default
   applies, equal to the electrical one ({ref}`BSIM4.5.0 manual, appendix A <lit-bsim4>`).
