@@ -863,6 +863,8 @@ def cv_parts(palette: str) -> bytes:
 CORNER_DEVICE, CORNER_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
 #: The corners drawn in colour: the slow and the fast nfet, the two ends of its corner range.
 CORNER_HIGHLIGHT = {"ss": "hole", "ff": "electron"}
+#: The line style of each mixed corner, drawn thin and muted.
+CORNER_MIXED_STYLE = {"fs": ":", "sf": "-."}
 
 
 def corner_cv_curves(device: str, gid: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
@@ -879,7 +881,8 @@ def corner_cv_curves(device: str, gid: str) -> dict[str, tuple[np.ndarray, np.nd
 
 def corner_cv(palette: str) -> bytes:
     """The five SPICE corner curves of one geometry: the typical corner (solid, text colour),
-    the slow and fast corners in colour, the two mixed corners muted. A corner fit takes one of
+    the slow and fast corners in colour, the two mixed corners muted, dotted (fs) and
+    dash-dotted (sf). A corner fit takes one of
     the coloured curves as its target instead of the typical one."""
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
@@ -895,7 +898,8 @@ def corner_cv(palette: str) -> bytes:
             elif corner in CORNER_HIGHLIGHT:
                 ax.plot(u, c, color=pal[CORNER_HIGHLIGHT[corner]], lw=lw, ls="--", label=corner)
             else:
-                ax.plot(u, c, color=pal["muted"], lw=STYLE["edge_width"], label=corner)
+                ax.plot(u, c, color=pal["muted"], lw=STYLE["line_width"] / 2,
+                        ls=CORNER_MIXED_STYLE[corner], label=corner)  # fmt: skip
         ax.set_ylim(bottom=0)
         ax.grid(True)
         ax.set_xlabel("gate voltage (V)")

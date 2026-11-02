@@ -237,21 +237,25 @@ calibration, never refitted.
 ```{figure} /_generated/explained/corner-cv-light.svg
 :figclass: only-light
 :name: fig-corner-cv
-:alt: Gate capacitance against gate voltage for five model corners: a solid black typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, and two thin grey curves between.
+:alt: Gate capacitance against gate voltage for five model corners: a solid black typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, a dotted grey fs curve between typical and fast, and a dash-dotted grey sf curve between typical and slow.
 
 The gate capacitance of the {term}`nfet_05v0` at `w10p0_l10p00` in the five SPICE corners
 ({repo}`results/spice/ngspice`). A corner fit takes one corner's curve as its target, here the
-dashed ss or ff curve instead of the solid typical one.
+dashed ss or ff curve instead of the solid typical one. The grey fs curve lies between typical
+and ff, the sf curve between typical and ss. Their nfet oxide offsets are −0.75 nm and +0.75 nm,
+against −1 nm at ff and +1 nm at ss ({repo}`data/pdk_corners.json`).
 ```
 
 ```{figure} /_generated/explained/corner-cv-dark.svg
 :figclass: only-dark
 :name: fig-corner-cv-dark
-:alt: Gate capacitance against gate voltage for five model corners: a solid light typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, and two thin grey curves between.
+:alt: Gate capacitance against gate voltage for five model corners: a solid light typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, a dotted grey fs curve between typical and fast, and a dash-dotted grey sf curve between typical and slow.
 
 The gate capacitance of the {term}`nfet_05v0` at `w10p0_l10p00` in the five SPICE corners
 ({repo}`results/spice/ngspice`). A corner fit takes one corner's curve as its target, here the
-dashed ss or ff curve instead of the solid typical one.
+dashed ss or ff curve instead of the solid typical one. The grey fs curve lies between typical
+and ff, the sf curve between typical and ss. Their nfet oxide offsets are −0.75 nm and +0.75 nm,
+against −1 nm at ff and +1 nm at ss ({repo}`data/pdk_corners.json`).
 ```
 
 **What a corner fit changes.** Its targets are the corner's ngspice curves at the three
