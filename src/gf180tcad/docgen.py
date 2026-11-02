@@ -1285,3 +1285,51 @@ def generate_tcad(out_dir: Path, tcad_root: Path = TCAD_RESULTS, spice_root: Pat
     for d in devices:
         _tcad_device_page(spice_root, d, out)
     _tcad_summary_page(devices, out)
+
+
+# README.md is read on GitHub, where no docs build runs, so its figures are committed files. Each
+# is an explainer figure (gf180tcad.explain.figures) in the light palette, whose opaque white
+# background reads in GitHub's light and dark themes. tests/test_docgen.py fails when a committed
+# file differs from what this draws: rerun `make readme-figures` after the results change.
+README_FIGURES_DIR = REPO_ROOT / "docs" / "images" / "readme"
+README_FIGURES = {"cell.svg": "parts-cell", "cv.svg": "cv-overview"}
+README_PALETTE = "light"
+
+
+def readme_figures() -> dict[str, bytes]:
+    """``{file name: svg bytes}`` of every README figure of :data:`README_FIGURES`."""
+    from gf180tcad.explain import figures as explained_figures
+
+    return {
+        name: explained_figures.FIGURES[figure](README_PALETTE)
+        for name, figure in README_FIGURES.items()
+    }
+
+
+def write_readme_figures(out_dir: Path = README_FIGURES_DIR) -> list[Path]:
+    """Write :func:`readme_figures` into ``out_dir``; return the paths written."""
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    written = []
+    for name, svg in readme_figures().items():
+        (out / name).write_bytes(svg)
+        written.append(out / name)
+    return written
+
+
+def main(argv: list[str] | None = None) -> int:
+    """``python -m gf180tcad.docgen readme-figures [--out DIR]``: write the README's figures."""
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="python -m gf180tcad.docgen", description=main.__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    readme = sub.add_parser("readme-figures", help="write the README's committed figures")
+    readme.add_argument("--out", type=Path, default=README_FIGURES_DIR)
+    args = parser.parse_args(argv)
+    for path in write_readme_figures(args.out):
+        print(path)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
