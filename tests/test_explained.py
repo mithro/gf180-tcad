@@ -1511,6 +1511,32 @@ def test_band_regimes_draw_the_idealised_bending():
     assert axes[-1].get_lines()[1].get_data()[1][0] == pytest.approx(-psi_b)
 
 
+def test_band_regimes_sheets_stand_apart_from_the_band_edges():
+    """The carrier sheets (holes in accumulation, electrons in inversion) are circles edged in the
+    text colour beyond their band edge, so at 400 px the accumulation panel differs from the
+    flat-band panel, whose bands are the same."""
+    from gf180tcad.explain import figures
+
+    for palette in figures.PALETTES:
+        pal = figures.PALETTES[palette]
+        axes = figures.band_regimes_figure(palette).axes
+        for ax in axes:
+            lines = {ln.get_label(): ln for ln in ax.get_lines()}
+            sheets = [lab for lab in lines if lab.endswith("at the surface")]
+            want = {"accumulation": ["holes at the surface"],
+                    "inversion": ["electrons at the surface"]}.get(ax.get_title(), [])  # fmt: skip
+            assert sheets == want, ax.get_title()
+            for lab in sheets:
+                sheet = lines[lab]
+                edge_name = "valence" if lab.startswith("holes") else "conduction"
+                edge = lines[f"{edge_name} band edge"]
+                assert sheet.get_marker() == "o" and sheet.get_linestyle() == "None"
+                assert sheet.get_markeredgecolor() == pal["text"] != edge.get_color()
+                e0 = edge.get_ydata()[0]
+                gap = sheet.get_ydata() - e0
+                assert all(gap < 0) if lab.startswith("holes") else all(gap > 0)
+
+
 def test_regions_figures_are_registered():
     from gf180tcad.explain import figures
 

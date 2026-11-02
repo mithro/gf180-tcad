@@ -85,13 +85,15 @@ STYLE = {
     "region_alpha": 0.2,
     "region_headroom": 1.25,
     # The band panels: a taller figure for the two rows; depths to (1 + pad) times the deepest
-    # depleted layer on this many points; the carrier sheet drawn over this fraction of the
-    # depth, this wide.
+    # depleted layer on this many points; the carriers of a sheet at the surface drawn as a column
+    # of circles at this fraction of the depth, this far apart in energy (eV) beyond the band edge
+    # they sit on, this size (pt), so the sheet does not merge with the edge's line.
     "regimes_size_in": (6.4, 6.4),
     "regime_pad": 0.5,
     "regime_points": 601,
-    "sheet_frac": 0.06,
-    "sheet_width": 7.0,
+    "sheet_frac": 0.04,
+    "sheet_steps_ev": (0.12, 0.27, 0.42),
+    "sheet_marker_pt": 7.0,
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -697,8 +699,10 @@ def cv_regions(palette: str) -> bytes:
 
 
 #: The four states of the band panels, by rising gate voltage, and the surface bending of each
-#: in units of ψ_B, the body's Fermi-level distance below the middle of the gap: none at
-#: accumulation (the depletion approximation keeps the bands flat there) and flat band; ψ_B for
+#: in units of ψ_B, the body's Fermi-level distance below the middle of the gap: none at flat
+#: band, and none at accumulation, where the drawing puts the extra holes in a sheet of no
+#: thickness and keeps the bands flat (a drawing choice: the depletion approximation covers
+#: depletion and inversion only, and the real bands bend up by a few thermal voltages); ψ_B for
 #: depletion (the surface at the middle of the gap); 2·ψ_B at the onset of strong inversion.
 REGIMES = {"accumulation": 0, "flat band": 0, "depletion": 1, "inversion": 2}
 _SHEET = {"accumulation": "hole", "inversion": "electron"}
@@ -735,9 +739,13 @@ def band_regimes_figure(palette: str):
             if name in _SHEET:
                 carrier = _SHEET[name]
                 edge = mid + half if carrier == "electron" else mid - half
-                n = max(round(len(x_um) * STYLE["sheet_frac"]), 2)
-                ax.plot(x_um[:n], edge[:n], color=pal[carrier], lw=STYLE["sheet_width"],
-                        solid_capstyle="butt", label=_SHEET_LABEL[carrier])  # fmt: skip
+                # Holes below the valence band edge, electrons above the conduction band edge.
+                sign = 1 if carrier == "electron" else -1
+                steps = np.asarray(STYLE["sheet_steps_ev"])
+                xs = np.full(len(steps), STYLE["sheet_frac"] * x_um[-1])
+                ax.plot(xs, edge[0] + sign * steps, ls="none", marker="o",
+                        ms=STYLE["sheet_marker_pt"], mfc=pal[carrier], mec=pal["text"],
+                        label=_SHEET_LABEL[carrier])  # fmt: skip
             ax.set_title(name, fontsize=STYLE["text_pt"])
             ax.set_xlim(x_um[0], x_um[-1])
         for ax in axes[2:]:
