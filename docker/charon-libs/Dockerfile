@@ -53,7 +53,9 @@ ARG SOURCE_DATE_EPOCH
 ARG JOBS=2
 
 # 3. Configure, make, install, probe, build record (build-charon.sh). Then the corresponding-source
-#    list, which hashes the build scripts too (hence the Dockerfile, build and fetch_sources.py).
+#    list, which hashes the build scripts too (hence the Dockerfile, build and fetch_sources.py),
+#    and two upstream test decks with their meshes for the image's sandbox tests
+#    (tests/test_charon_image.py), since the source tree is not in the image.
 RUN --network=none \
     --mount=type=bind,source=upstream.json,target=/run/gf180tcad/ctx/upstream.json \
     --mount=type=bind,source=Dockerfile,target=/run/gf180tcad/ctx/Dockerfile \
@@ -70,6 +72,12 @@ RUN --network=none \
  && /usr/bin/python3 -I /run/gf180tcad/ctx/inputs.py sources /run/gf180tcad/ctx/upstream.json \
         /run/gf180tcad/ctx /opt/charon/share/gf180tcad/SOURCES.json \
  && install -m 0644 /run/gf180tcad/ctx/upstream.json /opt/charon/share/gf180tcad/upstream.json \
+ && install -d -m 0755 /opt/charon/share/gf180tcad/tests \
+ && install -m 0644 -t /opt/charon/share/gf180tcad/tests \
+        /opt/build/tcad-charon/test/nightlyTests/capability/pmoscap.nlp.inp \
+        /opt/build/tcad-charon/test/nightlyTests/capability/pmoscap.exo \
+        /opt/build/tcad-charon/test/nightlyTests/freqdom/loca_moscap_cv/moscap.hb.locaOxide.1e0Hz.inp \
+        /opt/build/tcad-charon/test/nightlyTests/freqdom/loca_moscap_cv/moscap.dd.equ.exo \
  && cp -r /opt/build/tcad-charon/LICENSE/. /opt/charon/share/doc/charon/ \
  && chmod -R go-w,a+rX /opt/charon
 
