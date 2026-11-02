@@ -3,6 +3,7 @@
 
 import importlib.machinery
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -126,9 +127,8 @@ def _meshes_tree(tmp_path, image="dev"):
         d = root / "nfet_05v0" / "calibrated" / gid
         d.mkdir(parents=True)
         (d / "mesh-window.meta.json").write_bytes(b"{}\n")
-    (root / "provenance.json").write_text(
-        '{"images": {"meshes": {"name": "%s", "ref": "x"}}}\n' % image, encoding="utf-8"
-    )
+    record = {"images": {"meshes": {"name": image, "ref": "x"}}}
+    (root / "provenance.json").write_text(json.dumps(record) + "\n", encoding="utf-8")
     return results
 
 
