@@ -343,7 +343,7 @@ def format_value(v: float, digits: int, unit: str) -> str:
     """``v`` to ``digits`` significant digits with its unit: plain from 0.001 to 9999, else as
     a mantissa times a power of ten; a typographic minus sign; no space when ``unit`` is
     empty (a pure number). The value and its unit are joined by a non-breaking space
-    (:data:`NBSP`) and a "/" in the unit is followed by a word joiner (:data:`WORD_JOINER`),
+    (``NBSP``) and a "/" in the unit is followed by a word joiner (``WORD_JOINER``),
     so a page never breaks a number from its unit across lines."""
     if not math.isfinite(v):
         raise ValueError(f"{v!r} is not a finite number")
