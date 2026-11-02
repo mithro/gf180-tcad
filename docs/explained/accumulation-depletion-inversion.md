@@ -83,8 +83,8 @@ stays flat, because no current flows ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
 The bands of the nfet's body in an idealised stack, in the {term}`depletion approximation`.
 The body doping is fitted to the SPICE model. The {term}`band gap` is a textbook value. The
-intrinsic density and the thermal voltage are the simulation's constants. The depth shown is a
-project choice.
+intrinsic density, the thermal voltage, silicon's permittivity, the permittivity of free space
+and the elementary charge are the simulation's constants. The depth shown is a project choice.
 ```
 
 ```{figure} /_generated/explained/band-regimes-dark.svg
@@ -93,9 +93,13 @@ project choice.
 
 The bands of the nfet's body in an idealised stack, in the {term}`depletion approximation`.
 The body doping is fitted to the SPICE model. The {term}`band gap` is a textbook value. The
-intrinsic density and the thermal voltage are the simulation's constants. The depth shown is a
-project choice.
+intrinsic density, the thermal voltage, silicon's permittivity, the permittivity of free space
+and the elementary charge are the simulation's constants. The depth shown is a project choice.
 ```
+
+In the accumulation panel the extra holes form a sheet of no thickness at the surface. That is
+a drawing choice, and it keeps the bands flat. In fact the bands bend up there a little
+({ref}`Sze and Ng, ch. 4 <lit-sze>`; {ref}`where this repo's results differ <explained-regions-differs>`).
 
 A positive gate bends the bands down at the surface. The depletion panel is drawn where the
 middle of the gap at the surface meets the Fermi level. There electrons and holes are equally
@@ -103,11 +107,10 @@ few ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
 In the inversion panel the bending is twice that: the surface is as n-type as the body is
 p-type. That is the textbook start of strong inversion ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
-In this approximation the bands stay flat in accumulation, and the holes form a thin sheet at
-the surface.
 
-For this idealised stack, with no charge in the oxide, the textbook formulas put flat band at
-{{ x_v_fb_nfet }}. They put the {term}`threshold voltage`, the start of strong inversion, at
+For this idealised stack, with no charge in the oxide, the formulas put flat band at
+{{ x_v_fb_nfet }}. They count the gate's carriers with {term}`Boltzmann statistics`, as the
+simulation does ({ref}`the gate's error <explained-bands-differs>`). They put the {term}`threshold voltage`, the start of strong inversion, at
 {{ x_v_t_nfet }}, also an idealised value. The inputs are the {term}`model card`'s gate doping
 and the fitted body doping and oxide thickness.
 

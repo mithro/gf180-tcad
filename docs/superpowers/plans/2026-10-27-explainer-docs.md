@@ -381,11 +381,20 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
   fixed fraction of u_fb is not printed: it is a code constant, linked as
   `calibrate.cv.FB_FRACTION`.
 - The band panels show accumulation, flat band, depletion (surface at the middle of the gap,
-  ψ_s = ψ_B) and inversion (ψ_s = 2ψ_B). In the depletion approximation the accumulation panel
-  keeps flat bands with a sheet of holes at the surface; the gap section says so.
-- `numbers.CHECKS`: both crossing checks are of one level, (C_min + C_acc)/2, which the page
-  names the halfway level ("midway between the minimum and the accumulation flat part"); the
-  words of `dv_dep` and `dv_inv` differ only in their sides. `test_check_words_name_both_signs`
+  ψ_s = ψ_B) and inversion (ψ_s = 2ψ_B). The accumulation panel keeps the bands flat and draws
+  the extra holes as a sheet of no thickness, a drawing choice outside the depletion
+  approximation (which covers depletion and inversion only); the page says so and links the
+  "differs" section, where the simulation's bands bend up a little. The hole and electron sheets
+  are circles edged in the text colour beyond their band edge, so at 400 px the accumulation
+  panel differs from the flat-band panel (`test_band_regimes_sheets_stand_apart_from_the_band_edges`).
+- The idealised flat band, −V_t·ln(N_gate·N_A/n_i²), is the non-degenerate (Boltzmann) gate form,
+  the same counting as the simulation; the page says so and links `explained-bands-differs`.
+- `numbers.CHECKS`: both crossing checks are of one level definition, (C_min + C_acc)/2, which
+  each curve, SPICE or simulated, takes from its own minimum and accumulation flat part
+  (`calibrate.cv.crossings`); the page names it the halfway level and says each curve crosses its
+  own. The start of inversion, (C_min + C_inv)/2 of the SPICE curve, is described without the
+  word "halfway", so the two levels (both at the same voltage here) are not read as one. The
+  words of `dv_dep` and `dv_inv` ("halfway-level crossing") differ only in their sides. `test_check_words_name_both_signs`
   now reads, for each device, the sign of u where each check is measured in the committed result
   file times the polarity, with a swapped-pair positive control. The MOS capacitor page links
   the dip and the halfway level.

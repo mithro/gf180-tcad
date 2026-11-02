@@ -174,6 +174,11 @@ def flat_band(n_a_cm3, n_gate_cm3, n_i_cm3, vt_v):
     Its size is the built-in potential of the two dopings, computed by
     :func:`built_in_potential`.
 
+    This is the non-degenerate (Boltzmann) gate form: both layers are counted with Boltzmann
+    statistics, as the simulation counts the gate. For a gate doped past the point where its
+    Fermi level enters the conduction band, the degenerate form, −(E_g/2q + ψ_B), differs; the
+    bands page states the gate's Boltzmann error (``docs/explained/bands-and-fermi-level.md``).
+
     Reference: Sze and Ng 2006 (lit-sze), ch. 4 (the work-function difference).
     """
     return -built_in_potential(n_a_cm3, n_gate_cm3, n_i_cm3, vt_v)
