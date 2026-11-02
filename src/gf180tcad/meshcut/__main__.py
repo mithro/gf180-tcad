@@ -31,7 +31,8 @@ read-only.
 renders plan fixes them as constants.
 
 A sandbox workdir may not lie inside the repository (:func:`gf180tcad.sandbox.check_workdir`),
-so the default scratch directory is a new temporary directory, as for the TCAD jobs.
+so the default scratch directory is a new temporary directory, as for the TCAD jobs. ``cut``
+removes it after a successful install and keeps it after a refusal or a failure.
 """
 
 from __future__ import annotations
@@ -158,11 +159,15 @@ def run_cut(
     scratch: Path | None = None,
     results_root: Path | None = None,
 ) -> Path:
-    """``cut``: pull the job's mesh, run ``cut-job`` in the sandbox, install the artefact."""
+    """``cut``: pull the job's mesh, run ``cut-job`` in the sandbox, install the artefact.
+
+    A scratch directory that this command made (no ``scratch``) is removed after the install;
+    on any refusal or failure it is kept, with the mesh, the job's outputs and its log."""
     job_dir = Path(job_dir)
     image = _check_out(job_dir, out)
     key = job.job_key(job_dir, results_root)
     cv_meta, _ = job.load_job(job_dir)
+    made = scratch is None
     scratch = _scratch(scratch, "gf180tcad-meshcut-")
     pull(cv_meta["mesh_sha256"], scratch / job.MESH_NAME, cache)
     cmd = [
@@ -171,6 +176,8 @@ def run_cut(
     ]  # fmt: skip
     _sandbox(cmd, scratch, image, job.JOB_MEM)
     dest = install(scratch, out, key, image)
+    if made:
+        shutil.rmtree(scratch)
     print(f"{key['device']}/{key['params']}/{key['geometry_id']}: {dest}", flush=True)
     return dest
 

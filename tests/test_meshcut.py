@@ -918,6 +918,57 @@ def test_host_command_refuses_an_artefact_over_budget(tmp_path, monkeypatch, ins
     assert (tmp_path / "s" / meshcut.ARTEFACT).stat().st_size > 100
 
 
+def _fake_host_cut(tmp_path, monkeypatch):
+    """The host command with the pull and the sandbox faked, and its own scratch directory
+    (no ``--scratch``) made at ``<tmp>/auto``: returns ``(job_dir, results, auto)``."""
+    results, d = _fixture_job(tmp_path)
+    monkeypatch.setattr(job, "cross_section", lambda job_dir, cv_meta: _fixture_xs())
+    monkeypatch.setattr(meshcut_cli, "source_image", lambda job_dir: "stable")
+    real_run = meshcut_cli.subprocess.run
+
+    def fake_pull(cmd, **kw):
+        if Path(cmd[1]).name != "output-cache":  # git, for the provenance
+            return real_run(cmd, **kw)
+        Path(cmd[cmd.index("--out") + 1]).write_bytes(FIXTURE.read_bytes())
+
+    def fake_sandbox(cmd, *, out_dir, **kw):
+        a = meshcut_cli._parser().parse_args(cmd[3:])
+        job.run_cut_job(d, out_dir, kx=a.kx, depth_um=a.depth_um, results_root=results)
+
+    auto = tmp_path / "auto"
+
+    def mkdtemp(prefix):
+        auto.mkdir()
+        return str(auto)
+
+    monkeypatch.setattr(meshcut_cli.subprocess, "run", fake_pull)
+    monkeypatch.setattr(meshcut_cli.sandbox, "run", fake_sandbox)
+    monkeypatch.setattr(meshcut_cli.tempfile, "mkdtemp", mkdtemp)
+    return d, results, auto
+
+
+def test_host_command_removes_its_own_scratch_after_install(tmp_path, monkeypatch, inside):
+    d, results, auto = _fake_host_cut(tmp_path, monkeypatch)
+    out = tmp_path / "meshes" / "stable"
+    dest = meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.2, results_root=results)
+    assert (dest / meshcut.ARTEFACT).is_file()
+    assert not auto.exists()
+    # a --scratch the caller named is the caller's: it stays
+    meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.2, scratch=tmp_path / "s",
+                        results_root=results)  # fmt: skip
+    assert (tmp_path / "s" / job.MESH_NAME).is_file()
+
+
+def test_host_command_keeps_its_own_scratch_on_refusal(tmp_path, monkeypatch, inside):
+    d, results, auto = _fake_host_cut(tmp_path, monkeypatch)
+    monkeypatch.setattr(meshcut, "MAX_BYTES", 100)
+    out = tmp_path / "meshes" / "stable"
+    with pytest.raises(meshcut_cli.OverBudget):
+        meshcut_cli.run_cut(d, out, kx=0.0, depth_um=0.1, results_root=results)
+    for name in (job.MESH_NAME, meshcut.ARTEFACT, meshcut.META):
+        assert (auto / name).is_file()
+
+
 def test_source_image_is_the_tree_s_recorded_image():
     assert meshcut_cli.source_image(L0P60) == "stable"
 
