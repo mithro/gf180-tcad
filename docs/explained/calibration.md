@@ -110,8 +110,9 @@ scale to.
 :alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey, with dark contact bars on the gate, the source, the drain and the bottom of the body.
 
 The 2D cell `w10p0_l0p70` of the nfet_05v0. The 1D stack is the column under the gate, in
-colour. The fit compares a capacitance per area of that column. Fixed card terms scale it to the
-gate's whole length and width and add the overlap at the gate's ends. The junction depth is the
+colour. The column gives a capacitance per area. Fixed card terms scale it to the
+gate's whole length and width and add the overlap at the gate's ends. The fit compares this scaled
+gate capacitance, in fF. The junction depth is the
 model card's value. The gate and body depths and the source and drain width are project
 choices. {{ x_fig_moscap_cell_scale }}
 ```
@@ -121,8 +122,9 @@ choices. {{ x_fig_moscap_cell_scale }}
 :alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey, with dark contact bars on the gate, the source, the drain and the bottom of the body.
 
 The 2D cell `w10p0_l0p70` of the nfet_05v0. The 1D stack is the column under the gate, in
-colour. The fit compares a capacitance per area of that column. Fixed card terms scale it to the
-gate's whole length and width and add the overlap at the gate's ends. The junction depth is the
+colour. The column gives a capacitance per area. Fixed card terms scale it to the
+gate's whole length and width and add the overlap at the gate's ends. The fit compares this scaled
+gate capacitance, in fF. The junction depth is the
 model card's value. The gate and body depths and the source and drain width are project
 choices. {{ x_fig_moscap_cell_scale }}
 ```
