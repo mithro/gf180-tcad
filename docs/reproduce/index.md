@@ -510,8 +510,8 @@ Those are the stamps the folder already had, so the jobs left
 
 ## The same bytes on another computer
 
-The committed reference is generated on the project's own machine. Each run's CPU
-model goes into its run record ([issue #144](https://github.com/mithro/gf180-tcad/issues/144)).
+The committed reference is generated on the project's own machine. Recording that machine's
+CPU model with each run is [issue #144](https://github.com/mithro/gf180-tcad/issues/144).
 
 To show that the same bytes come out on a different
 host, the `crosscheck` {{ GitHub_Actions }} workflow
