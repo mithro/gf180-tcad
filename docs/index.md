@@ -22,7 +22,7 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
 - the 1D and 2D MOS capacitor {term}`C–V` curves at the start values, in
   {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`);
 - the calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1 and W10/L2, in {repo}`results/tcad/moscap2d`;
-- the calibrated 2D pfet cells at W10/L0.5 and W10/L0.7, in the same folder;
+- the calibrated 2D pfet cells at W10/L0.5, W10/L0.7 and W10/L1, in the same folder;
 - their {term}`mesh convergence`, 1D and 2D, in {repo}`results/tcad/meshconv`
   ({doc}`limitations/mesh-convergence`);
 - the 1D calibration against the SPICE {term}`Cgg`–Vg, in {repo}`results/tcad/calibration`,
@@ -32,8 +32,8 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
   {term}`Agree` at every geometry and the pfet is published as {term}`Disagree`.
 
 The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation
-([issue #35](https://github.com/mithro/gf180-tcad/issues/35)) is {term}`Disagree` at the two shortest nfet cells
-and {term}`Same process` at the other committed cells ({ref}`cv-agreement-validation`).
+([issue #35](https://github.com/mithro/gf180-tcad/issues/35)) is {term}`Disagree` at three committed cells
+and {term}`Same process` at the others ({ref}`cv-agreement-validation`).
 Planned work, each item with its issue, is on the {doc}`roadmap`. No measured silicon data
 exists ({doc}`limitations/silicon-validation`). See {doc}`limitations/index`.
 ```

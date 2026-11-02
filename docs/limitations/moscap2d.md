@@ -319,8 +319,7 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 {ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
 None of the four committed start-value 2D jobs' meshes is in the cache, nor on any disk:
 `tools/output-cache status` reports all four as absent. The cache holds the meshes of the
-calibrated nfet cells W10/L0.6, W10/L0.7, W10/L1 and W10/L2 of
-[issue #35](https://github.com/mithro/gf180-tcad/issues/35). Once a mesh is in the cache,
+calibrated cells of [issue #35](https://github.com/mithro/gf180-tcad/issues/35), listed on {doc}`/reproduce/output-cache`. Once a mesh is in the cache,
 `tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh` writes it
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
 committed `cv.meta.json` stays the truth.
@@ -340,6 +339,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | nfet `w10p0_l2p00` | 506292 | 244 | none | 246 |
 | pfet `w10p0_l0p50` | 205520 | 85 | 76 | 162 |
 | pfet `w10p0_l0p70` | 244880 | 105 | 93 | 198 |
+| pfet `w10p0_l1p00` | 304781 | 131 | 123 | 255 |
 
 | Cell | Peak memory (GiB) | Attempts |
 |---|---|---|
@@ -349,6 +349,7 @@ cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committe
 | nfet `w10p0_l2p00` | 16.0 | 3 |
 | pfet `w10p0_l0p50` | 7.4 | 1 |
 | pfet `w10p0_l0p70` | 5.4 | 1 |
+| pfet `w10p0_l1p00` | 7.8 | 1 |
 
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
@@ -438,5 +439,6 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
 - **No 2D result at L = 10 µm** ({ref}`moscap2d-l10`), and **no AC result at L = 2 µm**
   ({ref}`moscap2d-l2`).
 - **Few calibrated 2D cells** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
-  They are the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2, and the pfet W10/L0.5 and W10/L0.7.
+  They are the nfet W10/L0.6, W10/L0.7, W10/L1 and W10/L2.
+  The pfet cells are W10/L0.5, W10/L0.7 and W10/L1.
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).
