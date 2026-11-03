@@ -2177,3 +2177,260 @@ def test_cv_page_says_quasi_static_only_when_both_switches_are_off():
     )
     assert "SPICE capacitance is\nquasi-static" in text
     assert numbers.value("acnqsmod_nfet") == 0 and numbers.value("trnqsmod_nfet") == 0
+
+
+# --- the figures of the docs rules (issue #129) ------------------------------------------------
+
+
+def _gids(fig) -> Counter:
+    """How many artists of each gid the figure holds, over all its axes."""
+    found = Counter()
+    for ax in fig.axes:
+        for artist in [*ax.lines, *ax.patches, *ax.collections]:
+            if artist.get_gid():
+                found[artist.get_gid()] += 1
+    return found
+
+
+def test_lattice_bonds_give_every_atom_four():
+    """Each atom of the grid has four bonds (neighbours or stubs off the edge), so the drawing
+    is the four-neighbour bond picture of the silicon page."""
+    from gf180tcad.explain import figures
+
+    n = figures.STYLE["lattice_atoms"]
+    ends = Counter()
+    for a, b in figures.lattice_bonds(n):
+        for end in (a, b):
+            if end in {(i, j) for i in range(n) for j in range(n)}:
+                ends[end] += 1
+    assert set(ends) == {(i, j) for i in range(n) for j in range(n)}
+    assert set(ends.values()) == {4}
+
+
+@pytest.mark.parametrize(
+    ("panel", "bond_electrons", "free", "holes", "ions"),
+    [
+        ("perfect crystal", 0, 0, 0, 0),
+        ("one broken bond", -1, 1, 1, 0),
+        ("donor", 0, 1, 0, 1),
+        ("acceptor", -1, 0, 1, 1),
+    ],
+)
+def test_lattice_panels_count_the_carriers(panel, bond_electrons, free, holes, ions):
+    """Every bond holds two electrons but the broken one; a broken bond gives one free electron
+    and one hole; a donor adds a free electron and an acceptor a hole, the dopant an ion."""
+    from gf180tcad.explain import figures
+
+    n = figures.STYLE["lattice_atoms"]
+    bonds = len(figures.lattice_bonds(n))
+    found = _gids(figures.lattice_figure((panel,), "light"))
+    assert found["bond-electron"] == 2 * bonds + bond_electrons
+    assert found["free-electron"] == free
+    assert found["hole"] == holes
+    assert found["ion"] == ions
+    assert found["atom"] == n * n - ions
+
+
+def test_lattice_figures_are_registered():
+    from gf180tcad.explain import figures
+
+    for name in ("silicon-bonds", "silicon-dopants"):
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark"), name
+        assert light == figures.FIGURES[name]("light"), name  # byte-deterministic
+        assert f"x_fig_{name.replace('-', '_')}_scale" not in figures.substitutions()
+    text = (EXPLAINED / "silicon-and-carriers.md").read_text(encoding="utf-8")
+    for name in ("silicon-bonds", "silicon-dopants"):
+        assert f"/_generated/explained/{name}-light.svg" in text, name
+
+
+def test_sd_straggle_is_the_simulated_cells():
+    """The explainer's source/drain Gaussian is the one the 2D cell is built with: the same
+    straggle as gf180tcad.tcad.stack.sd_straggle_um for the cell's peak, body doping and junction
+    depth, the peak at the surface and the body doping at the junction depth.
+
+    Hand value: peak 1e20, body 8.813323e16 and XJ 0.15 µm give
+    s = 0.15 / √(2 · ln(1e20 / 8.813323e16)) = 0.15 / √(2 · 7.03409) = 0.0399922 µm."""
+    from gf180tcad.explain import figures, model
+    from gf180tcad.tcad import stack
+
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70",
+        scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
+    )  # fmt: skip
+
+    meta = json.loads((ROOT / _CELL).read_text("utf-8"))
+    assert c.n_sd_cm3 == meta["sd_peak_cm3"]
+    assert c.n_body_cm3 == meta["tunables"]["n_ch_cm3"]["value"]
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))
+    assert c.xj_um == proc["param"]["xj_um"]["value"]
+
+    class _Proc:
+        def values(self):
+            return {"xj_um": c.xj_um, "n_ch_cm3": c.n_body_cm3}
+
+    assert c.sd_straggle_um == pytest.approx(stack.sd_straggle_um(_Proc(), c.n_sd_cm3), rel=1e-12)
+    assert c.sd_straggle_um == pytest.approx(0.0399922, rel=1e-5)
+    assert c.sd_doping(0.0) == pytest.approx(c.n_sd_cm3)
+    assert c.sd_doping(c.xj_um) == pytest.approx(c.n_body_cm3, rel=1e-12)
+
+
+def test_lateral_spread_is_the_simulated_cells(tmp_path):
+    """Across the gate edge the explainer's source doping is gplugins' mask-edge factor
+    ½·erfc(x/(√2·s_lat)) with the cell's lateral straggle: half the peak at the edge, the peak far
+    into the source and nothing far under the gate; the ratio is the stack's own (read from its
+    source, tested equal to the import), and a source without it is an error.
+
+    Hand value: one lateral straggle under the gate, ½·erfc(1/√2) = 0.158655."""
+    from gf180tcad.explain import figures, model
+    from gf180tcad.tcad import stack
+
+    assert model.lateral_straggle_ratio() == stack.LATERAL_STRAGGLE_RATIO
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70",
+        scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
+    )  # fmt: skip
+    s_lat = c.sd_straggle_um * stack.LATERAL_STRAGGLE_RATIO
+    peak = c.n_sd_cm3
+    assert c.sd_doping(0.0, 0.0) == pytest.approx(peak / 2)
+    assert c.sd_doping(0.0, s_lat) == pytest.approx(0.158655 * peak, rel=1e-5)
+    assert c.sd_doping(0.0, -10 * s_lat) == pytest.approx(peak)
+    assert c.sd_doping(0.0, 10 * s_lat) < 1e-20 * peak
+    src = tmp_path / model.STACK_SOURCE
+    src.parent.mkdir(parents=True)
+    src.write_text("OTHER = 2.0\n", encoding="utf-8")
+    with pytest.raises(LookupError):
+        model.lateral_straggle_ratio(tmp_path)
+    src.write_text("LATERAL_STRAGGLE_RATIO = 0.7\n", encoding="utf-8")
+    assert model.lateral_straggle_ratio(tmp_path) == 0.7
+
+
+def test_junction_profile_draws_the_cell():
+    """The profile plot's lines are the cell's Gaussian, the abrupt step at the junction depth
+    and the uniform body, and the figure is registered with no exaggeration statement."""
+    from gf180tcad.explain import figures, model
+
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70",
+        scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
+    )  # fmt: skip
+    fig = figures.junction_profile_figure("light")
+    ax, ax_lat = fig.axes
+    (lateral,) = [ln for ln in ax_lat.lines if ln.get_gid() == "lateral"]
+    x = lateral.get_xdata()
+    assert list(lateral.get_ydata()) == pytest.approx(list(c.sd_doping(0.0, x)))
+    assert x[0] < 0 < x[-1]
+    # The labels either side of the gate edge stand apart (PR #153 review should-fix 3).
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    (src,) = [t for t in ax_lat.texts if t.get_gid() == "label-source"]
+    (gate,) = [t for t in ax_lat.texts if t.get_gid() == "label-gate"]
+    edge = ax_lat.transData.transform((0.0, 1.0))[0]
+    assert src.get_window_extent(r).x1 < edge < gate.get_window_extent(r).x0
+    lines = {ln.get_label(): ln for ln in ax.lines}
+    g = lines[figures.PROFILE_LINES["gaussian"]]
+    assert list(g.get_ydata()) == pytest.approx(list(c.sd_doping(g.get_xdata())))
+    step = lines[figures.PROFILE_LINES["step"]]
+    assert list(step.get_xdata())[1:] == pytest.approx([c.xj_um, c.xj_um])
+    assert step.get_ydata()[0] == pytest.approx(c.n_sd_cm3)
+    assert set(lines[figures.PROFILE_LINES["body"]].get_ydata()) == {c.n_body_cm3}
+    assert "x_fig_junction_profile_scale" not in figures.substitutions()
+    light = figures.FIGURES["junction-profile"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["junction-profile"]("dark")
+
+
+def test_ldd_structure_is_the_textbook_one():
+    """The drawn structure is Taur and Ning's (PR #153 review should-fix 4): a spacer against
+    each side of the gate and its oxide; the heavily doped source and drain start at the spacers'
+    outer edges; the lightly doped drain runs from there under the spacer to a little under the
+    gate, from the surface to less than the junction depth. Its drawn sizes are named in the
+    statement, and the SVG carries the spacers and the LDD."""
+    from gf180tcad.explain import figures, model
+
+    drawn = {**figures.STYLE["drawn_um"], **figures.STYLE["ldd_drawn_um"]}
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=figures.STYLE["scales"], drawn=drawn
+    )
+    ext = figures.cell_extents(c)
+    gate = ext["gate"]
+    parts = figures.ldd_parts(c)
+    w, reach = drawn["spacer width"], drawn["LDD overlap"]
+    for side, sign, edge in (("source", -1, gate.x0), ("drain", 1, gate.x1)):
+        sp, ldd, sd = parts[f"spacer-{side}"], parts[f"ldd-{side}"], parts[side]
+        outer = edge + sign * w
+        assert (sp.y0, sp.y1) == (gate.y0, 0.0), side  # from the gate's top to the surface
+        assert sorted((sp.x0, sp.x1)) == pytest.approx(sorted((edge, outer))), side
+        near = sd.x1 if side == "source" else sd.x0
+        assert near == pytest.approx(outer), side  # n+ starts at the spacer's outer edge
+        assert sd.y1 == pytest.approx(c.xj_um), side
+        assert sorted((ldd.x0, ldd.x1)) == pytest.approx(sorted((outer, edge - sign * reach))), side
+        assert ldd.y0 == 0 and 0 < ldd.y1 < c.xj_um, side
+    statement = figures.substitutions()["x_fig_ldd_cell_scale"]
+    assert statement == model.exaggeration(c.scales, drawn)
+    for name in figures.STYLE["ldd_drawn_um"]:
+        assert f"{name[0].upper()}{name[1:]} chosen for the drawing" in statement, name
+    light = figures.FIGURES["ldd-cell"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["ldd-cell"]("dark")
+    for gid in ("spacer-source", "spacer-drain", "ldd-source", "ldd-drain"):
+        assert f'id="{gid}'.encode() in light, gid
+
+
+def _drawn_figures(monkeypatch) -> dict[str, object]:
+    """Every figure of FIGURES in the light palette as its matplotlib figure, caught as it is
+    saved."""
+    from gf180tcad.explain import figures
+
+    caught = {}
+    for name, draw in figures.FIGURES.items():
+        monkeypatch.setattr(
+            figures, "_svg", lambda fig, name=name: caught.setdefault(name, fig) and b""
+        )
+        draw("light")
+    return caught
+
+
+def text_outside(fig) -> list[str]:
+    """What of ``fig`` is drawn outside the figure: its tight bounding box (every drawn artist,
+    tick labels and texts included) against the figure's own, and each title, text and legend
+    entry that leaves it, as 'text: extent'. Half a pixel of rounding is allowed."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    w, h = fig.bbox.width, fig.bbox.height
+
+    def outside(bb) -> bool:
+        return bb.x0 < -0.5 or bb.y0 < -0.5 or bb.x1 > w + 0.5 or bb.y1 > h + 0.5
+
+    out = []
+    texts = [*fig.texts, *(t for lg in fig.legends for t in lg.get_texts())]
+    for ax in fig.axes:
+        texts += [ax.title, ax._left_title, ax._right_title, *ax.texts]
+        if ax.get_legend():
+            texts += ax.get_legend().get_texts()
+    for t in texts:
+        if t.get_visible() and t.get_text().strip() and outside(t.get_window_extent(renderer)):
+            out.append(f"{t.get_text()!r}: {t.get_window_extent(renderer).bounds}")
+    tight = fig.get_tightbbox(renderer).transformed(fig.dpi_scale_trans)
+    if not out and outside(tight):
+        out.append(f"drawn extent {tight.bounds} beyond the figure {(0, 0, w, h)}")
+    return out
+
+
+def test_every_figure_keeps_its_text_inside(monkeypatch):
+    """No title, label or legend entry of any explainer figure is cut off at the figure's edge
+    (PR #153 review: the LDD cell's statement lost its first letter and its period)."""
+    found = {n: bad for n, fig in _drawn_figures(monkeypatch).items() if (bad := text_outside(fig))}
+    assert not found, found
+
+
+def test_positive_control_text_outside():
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+
+    fig = Figure(figsize=(2, 2), layout="constrained")
+    FigureCanvasAgg(fig)
+    fig.subplots().set_title("a title much too long for a figure two inches wide, cut at both ends")
+    assert text_outside(fig)
+    fig = Figure(figsize=(2, 2), layout="constrained")
+    FigureCanvasAgg(fig)
+    fig.subplots().set_title("short")
+    assert not text_outside(fig)
