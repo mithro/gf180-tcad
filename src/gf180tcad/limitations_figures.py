@@ -83,6 +83,8 @@ STYLE = {
     "ccox_span": (0.55, 1.2),
     # The 2D-metrics figure: the cells' labels and markers.
     "metric_headroom": 1.25,
+    # Log axes with a labelled criterion line reach this factor above the line or the data.
+    "criterion_headroom": 3.0,
     # The plugin record: bar width (V) of the region ranges.
     "bar_width": 0.02,
     "hatch": "//",
@@ -194,9 +196,8 @@ def engine_diff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                         ms=STYLE["marker_pt"], color=pal[_SWEEP_COLOUR[sweep]], label=sweep,
                         gid=f"{device} {sweep}")  # fmt: skip
             ax.axhline(thr, color=pal["text"], lw=ef.STYLE["edge_width"], ls="--",
+                       label=f"threshold {thr * UNITS['percent']:g} %",
                        gid="threshold")  # fmt: skip
-            ax.text(x[-1] + STYLE["sweep_offset"] * len(_SWEEPS) / 2, thr,
-                    f"threshold {thr * UNITS['percent']:g} %", ha="right", va="bottom")  # fmt: skip
             ax.set_yscale("log")
             ax.set_ylim(STYLE["decade"] ** lo, STYLE["decade"] ** hi)
             ax.set_xticks(x, [_label(g) for g in gs], rotation=STYLE["tick_deg"])
@@ -325,8 +326,9 @@ def vertex_grid_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                 note = f"Cox within {v['fix_grid_nm'] / 2 / v['t_ox_nm']:.0e}"
             ax.text(x0, meshed, f"meshed {meshed:.4g} nm\n{note}", ha="center", va="top",
                     gid=f"label {key}")  # fmt: skip
-        ax.text(STYLE["box_width"] - half, v["t_ox_nm"], f" drawn {v['t_ox_nm']:g} nm",
-                ha="left", va="bottom")  # fmt: skip
+        # Between the two boxes, so it sits on neither.
+        ax.text(STYLE["box_width"] - half + (1 - STYLE["box_width"]) / 2, v["t_ox_nm"],
+                f"drawn\n{v['t_ox_nm']:g} nm", ha="center", va="center")  # fmt: skip
         ax.set_xlim(-half * STYLE["label_drop"], 1 + half * STYLE["label_drop"])
         ax.set_ylim(lo, hi)
         ax.set_xticks([])
