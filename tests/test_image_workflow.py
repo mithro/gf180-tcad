@@ -11,6 +11,7 @@ import ast
 import re
 from pathlib import Path
 
+import pytest
 from optional import importorskip
 
 # pyyaml comes with the docs group (myst-parser), which CI installs.
@@ -84,9 +85,17 @@ def test_image_docs_name_the_sandbox_environment():
     assert re.search(r"^5\. .*green", base_change, re.MULTILINE)
 
 
+# DRAFT (A-3 in progress): the charon entry's pin, IMAGE_ID and versions.json follow CI's first
+# build. Remove with the pin.
+@pytest.mark.xfail(
+    not (REPO_ROOT / "docker" / "CHARON_IMAGE").exists(),
+    reason="docker/CHARON_IMAGE not written yet (A-3)",
+    strict=True,
+)
 def test_every_image_is_built_and_rebuilt():
-    """base, tcad (stable, PyPI releases), tcad-dev (upstream dev HEAD) and charon-libs (Charon
-    and Trilinos from source), in both jobs."""
+    """base, tcad (stable, PyPI releases), tcad-dev (upstream dev HEAD), charon-libs (Charon
+    and Trilinos from source) and charon (tcad-dev plus charon-libs' /opt/charon), in both
+    jobs. Only charon-libs is gated."""
     want = [
         {"image": "base", "name": "ghcr.io/mithro/gf180-tcad-base", "pin": "docker/IMAGE"},
         {"image": "tcad", "name": "ghcr.io/mithro/gf180-tcad-tcad", "pin": "docker/TCAD_IMAGE"},
@@ -101,6 +110,11 @@ def test_every_image_is_built_and_rebuilt():
             "pin": "docker/CHARON_LIBS_IMAGE",
             "timeout": 350,
             "gated": True,
+        },
+        {
+            "image": "charon",
+            "name": "ghcr.io/mithro/gf180-tcad-charon",
+            "pin": "docker/CHARON_IMAGE",
         },
     ]
     jobs = _jobs()
