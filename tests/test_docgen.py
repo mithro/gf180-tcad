@@ -685,10 +685,27 @@ def test_readme_figures_are_current():
     assert sorted(p.name for p in docgen.README_FIGURES_DIR.iterdir()) == sorted(drawn)
 
 
+def readme_prose(text: str) -> str:
+    """README.md without its figure captions (``*Figure N. ...*`` blocks) and image lines: the
+    text a prose citation of a figure must sit in."""
+    text = re.sub(r"^\*Figure \d+\. .*?\*$", " ", text, flags=re.MULTILINE | re.DOTALL)
+    return re.sub(r"^\s*(!\[|<).*$", " ", text, flags=re.MULTILINE)
+
+
 def test_readme_shows_each_figure():
-    """Each README figure is a Markdown image of README.md, numbered in order and cited."""
+    """Each README figure is shown in README.md, captioned "*Figure N. ...*" in order, and cited
+    as "Figure N" in the prose outside every caption."""
     text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    prose = readme_prose(text)
     rel = docgen.README_FIGURES_DIR.relative_to(REPO_ROOT).as_posix()
     for n, name in enumerate(docgen.README_FIGURES, start=1):
-        assert re.search(rf"!\[[^\]]+\]\({re.escape(rel)}/{re.escape(name)}\)", text), name
-        assert f"*Figure {n}. " in text and text.count(f"Figure {n}") >= 2, name
+        assert f"{rel}/{name}" in text, name
+        assert f"*Figure {n}. " in text, name
+        assert re.search(rf"\bFigure {n}\b", prose), f"no prose citation of Figure {n} ({name})"
+
+
+def test_readme_prose_drops_the_captions():
+    """Positive control: a citation that sits only in a caption is not a prose citation."""
+    text = "Some text.\n\n![alt](a.svg)\n\n*Figure 2. A caption that names Figure 1\nover two lines.*\n"
+    assert "Figure 1" not in readme_prose(text)
+    assert "Figure 1" in readme_prose(text + "\nAs Figure 1 shows.\n")
