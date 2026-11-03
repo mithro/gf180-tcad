@@ -97,9 +97,12 @@ parser of the command line it calls, and compare the jobs with the committed job
 default. A host with less than 32 GiB of memory should pass `make reproduce JOBS=4`, because
 each job is admitted at 4 GiB. With `make reproduce JOBS=16` more run at once, up to the
 {ref}`memory admission <reproduce-how-it-works>` limit of 32. The 1D {term}`TCAD` jobs take
-minutes; the eight corner fits take under an hour, four at a time. The 2D ones take hours: the 2D {term}`mesh convergence` and every 2D
+minutes. The 2D ones take hours: the 2D {term}`mesh convergence` and every 2D
 {term}`MOS capacitor` job run one 16 GiB job at a time, hours each ({doc}`../limitations/moscap2d`),
 so the host needs 16 GiB of memory free for the sandbox.
+
+The eight 1D corner fits of `tcad-corners` run four at a time, 2 GiB each, and take under an
+hour in all.
 
 **Not run end to end, and the 2D files are not expected to match.** Its TCAD half has not
 been run in one go. Its 2D job files were made by older code, and the
