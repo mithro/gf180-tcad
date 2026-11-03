@@ -431,8 +431,8 @@ Two of them are compared with SPICE in {numref}`moscap2d-validation-figure`. Eve
 :alt: Two panels of gate capacitance against voltage. In each a dashed 2D curve lies below a black SPICE curve inside a grey band on both plateaus, and a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
 
 {term}`Cgg` of the calibrated 2D cells nfet W10/L0.6 (top) and pfet W10/L1 (bottom) against u =
-polarity × Vg. The black line is SPICE at the typical corner, inside the grey band of its five
-corners; the dashed line is the 2D cell. The ring and the dot are the depletion crossings of SPICE
+polarity × Vg. The black line is SPICE at the {term}`typical corner`, inside the grey band of its five
+{term}`corners <corner>`; the dashed line is the 2D cell. The ring and the dot are the depletion crossings of SPICE
 and of the 2D cell at the level C_mid (dotted), labelled with their shift
 ({repo}`results/tcad/validation`).
 ```
@@ -442,8 +442,8 @@ and of the 2D cell at the level C_mid (dotted), labelled with their shift
 :alt: Two panels of gate capacitance against voltage. In each a dashed 2D curve lies below a black SPICE curve inside a grey band on both plateaus, and a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
 
 {term}`Cgg` of the calibrated 2D cells nfet W10/L0.6 (top) and pfet W10/L1 (bottom) against u =
-polarity × Vg. The black line is SPICE at the typical corner, inside the grey band of its five
-corners; the dashed line is the 2D cell. The ring and the dot are the depletion crossings of SPICE
+polarity × Vg. The black line is SPICE at the {term}`typical corner`, inside the grey band of its five
+{term}`corners <corner>`; the dashed line is the 2D cell. The ring and the dot are the depletion crossings of SPICE
 and of the 2D cell at the level C_mid (dotted), labelled with their shift
 ({repo}`results/tcad/validation`).
 ```
