@@ -22,6 +22,7 @@ import matplotlib
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.collections import PolyCollection
+from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
@@ -88,7 +89,9 @@ STYLE = {
     "mesh_edge_pt": 0.2,
     "mesh_dpi": 150,
     "mesh_height_in": (1.2, 3.6),
-    "mesh_room_in": 1.6,
+    "mesh_room_in": 1.3,
+    # The axes' margins (in): fixed, so the figure is drawn once (no layout pass over the mesh).
+    "mesh_margin_in": {"left": 0.9, "right": 0.2, "bottom": 1.05, "top": 0.15},
     # The junction panels: positions from (1 + pad) widths into the body to pad widths into the
     # source, on this many points; the charge axis spans the dopings with headroom.
     "junction_pad": 0.25,
@@ -614,14 +617,18 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
     height = min(max(width * (y1 - y0) / (x1 - x0), low), high) + STYLE["mesh_room_in"]
     colours = {name: STYLE["mesh_regions"].get(name, (pal["muted"], name)) for name in win.regions}
     with matplotlib.rc_context(_rc(palette)):
-        fig = Figure(figsize=(width, height), layout="constrained")
+        fig = Figure(figsize=(width, height))
         FigureCanvasAgg(fig)
+        m = STYLE["mesh_margin_in"]
+        fig.subplots_adjust(left=m["left"] / width, right=1 - m["right"] / width,
+                            bottom=m["bottom"] / height, top=1 - m["top"] / height)  # fmt: skip
         ax = fig.add_subplot()
-        faces = [colours[win.regions[r]][0] for r in win.region]
+        # one RGBA row per region, the opacity in it, indexed by each triangle's region
+        rgba = np.array([to_rgba(colours[n][0], STYLE["mesh_alpha"]) for n in win.regions])
         ax.add_collection(PolyCollection(
-            xy[win.triangles], facecolors=faces, edgecolors=pal["text"], alpha=STYLE["mesh_alpha"],
+            xy[win.triangles], facecolors=rgba[win.region], edgecolors=to_rgba(pal["text"], STYLE["mesh_alpha"]),
             linewidths=STYLE["mesh_edge_pt"], rasterized=True,
-        ))  # fmt: skip
+        ), autolim=False)  # fmt: skip
         # the boundary lines as one path, NaN between segments, so the SVG holds one element
         seg = xy[win.boundary_lines]
         gaps = np.full((len(seg), 1, 2), np.nan)
@@ -636,7 +643,7 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
         present = sorted({win.regions[r] for r in np.unique(win.region)})
         keys = [Patch(facecolor=colours[n][0], alpha=STYLE["mesh_alpha"], label=colours[n][1])
                 for n in present]  # fmt: skip
-        fig.legend(handles=keys, loc="outside lower center", ncols=2, frameon=False)
+        fig.legend(handles=keys, loc="lower center", ncols=2, frameon=False)
         buf = BytesIO()
         fig.savefig(buf, format="svg", metadata=plots.METADATA, dpi=STYLE["mesh_dpi"])
         return buf.getvalue()

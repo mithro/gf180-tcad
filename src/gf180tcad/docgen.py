@@ -1003,6 +1003,10 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
 
 
+# The mesh figures drawn in this process, by the artefact's npz sha256 and the palette.
+_MESH_SVG: dict[tuple[str, str], bytes] = {}
+
+
 def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
     """The geometry page's mesh pictures: for each committed 2D cell, the figure of its reduced
     mesh artefact in a light and a dark twin (written into ``ddir``), or why it has none."""
@@ -1030,7 +1034,11 @@ def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
         )
         for palette in figures.PALETTES:
             svg = f"{gid}_mesh_{params}-{palette}.svg"
-            (ddir / svg).write_bytes(figures.mesh_artefact(adir, palette))
+            # cells that share a mesh (W1.6/L0.7 and W10/L0.7) have the same npz: drawn once
+            key = (meta["npz_sha256"], palette)
+            if key not in _MESH_SVG:
+                _MESH_SVG[key] = figures.mesh_artefact(adir, palette)
+            (ddir / svg).write_bytes(_MESH_SVG[key])
             head = [f"```{{figure}} {svg}"]
             if palette == "light":
                 head.append(f":name: mesh-{name}-{gid}-{params}")
