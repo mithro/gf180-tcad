@@ -2209,7 +2209,7 @@ def test_corner_limits_doping_axis_has_several_labels():
     lo, hi = ax.get_xlim()
     labels = [t.get_text() for t in ax.get_xticklabels() if lo <= t.get_position()[0] <= hi]
     assert len([x for x in labels if x]) >= 2, labels
-    assert "2×10¹⁷" in labels
+    assert "2\xa0×\xa010¹⁷" in labels
 
 
 def test_corner_nearest_limit_is_the_files():
