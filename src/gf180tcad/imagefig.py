@@ -83,9 +83,9 @@ STYLE = {
     "ci_label_dx": 0.03,
 }
 
-# Okabe-Ito blue, reddish purple, vermilion, bluish green and yellow are the hues of the box
-# roles, mixed towards white for the light twin and towards black for the dark twin; the
-# container role is a neutral grey with an edge in the arrow colour.
+#: The colours of each twin. Okabe-Ito blue, reddish purple, vermilion, bluish green and yellow
+#: are the hues of the box roles, mixed towards white for the light twin and towards black for
+#: the dark twin; the container role is a neutral grey with an edge in the arrow colour.
 PALETTES = {
     "light": {
         "background": "#ffffff",

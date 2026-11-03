@@ -49,7 +49,7 @@ docker/base/build --no-cache
 {repo}`docker/base/IMAGE_ID`. The build refuses to run if the build inputs have uncommitted changes.
 
 The `image` {{ GitHub_Actions }} workflow ({repo}`.github/workflows/image.yml`) checks this
-on pull requests and on pushes to `main` (only when a file under {repo}`docker/` or
+on pull requests and on pushes to `main` (only when {repo}`docker/` or
 {repo}`image.yml <.github/workflows/image.yml>` changes), and weekly and on manual dispatch (always):
 
 1. build, and require the config digest to equal {repo}`docker/base/IMAGE_ID` and the
@@ -276,8 +276,6 @@ tools/sandbox-run --image "$(cat docker/TCAD_DEV_IMAGE)" --workdir DIR -- python
 
 ### Forks, and why
 
-<!-- figure-ok: the meshes here are MSH files that meshio reads, not a geometry -->
-
 When the image was first pinned (2026-10-19), three upstream problems kept the full flow from
 running in it. They were recorded as {term}`strict expected failures <strict expected failure>`
 and are now fixed. Each fix lives in a fork under
@@ -379,8 +377,6 @@ byte-identical to the first GCC 14 pin's.
 
 ### Which image makes which results
 
-<!-- figure-ok: this compares two gmsh versions, it describes no one mesh geometry -->
-
 The final results come from upstream dev HEAD; the stable image is for testing how things used
 to work, and for debugging. {py:data}`gf180tcad.tcad.RESULTS_IMAGE` names the image each result
 kind is generated with, and it is the default of `python -m gf180tcad.tcad moscap` and
@@ -394,7 +390,7 @@ kind is generated with, and it is the default of `python -m gf180tcad.tcad mosca
 
 The top folder of each set of results holds a provenance file, such as
 {repo}`results/tcad/moscap2d/provenance.json`. Under `images`, it records which image made each
-result kind in it: the image's name, its reference and its probe record, the image's
+result kind in it: the image's name, its reference and its probe record. That record is
 {repo}`docker/tcad/versions.json` or {repo}`docker/tcad-dev/versions.json`. The mesh-convergence results folder holds
 1D and 2D results, so it records one entry for each.
 
@@ -654,7 +650,7 @@ produced by {repo}`docker/charon-libs/inputs.py`:
 
 {repo}`docker/charon-libs/probe_versions.py` reads both records, the compiler of
 `charon_mp.exe` and the runtime packages, and its output is
-{repo}`docker/charon-libs/versions.json`, whose `charon_build` and `sources` keys copy the two
+{repo}`docker/charon-libs/versions.json`. Its `charon_build` and `sources` keys copy the two
 records. {repo}`docker/charon-libs/IMAGE_ID` holds the config digest.
 
 `--target deps --load` loads the first stage as a local image. A developer can then run the
@@ -707,7 +703,7 @@ builder, with other jobs sharing its 8 CPUs. Both gave the same digests. The rec
 | Wall time of `make` (min) | 65 | 209 |
 
 On the project's host the builder's memory peaked at 6.35 GB. In the pinned image, the files in
-`/opt/charon` add up to 353 MB (`du -sb`), and the layer it adds to the base image is 91.7 MB
+`/opt/charon` add up to 353 MB (`du -sb`). The layer it adds to the base image is 91.7 MB
 compressed.
 
 ### Checks on GitHub
@@ -737,7 +733,7 @@ reproducible, runs on the weekly schedule and on a manual run. Every other pull 
 both and passes.
 
 The build pushes only the tag `unverified`. Three checks then compare the config digest with
-{repo}`docker/charon-libs/IMAGE_ID`, the manifest with {repo}`docker/CHARON_LIBS_IMAGE` and the
+{repo}`docker/charon-libs/IMAGE_ID`, the {term}`manifest digest` with {repo}`docker/CHARON_LIBS_IMAGE` and the
 probe's output with {repo}`docker/charon-libs/versions.json`. The published tags come last.
 
 {repo}`tests/test_charon_image.py` runs the image's checks. Its sandbox tests run the upstream
