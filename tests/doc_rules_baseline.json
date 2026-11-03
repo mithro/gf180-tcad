@@ -152,14 +152,6 @@
  "docs/limitations/literature.md": {
   "FIGURE": 3
  },
- "docs/limitations/mesh-convergence.md": {
-  "FIGURE": 6,
-  "FILELINK": 1
- },
- "docs/limitations/moscap2d.md": {
-  "FIGURE": 11,
-  "FILELINK": 13
- },
  "docs/limitations/plugin-history.md": {
   "FIGURE": 9,
   "FILELINK": 5
