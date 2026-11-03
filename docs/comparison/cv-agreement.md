@@ -71,24 +71,8 @@ process files.
   absorbs the {term}`Boltzmann statistics` of the degenerate gate, SPICE's empirical {term}`flat band`
   and any interface charge.
 
-{numref}`cv-fitted-stack-figure` shows the fitted stack of the nfet.
-
-```{figure} /_generated/comparison/fitted-stack-light.svg
-:name: cv-fitted-stack-figure
-:figclass: only-light
-:alt: Three stacked layers: a muted gate on top, a thin shaded oxide and a tall shaded body, each labelled with its material, thickness and doping.
-
-The 1D stack of the calibrated {term}`nfet_05v0`, gate on top. The oxide and the body are shaded:
-their thickness and doping are two of the three fitted values. {{ x_fig_oxide_stack_scale }}
-```
-
-```{figure} /_generated/comparison/fitted-stack-dark.svg
-:figclass: only-dark
-:alt: Three stacked layers: a muted gate on top, a thin shaded oxide and a tall shaded body, each labelled with its material, thickness and doping.
-
-The 1D stack of the calibrated {term}`nfet_05v0`, gate on top. The oxide and the body are shaded:
-their thickness and doping are two of the three fitted values. {{ x_fig_oxide_stack_scale }}
-```
+The fitted stack of the nfet is
+{numref}`Figure %s of What the calibration changes <fig-calibration-stack>`.
 
 The model is the 1D MOS capacitor ({py:func}`gf180tcad.tcad.moscap1d.simulate`) on its selected
 mesh ({ref}`mesh-convergence`), with {term}`poly depletion` simulated in the poly-gate region at the

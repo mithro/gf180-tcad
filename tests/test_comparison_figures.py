@@ -34,7 +34,6 @@ FIGURES = [
     "cv-validation",
     "cv-metric",
     "pfet-edge",
-    "fitted-stack",
     "start-stack",
     "cgg-split",
     "centroid",

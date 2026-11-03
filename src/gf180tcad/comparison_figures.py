@@ -396,13 +396,6 @@ def pfet_edge(palette: str) -> bytes:
         return ef._svg(fig)
 
 
-def fitted_stack(palette: str) -> bytes:
-    """The 1D stack of the calibrated nfet, oxide and body shaded: the layers the three tunables
-    set, labelled with the fitted thickness and doping."""
-    dev = model.device("nfet_05v0", "calibrated", scales=ef.STYLE["scales"])
-    return ef.stack_1d(dev, ("oxide", "body"), palette)
-
-
 # --- the process data ------------------------------------------------------------------------
 
 
@@ -546,7 +539,6 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "cv-validation": cv_validation,
     "cv-metric": cv_metric,
     "pfet-edge": pfet_edge,
-    "fitted-stack": fitted_stack,
     "start-stack": start_stack,
     "cgg-split": cgg_split,
     "centroid": centroid,
