@@ -115,3 +115,19 @@ def test_charon_ci_matches_the_workflow_and_draws_every_box():
         _drawn(svg, lines)
     for _, lines in imagefig.CI_CHECKS.values():
         _drawn(svg, lines)
+
+
+def test_charon_layers_match_the_dockerfile_and_draw_every_box():
+    """The named stages are the charon Dockerfile's, the image is FROM the dev image with
+    /opt/charon copied from charon-libs, and every ENV name the figure draws is set there."""
+    dockerfile = (REPO / "docker" / "charon" / "Dockerfile").read_text(encoding="utf-8")
+    stages = tuple(re.findall(r"^FROM \S+ AS ([\w-]+)$", dockerfile, re.MULTILINE))
+    assert stages == imagefig.LAYER_STAGES
+    final = dockerfile[dockerfile.rindex("FROM ${TCAD_DEV_IMAGE}\n") :]
+    assert "COPY --from=charon-libs /opt/charon /opt/charon" in final
+    for name in ("CHARON_EXECUTABLE_PATH", "CHARON_EXECUTABLE", "PATH"):
+        assert re.search(rf"\b{name}=", final), name
+    assert imagefig.MPI_ENV in final
+    svg = imagefig.charon_layers()
+    for lines in imagefig.LAYER_BOXES.values():
+        _drawn(svg, lines)
