@@ -2259,6 +2259,12 @@ def test_sd_straggle_is_the_simulated_cells():
         scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
     )  # fmt: skip
 
+    meta = json.loads((ROOT / _CELL).read_text("utf-8"))
+    assert c.n_sd_cm3 == meta["sd_peak_cm3"]
+    assert c.n_body_cm3 == meta["tunables"]["n_ch_cm3"]["value"]
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))
+    assert c.xj_um == proc["param"]["xj_um"]["value"]
+
     class _Proc:
         def values(self):
             return {"xj_um": c.xj_um, "n_ch_cm3": c.n_body_cm3}
