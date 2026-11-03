@@ -50,11 +50,11 @@ Carriers spread from where they are crowded to where they are scarce. Electrons 
 cross the boundary and fill holes on the p side, and holes cross the other way
 ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
 
-Each carrier that leaves uncovers the {term}`dopant` atom it came from. That atom becomes an ion, an atom
-with a net charge: positive on the n side, negative on the p side. The ions cannot move, so a
+Each carrier that leaves uncovers the {term}`dopant` atom it came from. That atom becomes an ion, an
+atom with a net charge: positive on the n side, negative on the p side. The ions cannot move, so a
 layer of fixed charge forms on each side, with no free carriers in it. That layer is the
-{term}`depletion` region. The charge panel of {numref}`fig-junction-panels` shows its two
-layers of ions.
+{term}`depletion` region. The charge panel of {numref}`fig-junction-panels` shows its two layers of
+ions.
 
 The two layers of charge set up an electric field, which pushes the carriers back. The carriers
 stop crossing when the push of the field balances their spread
@@ -150,7 +150,8 @@ to the body's at the junction depth, in a bell-shaped curve called a Gaussian. T
 spreads sideways under the gate edge ({py:mod}`gf180tcad.tcad.stack`). The two panels of
 {numref}`fig-junction-profile` show both.
 
-Near the junction the n side is therefore lightly doped too. The textbook treats such a profile as a graded junction ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
+Near the junction the n side is therefore lightly doped too. The textbook treats such a profile as a
+graded junction ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
 
 ```{figure} /_generated/explained/junction-profile-light.svg
 :figclass: only-light

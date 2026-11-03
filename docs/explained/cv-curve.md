@@ -45,12 +45,12 @@ ACNQSMOD to {{ x_acnqsmod_nfet }} and TRNQSMOD to {{ x_trnqsmod_nfet }}
 ({ref}`BSIM4 manual, §8.1 and appendix A <lit-bsim4>`). So the SPICE capacitance is
 quasi-static: its charges follow the gate voltage without delay.
 
-The simulated stack has three free numbers: the oxide thickness, the body doping and a shift of
-the gate voltage ({ref}`cv-agreement`). The stack is in
-{numref}`Figure %s of What the calibration changes <fig-calibration-stack>`, and the curves
-before and after the fit are in {numref}`fig-cv-parts`. The fit searches for the values that bring the simulated
-curve closest to the SPICE one. It starts from the values below and stays within limits set
-beforehand ({doc}`/comparison/process-data`).
+The simulated stack has three free numbers: the oxide thickness, the body doping and a shift of the
+gate voltage ({ref}`cv-agreement`). The stack is in
+{numref}`Figure %s of What the calibration changes <fig-calibration-stack>`, and the curves before
+and after the fit are in {numref}`fig-cv-parts`. The fit searches for the values that bring the
+simulated curve closest to the SPICE one. It starts from the values below and stays within limits
+set beforehand ({doc}`/comparison/process-data`).
 
 | Parameter | Start | Fitted |
 |---|---|---|
@@ -122,10 +122,11 @@ its shape unchanged. At its true length that shift is too short to see in
 
 ## Where this repo's results differ
 
-{numref}`fig-cv-parts` shows the geometry `w10p0_l10p00`. There the fitted flat parts lie within {{ x_plateau_acc_l10 }} and
-{{ x_plateau_inv_l10 }} of the SPICE curve. The allowed error is {{ x_plateau_tol_l10 }}. The
-halfway-level crossings differ by {{ x_dv_dep_l10 }} on the falling side and {{ x_dv_inv_l10 }} on
-the rising side, simulated minus SPICE. The allowed difference is {{ x_dv_tol_l10 }}
+{numref}`fig-cv-parts` shows the geometry `w10p0_l10p00`. There the fitted flat parts lie within
+{{ x_plateau_acc_l10 }} and {{ x_plateau_inv_l10 }} of the SPICE curve. The allowed error is
+{{ x_plateau_tol_l10 }}. The halfway-level crossings differ by {{ x_dv_dep_l10 }} on the falling
+side and {{ x_dv_inv_l10 }} on the rising side, simulated minus SPICE. The allowed difference is
+{{ x_dv_tol_l10 }}
 ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 
 Between the flat parts the two curves differ by up to {{ x_depletion_l10 }}. Where the curve is

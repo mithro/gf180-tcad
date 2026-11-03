@@ -32,10 +32,10 @@ doping is the {term}`model card`'s value, and the gate and body depths are proje
 
 ## Two bands of energy
 
-An {term}`electron` in a crystal can only have certain energies. The energies that matter here
-fall into two ranges, called bands ({ref}`Sze and Ng, ch. 1 <lit-sze>`). The electrons held in the bonds between atoms
-fill the lower range, the {term}`valence band`. The free electrons that move and carry current
-have energies in the upper range, the {term}`conduction band`. The shaded ranges of
+An {term}`electron` in a crystal can only have certain energies. The energies that matter here fall
+into two ranges, called bands ({ref}`Sze and Ng, ch. 1 <lit-sze>`). The electrons held in the bonds
+between atoms fill the lower range, the {term}`valence band`. The free electrons that move and carry
+current have energies in the upper range, the {term}`conduction band`. The shaded ranges of
 {numref}`fig-bands-flat` are the two bands.
 
 Between the two lies the {term}`band gap`, where no electron of a perfect crystal can be. Breaking
@@ -124,8 +124,8 @@ an idealised example from the calibrated body doping.
 ## Where this repo's results differ
 
 The conduction band edge lies half the band gap above the middle. In the gate the formula puts the
-Fermi level above that edge, as {numref}`fig-bands-flat` shows. There the Fermi level lies past the band
-edge, where Boltzmann statistics fail ({ref}`Sze and Ng, ch. 1 <lit-sze>`).
+Fermi level above that edge, as {numref}`fig-bands-flat` shows. There the Fermi level lies past the
+band edge, where Boltzmann statistics fail ({ref}`Sze and Ng, ch. 1 <lit-sze>`).
 
 The {term}`TCAD` still counts the gate's carriers with Boltzmann statistics. The size of that
 error, and the calibration parameter that absorbs it, are on {doc}`/limitations/index`, in its
@@ -135,6 +135,7 @@ The band gap of the diagrams is the reference value at 300 K<!-- number-ok: cite
 The simulations run at {{ x_t_tcad }} and read the intrinsic carrier density, not a band gap
 ({py:class}`gf180tcad.tcad.process.Constants`).
 
-The diagrams of {numref}`fig-bands-flat` show each layer alone. Where the gate, the oxide and the body meet, the bands bend
+The diagrams of {numref}`fig-bands-flat` show each layer alone. Where the gate, the oxide and the
+body meet, the bands bend
 ({ref}`Sze and Ng, ch. 4 <lit-sze>`). This repo's {term}`MOS capacitor <MOSCAP>` simulations
 compute that bending as the gate voltage changes ({py:mod}`gf180tcad.tcad.moscap1d`).

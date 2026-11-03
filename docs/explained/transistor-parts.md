@@ -101,9 +101,10 @@ to {{ x_sd_peak_nfet }} of {term}`donors <donor>` ({term}`NSD`). They reach {{ x
 
 ## The body and the wells
 
-The body is the silicon around the source and the drain, the channel under the gate included.
-It is the large part at the bottom of {numref}`fig-parts-cell`. In the nfet it is p-type. The design manual defines the LVPWELL layer for the body of the
-n-channel transistors, whose channel carries {term}`electrons <electron>`
+The body is the silicon around the source and the drain, the channel under the gate included. It is
+the large part at the bottom of {numref}`fig-parts-cell`. In the nfet it is p-type. The design
+manual defines the LVPWELL layer for the body of the n-channel transistors, whose channel carries
+{term}`electrons <electron>`
 ([LVPWELL rules](https://github.com/google/gf180mcu-pdk/blob/de3240d7529a6970437ac3344820aaae7839f215/docs/physical_verification/design_manual/drm_07_04.rst)).
 
 The {term}`pfet_05v0` is the mirror image, with a p-type source and drain in an
@@ -117,11 +118,11 @@ fitted to the {term}`SPICE` model, {{ x_n_ch_nfet_cal }} for the nfet.
 
 ## The contacts
 
-Each part takes its voltage through a contact, drawn as a solid bar in {numref}`fig-parts-cell`.
-The gate's sits on top, the
-source's and the drain's at the surface, and the body's underneath. The simulated cell has four contacts, gate,
-body, drain and source ({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`).
-The simulator solves for the cell on a mesh, a grid of {{ x_node_count_cell }} points.
+Each part takes its voltage through a contact, drawn as a solid bar in {numref}`fig-parts-cell`. The
+gate's sits on top, the source's and the drain's at the surface, and the body's underneath. The
+simulated cell has four contacts, gate, body, drain and source
+({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`). The
+simulator solves for the cell on a mesh, a grid of {{ x_node_count_cell }} points.
 
 (explained-parts-ldd)=
 

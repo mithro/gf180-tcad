@@ -2,10 +2,10 @@
 
 # The MOS capacitor
 
-What is a {term}`MOS capacitor <MOSCAP>`, and why does this project simulate it before the transistor? This page
-answers that for a reader who knows basic circuits and has read {doc}`oxide-and-poly`. It leaves
-out why the capacitance changes with the gate voltage. The column of {numref}`fig-moscap-cell`
-under the gate is the MOS capacitor.
+What is a {term}`MOS capacitor <MOSCAP>`, and why does this project simulate it before the
+transistor? This page answers that for a reader who knows basic circuits and has read
+{doc}`oxide-and-poly`. It leaves out why the capacitance changes with the gate voltage. The column
+of {numref}`fig-moscap-cell` under the gate is the MOS capacitor.
 
 ```{figure} /_generated/explained/moscap-cell-light.svg
 :figclass: only-light
@@ -119,8 +119,9 @@ meets the muted source and drain.
 ## Where this repo's results differ
 
 {numref}`fig-moscap-cv` shows the geometry `w10p0_l10p00`. There the simulated curve lies within
-{{ x_plateau_acc_l10 }} of the SPICE curve at the most negative gate voltage. At the most positive it lies within {{ x_plateau_inv_l10 }}. The allowed error is
-{{ x_plateau_tol_l10 }} ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
+{{ x_plateau_acc_l10 }} of the SPICE curve at the most negative gate voltage. At the most positive
+it lies within {{ x_plateau_inv_l10 }}. The allowed error is {{ x_plateau_tol_l10 }}
+({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 
 A verdict says whether the simulation matches the SPICE model: {term}`Agree`,
 {term}`Same process` or {term}`Disagree` ({ref}`the verdicts <agreement-verdicts>`). Each check

@@ -77,8 +77,9 @@ they cross at {{ x_u_inv_spice_l10 }} and {{ x_u_inv_tcad_l10 }}.
 ## The bands in each region
 
 A band diagram shows the energies an electron can have against the depth into the body
-({doc}`bands-and-fermi-level`); {numref}`fig-regions-bands` has one for each region. The {term}`Fermi level`, the energy filled half of the time,
-stays flat, because no current flows ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
+({doc}`bands-and-fermi-level`); {numref}`fig-regions-bands` has one for each region. The
+{term}`Fermi level`, the energy filled half of the time, stays flat, because no current flows
+({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
 ```{figure} /_generated/explained/band-regimes-light.svg
 :figclass: only-light
@@ -123,9 +124,10 @@ and the fitted body doping and oxide thickness.
 
 ## Where this repo's results differ
 
-The panels of {numref}`fig-regions-bands` use the depletion approximation. The simulation solves the charge and the bending
-together, with {term}`Boltzmann statistics` ({py:mod}`gf180tcad.tcad.moscap1d`). Its depleted
-layer then has a smooth edge, and its bands bend in accumulation too
+The panels of {numref}`fig-regions-bands` use the depletion approximation. The simulation solves the
+charge and the bending together, with {term}`Boltzmann statistics`
+({py:mod}`gf180tcad.tcad.moscap1d`). Its depleted layer then has a smooth edge, and its bands bend
+in accumulation too
 ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
 The idealised voltages are not the marks of {numref}`fig-regions-cv`. The marks are read off

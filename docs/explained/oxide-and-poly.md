@@ -53,8 +53,8 @@ Most of the model's equations use it, the {term}`threshold voltage <Vt>` among t
 capacitance ({ref}`BSIM4 manual, §1.1 <lit-bsim4>`).
 
 The oxide is the thin middle layer of {numref}`fig-oxide-stack`, drawn with the calibrated
-thickness. The oxide's relative permittivity, {term}`EPSROX`, is {{ x_epsrox_nfet }}. At the same voltage,
-a capacitor with this oxide holds that many times the charge of a vacuum gap as thick
+thickness. The oxide's relative permittivity, {term}`EPSROX`, is {{ x_epsrox_nfet }}. At the same
+voltage, a capacitor with this oxide holds that many times the charge of a vacuum gap as thick
 ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
 (explained-oxide-cox)=
