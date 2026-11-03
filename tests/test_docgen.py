@@ -74,6 +74,10 @@ EXPLAINED_FIGURES = [
     "calibration-pfet",
     "calibration-stack",
     "cv-parts",
+    "silicon-bonds",
+    "silicon-dopants",
+    "junction-profile",
+    "ldd-cell",
 ]
 
 
