@@ -11,7 +11,7 @@ there.
 - **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD.** The
   {term}`SPICE reference <SPICE reference results>` dataset of {term}`Phases 0 and 1` is complete. On the TCAD side the 1D
   and 2D MOS capacitors exist, with the start values and mesh-converged meshes
-  ({doc}`mesh-convergence`, {doc}`moscap2d`), and the 1D one also with the calibrated values.
+  ({doc}`mesh-convergence`, {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-2d-figure>`, {doc}`moscap2d`), and the 1D one also with the calibrated values.
   The generated pages are {doc}`/_generated/tcad/index`; the limits of the model are
   {ref}`below <limitations-moscap>`.
 - **The {term}`C–V` calibration is 1D only, and the pfet disagrees.** The 1D MOS capacitor is calibrated

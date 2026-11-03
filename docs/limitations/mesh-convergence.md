@@ -224,7 +224,7 @@ Both criteria are plotted at every bias in {numref}`meshconv-2d-figure`.
 ```{figure} /_generated/limitations/meshconv-2d-light.svg
 :name: meshconv-2d-figure
 :figclass: only-light
-:alt: Four panels on log axes. Left: the change of levels 0 and 1 to the next level, about 1e-3, below a dashed 1 % line. Right: the 2D-against-1D difference of levels 0 to 2, level 0 crossing a dashed 0.5 % line near 0 V.
+:alt: Four panels on log axes. Left: the change of levels 0 and 1 to the next level, at most 0.26 %, below a dashed 1 % line. Right: the 2D-against-1D difference of levels 0 to 2, level 0 crossing a dashed 0.5 % line near 0 V.
 
 Left: the 2D relative change |C / C_finer − 1| of levels 0 and 1, with the 1 % criterion. Right: the
 extruded stack's largest relative difference from 1D at each level, with the 0.5 % criterion.
@@ -233,7 +233,7 @@ Against u = polarity × Vg, nfet above and pfet below ({repo}`results/tcad/meshc
 
 ```{figure} /_generated/limitations/meshconv-2d-dark.svg
 :figclass: only-dark
-:alt: Four panels on log axes. Left: the change of levels 0 and 1 to the next level, about 1e-3, below a dashed 1 % line. Right: the 2D-against-1D difference of levels 0 to 2, level 0 crossing a dashed 0.5 % line near 0 V.
+:alt: Four panels on log axes. Left: the change of levels 0 and 1 to the next level, at most 0.26 %, below a dashed 1 % line. Right: the 2D-against-1D difference of levels 0 to 2, level 0 crossing a dashed 0.5 % line near 0 V.
 
 Left: the 2D relative change |C / C_finer − 1| of levels 0 and 1, with the 1 % criterion. Right: the
 extruded stack's largest relative difference from 1D at each level, with the 0.5 % criterion.

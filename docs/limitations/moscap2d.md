@@ -318,7 +318,7 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
 
 ## The L = 2 µm cells: QS only, resumed, with a memory growth that is not fixed
 
-- **QS only.** The L = 2 µm cells (501k nodes for the nfet, 504k for the pfet) have no AC result (no {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>`). Their AC
+- **QS only.** The L = 2 µm cells (501k nodes for the nfet, 504k for the pfet) have no AC result: their folders, such as {repo}`results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00`, hold no AC file like the Lmin cell's {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>`. Their AC
   sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
   solver ({term}`UMFPACK` 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is

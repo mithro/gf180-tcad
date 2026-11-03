@@ -25,7 +25,7 @@ threshold in {numref}`engine-diff-figure`.
 ```{figure} /_generated/limitations/engine-diff-light.svg
 :name: engine-diff-figure
 :figclass: only-light
-:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the circles and squares sit just above a dashed threshold line; every pfet marker sits below it.
+:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the circles and squares sit above a dashed threshold line; every pfet marker sits below it.
 
 The {term}`engine_diff` of each {term}`typical corner` sweep, nfet above and pfet below, from the
 committed {{ ngspice }} and {{ Xyce }} files ({repo}`results/spice`). The dashed line is the 0.5 %
@@ -34,7 +34,7 @@ threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geom
 
 ```{figure} /_generated/limitations/engine-diff-dark.svg
 :figclass: only-dark
-:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the circles and squares sit just above a dashed threshold line; every pfet marker sits below it.
+:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the circles and squares sit above a dashed threshold line; every pfet marker sits below it.
 
 The {term}`engine_diff` of each {term}`typical corner` sweep, nfet above and pfet below, from the
 committed {{ ngspice }} and {{ Xyce }} files ({repo}`results/spice`). The dashed line is the 0.5 %
@@ -81,7 +81,7 @@ sweep are in {numref}`engine-subthreshold-figure`.
 ```{figure} /_generated/limitations/engine-subthreshold-light.svg
 :name: engine-subthreshold-figure
 :figclass: only-light
-:alt: Top, two drain-current curves on a log axis that lie on each other. Bottom, their relative difference: a flat step just above the 0.5 % line at low gate voltage, falling towards zero above 1 V.
+:alt: Top, two drain-current curves on a log axis that lie on each other. Bottom, their relative difference: a flat step above the 0.5 % line at low gate voltage, falling towards zero above 1 V.
 
 The nfet at W = 10 µm, L = 0.6 µm, Vds = 5 V and Vbs = 0, typical corner. Top: |Id| of both
 engines, with the 1 pA floor dotted. Bottom: (Id,Xyce − Id,ngspice) / max(|Id|), blank where both
@@ -90,7 +90,7 @@ currents are below the floor, with the ±0.5 % threshold dashed.
 
 ```{figure} /_generated/limitations/engine-subthreshold-dark.svg
 :figclass: only-dark
-:alt: Top, two drain-current curves on a log axis that lie on each other. Bottom, their relative difference: a flat step just above the 0.5 % line at low gate voltage, falling towards zero above 1 V.
+:alt: Top, two drain-current curves on a log axis that lie on each other. Bottom, their relative difference: a flat step above the 0.5 % line at low gate voltage, falling towards zero above 1 V.
 
 The nfet at W = 10 µm, L = 0.6 µm, Vds = 5 V and Vbs = 0, typical corner. Top: |Id| of both
 engines, with the 1 pA floor dotted. Bottom: (Id,Xyce − Id,ngspice) / max(|Id|), blank where both

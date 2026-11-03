@@ -43,7 +43,7 @@ Each annotation names what the project uses the item for.
   Its §8.1 and appendix A give the switches
   ACNQSMOD and TRNQSMOD of the non-quasi-static model: the value 0, the default, turns it off.
 
-The modelled source/drain doping under the gate edge is in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-sd-figure>`.
+The project models no {term}`LDD`: its modelled source/drain doping under the gate edge is in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-sd-figure>`.
 
 ## Physics models
 
