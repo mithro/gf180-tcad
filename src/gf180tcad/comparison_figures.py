@@ -43,8 +43,10 @@ STYLE = {
     # The gate of the plan view runs this far past the active area at each end (µm), a
     # drawing choice: the instance parameters do not depend on it.
     "gate_overhang_um": 0.2,
-    # Room round the plan view, as a fraction of its width, for the dimension labels.
-    "plan_margin": 0.35,
+    # Room either side of the plan view for the source and drain labels, as a fraction of the
+    # drawing's half width, and rows of dimension-label room above and below it.
+    "plan_side": 0.9,
+    "plan_rows": 2,
     "dim_offset": 0.12,
     # The pfet edge plot: the span of u (V) that holds every depletion-side crossing.
     "edge_u_v": (-2.0, 0.0),
@@ -207,44 +209,47 @@ def instance_extents(device: str = PLAN_DEVICE, gid: str = PLAN_GEOMETRY) -> dic
 def instance_plan_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The transistor of the SPICE reference seen from above, to scale: the gate strip of length
     L across the active area of width W, and the source and drain each of the length that AS and
-    PS (AD and PD) assume, outlined by the perimeter those parameters count."""
+    PS (AD and PD) assume, outlined by the perimeter those parameters count. The figure's shape
+    follows the drawing's, so no band of it is left empty."""
     pal = ef.PALETTES[palette]
     e = instance_extents()
     w, half, sd = e["w_um"], e["l_um"] / 2, e["sd_um"]
     over = STYLE["gate_overhang_um"]
     off = (2 * (half + sd)) * STYLE["dim_offset"]
     fill = pal[_CARRIER[PLAN_DEVICE]]
+    side = (half + sd) * STYLE["plan_side"]
+    top, bottom = w + over + off, -over - off
+    x_lo, x_hi = -half - sd - side, half + sd + side
+    y_lo, y_hi = bottom - off * STYLE["plan_rows"], top + off * STYLE["plan_rows"]
+    width_in = STYLE["plan_in"][0]
     with matplotlib.rc_context(ef._rc(palette)):
-        fig = _figure(STYLE["plan_in"])
+        fig = _figure((width_in, width_in * (y_hi - y_lo) / (x_hi - x_lo)))
         ax = fig.subplots()
         ax.set_axis_off()
         ax.set_aspect("equal")
-        for x0, x1, name, short in ((-half - sd, -half, "source", "AS, PS"),
-                                    (half, half + sd, "drain", "AD, PD")):  # fmt: skip
+        for x0, x1, name, short, ha, tx in (
+            (-half - sd, -half, "source", "AS, PS", "right", -half - sd - off / 2),
+            (half, half + sd, "drain", "AD, PD", "left", half + sd + off / 2),
+        ):
             ax.fill_between([x0, x1], 0, w, color=fill, alpha=ef.STYLE["cell_alpha"], lw=0)
             ax.plot([x0, x1, x1, x0, x0], [0, 0, w, w, 0], color=pal["text"],
                     lw=ef.STYLE["line_width"], ls=ef.STYLE["window_dash"], gid=name)  # fmt: skip
-            ax.text((x0 + x1) / 2, w / 2, f"{name}\n{short}", ha="center", va="center",
-                    rotation=ef.STYLE["upright_deg"])  # fmt: skip
+            ax.text(tx, w / 2, f"{name}\n({short})", ha=ha, va="center", multialignment=ha)
         ax.fill_between([-half, half], -over, w + over, color=pal["muted"],
                         alpha=ef.STYLE["cell_alpha"], lw=0)  # fmt: skip
         ax.plot([-half, half, half, -half, -half], [-over, -over, w + over, w + over, -over],
                 color=pal["text"], lw=ef.STYLE["edge_width"], gid="gate")  # fmt: skip
-        ax.text(0, w / 2, "gate", ha="center", va="center", rotation=ef.STYLE["upright_deg"])
+        ax.text(0, bottom, "gate", ha="center", va="center")
         arrow = {"arrowstyle": "<->", "color": pal["text"], "lw": ef.STYLE["edge_width"]}
-        right = half + sd + off
-        ax.annotate("", xy=(right, 0), xytext=(right, w), arrowprops=arrow)
-        ax.text(right + off / 2, w / 2, f"W = {w:g} µm", ha="left", va="center")
-        top = w + over + off
+        ax.annotate("", xy=(0, 0), xytext=(0, w), arrowprops=arrow)
+        ax.text(off / 4, w / 2, f"W = {w:g} µm", ha="left", va="center",
+                rotation=ef.STYLE["upright_deg"])  # fmt: skip
         ax.annotate("", xy=(-half, top), xytext=(half, top), arrowprops=arrow)
         ax.text(0, top + off / 2, f"L = {e['l_um']:g} µm", ha="center", va="bottom")
-        bottom = -over - off
         ax.annotate("", xy=(half, bottom), xytext=(half + sd, bottom), arrowprops=arrow)
         ax.text(half + sd / 2, bottom - off / 2, f"{sd:g} µm", ha="center", va="top")
-        span = 2 * (half + sd)
-        pad = span * STYLE["plan_margin"]
-        ax.set_xlim(-half - sd - pad, half + sd + pad * 2)
-        ax.set_ylim(bottom - pad, top + pad)
+        ax.set_xlim(x_lo, x_hi)
+        ax.set_ylim(y_lo, y_hi)
         return fig
 
 
