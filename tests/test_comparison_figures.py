@@ -492,3 +492,24 @@ def test_positive_control_literal_digits():
         "    ax.text(0, 0, f'{g:.0%}')\n"
     )
     assert [line for line, _ in literal_digits(src, {"nfet_05v0"})] == [2, 3]
+
+
+# The figures drawn from no results tree: the two explainer-model drawings (the committed TCAD
+# tree through gf180tcad.explain.model), the process-file plot and the two drawn from code.
+NO_ROOT = {"process-cell", "start-stack", "centroid", "geometries", "instance-plan"}
+
+
+@pytest.mark.parametrize("name", sorted(set(FIGURES) - NO_ROOT))
+def test_figures_read_the_trees_they_are_given(name, tmp_path):
+    """Given empty trees, every figure that reads results fails: none falls back to the
+    committed trees behind docgen.generate's back."""
+    empty = cf.Roots(spice=tmp_path, older_pdk=tmp_path, tcad=tmp_path)
+    with pytest.raises(OSError):
+        cf.FIGURES[name]("light", empty)
+
+
+def test_default_roots_are_the_committed_trees():
+    assert cf.DEFAULT_ROOTS == cf.Roots(
+        REPO_ROOT / "results/spice", REPO_ROOT / "results/spice-pdk-d658698",
+        REPO_ROOT / "results/tcad",
+    )  # fmt: skip

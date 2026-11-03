@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
 import matplotlib
 import numpy as np
@@ -79,6 +80,23 @@ SPICE_ROOT = REPO_ROOT / "results" / "spice"
 OLDER_PDK_ROOT = REPO_ROOT / "results" / "spice-pdk-d658698"
 # The committed TCAD results: 1D and 2D C-V, calibration, validation, mesh convergence.
 TCAD_ROOT = REPO_ROOT / "results" / "tcad"
+
+
+class Roots(NamedTuple):
+    """The results trees the figures read: the committed ones unless
+    :func:`gf180tcad.docgen.generate` is given others. The process-cell and start-stack drawings
+    read the committed TCAD tree through the explainer model (:mod:`gf180tcad.explain.model`),
+    and the centroid plot reads the process files, so those three take no root."""
+
+    spice: Path = SPICE_ROOT
+    older_pdk: Path = OLDER_PDK_ROOT
+    tcad: Path = TCAD_ROOT
+
+
+# The committed trees: the roots every figure reads unless it is given others.
+DEFAULT_ROOTS = Roots()
+
+
 # The corner of the SPICE reference that the TCAD is compared with.
 TYPICAL = "typical"
 
@@ -118,7 +136,7 @@ def process_cell_model() -> model.Cell:
 _DOPED = {"donor": "n-type", "acceptor": "p-type"}
 
 
-def process_cell_figure(palette: str):
+def process_cell_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The cell of :func:`process_cell_model` cut along its length, drawn by
     :func:`gf180tcad.explain.figures.cross_section_figure`: the parts whose doping, oxide and
     contacts one process description sets. Each doped region carries its type and doping from
@@ -155,10 +173,10 @@ def process_cell_figure(palette: str):
     return fig
 
 
-def process_cell(palette: str) -> bytes:
+def process_cell(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`process_cell_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(process_cell_figure(palette))
+        return ef._svg(process_cell_figure(palette, roots))
 
 
 # The device of the plan view.
@@ -184,7 +202,7 @@ def instance_extents(device: str = PLAN_DEVICE, gid: str = PLAN_GEOMETRY) -> dic
     return {"w_um": g.w_um, "l_um": g.l_um, "sd_um": sd_um}
 
 
-def instance_plan_figure(palette: str):
+def instance_plan_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The transistor of the SPICE reference seen from above, to scale: the gate strip of length
     L across the active area of width W, and the source and drain each of the length that AS and
     PS (AD and PD) assume, outlined by the perimeter those parameters count."""
@@ -228,13 +246,13 @@ def instance_plan_figure(palette: str):
         return fig
 
 
-def instance_plan(palette: str) -> bytes:
+def instance_plan(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`instance_plan_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(instance_plan_figure(palette))
+        return ef._svg(instance_plan_figure(palette, roots))
 
 
-def geometries_figure(palette: str):
+def geometries_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """W against L of every compared geometry, one panel per device: filled markers for the
     calibration geometries, open markers for the held-out ones (:attr:`Geometry.role`)."""
     pal = ef.PALETTES[palette]
@@ -267,15 +285,15 @@ def geometries_figure(palette: str):
         return fig
 
 
-def geometries(palette: str) -> bytes:
+def geometries(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`geometries_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(geometries_figure(palette))
+        return ef._svg(geometries_figure(palette, roots))
 
 
-def meshconv_report(dim: int, device: str) -> dict:
+def meshconv_report(dim: int, device: str, root: Path = TCAD_ROOT) -> dict:
     """The committed mesh-convergence report of the ``dim``-D MOS capacitor of ``device``."""
-    path = TCAD_ROOT / "meshconv" / f"moscap{dim}d" / device / "report.json"
+    path = Path(root) / "meshconv" / f"moscap{dim}d" / device / "report.json"
     return json.loads(path.read_text("utf-8"))
 
 
@@ -291,7 +309,7 @@ def meshconv_points(report: dict) -> tuple[list[int], list[float]]:
     return nodes, change
 
 
-def meshconv_figure(palette: str):
+def meshconv_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The mesh convergence of the 1D and 2D MOS capacitors: the largest change of the C per
     area against the next finer mesh, by node count, with the reports' criterion."""
     pal = ef.PALETTES[palette]
@@ -302,7 +320,7 @@ def meshconv_figure(palette: str):
         ax = fig.subplots()
         for dim, style in ((1, "-"), (2, "--")):
             for device in _DEVICES:
-                report = meshconv_report(dim, device)
+                report = meshconv_report(dim, device, roots.tcad)
                 crit.add(report["criterion"])
                 nodes, change = meshconv_points(report)
                 ax.plot(nodes, change, color=pal[_CARRIER[device]], ls=style, lw=lw, marker="o",
@@ -324,16 +342,16 @@ def meshconv_figure(palette: str):
         return fig
 
 
-def meshconv(palette: str) -> bytes:
+def meshconv(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`meshconv_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(meshconv_figure(palette))
+        return ef._svg(meshconv_figure(palette, roots))
 
 
 # --- the C-V calibration ---------------------------------------------------------------------
 
 
-def _cv_grid_figure(role: str, palette: str) -> Figure:
+def _cv_grid_figure(role: str, palette: str, roots: Roots) -> Figure:
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     rows = {d: _geometries(d, role) for d in _DEVICES}
@@ -344,7 +362,7 @@ def _cv_grid_figure(role: str, palette: str) -> Figure:
         for col, device in enumerate(_DEVICES):
             for row, g in enumerate(rows[device]):
                 ax = axes[row][col]
-                c = ef.cv_curves(device, "calibrated", geometry_id(g))
+                c = ef.cv_curves(device, "calibrated", geometry_id(g), roots.spice, roots.tcad)
                 ax.fill_between(c["u_spice"], c["spice_lo"], c["spice_hi"], color=pal["band"],
                                 linewidth=0, label="SPICE, all corners", gid="corners")  # fmt: skip
                 ax.plot(c["u_spice"], c["spice_tt"], color=pal["text"], lw=lw,
@@ -366,27 +384,27 @@ def _cv_grid_figure(role: str, palette: str) -> Figure:
         return fig
 
 
-def cv_fit_figure(palette: str):
+def cv_fit_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """Cgg against u of each calibration geometry, nfet left and pfet right: the SPICE typical
     corner inside the band of its five corners, and the fitted 1D stack, dashed."""
-    return _cv_grid_figure("calibration", palette)
+    return _cv_grid_figure("calibration", palette, roots)
 
 
-def cv_fit(palette: str) -> bytes:
+def cv_fit(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`cv_fit_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(cv_fit_figure(palette))
+        return ef._svg(cv_fit_figure(palette, roots))
 
 
-def cv_validation_figure(palette: str):
+def cv_validation_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The same as :func:`cv_fit_figure` at the held-out geometries."""
-    return _cv_grid_figure("validation", palette)
+    return _cv_grid_figure("validation", palette, roots)
 
 
-def cv_validation(palette: str) -> bytes:
+def cv_validation(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`cv_validation_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(cv_validation_figure(palette))
+        return ef._svg(cv_validation_figure(palette, roots))
 
 
 # The device of the curve the metric figure marks.
@@ -395,21 +413,21 @@ METRIC_DEVICE = "nfet_05v0"
 METRIC_GEOMETRY = "w10p0_l10p00"
 
 
-def metric_regions() -> tuple[np.ndarray, np.ndarray, calcv.Regions]:
+def metric_regions(spice_root: Path = SPICE_ROOT) -> tuple[np.ndarray, np.ndarray, calcv.Regions]:
     """``(u, C, regions)`` of the SPICE typical curve of :data:`METRIC_GEOMETRY`, the regions
     by :func:`gf180tcad.calibrate.cv.regions`, the function the calibration uses."""
     pol = DEVICES[METRIC_DEVICE].polarity
-    cols = data.spice_columns(SPICE_ROOT, "ngspice", TYPICAL, METRIC_DEVICE, METRIC_GEOMETRY, "cv")
+    cols = data.spice_columns(spice_root, "ngspice", TYPICAL, METRIC_DEVICE, METRIC_GEOMETRY, "cv")
     u, c = data.spice_cv(cols, pol)
     return u, c, calcv.regions(tuple(u.tolist()), tuple(c.tolist()))
 
 
-def cv_metric_figure(palette: str):
+def cv_metric_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The SPICE curve of :data:`METRIC_GEOMETRY` with the parts the agreement metric reads:
     the two plateaus (shaded), u_fb and u_t, the level C_mid and its two crossings."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
-    u, c, r = metric_regions()
+    u, c, r = metric_regions(roots.spice)
     off = calcv.PLATEAU_OFFSET_V
     lift = r.c_acc * STYLE["label_lift"]
     with matplotlib.rc_context(ef._rc(palette)):
@@ -441,24 +459,26 @@ def cv_metric_figure(palette: str):
         return fig
 
 
-def cv_metric(palette: str) -> bytes:
+def cv_metric(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`cv_metric_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(cv_metric_figure(palette))
+        return ef._svg(cv_metric_figure(palette, roots))
 
 
-def edge_curves(device: str = "pfet_05v0") -> list[dict]:
+def edge_curves(
+    device: str = "pfet_05v0", spice_root: Path = SPICE_ROOT, tcad_root: Path = TCAD_ROOT
+) -> list[dict]:
     """For each W = 10 µm geometry of ``device`` by falling L: the SPICE typical curve and the
     fitted 1D curve, each divided by its own C at u = -5 V, and the SPICE depletion-side
     crossing ``u_dep`` with its level, by :func:`gf180tcad.calibrate.cv.crossings`."""
     pol = DEVICES[device].polarity
-    moscap, proc = data.read_moscap(TCAD_ROOT, device, "calibrated")
+    moscap, proc = data.read_moscap(tcad_root, device, "calibrated")
     out = []
     wide = max(g.w_um for g in DEVICES[device].geometries)
     for g in sorted(DEVICES[device].geometries, key=lambda g: -g.l_um):
         if g.w_um != wide:
             continue
-        cols = data.spice_columns(SPICE_ROOT, "ngspice", TYPICAL, device, geometry_id(g), "cv")
+        cols = data.spice_columns(spice_root, "ngspice", TYPICAL, device, geometry_id(g), "cv")
         u_s, c_s = data.spice_cv(cols, pol)
         u_t, _i, _p, c_t = data.tcad_cgg(moscap, g, proc, pol)
         u_dep, _u_inv = calcv.crossings(tuple(u_s.tolist()), tuple(c_s.tolist()))
@@ -468,13 +488,13 @@ def edge_curves(device: str = "pfet_05v0") -> list[dict]:
     return out
 
 
-def pfet_edge_figure(palette: str):
+def pfet_edge_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The pfet's depletion edge against gate length: the SPICE typical curve (solid) and the
     fitted 1D curve (dashed) of each W = 10 µm geometry, each over its own accumulation value,
     with the SPICE crossing u_dep marked."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
-    curves = edge_curves()
+    curves = edge_curves("pfet_05v0", roots.spice, roots.tcad)
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
@@ -498,25 +518,25 @@ def pfet_edge_figure(palette: str):
         return fig
 
 
-def pfet_edge(palette: str) -> bytes:
+def pfet_edge(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`pfet_edge_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(pfet_edge_figure(palette))
+        return ef._svg(pfet_edge_figure(palette, roots))
 
 
 # --- the process data ------------------------------------------------------------------------
 
 
-def start_stack_figure(palette: str):
+def start_stack_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The 1D stack of the nfet at the start values of the calibration, oxide and body shaded."""
     dev = model.device("nfet_05v0", "start", scales=ef.STYLE["scales"])
     return ef.stack_1d_figure(dev, ("oxide", "body"), palette)
 
 
-def start_stack(palette: str) -> bytes:
+def start_stack(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`start_stack_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(start_stack_figure(palette))
+        return ef._svg(start_stack_figure(palette, roots))
 
 
 # The device of the split plot.
@@ -526,7 +546,7 @@ SPLIT_DEVICE = "nfet_05v0"
 SPLIT_GEOMETRY = "w10p0_l0p60"
 
 
-def cgg_split_figure(palette: str):
+def cgg_split_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The fitted 1D Cgg of :data:`SPLIT_GEOMETRY` and its two parts by the BSIM4 bookkeeping
     (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`): the intrinsic part over the
     capacitance area, and the overlap, fringe and gate-bulk part."""
@@ -534,7 +554,7 @@ def cgg_split_figure(palette: str):
     lw = ef.STYLE["line_width"]
     dev = DEVICES[SPLIT_DEVICE]
     (g,) = [g for g in dev.geometries if geometry_id(g) == SPLIT_GEOMETRY]
-    moscap, proc = data.read_moscap(TCAD_ROOT, SPLIT_DEVICE, "calibrated")
+    moscap, proc = data.read_moscap(roots.tcad, SPLIT_DEVICE, "calibrated")
     u, intrinsic, parasitic, total = data.tcad_cgg(moscap, g, proc, dev.polarity)
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
@@ -552,10 +572,10 @@ def cgg_split_figure(palette: str):
         return fig
 
 
-def cgg_split(palette: str) -> bytes:
+def cgg_split(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`cgg_split_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(cgg_split_figure(palette))
+        return ef._svg(cgg_split_figure(palette, roots))
 
 
 def centroid_curves(device: str) -> dict:
@@ -573,7 +593,7 @@ def centroid_curves(device: str) -> dict:
             "centroid": process.centroid(cv)}  # fmt: skip
 
 
-def centroid_figure(palette: str):
+def centroid_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """X_DC against u for both devices: the accumulation formula (solid), the plateau windows
     beyond plus and minus :data:`gf180tcad.tcad.process.PLATEAU_V` (shaded), the largest value
     inside the accumulation window (marked) and the inversion supremum (dotted, on the inversion
@@ -609,10 +629,10 @@ def centroid_figure(palette: str):
         return fig
 
 
-def centroid(palette: str) -> bytes:
+def centroid(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`centroid_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(centroid_figure(palette))
+        return ef._svg(centroid_figure(palette, roots))
 
 
 # --- the PDK versions ------------------------------------------------------------------------
@@ -632,7 +652,7 @@ def pdk_sweep_curves(device: str, root: Path) -> list[tuple[np.ndarray, np.ndarr
     return out
 
 
-def pdk_sweeps_figure(palette: str):
+def pdk_sweeps_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """|Id| against |Vg| of the linear sweep at :data:`PDK_GEOMETRY`, one panel per device: the
     reference with the PDK of the image (solid) and the rerun with open_pdks d658698 (dashed,
     on top)."""
@@ -642,8 +662,8 @@ def pdk_sweeps_figure(palette: str):
         fig = _figure(ef.STYLE["size_in"])
         axes = fig.subplots(1, len(_DEVICES), sharey=True)
         for ax, device in zip(axes, _DEVICES, strict=True):
-            new = pdk_sweep_curves(device, SPICE_ROOT)
-            old = pdk_sweep_curves(device, OLDER_PDK_ROOT)
+            new = pdk_sweep_curves(device, roots.spice)
+            old = pdk_sweep_curves(device, roots.older_pdk)
             for k, ((vg, i_new), (vg_old, i_old)) in enumerate(zip(new, old, strict=True)):
                 ax.plot(vg, i_new, color=pal[_CARRIER[device]], lw=lw,
                         label=None if k else "PDK of the image", gid=f"image {k}")  # fmt: skip
@@ -662,14 +682,14 @@ def pdk_sweeps_figure(palette: str):
         return fig
 
 
-def pdk_sweeps(palette: str) -> bytes:
+def pdk_sweeps(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`pdk_sweeps_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(pdk_sweeps_figure(palette))
+        return ef._svg(pdk_sweeps_figure(palette, roots))
 
 
 # name -> function of the palette name; each is written in both palettes by write_all.
-FIGURES: dict[str, Callable[[str], bytes]] = {
+FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "process-cell": process_cell,
     "instance-plan": instance_plan,
     "geometries": geometries,
@@ -685,10 +705,11 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
 }
 
 
-def write_all(out_dir: Path) -> None:
-    """Write every figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg``."""
+def write_all(out_dir: Path, roots: Roots = DEFAULT_ROOTS) -> None:
+    """Write every figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg``,
+    from the trees of ``roots``."""
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     for name, draw in FIGURES.items():
         for palette in ef.PALETTES:
-            (out / f"{name}-{palette}.svg").write_bytes(draw(palette))
+            (out / f"{name}-{palette}.svg").write_bytes(draw(palette, roots))

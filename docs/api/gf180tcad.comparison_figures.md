@@ -19,6 +19,9 @@ Source: {repo}`src/gf180tcad/comparison_figures.py`. Its figures appear on the
 .. autodata:: gf180tcad.comparison_figures.TCAD_ROOT
    :no-value:
 
+.. autodata:: gf180tcad.comparison_figures.DEFAULT_ROOTS
+   :no-value:
+
 .. autodata:: gf180tcad.comparison_figures.TYPICAL
 
 .. autodata:: gf180tcad.comparison_figures.PLAN_DEVICE

@@ -511,7 +511,12 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     shutil.rmtree(out / "explained", ignore_errors=True)
     explained_figures.write_all(out / "explained")
     shutil.rmtree(out / "comparison", ignore_errors=True)
-    comparison_figures.write_all(out / "comparison")
+    comparison_figures.write_all(
+        out / "comparison",
+        comparison_figures.Roots(
+            spice=Path(results_root), tcad=TCAD_RESULTS if tcad_root is None else Path(tcad_root)
+        ),
+    )
 
 
 # --- TCAD MOS capacitor pages (Task 13a) ------------------------------------------------------
