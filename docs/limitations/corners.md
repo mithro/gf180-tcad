@@ -2,8 +2,8 @@
 
 # Corner fits of the 1D MOS capacitor
 
-The corner fits give each fitted number of the 1D {term}`MOS capacitor <MOSCAP>` a lowest and a
-highest value. They span the five SPICE {term}`corners <corner>`
+The {term}`corner` fits give each fitted number of the 1D {term}`MOS capacitor <MOSCAP>` a
+lowest and a highest value. They span the five {term}`SPICE` corners
 ({ref}`explained-calibration-corners`, {ref}`reproduce-corners`). This page sets out what those
 fits cannot see, which fits stop on a limit, and how their shifts compare with the
 {term}`model card`'s. The fits are in {repo}`results/tcad/corners`.
@@ -44,7 +44,7 @@ gap is positive at its shortest gate and negative at its longest. The typical fi
 
 These corner inputs do not enter a corner fit at all:
 
-- **VSAT and its binning.** The saturation velocity acts on drain current, not on a C–V curve.
+- **VSAT and its binning.** The saturation velocity acts on drain current, not on a {term}`C–V` curve.
 - **TOXM.** The card's oxide thickness for parameter extraction, which the C–V model never reads.
 - **The pfet's PVTH0 line.** It adds a threshold shift that grows as the gate shrinks. At the
   worst calibration gate it moves VTH0 by {{ x_corner_pvth0_dv }}
@@ -101,7 +101,7 @@ where
 
 - $d_{t,c}$ is the oxide difference at corner $c$, in nm;
 - $t_c$ is the fitted oxide thickness at corner $c$, in nm;
-- $t_t$ is the fitted oxide thickness at the typical corner, in nm;
+- $t_t$ is the fitted oxide thickness at the {term}`typical corner`, in nm;
 - $\Delta t_c$ is the card's TOXE offset at corner $c$, in nm.
 
 For the gate voltage shift, {math:numref}`eq-corner-crosscheck-vfb` gives it:

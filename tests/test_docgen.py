@@ -729,7 +729,7 @@ def test_docgen_corner_table_one_value_per_cell():
     tables = _md_tables(lines)
     assert len(tables) == 6
     one_value = re.compile(r"^(`[a-z_0-9]+`( \([^)]+\))?|[−+-]?[0-9.]+(e[−+]?[0-9]+)?|[a-z]+|"
-                           r"lower bound|upper bound|Agree|Same process|Disagree|not applicable)$")  # fmt: skip
+                           r"lower bound|upper bound|\{term\}`(Agree|Same process|Disagree)`|not applicable)$")  # fmt: skip
     for header, rows in tables:
         assert len(header) <= 5, header
         for r in rows:
@@ -751,8 +751,8 @@ def test_docgen_corner_table_one_value_per_cell():
     assert tox[0] == ["Corner", "Card (nm)", "Fit (nm)", "Difference (nm)"]
     assert fb[0][1] == "Card (mV)"
     assert [r[0] for r in tox[1]] == ["ff", "ss", "fs", "sf"]
-    assert verdicts[1][0] == ["typical", "Agree", "not applicable"]
-    assert verdicts[1][2] == ["ss", "Agree", "Same process"]
+    assert verdicts[1][0] == ["typical", "{term}`Agree`", "not applicable"]
+    assert verdicts[1][2] == ["ss", "{term}`Agree`", "{term}`Same process`"]
     assert "Bound hits: `t_ox_eff_nm` at ff is on its lower bound." in lines
 
 

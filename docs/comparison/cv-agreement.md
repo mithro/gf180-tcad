@@ -492,7 +492,7 @@ multi-hour 2D sweep runs once and serves both the results folder and the validat
 The corner fits repeat this calibration against each of the other four SPICE
 {term}`corners <corner>`. Each takes its corner's {term}`model card` offsets as fixed inputs
 ({ref}`reproduce-corners`). The tables below give each fitted number's lowest and highest value
-over the corners. The typical fit is beside them. {numref}`Figure %s of What the calibration changes <fig-calibration-bounds>`
+over the corners. The typical fit is beside them. {ref}`The bounds figure <fig-calibration-bounds>`
 draws the same bounds. What the corner fits cannot see is on {doc}`/limitations/corners`.
 
 **nfet_05v0**

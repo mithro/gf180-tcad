@@ -750,7 +750,7 @@ def corner_verdicts(root: Path = ROOT) -> str:
                 if len(corners) == len(CORNERS) - 1
                 else ("at " + ", ".join(corners))
             )
-            clauses.append(f"the {device} is {{term}}`{verdict}` {where}")
+            clauses.append(f"the {{term}}`{device}` is {{term}}`{verdict}` {where}")
     return "Against each corner's SPICE curves, " + "; ".join(clauses)
 
 

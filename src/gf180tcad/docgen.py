@@ -1076,6 +1076,11 @@ def _corner_label(name: str) -> str:
     return f"`{name}` ({CORNER_UNITS[name][0]})"
 
 
+def _verdict_term(verdict: str) -> str:
+    """A verdict linked to its glossary entry; "not applicable" as it is."""
+    return verdict if verdict == "not applicable" else f"{{term}}`{verdict}`"
+
+
 def _bound_word(hit: str | None) -> str:
     return {"lower": "lower bound", "upper": "upper bound", None: "no"}[hit]
 
@@ -1106,15 +1111,14 @@ def corner_tables(name: str, summary: dict) -> list[str]:
     for c in corners:
         e = summary["corners"][c]
         held = cv.worst(e["held_out"].values()) if "held_out" in e else "not applicable"
-        verdicts.append([c, e["verdict"], held])
+        verdicts.append([c, _verdict_term(e["verdict"]), _verdict_term(held)])
         hits += [f"`{k}` at {c} is on its {v} bound" for k, v in sorted(e["bound_hits"].items())]
     lines = [
         (
-            f"From {src}: each fitted number at the typical corner (the committed calibration) "
-            "and the lowest and highest value over the five corners. The spread is the highest "
-            "minus the lowest. A lowest or highest value on a bound of its fit is reported as "
-            "that bound ({ref}`reproduce-corners`). {numref}`Figure %s of What the calibration "
-            "changes <fig-calibration-bounds>` draws the bounds of both devices."
+            f"From {src}: each fitted number at the {{term}}`typical corner` (the committed "
+            "calibration) and the lowest and highest value over the five {term}`corners <corner>`. "
+            "The spread is the highest minus the lowest. A lowest or highest value on a bound of "
+            "its fit is reported as that bound ({ref}`reproduce-corners`)."
         ),
         "",
         *_table(["Number", "Typical", "Lowest", "Highest", "Spread"], bounds),
@@ -1138,7 +1142,7 @@ def corner_tables(name: str, summary: dict) -> list[str]:
         ]  # fmt: skip
         lines += [
             (
-                f"Card cross-check of `{n}`: the model card's shift of the same quantity at each "
+                f"Card cross-check of `{n}`: the {{term}}`model card`'s shift of the same quantity at each "
                 "corner, the fit's shift from the typical value, and the fit's minus the card's:"
             ),
             "",
@@ -1147,8 +1151,8 @@ def corner_tables(name: str, summary: dict) -> list[str]:
         ]
     lines += [
         (
-            "The verdict at each corner against that corner's SPICE curves: at the calibration "
-            "geometries, and the worst at the held-out geometries (1D):"
+            "The verdict at each corner against that corner's {term}`SPICE` reference: at the "
+            "calibration geometries, and the worst at the held-out geometries (1D):"
         ),
         "",
         *_table(["Corner", "Calibration", "Held out (1D)"], verdicts),

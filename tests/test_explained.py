@@ -2136,7 +2136,7 @@ def test_corner_verdict_sentence_is_the_summaries():
         }
         if len(set(verdicts.values())) == 1:
             (v,) = set(verdicts.values())
-            assert f"the {device} is {{term}}`{v}` at every corner" in sentence
+            assert f"the {{term}}`{device}` is {{term}}`{v}` at every corner" in sentence
 
 
 def test_corner_crossing_gaps_back_the_limitations_page():
