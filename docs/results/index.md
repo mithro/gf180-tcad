@@ -34,9 +34,10 @@ capacitance against the gate voltage, with the line and the band as at the top.
 ```
 
 The function {py:func}`gf180tcad.docgen.generate` writes the pages at documentation build
-time, into a git-ignored folder that {repo}`.gitignore` lists. The docs configuration
+time, into the git-ignored folder {repo}`docs/_generated/ <.gitignore#L10>`. The docs configuration
 {repo}`docs/conf.py` calls it, and it reads only the committed {repo}`results/spice` files. So the pages never show numbers that are not in
-the dataset. Builds of one checkout serialise on a lock file, also git-ignored, and swap the
+the dataset. Builds of one checkout serialise on the lock file
+{repo}`docs/.generated.lock <.gitignore#L12>`, also git-ignored, and swap the
 finished folder in atomically. So two docs builds can run at the same time without corrupting
 each other.
 
