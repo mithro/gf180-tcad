@@ -103,6 +103,19 @@ STYLE = {
     # width long, a drawing choice (the fitted shift is too small to see at its true length).
     "part_offset": 0.14,
     "shift_arrow": 0.1,
+    # The overview plots (C-V of both devices, the SPICE reference sweeps): one panel per row, so
+    # the text keeps the 6.4 in width's size at 400 px; the Id-Vd family's line colours.
+    "overview_size_in": (6.4, 8.8),
+    "overview_ncols": 2,
+    # The pfet's two SPICE depletion edges: dotted lines this many edge widths thick, and the
+    # arrow between them at this fraction of the axis height.
+    "edge_line_factor": 2.0,
+    "edge_arrow_at": 0.25,
+    "sweeps_size_in": (6.4, 10.0),
+    "family": ("electron", "hole", "highlight", "highlight_oxide", "text"),
+    "family_ncols": 3,
+    # Room above the Id-Vd family for its legend, as a factor of the highest current.
+    "family_headroom": 1.45,
     # The calibration limits: a taller figure for the three panels; each limit drawn as a bar this
     # wide (pt) with end ticks this tall (pt); the start and fitted markers this size (pt); room of
     # this fraction of a row above and below the two rows, and of the axis width at either end, so
@@ -131,8 +144,9 @@ STYLE = {
     "corner_limits_size_in": (6.4, 7.2),
 }
 
-#: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
-UNITS = {"um_per_cm": 1e4, "kv_per_v": 1e-3, "mv_per_v": 1e3}
+#: Unit conversions of the junction panels (cm to µm, V/cm to kV/cm), the SPICE sweeps (A to
+#: mA) and the corner cross-check (V to mV).
+UNITS = {"um_per_cm": 1e4, "kv_per_v": 1e-3, "ma_per_a": 1e3, "mv_per_v": 1e3}
 
 # Okabe-Ito colours for the carriers and the highlight; greys for the muted parts.
 PALETTES = {
@@ -703,6 +717,137 @@ def _moscap_cv(palette: str) -> bytes:
     return cv_against_spice("nfet_05v0", "calibrated", "w10p0_l10p00", palette)
 
 
+#: The overview plots (docs/index.md, docs/results/index.md and README.md): each device at its
+#: minimum gate length, where the pfet's 1D stack disagrees with SPICE; the SPICE sweeps of the
+#: first.
+OVERVIEW = (("nfet_05v0", "w10p0_l0p60"), ("pfet_05v0", "w10p0_l0p50"))
+#: The sweeps of :func:`spice_sweeps`, one panel each, top to bottom.
+SWEEPS = ("idvg_lin", "idvd", "cv")
+
+
+def _geometry_title(device: str, gid: str) -> str:
+    from gf180tcad.devices import DEVICES, geometry_id
+
+    (geom,) = [g for g in DEVICES[device].geometries if geometry_id(g) == gid]
+    return f"{device}, W = {geom.w_um:g} µm, L = {geom.l_um:g} µm"
+
+
+def cv_overview(palette: str) -> bytes:
+    """The gate capacitance against the gate voltage of each device of :data:`OVERVIEW`, one
+    panel each: the :term:`SPICE` model at the :term:`typical corner` inside the band of its five
+    :term:`corners <corner>`; the committed 1D stack at the start values (dotted) and the fitted
+    values (dashed), from :func:`cv_curves`; and the committed 2D cell at the start and the fitted
+    values (dash-dot, :func:`gf180tcad.explain.data.two_d_cgg`). The x axis is the gate voltage
+    itself, so the pfet's curves run over negative voltages."""
+    from gf180tcad.devices import DEVICES
+
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    tcad_root = numbers.ROOT / "results" / "tcad"
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["overview_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(OVERVIEW), 1)
+        for ax, (device, gid) in zip(axes, OVERVIEW, strict=True):
+            pol = DEVICES[device].polarity
+            start = cv_curves(device, "start", gid)
+            fitted = cv_curves(device, "calibrated", gid)
+            u2s, c2s = data.two_d_cgg(tcad_root, device, "start", gid, pol)
+            u2f, c2f = data.two_d_cgg(tcad_root, device, "calibrated", gid, pol)
+            ax.fill_between(pol * fitted["u_spice"], fitted["spice_lo"], fitted["spice_hi"],
+                            color=pal["band"], linewidth=0, label="SPICE, all corners")  # fmt: skip
+            ax.plot(pol * fitted["u_spice"], fitted["spice_tt"], color=pal["text"], lw=lw,
+                    label="SPICE, typical")  # fmt: skip
+            ax.plot(pol * start["u"], start["tcad"], color=pal["muted"], lw=lw, ls=":",
+                    label="1D, start values")  # fmt: skip
+            ax.plot(pol * fitted["u"], fitted["tcad"], color=pal["highlight"], lw=lw, ls="--",
+                    zorder=STYLE["cv_zorder"], label="1D, fitted")  # fmt: skip
+            ax.plot(pol * u2s, c2s, color=pal["hole"], lw=lw, ls="-.",
+                    label="2D, start values")  # fmt: skip
+            ax.plot(pol * u2f, c2f, color=pal["electron"], lw=lw, ls="-.",
+                    zorder=STYLE["cv_zorder"], label="2D, fitted")  # fmt: skip
+            ax.set_ylim(bottom=0)
+            ax.grid(True)
+            ax.set_title(_geometry_title(device, gid))
+            ax.set_xlabel("gate voltage (V)")
+            ax.set_ylabel("gate capacitance (fF)")
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["overview_ncols"],
+                   frameon=False)  # fmt: skip
+        return _svg(fig)
+
+
+def _corner_sweeps(device: str, gid: str, sweep: str) -> list[dict]:
+    """The columns of one SPICE sweep at each corner, the :term:`typical corner` first."""
+    from gf180tcad.devices import CORNERS
+
+    order = (TYPICAL, *[c for c in CORNERS if c != TYPICAL])
+    return [data.spice_columns(SPICE_ROOT, "ngspice", c, device, gid, sweep) for c in order]
+
+
+def spice_sweeps(palette: str) -> bytes:
+    """Three sweeps of the :term:`SPICE` reference of the first device of :data:`OVERVIEW`, one
+    panel each, with the body at 0 V: the drain current against the gate voltage at the low drain
+    voltage and the gate capacitance against the gate voltage, each at the :term:`typical
+    corner` inside the band of the five :term:`corners <corner>`; and the drain current against
+    the drain voltage at the typical corner, one line per gate voltage."""
+    from gf180tcad.devices import DEVICES
+
+    device, gid = OVERVIEW[0]
+    pol = DEVICES[device].polarity
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    ma = UNITS["ma_per_a"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["sweeps_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax_g, ax_d, ax_c = fig.subplots(len(SWEEPS), 1)
+        fig.suptitle(_geometry_title(device, gid))
+
+        lin = _corner_sweeps(device, gid, "idvg_lin")
+        rows = [c["vb"] == 0.0 for c in lin]
+        x = pol * lin[0]["vg"][rows[0]]
+        ids = [np.abs(c["id"][m]) * ma for c, m in zip(lin, rows, strict=True)]
+        (vds,) = set(np.abs(lin[0]["vd"][rows[0]]).tolist())
+        ax_g.fill_between(x, np.min(ids, axis=0), np.max(ids, axis=0), color=pal["band"],
+                          linewidth=0, label="all corners")  # fmt: skip
+        ax_g.plot(x, ids[0], color=pal["text"], lw=lw, label="typical corner")
+        ax_g.set_title(f"drain current, drain at {vds:g} V")
+        ax_g.set_xlabel("gate voltage (V)")
+        ax_g.set_ylabel("drain current (mA)")
+        ax_g.legend(frameon=False)
+
+        out = data.spice_columns(SPICE_ROOT, "ngspice", TYPICAL, device, gid, "idvd")
+        m0 = out["vb"] == 0.0
+        for colour, vg in zip(STYLE["family"], sorted(set(np.abs(out["vg"][m0]).tolist())),
+                              strict=True):  # fmt: skip
+            m = m0 & (np.abs(out["vg"]) == vg)
+            ax_d.plot(pol * out["vd"][m], np.abs(out["id"][m]) * ma, color=pal[colour], lw=lw,
+                      label=f"gate at {vg:g} V")  # fmt: skip
+        ax_d.set_title("drain current, typical corner")
+        ax_d.set_xlabel("drain voltage (V)")
+        ax_d.set_ylabel("drain current (mA)")
+        ax_d.set_ylim(bottom=0, top=STYLE["family_headroom"] * ax_d.get_ylim()[1])
+        ax_d.legend(frameon=False, ncols=STYLE["family_ncols"], loc="upper left")
+
+        cv = [data.spice_cv(c, pol) for c in _corner_sweeps(device, gid, "cv")]
+        u = cv[0][0]
+        for uc, _c in cv:
+            if not np.array_equal(uc, u):
+                raise ValueError(f"{device} {gid} cv: the corner grids differ")
+        caps = [c for _u, c in cv]
+        ax_c.fill_between(pol * u, np.min(caps, axis=0), np.max(caps, axis=0), color=pal["band"],
+                          linewidth=0)  # fmt: skip
+        ax_c.plot(pol * u, caps[0], color=pal["text"], lw=lw)
+        ax_c.set_ylim(bottom=0)
+        ax_c.set_title("gate capacitance")
+        ax_c.set_xlabel("gate voltage (V)")
+        ax_c.set_ylabel("gate capacitance (fF)")
+        for ax in (ax_g, ax_d, ax_c):
+            ax.grid(True)
+        return _svg(fig)
+
+
 # The regions page (accumulation-depletion-inversion.md): the calibrated nfet at the longest
 # calibration gate, the geometry of the MOS capacitor page's C-V figure.
 REGIONS_DEVICE, REGIONS_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
@@ -1036,6 +1181,20 @@ def pfet_geometries() -> tuple[str, str]:
     return by_l[0], by_l[-1]
 
 
+def _mark_edge_shift(ax, xs: list[float], pal: dict) -> None:
+    """Dotted lines at the SPICE depletion edges ``xs`` (V) of the shortest and the longest gate,
+    and a two-headed arrow between them labelled with the shift, near the top of ``ax``."""
+    lo, hi = min(xs), max(xs)
+    for x in xs:
+        ax.axvline(x, color=pal["hole"], lw=STYLE["edge_width"] * STYLE["edge_line_factor"],
+                   ls=":")  # fmt: skip
+    y = STYLE["edge_arrow_at"]
+    ax.annotate("", xy=(lo, y), xytext=(hi, y), xycoords=("data", "axes fraction"),
+                arrowprops={"arrowstyle": "<->", "color": pal["hole"]})  # fmt: skip
+    ax.text(hi, y, f"  {hi - lo:.2f} V shift", transform=ax.get_xaxis_transform(),
+            ha="left", va="center", color=pal["hole"])  # fmt: skip
+
+
 def calibration_pfet_figure(palette: str):
     """The matplotlib figure of :func:`calibration_pfet`, for the tests to read its lines."""
     from gf180tcad.devices import DEVICES
@@ -1044,6 +1203,7 @@ def calibration_pfet_figure(palette: str):
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     gids = pfet_geometries()
+    edges = numbers.spice_edges(PFET)
     with matplotlib.rc_context(_rc(palette)):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
@@ -1059,6 +1219,7 @@ def calibration_pfet_figure(palette: str):
                     zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
             ax.set_ylim(bottom=0)
             ax.grid(True)
+            _mark_edge_shift(ax, [pol * edges[g] for g in gids], pal)
             ax.set_title(
                 f"gate length {numbers.fit_geometries(PFET)[gid]:g} µm", fontsize=STYLE["text_pt"]
             )
@@ -1465,6 +1626,8 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "band-regimes": band_regimes,
     "mesh-window": _mesh_window,
     "cv-parts": cv_parts,
+    "cv-overview": cv_overview,
+    "spice-sweeps": spice_sweeps,
     "calibration-limits": calibration_limits,
     "calibration-compare": calibration_compare,
     "calibration-pfet": calibration_pfet,
@@ -1488,6 +1651,8 @@ _PLOTS = (
     "cv-regions",
     "band-regimes",
     "cv-parts",
+    "cv-overview",
+    "spice-sweeps",
     "calibration-limits",
     "calibration-compare",
     "calibration-pfet",
