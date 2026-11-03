@@ -60,13 +60,13 @@ The 1D MOS capacitor is calibrated against the SPICE
 [`results/tcad/validation`](results/tcad/validation),
 [C–V calibration page](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html)):
 three tunables, 3 of the 8-parameter budget. In 1D the nfet agrees with SPICE at every geometry,
-fitted and held out.
+fitted and held out. Figure 2 shows both devices, 1D and 2D, at the minimum gate length.
 
 The pfet is published as a disagreement. The SPICE pfet's
 [depletion](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-depletion) edge
-moves by 0.57 V between L = 10 µm and the minimum length. One length-independent 1D stack
-cannot follow that. Figure 2 shows both devices at the minimum length. The calibrated 1D curves
-are in [`results/tcad/moscap1d`](results/tcad/moscap1d).
+moves by 0.57 V between L = 10 µm and the minimum length, as Figure 3 shows. One
+length-independent 1D stack cannot follow that. The calibrated 1D curves are in
+[`results/tcad/moscap1d`](results/tcad/moscap1d).
 
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/cv-dark.svg">
@@ -79,6 +79,17 @@ inside the grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/lat
 The 1D TCAD is dotted at the start values and dashed at the fitted ones, the 2D cell dash-dot
 (start orange, fitted blue). `make readme-figures`
 draws it from the committed results.*
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/pfet-lengths-dark.svg">
+<img alt="Gate capacitance against gate voltage of the pfet, L = 0.5 µm above and L = 10 µm below: SPICE curves in a grey band and a dashed 1D line." src="docs/images/readme/pfet-lengths-light.svg">
+</picture>
+
+*Figure 3. The pfet's gate capacitance at the shortest and the longest gate of the
+calibration, 0.5 µm and 10 µm. The solid line is SPICE at the typical corner, inside the
+grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner).
+The dashed line is the 1D stack at the fitted values. `make readme-figures` draws it from
+the committed results.*
 
 Every committed TCAD result has generated
 pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
