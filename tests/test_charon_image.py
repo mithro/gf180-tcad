@@ -202,6 +202,9 @@ def test_charon_mpi_singleton_in_the_sandbox(tmp_path):
 def test_charon_single_thread(tmp_path):
     """Kokkos Serial and OMP_NUM_THREADS=1: the solve adds no compute thread.
 
+    The test asserts that the most threads at any sample is exactly two, so a new compute
+    thread fails it.
+
     The process has two threads: the main thread, which runs the solve, and OpenMPI's
     progress thread, which a singleton starts in MPI_Init (Experiment A3 measured 2 threads,
     the same with or without the OpenMPI settings).
@@ -209,7 +212,8 @@ def test_charon_single_thread(tmp_path):
     out = _solve(tmp_path, LOCA, "moscap.dd.equ.exo", args="--current", sample=True)
     assert "Charon run completed." in out
     counts = {int(ln.split()[1]) for ln in (tmp_path / "threads.txt").read_text().splitlines()}
-    assert counts and max(counts) <= 2, counts
+    # a sample taken before MPI_Init sees 1 thread; the most at any sample is exactly 2
+    assert counts and max(counts) == 2, counts
 
 
 @pytest.mark.sandbox

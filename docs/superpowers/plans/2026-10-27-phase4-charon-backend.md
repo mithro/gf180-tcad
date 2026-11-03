@@ -120,10 +120,13 @@ The build and its checks:
 - **Probe fix (A2).** Charon's `Interpreter.cmake` copies the interpreter with `rsync`, which the base image lacks. It ignores the failure, so the first probe run failed. `0005` (GPL) copies with `file(COPY)`. All four probe tests then pass, and the `ctest -N` count is 4.
 - **Reproducibility fix.** Host and CI builds of one commit differed in 102 generated interpreter modules and their `.pyc` files. The interpreter generator lists its inputs in directory order. `0006` (GPL) sorts the three listings. Both builds then give config `sha256:100d6227…`.
 - **MPI singleton (A3).** Without settings, `charon_mp.exe` as one process forks `orted` and writes `/tmp/pmix-gds-shmem.*` files. `OMPI_MCA_ess_singleton_isolated=1` alone stops both. The plan's transport settings are not needed for one process.
-- **Threads.** The process has 2 threads: the solve and OpenMPI's progress thread.
-- **Output.** The Exodus output differs between runs only in its QA record. The byte-identity test compares `currents-loca.dat` byte for byte and the Exodus file through `exodiff -absolute -tolerance 0` (exit 0, "Files are the same").
 - **Measured.** A1 in `tools/sandbox-run` (16 GiB, 4 CPUs, `-j2`): `make` 2:43:46, container peak 4.48 GB, install 364 MB. Image build: 1 h 11 min on a runner, 3 h 36 min on the loaded host, builder peak 6.35 GB.
+
+The sandbox tests:
 - **Test decks.** `pmoscap.nlp` and `loca_moscap_cv` 1 Hz go to `/opt/charon/share/gf180tcad/tests` for the sandbox tests. The `pmoscap.nlp` output has one state: the image's `io_info` prints "Time steps = 1".
+- **Threads.** The process has 2 threads: the solve and OpenMPI's progress thread. `test_charon_single_thread` asserts that the most threads at any sample is exactly 2, so a new compute thread fails it.
+- **Environment.** `test_charon_environment` checks `PATH`, `OMP_NUM_THREADS=1` and the OpenMPI setting. The thin `charon` image adds `PYTHON_CPU_COUNT=1` and `CHARON_EXECUTABLE_PATH` ([issue #124](https://github.com/mithro/gf180-tcad/issues/124)). The first comes from {repo}`docker/TCAD_DEV_IMAGE`; {repo}`docker/IMAGE`, the base of charon-libs, sets neither.
+- **Output.** The Exodus output differs between runs only in its QA record. The byte-identity test compares `currents-loca.dat` byte for byte and the Exodus file through `exodiff -absolute -tolerance 0` (exit 0, "Files are the same").
 
 Process, tools and docs:
 - **Publishing (owner decision, 2026-11-03).** CI's build-push job publishes the image with `GITHUB_TOKEN`. The host's token has no `write:packages` scope. The recipe went first, so CI printed the digests; the pin, `IMAGE_ID` and `versions.json` followed, and CI verified them.
