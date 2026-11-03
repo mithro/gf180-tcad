@@ -47,6 +47,8 @@ STYLE = {
     # drawing's half width, and rows of dimension-label room above and below it.
     "plan_side": 0.9,
     "plan_rows": 2,
+    # The W label sits this fraction of a dimension offset right of its arrow.
+    "w_label_gap": 0.25,
     "dim_offset": 0.12,
     # The pfet edge plot: the span of u (V) that holds every depletion-side crossing.
     "edge_u_v": (-2.0, 0.0),
@@ -242,7 +244,7 @@ def instance_plan_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         ax.text(0, bottom, "gate", ha="center", va="center")
         arrow = {"arrowstyle": "<->", "color": pal["text"], "lw": ef.STYLE["edge_width"]}
         ax.annotate("", xy=(0, 0), xytext=(0, w), arrowprops=arrow)
-        ax.text(off / 4, w / 2, f"W = {w:g} µm", ha="left", va="center",
+        ax.text(off * STYLE["w_label_gap"], w / 2, f"W = {w:g} µm", ha="left", va="center",
                 rotation=ef.STYLE["upright_deg"])  # fmt: skip
         ax.annotate("", xy=(-half, top), xytext=(half, top), arrowprops=arrow)
         ax.text(0, top + off / 2, f"L = {e['l_um']:g} µm", ha="center", va="bottom")
