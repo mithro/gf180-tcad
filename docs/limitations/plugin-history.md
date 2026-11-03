@@ -30,10 +30,8 @@ All commits are linked in {{ gplugins_fork }}, which carries the upstream histor
   first released in [v2.0.0](https://github.com/mithro/gplugins/tree/v2.0.0), moved `gplugins.gmsh` to the new {{ meshwell }} API. [`create_2Duz_simulation`](https://github.com/mithro/gplugins/blob/208784df45f1db8b262f356ee2a67fa3808c3e1e/gplugins/devsim/get_simulation.py#L71),
   the mesher behind `DDComponent`, now raises [`NotImplementedError`](https://docs.python.org/3/library/exceptions.html#NotImplementedError) ("uz_xsection_mesh has been removed").
 
-The PIN waveguide never needed gmsh. The path that broke is `DDComponent` with the mesher,
-so the record below covers that path.
-
-The record's solves of that cross-section are plotted in {numref}`plugin-history-pn-figure` and {numref}`plugin-history-pin-figure`.
+The PIN waveguide ({numref}`plugin-history-pin-figure`) never needed gmsh. The path that broke is
+`DDComponent` with the mesher, so the record below covers that path ({numref}`plugin-history-pn-figure`).
 
 (plugin-history-record)=
 
@@ -60,15 +58,13 @@ The commands and the lock recipe are in {repo}`experiments/plugin-history/README
 
 The checks come from two blocks of the v0.8.0 source:
 
-- **PIN waveguide.** The body of
+- **PIN waveguide** ({numref}`plugin-history-pin-figure`). The body of
   [`test_pin_waveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/test_devsim.py#L4-L31): [`PINWaveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L101) (500 nm × 220 nm
   core, 90 nm slab), [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L385), then [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L420).
-- **PN slab.** The [`__main__`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L412-L524) block of [`get_solver.py`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py): a trimmed [`straight_pn`](https://github.com/gdsfactory/gdsfactory/blob/v7.6.1/gdsfactory/components/straight_pin.py#L90) as a [`DDComponent`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L43), [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L204) and
+- **PN slab** ({numref}`plugin-history-pn-figure`). The [`__main__`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L412-L524) block of [`get_solver.py`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py): a trimmed [`straight_pn`](https://github.com/gdsfactory/gdsfactory/blob/v7.6.1/gdsfactory/components/straight_pin.py#L90) as a [`DDComponent`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L43), [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L204) and
   [`get_refined_mesh`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L328). **The block solves only at equilibrium: it never calls `ramp_voltage`.** The PN-slab
   ramp to 0.1 and 0.2 V is an addition of this record. It uses [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L243-L245)'s default contact,
   `cathode` (the contact on the p⁺⁺ side, so the bias is forward).
-
-What the two blocks record is plotted in {numref}`plugin-history-pin-figure` and {numref}`plugin-history-pn-figure`.
 
 The checks, and what each one runs:
 
@@ -105,12 +101,10 @@ The checks, and what each one runs:
   precision globally, so this order gives each block the solver state it has on its own.
 - **Dropped from [`test_pin_waveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/test_devsim.py#L4-L31).** Its −5 V ramp and its {{ tidy3d }} mode solves
   ([`make_waveguide`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L485)).
-- **Added.** The PN-slab ramp, and the physical quantities recorded around it (below).
+- **Added.** The PN-slab ramp at both mesh sizes ({numref}`plugin-history-pn-figure`), and the physical quantities recorded around it (below).
 - **Never reached.** The block's second solve on the refined mesh
   ([`get_solver.py:511-524`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L511-L524)), because `refine`
   raises before it.
-
-The PN-slab results at both mesh sizes are in {numref}`plugin-history-pn-figure`.
 
 (plugin-history-results)=
 
@@ -129,11 +123,10 @@ On this page, v0.8.0 × 0.5 is v0.8.0 with the PN mesh × 0.5.
 | `refined_solve` | not run | not run | not run |
 
 The records are {repo}`results/plugin-history/v0.8.0.json`,
-{repo}`results/plugin-history/v0.8.0-mesh0p5.json` and
+{repo}`results/plugin-history/v0.8.0-mesh0p5.json` (both drawn in {numref}`plugin-history-pin-figure`
+and {numref}`plugin-history-pn-figure`) and
 {repo}`results/plugin-history/v1.4.2.json`. Each one gives the resolved package versions and the
 exact exception type, message and source line of every failed check.
-
-The recorded physical quantities are plotted in {numref}`plugin-history-pin-figure` and {numref}`plugin-history-pn-figure`.
 
 - **v0.8.0 worked.** The PIN waveguide and the PN slab both mesh, solve and ramp.
 - **`get_refined_mesh` was already broken at v0.8.0.** Its body reads `c`, the
@@ -151,11 +144,9 @@ The recorded physical quantities are plotted in {numref}`plugin-history-pin-figu
 
 ### Physical quantities
 
-The {term}`depletion width` is the span of the nodes on one mesh row where both n and p are
+The {term}`depletion width` ({numref}`plugin-history-pin-figure`) is the span of the nodes on one mesh row where both n and p are
 below 1e-2 |[`NetDoping`](https://devsim.net/models.html#node-models)|. The bias is the cathode
-voltage of the ramp; "equilibrium" is the solve before the ramp.
-
-The PIN widths are plotted in {numref}`plugin-history-pin-figure` and the PN-slab potentials in {numref}`plugin-history-pn-figure`.
+voltage of the ramp ({numref}`plugin-history-pn-figure`); "equilibrium" is the solve before the ramp.
 
 ```{figure} /_generated/limitations/pin-depletion-light.svg
 :name: plugin-history-pin-figure
@@ -408,9 +399,8 @@ What each fork PR changes:
   [`dddaa07`](https://github.com/mithro/gplugins/commit/dddaa071321c5177c8471312c565ad86d4b245d7).
   It adds a module and changes none of the paths below.
 
-The v0.8.0 side of the re-verification is plotted in {numref}`plugin-history-pn-figure` and {numref}`plugin-history-pin-figure`.
-
-The PRs #2 and #4 are the port that this section re-verifies. #3, #5 and #6 extend the plugin
+The PRs #2 and #4 are the port that this section re-verifies against the v0.8.0 records of
+{numref}`plugin-history-pn-figure` and {numref}`plugin-history-pin-figure`. #3, #5 and #6 extend the plugin
 for the {term}`MOS capacitors <MOSCAP>` of
 {repo}`Phase 2 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md>` and do not change the paths below.
 
