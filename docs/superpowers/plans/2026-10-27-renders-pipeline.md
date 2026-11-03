@@ -206,7 +206,8 @@ Nothing is resampled, smoothed or decimated: every kept element is a mesh elemen
   - Peak RSS of the cut job (`/usr/bin/time -v` in the job log) sets the `--mem` value.
   - The limitations page records the result.
 
-  As built (branch `task/p5-renders-artefacts`, PR #148, 2026-11-03), log `tmp/meshcut-m1.log`:
+  As built (branch `task/p5-renders-artefacts`, PR #148, 2026-11-03), recorded in the run record
+  `reproduce-meshcut-memory` on `docs/reproduce/index.md`:
   - The default window of the nfet `w10p0_l0p60` mesh: 109,188 nodes, 216,407 triangles,
     3,444,020 bytes with `net_doping_cm3`.
   - `/usr/bin/time -v`: peak RSS 479,624 kB, wall 24.7 s; the container's `memory.peak`

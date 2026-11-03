@@ -618,7 +618,28 @@ The command pulls the full mesh from the {ref}`output cache <output-cache>`, the
 | `pfet_05v0` | `w10p0_l2p00` | 40.4 | 0 |
 | `pfet_05v0` | `w1p6_l0p70` | 28.9 | 0 |
 
-{ref}`moscap2d-mesh-artefact` gives each artefact's node count, size and peak memory.
+{ref}`moscap2d-mesh-artefact` gives each artefact's node count and size. The logs of these ten
+cuts hold the wall time and the exit code; the peak memory was measured on one cut, below.
+
+(reproduce-meshcut-memory)=
+
+**Memory of a cut.** The nfet `w10p0_l0p60` cut ran once more on 2026-11-03, alone in the same
+4 GiB sandbox with one CPU, under `/usr/bin/time -v`. The peak resident memory and the job's
+wall time are from `/usr/bin/time -v`; `memory.peak` is the container's {term}`cgroup` peak.
+
+| Quantity | Value |
+|---|---|
+| Nodes kept | 109188 |
+| Triangles kept | 216407 |
+| `size_bytes` | 3444020 |
+| Wall time of the cut job (s) | 24.69 |
+| Wall time of the host command (s) | 25.6 |
+| Peak resident memory (kB) | 479624 |
+| `memory.peak` (bytes) | 479981568 |
+| Exit code | 0 |
+
+Its `.npz` sha256, node count, triangle count and `size_bytes` equal those in the committed
+{repo}`results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p60/mesh-window.meta.json`.
 
 The nfet jobs ran at gplugins `1c071d0`. The folder's `provenance.json` names the later pin, `0715c81`.
 The nfet W10/L2 job was committed after the "Restamped without a rerun" list below, so that list does not name it.

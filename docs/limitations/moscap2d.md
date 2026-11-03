@@ -376,11 +376,11 @@ The 2D start cells have no artefact. Their full meshes are in no cache and on no
 each must be regenerated first ([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
 Their geometry pages say why they have no mesh picture.
 
-**Memory and time of a cut.** The nfet W10/L0.6 cut ran alone in a 4 GiB
-{term}`sandbox` with one CPU. `/usr/bin/time -v` gave a peak resident memory of 479624 kB and a
-wall time of 24.7 s. The container's {term}`cgroup` `memory.peak` was 479981568 bytes. The
-4 GiB limit stays, because the L = 2 µm full meshes have more than twice as many triangles. The
-ten cuts and their exit codes are on {ref}`tcad-provenance`.
+**Memory and time of a cut.** The nfet W10/L0.6 cut was measured alone in a 4 GiB
+{term}`sandbox` with one CPU. Its peak memory, under an eighth of the limit, and its wall time
+are in the {ref}`run record <reproduce-meshcut-memory>`. The 4 GiB limit stays, because the
+L = 2 µm full meshes have more than twice as many triangles. The ten cuts and their exit codes
+are on {ref}`tcad-provenance`.
 
 **A regenerated mesh.** {test}`tests/tcad/test_meshcut_job.py::test_regenerated_mesh_sha_reported`
 meshed the calibrated nfet W10/L0.6 cell again in the stable image. Its sha256 equals the
