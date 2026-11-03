@@ -26,6 +26,7 @@ import matplotlib
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from matplotlib.ticker import MaxNLocator
 
 from gf180tcad.calibrate import cv as calcv
 from gf180tcad.devices import DEVICES, Geometry, geometry_id
@@ -70,6 +71,8 @@ STYLE = {
     "body_doping_drop": 1.5,
     # The base of the decades of a log axis.
     "decade": 10,
+    # The six-panel C-V grids: at most this many capacitance ticks per panel.
+    "grid_yticks": 3,
     # Legends of three or more entries: this many per row.
     "legend_cols": 3,
     # The tick labels of gate lengths stand upright, so that 0.5, 0.6 and 0.7 do not overlap.
@@ -383,6 +386,11 @@ def _cv_grid_figure(role: str, palette: str, roots: Roots) -> Figure:
                 ax.set_ylim(bottom=0)
                 ax.grid(True)
                 ax.set_title(f"{_SHORT[device]} {_label(g)}", fontsize=ef.STYLE["text_pt"])
+                # Tick text at the page's text size, so fewer ticks: both ends of u and 0, and
+                # a few round capacitances.
+                ax.tick_params(labelsize=ef.STYLE["text_pt"])
+                ax.set_xticks([c["u_spice"][0], 0, c["u_spice"][-1]])
+                ax.yaxis.set_major_locator(MaxNLocator(STYLE["grid_yticks"]))
                 if col == 0:
                     ax.set_ylabel("Cgg (fF)")
                 if row == n - 1:

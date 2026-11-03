@@ -513,3 +513,14 @@ def test_default_roots_are_the_committed_trees():
         REPO_ROOT / "results/spice", REPO_ROOT / "results/spice-pdk-d658698",
         REPO_ROOT / "results/tcad",
     )  # fmt: skip
+
+
+@pytest.mark.parametrize("figure", ["cv_fit_figure", "cv_validation_figure"])
+def test_cv_grid_ticks_are_text_size(figure):
+    """The six panels' tick text is the page's text size (9 px or more at 400 px wide)."""
+    from gf180tcad.explain import figures as ef
+
+    fig = getattr(cf, figure)("light")
+    for ax in fig.axes:
+        for label in (*ax.get_xticklabels(), *ax.get_yticklabels()):
+            assert label.get_fontsize() == ef.STYLE["text_pt"]
