@@ -2314,6 +2314,13 @@ def test_junction_profile_draws_the_cell():
     x = lateral.get_xdata()
     assert list(lateral.get_ydata()) == pytest.approx(list(c.sd_doping(0.0, x)))
     assert x[0] < 0 < x[-1]
+    # The labels either side of the gate edge stand apart (PR #153 review should-fix 3).
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    (src,) = [t for t in ax_lat.texts if t.get_gid() == "label-source"]
+    (gate,) = [t for t in ax_lat.texts if t.get_gid() == "label-gate"]
+    edge = ax_lat.transData.transform((0.0, 1.0))[0]
+    assert src.get_window_extent(r).x1 < edge < gate.get_window_extent(r).x0
     lines = {ln.get_label(): ln for ln in ax.lines}
     g = lines[figures.PROFILE_LINES["gaussian"]]
     assert list(g.get_ydata()) == pytest.approx(list(c.sd_doping(g.get_xdata())))

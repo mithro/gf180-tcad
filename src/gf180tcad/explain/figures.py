@@ -138,6 +138,8 @@ STYLE = {
     "profile_size_in": (6.4, 6.4),
     "profile_pad": 0.5,
     "profile_span": 4.0,
+    # The labels either side of the gate edge sit this fraction of the axis width off its line.
+    "edge_label_gap": 0.03,
     # The lightly doped drain of the parts page, which the simulated cell does not have: drawn at
     # a chosen size (µm), with no committed source.
     "ldd_drawn_um": {
@@ -1325,8 +1327,9 @@ def junction_profile_figure(palette: str):
         ax_lat.plot(x, c.sd_doping(0.0, x), color=pal["electron"], lw=lw, gid="lateral")
         ax_lat.plot([x[0], x[-1]], [c.n_body_cm3] * 2, color=pal["hole"], lw=lw)
         ax_lat.axvline(0.0, color=pal["text"], lw=STYLE["edge_width"])
-        ax_lat.text(0.0, label_y, "source ", ha="right", va="top")
-        ax_lat.text(0.0, label_y, " under the gate", ha="left", va="top")
+        off = STYLE["edge_label_gap"] * (x[-1] - x[0])
+        ax_lat.text(-off, label_y, "source", ha="right", va="top", gid="label-source")
+        ax_lat.text(off, label_y, "under the gate", ha="left", va="top", gid="label-gate")
         ax_lat.set_xlabel("distance from the gate edge (µm)")
         ax.plot(y, c.sd_doping(y), color=pal["electron"], lw=lw, label=PROFILE_LINES["gaussian"])
         ax.plot([y[0], c.xj_um, c.xj_um], [c.n_sd_cm3, c.n_sd_cm3, lo], color=pal["electron"],
