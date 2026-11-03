@@ -88,7 +88,7 @@ The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
 {term}`typical corner`, and the grey band spans its {{ x_corner_count }}
 {term}`corners <corner>`. The dotted and dashed lines are the 1D stack at the start and the
 fitted values. The dash-dot lines are the 2D cell at the start values (orange) and the fitted
-values (blue), with no BSIM4 parasitics added.
+values (blue), with no parasitics added outside the cell.
 ```
 
 ```{figure} /_generated/explained/cv-overview-dark.svg
@@ -100,7 +100,7 @@ The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
 {term}`typical corner`, and the grey band spans its {{ x_corner_count }}
 {term}`corners <corner>`. The dotted and dashed lines are the 1D stack at the start and the
 fitted values. The dash-dot lines are the 2D cell at the start values (orange) and the fitted
-values (blue), with no BSIM4 parasitics added.
+values (blue), with no parasitics added outside the cell.
 ```
 
 Every verdict and error on the TCAD pages comes from the calibration and validation files.
