@@ -656,12 +656,31 @@ the number of compile jobs.
 
 ### One MPI process in the sandbox
 
+```{figure} /_generated/reproduce/charon-mpi-light.svg
+:name: charon-mpi
+:figclass: only-light
+:alt: A container box holds a process box with two thread boxes, main and progress. An arrow leads from the process to a /tmp box. A dashed box lists orted and the pmix files as not started.
+
+`charon_mp.exe` in a container of {repo}`tools/sandbox-run`: one process with two threads, its
+session directory under `/tmp`, and neither `orted` nor the PMIx files. {repo}`tests/test_charon_image.py`
+checks each of these during a solve.
+```
+
+```{figure} /_generated/reproduce/charon-mpi-dark.svg
+:figclass: only-dark
+:alt: A container box holds a process box with two thread boxes, main and progress. An arrow leads from the process to a /tmp box. A dashed box lists orted and the pmix files as not started.
+
+`charon_mp.exe` in a container of {repo}`tools/sandbox-run`: one process with two threads, its
+session directory under `/tmp`, and neither `orted` nor the PMIx files. {repo}`tests/test_charon_image.py`
+checks each of these during a solve.
+```
+
 Charon is an MPI program. Every TCAD job runs `charon_mp.exe` as one process, without
 `mpirun`, under the rules of {repo}`tools/sandbox-run`: no network, and only `/tmp` writable.
 Started that way, OpenMPI 4.1 forks a helper daemon, `orted`, and writes shared-memory files
 under `/tmp`. {repo}`docker/charon-libs/Dockerfile` sets `OMPI_MCA_ess_singleton_isolated=1`,
-which stops both. The solve then runs in one process with two threads: the main thread, which
-computes, and OpenMPI's progress thread.
+which stops both. The solve then runs in one process with two threads, as {numref}`charon-mpi`
+shows: the main thread, which computes, and OpenMPI's progress thread.
 
 The Exodus output file holds the date, time and host of the run in its QA record. Two runs of
 the same deck therefore differ in that record only. The text output `currents-loca.dat` is
@@ -685,11 +704,33 @@ On the project's host the builder's memory peaked at 6.35 GB. The install in `/o
 
 ### Checks on GitHub
 
-{repo}`.github/workflows/image.yml` builds this image only when it changes. Its build job runs
-on a pull request or a push that changes {repo}`docker/charon-libs/`, {repo}`docker/IMAGE` or
-{repo}`docker/CHARON_LIBS_IMAGE`, and on a manual run. It allows 350 minutes. The rebuild from
-scratch, which proves the digests reproducible, runs on the weekly schedule and on a manual
-run. Every other pull request skips both and passes.
+```{figure} /_generated/reproduce/charon-ci-light.svg
+:name: charon-ci
+:figclass: only-light
+:alt: Flow from the trigger to a gate on three paths. No leads to a skip box. Yes leads to the build, then three checks in a row, then the published tags.
+
+The charon-libs entry of the build-push job in {repo}`.github/workflows/image.yml`. The checks run
+in turn, and a failed check ends the job before any published tag.
+```
+
+```{figure} /_generated/reproduce/charon-ci-dark.svg
+:figclass: only-dark
+:alt: Flow from the trigger to a gate on three paths. No leads to a skip box. Yes leads to the build, then three checks in a row, then the published tags.
+
+The charon-libs entry of the build-push job in {repo}`.github/workflows/image.yml`. The checks run
+in turn, and a failed check ends the job before any published tag.
+```
+
+{repo}`.github/workflows/image.yml` builds this image only when it changes, as
+{numref}`charon-ci` shows. Its build job runs on a pull request or a push that changes
+{repo}`docker/charon-libs/`, {repo}`docker/IMAGE` or {repo}`docker/CHARON_LIBS_IMAGE`, and on a
+manual run. It allows 350 minutes. The rebuild from scratch, which proves the digests
+reproducible, runs on the weekly schedule and on a manual run. Every other pull request skips
+both and passes.
+
+The build pushes only the tag `unverified`. Three checks then compare the config digest with
+{repo}`docker/charon-libs/IMAGE_ID`, the manifest with {repo}`docker/CHARON_LIBS_IMAGE` and the
+probe's output with {repo}`docker/charon-libs/versions.json`. The published tags come last.
 
 {repo}`tests/test_charon_image.py` runs the image's checks. Its sandbox tests run the upstream
 `pmoscap.nlp` and `loca_moscap_cv` decks in the pinned image, which installs them under

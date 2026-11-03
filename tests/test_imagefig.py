@@ -73,3 +73,43 @@ def test_image_page_embeds_both_twins_and_cites_the_figure(name):
     assert light in page and dark in page
     assert page.index(light) < page.index(dark)
     assert f"{{numref}}`{name}`" in page
+
+
+@pytest.mark.parametrize("palette", list(imagefig.PALETTES))
+def test_box_edges_read_on_the_container_fill(palette):
+    """The container and the dashed boxes have edges in the arrow colour, drawn on that fill."""
+    pal = imagefig.PALETTES[palette]
+    assert imagefig.contrast(pal["arrow"], pal["fill"]["container"]) >= imagefig.MIN_GRAPHIC_CONTRAST
+
+
+def _drawn(svg: bytes, lines) -> None:
+    text = svg.decode("utf-8")
+    for line in lines:
+        assert line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") in text, line
+
+
+def test_charon_mpi_names_the_image_setting_and_draws_every_box():
+    dockerfile = (REPO / "docker" / "charon-libs" / "Dockerfile").read_text(encoding="utf-8")
+    final = dockerfile[dockerfile.rindex("FROM ${BASE_IMAGE}") :]
+    assert imagefig.MPI_ENV in final
+    tests = (REPO / "tests" / "test_charon_image.py").read_text(encoding="utf-8")
+    key, value = imagefig.MPI_ENV.split("=")
+    assert f'OMPI_ENV = {{"{key}": "{value}"}}' in tests
+    svg = imagefig.charon_mpi()
+    for lines in imagefig.MPI_BOXES.values():
+        _drawn(svg, lines)
+
+
+def test_charon_ci_matches_the_workflow_and_draws_every_box():
+    """The checks are the workflow's step names, and the gate's paths those of its git diff."""
+    workflow = (REPO / ".github" / "workflows" / "image.yml").read_text(encoding="utf-8")
+    steps = re.findall(r"^      - name: (.+)$", workflow, re.MULTILINE)
+    names = [name for name, _ in imagefig.CI_CHECKS.values()]
+    assert [s for s in steps if s in names] == names  # present, once each, in this order
+    gate = re.search(r"git diff --quiet \"\$base\" HEAD -- (.+);", workflow).group(1)
+    assert tuple(gate.split()) == imagefig.CI_GATE_PATHS
+    svg = imagefig.charon_ci()
+    for lines in imagefig.CI_BOXES.values():
+        _drawn(svg, lines)
+    for _, lines in imagefig.CI_CHECKS.values():
+        _drawn(svg, lines)
