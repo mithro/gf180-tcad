@@ -4,10 +4,12 @@
 
 Which part of the stack sets each part of the {term}`C–V` curve? This page answers that for the
 {term}`nfet_05v0`, for a reader who has read {doc}`accumulation-depletion-inversion`. It shows
-how the fit moves the simulated curve onto the {term}`SPICE` one.
+how the fit moves the simulated curve onto the {term}`SPICE` one. The labels of
+{numref}`fig-cv-parts` name the number that sets each part.
 
 ```{figure} /_generated/explained/cv-parts-light.svg
 :figclass: only-light
+:name: fig-cv-parts
 :alt: Gate capacitance against gate voltage: a solid line, a dashed line almost on top of it, and a dotted line with higher flat ends and a shallower dip. Labels name the oxide thickness at both flat ends, the body doping at the dip and a voltage shift with an arrow on the falling side pointing to more positive gate voltage.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the SPICE model at
@@ -43,10 +45,12 @@ ACNQSMOD to {{ x_acnqsmod_nfet }} and TRNQSMOD to {{ x_trnqsmod_nfet }}
 ({ref}`BSIM4 manual, §8.1 and appendix A <lit-bsim4>`). So the SPICE capacitance is
 quasi-static: its charges follow the gate voltage without delay.
 
-The simulated stack has three free numbers: the oxide thickness, the body doping and a shift of
-the gate voltage ({ref}`cv-agreement`). The fit searches for the values that bring the simulated
-curve closest to the SPICE one. It starts from the values below and stays within limits set
-beforehand ({doc}`/comparison/process-data`).
+The simulated stack has three free numbers: the oxide thickness, the body doping and a shift of the
+gate voltage ({ref}`cv-agreement`). The stack is in
+{numref}`Figure %s of What the calibration changes <fig-calibration-stack>`, and the curves before
+and after the fit are in {numref}`fig-cv-parts`. The fit searches for the values that bring the
+simulated curve closest to the SPICE one. It starts from the values below and stays within limits
+set beforehand ({doc}`/comparison/process-data`).
 
 | Parameter | Start | Fitted |
 |---|---|---|
@@ -70,7 +74,7 @@ At both ends a layer of carriers sits right under the oxide. At the negative end
 alone sets the capacitance, and at the positive end the gate's doping also lowers it
 ({ref}`Sze and Ng, ch. 4 <lit-sze>`). The {term}`oxide capacitance <Cox>` per area is the
 oxide's {ref}`permittivity <explained-oxide-cox>` over its thickness. So a thicker oxide lowers
-both flat parts.
+both flat parts, as the dotted and dashed curves of {numref}`fig-cv-parts` show.
 
 From the thickness alone, the idealised oxide capacitance is {{ x_cox_toxe_nfet }} at the start
 and {{ x_cox_nfet_cal }} when fitted. The start curve's flat parts lie above the SPICE ones, and
@@ -92,7 +96,7 @@ doping deepens the dip.
 
 The fit lowers the body doping from {{ x_n_ch_nfet_start }} to {{ x_n_ch_nfet_cal }}. The SPICE
 curve's dip reaches down to {{ x_c_min_l10 }}. The start curve's dip is shallower than that, and
-the fitted curve's dip is deeper.
+the fitted curve's dip is deeper ({numref}`fig-cv-parts`).
 
 The doping also moves the start of inversion. The {term}`threshold voltage` rises with the body
 doping, because the gate must deplete a layer holding more {term}`acceptors <acceptor>` first
@@ -111,17 +115,18 @@ the oxide face.
 The simulation solves the stack at the gate voltage minus the shift
 ({repo}`per_area.meta.json <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`).
 So the nfet's whole curve slides to more positive gate voltages by {{ x_dv_fb_nfet_cal }}, with
-its shape unchanged. At its true length that shift is too short to see in the figure, so the
-arrow shows only its direction.
+its shape unchanged. At its true length that shift is too short to see in
+{numref}`fig-cv-parts`, so the arrow shows only its direction.
 
 (explained-cv-curve-differs)=
 
 ## Where this repo's results differ
 
-At `w10p0_l10p00` the fitted flat parts lie within {{ x_plateau_acc_l10 }} and
-{{ x_plateau_inv_l10 }} of the SPICE curve. The allowed error is {{ x_plateau_tol_l10 }}. The
-halfway-level crossings differ by {{ x_dv_dep_l10 }} on the falling side and {{ x_dv_inv_l10 }} on
-the rising side, simulated minus SPICE. The allowed difference is {{ x_dv_tol_l10 }}
+{numref}`fig-cv-parts` shows the geometry `w10p0_l10p00`. There the fitted flat parts lie within
+{{ x_plateau_acc_l10 }} and {{ x_plateau_inv_l10 }} of the SPICE curve. The allowed error is
+{{ x_plateau_tol_l10 }}. The halfway-level crossings differ by {{ x_dv_dep_l10 }} on the falling
+side and {{ x_dv_inv_l10 }} on the rising side, simulated minus SPICE. The allowed difference is
+{{ x_dv_tol_l10 }}
 ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 
 Between the flat parts the two curves differ by up to {{ x_depletion_l10 }}. Where the curve is

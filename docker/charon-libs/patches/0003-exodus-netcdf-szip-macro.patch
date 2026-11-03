@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Patches: tcad-charon/Trilinos/packages/seacas/ (Trilinos 81e9581a).
+# Reason: netCDF 4.9 defines NC_SZIP_NN (32) as a macro, which breaks this local constant of the same name and value; declare it only when netCDF does not.
+#
+--- a/Trilinos/packages/seacas/libraries/exodus/src/ex_utils.c
++++ b/Trilinos/packages/seacas/libraries/exodus/src/ex_utils.c
+@@ -1742,7 +1742,9 @@
+         */
+ 
+         /* const int NC_SZIP_EC = 4; */ /* Selects entropy coding method for szip. */
++#if !defined(NC_SZIP_NN)
+         const int NC_SZIP_NN = 32;      /* Selects nearest neighbor coding method for szip. */
++#endif
+         /* Even and between 4 and 32; typical values are 8, 10, 16, 32 */
+         const int SZIP_PIXELS_PER_BLOCK =
+             file->compression_level == 0 ? 32 : file->compression_level;

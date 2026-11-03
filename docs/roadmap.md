@@ -87,8 +87,8 @@ Its curves at the minimum gate length are in {numref}`roadmap-cv-figure`, beside
 - **{{ Charon }} beside {{ DEVSIM }} on every {term}`job`**, and the comparison of the two
   ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)). No Charon job has run.
-  The Charon image recipe is in {repo}`docker/charon-libs/` ({ref}`charon-images`); no Charon
-  image is pinned.
+  The charon-libs image, built from {repo}`docker/charon-libs/`, is pinned
+  ({ref}`charon-images`). The Charon backend and the thin `charon` image come next.
 
 ## Phase 5: temperature and silicon
 
@@ -116,5 +116,6 @@ Its curves at the minimum gate length are in {numref}`roadmap-cv-figure`, beside
   and {term}`poly-silicon`. The second tier covers the {term}`MOS capacitor <MOSCAP>`, its
   regions, what sets each part of its {term}`C–V` curve and what the calibration changes.
 - **The figure, equation and file-link rules** on every page. Each described thing gets a
-  figure, each equation its symbols and units, each file a link. Issues #129 to #134 hold the
-  work, one issue per group of pages.
+  figure, each equation its symbols and units, each file a link. The explainer pages meet them
+  (issue #129). Issues #130 to #134 hold the work on the other pages, one issue per group of
+  pages.
