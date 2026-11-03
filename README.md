@@ -55,6 +55,13 @@ moves by 0.57 V between L = 10 µm and the minimum length, which one length-inde
 cannot follow. The calibrated 1D curves are in
 [`results/tcad/moscap1d`](results/tcad/moscap1d).
 
+The same 1D calibration is repeated against the four other SPICE corners: ff, ss, fs and sf
+([`results/tcad/corners`](results/tcad/corners)). Each corner fit takes that corner's model-card
+offsets as fixed inputs. Each fitted number thus has a lower and an upper bound, and the spread
+between them
+([bounds and limitations](https://gf180-tcad.readthedocs.io/en/latest/explained/calibration.html#explained-calibration-corners)).
+The Monte Carlo spread has no code (issue #57, on the roadmap).
+
 Every committed TCAD result has generated
 pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
 [results page](https://gf180-tcad.readthedocs.io/en/latest/results/index.html), and

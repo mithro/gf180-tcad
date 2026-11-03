@@ -30,6 +30,9 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
   {repo}`results/tcad/validation`, with the calibrated 1D curves in
   {repo}`results/tcad/moscap1d` ({doc}`comparison/cv-agreement`). In 1D the nfet is
   {term}`Agree` at every geometry and the pfet is published as {term}`Disagree`.
+- the same 1D fit at the four other SPICE {term}`corners <corner>`, in
+  {repo}`results/tcad/corners`. It gives each fitted number's lower and upper bound and its
+  spread ({ref}`explained-calibration-corners`, {doc}`limitations/corners`).
 
 The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation
 ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)) is {term}`Disagree` at five committed cells

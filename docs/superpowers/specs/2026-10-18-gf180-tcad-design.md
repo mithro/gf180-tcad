@@ -958,3 +958,9 @@ that the intent survives later rewording of the sections it changed.
   > "Make sure that text never describes a situation without a clearly marked diagram or graph
   > that shows the item being described. Make sure that equations are always fully explained
   > and formatted correctly. Make sure that a file is never mentioned without being a link."
+- **2026-11-03: the corner fits are committed (Task 16a, issue #57).** `results/tcad/corners/`
+  holds the eight 1D corner fits (nfet and pfet at ff, ss, fs and sf) and one summary per
+  device. §5.3's lower and upper bound and spread of the three 1D tunables are on the
+  calibration explainer page and the TCAD device pages. The corner table of §10 items (b) and (c) is
+  split into tables of at most five columns, one value per cell (§10.3). The Monte Carlo spread
+  of §5.3 stays with Task 16b. The pfet flat-band fit stops on its upper limit at ff and sf.
