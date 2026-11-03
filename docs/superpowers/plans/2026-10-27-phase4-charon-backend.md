@@ -125,7 +125,7 @@ The build and its checks:
 
 The sandbox tests:
 - **Test decks.** `pmoscap.nlp` and `loca_moscap_cv` 1 Hz go to `/opt/charon/share/gf180tcad/tests` for the sandbox tests. The `pmoscap.nlp` output has one state: the image's `io_info` prints "Time steps = 1".
-- **Threads.** The process has 2 threads: the solve and OpenMPI's progress thread. `test_charon_single_thread` asserts that the most threads at any sample is exactly 2, so a new compute thread fails it.
+- **Threads.** The process has 2 threads: the solve and OpenMPI's progress thread. `test_charon_single_thread` asserts that the most threads at any sample is exactly 2, so an added compute thread fails it.
 - **Environment.** `test_charon_environment` checks `PATH`, `OMP_NUM_THREADS=1` and the OpenMPI setting. The thin `charon` image adds `PYTHON_CPU_COUNT=1` and `CHARON_EXECUTABLE_PATH` ([issue #124](https://github.com/mithro/gf180-tcad/issues/124)). The first comes from {repo}`docker/TCAD_DEV_IMAGE`; {repo}`docker/IMAGE`, the base of charon-libs, sets neither.
 - **Output.** The Exodus output differs between runs only in its QA record. The byte-identity test compares `currents-loca.dat` byte for byte and the Exodus file through `exodiff -absolute -tolerance 0` (exit 0, "Files are the same").
 
