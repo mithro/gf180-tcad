@@ -114,45 +114,6 @@
   "FIGURE": 3,
   "FILELINK": 2
  },
- "docs/explained/accumulation-depletion-inversion.md": {
-  "FIGURE": 3,
-  "FIGURE-FORM": 2
- },
- "docs/explained/bands-and-fermi-level.md": {
-  "EQUATION": 2,
-  "FIGURE": 3,
-  "FIGURE-FORM": 2
- },
- "docs/explained/cv-curve.md": {
-  "FIGURE": 5,
-  "FIGURE-FORM": 1
- },
- "docs/explained/index.md": {
-  "FIGURE": 2
- },
- "docs/explained/mos-capacitor.md": {
-  "FIGURE": 4,
-  "FIGURE-FORM": 2
- },
- "docs/explained/oxide-and-poly.md": {
-  "EQUATION": 2,
-  "FIGURE": 5,
-  "FIGURE-FORM": 1
- },
- "docs/explained/pn-junction.md": {
-  "EQUATION": 12,
-  "FIGURE": 4,
-  "FIGURE-FORM": 2
- },
- "docs/explained/silicon-and-carriers.md": {
-  "EQUATION": 2,
-  "FIGURE": 5,
-  "FIGURE-FORM": 1
- },
- "docs/explained/transistor-parts.md": {
-  "FIGURE": 6,
-  "FIGURE-FORM": 2
- },
  "docs/glossary.md": {
   "FILELINK": 1
  },
