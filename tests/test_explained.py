@@ -2151,8 +2151,11 @@ def test_corner_crossing_gaps_back_the_limitations_page():
         assert gaps[lengths[0]] > 0 > gaps[lengths[-1]], corner
         swing = gaps[lengths[0]] - gaps[lengths[-1]]
         assert max(abs(v) for v in nfet[corner].values()) < swing / 5, corner
-    text = LIMITS_CORNERS_PAGE.read_text("utf-8")
-    assert "positive\nat its shortest gate and negative at its longest, at every corner" in text
+    text = " ".join(LIMITS_CORNERS_PAGE.read_text("utf-8").split())
+    assert (
+        "At every corner the pfet's gap is positive at its shortest gate and negative at its "
+        "longest." in text
+    )
 
 
 def test_corner_figures_are_registered_and_drawn():
