@@ -37,3 +37,5 @@ The structures of each design, and what to note about them:
   circuit-level check.
 - **Priority 5, ISHI.** Probe-padded inverters (`05v0` and `06v0`). Check that
   {term}`Dualgate` is over each device: some "5 V" devices are built thin-oxide.
+
+The TRID geometry is drawn from above, to scale, in {numref}`Figure %s of Definition of agreement <agreement-instance-figure>`.

@@ -146,19 +146,6 @@
  "docs/limitations/engine-cross-check.md": {
   "FIGURE-OK": 1
  },
- "docs/limitations/index.md": {
-  "FIGURE": 6
- },
- "docs/limitations/literature.md": {
-  "FIGURE": 3
- },
- "docs/limitations/plugin-history.md": {
-  "FIGURE": 9,
-  "FILELINK": 5
- },
- "docs/limitations/silicon-validation.md": {
-  "FIGURE": 1
- },
  "docs/reproduce/image.md": {
   "FIGURE": 4,
   "FILELINK": 11
