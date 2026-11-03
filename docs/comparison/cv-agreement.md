@@ -490,8 +490,9 @@ multi-hour 2D sweep runs once and serves both the results folder and the validat
 ## Corner bounds
 
 The corner fits repeat this calibration against each of the other four SPICE
-{term}`corners <corner>`. Each takes its corner's {term}`model card` offsets as fixed inputs
-({ref}`reproduce-corners`). The tables below give each fitted number's lowest and highest value
+{term}`corners <corner>`. Each takes its corner's {term}`model card` offsets of the gate area and
+the overlaps as fixed inputs. Its oxide and threshold offsets move the start value and limits of
+two numbers that stay fitted ({ref}`reproduce-corners`). The tables below give each fitted number's lowest and highest value
 over the corners. The typical fit is beside them. {ref}`The bounds figure <fig-calibration-bounds>`
 draws the same bounds. What the corner fits cannot see is on {doc}`/limitations/corners`.
 

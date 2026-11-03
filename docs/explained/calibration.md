@@ -226,10 +226,12 @@ leaves out the extra solves that measure how each number moves the curve
 
 The SPICE reference runs {{ x_corner_count }} {term}`corners <corner>`, the typical one among
 them. A corner fit repeats the calibration against one other corner's SPICE curves. It takes that
-corner's model-card offsets of the gate area, the overlaps, the oxide and the threshold as fixed
-inputs ({ref}`reproduce-corners`). Over the {{ x_corner_count }} fits, each fitted number gets a
-lowest and a highest value. The spread is the highest minus the lowest.
-{numref}`fig-calibration-bounds` shows them.
+corner's model-card offsets of the gate area and the overlaps as fixed inputs. The corner's oxide
+and threshold offsets move the start and limits of the oxide thickness and gate voltage shift,
+which stay fitted ({ref}`reproduce-corners`).
+
+Over the {{ x_corner_count }} fits, each fitted number gets a lowest and a highest value. The
+spread is the highest minus the lowest. {numref}`fig-calibration-bounds` shows them.
 
 ```{figure} /_generated/explained/corner-bounds-light.svg
 :figclass: only-light
