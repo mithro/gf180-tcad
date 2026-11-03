@@ -28,6 +28,7 @@ gf180tcad.history.__main__
 gf180tcad.io
 gf180tcad.known
 gf180tcad.layout
+gf180tcad.limitations_figures
 gf180tcad.manifest
 gf180tcad.meshcut
 gf180tcad.meshcut.__main__
