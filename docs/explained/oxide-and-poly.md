@@ -5,7 +5,7 @@
 What are the {term}`gate oxide` and the {term}`poly-silicon` gate of this project's transistors,
 and why do their thickness and doping matter? This page answers that for a reader who knows basic
 circuits and has read {doc}`silicon-and-carriers`. It leaves out what the silicon under the oxide
-does as the gate voltage changes. The stack of {numref}`fig-oxide-stack` shows both layers.
+does as the gate voltage changes.
 
 ```{figure} /_generated/explained/oxide-stack-light.svg
 :figclass: only-light

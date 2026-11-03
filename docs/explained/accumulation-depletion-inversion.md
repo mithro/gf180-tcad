@@ -5,7 +5,6 @@
 What happens under the gate as the gate voltage moves from negative to positive? This page answers that for the
 {term}`MOS capacitor <MOSCAP>` of the {term}`nfet_05v0`, for a reader who has read {doc}`mos-capacitor`. It names
 the three regions of the {term}`C–V` curve and shows the energy bands in each.
-The shading in {numref}`fig-regions-cv` marks the three regions on the curve.
 
 ```{figure} /_generated/explained/cv-regions-light.svg
 :figclass: only-light
@@ -32,9 +31,10 @@ this project chose on the SPICE curve ({py:func}`~gf180tcad.calibrate.cv.regions
 
 ## Three regions and flat band
 
-The body of the nfet is p-type: its free carriers are {term}`holes <hole>`. The gate voltage
-decides which carriers gather at the surface of the body, under the oxide
-({ref}`Sze and Ng, ch. 4 <lit-sze>`; {ref}`Taur and Ning, ch. 4 <lit-taur>`).
+The body of the nfet is p-type: its free carriers are {term}`holes <hole>`. Which carriers
+gather at the surface of the body, under the oxide, depends on the gate voltage
+({numref}`fig-regions-bands`; {ref}`Sze and Ng, ch. 4 <lit-sze>`;
+{ref}`Taur and Ning, ch. 4 <lit-taur>`).
 
 - {term}`Accumulation`: a negative gate draws extra holes to the surface. They form a thin layer
   right under the oxide, so the capacitance is close to the oxide's.
@@ -44,13 +44,10 @@ decides which carriers gather at the surface of the body, under the oxide
 - {term}`Inversion`: further up, the gate draws {term}`electrons <electron>` to the surface.
   There they outnumber the holes, and the surface turns n-type.
 
-The panels of {numref}`fig-regions-bands` draw the carriers at the surface in each region. They
-also shade the layer without free carriers in depletion and inversion.
-
 The depleted layer acts as a second capacitor, in series with the oxide: the gate charge must
-reach across both. So the gate capacitance falls in depletion. In inversion the electrons sit
+reach across both. So the gate capacitance falls in depletion
+({numref}`fig-regions-cv`). In inversion the electrons sit
 right under the oxide again, and the curve climbs back ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
-The curve in {numref}`fig-regions-cv` shows that fall and climb.
 
 The {term}`pfet_05v0` has an n-type body, the {term}`n-well`. There electrons and holes swap
 roles, and the gate voltages change sign.
@@ -61,8 +58,8 @@ roles, and the gate voltages change sign.
 
 Between its two flat parts the SPICE curve dips to a minimum of {{ x_c_min_l10 }} at
 {{ x_u_min_l10 }} ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
-This repo marks the regions on that curve ({py:func}`~gf180tcad.calibrate.cv.regions`).
-The shading in {numref}`fig-regions-cv` lies between the two marks below.
+This repo marks the regions on that curve, the shading edges of {numref}`fig-regions-cv`
+({py:func}`~gf180tcad.calibrate.cv.regions`).
 
 - Accumulation ends at {{ x_u_fb_l10 }}, where the curve has fallen to a set fraction of its
   flat part ({py:data}`~gf180tcad.calibrate.cv.FB_FRACTION`).
@@ -80,9 +77,8 @@ they cross at {{ x_u_inv_spice_l10 }} and {{ x_u_inv_tcad_l10 }}.
 ## The bands in each region
 
 A band diagram shows the energies an electron can have against the depth into the body
-({doc}`bands-and-fermi-level`). The {term}`Fermi level`, the energy filled half of the time,
+({doc}`bands-and-fermi-level`); {numref}`fig-regions-bands` has one for each region. The {term}`Fermi level`, the energy filled half of the time,
 stays flat, because no current flows ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
-The panels of {numref}`fig-regions-bands` draw the bands in each region.
 
 ```{figure} /_generated/explained/band-regimes-light.svg
 :figclass: only-light

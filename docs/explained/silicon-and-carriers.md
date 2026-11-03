@@ -4,8 +4,7 @@
 
 What carries a current in silicon, and how many carriers are in the silicon of this project's
 transistors? This page answers that for a reader who knows basic circuits and has not studied
-semiconductor physics. It leaves out energy bands. The densities in {numref}`fig-silicon-doping`
-are the numbers it explains.
+semiconductor physics. It leaves out energy bands.
 
 ```{figure} /_generated/explained/silicon-doping-light.svg
 :figclass: only-light
@@ -33,8 +32,7 @@ are project choices. {{ x_fig_silicon_doping_scale }}
 Silicon is a crystal in which each atom shares its four outer {term}`electrons <electron>` with
 four neighbours ({ref}`Sze and Ng, ch. 1 <lit-sze>`). Each shared pair is a bond that holds the
 atoms together. An electron held in a bond cannot move through the crystal. A perfect crystal
-with every electron in a bond carries no current. The left panel of {numref}`fig-silicon-bonds`
-draws such a crystal flat.
+with every electron in a bond carries no current (left panel of {numref}`fig-silicon-bonds`).
 
 ```{figure} /_generated/explained/silicon-bonds-light.svg
 :figclass: only-light

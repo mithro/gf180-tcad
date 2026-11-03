@@ -5,7 +5,6 @@
 What are the gate, the source, the drain and the body of a {term}`GF180MCU` 5 V transistor,
 and which does this repo simulate? This page answers that for a reader who knows basic circuits and has
 read {doc}`silicon-and-carriers`. It names each part and leaves out how the transistor switches.
-The cross-section of {numref}`fig-parts-cell` labels each part.
 
 ```{figure} /_generated/explained/parts-cell-light.svg
 :figclass: only-light
