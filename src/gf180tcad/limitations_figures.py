@@ -803,6 +803,8 @@ def _meshconv_figure(dim: int, palette: str, roots: Roots):
             ax.text(c["u"][0], c["criterion"], f" {c['criterion'] * UNITS['percent']:g} %",
                     ha="left", va="bottom")  # fmt: skip
             ax.set_yscale("log")
+            top = max(c["criterion"], *(float(np.max(lv["change"])) for lv in c["levels"]))
+            ax.set_ylim(top=top * STYLE["criterion_headroom"])
             ax.set_ylabel(f"{_SHORT[device]}: change\nto next level")
             ax.grid(True)
             if dim == 2:
@@ -818,6 +820,8 @@ def _meshconv_figure(dim: int, palette: str, roots: Roots):
                 ax2.text(c["u"][0], crit, f" {crit * UNITS['percent']:g} %", ha="left",
                          va="bottom")  # fmt: skip
                 ax2.set_yscale("log")
+                top = max(crit, *(float(np.max(a["rel"])) for a in c["agreement"]))
+                ax2.set_ylim(top=top * STYLE["criterion_headroom"])
                 ax2.set_ylabel("2D against 1D")
                 ax2.grid(True)
         for ax in axes[-1]:
@@ -970,6 +974,41 @@ def pin_depletion_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         ax.grid(True)
         ax.legend(loc="upper right", frameon=False)
         return fig
+
+
+# --- the numbers the pages print ----------------------------------------------------------------
+
+# The level of the nfet 2D mesh-convergence study whose round-off acceptance the moscap2d page
+# describes (its one accepted solve).
+ROUNDOFF_LEVEL = 1
+
+
+def _sci(v: float) -> str:
+    """``v`` to :data:`STYLE` ``page_digits`` significant digits in the pages' e-notation."""
+    mant, exp = f"{v:.{STYLE['page_digits'] - 1}e}".split("e")
+    return f"{mant}e{int(exp)}"
+
+
+def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
+    """``{"lim_<name>": text}``: the numbers the limitations pages print beside these figures,
+    from the functions the figures draw. ``lim_roundoff_min_psi``, ``lim_roundoff_region``,
+    ``lim_roundoff_update`` and ``lim_roundoff_bound``: the accepted solve of level
+    :data:`ROUNDOFF_LEVEL` of :func:`roundoff_points`; ``lim_ccox_acc`` and ``lim_ccox_inv``: C/Cox
+    per drawn area of the nfet's Lmin start cell (:func:`c_over_cox`) at the accumulation and
+    inversion ends of its sweep."""
+    k = roundoff_points(roots)
+    (p,) = [p for p in k["points"] if p["level"] == ROUNDOFF_LEVEL]
+    nfet = c_over_cox(EVIDENCE_DEVICE, roots)
+    cell = nfet[CCOX_CELLS[EVIDENCE_DEVICE][0]]
+    ccox = STYLE["ccox_digits"]
+    return {
+        "lim_roundoff_min_psi": _sci(p["min_abs_psi"]),
+        "lim_roundoff_region": p["region"],
+        "lim_roundoff_update": _sci(p["abs_error"]),
+        "lim_roundoff_bound": _sci(k["bound"]),
+        "lim_ccox_acc": f"{cell['ratio'][np.argmin(cell['u'])]:.{ccox}f}",
+        "lim_ccox_inv": f"{cell['ratio'][np.argmax(cell['u'])]:.{ccox}f}",
+    }
 
 
 # --- the registry -------------------------------------------------------------------------------

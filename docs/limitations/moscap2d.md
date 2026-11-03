@@ -237,8 +237,9 @@ The mesh size of both kinds of refinement is in {numref}`Figure %s of Mesh conve
   ≤ 32·eps·max|ψ| over the last 10 iterations, a plateau of the relative error, and a node
   with |ψ| small enough to explain it), after solving it again to that round-off state, because
   DEVSIM restores the previous solution of a solve it calls non-converged. Every accepted point is
-  recorded. At the nfet level-1 point the accepted update is 1.6e-16 V (the bound 4.2e-15 V), the
-  dielectric's smallest |ψ| is 2.7e-8 V, Cgg there is smooth against its neighbours (second
+  recorded. At the nfet level-1 point the accepted update is {{ lim_roundoff_update }} V (the bound
+  {{ lim_roundoff_bound }} V), the dielectric's smallest |ψ| is {{ lim_roundoff_min_psi }} V (region
+  {{ lim_roundoff_region }} of the {repo}`report <results/tcad/meshconv/moscap2d/nfet_05v0/report.json>`), Cgg there is smooth against its neighbours (second
   difference 1.20e-3 C against 1.19e-3 on the level that needed no acceptance). A ±0.1 mV
   nudge of the gate bias reproduces it within 5e-9, but that check was run on the identical
   {py:mod}`meshconv <gf180tcad.tcad.meshconv>` level-1 {term}`job`, not on the production results
@@ -251,7 +252,7 @@ The accepted solves of the mesh-convergence study sit where the criterion asks f
 ```{figure} /_generated/limitations/roundoff-light.svg
 :name: moscap2d-roundoff-figure
 :figclass: only-light
-:alt: A log-log plot: a line rising from 1e-20 V at small potentials, three dots above it near 1e-7 V of potential and 1.5e-16 V of update, and a dashed level line above the dots.
+:alt: A log-log plot: a line rising from 1e-20 V at small potentials, three dots above it at 3e-8 to 3e-7 V of potential and 1.5e-16 V of update, and a dashed level line above the dots.
 
 The potential update the relative criterion asks for at a node, 1e-10 × (|psi| + 1e-10 V), against
 the node's potential |psi| (solid). The dots are the three solves of the nfet 2D mesh-convergence
@@ -261,7 +262,7 @@ acceptance bound ({repo}`report <results/tcad/meshconv/moscap2d/nfet_05v0/report
 
 ```{figure} /_generated/limitations/roundoff-dark.svg
 :figclass: only-dark
-:alt: A log-log plot: a line rising from 1e-20 V at small potentials, three dots above it near 1e-7 V of potential and 1.5e-16 V of update, and a dashed level line above the dots.
+:alt: A log-log plot: a line rising from 1e-20 V at small potentials, three dots above it at 3e-8 to 3e-7 V of potential and 1.5e-16 V of update, and a dashed level line above the dots.
 
 The potential update the relative criterion asks for at a node, 1e-10 × (|psi| + 1e-10 V), against
 the node's potential |psi| (solid). The dots are the three solves of the nfet 2D mesh-convergence
@@ -616,8 +617,9 @@ that of the 15.2 nm (nfet) or 15.6 nm (pfet) oxide.
 
 BSIM4's CF of 0.0727 fF/µm per side would add
 2 × 0.0727 / (0.6 µm × 2.272 fF/µm²) = 0.107 Cox. With source and drain, their doping that
-reaches under the gate edges adds the overlap, and C/Cox per drawn area is 1.071 (accumulation) and
-1.090 (inversion) at Lmin. {test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1` therefore
+reaches under the gate edges adds the overlap, and C/Cox per drawn area of the start cell at Lmin
+({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.csv>`) is {{ lim_ccox_acc }}
+(accumulation) and {{ lim_ccox_inv }} (inversion). {test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1` therefore
 checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is reported, not tested.
 
 ## Limitations

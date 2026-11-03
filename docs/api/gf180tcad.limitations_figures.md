@@ -30,6 +30,8 @@ Source: {repo}`src/gf180tcad/limitations_figures.py`. Its figures appear on the
 
 .. autodata:: gf180tcad.limitations_figures.SAME_PROCESS
 
+.. autodata:: gf180tcad.limitations_figures.ROUNDOFF_LEVEL
+
 .. autodata:: gf180tcad.limitations_figures.SD_DEVICE
 
 .. autodata:: gf180tcad.limitations_figures.PLUGIN_FILES

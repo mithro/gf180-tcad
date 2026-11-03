@@ -871,3 +871,35 @@ def test_positive_control_mutate_changes_zero_lines():
     edge = ax.axvline(0, gid="edge")
     mutate(edge)
     assert list(edge.get_xdata()) == [1, 1]
+
+
+# --- the numbers the pages print by substitution -------------------------------------------------
+
+
+def test_page_numbers_are_the_committed_files():
+    """The moscap2d page's round-off and C/Cox numbers (issue #159): substituted from the report
+    and the start cell's cv.csv, read here directly, and no longer typed on the page."""
+    subs = lf.substitutions()
+    rep = _json("tcad", "meshconv", "moscap2d", "nfet_05v0", "report.json")
+    (p,) = rep["levels"][lf.ROUNDOFF_LEVEL]["roundoff_accepted"]
+    assert subs["lim_roundoff_min_psi"] == "2.1e-7" and float(
+        subs["lim_roundoff_min_psi"]
+    ) == float(f"{p['min_abs_psi']:.1e}")
+    assert subs["lim_roundoff_region"] == p["region"] == "oxide"
+    assert float(subs["lim_roundoff_update"]) == float(f"{p['abs_error']:.1e}")
+    assert float(subs["lim_roundoff_bound"]) == float(f"{p['roundoff_bound']:.1e}")
+    qs = _csv("tcad", "moscap2d", "nfet_05v0", "start", "w10p0_l0p60", "cv.csv")
+    l_um = _json("tcad", "moscap2d", "nfet_05v0", "start", "w10p0_l0p60", "cv.meta.json")["l_um"]
+    ratio = qs["cgg_per_um"] / l_um / _cox_ff_um2("nfet_05v0")
+    assert subs["lim_ccox_acc"] == f"{ratio[np.argmin(qs['vg'])]:.3f}" == "1.068"
+    assert subs["lim_ccox_inv"] == f"{ratio[np.argmax(qs['vg'])]:.3f}" == "1.087"
+    page = (REPO_ROOT / "docs/limitations/moscap2d.md").read_text("utf-8")
+    for key in subs:
+        assert f"{{{{ {key} }}}}" in page, key
+    for old in ("2.7e-8", "1.071", "1.090"):
+        assert old not in page, old
+
+
+def test_docs_conf_registers_the_substitutions():
+    conf = (REPO_ROOT / "docs/conf.py").read_text("utf-8")
+    assert "limitations_figures" in conf and ".substitutions()" in conf
