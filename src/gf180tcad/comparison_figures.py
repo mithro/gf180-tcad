@@ -17,6 +17,7 @@ No number is typed below except in :data:`STYLE` (sizes, offsets, axis spans) an
 from __future__ import annotations
 
 import json
+import pathlib
 from collections.abc import Callable
 from pathlib import Path
 from typing import NamedTuple
@@ -88,9 +89,10 @@ class Roots(NamedTuple):
     read the committed TCAD tree through the explainer model (:mod:`gf180tcad.explain.model`),
     and the centroid plot reads the process files, so those three take no root."""
 
-    spice: Path = SPICE_ROOT
-    older_pdk: Path = OLDER_PDK_ROOT
-    tcad: Path = TCAD_ROOT
+    # Spelled pathlib.Path: the docs link that name (docs/_ext/api_links.py), not a bare Path.
+    spice: pathlib.Path = SPICE_ROOT
+    older_pdk: pathlib.Path = OLDER_PDK_ROOT
+    tcad: pathlib.Path = TCAD_ROOT
 
 
 # The committed trees: the roots every figure reads unless it is given others.
