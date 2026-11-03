@@ -520,7 +520,8 @@ The build script refuses a builder in which any node lacks the pinned {{ BuildKi
 
 {{ Charon }} is the second TCAD simulator of {term}`Phase 4`. It is built from source in
 {repo}`docker/charon-libs/`, with the [Charon user manual](https://www.sandia.gov/app/uploads/sites/106/2022/08/Charon_UserManual-v2_2.pdf)'s
-own recipe. {repo}`docker/CHARON_LIBS_IMAGE` pins the image by digest. No TCAD job runs Charon.
+own recipe. {repo}`docker/CHARON_LIBS_IMAGE` pins that image by digest. The `charon` image
+adds its `/opt/charon` to the dev-HEAD TCAD image ({ref}`charon-image`). No TCAD job runs Charon.
 
 ```{figure} /_generated/reproduce/charon-stages-light.svg
 :name: charon-stages
@@ -657,6 +658,8 @@ records. {repo}`docker/charon-libs/IMAGE_ID` holds the config digest.
 compile in {repo}`tools/sandbox-run` and keep the build tree between attempts. `--jobs N` sets
 the number of compile jobs.
 
+(charon-mpi-sandbox)=
+
 ### One MPI process in the sandbox
 
 ```{figure} /_generated/reproduce/charon-mpi-light.svg
@@ -737,6 +740,89 @@ The build pushes only the tag `unverified`. Three checks then compare the config
 probe's output with {repo}`docker/charon-libs/versions.json`. The published tags come last.
 
 {repo}`tests/test_charon_image.py` runs the image's checks. Its sandbox tests run the upstream
-`pmoscap.nlp` and `loca_moscap_cv` decks in the pinned image, which installs them under
-`/opt/charon/share/gf180tcad/tests`. The image's `io_info` reads one time step in the
+`pmoscap.nlp` and `loca_moscap_cv` decks in both pinned Charon images. The charon-libs image
+installs them under `/opt/charon/share/gf180tcad/tests`. The image's `io_info` reads one time step in the
 `pmoscap.nlp` output file.
+
+(charon-image)=
+
+### The charon image
+
+The `charon` image is the one a Charon job runs in. It is the
+{ref}`dev-HEAD TCAD image <tcad-dev-image>` with `/opt/charon` from the charon-libs image and the
+{{ netCDF4 }} and {{ cftime }} packages added to its venv. One container then holds {{ Python }} 3.13,
+the {{ DEVSIM }} stack, `netCDF4` and `charon_mp.exe`. {repo}`docker/charon/` holds the recipe, and
+{repo}`docker/CHARON_IMAGE` pins it by digest.
+
+```{figure} /_generated/reproduce/charon-layers-light.svg
+:name: charon-layers
+:figclass: only-light
+:alt: A tall container box on the right holds four boxes stacked from the bottom: the dev-HEAD TCAD image, layer 1 /opt/charon, layer 2 netCDF4 and cftime, and the ENV. Two boxes on the left, the charon-libs image and the wheels stage, each have an arrow to the layer beside them.
+
+The layers of the charon image, from {repo}`docker/charon/Dockerfile`. The dev-HEAD TCAD image
+is the bottom of the stack. The charon-libs image gives layer 1 and the `wheels` stage gives
+layer 2.
+```
+
+```{figure} /_generated/reproduce/charon-layers-dark.svg
+:figclass: only-dark
+:alt: A tall container box on the right holds four boxes stacked from the bottom: the dev-HEAD TCAD image, layer 1 /opt/charon, layer 2 netCDF4 and cftime, and the ENV. Two boxes on the left, the charon-libs image and the wheels stage, each have an arrow to the layer beside them.
+
+The layers of the charon image, from {repo}`docker/charon/Dockerfile`. The dev-HEAD TCAD image
+is the bottom of the stack. The charon-libs image gives layer 1 and the `wheels` stage gives
+layer 2.
+```
+
+{numref}`charon-layers` shows the two layers the image adds:
+
+1. Layer 1 copies `/opt/charon` byte for byte from the image that {repo}`docker/CHARON_LIBS_IMAGE`
+   pins. Both images start from {repo}`docker/IMAGE`, so the runtime libraries are present. The
+   build runs the `ldd` check of {repo}`docker/charon-libs/build-charon.sh` on every file.
+2. Layer 2 installs the wheels that {repo}`docker/charon/requirements.lock` pins by sha256. The
+   `wheels` stage downloads them, and the install runs with no network and no dependency
+   resolution. `numpy` and `certifi`, the other requirements of `netCDF4`, come from the dev
+   image's venv.
+
+The image's ENV keeps the dev image's settings, `OMP_NUM_THREADS=1` among them. It adds:
+
+- `PATH`: `/opt/charon/bin` first, then the dev image's `PATH`;
+- `CHARON_EXECUTABLE_PATH=/opt/charon/bin` and `CHARON_EXECUTABLE=charon_mp.exe`;
+- `OMPI_MCA_ess_singleton_isolated=1`, as in the charon-libs image ({ref}`charon-mpi-sandbox`);
+- `PYTHON_CPU_COUNT=1`, the dev image's value, set again.
+
+{repo}`docker/charon/probe_versions.py` writes {repo}`docker/charon/versions.json`. It holds the
+dev image's probe, both pinned image references, the charon-libs keys and the versions below.
+
+```{table} The Python packages the charon image adds, and the C libraries inside the netCDF4 wheel. Values from {repo}`docker/charon/versions.json`.
+:name: charon-image-versions
+
+| Component | Version |
+|---|---|
+| `netCDF4` | 1.7.5 |
+| `cftime` | 1.6.6.1 |
+| netCDF-C in the `netCDF4` wheel | 4.10.1 |
+| HDF5 in the `netCDF4` wheel | 2.2.0 |
+```
+
+{repo}`docker/charon/build` works like {repo}`docker/charon-libs/build`, in the same 16 GiB
+builder. Its build inputs are the files in {repo}`docker/charon/`, the two pin files and
+{repo}`docker/charon-libs/build-charon.sh`.
+
+The pinned image was built twice from the same commit, once on a GitHub runner and once on the
+project's host. Both gave the same digests, as [pull request #164](https://github.com/mithro/gf180-tcad/pull/164)
+records. The runner's time includes the push of the image, and the host's its load into the
+local image store.
+
+| Quantity | GitHub runner | Project's host |
+|---|---|---|
+| Wall time of the whole build (s) | 295 | 335 |
+| Builder memory peak (GB) | none recorded | 5.10 |
+
+The two layers add 91.7 MB and 12.5 MB, compressed, to the dev-HEAD TCAD image.
+
+{repo}`.github/workflows/image.yml` builds the charon image whenever a pull request or a push
+changes a file under {repo}`docker/`. The entry has no gate: in {numref}`charon-ci` the trigger
+leads straight to the build, then to the same three checks and published tags. Its rebuild from
+scratch runs on every such change as well. The sandbox tests of
+{repo}`tests/test_charon_image.py` also check the ENV above and read the `pmoscap.nlp` output
+with `netCDF4`.
