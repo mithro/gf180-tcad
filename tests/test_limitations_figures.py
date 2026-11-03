@@ -35,6 +35,15 @@ SRC = REPO_ROOT / "src" / "gf180tcad" / "limitations_figures.py"
 FIGURES = [
     "engine-diff",
     "engine-subthreshold",
+    "vertex-grid",
+    "c-over-cox",
+    "twod-validation",
+    "twod-metrics",
+    "roundoff",
+    "sd-profile",
+    "mesh-grading",
+    "meshconv-1d",
+    "meshconv-2d",
 ]
 
 _RENDER = textwrap.dedent(
@@ -153,6 +162,7 @@ def test_c_over_cox_figure_draws_the_committed_curves():
         pol = DEVICES[device].polarity
         one = dict(zip(np.round(k["one_d"]["u"] * pol, 6), k["one_d"]["ratio"], strict=True))
         assert round(one[-5.0], 5) == at_m5 and round(one[5.0], 5) == at_p5
+        assert k["one_d"]["ratio"].max() < 1  # the mesh-convergence page: below 1 at every bias
         lmin, l2 = lf.CCOX_CELLS[device]
         q = dict(zip(np.round(k[lmin]["u"], 6), k[lmin]["ratio"], strict=True))
         assert q[-5.0] > 1 and q[5.0] > 1

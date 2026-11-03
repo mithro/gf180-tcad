@@ -190,7 +190,7 @@ EVIDENCE_SWEEP = "idvg_sat"
 def evidence_curves(roots: Roots = DEFAULT_ROOTS) -> dict[str, np.ndarray]:
     """The committed :data:`EVIDENCE_SWEEP` of :data:`EVIDENCE_GEOMETRY` at Vbs = 0 from both
     engines: ``vg``, ``id_ngspice``, ``id_xyce`` (A) and ``rel``, (Id,Xyce − Id,ngspice) /
-    max(|Id|), NaN where both currents are at or below
+    ``max(|Id|)``, NaN where both currents are at or below
     :data:`gf180tcad.spice.xyce.ENGINE_DIFF_FLOOR`."""
     cols = {
         eng: data.spice_columns(
@@ -524,9 +524,9 @@ def roundoff_points(roots: Roots = DEFAULT_ROOTS) -> dict:
 
 
 def roundoff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
-    """The update DEVSIM's relative criterion asks for at a node, rel_tol × (|psi| + offset),
-    against |psi| (log-log), and each accepted solve of :func:`roundoff_points` at its smallest
-    |psi| and its update: the solves sit where the criterion asks for less than the round-off."""
+    """The update DEVSIM's relative criterion asks for at a node, ``rel_tol * (|psi| + offset)``,
+    against ``|psi|`` (log-log), and each accepted solve of :func:`roundoff_points` at its smallest
+    ``|psi|`` and its update: the solves sit where the criterion asks for less than the round-off."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     k = roundoff_points(roots)
@@ -678,7 +678,7 @@ def mesh_grading_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def meshconv_curves(dim: int, roots: Roots = DEFAULT_ROOTS) -> dict:
     """Per device, the committed ``dim``-D mesh-convergence report: ``u`` and per level with a
-    finer neighbour its scale and |C / C_finer − 1| at every bias; the criterion; in 2D also the
+    finer neighbour its scale and ``|C / C_finer - 1|`` at every bias; the criterion; in 2D also the
     2D-against-1D difference of the extruded stack at each level (``agreement``) and its
     criterion."""
     out = {}
@@ -753,7 +753,7 @@ def _meshconv_figure(dim: int, palette: str, roots: Roots):
 
 
 def meshconv_1d_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
-    """|C / C_finer − 1| against u at each 1D level with a finer neighbour, one panel per device,
+    """``|C / C_finer - 1|`` against u at each 1D level with a finer neighbour, one panel per device,
     with the 1 % criterion."""
     return _meshconv_figure(1, palette, roots)
 
@@ -892,6 +892,15 @@ def _svg_of(draw: Callable) -> Callable[[str, Roots], bytes]:
 FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "engine-diff": _svg_of(engine_diff_figure),
     "engine-subthreshold": _svg_of(engine_subthreshold_figure),
+    "vertex-grid": _svg_of(vertex_grid_figure),
+    "c-over-cox": _svg_of(c_over_cox_figure),
+    "twod-validation": _svg_of(two_d_validation_figure),
+    "twod-metrics": _svg_of(two_d_metrics_figure),
+    "roundoff": _svg_of(roundoff_figure),
+    "sd-profile": _svg_of(sd_profile_figure),
+    "mesh-grading": _svg_of(mesh_grading_figure),
+    "meshconv-1d": _svg_of(meshconv_1d_figure),
+    "meshconv-2d": _svg_of(meshconv_2d_figure),
 }
 
 
