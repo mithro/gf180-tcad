@@ -1063,6 +1063,32 @@ def test_cell_source_and_drain_widths_come_from_the_artefact():
         model.artefact_meta_path("nfet_05v0", "start", "w10p0_l0p70")
 
 
+def test_cell_source_and_drain_widths_follow_an_edited_artefact(tmp_path, monkeypatch):
+    """Issue #128, mutation-proof: in a copy of the committed files whose artefact meta moves the
+    body's ends out by 0.25 µm (source) and 0.13 µm (drain), the cell's widths move by exactly
+    those amounts. A width written into the code as a literal cannot follow the edit."""
+    import shutil
+
+    from gf180tcad.explain import model
+
+    args = ("nfet_05v0", "calibrated", "w10p0_l0p70")
+    committed = model.cell(*args, scales={})
+    for rel in (model.cell_meta_path(*args), model.meta_path(*args[:2]),
+                f"data/process/{args[0]}.toml"):  # fmt: skip
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / rel, tmp_path / rel)
+    rel = model.artefact_meta_path(*args)
+    meta = json.loads((ROOT / rel).read_text("utf-8"))
+    body = meta["region_bounds_um"]["body"]["x_um"]
+    meta["region_bounds_um"]["body"]["x_um"] = [body[0] - 0.25, body[1] + 0.13]
+    (tmp_path / rel).parent.mkdir(parents=True)
+    (tmp_path / rel).write_text(json.dumps(meta), encoding="utf-8")
+    monkeypatch.setattr(model, "ROOT", tmp_path)
+    edited = model.cell(*args, scales={})
+    assert edited.source_um == pytest.approx(committed.source_um + 0.25)
+    assert edited.drain_um == pytest.approx(committed.drain_um + 0.13)
+
+
 def test_cross_section_matches_cell():
     """Every drawn part of the cross-section is the cell's dimension times its stated scale; the
     source and drain are drawn at the artefact's widths, so the statement names only scales."""
