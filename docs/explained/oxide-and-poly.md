@@ -103,7 +103,8 @@ Because the gate is silicon, the gate voltage can push the free carriers away fr
 face, as it does in the body. That thin layer without free carriers is
 {term}`poly depletion`. It adds a capacitance in series with Cox
 ({ref}`Sze and Ng, ch. 4 <lit-sze>`). Two capacitors in series hold less charge per volt than
-either alone, so it lowers the gate's capacitance.
+either alone, so it lowers the gate's capacitance. For that reason the right-hand label of
+{numref}`Figure %s of What sets each part of the C–V curve <fig-cv-parts>` names the gate doping.
 
 The simulated gate is {{ x_poly_nfet }} deep. That depth is a project choice, many times the
 widest depleted layer, so the far side of the gate stays neutral silicon
