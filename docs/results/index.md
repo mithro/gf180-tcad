@@ -15,7 +15,7 @@ differences ({doc}`/limitations/engine-cross-check`).
 
 Three sweeps of the {term}`SPICE` reference of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm,
 with the body at 0 V. Top, the drain current against the gate voltage at a drain voltage of
-0.1 V: the black line is the {term}`typical corner`, and the grey band spans the
+0.1 V. Its black line is the {term}`typical corner`, and the grey band spans the
 {{ x_corner_count }} {term}`corners <corner>`. Middle, the drain current against the drain
 voltage at the typical corner only, one coloured line per gate voltage. Bottom, the gate
 capacitance against the gate voltage, with the line and the band as at the top.
@@ -27,7 +27,7 @@ capacitance against the gate voltage, with the line and the band as at the top.
 
 Three sweeps of the {term}`SPICE` reference of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm,
 with the body at 0 V. Top, the drain current against the gate voltage at a drain voltage of
-0.1 V: the black line is the {term}`typical corner`, and the grey band spans the
+0.1 V. Its black line is the {term}`typical corner`, and the grey band spans the
 {{ x_corner_count }} {term}`corners <corner>`. Middle, the drain current against the drain
 voltage at the typical corner only, one coloured line per gate voltage. Bottom, the gate
 capacitance against the gate voltage, with the line and the band as at the top.
