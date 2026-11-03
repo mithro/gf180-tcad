@@ -239,7 +239,7 @@ The mesh size of both kinds of refinement is in {numref}`Figure %s of Mesh conve
   DEVSIM restores the previous solution of a solve it calls non-converged. Every accepted point is
   recorded. At the nfet level-1 point the accepted update is {{ lim_roundoff_update }} V (the bound
   {{ lim_roundoff_bound }} V), the dielectric's smallest |ψ| is {{ lim_roundoff_min_psi }} V (region
-  {{ lim_roundoff_region }} of the {repo}`report <results/tcad/meshconv/moscap2d/nfet_05v0/report.json>`), Cgg there is smooth against its neighbours (second
+  {{ lim_roundoff_region }} of the {repo}`report <results/tcad/meshconv/moscap2d/nfet_05v0/report.json>`). Cgg there is smooth against its neighbours (second
   difference 1.20e-3 C against 1.19e-3 on the level that needed no acceptance). A ±0.1 mV
   nudge of the gate bias reproduces it within 5e-9, but that check was run on the identical
   {py:mod}`meshconv <gf180tcad.tcad.meshconv>` level-1 {term}`job`, not on the production results
@@ -318,7 +318,7 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
 
 ## The L = 2 µm cells: QS only, resumed, with a memory growth that is not fixed
 
-- **QS only.** The L = 2 µm cells (501k nodes for the nfet, 504k for the pfet) have no AC result: their folders, such as {repo}`results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00`, hold no AC file like the Lmin cell's {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>`. Their AC
+- **QS only.** The L = 2 µm cells (501k nodes for the nfet, 504k for the pfet) have no AC result. Their {repo}`folders <results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00>` hold no {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>` like Lmin's. Their AC
   sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
   solver ({term}`UMFPACK` 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
@@ -617,8 +617,8 @@ that of the 15.2 nm (nfet) or 15.6 nm (pfet) oxide.
 
 BSIM4's CF of 0.0727 fF/µm per side would add
 2 × 0.0727 / (0.6 µm × 2.272 fF/µm²) = 0.107 Cox. With source and drain, their doping that
-reaches under the gate edges adds the overlap, and C/Cox per drawn area of the start cell at Lmin
-({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.csv>`) is {{ lim_ccox_acc }}
+reaches under the gate edges adds the overlap. C/Cox per drawn area of the start cell at Lmin
+({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.csv>`) is then {{ lim_ccox_acc }}
 (accumulation) and {{ lim_ccox_inv }} (inversion). {test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1` therefore
 checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is reported, not tested.
 
