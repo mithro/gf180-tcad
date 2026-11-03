@@ -645,17 +645,17 @@ The four tests of the build check are these, by their CTest names:
   [`pndiode.nlp.inp`](https://charon.sandia.gov/charon-downloads/source-code/) of the Charon
   tarball defines it.
 
-The build writes two records into the image, both produced by
-{repo}`docker/charon-libs/inputs.py`:
+The build writes two JSON records into `/opt/charon/share/gf180tcad/` in the image, both
+produced by {repo}`docker/charon-libs/inputs.py`:
 
-- {repo}`charon-build.json <docker/charon-libs/inputs.py>` lists the inputs by sha256, the opts
-  files, the patches and the tests of the build check;
-- {repo}`SOURCES.json <docker/charon-libs/inputs.py>` lists the corresponding source by sha256.
+- the build record lists the inputs by sha256, the opts files, the patches and the tests of
+  the build check;
+- the source record lists the corresponding source by sha256.
 
 {repo}`docker/charon-libs/probe_versions.py` reads both records, the compiler of
 `charon_mp.exe` and the runtime packages, and its output is
-{repo}`docker/charon-libs/versions.json`. {repo}`docker/charon-libs/IMAGE_ID` holds the
-config digest.
+{repo}`docker/charon-libs/versions.json`, whose `charon_build` and `sources` keys copy the two
+records. {repo}`docker/charon-libs/IMAGE_ID` holds the config digest.
 
 `--target deps --load` loads the first stage as a local image. A developer can then run the
 compile in {repo}`tools/sandbox-run` and keep the build tree between attempts. `--jobs N` sets
