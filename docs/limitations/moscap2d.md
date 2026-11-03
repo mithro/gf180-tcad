@@ -456,8 +456,8 @@ and of the 2D cell at the level C_mid (dotted), labelled with their shift
 Every compared calibrated 2D cell ({repo}`results/tcad/validation`). Top: the shift of its depletion
 crossing from SPICE's, with the ±50 mV tolerance shaded. Bottom: its largest signed difference from
 SPICE on the accumulation (circles) and inversion (squares) plateaus, with the ±5 % tolerance shaded.
-A hollow marker is a "Same process" verdict: outside the tolerance, inside the SPICE corner window.
-A filled marker outside the band is Disagree.
+A hollow marker is a {term}`Same process` verdict: outside the tolerance, inside the SPICE corner window.
+A filled marker outside the band is {term}`Disagree`.
 ```
 
 ```{figure} /_generated/limitations/twod-metrics-dark.svg
@@ -467,8 +467,8 @@ A filled marker outside the band is Disagree.
 Every compared calibrated 2D cell ({repo}`results/tcad/validation`). Top: the shift of its depletion
 crossing from SPICE's, with the ±50 mV tolerance shaded. Bottom: its largest signed difference from
 SPICE on the accumulation (circles) and inversion (squares) plateaus, with the ±5 % tolerance shaded.
-A hollow marker is a "Same process" verdict: outside the tolerance, inside the SPICE corner window.
-A filled marker outside the band is Disagree.
+A hollow marker is a {term}`Same process` verdict: outside the tolerance, inside the SPICE corner window.
+A filled marker outside the band is {term}`Disagree`.
 ```
 
 The committed cells:
