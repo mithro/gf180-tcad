@@ -106,6 +106,10 @@ STYLE = {
     # the text keeps the 6.4 in width's size at 400 px; the Id-Vd family's line colours.
     "overview_size_in": (6.4, 8.8),
     "overview_ncols": 2,
+    # The pfet's two SPICE depletion edges: dotted lines this many edge widths thick, and the
+    # arrow between them at this fraction of the axis height.
+    "edge_line_factor": 2.0,
+    "edge_arrow_at": 0.25,
     "sweeps_size_in": (6.4, 10.0),
     "family": ("electron", "hole", "highlight", "highlight_oxide", "text"),
     "family_ncols": 3,
@@ -1168,6 +1172,20 @@ def pfet_geometries() -> tuple[str, str]:
     return by_l[0], by_l[-1]
 
 
+def _mark_edge_shift(ax, xs: list[float], pal: dict) -> None:
+    """Dotted lines at the SPICE depletion edges ``xs`` (V) of the shortest and the longest gate,
+    and a two-headed arrow between them labelled with the shift, near the top of ``ax``."""
+    lo, hi = min(xs), max(xs)
+    for x in xs:
+        ax.axvline(x, color=pal["hole"], lw=STYLE["edge_width"] * STYLE["edge_line_factor"],
+                   ls=":")  # fmt: skip
+    y = STYLE["edge_arrow_at"]
+    ax.annotate("", xy=(lo, y), xytext=(hi, y), xycoords=("data", "axes fraction"),
+                arrowprops={"arrowstyle": "<->", "color": pal["hole"]})  # fmt: skip
+    ax.text(hi, y, f"  {hi - lo:.2f} V shift", transform=ax.get_xaxis_transform(),
+            ha="left", va="center", color=pal["hole"])  # fmt: skip
+
+
 def calibration_pfet_figure(palette: str):
     """The matplotlib figure of :func:`calibration_pfet`, for the tests to read its lines."""
     from gf180tcad.devices import DEVICES
@@ -1176,6 +1194,7 @@ def calibration_pfet_figure(palette: str):
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     gids = pfet_geometries()
+    edges = numbers.spice_edges(PFET)
     with matplotlib.rc_context(_rc(palette)):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
@@ -1191,6 +1210,7 @@ def calibration_pfet_figure(palette: str):
                     zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
             ax.set_ylim(bottom=0)
             ax.grid(True)
+            _mark_edge_shift(ax, [pol * edges[g] for g in gids], pal)
             ax.set_title(
                 f"gate length {numbers.fit_geometries(PFET)[gid]:g} µm", fontsize=STYLE["text_pt"]
             )

@@ -83,14 +83,14 @@ draws it from the committed results.*
 
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/pfet-lengths-dark.svg">
-<img alt="Gate capacitance against gate voltage of the pfet, L = 0.5 µm above and L = 10 µm below: SPICE curves in a grey band and a dashed 1D line." src="docs/images/readme/pfet-lengths-light.svg">
+<img alt="Gate capacitance against gate voltage of the pfet, L = 0.5 µm above and L = 10 µm below: SPICE in a grey band, a dashed 1D line and two dotted edges." src="docs/images/readme/pfet-lengths-light.svg">
 </picture>
 
 *Figure 3. The pfet's gate capacitance at the shortest and the longest gate of the
-calibration, 0.5 µm and 10 µm. The solid line is SPICE at the typical corner, inside the
-grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner).
-The dashed line is the 1D stack at the fitted values. `make readme-figures` draws it from
-the committed results.*
+calibration, 0.5 µm and 10 µm. The solid line is SPICE at the typical corner inside the
+grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner),
+and the dashed line the fitted 1D stack. Dotted lines and an arrow mark each length's SPICE
+depletion edge. `make readme-figures` draws it from the committed results.*
 
 Every committed TCAD result has generated
 pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
