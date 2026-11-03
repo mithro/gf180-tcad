@@ -64,7 +64,8 @@ fitted and held out. Figure 2 shows both devices, 1D and 2D, at the minimum gate
 
 The pfet is published as a disagreement. The SPICE pfet's
 [depletion](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-depletion) edge
-moves by 0.57 V between L = 10 µm and the minimum length, as Figure 3 shows. One
+moves by [0.57 V](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html#cv-agreement-mismatch)
+between L = 10 µm and the minimum length, as Figure 3 shows. One
 length-independent 1D stack cannot follow that. The calibrated 1D curves are in
 [`results/tcad/moscap1d`](results/tcad/moscap1d).
 
