@@ -102,6 +102,18 @@ STYLE = {
     # width long, a drawing choice (the fitted shift is too small to see at its true length).
     "part_offset": 0.14,
     "shift_arrow": 0.1,
+    # The calibration limits: a taller figure for the three panels; each limit drawn as a bar this
+    # wide (pt) with end ticks this tall (pt); the start and fitted markers this size (pt); room of
+    # this fraction of a row above and below the two rows, and of the axis width at either end, so
+    # no marker on a limit is clipped.
+    "limits_size_in": (6.4, 6.4),
+    "limit_width": 10.0,
+    "limit_tick_pt": 16.0,
+    "marker_pt": 9.0,
+    # The SPICE crossings of the compare plot: hollow rings this size (pt) round the simulated ones.
+    "ring_pt": 16.0,
+    "row_pad": 0.6,
+    "limit_margin": 0.08,
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -244,12 +256,8 @@ def doping_profile(dev: model.Device, highlight: str, palette: str) -> bytes:
 
 def _short(v: float, unit: str, most: int) -> str:
     """``v`` with the fewest significant digits (up to ``most``) that print the same value as
-    ``most`` digits do: 0.2 µm, not 0.2000 µm."""
-    target = float(f"{v:.{most - 1}e}")
-    for d in range(1, most + 1):
-        if float(f"{v:.{d - 1}e}") == target:
-            return numbers.format_value(v, d, unit)
-    return numbers.format_value(v, most, unit)
+    ``most`` digits do: 0.2 µm, not 0.2000 µm (:func:`gf180tcad.explain.numbers.shortest`)."""
+    return numbers.shortest(v, unit, most)
 
 
 def _thickness(layer: model.Layer) -> str:
@@ -383,6 +391,12 @@ def _silicon_doping(palette: str) -> bytes:
 def _oxide_stack(palette: str) -> bytes:
     dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
     return stack_1d(dev, ("gate", "oxide"), palette)
+
+
+def _calibration_stack(palette: str) -> bytes:
+    # The calibration page: the two layers the fit changes, the oxide and the body, highlighted.
+    dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
+    return stack_1d(dev, ("oxide", "body"), palette)
 
 
 def _bands_stack(palette: str) -> bytes:
@@ -889,6 +903,165 @@ def cv_parts(palette: str) -> bytes:
         return _svg(cv_parts_figure(palette))
 
 
+# The calibration page (calibration.md): the fitted numbers of both transistors within their limits.
+#: The fitted numbers drawn on a log axis (a doping spans powers of ten).
+LOG_TUNABLES = ("n_ch_cm3",)
+
+
+def calibration_limits_figure(palette: str):
+    """The matplotlib figure of :func:`calibration_limits`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    fits = {d: numbers.fits(d) for d in devices}
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(numbers.TUNABLES), 1)
+        for i, (ax, (name, (words, unit, _most))) in enumerate(
+            zip(axes, numbers.TUNABLES.items(), strict=True)
+        ):
+            if name in LOG_TUNABLES:
+                ax.set_xscale("log")
+            for row, device in enumerate(devices):
+                (f,) = [f for f in fits[device] if f.name == name]
+                ax.plot([f.lower, f.upper], [row, row], color=pal["band"], lw=STYLE["limit_width"],
+                        solid_capstyle="butt", label="limits" if row == 0 else None)  # fmt: skip
+                ax.plot([f.lower, f.upper], [row, row], ls="none", marker="|", color=pal["text"],
+                        ms=STYLE["limit_tick_pt"], mew=STYLE["edge_width"] * 2)  # fmt: skip
+                ax.plot([f.start], [row], ls="none", marker="o", ms=STYLE["marker_pt"], mfc=pal["background"],
+                        mec=pal["text"], mew=STYLE["edge_width"] * 2, label="start" if row == 0 else None)  # fmt: skip
+                ax.plot([f.fitted], [row], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["highlight"],
+                        mec=pal["text"], mew=STYLE["edge_width"], label="fitted" if row == 0 else None)  # fmt: skip
+            ax.set_yticks(range(len(devices)), [d.split("_")[0] for d in devices])
+            ax.set_ylim(-STYLE["row_pad"], len(devices) - 1 + STYLE["row_pad"])
+            ax.margins(x=STYLE["limit_margin"])
+            ax.set_xlabel(f"{words.lower()} ({unit})" if unit else words.lower())
+            ax.grid(True, axis="x")
+            if i == 0:
+                handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
+        return fig
+
+
+def calibration_limits(palette: str) -> bytes:
+    """Each fitted number of the nfet and the pfet (:data:`gf180tcad.explain.numbers.TUNABLES`)
+    on its own axis: a bar from its lower to its upper limit, its start (open circle) and its
+    fitted value (filled diamond), read from the calibration result files
+    (:func:`gf180tcad.explain.numbers.fits`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_limits_figure(palette))
+
+
+#: The legend words of the crossing marks of :func:`calibration_compare`, by curve.
+COMPARE_MARKS = {"spice": "SPICE crossings", "tcad": "simulated crossings"}
+
+
+def calibration_compare_figure(palette: str):
+    """The matplotlib figure of :func:`calibration_compare`, for the tests to read it."""
+    from gf180tcad.devices import DEVICES
+
+    if DEVICES[REGIONS_DEVICE].polarity != 1:
+        raise ValueError(f"{REGIONS_DEVICE}: u is not the gate voltage")
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    c = cv_curves(REGIONS_DEVICE, "calibrated", REGIONS_GEOMETRY)
+    rec = numbers.fit_record(REGIONS_DEVICE, REGIONS_GEOMETRY)
+    res, sp, tc = rec["residuals"], rec["spice_regions"], rec["tcad_crossings"]
+    u = c["u_spice"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.set_xlim(u[0], u[-1])
+        top = max(c["spice_tt"].max(), c["tcad"].max()) * STYLE["region_headroom"]
+        ax.set_ylim(0, top)
+        ax.grid(True)
+        for key in ("plateau_acc_u", "plateau_inv_u"):
+            a, b = min(res[key]), max(res[key])
+            ax.axvspan(a, b, color=pal["highlight"], alpha=STYLE["region_alpha"], lw=0,
+                       label="flat parts compared" if key == "plateau_acc_u" else None)  # fmt: skip
+        ax.plot(u, c["spice_tt"], color=pal["text"], lw=lw, label="SPICE, typical")
+        ax.plot(c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
+                zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
+        for key, xs, uu, cc, marker in (
+            ("tcad", [tc["u_dep"], tc["u_inv"]], c["u"], c["tcad"], "D"),
+            ("spice", [sp["u_dep"], sp["u_inv"]], u, c["spice_tt"], "o"),
+        ):
+            # The two crossings lie close together: the SPICE ones are hollow rings, larger and
+            # on top, so the simulated diamond shows through each.
+            ring = key == "spice"
+            ax.plot(xs, np.interp(xs, uu, cc), ls="none", marker=marker,
+                    ms=STYLE["ring_pt"] if ring else STYLE["marker_pt"],
+                    mfc="none" if ring else pal["highlight"], mec=pal["text"],
+                    mew=STYLE["edge_width"] * 2, zorder=STYLE["spike_zorder"] + (2 if ring else 1),
+                    label=COMPARE_MARKS[key])  # fmt: skip
+        ax.set_xlabel("gate voltage (V)")
+        ax.set_ylabel("gate capacitance (fF)")
+        fig.legend(loc="outside lower center", ncols=2, frameon=False)
+        return fig
+
+
+def calibration_compare(palette: str) -> bytes:
+    """The nfet at ``w10p0_l10p00``: the :term:`SPICE` curve at the :term:`typical corner` and the
+    fitted simulated curve, the flat parts the fit compares shaded (the voltages of the result
+    file's residuals) and each curve's halfway-level crossings marked (``spice_regions`` and
+    ``tcad_crossings``)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_compare_figure(palette))
+
+
+#: The transistor of :func:`calibration_pfet`.
+PFET = "pfet_05v0"
+
+
+def pfet_geometries() -> tuple[str, str]:
+    """The shortest and the longest gate of the pfet's fit (``per_geometry`` of its result file)."""
+    fit = numbers.fit_geometries(PFET)
+    by_l = sorted(fit, key=lambda g: fit[g])
+    return by_l[0], by_l[-1]
+
+
+def calibration_pfet_figure(palette: str):
+    """The matplotlib figure of :func:`calibration_pfet`, for the tests to read its lines."""
+    from gf180tcad.devices import DEVICES
+
+    pol = DEVICES[PFET].polarity
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    gids = pfet_geometries()
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(gids), 1)
+        for ax, gid in zip(axes, gids, strict=True):
+            c = cv_curves(PFET, "calibrated", gid)
+            ax.fill_between(pol * c["u_spice"], c["spice_lo"], c["spice_hi"], color=pal["band"],
+                            linewidth=0, label="SPICE, all corners")  # fmt: skip
+            ax.plot(
+                pol * c["u_spice"], c["spice_tt"], color=pal["text"], lw=lw, label="SPICE, typical"
+            )
+            ax.plot(pol * c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
+                    zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
+            ax.set_ylim(bottom=0)
+            ax.grid(True)
+            ax.set_title(
+                f"gate length {numbers.fit_geometries(PFET)[gid]:g} µm", fontsize=STYLE["text_pt"]
+            )
+            ax.set_xlabel("gate voltage (V)")
+            ax.set_ylabel("gate capacitance (fF)")
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
+        return fig
+
+
+def calibration_pfet(palette: str) -> bytes:
+    """The pfet's gate capacitance at the shortest and the longest gate of its fit
+    (:func:`pfet_geometries`), on the true gate voltage: the :term:`SPICE` band of all
+    :term:`corners <corner>`, the typical curve and the fitted simulated curve."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_pfet_figure(palette))
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -904,13 +1077,27 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "band-regimes": band_regimes,
     "mesh-window": _mesh_window,
     "cv-parts": cv_parts,
+    "calibration-limits": calibration_limits,
+    "calibration-compare": calibration_compare,
+    "calibration-pfet": calibration_pfet,
+    "calibration-stack": _calibration_stack,
 }
 
 
 # The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
 # computed curves (not drawings of the device) carry no statement.
 _CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell", "mesh-window")
-_PLOTS = ("bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes", "cv-parts")
+_PLOTS = (
+    "bands-flat",
+    "junction-panels",
+    "moscap-cv",
+    "cv-regions",
+    "band-regimes",
+    "cv-parts",
+    "calibration-limits",
+    "calibration-compare",
+    "calibration-pfet",
+)
 
 
 def substitutions() -> dict[str, str]:
