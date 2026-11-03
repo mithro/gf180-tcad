@@ -154,6 +154,10 @@ same line with the same expression. The links go to the latest card's source in 
 Expressions in {term}`corner` parameters (such as `nfet_06v0_tox`) are 0 or 1 at TT, so the
 TT value is the leading number.
 
+Two of the entries below describe the gate stack. TOXE is the gate oxide's thickness and NDEP
+the body doping under it. The nfet stack drawn at these two values is
+{numref}`Figure %s of Process data for the MOS capacitors <process-data-stack-figure>`.
+
 `nfet_06v0.0`:
 
 | Parameter | Value | Card line |
@@ -289,9 +293,6 @@ Every spec §4 value is confirmed on both cards. Two of them are rounded in the 
 0.67314 V, and VSAT is 103999.98 m/s. The nfet has two {term}`L bins <L bin>`, 0.6–0.7 µm and
 0.7–50 µm; the pfet {term}`Lmin` is 0.5 µm. IGCMOD = IGBMOD = 0 (no gate leakage), and ALPHA0
 and BETA0 are set (impact-ionisation substrate current on). The pfet card sets no TOXP.
-
-TOXE and NDEP are the oxide thickness and the body doping of the start stack in
-{numref}`Figure %s of Process data for the MOS capacitors <process-data-stack-figure>`.
 
 (pdk-versions-run2)=
 
