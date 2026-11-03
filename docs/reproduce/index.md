@@ -902,12 +902,14 @@ Its steps are:
    --prefix tcad/ --subset tests/crosscheck_tcad_subset.txt`. TCAD jobs are `<tree>/<device>/<params>`
    paths; each results folder the jobs name must have its own `provenance.json`, which is compared (it holds
    the calibration file's sha256 for both devices, which is why both are listed). There is no
-   envelope. On success it prints `identical: 26 files of 4 jobs ...`. The first run of the 1D jobs passed on an AMD EPYC 7763
-   ([run](https://github.com/mithro/gf180-tcad/actions/runs/40308867413), 2026-10-26). The first
-   run with the artefact jobs passed on an AMD EPYC 9V74
-   ([run](https://github.com/mithro/gf180-tcad/actions/runs/41549254923), 2026-11-03).
+   envelope. On success it prints `identical: 26 files of 4 jobs ...`.
 5. On failure, the artefact `crosscheck-tcad-differences` holds the generated and committed copy
    of each differing file, their `diff -u`, the logs and the scratch directory of any failed job.
+
+The cross-check first passed with the 1D jobs on an AMD EPYC 7763
+([run](https://github.com/mithro/gf180-tcad/actions/runs/40308867413), 2026-10-26). It first
+passed with the artefact jobs on an AMD EPYC 9V74
+([run](https://github.com/mithro/gf180-tcad/actions/runs/41549254923), 2026-11-03).
 
 **Checked only locally.** GitHub-hosted runners do not cross-check the 1D start values, the
 calibration and validation, the mesh convergence or the 2D C–V results. The 2D jobs take
