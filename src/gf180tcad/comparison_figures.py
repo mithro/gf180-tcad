@@ -56,6 +56,12 @@ STYLE = {
     "older_dash": (0, (4, 3)),
     # The criterion label of the mesh plot sits this fraction of the axis width from the left.
     "criterion_x": 0.02,
+    # The cell figure: the channel arrow ends this fraction of the junction depth below the
+    # surface, its label sits this many label gaps below the junction depth, and the body's
+    # doping this many gaps below the body label.
+    "channel_tip": 0.15,
+    "channel_text": 4,
+    "body_doping_drop": 1.5,
     # Legends of three or more entries: this many per row.
     "legend_cols": 3,
     # The tick labels of gate lengths stand upright, so that 0.5, 0.6 and 0.7 do not overlap.
@@ -107,11 +113,44 @@ def process_cell_model() -> model.Cell:
                       drawn=ef.STYLE["drawn_um"])  # fmt: skip
 
 
+_DOPED = {"donor": "n-type", "acceptor": "p-type"}
+
+
 def process_cell_figure(palette: str):
     """The cell of :func:`process_cell_model` cut along its length, drawn by
     :func:`gf180tcad.explain.figures.cross_section_figure`: the parts whose doping, oxide and
-    contacts one process description sets."""
-    return ef.cross_section_figure(process_cell_model(), (), palette)
+    contacts one process description sets. Each doped region carries its type and doping from
+    the model, and an arrow marks the channel, the body's surface under the gate oxide."""
+    pal = ef.PALETTES[palette]
+    c = process_cell_model()
+    ext = ef.cell_extents(c)
+    fig = ef.cross_section_figure(c, (), palette)
+    (ax,) = fig.axes
+    gap = (ext["body"].y1 - ext["gate"].y0) * ef.STYLE["cell_label_gap"]
+    digits = ef.STYLE["label_digits"]["doping"]
+
+    def doping(dopant: str, n: float) -> str:
+        return f"{_DOPED[dopant]}, {ef._short(n, 'cm⁻³', digits)}"
+
+    with matplotlib.rc_context(ef._rc(palette)):
+        for side in ("source", "drain"):
+            box = ext[side]
+            ax.text((box.x0 + box.x1) / 2, box.y1 + gap, doping(c.sd_dopant, c.n_sd_cm3),
+                    ha="center", va="top", gid=f"doping {side}")  # fmt: skip
+        gate = ext["gate"]
+        ax.text(gate.x0 - gap, (gate.y0 + gate.y1) / 2, doping(c.sd_dopant, c.n_gate_cm3),
+                ha="right", va="center", gid="doping gate")  # fmt: skip
+        body = ext["body"]
+        ax.text(0.0, (ext["source"].y1 + body.y1) / 2 + gap * STYLE["body_doping_drop"],
+                doping(c.body_dopant, c.n_body_cm3), ha="center", va="top",
+                gid="doping body")  # fmt: skip
+        tip = (0.0, ext["source"].y1 * STYLE["channel_tip"])
+        ax.annotate("channel", xy=tip, xytext=(0.0, ext["source"].y1 + gap * STYLE["channel_text"]),
+                    ha="center", va="top", fontweight="bold", color=pal["highlight"],
+                    arrowprops={"arrowstyle": "->", "color": pal["highlight"],
+                                "lw": ef.STYLE["edge_width"] * 2},
+                    gid="channel")  # fmt: skip
+    return fig
 
 
 def process_cell(palette: str) -> bytes:

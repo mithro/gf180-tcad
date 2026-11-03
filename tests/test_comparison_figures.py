@@ -402,3 +402,30 @@ def test_start_stack_labels_are_the_process_file():
     assert any(f"{t_ox:g} nm" in t for t in texts), texts
     mant, _exp = f"{n_ch:e}".split("e")
     assert any(f"{float(mant):g} × 10" in t and "acceptors" in t for t in texts), texts
+
+
+@pytest.mark.parametrize("palette", ["light", "dark"])
+def test_process_cell_marks_the_channel_and_the_doping(palette):
+    """The arrow points at the body's surface under the gate, and each doped part's label gives
+    its type and doping from the cell model; the cell is drawn at the scales of the parts-cell
+    figure, so the caption's statement {{ x_fig_parts_cell_scale }} is this figure's."""
+    from gf180tcad.explain import figures as ef
+    from gf180tcad.explain import model
+
+    c = cf.process_cell_model()
+    fig = cf.process_cell_figure(palette)
+    (ax,) = fig.axes
+    texts = {t.get_gid(): t for t in ax.texts if t.get_gid()}
+    arrow = texts["channel"]
+    x, y = arrow.xy
+    gate = ef.cell_extents(c)["gate"]
+    assert gate.x0 < x < gate.x1 and 0 < y < c.xj_um
+    assert arrow.get_text() == "channel"
+    want = {"source": c.n_sd_cm3, "drain": c.n_sd_cm3, "gate": c.n_gate_cm3, "body": c.n_body_cm3}
+    for part, n in want.items():
+        text = texts[f"doping {part}"].get_text()
+        kind = "p-type" if (part == "body") == (c.polarity == "n") else "n-type"
+        assert text.startswith(kind), (part, text)
+        assert ef._short(n, "cm⁻³", ef.STYLE["label_digits"]["doping"]) in text, (part, text)
+    statement = model.exaggeration(c.scales, c.drawn)
+    assert statement == ef.substitutions()["x_fig_parts_cell_scale"]

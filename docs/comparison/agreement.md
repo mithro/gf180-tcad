@@ -20,18 +20,20 @@ physical or modelling cause and the evidence that shows it.
 ```{figure} /_generated/comparison/process-cell-light.svg
 :name: agreement-cell-figure
 :figclass: only-light
-:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right, a large body below.
+:alt: Cross-section of the transistor: gate on a thin oxide, source left, drain right, body below, each with its doping, an arrow marking the channel.
 
 The 2D cell of the {term}`nfet_05v0` with {term}`geometry id` `w10p0_l0p70`, cut along the gate's length.
-One process description sets the doping of each part, the oxide and the contacts. {{ x_fig_parts_cell_scale }}
+One process description sets the doping of each part, the oxide and the contacts. Each doped
+part is labelled with its type and doping, and the arrow marks the channel. {{ x_fig_parts_cell_scale }}
 ```
 
 ```{figure} /_generated/comparison/process-cell-dark.svg
 :figclass: only-dark
-:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right, a large body below.
+:alt: Cross-section of the transistor: gate on a thin oxide, source left, drain right, body below, each with its doping, an arrow marking the channel.
 
 The 2D cell of the {term}`nfet_05v0` with {term}`geometry id` `w10p0_l0p70`, cut along the gate's length.
-One process description sets the doping of each part, the oxide and the contacts. {{ x_fig_parts_cell_scale }}
+One process description sets the doping of each part, the oxide and the contacts. Each doped
+part is labelled with its type and doping, and the arrow marks the channel. {{ x_fig_parts_cell_scale }}
 ```
 
 (agreement-verdicts)=
