@@ -260,6 +260,13 @@ def test_meshconv_figure_draws_the_reports(palette):
             want = [max(abs(x) for x in lv["rel_change"]) for lv in levels]
             assert _close(line.get_ydata(), want)
             assert _close(_artist(fig, "criterion").get_ydata(), [report["criterion"]] * 2)
+    # Every point lies above a labelled decade tick: the axis starts at the decade below the
+    # smallest point.
+    (ax,) = fig.axes
+    lowest = min(y for line in ax.get_lines() for y in line.get_ydata())
+    bottom = ax.get_ylim()[0]
+    assert bottom <= lowest < bottom * 10
+    assert any(math.isclose(t, bottom) for t in ax.get_yticks())
 
 
 @pytest.mark.parametrize("palette", ["light", "dark"])

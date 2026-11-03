@@ -62,6 +62,8 @@ STYLE = {
     "channel_tip": 0.15,
     "channel_text": 4,
     "body_doping_drop": 1.5,
+    # The base of the decades of a log axis.
+    "decade": 10,
     # Legends of three or more entries: this many per row.
     "legend_cols": 3,
     # The tick labels of gate lengths stand upright, so that 0.5, 0.6 and 0.7 do not overlap.
@@ -311,6 +313,10 @@ def meshconv_figure(palette: str):
                 transform=ax.get_yaxis_transform())  # fmt: skip
         ax.set_xscale("log")
         ax.set_yscale("log")
+        # From the decade below the smallest point, so that its value can be read off a tick.
+        lowest = min(y for line in ax.get_lines() for y in line.get_ydata())
+        base = STYLE["decade"]
+        ax.set_ylim(bottom=base ** np.floor(np.log(lowest) / np.log(base)))
         ax.set_xlabel("mesh nodes")
         ax.set_ylabel("largest relative change of C")
         ax.grid(True)
