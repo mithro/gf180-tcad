@@ -74,6 +74,8 @@ EXPLAINED_FIGURES = [
     "calibration-pfet",
     "calibration-stack",
     "cv-parts",
+    "corner-cv",
+    "corner-area",
 ]
 
 
