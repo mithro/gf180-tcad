@@ -524,3 +524,105 @@ def test_cv_grid_ticks_are_text_size(figure):
     for ax in fig.axes:
         for label in (*ax.get_xticklabels(), *ax.get_yticklabels()):
             assert label.get_fontsize() == ef.STYLE["text_pt"]
+
+
+# --- the drawn data, part 2: the simulated curves, against the committed result files --------
+
+
+def _residual_curve(rec: dict) -> dict[float, float]:
+    """u -> (TCAD - SPICE) / SPICE at each plateau bias of a calibration or validation record."""
+    r = rec["residuals"]
+    out = {}
+    for side in ("acc", "inv"):
+        out.update(zip(r[f"plateau_{side}_u"], r[f"plateau_{side}_rel"], strict=True))
+    return out
+
+
+def _record(device: str, gid: str) -> dict:
+    """The committed per-geometry record: the calibration result file for a calibration geometry,
+    the validation file's 1D entry for a held-out one."""
+    per = _result(device)["per_geometry"]
+    if gid in per:
+        return per[gid]
+    path = REPO_ROOT / "results/tcad/validation" / f"{device}.json"
+    return json.loads(path.read_text("utf-8"))["one_d"][gid]
+
+
+def _typical(device: str, gid: str) -> dict[float, float]:
+    """u -> SPICE typical Cgg (fF), read from the committed cv.csv."""
+    pol = DEVICES[device].polarity
+    cols = _csv("spice", "ngspice", "typical", device, gid, "cv.csv")
+    return dict(zip((pol * cols["vg"]).tolist(), (cols["cgg"] * 1e15).tolist(), strict=True))
+
+
+@pytest.mark.parametrize("figure", ["cv_fit_figure", "cv_validation_figure"])
+def test_cv_grid_simulated_line_is_the_recorded_fit(figure):
+    """At every plateau bias the dashed line is SPICE x (1 + the recorded relative error), and
+    its two mid-capacitance crossings are the recorded TCAD crossings."""
+    from gf180tcad.calibrate.cv import crossings
+
+    role = "calibration" if figure == "cv_fit_figure" else "validation"
+    fig = getattr(cf, figure)("light")
+    for device, dev in DEVICES.items():
+        for g in (g for g in dev.geometries if g.role == role):
+            gid = geometry_id(g)
+            rec = _record(device, gid)
+            sim = _artist(fig, "simulated", _axis(fig, f"{device} {gid}"))
+            drawn = dict(zip(sim.get_xdata().tolist(), sim.get_ydata().tolist(), strict=True))
+            tt = _typical(device, gid)
+            for u, rel in _residual_curve(rec).items():
+                assert math.isclose(drawn[u], tt[u] * (1 + rel), rel_tol=1e-9), (device, gid, u)
+            got = crossings(tuple(drawn), tuple(drawn.values()))
+            want = (rec["tcad_crossings"]["u_dep"], rec["tcad_crossings"]["u_inv"])
+            assert _close(got, want, rel=1e-9), (device, gid)
+
+
+def test_pfet_edge_simulated_lines_are_the_recorded_fit():
+    """Each dashed line is the fitted curve over its value at u = -5 V: 1 there, and at every
+    other accumulation-plateau bias the ratio of SPICE x (1 + recorded error) at the two biases;
+    its crossing of its own mid level is the recorded TCAD u_dep."""
+    from gf180tcad.calibrate.cv import crossings
+
+    fig = cf.pfet_edge_figure("light")
+    for g in (g for g in DEVICES["pfet_05v0"].geometries if g.w_um == 10):
+        gid = geometry_id(g)
+        rec = _record("pfet_05v0", gid)
+        line = _artist(fig, f"simulated {gid}")
+        drawn = dict(zip(line.get_xdata().tolist(), line.get_ydata().tolist(), strict=True))
+        tt, res = _typical("pfet_05v0", gid), _residual_curve(rec)
+        u0 = min(drawn)
+        assert drawn[u0] == 1.0
+        ref = tt[u0] * (1 + res[u0])
+        for u, rel in res.items():
+            assert math.isclose(drawn[u], tt[u] * (1 + rel) / ref, rel_tol=1e-9), (gid, u)
+        u_dep, _ = crossings(tuple(drawn), tuple(drawn.values()))
+        assert math.isclose(u_dep, rec["tcad_crossings"]["u_dep"], rel_tol=1e-9), gid
+
+
+def _process_table(row: str) -> tuple[float, float]:
+    """The nfet and pfet values of one row of the charge-centroid table on the committed
+    process-data page."""
+    page = (REPO_ROOT / "docs/comparison/process-data.md").read_text("utf-8")
+    (line,) = [ln for ln in page.splitlines() if ln.startswith(f"| {row} |")]
+    cells = [c.strip().strip("*") for c in line.strip("|").split("|")]
+    return float(cells[1]), float(cells[2])
+
+
+@pytest.mark.parametrize("palette", ["light", "dark"])
+def test_centroid_curves_are_the_card_formula(palette):
+    """Each solid line is X_DC of eqs. 7.3.2-7.3.3 on the committed card values at every drawn u,
+    and it passes through the page table's values at the plateau edge and at u = -5 V."""
+    from gf180tcad.tcad import process
+
+    fig = cf.centroid_figure(palette)
+    edge = _process_table("X_DC, accumulation plateau edge (polarity·Vg = −2 V) (nm)")
+    end = _process_table("X_DC, accumulation end (polarity·Vg = −5 V) (nm)")
+    for k, device in enumerate(("nfet_05v0", "pfet_05v0")):
+        cv = process.load(device).card_values()
+        pol = cv["type"]
+        line = _artist(fig, f"accumulation {device}")
+        u, x = line.get_xdata(), line.get_ydata()
+        want = [process.ctm_x_dc_acc_m(pol * v, cv) * 1e9 for v in u]
+        assert _close(x, want, rel=1e-12), device
+        drawn = dict(zip(u.tolist(), x.tolist(), strict=True))
+        assert round(drawn[-2.0], 3) == edge[k] and round(drawn[-5.0], 3) == end[k], device
