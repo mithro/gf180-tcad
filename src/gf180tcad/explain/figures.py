@@ -1433,18 +1433,23 @@ def _limit_ring_handle(pal: dict) -> Line2D:
                   mfc="none", mec=pal["hole"], mew=STYLE["edge_width"] * 2, label=LIMIT_RING_LABEL)  # fmt: skip
 
 
-def _log_ticks(ax) -> None:
+def _log_ticks(ax) -> str:
     """Label a log axis spanning less than a decade at ``STYLE["log_tick_mantissas"]`` times each
-    power of ten inside its limits (the default labels only the power of ten itself)."""
+    power of ten inside its limits (the default labels only the power of ten itself), in units
+    of the power of ten of its upper limit so the labels stay short; returns that unit (10ⁿ)."""
     lo, hi = sorted(ax.get_xlim())
     base = STYLE["log_base"]
     powers = range(math.floor(math.log(lo, base)), math.ceil(math.log(hi, base)) + 1)
     ticks = [
         m * base**e for e in powers for m in STYLE["log_tick_mantissas"] if lo <= m * base**e <= hi
     ]
+    scale = base ** math.floor(math.log(hi, base))
     ax.xaxis.set_major_locator(FixedLocator(ticks))
-    ax.xaxis.set_major_formatter(FixedFormatter([numbers.format_value(t, 1, "") for t in ticks]))
+    ax.xaxis.set_major_formatter(
+        FixedFormatter([numbers.shortest(t / scale, "", 2) for t in ticks])
+    )
     ax.xaxis.set_minor_formatter(NullFormatter())
+    return numbers.format_value(scale, 1, "").split("×")[-1].strip()
 
 
 def corner_bounds_figure(palette: str):
@@ -1639,7 +1644,7 @@ def corner_limits_figure(palette: str):
             ax.set_ylim(len(rows) - 1 + STYLE["row_pad"], -STYLE["row_pad"])
             ax.margins(x=STYLE["limit_margin"])
             if name in LOG_TUNABLES:
-                _log_ticks(ax)
+                unit = f"{_log_ticks(ax)} {unit}"
             ax.set_xlabel(f"{words.lower()}\n({unit})")
             ax.grid(True, axis="x")
         axes[0].set_yticks(range(len(rows)), [f"{d.split('_')[0]} {c}" for d, c in rows])
