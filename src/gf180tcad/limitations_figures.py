@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -86,19 +87,42 @@ STYLE = {
     "hatch": "//",
     "bias_pad_v": 0.05,
     "legend_cols": 2,
+    # The numbers the pages print: significant digits of e-notation, decimals of C/Cox.
+    "page_digits": 2,
+    "ccox_digits": 3,
 }
 
-# Unit conversions: fraction to per cent, m to µm, µm to nm, A to pA.
-UNITS = {"percent": 100.0, "nm_per_um": 1e3, "mv_per_v": 1e3, "pa_per_a": 1e12}
+# Unit conversions: fraction to per cent, µm to nm, V to mV, A to pA, Hz to MHz.
+UNITS = {
+    "percent": 100.0,
+    "nm_per_um": 1e3,
+    "mv_per_v": 1e3,
+    "pa_per_a": 1e12,
+    "hz_per_mhz": 1e6,
+}
 
 # Defaults of the tools the 2D mesh and solve use, each read from the tool's source.
 TOOLS = {
-    # meshwell PolySurface: point_tolerance defaults to 1e-3 µm, the vertex grid the 2D path
-    # used before the fix (docs/limitations/moscap2d.md, gplugins fork PR #8).
+    # meshwell's vertex grid (µm) when none is given: DEFAULT_POINT_TOLERANCE = 1e-3 in
+    # meshwell/cad_settings.py line 52 of the meshwell pinned by docker/tcad-dev/versions.json
+    # (https://github.com/mithro/meshwell/blob/4184d3138e80c3b0b365aee615a07adf7f9f8ac5/
+    # meshwell/cad_settings.py#L52), which PolySurface's point_tolerance defaults to.
     "meshwell_point_tolerance_um": 1e-3,
     # DEVSIM's relative error per node, |update| / (|psi| + 1e-10 V): the offset (V), from
-    # src/Equation/Equation.cc of DEVSIM 2.11.1.
+    # src/Equation/Equation.cc of DEVSIM 2.11.1 (https://github.com/devsim/devsim/blob/
+    # c83824c7a84e3154b690e4d59966a136fb00296f/src/Equation/Equation.cc).
     "devsim_rel_offset_v": 1e-10,
+    # The BSIM4 version the nfet card declares, which ngspice runs: "+ version=4.5" at line 37330
+    # of models/ngspice/sm141064.spice of gf180mcu_fd_pr 4e132a23 (the file whose sha256
+    # docker/base/versions.json pins as sm141064_ngspice_sha256;
+    # https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/
+    # 4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37330).
+    "ngspice_nfet_bsim4": "4.5",
+    # The oldest BSIM4 of Xyce 7.10, which it runs for the 4.5 card: "the oldest version
+    # supported in Xyce (4.6.1)" at line 9266 of src/DeviceModelPKG/OpenModels/N_DEV_MOSFET_B4.C
+    # of Xyce Release-7.10.0 (https://github.com/Xyce/Xyce/blob/
+    # f18ab3816fcab005f510d429898f1067d0420d36/src/DeviceModelPKG/OpenModels/N_DEV_MOSFET_B4.C#L9266).
+    "xyce_nfet_bsim4": "4.6.1",
 }
 
 _DEVICES = ("nfet_05v0", "pfet_05v0")
@@ -191,7 +215,7 @@ def evidence_curves(roots: Roots = DEFAULT_ROOTS) -> dict[str, np.ndarray]:
     """The committed :data:`EVIDENCE_SWEEP` of :data:`EVIDENCE_GEOMETRY` at Vbs = 0 from both
     engines: ``vg``, ``id_ngspice``, ``id_xyce`` (A) and ``rel``, (Id,Xyce − Id,ngspice) /
     ``max(|Id|)``, NaN where both currents are at or below
-    :data:`gf180tcad.spice.xyce.ENGINE_DIFF_FLOOR`."""
+    :data:`gf180tcad.spice.xyce.ENGINE_DIFF_FLOOR`; and the sweep's one ``vd`` and ``vb`` (V)."""
     cols = {
         eng: data.spice_columns(
             roots.spice, eng, TYPICAL, EVIDENCE_DEVICE, EVIDENCE_GEOMETRY, EVIDENCE_SWEEP
@@ -204,9 +228,11 @@ def evidence_curves(roots: Roots = DEFAULT_ROOTS) -> dict[str, np.ndarray]:
             raise ValueError(f"bias column {col} differs between the engines")
     keep = a["vb"] == 0
     vg, x, y = a["vg"][keep], a["id"][keep], b["id"][keep]
+    (vd,) = set(a["vd"][keep].tolist())
+    (vb,) = set(a["vb"][keep].tolist())
     den = np.maximum(np.abs(x), np.abs(y))
     rel = np.where(den > xyce.ENGINE_DIFF_FLOOR, (y - x) / np.where(den > 0, den, 1), np.nan)
-    return {"vg": vg, "id_ngspice": x, "id_xyce": y, "rel": rel}
+    return {"vg": vg, "id_ngspice": x, "id_xyce": y, "rel": rel, "vd": vd, "vb": vb}
 
 
 def engine_subthreshold_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
@@ -220,9 +246,9 @@ def engine_subthreshold_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         fig = _figure(STYLE["tall_in"])
         top, bottom = fig.subplots(2, 1, sharex=True)
         top.plot(c["vg"], np.abs(c["id_ngspice"]), color=pal["electron"], lw=lw,
-                 label="ngspice (BSIM4 4.5)", gid="ngspice")  # fmt: skip
+                 label=f"ngspice (BSIM4 {TOOLS['ngspice_nfet_bsim4']})", gid="ngspice")  # fmt: skip
         top.plot(c["vg"], np.abs(c["id_xyce"]), color=pal["hole"], lw=lw, ls="--",
-                 label="Xyce (BSIM4 4.6.1)", gid="xyce")  # fmt: skip
+                 label=f"Xyce (BSIM4 {TOOLS['xyce_nfet_bsim4']})", gid="xyce")  # fmt: skip
         top.axhline(xyce.ENGINE_DIFF_FLOOR, color=pal["text"], lw=ef.STYLE["edge_width"], ls=":",
                     gid="floor")  # fmt: skip
         top.text(c["vg"][0], xyce.ENGINE_DIFF_FLOOR,
@@ -238,7 +264,7 @@ def engine_subthreshold_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             bottom.axhline(s * thr, color=pal["text"], lw=ef.STYLE["edge_width"], ls="--",
                            gid=f"threshold {s:+d}")  # fmt: skip
         bottom.text(c["vg"][-1], thr, f"±{thr:g} % ", ha="right", va="bottom")
-        bottom.set_xlabel("Vg (V), Vds = 5 V, Vbs = 0")
+        bottom.set_xlabel(f"Vg (V), Vds = {c['vd']:g} V, Vbs = {c['vb']:g} V")
         bottom.set_ylabel("(Xyce − ngspice) / max (%)")
         bottom.grid(True)
         return fig
@@ -318,8 +344,9 @@ def _csv(path: Path) -> dict[str, np.ndarray]:
 def c_over_cox(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
     """The C/Cox curves of ``device`` at the start values: ``cox`` (fF/µm², from the 1D stack's
     oxide), the 1D curve ``one_d`` (``u``, ``ratio``), and per 2D cell of :data:`CCOX_CELLS` the
-    QS curve per drawn area (``u``, ``ratio``) and the 1 MHz AC points (``u_ac``, ``ratio_ac``),
-    empty where the job has no AC result. u = polarity × Vg."""
+    QS curve per drawn area (``u``, ``ratio``), the AC points (``u_ac``, ``ratio_ac``) at the
+    job's ``freq_hz``, empty where the job has no AC result, and the job's ``resumed`` record.
+    u = polarity × Vg."""
     pol = DEVICES[device].polarity
     one = moscap1d.read(Path(roots.tcad) / "moscap1d" / device / "start")
     s = one.stack
@@ -334,7 +361,8 @@ def c_over_cox(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
         if meta["t_ox_nm"] != s.t_ox_nm:
             raise ValueError(f"{job}: oxide {meta['t_ox_nm']} nm, the 1D stack's {s.t_ox_nm} nm")
         cell = {"u": pol * qs["vg"], "ratio": qs["cgg_per_um"] / g.l_um / cox,
-                "resumed": meta.get("resumed", {}), "ac": meta.get("ac")}  # fmt: skip
+                "resumed": meta.get("resumed", {}),
+                "freq_hz": meta.get("ac_freq_hz")}  # fmt: skip
         cgx = job / moscap2d.CGX_CSV
         if cgx.is_file():
             ac = _csv(cgx)
@@ -347,7 +375,7 @@ def c_over_cox(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
 
 def c_over_cox_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """C/Cox against u at the start values, one panel per device: the 1D stack, the 2D cell at
-    Lmin (QS line, 1 MHz AC points) and the 2D cell at L = 2 µm (QS only), per drawn gate area,
+    Lmin (QS line, AC points) and the 2D cell at L = 2 µm (QS only), per drawn gate area,
     with the line C/Cox = 1."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
@@ -369,7 +397,8 @@ def c_over_cox_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                 if len(cell["u_ac"]):
                     ax.plot(cell["u_ac"], cell["ratio_ac"], ls="none", marker="o",
                             ms=STYLE["small_marker_pt"], color=colour,
-                            label=f"2D L = {g.l_um:g} µm, 1 MHz AC",
+                            label=f"2D L = {g.l_um:g} µm, "
+                                  f"{cell['freq_hz'] / UNITS['hz_per_mhz']:g} MHz AC",
                             gid=f"{device} {gid} AC")  # fmt: skip
             ax.axhline(1, color=pal["muted"], lw=ef.STYLE["edge_width"], gid="C = Cox")
             ax.set_ylim(lo, hi)
@@ -515,12 +544,18 @@ ROUNDOFF_DEVICE = "nfet_05v0"
 
 def roundoff_points(roots: Roots = DEFAULT_ROOTS) -> dict:
     """The round-off acceptances of the 2D mesh-convergence report of :data:`ROUNDOFF_DEVICE`:
-    ``rel_tol`` (the report's solver setting) and per accepted solve its level ``scale``,
-    ``vg``, ``region``, ``min_abs_psi`` (V) and ``abs_error`` (V, the accepted update)."""
+    ``rel_tol`` (the report's solver setting), per accepted solve its ``level``, ``scale``,
+    ``vg``, ``region``, ``min_abs_psi`` (V) and ``abs_error`` (V, the accepted update), the one
+    acceptance ``bound`` (V) of every solve, and ``k`` of that bound, k·eps·max|psi| (eps the
+    double machine epsilon), read back from the recorded bound and max|psi|."""
     path = Path(roots.tcad) / "meshconv" / "moscap2d" / ROUNDOFF_DEVICE / "report.json"
     rep = json.loads(path.read_text("utf-8"))
-    pts = [{"scale": lv["scale"], **p} for lv in rep["levels"] for p in lv["roundoff_accepted"]]
-    return {"rel_tol": rep["settings"]["rel_tol"], "points": pts}
+    pts = [{"level": i, "scale": lv["scale"], **p}
+           for i, lv in enumerate(rep["levels"]) for p in lv["roundoff_accepted"]]  # fmt: skip
+    (bound,) = {p["roundoff_bound"] for p in pts}
+    (max_psi,) = {p["max_abs_psi"] for p in pts}
+    k = round(bound / (sys.float_info.epsilon * max_psi))
+    return {"rel_tol": rep["settings"]["rel_tol"], "points": pts, "bound": bound, "k": k}
 
 
 def roundoff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
@@ -539,9 +574,9 @@ def roundoff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         ax.plot(psi, need, color=pal["text"], lw=lw, label="update the criterion asks for",
                 gid="criterion")  # fmt: skip
         ups = [p["abs_error"] for p in k["points"]]
-        (bound,) = {p["roundoff_bound"] for p in k["points"]}
-        ax.axhline(bound, color=pal["muted"], lw=ef.STYLE["edge_width"], ls="--",
-                   label="acceptance bound, 32·eps·max|psi|", gid="roundoff bound")  # fmt: skip
+        ax.axhline(k["bound"], color=pal["muted"], lw=ef.STYLE["edge_width"], ls="--",
+                   label=f"acceptance bound, {k['k']}·eps·max|psi|",
+                   gid="roundoff bound")  # fmt: skip
         ax.plot([p["min_abs_psi"] for p in k["points"]], ups, ls="none", marker="o",
                 ms=STYLE["marker_pt"], color=pal["highlight"],
                 label="accepted solves (update, smallest |psi|)", gid="accepted")  # fmt: skip
@@ -766,13 +801,31 @@ def meshconv_2d_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 # --- the plugin history ---------------------------------------------------------------------------
 
-PLUGIN_RECORDS = {"v0.8.0": "v0.8.0.json", "v0.8.0 × 0.5": "v0.8.0-mesh0p5.json"}
+# The committed records of the plugin-history page: the release at its own mesh, then at half it.
+PLUGIN_FILES = ("v0.8.0.json", "v0.8.0-mesh0p5.json")
 PLUGIN_ROOT = REPO_ROOT / "results" / "plugin-history"
 
 
+def plugin_root(roots: Roots = DEFAULT_ROOTS) -> Path:
+    """The plugin-history records of ``roots``: ``plugin-history`` beside its TCAD tree, so the
+    committed :data:`PLUGIN_ROOT` for the committed trees."""
+    return Path(roots.tcad).parent / "plugin-history"
+
+
+def plugin_records(root: Path = PLUGIN_ROOT) -> dict[str, dict]:
+    """``{name: record}`` of :data:`PLUGIN_FILES` under ``root``, in that order, each named by
+    its ``gplugins_tag`` and, where it is not 1, its ``mesh_scale`` ("<tag> × <scale>")."""
+    out = {}
+    for file in PLUGIN_FILES:
+        rec = json.loads((Path(root) / file).read_text("utf-8"))
+        scale = rec["mesh_scale"]
+        out[rec["gplugins_tag"] + ("" if scale == 1 else f" × {scale:g}")] = rec
+    return out
+
+
 def plugin_record(name: str, root: Path = PLUGIN_ROOT) -> dict:
-    """The committed plugin-history record ``name`` of :data:`PLUGIN_RECORDS`."""
-    return json.loads((Path(root) / PLUGIN_RECORDS[name]).read_text("utf-8"))
+    """The record ``name`` of :func:`plugin_records`."""
+    return plugin_records(root)[name]
 
 
 def pn_slab_steps(name: str, root: Path = PLUGIN_ROOT) -> list[dict]:
@@ -799,14 +852,16 @@ def pn_slab_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     w = STYLE["bar_width"]
-    records = (("v0.8.0", "-", ""), ("v0.8.0 × 0.5", "--", STYLE["hatch"]))
-    regions = (("core", "hole", "rib (core)"), ("slab90", "electron", "slab (slab90)"))
+    root = plugin_root(roots)
+    names = list(plugin_records(root))
+    records = tuple(zip(names, ("-", "--"), ("", STYLE["hatch"]), strict=True))
+    regions = (("core", "hole", "rib"), ("slab90", "electron", "slab"))
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(STYLE["tall_in"])
         top, bottom = fig.subplots(2, 1, sharex=True)
         ends, handles = [], []
         for i, (name, ls, hatch) in enumerate(records):
-            steps = pn_slab_steps(name)
+            steps = pn_slab_steps(name, root)
             b = np.array([s["bias"] for s in steps])
             top.plot(b, [s["anode_minus_cathode"] for s in steps], color=pal["electron"], lw=lw,
                      ls=ls, marker="o", label=f"anode − cathode, {name}",
@@ -823,8 +878,8 @@ def pn_slab_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                                gid=f"{name} {region} {s['bias']:g}")  # fmt: skip
                 handles.append(matplotlib.patches.Patch(
                     facecolor=pal[colour], hatch=hatch, edgecolor=pal["background"],
-                    label=f"{label}, {name}"))  # fmt: skip
-        eq = pn_slab_steps("v0.8.0")
+                    label=f"{label} ({region}), {name}"))  # fmt: skip
+        eq = pn_slab_steps(names[0], root)
         b = np.array([s["bias"] for s in eq])
         top.plot(b, eq[0]["drop"] - b, color=pal["muted"], lw=lw, ls=":",
                  label="drop if the bias reached the junction", gid="connected")  # fmt: skip
@@ -848,9 +903,8 @@ def pin_widths(root: Path = PLUGIN_ROOT) -> dict[str, list[tuple[float, float]]]
     """``{record: [(bias V, depletion width µm), ...]}`` of the PIN waveguide in each v0.8.0
     record."""
     out = {}
-    for name in PLUGIN_RECORDS:
-        out[name] = [(b["v"], b["depletion_width_um"])
-                     for b in plugin_record(name, root)["pin"]["bias"]]  # fmt: skip
+    for name, rec in plugin_records(root).items():
+        out[name] = [(b["v"], b["depletion_width_um"]) for b in rec["pin"]["bias"]]
     return out
 
 
@@ -859,7 +913,7 @@ def pin_depletion_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     meshes give the same widths, since the waveguide uses DEVSIM's own mesh."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
-    k = pin_widths()
+    k = pin_widths(plugin_root(roots))
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()

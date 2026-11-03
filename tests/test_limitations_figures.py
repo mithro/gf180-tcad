@@ -3,6 +3,7 @@
 dark twins, drawn from the committed files, each embedded as a pair and cited on its page, and
 each showing the numbers its page states."""
 
+import ast
 import json
 import math
 import os
@@ -21,6 +22,7 @@ import test_explained
 from test_explained import numeric_literals
 
 from gf180tcad import limitations_figures as lf
+from gf180tcad.calibrate.cv import No2DResult
 from gf180tcad.devices import DEVICES, geometry_id
 from gf180tcad.explain import figures as ef
 from gf180tcad.known import KNOWN_ENGINE_DIFFS
@@ -82,13 +84,6 @@ def test_svg_deterministic(figure, palette):
     a, b = runs
     assert a.startswith(b"<?xml") and b"<text" in a and a == b
     assert b"<dc:date>" not in a and str(REPO_ROOT).encode() not in a
-
-
-def test_figure_code_has_no_numeric_literals(monkeypatch):
-    """Numbers only in STYLE, UNITS and TOOLS (the tools' defaults, each with its source)."""
-    monkeypatch.setattr(test_explained, "TABLES", ("STYLE", "UNITS", "TOOLS"))
-    found = numeric_literals(SRC.read_text(encoding="utf-8"))
-    assert not found, f"number literals outside STYLE, UNITS and TOOLS: {found}"
 
 
 def test_figures_have_dark_twins_and_every_page_embeds_pairs(tmp_path):
@@ -269,7 +264,7 @@ def test_meshconv_figures_draw_the_reports(dim):
 def test_pn_slab_figure_draws_the_records():
     """The junction drop stays at 0.83450 V at every step of both records while anode − cathode
     falls by 0.1 V a step: the plugin-history page's ramp tables."""
-    for name in lf.PLUGIN_RECORDS:
+    for name in lf.plugin_records():
         steps = lf.pn_slab_steps(name)
         assert [s["bias"] for s in steps] == [0.0, 0.1, 0.2]
         assert {round(s["drop"], 5) for s in steps} == {0.8345}
@@ -292,17 +287,105 @@ def test_page_figures_render_in_both_palettes():
             assert lf.FIGURES[name](palette).startswith(b"<?xml"), name
 
 
-def test_figure_data_come_from_the_roots(tmp_path):
-    """A figure reads the trees it is given: an empty TCAD tree is a FileNotFoundError, never a
-    figure drawn from the committed tree."""
-    roots = lf.Roots(spice=tmp_path / "spice", tcad=tmp_path / "tcad")
-    with pytest.raises(FileNotFoundError):
-        lf.c_over_cox("nfet_05v0", roots)
-    with pytest.raises(FileNotFoundError):
-        lf.engine_diffs(roots)
+# The figures drawn from no results tree: the process files and the meshing and stack code.
+NO_ROOT = {"vertex-grid", "sd-profile"}
+
+
+@pytest.mark.parametrize("name", sorted(set(FIGURES) - NO_ROOT))
+def test_figure_data_come_from_the_roots(name, tmp_path):
+    """A figure reads the trees it is given: empty trees are a missing-file error (an OSError,
+    or calibrate.cv's No2DResult for the 2D cells), never a figure drawn from the committed
+    trees."""
+    roots = lf.Roots(spice=tmp_path / "spice", older_pdk=tmp_path / "old", tcad=tmp_path / "tcad")
+    with pytest.raises((OSError, No2DResult)):
+        lf.FIGURES[name]("light", roots)
+
+
+def test_plugin_root_is_beside_the_tcad_tree():
+    assert lf.plugin_root() == lf.PLUGIN_ROOT
 
 
 def test_validation_files_exist():
     for device in DEVICES:
         assert json.loads((REPO_ROOT / "results" / "tcad" / "validation" / f"{device}.json")
                           .read_text("utf-8"))["two_d"]  # fmt: skip
+
+
+# --- no number typed into the code: numeric literals and digits in strings -----------------------
+
+
+def string_digits(source: str, allowed: set[str]) -> list[tuple[int, str]]:
+    """(line, text) of each string literal of the module (f-string parts included) that holds a
+    digit once the ``allowed`` names are taken out. Skipped: docstrings, raise messages, format
+    specs and the :data:`TABLES` (STYLE, UNITS and TOOLS, where each number has its source). A
+    number in a label must come from the data, the code that defines it or TOOLS."""
+    tree = ast.parse(source)
+    skip = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Raise):
+            skip |= set(ast.walk(node))
+        if isinstance(node, ast.FormattedValue) and node.format_spec is not None:
+            skip |= set(ast.walk(node.format_spec))
+        if isinstance(node, ast.Module | ast.FunctionDef | ast.ClassDef) and node.body:
+            first = node.body[0]
+            if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant):
+                skip.add(first.value)
+        targets = getattr(node, "targets", None) or [getattr(node, "target", None)]
+        if isinstance(node, ast.Assign | ast.AnnAssign) and any(
+            isinstance(t, ast.Name) and t.id in TABLES for t in targets
+        ):
+            skip |= set(ast.walk(node))
+    out = []
+    for node in ast.walk(tree):
+        if node in skip or not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+            continue
+        if node.value.isidentifier():
+            continue  # a key or a name (n_ch_cm3, slab90, moscap2d), never a label's number
+        text = node.value
+        for name in sorted(allowed, key=len, reverse=True):
+            text = text.replace(name, "")
+        if re.search(r"\d", text):
+            out.append((node.lineno, node.value))
+    return out
+
+
+TABLES = ("STYLE", "UNITS", "TOOLS")
+
+
+def _allowed_names() -> set[str]:
+    """Names that hold digits but are identifiers, not numbers: the devices and their geometry
+    ids, the plugin-history record files, the figures, the dimensions of the model, the model's
+    name and the text encoding."""
+    gids = {geometry_id(g) for d in DEVICES.values() for g in d.geometries}
+    names = set(DEVICES) | gids | set(lf.PLUGIN_FILES) | set(lf.FIGURES)
+    return names | {"1D", "2D", "BSIM4", "utf-8"}
+
+
+def test_figure_code_has_no_numeric_literals(monkeypatch):
+    """Numbers only in STYLE, UNITS and TOOLS (the tools' defaults, each with its source)."""
+    monkeypatch.setattr(test_explained, "TABLES", TABLES)
+    found = numeric_literals(SRC.read_text(encoding="utf-8"))
+    assert not found, f"number literals outside STYLE, UNITS and TOOLS: {found}"
+
+
+def test_figure_strings_type_no_numbers():
+    found = string_digits(SRC.read_text(encoding="utf-8"), _allowed_names())
+    assert not found, f"numbers typed into strings (derive them from the data): {found}"
+
+
+def test_positive_control_string_digits():
+    src = (
+        '"""Module docstring at 25 C."""\n'
+        'TOOLS = {"version": "4.6.1"}\n'
+        'NAMES = {"a": "2D, calibrated at 25 C"}\n'
+        "def f(ax, g):\n"
+        '    """At 1 MHz."""\n'
+        "    ax.plot([], label='ngspice (BSIM4 4.5)')\n"
+        "    ax.set_xlabel(f'Vg (V), Vds = {g:g} V, Vbs = 0')\n"
+        "    ax.text(0, 0, 'nfet_05v0 2D')\n"
+        "    ax.plot([], g['n_ch_cm3'])\n"
+        "    ax.text(0, 0, f'{g:.0e}')\n"
+        "    raise ValueError('2 things')\n"
+    )
+    found = sorted(line for line, _ in string_digits(src, {"nfet_05v0", "2D"}))
+    assert found == [3, 6, 7]
