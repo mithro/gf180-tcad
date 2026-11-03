@@ -128,9 +128,14 @@ The simulator solves for the cell on a mesh, a grid of {{ x_node_count_cell }} p
 
 ## The lightly doped drain
 
-A lightly doped drain ({term}`LDD`) is a part of the source and drain with less doping, under the
-edge of the gate. It is drawn in {numref}`fig-parts-ldd`. The {term}`BSIM4` model gives the gate's overlap with it a capacitance of its
-own, which changes with the gate voltage
+A lightly doped drain ({term}`LDD`) is a part of the source and drain with less doping, at the
+edge of the gate. In the usual structure a spacer, an insulating wall, stands against each side
+of the gate. The heavily doped source and drain start at the spacer's outer edge. The LDD runs
+under the spacer to a little under the gate ({ref}`Taur and Ning <lit-taur>`). That structure
+is drawn on the simulated cell in {numref}`fig-parts-ldd`.
+
+The {term}`BSIM4` model gives the gate's overlap with the LDD a capacitance of its own, which
+changes with the gate voltage
 ({ref}`BSIM4 manual, §7.1 and §7.5.2 <lit-bsim4>`). The nfet's model card sets that
 capacitance, CGDL, to {{ x_cgdl_nfet }} of gate width
 ({repo}`data/process/nfet_05v0.toml`).
@@ -138,20 +143,22 @@ capacitance, CGDL, to {{ x_cgdl_nfet }} of gate width
 ```{figure} /_generated/explained/ldd-cell-light.svg
 :figclass: only-light
 :name: fig-parts-ldd
-:alt: Cross-section of the transistor with every part muted except two shallow regions at the inner ends of the source and the drain, which reach a little way under the gate edges and are labelled LDD.
+:alt: Cross-section of the transistor with a coloured spacer against each side of the gate, the source and drain pulled back to the spacers' outer edges, and a thin coloured region at each end, labelled LDD, running under the spacer to a little under the gate.
 
-The 2D cell of the {term}`nfet_05v0` with a lightly doped drain drawn in at both ends of the
-gate. The simulated cell has none. The oxide thickness and the body doping are fitted to the
+The 2D cell of the {term}`nfet_05v0` with spacers and a lightly doped drain drawn in at both ends
+of the gate, and the source and drain pulled back to the spacers. The simulated cell has neither.
+The oxide thickness and the body doping are fitted to the
 {term}`SPICE` model, and the junction depth is the {term}`model card`'s value.
 {{ x_fig_ldd_cell_scale }}
 ```
 
 ```{figure} /_generated/explained/ldd-cell-dark.svg
 :figclass: only-dark
-:alt: Cross-section of the transistor with every part muted except two shallow regions at the inner ends of the source and the drain, which reach a little way under the gate edges and are labelled LDD.
+:alt: Cross-section of the transistor with a coloured spacer against each side of the gate, the source and drain pulled back to the spacers' outer edges, and a thin coloured region at each end, labelled LDD, running under the spacer to a little under the gate.
 
-The 2D cell of the {term}`nfet_05v0` with a lightly doped drain drawn in at both ends of the
-gate. The simulated cell has none. The oxide thickness and the body doping are fitted to the
+The 2D cell of the {term}`nfet_05v0` with spacers and a lightly doped drain drawn in at both ends
+of the gate, and the source and drain pulled back to the spacers. The simulated cell has neither.
+The oxide thickness and the body doping are fitted to the
 {term}`SPICE` model, and the junction depth is the {term}`model card`'s value.
 {{ x_fig_ldd_cell_scale }}
 ```
@@ -160,9 +167,10 @@ gate. The simulated cell has none. The oxide thickness and the body doping are f
 
 ## Where this repo's results differ
 
-The simulated cell of {numref}`fig-parts-cell` has no spacers, the insulating walls either side
-of the gate ({py:mod}`gf180tcad.tcad.stack`). It has no LDD like that of {numref}`fig-parts-ldd`. The overlap capacitance of the LDD enters the 1D result, the
-stack of layers on its own, from the model card instead
+The simulated cell of {numref}`fig-parts-cell` has no spacers and no LDD
+({py:mod}`gf180tcad.tcad.stack`); both are drawn in {numref}`fig-parts-ldd`. The overlap
+capacitance of the LDD enters the 1D result, the stack of layers on its own, from the model card
+instead
 ({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`). The cell also has no shallow trench isolation
 ({term}`STI`): its sides are boundaries that no current crosses.
 

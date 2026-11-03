@@ -142,10 +142,7 @@ STYLE = {
     "edge_label_gap": 0.03,
     # The lightly doped drain of the parts page, which the simulated cell does not have: drawn at
     # a chosen size (µm), with no committed source.
-    "ldd_drawn_um": {
-        "lightly doped drain depth": 0.05,
-        "lightly doped drain reach under the gate": 0.08,
-    },
+    "ldd_drawn_um": {"LDD depth": 0.05, "LDD overlap": 0.08, "spacer width": 0.15},
     # The gate-area figure of the corner fits, in drawing units: the drawn gate's length and
     # width, then the size drawn for |X_L| and |X_W| and for D_L and D_W.
     "area_drawn": {"gate length and width": (4.0, 2.6), "length and width offsets": (0.45, 0.3)},
@@ -493,16 +490,25 @@ def wrap_statement(statement: str) -> str:
     return "\n".join(textwrap.fill(s, STYLE["title_chars"]) for s in sentences)
 
 
-def ldd_boxes(c: model.Cell) -> dict[str, Box]:
-    """The drawn lightly doped drain at each end of the gate, in the coordinates of
-    :func:`cell_extents`: from the surface down to the drawn depth, reaching the drawn distance
-    under the gate from its edge (``c.drawn``)."""
-    gate = cell_extents(c)["gate"]
-    depth = c.drawn["lightly doped drain depth"]
-    reach = c.drawn["lightly doped drain reach under the gate"]
+def ldd_parts(c: model.Cell) -> dict[str, Box]:
+    """The textbook lightly doped drain structure drawn on the cell, in the coordinates of
+    :func:`cell_extents` (Taur and Ning, lit-taur): a spacer of the drawn width
+    against each side of the gate and its oxide; the heavily doped source and drain pulled back
+    to the spacers' outer edges; and the lightly doped drain from there, under the spacer, to the
+    drawn reach under the gate, as deep as the drawn depth (``c.drawn``). Keys ``spacer-source``,
+    ``spacer-drain``, ``ldd-source``, ``ldd-drain``, ``source`` and ``drain``."""
+    ext = cell_extents(c)
+    gate, src, drn = ext["gate"], ext["source"], ext["drain"]
+    w = c.drawn["spacer width"]
+    depth = c.drawn["LDD depth"]
+    reach = c.drawn["LDD overlap"]
     return {
-        "source": Box(gate.x0, gate.x0 + reach, 0.0, depth),
-        "drain": Box(gate.x1 - reach, gate.x1, 0.0, depth),
+        "spacer-source": Box(gate.x0 - w, gate.x0, gate.y0, 0.0),
+        "spacer-drain": Box(gate.x1, gate.x1 + w, gate.y0, 0.0),
+        "ldd-source": Box(gate.x0 - w, gate.x0 + reach, 0.0, depth),
+        "ldd-drain": Box(gate.x1 - reach, gate.x1 + w, 0.0, depth),
+        "source": Box(src.x0, gate.x0 - w, src.y0, src.y1),
+        "drain": Box(gate.x1 + w, drn.x1, drn.y0, drn.y1),
     }
 
 
@@ -519,10 +525,13 @@ def cross_section(
     named there keep their colour and the rest are muted; ``"junction"`` draws the boundary of
     the source and the drain with the body in the highlight colour. With ``window``, that box
     is outlined, dashed, in the highlight colour and labelled "mesh window". With ``ldd``, the
-    lightly doped drain of :func:`ldd_boxes` is drawn at both ends of the gate and labelled
-    "LDD", in its carrier's colour when ``"ldd"`` is highlighted."""
+    structure of :func:`ldd_parts` is drawn: the spacers (labelled "spacer", in the oxide's
+    colour when ``"spacer"`` is highlighted), the source and drain pulled back to them and the
+    lightly doped drain (labelled "LDD", in its carrier's colour when ``"ldd"`` is highlighted)."""
     pal = PALETTES[palette]
     ext = cell_extents(c)
+    extra = ldd_parts(c) if ldd else {}
+    ext.update({k: v for k, v in extra.items() if k in ("source", "drain")})
     carrier = {"donor": "electron", "acceptor": "hole"}
     fill = {
         "gate": pal[carrier[c.sd_dopant]],
@@ -555,22 +564,28 @@ def cross_section(
             ax.plot(
                 [a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"], lw=STYLE["edge_width"]
             )
-        if ldd:
-            muted = "ldd" not in highlight
-            colour = pal["muted"] if muted else fill["source"]
+        for name, box in extra.items():
+            kind = name.split("-")[0]
+            if kind not in ("ldd", "spacer"):
+                continue
+            muted = kind not in highlight
+            own = fill["source"] if kind == "ldd" else pal["highlight_oxide"]
+            colour = pal["muted"] if muted else own
             alpha = STYLE["band_alpha"]["muted"] if muted else STYLE["cell_alpha"]
-            for side, box in ldd_boxes(c).items():
-                a, b, y0, y1 = box
-                ax.fill_between([a, b], y0, y1, color=pal["background"], linewidth=0)
-                ax.fill_between(
-                    [a, b], y0, y1, color=colour, alpha=alpha, linewidth=0, gid=f"ldd-{side}"
-                )
-                ax.plot([a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"],
-                        lw=STYLE["edge_width"])  # fmt: skip
-                ax.annotate("LDD", xy=((a + b) / 2, y1), xytext=((a + b) / 2, ext["source"].y1 + gap),
-                            ha="center", va="top", fontweight="bold" if not muted else "normal",
-                            arrowprops={"arrowstyle": "-", "color": pal["text"],
-                                        "lw": STYLE["edge_width"]})  # fmt: skip
+            a, b, y0, y1 = box
+            ax.fill_between([a, b], y0, y1, color=pal["background"], linewidth=0)
+            ax.fill_between([a, b], y0, y1, color=colour, alpha=alpha, linewidth=0, gid=name)
+            ax.plot([a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"],
+                    lw=STYLE["edge_width"])  # fmt: skip
+            # The LDD's label below the source and drain, the spacer's above the gate's contact.
+            label, at, to = "LDD", y1, ext["source"].y1 + gap
+            if kind == "spacer":
+                label, at, to = "spacer", y0, top - bar - gap / 2
+            ax.annotate(label, xy=((a + b) / 2, at), xytext=((a + b) / 2, to),
+                        ha="center", va="top" if kind == "ldd" else "bottom",
+                        fontweight="normal" if muted else "bold",
+                        arrowprops={"arrowstyle": "-", "color": pal["text"],
+                                    "lw": STYLE["edge_width"]})  # fmt: skip
         if "junction" in highlight:
             for side in ("source", "drain"):
                 a, b, _y0, y1 = ext[side]
@@ -770,7 +785,7 @@ def _ldd_cell(palette: str) -> bytes:
         "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"],
         drawn={**STYLE["drawn_um"], **STYLE["ldd_drawn_um"]},
     )  # fmt: skip
-    return cross_section(c, ("ldd",), palette, ldd=True)
+    return cross_section(c, ("ldd", "spacer"), palette, ldd=True)
 
 
 def _moscap_cv(palette: str) -> bytes:

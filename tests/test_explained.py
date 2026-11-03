@@ -2333,29 +2333,40 @@ def test_junction_profile_draws_the_cell():
     assert light.startswith(b"<?xml") and light != figures.FIGURES["junction-profile"]("dark")
 
 
-def test_ldd_is_drawn_under_the_gate_edges():
-    """The drawn lightly doped drain starts at the surface, is shallower than the junction, and
-    reaches under the gate from each edge; its drawn sizes are named in the statement."""
+def test_ldd_structure_is_the_textbook_one():
+    """The drawn structure is Taur and Ning's (PR #153 review should-fix 4): a spacer against
+    each side of the gate and its oxide; the heavily doped source and drain start at the spacers'
+    outer edges; the lightly doped drain runs from there under the spacer to a little under the
+    gate, from the surface to less than the junction depth. Its drawn sizes are named in the
+    statement, and the SVG carries the spacers and the LDD."""
     from gf180tcad.explain import figures, model
 
     drawn = {**figures.STYLE["drawn_um"], **figures.STYLE["ldd_drawn_um"]}
     c = model.cell(
         "nfet_05v0", "calibrated", "w10p0_l0p70", scales=figures.STYLE["scales"], drawn=drawn
     )
-    gate = figures.cell_extents(c)["gate"]
-    boxes = figures.ldd_boxes(c)
-    for side, edge in (("source", gate.x0), ("drain", gate.x1)):
-        x0, x1, y0, y1 = boxes[side]
-        assert y0 == 0 and 0 < y1 < c.xj_um, side
-        assert gate.x0 <= x0 < x1 <= gate.x1 and edge in (x0, x1), side
-        assert x1 - x0 == pytest.approx(drawn["lightly doped drain reach under the gate"])
+    ext = figures.cell_extents(c)
+    gate = ext["gate"]
+    parts = figures.ldd_parts(c)
+    w, reach = drawn["spacer width"], drawn["LDD overlap"]
+    for side, sign, edge in (("source", -1, gate.x0), ("drain", 1, gate.x1)):
+        sp, ldd, sd = parts[f"spacer-{side}"], parts[f"ldd-{side}"], parts[side]
+        outer = edge + sign * w
+        assert (sp.y0, sp.y1) == (gate.y0, 0.0), side  # from the gate's top to the surface
+        assert sorted((sp.x0, sp.x1)) == pytest.approx(sorted((edge, outer))), side
+        near = sd.x1 if side == "source" else sd.x0
+        assert near == pytest.approx(outer), side  # n+ starts at the spacer's outer edge
+        assert sd.y1 == pytest.approx(c.xj_um), side
+        assert sorted((ldd.x0, ldd.x1)) == pytest.approx(sorted((outer, edge - sign * reach))), side
+        assert ldd.y0 == 0 and 0 < ldd.y1 < c.xj_um, side
     statement = figures.substitutions()["x_fig_ldd_cell_scale"]
     assert statement == model.exaggeration(c.scales, drawn)
     for name in figures.STYLE["ldd_drawn_um"]:
         assert f"{name[0].upper()}{name[1:]} chosen for the drawing" in statement, name
     light = figures.FIGURES["ldd-cell"]("light")
     assert light.startswith(b"<?xml") and light != figures.FIGURES["ldd-cell"]("dark")
-    assert b'id="ldd' in light
+    for gid in ("spacer-source", "spacer-drain", "ldd-source", "ldd-drain"):
+        assert f'id="{gid}'.encode() in light, gid
 
 
 def _drawn_figures(monkeypatch) -> dict[str, object]:
