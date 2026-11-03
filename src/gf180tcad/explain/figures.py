@@ -13,6 +13,7 @@ committed files (tested).
 
 from __future__ import annotations
 
+import textwrap
 from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
@@ -71,6 +72,8 @@ STYLE = {
     "junction_width": 4.0,
     # Labels of the cross-section sit this fraction of the drawing's height off their part.
     "cell_label_gap": 0.03,
+    # A title line holds at most this many characters: 12 pt text across a 6.4 in figure.
+    "title_chars": 60,
     # The reduced mesh artefact's window, outlined on the cross-section: dashed, this wide.
     "window_width": 2.4,
     "window_dash": (0, (4, 2)),
@@ -481,6 +484,13 @@ def window_box(c: model.Cell) -> Box:
     return Box(gate.x0 - margin, gate.x1 + margin, gate.y0, meshcut.WINDOW_DEPTH_UM)
 
 
+def wrap_statement(statement: str) -> str:
+    """An exaggeration statement as a figure title: one sentence per line, and a sentence longer
+    than :data:`STYLE` ``title_chars`` wrapped, so no line is wider than the figure (tested)."""
+    sentences = [s if s.endswith(".") else s + "." for s in statement.split(". ")]
+    return "\n".join(textwrap.fill(s, STYLE["title_chars"]) for s in sentences)
+
+
 def ldd_boxes(c: model.Cell) -> dict[str, Box]:
     """The drawn lightly doped drain at each end of the gate, in the coordinates of
     :func:`cell_extents`: from the surface down to the drawn depth, reaching the drawn distance
@@ -608,8 +618,9 @@ def cross_section(
             # parts' boundaries.
             ax.text(a - pad / 2, top + gap, "mesh window", ha="right", va="center",
                     color=pal["highlight"], fontweight="bold")  # fmt: skip
-        statement = model.exaggeration(c.scales, c.drawn).replace(". ", ".\n")
-        ax.set_title(statement, fontsize=STYLE["text_pt"])
+        ax.set_title(
+            wrap_statement(model.exaggeration(c.scales, c.drawn)), fontsize=STYLE["text_pt"]
+        )
         return _svg(fig)
 
 

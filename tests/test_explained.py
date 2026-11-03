@@ -2349,3 +2349,64 @@ def test_ldd_is_drawn_under_the_gate_edges():
     light = figures.FIGURES["ldd-cell"]("light")
     assert light.startswith(b"<?xml") and light != figures.FIGURES["ldd-cell"]("dark")
     assert b'id="ldd' in light
+
+
+def _drawn_figures(monkeypatch) -> dict[str, object]:
+    """Every figure of FIGURES in the light palette as its matplotlib figure, caught as it is
+    saved."""
+    from gf180tcad.explain import figures
+
+    caught = {}
+    for name, draw in figures.FIGURES.items():
+        monkeypatch.setattr(
+            figures, "_svg", lambda fig, name=name: caught.setdefault(name, fig) and b""
+        )
+        draw("light")
+    return caught
+
+
+def text_outside(fig) -> list[str]:
+    """What of ``fig`` is drawn outside the figure: its tight bounding box (every drawn artist,
+    tick labels and texts included) against the figure's own, and each title, text and legend
+    entry that leaves it, as 'text: extent'. Half a pixel of rounding is allowed."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    w, h = fig.bbox.width, fig.bbox.height
+
+    def outside(bb) -> bool:
+        return bb.x0 < -0.5 or bb.y0 < -0.5 or bb.x1 > w + 0.5 or bb.y1 > h + 0.5
+
+    out = []
+    texts = [*fig.texts, *(t for lg in fig.legends for t in lg.get_texts())]
+    for ax in fig.axes:
+        texts += [ax.title, ax._left_title, ax._right_title, *ax.texts]
+        if ax.get_legend():
+            texts += ax.get_legend().get_texts()
+    for t in texts:
+        if t.get_visible() and t.get_text().strip() and outside(t.get_window_extent(renderer)):
+            out.append(f"{t.get_text()!r}: {t.get_window_extent(renderer).bounds}")
+    tight = fig.get_tightbbox(renderer).transformed(fig.dpi_scale_trans)
+    if not out and outside(tight):
+        out.append(f"drawn extent {tight.bounds} beyond the figure {(0, 0, w, h)}")
+    return out
+
+
+def test_every_figure_keeps_its_text_inside(monkeypatch):
+    """No title, label or legend entry of any explainer figure is cut off at the figure's edge
+    (PR #153 review: the LDD cell's statement lost its first letter and its period)."""
+    found = {n: bad for n, fig in _drawn_figures(monkeypatch).items() if (bad := text_outside(fig))}
+    assert not found, found
+
+
+def test_positive_control_text_outside():
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+
+    fig = Figure(figsize=(2, 2), layout="constrained")
+    FigureCanvasAgg(fig)
+    fig.subplots().set_title("a title much too long for a figure two inches wide, cut at both ends")
+    assert text_outside(fig)
+    fig = Figure(figsize=(2, 2), layout="constrained")
+    FigureCanvasAgg(fig)
+    fig.subplots().set_title("short")
+    assert not text_outside(fig)
