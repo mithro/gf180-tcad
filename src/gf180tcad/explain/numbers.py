@@ -402,6 +402,14 @@ def fit_geometries(device: str, root: Path = ROOT) -> dict[str, float]:
     return {g: e["geometry"]["l_um"] for g, e in _fit_doc(device, root)["per_geometry"].items()}
 
 
+def spice_edges(device: str, root: Path = ROOT) -> dict[str, float]:
+    """The SPICE accumulation-to-depletion edge ``u_dep`` (V, u = polarity × Vg) at the
+    :term:`typical corner` of each geometry of the fit of ``device``, by geometry id: the
+    ``spice_regions`` of its result file."""
+    doc = _fit_doc(device, root)["per_geometry"]
+    return {g: e["spice_regions"]["u_dep"] for g, e in doc.items()}
+
+
 def fit_table(device: str, root: Path = ROOT) -> str:
     """A Markdown table of :func:`fits` of ``device``: one row per fitted number, its lower
     limit, start, fitted value and upper limit. The unit is in the row label and the cells hold
