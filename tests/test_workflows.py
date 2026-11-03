@@ -61,7 +61,9 @@ def test_every_job_has_a_timeout(name):
     jobs = _jobs(_lines(name))
     assert jobs
     for job, body in jobs.items():
-        assert any(re.match(r"^    timeout-minutes: \d+$", ln) for ln in body), (
+        # a number, or a matrix entry's own limit with a numeric default
+        limit = r"(\d+|\$\{\{ matrix\.timeout \|\| \d+ \}\})"
+        assert any(re.match(rf"^    timeout-minutes: {limit}$", ln) for ln in body), (
             f"{name}: job {job} has no timeout-minutes"
         )
 

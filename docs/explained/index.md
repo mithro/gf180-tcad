@@ -5,7 +5,8 @@
 ## The basics
 
 - {doc}`Silicon, doping and carriers <silicon-and-carriers>`: what {term}`electrons <electron>`,
-  {term}`holes <hole>` and {term}`dopants <dopant>` are, with this process's numbers.
+  {term}`holes <hole>` and {term}`dopants <dopant>` are, with this process's numbers
+  ({numref}`Figure %s of Silicon, doping and carriers <fig-silicon-dopants>`).
 - {doc}`Energy bands and the Fermi level <bands-and-fermi-level>`: how a band diagram shows
   where the carriers are, with the {term}`Fermi level` of this process's gate and body.
 - {doc}`The pn junction and its depletion region <pn-junction>`: why a layer without free
@@ -17,8 +18,9 @@
 
 ## The MOS capacitor
 
-- {doc}`The MOS capacitor <mos-capacitor>`: the transistor without its source and drain, and
-  why this project fits it to the {term}`SPICE` model first.
+- {doc}`The MOS capacitor <mos-capacitor>`: the transistor without its source and drain
+  ({numref}`Figure %s of The MOS capacitor <fig-moscap-cell>`), and why this project fits it
+  to the {term}`SPICE` model first.
 - {doc}`Accumulation, depletion and inversion <accumulation-depletion-inversion>`: what gathers
   under the gate as its voltage changes, and the bands of each region.
 - {doc}`What sets each part of the C–V curve <cv-curve>`: which of the oxide thickness, the

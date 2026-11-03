@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Patches: tcad-charon/Interpreter.cmake (Charon 2.2.0).
+# Reason: the configure step copies the input-deck interpreter with rsync, which the base image lacks, and ignores the failure, so charonInterpreter is missing; copy it with CMake's file(COPY) and the same three excludes instead.
+#
+--- a/Interpreter.cmake
++++ b/Interpreter.cmake
+@@ -6,7 +6,8 @@
+         execute_process (COMMAND rm -fr src/interpreter/modifiers)
+ ENDIF()
+ execute_process (COMMAND rm -fr src/interpreter )
+-execute_process (COMMAND rsync -av  --exclude generateParserDocumentation --exclude parsers --exclude modifiers --progress ${CMAKE_SOURCE_DIR}/scripts/charonInterpreter  src/interpreter --delete)
++file (COPY ${CMAKE_SOURCE_DIR}/scripts/charonInterpreter DESTINATION src/interpreter
++      PATTERN generateParserDocumentation EXCLUDE PATTERN parsers EXCLUDE PATTERN modifiers EXCLUDE)
+ 
+ #execute_process (WORKING_DIRECTORY 
+ 

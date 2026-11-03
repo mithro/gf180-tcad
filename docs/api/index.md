@@ -25,6 +25,7 @@ gf180tcad.explain.model
 gf180tcad.explain.numbers
 gf180tcad.history
 gf180tcad.history.__main__
+gf180tcad.imagefig
 gf180tcad.io
 gf180tcad.known
 gf180tcad.layout
