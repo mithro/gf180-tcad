@@ -23,6 +23,7 @@ import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
+from matplotlib.patches import Circle
 
 from gf180tcad import meshcut, plots
 from gf180tcad.explain import data, idealised, model, numbers
@@ -114,6 +115,29 @@ STYLE = {
     "ring_pt": 16.0,
     "row_pad": 0.6,
     "limit_margin": 0.08,
+    # The lattice drawings: a figure this size; this many atoms per side, one atom spacing apart;
+    # the bonds off the edge this long (spacings), so the crystal reads as going on; atoms of this
+    # radius (spacings); a bond's two electrons this far either side of its line (spacings); the
+    # dots this size (pt).
+    "lattice_size_in": (6.4, 3.9),
+    "lattice_atoms": 3,
+    "lattice_stub": 0.75,
+    "atom_radius": 0.22,
+    "bond_pair_gap": 0.07,
+    "bond_electron_pt": 5.0,
+    "free_electron_pt": 10.0,
+    "hole_pt": 11.0,
+    # Drawing order (matplotlib zorder) of the lattice: bonds, then atoms, then the bonding
+    # electrons, then the free electrons and holes, then the atoms' labels on top.
+    "lattice_zorder": {"bond": 1, "atom": 2, "electron": 3, "carrier": 4, "label": 5},
+    # The source doping profile: depths to (1 + pad) junction depths.
+    "profile_pad": 0.5,
+    # The lightly doped drain of the parts page, which the simulated cell does not have: drawn at
+    # a chosen size (µm), with no committed source.
+    "ldd_drawn_um": {
+        "lightly doped drain depth": 0.05,
+        "lightly doped drain reach under the gate": 0.08,
+    },
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -448,15 +472,34 @@ def window_box(c: model.Cell) -> Box:
     return Box(gate.x0 - margin, gate.x1 + margin, gate.y0, meshcut.WINDOW_DEPTH_UM)
 
 
+def ldd_boxes(c: model.Cell) -> dict[str, Box]:
+    """The drawn lightly doped drain at each end of the gate, in the coordinates of
+    :func:`cell_extents`: from the surface down to the drawn depth, reaching the drawn distance
+    under the gate from its edge (``c.drawn``)."""
+    gate = cell_extents(c)["gate"]
+    depth = c.drawn["lightly doped drain depth"]
+    reach = c.drawn["lightly doped drain reach under the gate"]
+    return {
+        "source": Box(gate.x0, gate.x0 + reach, 0.0, depth),
+        "drain": Box(gate.x1 - reach, gate.x1, 0.0, depth),
+    }
+
+
 def cross_section(
-    c: model.Cell, highlight: tuple[str, ...], palette: str, window: Box | None = None
+    c: model.Cell,
+    highlight: tuple[str, ...],
+    palette: str,
+    window: Box | None = None,
+    ldd: bool = False,
 ) -> bytes:
     """The 2D cell cut along its length: gate, gate oxide, source, drain and body, each filled
     with its carrier's colour (n-type: electrons, p-type: holes; the oxide its own) and labelled
     on the part, and the contacts of ``c.contacts`` as dark bars. With ``highlight``, the parts
     named there keep their colour and the rest are muted; ``"junction"`` draws the boundary of
     the source and the drain with the body in the highlight colour. With ``window``, that box
-    is outlined, dashed, in the highlight colour and labelled "mesh window"."""
+    is outlined, dashed, in the highlight colour and labelled "mesh window". With ``ldd``, the
+    lightly doped drain of :func:`ldd_boxes` is drawn at both ends of the gate and labelled
+    "LDD", in its carrier's colour when ``"ldd"`` is highlighted."""
     pal = PALETTES[palette]
     ext = cell_extents(c)
     carrier = {"donor": "electron", "acceptor": "hole"}
@@ -491,6 +534,22 @@ def cross_section(
             ax.plot(
                 [a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"], lw=STYLE["edge_width"]
             )
+        if ldd:
+            muted = "ldd" not in highlight
+            colour = pal["muted"] if muted else fill["source"]
+            alpha = STYLE["band_alpha"]["muted"] if muted else STYLE["cell_alpha"]
+            for side, box in ldd_boxes(c).items():
+                a, b, y0, y1 = box
+                ax.fill_between([a, b], y0, y1, color=pal["background"], linewidth=0)
+                ax.fill_between(
+                    [a, b], y0, y1, color=colour, alpha=alpha, linewidth=0, gid=f"ldd-{side}"
+                )
+                ax.plot([a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"],
+                        lw=STYLE["edge_width"])  # fmt: skip
+                ax.annotate("LDD", xy=((a + b) / 2, y1), xytext=((a + b) / 2, ext["source"].y1 + gap),
+                            ha="center", va="top", fontweight="bold" if not muted else "normal",
+                            arrowprops={"arrowstyle": "-", "color": pal["text"],
+                                        "lw": STYLE["edge_width"]})  # fmt: skip
         if "junction" in highlight:
             for side in ("source", "drain"):
                 a, b, _y0, y1 = ext[side]
@@ -682,6 +741,14 @@ def _moscap_cell(palette: str) -> bytes:
         "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
     )
     return cross_section(c, ("gate", "oxide", "body"), palette)
+
+
+def _ldd_cell(palette: str) -> bytes:
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"],
+        drawn={**STYLE["drawn_um"], **STYLE["ldd_drawn_um"]},
+    )  # fmt: skip
+    return cross_section(c, ("ldd",), palette, ldd=True)
 
 
 def _moscap_cv(palette: str) -> bytes:
@@ -1062,6 +1129,193 @@ def calibration_pfet(palette: str) -> bytes:
         return _svg(calibration_pfet_figure(palette))
 
 
+# The silicon page (silicon-and-carriers.md): the bonds of the crystal, drawn flat.
+#: The panels of the lattice drawings by title: the centre atom (silicon, or a dopant ion), whether
+#: an electron moves free, and whether a bond away from the centre has lost an electron (a hole).
+LATTICE_PANELS = {
+    "perfect crystal": {"centre": None, "free": False, "hole": False},
+    "one broken bond": {"centre": None, "free": True, "hole": True},
+    "donor": {"centre": "donor", "free": True, "hole": False},
+    "acceptor": {"centre": "acceptor", "free": False, "hole": True},
+}
+_ION = {"donor": "+", "acceptor": "−"}
+_ION_CARRIER = {"donor": "electron", "acceptor": "hole"}
+
+
+def lattice_bonds(n: int) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    """Each bond of an ``n`` by ``n`` grid of atoms one spacing apart, as its two ends: one between
+    each pair of neighbours, and a stub :data:`STYLE` ``lattice_stub`` long off each edge atom."""
+    stub = STYLE["lattice_stub"]
+    out = []
+    for i in range(n):
+        for j in range(n):
+            if i + 1 < n:
+                out.append(((i, j), (i + 1, j)))
+            if j + 1 < n:
+                out.append(((i, j), (i, j + 1)))
+            if i == 0:
+                out.append(((i - stub, j), (i, j)))
+            if i == n - 1:
+                out.append(((i, j), (i + stub, j)))
+            if j == 0:
+                out.append(((i, j - stub), (i, j)))
+            if j == n - 1:
+                out.append(((i, j), (i, j + stub)))
+    return out
+
+
+def lattice_figure(panels: tuple[str, ...], palette: str):
+    """The matplotlib figure of :func:`lattice`, for the tests to count its electrons and holes:
+    each artist carries a gid, ``bond-electron``, ``free-electron``, ``hole``, ``atom`` or
+    ``ion``."""
+    pal = PALETTES[palette]
+    n = STYLE["lattice_atoms"]
+    mid = (n - 1) / 2
+    stub, r, gap = STYLE["lattice_stub"], STYLE["atom_radius"], STYLE["bond_pair_gap"]
+    bonds = lattice_bonds(n)
+    # The bond that loses an electron leaves the centre atom's own four bonds whole, and the free
+    # electron sits in the gap of the grid beside it.
+    broken = {(mid + 1, mid), (mid + 1, mid + 1)}
+    free_at = (mid + 1 / 2, mid + 1 / 2)
+    dot = {"ls": "none", "marker": "o"}
+    z = STYLE["lattice_zorder"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["lattice_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(panels), squeeze=False).ravel()
+        for ax, name in zip(axes, panels, strict=True):
+            spec = LATTICE_PANELS[name]
+            ax.set_aspect("equal")
+            ax.set_axis_off()
+            ax.set_xlim(-stub, n - 1 + stub)
+            ax.set_ylim(-stub, n - 1 + stub)
+            for (x0, y0), (x1, y1) in bonds:
+                ax.plot(
+                    [x0, x1], [y0, y1], color=pal["muted"], lw=STYLE["edge_width"], zorder=z["bond"]
+                )
+                xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
+                pair = [(0, gap), (0, -gap)] if y0 == y1 else [(gap, 0), (-gap, 0)]
+                for k, (dx, dy) in enumerate(pair):
+                    if spec["hole"] and k == 0 and {(x0, y0), (x1, y1)} == broken:
+                        ax.plot([xm + dx], [ym + dy], **dot, ms=STYLE["hole_pt"], mfc="none",
+                                mec=pal["hole"], mew=STYLE["edge_width"] * 2, zorder=z["carrier"], gid="hole")  # fmt: skip
+                        continue
+                    ax.plot([xm + dx], [ym + dy], **dot, ms=STYLE["bond_electron_pt"],
+                            color=pal["text"], zorder=z["electron"], gid="bond-electron")  # fmt: skip
+            for i in range(n):
+                for j in range(n):
+                    ion = spec["centre"] if (i, j) == (mid, mid) else None
+                    # An opaque ground, then the ion's tint, then the outline.
+                    ax.add_patch(Circle((i, j), r, facecolor=pal["background"], edgecolor="none",
+                                        zorder=z["atom"]))  # fmt: skip
+                    if ion:
+                        ax.add_patch(Circle((i, j), r, facecolor=pal[_ION_CARRIER[ion]],
+                                            alpha=STYLE["cell_alpha"], edgecolor="none", zorder=z["atom"]))  # fmt: skip
+                    ax.add_patch(Circle((i, j), r, facecolor="none", edgecolor=pal["text"],
+                                        lw=STYLE["edge_width"], zorder=z["atom"], gid="ion" if ion else "atom"))  # fmt: skip
+                    ax.text(i, j, _ION[ion] if ion else "Si", ha="center", va="center", zorder=z["label"],
+                            fontweight="bold" if ion else "normal")  # fmt: skip
+            if spec["free"]:
+                ax.plot([free_at[0]], [free_at[1]], **dot, ms=STYLE["free_electron_pt"],
+                        color=pal["electron"], mec=pal["text"], zorder=z["carrier"], gid="free-electron")  # fmt: skip
+            ax.set_title(name, fontsize=STYLE["text_pt"])
+        handles = [
+            Line2D(
+                [],
+                [],
+                **dot,
+                ms=STYLE["bond_electron_pt"],
+                color=pal["text"],
+                label="electron in a bond",
+            ),
+            Line2D(
+                [],
+                [],
+                **dot,
+                ms=STYLE["free_electron_pt"],
+                color=pal["electron"],
+                mec=pal["text"],
+                label="free electron",
+            ),
+            Line2D(
+                [],
+                [],
+                **dot,
+                ms=STYLE["hole_pt"],
+                mfc="none",
+                mec=pal["hole"],
+                mew=STYLE["edge_width"] * 2,
+                label="hole",
+            ),
+        ]
+        fig.legend(handles=handles, loc="outside lower center", ncols=len(handles), frameon=False)
+        return fig
+
+
+def lattice(panels: tuple[str, ...], palette: str) -> bytes:
+    """The bonds of silicon drawn flat, one panel per name of :data:`LATTICE_PANELS`: a grid of
+    atoms, each bond a line with its two electrons, the free electrons and the holes. A drawing of
+    the bond picture of Sze and Ng 2006 (lit-sze), ch. 1, with no data and not to scale."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(lattice_figure(panels, palette))
+
+
+def _silicon_bonds(palette: str) -> bytes:
+    return lattice(("perfect crystal", "one broken bond"), palette)
+
+
+def _silicon_dopants(palette: str) -> bytes:
+    return lattice(("donor", "acceptor"), palette)
+
+
+# The pn junction page (pn-junction.md): the source doping of the 2D cell against depth.
+#: The curves of the profile plot by their legend labels.
+PROFILE_LINES = {
+    "gaussian": "donors, simulated cell",
+    "step": "donors, abrupt step",
+    "body": "acceptors, body",
+}
+
+
+def junction_profile_figure(palette: str):
+    """The matplotlib figure of :func:`junction_profile`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
+    )
+    y = np.linspace(0, (1 + STYLE["profile_pad"]) * c.xj_um, STYLE["regime_points"])
+    lo, hi = c.n_body_cm3 / STYLE["headroom"], c.n_sd_cm3 * STYLE["headroom"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.set_yscale("log")
+        ax.set_ylim(lo, hi)
+        ax.set_xlim(y[0], y[-1])
+        ax.grid(True)
+        ax.plot(y, c.sd_doping(y), color=pal["electron"], lw=lw, label=PROFILE_LINES["gaussian"])
+        ax.plot([y[0], c.xj_um, c.xj_um], [c.n_sd_cm3, c.n_sd_cm3, lo], color=pal["electron"],
+                lw=lw, ls="--", label=PROFILE_LINES["step"])  # fmt: skip
+        ax.plot([y[0], y[-1]], [c.n_body_cm3] * 2, color=pal["hole"], lw=lw,
+                label=PROFILE_LINES["body"])  # fmt: skip
+        ax.axvline(c.xj_um, color=pal["text"], lw=STYLE["edge_width"])
+        ax.text(c.xj_um, hi / (hi / lo) ** STYLE["label_drop"], " junction", ha="left", va="top")
+        ax.set_xlabel("depth below the silicon surface (µm)")
+        ax.set_ylabel("dopant density (cm⁻³)")
+        fig.legend(loc="outside lower center", ncols=2, frameon=False)
+        return fig
+
+
+def junction_profile(palette: str) -> bytes:
+    """The donor and acceptor densities of the nfet's 2D cell ``w10p0_l0p70`` against the depth
+    below its source, away from the gate edge: the Gaussian of the simulated cell
+    (:meth:`gf180tcad.explain.model.Cell.sd_doping`), the abrupt step of the junction panels and
+    the uniform body, with the junction depth marked."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(junction_profile_figure(palette))
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -1081,12 +1335,18 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "calibration-compare": calibration_compare,
     "calibration-pfet": calibration_pfet,
     "calibration-stack": _calibration_stack,
+    "silicon-bonds": _silicon_bonds,
+    "silicon-dopants": _silicon_dopants,
+    "junction-profile": junction_profile,
+    "ldd-cell": _ldd_cell,
 }
 
 
-# The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
-# computed curves (not drawings of the device) carry no statement.
-_CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell", "mesh-window")
+# The figures drawn from the 2D cell, whose statement also names the drawn extents (the LDD cell
+# names its own as well); the plots of computed curves and the drawings of the crystal (not
+# drawings of the device) carry no statement.
+_CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell", "mesh-window", "ldd-cell")
+_DRAWN = {"ldd-cell": {**STYLE["drawn_um"], **STYLE["ldd_drawn_um"]}}
 _PLOTS = (
     "bands-flat",
     "junction-panels",
@@ -1097,6 +1357,9 @@ _PLOTS = (
     "calibration-limits",
     "calibration-compare",
     "calibration-pfet",
+    "junction-profile",
+    "silicon-bonds",
+    "silicon-dopants",
 )
 
 
@@ -1107,7 +1370,7 @@ def substitutions() -> dict[str, str]:
     for name in FIGURES:
         if name in _PLOTS:
             continue
-        drawn = STYLE["drawn_um"] if name in _CELL_FIGURES else None
+        drawn = _DRAWN.get(name, STYLE["drawn_um"]) if name in _CELL_FIGURES else None
         out[f"x_fig_{name.replace('-', '_')}_scale"] = model.exaggeration(STYLE["scales"], drawn)
     return out
 

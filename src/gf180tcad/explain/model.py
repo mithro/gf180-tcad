@@ -22,8 +22,11 @@ It reads no simulator module and imports nothing outside the docs dependency gro
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+
+import numpy as np
 
 from gf180tcad import quantity
 from gf180tcad.explain.numbers import ROOT
@@ -148,6 +151,19 @@ class Cell:
     @property
     def body_dopant(self) -> str:
         return _DOPANTS[self.polarity][1]
+
+    @property
+    def sd_straggle_um(self) -> float:
+        """The vertical straggle s (µm) of the source/drain Gaussian of the simulated cell: the
+        peak at the surface falls to the body doping at the junction depth, so
+        peak·exp(−XJ²/(2·s²)) = body and s = XJ/√(2·ln(peak/body)), as
+        :func:`gf180tcad.tcad.stack.sd_straggle_um` computes it (tested)."""
+        return self.xj_um / math.sqrt(2 * math.log(self.n_sd_cm3 / self.n_body_cm3))
+
+    def sd_doping(self, depth_um):
+        """The source/drain donor (nfet) or acceptor (pfet) density (cm⁻³) at ``depth_um`` below
+        the surface, away from the gate edge: peak·exp(−y²/(2·s²)) with s :attr:`sd_straggle_um`."""
+        return self.n_sd_cm3 * np.exp(-np.square(depth_um) / (2 * self.sd_straggle_um**2))
 
 
 def cell_meta_path(device: str, params: str, geometry: str) -> str:
