@@ -671,3 +671,83 @@ def test_moscap_missing_result_raises(tmp_path):
     (tcad / "validation" / "pfet_05v0.json").unlink()
     with pytest.raises(FileNotFoundError, match="pfet_05v0.json"):
         docgen.generate(tmp_path / "out", tcad_root=tcad)
+
+
+def _corner_summary() -> dict:
+    """A synthetic corner summary of the nfet (the layout of
+    :func:`gf180tcad.calibrate.corners.summary`), with the ff oxide on its lower bound."""
+    from gf180tcad.devices import CORNERS
+
+    fit = [c for c in CORNERS if c != "typical"]
+    values = {
+        "t_ox_eff_nm": dict(zip(CORNERS, (16.05, 15.05, 17.0, 15.3, 16.8), strict=True)),
+        "n_ch_cm3": dict(zip(CORNERS, (8.8e16, 8.1e16, 9.6e16, 8.5e16, 9.1e16), strict=True)),
+        "dv_fb_v": dict(zip(CORNERS, (0.0987, -0.03, 0.22, 0.01, 0.18), strict=True)),
+    }
+    tunables = {}
+    for n, per in values.items():
+        lo = min(per, key=per.get)
+        hi = max(per, key=per.get)
+        row = {"typical": per["typical"], "values": per, "min": per[lo], "min_corner": lo,
+               "max": per[hi], "max_corner": hi, "spread": per[hi] - per[lo],
+               "min_at_bound": "lower" if n == "t_ox_eff_nm" else None, "max_at_bound": None}  # fmt: skip
+        if n == "n_ch_cm3":
+            row["card_shift"] = row["tcad_shift"] = row["shift_difference"] = None
+        else:
+            card = {c: (per[c] - per["typical"]) * 0.9 for c in fit}
+            tcad = {c: per[c] - per["typical"] for c in fit}
+            row |= {"card_shift": card, "tcad_shift": tcad,
+                    "shift_difference": {c: tcad[c] - card[c] for c in fit}}  # fmt: skip
+        tunables[n] = row
+    corners = {"typical": {"bound_hits": {}, "per_geometry": {"g": "Agree"}, "verdict": "Agree"}}
+    for c in fit:
+        corners[c] = {
+            "bound_hits": {"t_ox_eff_nm": "lower"} if c == "ff" else {},
+            "held_out": {"a": "Agree", "b": "Same process" if c == "ss" else "Agree"},
+            "per_geometry": {"g": "Agree"},
+            "verdict": "Agree",
+        }
+    return {"corners": corners, "device": "nfet_05v0", "tunables": tunables}
+
+
+def test_docgen_corner_table_one_value_per_cell():
+    """The corner tables of a device page: at most five columns, one value per cell (a number,
+    a corner, a verdict or a bound word), each read from the summary, the unit in the row label
+    or the header; a bound hit is named below the tables, not in a cell."""
+    import re
+
+    s = _corner_summary()
+    lines = docgen.corner_tables("nfet_05v0", s)
+    tables = _md_tables(lines)
+    assert len(tables) == 6
+    one_value = re.compile(r"^(`[a-z_0-9]+`( \([^)]+\))?|[−+-]?[0-9.]+(e[−+]?[0-9]+)?|[a-z]+|"
+                           r"lower bound|upper bound|Agree|Same process|Disagree|not applicable)$")  # fmt: skip
+    for header, rows in tables:
+        assert len(header) <= 5, header
+        for r in rows:
+            assert len(r) == len(header)
+            for cell in r:
+                assert one_value.match(cell), (header, cell)
+    bounds, where, per, tox, fb, verdicts = tables
+    assert bounds[0] == ["Number", "Typical", "Lowest", "Highest", "Spread"]
+    tox_row = s["tunables"]["t_ox_eff_nm"]
+    assert bounds[1][0] == ["`t_ox_eff_nm` (nm)", *(docgen.num(tox_row[k]) for k in
+                            ("typical", "min", "max", "spread"))]  # fmt: skip
+    fb_row = s["tunables"]["dv_fb_v"]
+    assert bounds[1][2][1:] == [
+        docgen.num(1e3 * fb_row[k]) for k in ("typical", "min", "max", "spread")
+    ]
+    assert where[1][0] == ["`t_ox_eff_nm`", "ff", "lower bound", "ss", "no"]
+    assert [r[0] for r in per[1]] == ["typical", "ff", "ss", "fs", "sf"]
+    assert per[1][2][1:] == [docgen.num(16.0 + 1.0), docgen.num(9.6e16), docgen.num(220.0)]
+    assert tox[0] == ["Corner", "Card (nm)", "Fit (nm)", "Difference (nm)"]
+    assert fb[0][1] == "Card (mV)"
+    assert [r[0] for r in tox[1]] == ["ff", "ss", "fs", "sf"]
+    assert verdicts[1][0] == ["typical", "Agree", "not applicable"]
+    assert verdicts[1][2] == ["ss", "Agree", "Same process"]
+    assert "Bound hits: `t_ox_eff_nm` at ff is on its lower bound." in lines
+
+
+def test_docgen_corner_table_refuses_another_device():
+    with pytest.raises(ValueError, match="pfet_05v0"):
+        docgen.corner_tables("pfet_05v0", _corner_summary())
