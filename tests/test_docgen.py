@@ -686,7 +686,7 @@ def test_moscap_missing_result_raises(tmp_path):
 
 def _corner_summary() -> dict:
     """A synthetic corner summary of the nfet (the layout of
-    :func:`gf180tcad.calibrate.corners.summary`), with the ff oxide on its lower bound."""
+    :func:`gf180tcad.calibrate.corners.summary`), with the ff oxide on its lower limit."""
     from gf180tcad.devices import CORNERS
 
     fit = [c for c in CORNERS if c != "typical"]
@@ -723,16 +723,19 @@ def _corner_summary() -> dict:
 
 def test_docgen_corner_table_one_value_per_cell():
     """The corner tables of a device page: at most five columns, one value per cell (a number,
-    a corner, a verdict or a bound word), each read from the summary, the unit in the row label
-    or the header; a bound hit is named below the tables, not in a cell."""
+    a corner, a verdict or a limit word), each read from the summary, the unit in the row label
+    or the header; a limit hit is named below the tables, not in a cell."""
     import re
+
+    from gf180tcad.explain.numbers import shortest
 
     s = _corner_summary()
     lines = docgen.corner_tables("nfet_05v0", s)
     tables = _md_tables(lines)
     assert len(tables) == 6
-    one_value = re.compile(r"^(`[a-z_0-9]+`( \([^)]+\))?|[−+-]?[0-9.]+(e[−+]?[0-9]+)?|[a-z]+|"
-                           r"lower bound|upper bound|\{term\}`(Agree|Same process|Disagree)`|not applicable)$")  # fmt: skip
+    one_value = re.compile(r"^(`[a-z_0-9]+`( \([^)]+\))?|−?[0-9.]+(\xa0×\xa010[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)?†?|"
+                           r"[a-z]+|lower limit|upper limit|"
+                           r"\{term\}`(Agree|Same process|Disagree)`|not applicable)$")  # fmt: skip
     for header, rows in tables:
         assert len(header) <= 5, header
         for r in rows:
@@ -742,21 +745,46 @@ def test_docgen_corner_table_one_value_per_cell():
     bounds, where, per, tox, fb, verdicts = tables
     assert bounds[0] == ["Number", "Typical", "Lowest", "Highest", "Spread"]
     tox_row = s["tunables"]["t_ox_eff_nm"]
-    assert bounds[1][0] == ["`t_ox_eff_nm` (nm)", *(docgen.num(tox_row[k]) for k in
-                            ("typical", "min", "max", "spread"))]  # fmt: skip
+    assert bounds[1][0] == ["`t_ox_eff_nm` (nm)", shortest(tox_row["typical"], "", 4),
+                            shortest(tox_row["min"], "", 4) + "†", shortest(tox_row["max"], "", 4),
+                            shortest(tox_row["spread"], "", 4)]  # fmt: skip
     fb_row = s["tunables"]["dv_fb_v"]
     assert bounds[1][2][1:] == [
-        docgen.num(1e3 * fb_row[k]) for k in ("typical", "min", "max", "spread")
+        shortest(fb_row[k], "", 3) for k in ("typical", "min", "max", "spread")
     ]
-    assert where[1][0] == ["`t_ox_eff_nm`", "ff", "lower bound", "ss", "no"]
+    assert bounds[1][2][2] == "−0.03"
+    assert bounds[1][1][1] == "8.8\xa0×\xa010¹⁶"
+    assert where[0] == ["Number", "Lowest at", "On a limit", "Highest at", "On a limit"]
+    assert where[1][0] == ["`t_ox_eff_nm`", "ff", "lower limit", "ss", "no"]
     assert [r[0] for r in per[1]] == ["typical", "ff", "ss", "fs", "sf"]
-    assert per[1][2][1:] == [docgen.num(16.0 + 1.0), docgen.num(9.6e16), docgen.num(220.0)]
+    assert per[1][2][1:] == ["17", "9.6\xa0×\xa010¹⁶", "0.22"]
+    assert per[1][1][1] == "15.05†" and per[1][1][3] == "−0.03"
     assert tox[0] == ["Corner", "Card (nm)", "Fit (nm)", "Difference (nm)"]
-    assert fb[0][1] == "Card (mV)"
+    assert tox[1][0][2].endswith("†") and tox[1][0][3].endswith("†") and "†" not in tox[1][0][1]
+    assert not any("†" in c for r in fb[1] for c in r)
+    assert fb[0][1] == "Card (V)"
     assert [r[0] for r in tox[1]] == ["ff", "ss", "fs", "sf"]
     assert verdicts[1][0] == ["typical", "{term}`Agree`", "not applicable"]
     assert verdicts[1][2] == ["ss", "{term}`Agree`", "{term}`Same process`"]
-    assert "Bound hits: `t_ox_eff_nm` at ff is on its lower bound." in lines
+    assert "Limit hits: `t_ox_eff_nm` at ff is on its lower limit." in lines
+    # the note below each table with a marked value, and only below those
+    note = [i for i, ln in enumerate(lines) if ln == docgen.LIMIT_NOTE]
+    marked = [i for i, ln in enumerate(lines) if ln.startswith("|") and "†" in ln]
+    assert len(note) == 3 and all(any(m < n for m in marked) for n in note)
+    assert not any(
+        "bound" in ln.lower().replace("bounds", "") for ln in lines if "{repo}" not in ln
+    )
+
+
+def test_docgen_corner_tables_mark_nothing_without_a_limit_hit():
+    """With no fit on a limit, no cell carries the mark and no note is written."""
+    s = _corner_summary()
+    s["tunables"]["t_ox_eff_nm"]["min_at_bound"] = None
+    s["corners"]["ff"]["bound_hits"] = {}
+    lines = docgen.corner_tables("nfet_05v0", s)
+    assert not any("†" in ln for ln in lines)
+    assert docgen.LIMIT_NOTE not in lines
+    assert "No fit, typical or corner, sits on a limit." in lines
 
 
 def test_docgen_corner_table_refuses_another_device():

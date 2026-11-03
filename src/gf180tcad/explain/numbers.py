@@ -543,15 +543,21 @@ def corner_table(root: Path = ROOT) -> str:
 #: The corner summaries of the corner fits (Task 16a, written by
 #: :func:`gf180tcad.calibrate.corners.summary`), by transistor.
 CORNER_SUMMARIES = {d: f"results/tcad/corners/{d}/summary.json" for d in FITS}
-#: The words of a lowest or highest value that sits on a bound of its fit, by bound.
+#: The words of a lowest or highest value that sits on a limit of its fit, by limit.
 BOUND_WORDS = {"lower": "lower limit", "upper": "upper limit"}
+#: The mark of a table value that sits on a limit of its fit, explained in prose below the table.
+LIMIT_MARK = "†"
+#: The note below a table holding a :data:`LIMIT_MARK`.
+LIMIT_NOTE = f"A value marked {LIMIT_MARK} sits on a limit of its fit: the limit sets it, not the SPICE curve."
 
 
 @dataclass(frozen=True)
 class Bound:
     """One fitted number of one transistor over the :term:`corners <corner>`: the typical fit,
     the lowest and highest value with their corner and the limit each sits on (None when it
-    sits on none), the spread (highest minus lowest) and the value at each corner (its unit)."""
+    sits on none), the spread (highest minus lowest), the value at each corner (its unit) and
+    the limit each corner's fit sits on (``on_limit``: corner to ``"lower"`` or ``"upper"``, only
+    the corners whose fit sits on one)."""
 
     device: str
     name: str
@@ -564,6 +570,7 @@ class Bound:
     highest_at_bound: str | None
     spread: float
     values: dict[str, float]
+    on_limit: dict[str, str]
 
 
 def corner_summary(device: str, root: Path = ROOT) -> dict:
@@ -579,11 +586,16 @@ def corner_summary(device: str, root: Path = ROOT) -> dict:
 def corner_bounds(device: str, root: Path = ROOT) -> list[Bound]:
     """The :class:`Bound` of each of :data:`TUNABLES` of ``device``, read from its corner
     summary under ``root``. A lowest or highest value on a limit of its fit is that limit."""
+    doc = corner_summary(device, root)
     out = []
-    for name, t in corner_summary(device, root)["tunables"].items():
+    for name, t in doc["tunables"].items():
+        on = {
+            c: e["bound_hits"][name] for c, e in doc["corners"].items() if name in e["bound_hits"]
+        }
         out.append(
             Bound(device, name, t["typical"], t["min"], t["min_corner"], t["min_at_bound"],
-                  t["max"], t["max_corner"], t["max_at_bound"], t["spread"], dict(t["values"]))
+                  t["max"], t["max_corner"], t["max_at_bound"], t["spread"], dict(t["values"]),
+                  on)
         )  # fmt: skip
     return out
 
@@ -591,13 +603,21 @@ def corner_bounds(device: str, root: Path = ROOT) -> list[Bound]:
 def corner_bounds_table(device: str, root: Path = ROOT) -> str:
     """A Markdown table of :func:`corner_bounds` of ``device``: one row per fitted number, its
     typical fit, lowest and highest value over the corners and the spread. The unit is in the
-    row label, as in :func:`fit_table`."""
+    row label, as in :func:`fit_table`. A value on a limit of its fit carries :data:`LIMIT_MARK`,
+    and :data:`LIMIT_NOTE` follows the table."""
     rows = ["| Number | Typical | Lowest | Highest | Spread |", "|---|---|---|---|---|"]
+    marked = False
     for b in corner_bounds(device, root):
         words, unit, most = TUNABLES[b.name]
-        cells = (shortest(v, "", most) for v in (b.typical, b.lowest, b.highest, b.spread))
+        on = ("typical" in b.on_limit, b.lowest_at_bound is not None,
+              b.highest_at_bound is not None, False)  # fmt: skip
+        cells = [
+            shortest(v, "", most) + (LIMIT_MARK if m else "")
+            for v, m in zip((b.typical, b.lowest, b.highest, b.spread), on, strict=True)
+        ]
+        marked = marked or any(on)
         rows.append(f"| {words} ({unit}) | " + " | ".join(cells) + " |")
-    return "\n".join(rows)
+    return "\n".join(rows) + (f"\n\n{LIMIT_NOTE}" if marked else "")
 
 
 def corner_extremes_table(root: Path = ROOT) -> str:
@@ -698,6 +718,30 @@ def corner_fit_limits(device: str, root: Path = ROOT) -> list[CornerFit]:
     return out
 
 
+def corner_nearest_limit(root: Path = ROOT) -> CornerFit:
+    """The fitted value, over every fit not on a limit, closest to a limit of its fit relative
+    to the width between its limits."""
+
+    def gap(f: CornerFit) -> float:
+        return min(f.fitted - f.lower, f.upper - f.fitted) / (f.upper - f.lower)
+
+    fits = [f for d in FITS for f in corner_fit_limits(d, root) if f.at_bound is None]
+    return min(fits, key=gap)
+
+
+def corner_nearest_limit_sentence(root: Path = ROOT) -> str:
+    """A sentence on :func:`corner_nearest_limit`: which value, how far from which limit."""
+    f = corner_nearest_limit(root)
+    words, unit, _most = TUNABLES[f.name]
+    low = f.fitted - f.lower <= f.upper - f.fitted
+    d = f.fitted - f.lower if low else f.upper - f.fitted
+    side = "above its lower" if low else "below its upper"
+    return (
+        f"The value closest to a limit without sitting on it is the {words.lower()} of the "
+        f"{f.device} at {f.corner}, {shortest(d, unit, 2)} {side} limit"
+    )
+
+
 def corner_fit_hits(root: Path = ROOT) -> str:
     """A sentence naming every fit, typical or corner, whose fitted value sits on a limit."""
     hits = [
@@ -714,7 +758,7 @@ def corner_fit_hits(root: Path = ROOT) -> str:
 
 #: The fitted numbers of the card cross-check: the summary key, the unit and digits a page prints
 #: the gap in, and the factor from the summary unit.
-CROSSCHECK = {"t_ox_eff_nm": ("tox", "nm", 2, 1.0), "dv_fb_v": ("vfb", "mV", 2, 1e3)}
+CROSSCHECK = {"t_ox_eff_nm": ("tox", "nm", 2, 1.0), "dv_fb_v": ("vfb", "V", 2, 1.0)}
 
 
 def crosscheck_largest(device: str, name: str, root: Path = ROOT) -> tuple[str, float]:
@@ -857,6 +901,7 @@ def substitutions() -> dict[str, str]:
     out["x_corner_bound_hits"] = corner_bound_hits()
     out.update(crosscheck_substitutions())
     out["x_corner_fit_hits"] = corner_fit_hits()
+    out["x_corner_nearest_limit"] = corner_nearest_limit_sentence()
     out["x_corner_verdicts"] = corner_verdicts()
     out.update({f"x_{k}": v for k, v in corner_pvth0().items()})
     return out

@@ -13,6 +13,7 @@ committed files (tested).
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
@@ -23,7 +24,7 @@ import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
-from matplotlib.ticker import NullFormatter
+from matplotlib.ticker import FixedFormatter, FixedLocator, NullFormatter
 
 from gf180tcad import meshcut, plots
 from gf180tcad.explain import data, idealised, model, numbers
@@ -1409,6 +1410,42 @@ def corner_area(palette: str) -> bytes:
 # The corner bounds of the calibration page (calibration.md, Task 16a): each fitted number's
 # lowest and highest value over the corners, from the corner summaries.
 
+#: The ring around a marker whose value sits on a limit of its fit: its size as a multiple of
+#: the marker's, in the hole colour (as the on-a-limit diamond of :func:`corner_limits`).
+LIMIT_RING_SCALE = 1.9
+#: The legend words of :func:`_limit_ring`.
+LIMIT_RING_LABEL = "on a limit"
+
+
+def _limit_ring(ax, x: float, y: float, pal: dict, label: str | None = None) -> None:
+    """A ring in the hole colour round the marker at (``x``, ``y``): a value set by a limit of its
+    fit, not by the SPICE curve."""
+    ax.plot([x], [y], ls="none", marker="o", ms=STYLE["marker_pt"] * LIMIT_RING_SCALE, mfc="none",
+            mec=pal["hole"], mew=STYLE["edge_width"] * 2, label=label)  # fmt: skip
+
+
+def _limit_ring_handle(pal: dict) -> Line2D:
+    return Line2D([], [], ls="none", marker="o", ms=STYLE["marker_pt"] * LIMIT_RING_SCALE,
+                  mfc="none", mec=pal["hole"], mew=STYLE["edge_width"] * 2, label=LIMIT_RING_LABEL)  # fmt: skip
+
+
+def _log_ticks(ax) -> None:
+    """Label a log axis spanning less than a decade at 1, 2, 3 and 5 times each power of ten
+    inside its limits (the default labels only the power of ten itself)."""
+    lo, hi = sorted(ax.get_xlim())
+    ticks = [m * 10.0**e for e in range(math.floor(math.log10(lo)), math.ceil(math.log10(hi)) + 1)
+             for m in (1, 2, 3, 5) if lo <= m * 10.0**e <= hi]  # fmt: skip
+    sup = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+    def label(t: float) -> str:
+        e = math.floor(math.log10(t) + 1e-9)
+        m = round(t / 10.0**e)
+        return f"10{str(e).translate(sup)}" if m == 1 else f"{m}×10{str(e).translate(sup)}"
+
+    ax.xaxis.set_major_locator(FixedLocator(ticks))
+    ax.xaxis.set_major_formatter(FixedFormatter([label(t) for t in ticks]))
+    ax.xaxis.set_minor_formatter(NullFormatter())
+
 
 def corner_bounds_figure(palette: str):
     """The matplotlib figure of :func:`corner_bounds`, for the tests to read its lines."""
@@ -1416,6 +1453,7 @@ def corner_bounds_figure(palette: str):
     devices = list(numbers.FITS)
     bounds = {d: {b.name: b for b in numbers.corner_bounds(d)} for d in devices}
     marks = STYLE["corner_markers"]
+    hits = False
     colour = {c: pal[CORNER_HIGHLIGHT[c]] if c in CORNER_HIGHLIGHT else pal["muted"] for c in marks}
     with matplotlib.rc_context(_rc(palette)):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
@@ -1439,6 +1477,9 @@ def corner_bounds_figure(palette: str):
                             label=corner if first else None)  # fmt: skip
                 ax.plot([b.typical], [row], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["highlight"],
                         mec=pal["text"], mew=STYLE["edge_width"], label="typical" if first else None)  # fmt: skip
+                for corner in b.on_limit:
+                    _limit_ring(ax, b.values[corner], row, pal)
+                    hits = True
             ax.set_yticks(range(len(devices)), [d.split("_")[0] for d in devices])
             ax.set_ylim(-STYLE["row_pad"], len(devices) - 1 + STYLE["row_pad"])
             ax.margins(x=STYLE["limit_margin"])
@@ -1446,6 +1487,8 @@ def corner_bounds_figure(palette: str):
             ax.grid(True, axis="x")
             if i == 0:
                 handles, labels = ax.get_legend_handles_labels()
+        if hits:
+            handles, labels = [*handles, _limit_ring_handle(pal)], [*labels, LIMIT_RING_LABEL]
         fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["bounds_legend_cols"],
                    frameon=False)  # fmt: skip
         return fig
@@ -1463,7 +1506,7 @@ def corner_bounds(palette: str) -> bytes:
 #: from its summary unit: the oxide (TOXE) and the flat band (VTH0).
 CROSSCHECK = {
     "t_ox_eff_nm": ("oxide thickness shift", "nm", 1.0),
-    "dv_fb_v": ("gate voltage shift", "mV", UNITS["mv_per_v"]),
+    "dv_fb_v": ("gate voltage shift", "V", 1.0),
 }
 
 
@@ -1477,16 +1520,21 @@ def corner_crosscheck_figure(palette: str):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(1, len(CROSSCHECK))
+        hits = False
         for ax, (name, (words, unit, factor)) in zip(axes, CROSSCHECK.items(), strict=True):
             lo = hi = 0.0
             for device, shape in shapes.items():
-                t = numbers.corner_summary(device)["tunables"][name]
+                doc = numbers.corner_summary(device)
+                t = doc["tunables"][name]
                 for corner in marks:
                     card = t["card_shift"][corner] * factor
                     fit = t["tcad_shift"][corner] * factor
                     lo, hi = min(lo, card, fit), max(hi, card, fit)
                     ax.plot([card], [fit], ls="none", marker=shape, ms=STYLE["marker_pt"],
                             color=colour[corner], mec=pal["text"], mew=STYLE["edge_width"])  # fmt: skip
+                    if name in doc["corners"][corner]["bound_hits"]:
+                        _limit_ring(ax, card, fit, pal)
+                        hits = True
             ax.plot([lo, hi], [lo, hi], color=pal["text"], lw=STYLE["edge_width"], ls="--",
                     zorder=STYLE["junction_line_zorder"])  # fmt: skip
             pad = STYLE["limit_margin"] * (hi - lo)
@@ -1506,6 +1554,8 @@ def corner_crosscheck_figure(palette: str):
                    mec=pal["text"], label=device.split("_")[0])
             for device, shape in shapes.items()
         ] + [Line2D([], [], color=pal["text"], lw=STYLE["edge_width"], ls="--", label="fit = card")]  # fmt: skip
+        if hits:
+            handles.append(_limit_ring_handle(pal))
         fig.legend(handles=handles, loc="outside lower center", ncols=STYLE["bounds_legend_cols"],
                    frameon=False)  # fmt: skip
         return fig
@@ -1575,7 +1625,6 @@ def corner_limits_figure(palette: str):
         for ax, (name, (words, unit, _most)) in zip(axes, numbers.TUNABLES.items(), strict=True):
             if name in LOG_TUNABLES:
                 ax.set_xscale("log")
-                ax.xaxis.set_minor_formatter(NullFormatter())
             for row, (device, corner) in enumerate(rows):
                 f = fits[(device, corner, name)]
                 first = row == 0
@@ -1589,6 +1638,8 @@ def corner_limits_figure(palette: str):
                         mew=STYLE["edge_width"])  # fmt: skip
             ax.set_ylim(len(rows) - 1 + STYLE["row_pad"], -STYLE["row_pad"])
             ax.margins(x=STYLE["limit_margin"])
+            if name in LOG_TUNABLES:
+                _log_ticks(ax)
             ax.set_xlabel(f"{words.lower()}\n({unit})")
             ax.grid(True, axis="x")
         axes[0].set_yticks(range(len(rows)), [f"{d.split('_')[0]} {c}" for d, c in rows])
