@@ -12,7 +12,8 @@ hashed generator closure (tested), so a change here restamps no committed result
 - :func:`read_moscap`: a committed 1D C per area and the device's process description;
 - :func:`tcad_cgg`: the gate capacitance of one geometry from a 1D C per area, with the fixed
   BSIM4 bookkeeping (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`);
-- :func:`u_sorted`: u = polarity × Vg ascending, with curves in the same order.
+- :func:`u_sorted`: u = polarity × Vg ascending, with curves in the same order;
+- :func:`two_d_cgg`: a committed 2D cell's total gate capacitance in fF against u.
 """
 
 from __future__ import annotations
@@ -61,3 +62,14 @@ def tcad_cgg(moscap, geometry, proc, pol: int) -> list[np.ndarray]:
     area (a :class:`gf180tcad.tcad.moscap1d.MoscapCV`) and its process description."""
     vg, intrinsic, parasitic, total = moscap.area_scaled(geometry, proc)
     return u_sorted(vg, pol, intrinsic, parasitic, total)
+
+
+def two_d_cgg(tcad_root: Path, device: str, params: str, gid: str, pol: int) -> list[np.ndarray]:
+    """``[u, cgg_fF]`` of one committed 2D cell (``moscap2d/<device>/<params>/<gid>/cv.csv``):
+    its ``cgg_total``, the 2D gate capacitance per unit width times the drawn width, with the
+    cell's own fringe and overlap and no BSIM4 parasitics. FileNotFoundError if it is missing."""
+    path = Path(tcad_root) / "moscap2d" / device / params / gid / "cv.csv"
+    if not path.is_file():
+        raise FileNotFoundError(f"missing result file {path}")
+    cols = io.read_csv(path)[0]
+    return u_sorted(cols["vg"], pol, cols["cgg_total"])

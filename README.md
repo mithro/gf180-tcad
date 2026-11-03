@@ -65,13 +65,14 @@ moves by 0.57 V between L = 10 µm and the minimum length. One length-independen
 cannot follow that. Figure 2 shows both devices at the minimum length. The calibrated 1D curves
 are in [`results/tcad/moscap1d`](results/tcad/moscap1d).
 
-![Gate capacitance against gate voltage for the nfet and the pfet: SPICE curves in a grey band, with a dotted and a dashed simulated line on each.](docs/images/readme/cv.svg)
+![Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.](docs/images/readme/cv.svg)
 
 *Figure 2. Gate capacitance against gate voltage at the minimum gate length. The solid line is the
-SPICE model at the [typical corner](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-typical-corner), inside the grey band of its five
-[corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner). The dotted line is
-the 1D TCAD at the start values, the dashed line after calibration. It is drawn the same way
-as Figure 1.*
+SPICE model at the [typical corner](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-typical-corner),
+inside the grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner).
+Dotted and dashed lines are the 1D TCAD at the start and fitted values; dash-dot lines are the
+2D cell at the start (orange) and fitted (blue) values. `make readme-figures`
+draws it from the committed results.*
 
 Every committed TCAD result has generated
 pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the

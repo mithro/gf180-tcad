@@ -81,24 +81,26 @@ overlay are drawn for both devices at the minimum gate length in {numref}`result
 ```{figure} /_generated/explained/cv-overview-light.svg
 :figclass: only-light
 :name: results-cv-figure
-:alt: Gate capacitance against gate voltage in two panels, nfet above and pfet below: SPICE curves in a grey band, a dotted and a dashed simulated line on each.
+:alt: Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.
 
 The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
 {term}`pfet_05v0` at the minimum gate length. The solid line is the {term}`SPICE` model at the
 {term}`typical corner`, and the grey band spans its {{ x_corner_count }}
-{term}`corners <corner>`. The dotted line is the 1D stack at the start values, and the dashed
-line is the stack at the fitted values.
+{term}`corners <corner>`. The dotted and dashed lines are the 1D stack at the start and the
+fitted values. The dash-dot lines are the 2D cell at the start values (orange) and the fitted
+values (blue), with no BSIM4 parasitics added.
 ```
 
 ```{figure} /_generated/explained/cv-overview-dark.svg
 :figclass: only-dark
-:alt: Gate capacitance against gate voltage in two panels, nfet above and pfet below: SPICE curves in a grey band, a dotted and a dashed simulated line on each.
+:alt: Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.
 
 The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
 {term}`pfet_05v0` at the minimum gate length. The solid line is the {term}`SPICE` model at the
 {term}`typical corner`, and the grey band spans its {{ x_corner_count }}
-{term}`corners <corner>`. The dotted line is the 1D stack at the start values, and the dashed
-line is the stack at the fitted values.
+{term}`corners <corner>`. The dotted and dashed lines are the 1D stack at the start and the
+fitted values. The dash-dot lines are the 2D cell at the start values (orange) and the fitted
+values (blue), with no BSIM4 parasitics added.
 ```
 
 Every verdict and error on the TCAD pages comes from the calibration and validation files.

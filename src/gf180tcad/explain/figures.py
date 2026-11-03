@@ -104,7 +104,8 @@ STYLE = {
     "shift_arrow": 0.1,
     # The overview plots (C-V of both devices, the SPICE reference sweeps): one panel per row, so
     # the text keeps the 6.4 in width's size at 400 px; the Id-Vd family's line colours.
-    "overview_size_in": (6.4, 8.0),
+    "overview_size_in": (6.4, 8.8),
+    "overview_ncols": 2,
     "sweeps_size_in": (6.4, 10.0),
     "family": ("electron", "hole", "highlight", "highlight_oxide", "text"),
     "family_ncols": 3,
@@ -715,13 +716,15 @@ def _geometry_title(device: str, gid: str) -> str:
 def cv_overview(palette: str) -> bytes:
     """The gate capacitance against the gate voltage of each device of :data:`OVERVIEW`, one
     panel each: the :term:`SPICE` model at the :term:`typical corner` inside the band of its five
-    :term:`corners <corner>`, and the committed 1D stack at the start values (dotted) and the
-    fitted values (dashed), from :func:`cv_curves`. The x axis is the gate voltage itself, so the
-    pfet's curve runs over negative voltages."""
+    :term:`corners <corner>`; the committed 1D stack at the start values (dotted) and the fitted
+    values (dashed), from :func:`cv_curves`; and the committed 2D cell at the start and the fitted
+    values (dash-dot, :func:`gf180tcad.explain.data.two_d_cgg`). The x axis is the gate voltage
+    itself, so the pfet's curves run over negative voltages."""
     from gf180tcad.devices import DEVICES
 
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
+    tcad_root = numbers.ROOT / "results" / "tcad"
     with matplotlib.rc_context(_rc(palette)):
         fig = Figure(figsize=STYLE["overview_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
@@ -730,21 +733,28 @@ def cv_overview(palette: str) -> bytes:
             pol = DEVICES[device].polarity
             start = cv_curves(device, "start", gid)
             fitted = cv_curves(device, "calibrated", gid)
+            u2s, c2s = data.two_d_cgg(tcad_root, device, "start", gid, pol)
+            u2f, c2f = data.two_d_cgg(tcad_root, device, "calibrated", gid, pol)
             ax.fill_between(pol * fitted["u_spice"], fitted["spice_lo"], fitted["spice_hi"],
                             color=pal["band"], linewidth=0, label="SPICE, all corners")  # fmt: skip
             ax.plot(pol * fitted["u_spice"], fitted["spice_tt"], color=pal["text"], lw=lw,
                     label="SPICE, typical")  # fmt: skip
             ax.plot(pol * start["u"], start["tcad"], color=pal["muted"], lw=lw, ls=":",
-                    label="simulated, start values")  # fmt: skip
+                    label="1D, start values")  # fmt: skip
             ax.plot(pol * fitted["u"], fitted["tcad"], color=pal["highlight"], lw=lw, ls="--",
-                    zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
+                    zorder=STYLE["cv_zorder"], label="1D, fitted")  # fmt: skip
+            ax.plot(pol * u2s, c2s, color=pal["hole"], lw=lw, ls="-.",
+                    label="2D, start values")  # fmt: skip
+            ax.plot(pol * u2f, c2f, color=pal["electron"], lw=lw, ls="-.",
+                    zorder=STYLE["cv_zorder"], label="2D, fitted")  # fmt: skip
             ax.set_ylim(bottom=0)
             ax.grid(True)
             ax.set_title(_geometry_title(device, gid))
             ax.set_xlabel("gate voltage (V)")
             ax.set_ylabel("gate capacitance (fF)")
         handles, labels = axes[0].get_legend_handles_labels()
-        fig.legend(handles, labels, loc="outside lower center", ncols=2, frameon=False)
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["overview_ncols"],
+                   frameon=False)  # fmt: skip
         return _svg(fig)
 
 
