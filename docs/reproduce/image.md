@@ -49,8 +49,8 @@ docker/base/build --no-cache
 {repo}`docker/base/IMAGE_ID`. The build refuses to run if the build inputs have uncommitted changes.
 
 The `image` {{ GitHub_Actions }} workflow ({repo}`.github/workflows/image.yml`) checks this
-on pull requests and on pushes to `main` (only when `docker/**` or
-`image.yml` changes), and weekly and on manual dispatch (always):
+on pull requests and on pushes to `main` (only when a file under {repo}`docker/` or
+{repo}`image.yml <.github/workflows/image.yml>` changes), and weekly and on manual dispatch (always):
 
 1. build, and require the config digest to equal {repo}`docker/base/IMAGE_ID` and the
    manifest digest to equal {repo}`docker/IMAGE`;
@@ -78,7 +78,7 @@ reference in {repo}`docker/IMAGE` ({repo}`docker/tcad/build` passes it as `BASE_
 on it.
 
 This is the {term}`stable TCAD image`, with the latest PyPI releases of the TCAD stack. The
-{term}`dev-HEAD TCAD image` ({ref}`tcad-dev-image`) has the same layout with each project at its
+{term}`dev-HEAD TCAD image` ({ref}`tcad-dev-image`) has the same structure with each project at its
 upstream development HEAD; it is the stack of the final results, and this one is the baseline
 for how things used to work and for debugging.
 
@@ -135,8 +135,8 @@ or {py:func}`gf180tcad.sandbox.run` with `image=`.
 docker/tcad/build --no-cache
 ```
 
-works like the base build ({ref}`image-rebuild`). Its `SOURCE_DATE_EPOCH` inputs are the
-Dockerfile, the three lock files and {repo}`docker/IMAGE`: the base digest is the `FROM`, so it
+works like the base build ({ref}`image-rebuild`). Its `SOURCE_DATE_EPOCH` inputs are
+{repo}`docker/tcad/Dockerfile`, the three lock files and {repo}`docker/IMAGE`: the base digest is the `FROM`, so it
 dates the build. The `image` workflow is a matrix over `{base, tcad}`. Each image has its own
 build, `IMAGE_ID`, pinned-manifest and versions-probe checks and its own from-scratch rebuild
 job. The TCAD entry pulls the public base image by digest, so scheduled runs need no login.
@@ -160,7 +160,7 @@ the base image updates both images in **one** pull request:
 
 1. Change the base, rebuild it locally twice, and commit the new {repo}`docker/base/IMAGE_ID`,
    {repo}`docker/base/versions.json` and the predicted {repo}`docker/IMAGE`; CI pushes the base.
-   Until step 3, the TCAD checks fail (its `versions.json` names the old base, and its digests
+   Until step 3, the TCAD checks fail ({repo}`docker/tcad/versions.json` names the old base, and its digests
    change), and so does `lint-test`.
 2. Rebuild the TCAD image locally (twice, `--no-cache`) FROM the pushed base, and commit the new
    {repo}`docker/tcad/IMAGE_ID` and {repo}`docker/tcad/versions.json`.
@@ -276,6 +276,8 @@ tools/sandbox-run --image "$(cat docker/TCAD_DEV_IMAGE)" --workdir DIR -- python
 
 ### Forks, and why
 
+<!-- figure-ok: the meshes here are MSH files that meshio reads, not a geometry -->
+
 When the image was first pinned (2026-10-19), three upstream problems kept the full flow from
 running in it. They were recorded as {term}`strict expected failures <strict expected failure>`
 and are now fixed. Each fix lives in a fork under
@@ -291,10 +293,10 @@ workflows.
   plus [mithro/gf180mcu#4](https://github.com/mithro/gf180mcu/pull/4).
   - **Problem.** gf180mcu did not import with gdsfactory's HEAD (10.0.0rc0). Its
     [`tech.py`](https://github.com/gdsfactory/gf180mcu/blob/96b7324d85df05704f68c1370c175627d0a88034/gf180mcu/tech.py)
-    built every cross-section at import, to learn its default name. From gdsfactory 10, the
+    built every gdsfactory `CrossSection` at import, to learn its default name. From gdsfactory 10, the
     layer lookup that this needs activates the PDK named by `PDK=gf180mcu`, which is the
     half-imported module itself.
-  - **Fix.** The cross-sections are now built on first use.
+  - **Fix.** The `CrossSection` objects are now built on first use.
   - **Pin.** Relaxed to `gdsfactory>=9.45,<11`. gf180mcu is therefore an ordinary part of
     {repo}`docker/tcad-dev/uv.lock` and is no longer installed `--no-deps`.
   - **Checks in the fork.** The fork's own tests,
@@ -359,7 +361,8 @@ workflows.
   {repo}`tests/test_tcad_image.py` pass;
 - the 1D {term}`MOS capacitor <MOSCAP>` and mesh-convergence results folders regenerated in the dev image
   are byte-identical to the committed {repo}`results/tcad/moscap1d` and
-  {repo}`results/tcad/meshconv` results folders. Only their `provenance.json`, which names the
+  {repo}`results/tcad/meshconv` results folders. Only their provenance files
+({repo}`results/tcad/moscap1d/provenance.json`, {repo}`results/tcad/meshconv/provenance.json`), which name the
   image, differs;
 - the drift guard, {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`, passes:
   the stable and dev images give the same bytes.
@@ -376,6 +379,8 @@ byte-identical to the first GCC 14 pin's.
 
 ### Which image makes which results
 
+<!-- figure-ok: this compares two gmsh versions, it describes no one mesh geometry -->
+
 The final results come from upstream dev HEAD; the stable image is for testing how things used
 to work, and for debugging. {py:data}`gf180tcad.tcad.RESULTS_IMAGE` names the image each result
 kind is generated with, and it is the default of `python -m gf180tcad.tcad moscap` and
@@ -387,12 +392,14 @@ kind is generated with, and it is the default of `python -m gf180tcad.tcad mosca
 | 1D {term}`mesh convergence`, {repo}`results/tcad/meshconv` (`moscap1d/`) | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the same |
 | 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | see below |
 
-The top folder of each set of results holds a `provenance.json`. Under `images`, it records which
-image made each result kind in it: the image's name, its reference and its `versions.json`. The mesh-convergence results folder holds
+The top folder of each set of results holds a provenance file, such as
+{repo}`results/tcad/moscap2d/provenance.json`. Under `images`, it records which image made each
+result kind in it: the image's name, its reference and its probe record, the image's
+{repo}`docker/tcad/versions.json` or {repo}`docker/tcad-dev/versions.json`. The mesh-convergence results folder holds
 1D and 2D results, so it records one entry for each.
 
 - **1D on dev HEAD.** The 1D results folders regenerate on the dev image byte-identical to the stable
-  image's, data file for data file. Only `provenance.json` differs. Two sandbox tests keep it
+  image's, data file for data file. Only {repo}`provenance.json <results/tcad/moscap1d/provenance.json>` differs. Two sandbox tests keep it
   so: {test}`tests/tcad/test_moscap1d.py::test_byte_identical` and
   {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_identical` rerun the committed results folders in
   the dev image, and {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`
