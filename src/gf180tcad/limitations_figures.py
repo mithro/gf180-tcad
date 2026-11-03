@@ -635,7 +635,8 @@ SD_DEVICE = "pfet_05v0"
 def sd_profiles(device: str = SD_DEVICE) -> dict:
     """The source/drain doping of ``device`` at the start values for the peaks of
     :data:`STYLE` ``sd_factors`` × the process file's peak: per peak the straggle
-    (:func:`gf180tcad.tcad.stack.sd_straggle_um`), the vertical Gaussian at the gate edge and the
+    (:func:`gf180tcad.tcad.stack.sd_straggle_um`), the vertical Gaussian inside the source/drain,
+    away from the gate edge (where the lateral factor below is 1), and the
     surface doping across the gate edge (x = 0, gate at x > 0) with the lateral straggle of
     :data:`gf180tcad.tcad.stack.LATERAL_STRAGGLE_RATIO` (the lateral mask-edge factor
     (1 − erf(x / (√2 s))) / 2 of the plugin's ``doping.Lateral``)."""
@@ -659,8 +660,9 @@ def sd_profiles(device: str = SD_DEVICE) -> dict:
 
 
 def sd_profile_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
-    """The pfet source/drain doping for three peaks with XJ fixed: against depth at the gate edge
-    (top), meeting the body doping at XJ, and along the surface across the gate edge (bottom),
+    """The pfet source/drain doping for three peaks with XJ fixed: against depth inside the
+    source/drain, away from the gate edge (top), meeting the body doping at XJ, and along the
+    surface across the gate edge (bottom), half the peak at the edge,
     where each reaches the body doping at a different distance under the gate."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
@@ -687,7 +689,7 @@ def sd_profile_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         top.axvline(k["xj_um"] * nm, color=pal["text"], lw=ef.STYLE["edge_width"], ls=":",
                     gid="XJ")  # fmt: skip
         top.text(k["xj_um"] * nm, k["n_body"], " XJ", ha="left", va="bottom")
-        top.set_xlabel("depth below the surface at the gate edge (nm)")
+        top.set_xlabel("depth below the surface, away from the gate edge (nm)")
         top.legend(
             loc="upper right", frameon=False, fontsize=ef.STYLE["text_pt"] * STYLE["legend_scale"]
         )

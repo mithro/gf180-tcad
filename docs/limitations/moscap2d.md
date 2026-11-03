@@ -287,8 +287,9 @@ The three profiles are in {numref}`moscap2d-sd-figure`.
 :alt: Two plots of doping on a log axis. Top: three Gaussian curves against depth that all cross a dashed body-doping line at the same depth, XJ. Bottom: the same three along the surface, falling under the gate and reaching the body doping at slightly different distances.
 
 The {term}`pfet_05v0` source/drain doping at the start values for the peaks 5e19, 1e20 and 2e20
-cm⁻³, with {term}`XJ` fixed ({py:func}`gf180tcad.tcad.stack.sd_straggle_um`). Top: against depth at
-the gate edge. Bottom: along the surface, the gate edge at 0. The dashed line is the body doping.
+cm⁻³, with {term}`XJ` fixed ({py:func}`gf180tcad.tcad.stack.sd_straggle_um`). Top: against depth
+inside the source/drain, away from the gate edge. Bottom: along the surface, the gate edge
+at 0, where each is half its peak. The dashed line is the body doping.
 ```
 
 ```{figure} /_generated/limitations/sd-profile-dark.svg
@@ -296,8 +297,9 @@ the gate edge. Bottom: along the surface, the gate edge at 0. The dashed line is
 :alt: Two plots of doping on a log axis. Top: three Gaussian curves against depth that all cross a dashed body-doping line at the same depth, XJ. Bottom: the same three along the surface, falling under the gate and reaching the body doping at slightly different distances.
 
 The {term}`pfet_05v0` source/drain doping at the start values for the peaks 5e19, 1e20 and 2e20
-cm⁻³, with {term}`XJ` fixed ({py:func}`gf180tcad.tcad.stack.sd_straggle_um`). Top: against depth at
-the gate edge. Bottom: along the surface, the gate edge at 0. The dashed line is the body doping.
+cm⁻³, with {term}`XJ` fixed ({py:func}`gf180tcad.tcad.stack.sd_straggle_um`). Top: against depth
+inside the source/drain, away from the gate edge. Bottom: along the surface, the gate edge
+at 0, where each is half its peak. The dashed line is the body doping.
 ```
 
 
