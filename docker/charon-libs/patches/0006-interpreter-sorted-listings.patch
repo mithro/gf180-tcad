@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Patches: tcad-charon/scripts/charonInterpreter/parseGenerator/ (Charon 2.2.0).
+# Reason: the interpreter generator lists its input files in directory order, which differs between filesystems, so the generated parser and modifier libraries (and the image digest) differed between the project's host and a GitHub runner; list them sorted.
+#
+--- a/scripts/charonInterpreter/parseGenerator/generateInterpreter.py
++++ b/scripts/charonInterpreter/parseGenerator/generateInterpreter.py
+@@ -37,7 +37,7 @@
+ if path.isdir(modifierTargetPath) == False:
+     os.mkdir(modifierTargetPath)
+ 
+-for filename in listdir(sourcePath):
++for filename in sorted(listdir(sourcePath)):
+     inputFiles.append(filename)
+ 
+ for inputs in inputFiles:
+--- a/scripts/charonInterpreter/parseGenerator/createBlockParser.py
++++ b/scripts/charonInterpreter/parseGenerator/createBlockParser.py
+@@ -125,7 +125,7 @@
+         inputFiles = []
+         subLineSource = self.sourcePath+"/"+self.parserBlockName
+         subLineTarget = self.targetPath+"/"+self.parserBlockName
+-        for filename in listdir(subLineSource):
++        for filename in sorted(listdir(subLineSource)):
+             inputFiles.append(filename)
+ 
+         self.localParserList = []
+--- a/scripts/charonInterpreter/parseGenerator/createModifiers.py
++++ b/scripts/charonInterpreter/parseGenerator/createModifiers.py
+@@ -27,7 +27,8 @@
+ 
+         # Collect up all filenames
+         for dirname, dirnames, filenames in os.walk(self.modifierSourcePath):
+-            for filename in filenames:
++            dirnames.sort()
++            for filename in sorted(filenames):
+                 if filename[-14:].lower() == "modifierinp.py":
+                     modifierInputList.append(os.path.join(dirname,filename))
+                     modifierInputFilenameList.append(filename)

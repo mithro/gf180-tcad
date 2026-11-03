@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Patches: tcad-charon/Trilinos/packages/kokkos/ (Trilinos 81e9581a).
+# Reason: GCC 13 no longer includes <cstdint> through the standard headers these files use, so uint32_t and friends are undeclared; add the include.
+#
+--- a/Trilinos/packages/kokkos/core/src/impl/Kokkos_MemoryPool.cpp
++++ b/Trilinos/packages/kokkos/core/src/impl/Kokkos_MemoryPool.cpp
+@@ -46,6 +46,7 @@
+ 
+ #include <ostream>
+ #include <sstream>
++#include <cstdint>
+ 
+ //----------------------------------------------------------------------------
+ //----------------------------------------------------------------------------

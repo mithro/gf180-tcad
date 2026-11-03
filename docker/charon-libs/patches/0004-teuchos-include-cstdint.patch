@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Patches: tcad-charon/Trilinos/packages/teuchos/ (Trilinos 81e9581a).
+# Reason: GCC 13 no longer includes <cstdint> through the standard headers these files use, so std::uint32_t and std::uint64_t are undeclared; add the include.
+#
+--- a/Trilinos/packages/teuchos/core/src/Teuchos_BigUIntDecl.hpp
++++ b/Trilinos/packages/teuchos/core/src/Teuchos_BigUIntDecl.hpp
+@@ -43,6 +43,7 @@
+ #define TEUCHOS_BIG_UINT_DECL_HPP
+ 
+ #include <iosfwd>
++#include <cstdint>
+ 
+ /*! \file Teuchos_BigUIntDecl.hpp
+     \brief Arbitrary-precision unsigned integer declaration.

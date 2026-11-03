@@ -1,9 +1,11 @@
 # Contributing to gf180-tcad
 
 Everything written here is licensed [Apache-2.0](LICENSE), except the patches in
-[docker/charon-libs/patches/](docker/charon-libs/patches/). They change
-[Charon](https://charon.sandia.gov/) source code, so they are licensed GPL-3.0-or-later like
-Charon, and each carries `# SPDX-License-Identifier: GPL-3.0-or-later`
+[docker/charon-libs/patches/](docker/charon-libs/patches/). They change upstream source code,
+so each keeps the licence of the files it changes and carries it as its first line. A
+[Charon](https://charon.sandia.gov/) patch has `# SPDX-License-Identifier: GPL-3.0-or-later`.
+A [Trilinos](https://github.com/trilinos/Trilinos) patch has
+`# SPDX-License-Identifier: BSD-3-Clause`
 ([docker/charon-libs/README.md](docker/charon-libs/README.md)). Other new source files carry the header
 `# SPDX-License-Identifier: Apache-2.0`
 ([SPDX license identifiers](https://spdx.dev/learn/handling-license-info/)).

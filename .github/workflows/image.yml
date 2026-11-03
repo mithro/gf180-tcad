@@ -8,6 +8,12 @@
 #         the mithro forks), pinned by commit in docker/tcad-dev/upstream.json, every input
 #         fetched from the gf180-tcad input mirror first, DEVSIM compiled from source; also FROM
 #         docker/IMAGE)
+#   charon-libs: ghcr.io/mithro/gf180-tcad-charon-libs  (docker/charon-libs/, pinned by
+#         docker/CHARON_LIBS_IMAGE; Charon 2.2.0 and its Trilinos compiled from source, hours of
+#         compile, so the entry is gated: build-push runs it only when its inputs change
+#         (docker/charon-libs, docker/IMAGE, docker/CHARON_LIBS_IMAGE) and on manual dispatch,
+#         the reproducible rebuild only on the weekly schedule and on manual dispatch; a gated
+#         entry that does not run skips every step after the gate and passes)
 #   PRs:  push tag pr-<number>;  main: push latest and sha-<commit>; both only after the
 #         IMAGE_ID, pin and versions checks passed (the build pushes only the staging tag
 #         `unverified`, which may point at an unverified image);
@@ -47,7 +53,7 @@ jobs:
   build:
     name: build-push (${{ matrix.image }})
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: ${{ matrix.timeout || 120 }}
     permissions:
       contents: read
       packages: write
@@ -64,6 +70,11 @@ jobs:
           - image: tcad-dev
             name: ghcr.io/mithro/gf180-tcad-tcad-dev
             pin: docker/TCAD_DEV_IMAGE
+          - image: charon-libs
+            name: ghcr.io/mithro/gf180-tcad-charon-libs
+            pin: docker/CHARON_LIBS_IMAGE
+            timeout: 350
+            gated: true
     env:
       IMAGE_NAME: ${{ matrix.name }}
       DIR: docker/${{ matrix.image }}
@@ -79,13 +90,44 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+      - name: Decide whether this entry runs
+        id: gate
+        env:
+          GATED: ${{ matrix.gated || false }}
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          # An ungated entry always runs. The charon-libs entry runs on manual dispatch, never
+          # on the schedule (the rebuild job verifies it then), and on a pull request or a push
+          # only when its inputs differ from the base.
+          run=true
+          if [ "$GATED" = true ]; then
+            case "$EVENT" in
+              workflow_dispatch) run=true ;;
+              schedule) run=false ;;
+              *)
+                if [ "$EVENT" = pull_request ]; then
+                  base="$(git merge-base "$PR_BASE" HEAD)"
+                else
+                  base="$PUSH_BEFORE"
+                fi
+                if git cat-file -e "$base^{commit}" &&
+                    git diff --quiet "$base" HEAD -- docker/charon-libs docker/IMAGE docker/CHARON_LIBS_IMAGE; then
+                  run=false
+                fi ;;
+            esac
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "- ${{ matrix.image }}: runs=$run ($EVENT)" >> "$GITHUB_STEP_SUMMARY"
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        if: env.PUSH == 'true'
+        if: env.PUSH == 'true' && steps.gate.outputs.run == 'true'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build (and push the staging tag on PRs / main)
+        if: steps.gate.outputs.run == 'true'
         id: build
         run: |
           # Only the staging tag is pushed here; the published tags follow the checks below.
@@ -106,16 +148,19 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat meta.json
       - name: Config digest matches IMAGE_ID
+        if: steps.gate.outputs.run == 'true'
         run: |
           want="$(cat "$DIR/IMAGE_ID")"
           got="${{ steps.build.outputs.config }}"
           [ "$got" = "$want" ] || { echo "::error::config digest $got != $DIR/IMAGE_ID $want"; exit 1; }
       - name: Manifest matches the pin file
+        if: steps.gate.outputs.run == 'true'
         run: |
           want="$(cat "$PIN")"
           got="$IMAGE_NAME@${{ steps.build.outputs.manifest }}"
           [ "$got" = "$want" ] || { echo "::error::built $got != $PIN $want"; exit 1; }
       - name: versions.json matches the probe run in the pinned image
+        if: steps.gate.outputs.run == 'true'
         run: |
           image="$(cat "$PIN")"
           docker pull --quiet "$image"
@@ -125,7 +170,7 @@ jobs:
           diff -u "$DIR/versions.json" probe.json \
             || { echo "::error::$DIR/versions.json is stale (diff above)"; exit 1; }
       - name: Tag the verified image
-        if: env.PUSH == 'true'
+        if: env.PUSH == 'true' && steps.gate.outputs.run == 'true'
         run: |
           # Retag by manifest digest (no new manifest: --prefer-index=false), then check that
           # every published tag resolves to exactly that digest.
@@ -151,7 +196,7 @@ jobs:
     # failed (a base-only change fails the tcad entry until its pins are refreshed).
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: ${{ matrix.timeout || 120 }}
     permissions:
       contents: read
     strategy:
@@ -167,6 +212,11 @@ jobs:
           - image: tcad-dev
             name: ghcr.io/mithro/gf180-tcad-tcad-dev
             pin: docker/TCAD_DEV_IMAGE
+          - image: charon-libs
+            name: ghcr.io/mithro/gf180-tcad-charon-libs
+            pin: docker/CHARON_LIBS_IMAGE
+            timeout: 350
+            gated: true
     env:
       IMAGE_NAME: ${{ matrix.name }}
       DIR: docker/${{ matrix.image }}
@@ -181,7 +231,24 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+      - name: Decide whether this entry runs
+        id: gate
+        env:
+          GATED: ${{ matrix.gated || false }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          # The charon-libs rebuild (hours) runs only on the weekly schedule and on dispatch.
+          run=true
+          if [ "$GATED" = true ]; then
+            case "$EVENT" in
+              schedule|workflow_dispatch) run=true ;;
+              *) run=false ;;
+            esac
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "- ${{ matrix.image }}: rebuild runs=$run ($EVENT)" >> "$GITHUB_STEP_SUMMARY"
       - name: Rebuild from scratch and compare
+        if: steps.gate.outputs.run == 'true'
         run: |
           got="$("$DIR/build" --no-cache --metadata meta.json)"
           manifest="$IMAGE_NAME@$(jq -r '."containerimage.digest"' meta.json)"
