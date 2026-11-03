@@ -493,7 +493,7 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     """Write the SPICE pages under ``out_dir/results`` (summary, 12 geometry pages, SVGs), the
     TCAD pages under ``out_dir/tcad`` (:func:`generate_tcad`), the explainer figures under
     ``out_dir/explained`` (:func:`gf180tcad.explain.figures.write_all`) and the image page's
-    figure under ``out_dir/reproduce`` (:func:`gf180tcad.imagefig.write_all`)."""
+    figures under ``out_dir/reproduce`` (:func:`gf180tcad.imagefig.write_all`)."""
     from gf180tcad import imagefig
     from gf180tcad.explain import figures as explained_figures
 

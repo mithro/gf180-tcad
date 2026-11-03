@@ -519,8 +519,18 @@ The build script refuses a builder in which any node lacks the pinned {{ BuildKi
 {repo}`docker/charon-libs/`, with the [Charon user manual](https://www.sandia.gov/app/uploads/sites/106/2022/08/Charon_UserManual-v2_2.pdf)'s
 own recipe. {repo}`docker/CHARON_LIBS_IMAGE` pins the image by digest. No TCAD job runs Charon.
 
-```{figure} /_generated/reproduce/charon-stages.svg
+```{figure} /_generated/reproduce/charon-stages-light.svg
 :name: charon-stages
+:figclass: only-light
+:alt: Five boxes joined by arrows. The inputs box at the top feeds the deps stage, which feeds the build stage, which feeds the charon-libs image at the bottom. A base image box on the left feeds both the deps stage and the image.
+
+How the charon-libs image is built, from the stages of {repo}`docker/charon-libs/Dockerfile`.
+The inputs come from {repo}`docker/charon-libs/upstream.json`, and the base image is
+{repo}`docker/IMAGE`. Only `/opt/charon` passes from the build stage into the image.
+```
+
+```{figure} /_generated/reproduce/charon-stages-dark.svg
+:figclass: only-dark
 :alt: Five boxes joined by arrows. The inputs box at the top feeds the deps stage, which feeds the build stage, which feeds the charon-libs image at the bottom. A base image box on the left feeds both the deps stage and the image.
 
 How the charon-libs image is built, from the stages of {repo}`docker/charon-libs/Dockerfile`.
