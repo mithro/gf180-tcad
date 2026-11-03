@@ -5,10 +5,11 @@
 What are the {term}`gate oxide` and the {term}`poly-silicon` gate of this project's transistors,
 and why do their thickness and doping matter? This page answers that for a reader who knows basic
 circuits and has read {doc}`silicon-and-carriers`. It leaves out what the silicon under the oxide
-does as the gate voltage changes.
+does as the gate voltage changes. The stack of {numref}`fig-oxide-stack` shows both layers.
 
 ```{figure} /_generated/explained/oxide-stack-light.svg
 :figclass: only-light
+:name: fig-oxide-stack
 :alt: Three stacked layers: a shaded gate on top, a thin shaded oxide below it and a tall muted body at the bottom, each labelled with its material, thickness and doping.
 
 The layers of the {term}`nfet_05v0`: the gate and the {term}`gate oxide` shaded, the body
@@ -32,8 +33,10 @@ doping is the {term}`model card`'s value, and the gate and body depths are proje
 ## A capacitor with silicon plates
 
 The gate, the gate oxide and the body form a capacitor, with the gate and the body underneath
-as its plates. The oxide between them is the insulator
-({ref}`Taur and Ning, ch. 4 <lit-taur>`). A voltage on the gate draws
+as its plates. In {numref}`fig-oxide-stack` they are the top and bottom layers. The oxide
+between them is the insulator ({ref}`Taur and Ning, ch. 4 <lit-taur>`).
+
+A voltage on the gate draws
 charge into the silicon under the oxide. That charge lets the gate switch the transistor
 ({ref}`Taur and Ning, ch. 5 <lit-taur>`). This repo simulates the stack on its
 own, without a source or drain, as a {term}`MOS capacitor <MOSCAP>`.
@@ -49,7 +52,8 @@ Most of the model's equations use it, the {term}`threshold voltage <Vt>` among t
 {{ x_toxp_nfet }}. The model adds the depth of the charge to it when it computes the gate
 capacitance ({ref}`BSIM4 manual, §1.1 <lit-bsim4>`).
 
-The oxide's relative permittivity, {term}`EPSROX`, is {{ x_epsrox_nfet }}. At the same voltage,
+The oxide is the thin middle layer of {numref}`fig-oxide-stack`, drawn with the calibrated
+thickness. The oxide's relative permittivity, {term}`EPSROX`, is {{ x_epsrox_nfet }}. At the same voltage,
 a capacitor with this oxide holds that many times the charge of a vacuum gap as thick
 ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
@@ -57,14 +61,20 @@ a capacitor with this oxide holds that many times the charge of a vacuum gap as 
 
 ## Oxide capacitance
 
-A thinner oxide puts the plates closer, so the gate holds more charge for each volt. The
-capacitance per area of the oxide alone is {term}`Cox`. Three quantities set it: the oxide's
-permittivity $\varepsilon_{ox}$, that of vacuum $\varepsilon_0$, and the thickness $t_{ox}$
-({ref}`Sze and Ng, ch. 4 <lit-sze>`).
+A thinner oxide puts the plates of {numref}`fig-oxide-stack` closer, so the gate holds more
+charge for each volt. The capacitance per area of the oxide alone is {term}`Cox`, given by
+{math:numref}`eq-oxide-cox` ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
 
 $$
 C_{ox} = \frac{\varepsilon_{ox} \, \varepsilon_0}{t_{ox}}
-$$
+$$ (eq-oxide-cox)
+
+where
+
+- $C_{ox}$ is the oxide capacitance per area, in F/m²;
+- $\varepsilon_{ox}$ is the oxide's relative permittivity, {term}`EPSROX`, dimensionless;
+- $\varepsilon_0$ is the permittivity of vacuum, in F/m;
+- $t_{ox}$ is the oxide thickness, in m.
 
 With TOXE, Cox is {{ x_cox_toxe_nfet }}, an idealised example from the card's values. This
 repo's calibration ({ref}`cv-agreement`) adjusts three parameters until the simulated gate
@@ -83,7 +93,8 @@ That row applies because the nfet_05v0 uses the {term}`nfet_06v0` model card and
 
 ## The poly-silicon gate
 
-The gate is poly-silicon, silicon made of many small crystals. The nfet's gate holds
+The gate is poly-silicon, silicon made of many small crystals: the top layer of
+{numref}`fig-oxide-stack`. The nfet's gate holds
 {{ x_ngate_nfet }} of {term}`donors <donor>` ({term}`NGATE`), so it is n-type. The pfet's gate
 holds {{ x_ngate_pfet }} of {term}`acceptors <acceptor>`, so it is p-type
 ({repo}`data/process/pfet_05v0.toml`).
@@ -102,7 +113,8 @@ widest depleted layer, so the far side of the gate stays neutral silicon
 
 ## Where this repo's results differ
 
-The calibration fits the oxide thickness between TOXE and an upper bound. That bound is TOXP
+The calibration fits the oxide thickness of {numref}`fig-oxide-stack` between TOXE and an upper
+bound. That bound is TOXP
 plus an allowance of {{ x_delta_nfet }}, so {{ x_t_ox_upper_nfet }}. The fit ends at
 {{ x_t_ox_nfet_cal }}, thicker than TOXE. The allowance stands for the depth at which the SPICE
 model places the charge, a little below the oxide face. Poly {term}`depletion` is not part of it,
