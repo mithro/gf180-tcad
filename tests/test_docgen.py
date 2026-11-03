@@ -76,6 +76,10 @@ EXPLAINED_FIGURES = [
     "cv-parts",
     "corner-cv",
     "corner-area",
+    "corner-bounds",
+    "corner-crosscheck",
+    "corner-crossing",
+    "corner-limits",
 ]
 
 
@@ -432,7 +436,11 @@ def test_moscap_page_per_device_geometry(tmp_path):
     docgen.generate(tmp_path)
     root = tmp_path / "tcad"
     expected = {f"{name}/{geometry_id(g)}.md" for name, d in DEVICES.items() for g in d.geometries}
-    pages = {str(p.relative_to(root)) for p in root.glob("*/*.md") if p.name != "index.md"}
+    pages = {
+        str(p.relative_to(root))
+        for p in root.glob("*/*.md")
+        if p.name not in ("index.md", docgen.CORNER_FRAGMENT)
+    }
     assert len(expected) == 12 and pages == expected
     for name, device in DEVICES.items():
         for g in device.geometries:

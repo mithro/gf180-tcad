@@ -1089,9 +1089,10 @@ def corner_tables(name: str, summary: dict) -> list[str]:
     from gf180tcad.calibrate import cv
     from gf180tcad.calibrate.corners import FIT_CORNERS
 
-    tun = summary["tunables"]
-    if summary["device"] != name or list(tun) != list(CORNER_UNITS):
-        raise ValueError(f"{name}: the corner summary is of {summary['device']}, {list(tun)}")
+    if summary["device"] != name or set(summary["tunables"]) != set(CORNER_UNITS):
+        tun = summary["tunables"]
+        raise ValueError(f"{name}: the corner summary is of {summary['device']}, {sorted(tun)}")
+    tun = {n: summary["tunables"][n] for n in CORNER_UNITS}
     src = f"{{repo}}`results/tcad/corners/{name}/summary.json`"
     bounds, where = [], []
     for n, row in tun.items():
@@ -1112,7 +1113,8 @@ def corner_tables(name: str, summary: dict) -> list[str]:
             f"From {src}: each fitted number at the typical corner (the committed calibration) "
             "and the lowest and highest value over the five corners. The spread is the highest "
             "minus the lowest. A lowest or highest value on a bound of its fit is reported as "
-            "that bound ({ref}`reproduce-corners`)."
+            "that bound ({ref}`reproduce-corners`). {numref}`Figure %s of What the calibration "
+            "changes <fig-calibration-bounds>` draws the bounds of both devices."
         ),
         "",
         *_table(["Number", "Typical", "Lowest", "Highest", "Spread"], bounds),

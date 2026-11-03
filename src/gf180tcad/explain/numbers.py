@@ -25,8 +25,9 @@ its sentence on the Disagree cells (:func:`two_d_disagree`) grow with each new c
 
 The calibration page's tables are written from the calibration result files and the process
 files: the fitted numbers within their limits (:func:`fit_table`), where each start and limit
-comes from (:func:`limit_kinds_table`), the :term:`SPICE` :term:`corner` spread (:func:`corner_table`) and the
-fit's verdicts (:func:`fit_verdict_table`).
+comes from (:func:`limit_kinds_table`), the :term:`SPICE` :term:`corner` spread (:func:`corner_table`), the
+fit's verdicts (:func:`fit_verdict_table`) and, from the corner summaries, each fitted number's
+lowest and highest value over the corners and its spread (:func:`corner_bounds_table`).
 """
 
 from __future__ import annotations
@@ -531,6 +532,228 @@ def corner_table(root: Path = ROOT) -> str:
     return "\n".join(rows)
 
 
+#: The corner summaries of the corner fits (Task 16a, written by
+#: :func:`gf180tcad.calibrate.corners.summary`), by transistor.
+CORNER_SUMMARIES = {d: f"results/tcad/corners/{d}/summary.json" for d in FITS}
+#: The words of a lowest or highest value that sits on a bound of its fit, by bound.
+BOUND_WORDS = {"lower": "lower limit", "upper": "upper limit"}
+
+
+@dataclass(frozen=True)
+class Bound:
+    """One fitted number of one transistor over the :term:`corners <corner>`: the typical fit,
+    the lowest and highest value with their corner and the limit each sits on (None when it
+    sits on none), the spread (highest minus lowest) and the value at each corner (its unit)."""
+
+    device: str
+    name: str
+    typical: float
+    lowest: float
+    lowest_corner: str
+    lowest_at_bound: str | None
+    highest: float
+    highest_corner: str
+    highest_at_bound: str | None
+    spread: float
+    values: dict[str, float]
+
+
+def corner_summary(device: str, root: Path = ROOT) -> dict:
+    """The corner summary of ``device`` under ``root``; KeyError when its tunables are not
+    :data:`TUNABLES` in order."""
+    doc = json.loads((Path(root) / CORNER_SUMMARIES[device]).read_text("utf-8"))
+    if doc["device"] != device or set(doc["tunables"]) != set(TUNABLES):
+        raise KeyError(f"{CORNER_SUMMARIES[device]}: {doc['device']}, {sorted(doc['tunables'])}")
+    doc["tunables"] = {n: doc["tunables"][n] for n in TUNABLES}
+    return doc
+
+
+def corner_bounds(device: str, root: Path = ROOT) -> list[Bound]:
+    """The :class:`Bound` of each of :data:`TUNABLES` of ``device``, read from its corner
+    summary under ``root``. A lowest or highest value on a limit of its fit is that limit."""
+    out = []
+    for name, t in corner_summary(device, root)["tunables"].items():
+        out.append(
+            Bound(device, name, t["typical"], t["min"], t["min_corner"], t["min_at_bound"],
+                  t["max"], t["max_corner"], t["max_at_bound"], t["spread"], dict(t["values"]))
+        )  # fmt: skip
+    return out
+
+
+def corner_bounds_table(device: str, root: Path = ROOT) -> str:
+    """A Markdown table of :func:`corner_bounds` of ``device``: one row per fitted number, its
+    typical fit, lowest and highest value over the corners and the spread. The unit is in the
+    row label, as in :func:`fit_table`."""
+    rows = ["| Number | Typical | Lowest | Highest | Spread |", "|---|---|---|---|---|"]
+    for b in corner_bounds(device, root):
+        words, unit, most = TUNABLES[b.name]
+        cells = (shortest(v, "", most) for v in (b.typical, b.lowest, b.highest, b.spread))
+        rows.append(f"| {words} ({unit}) | " + " | ".join(cells) + " |")
+    return "\n".join(rows)
+
+
+def corner_extremes_table(root: Path = ROOT) -> str:
+    """A Markdown table of the corner of each lowest and highest value of :func:`corner_bounds`,
+    for both transistors: transistor, number, corner of the lowest, corner of the highest."""
+    rows = ["| Transistor | Number | Lowest at | Highest at |", "|---|---|---|---|"]
+    for device in FITS:
+        for b in corner_bounds(device, root):
+            rows.append(
+                f"| {{term}}`{device}` | {TUNABLES[b.name][0]} | {b.lowest_corner} | "
+                f"{b.highest_corner} |"
+            )
+    return "\n".join(rows)
+
+
+def corner_bound_hits(root: Path = ROOT) -> str:
+    """A sentence on the lowest and highest values of :func:`corner_bounds` that sit on a limit
+    of their fit, which the bounds table gives as that limit."""
+    hits = []
+    for device in FITS:
+        for b in corner_bounds(device, root):
+            for side, corner, at in (
+                ("lowest", b.lowest_corner, b.lowest_at_bound),
+                ("highest", b.highest_corner, b.highest_at_bound),
+            ):
+                if at is not None:
+                    hits.append(
+                        f"The {side} {TUNABLES[b.name][0].lower()} of the {device}, at {corner}, "
+                        f"sits on its {BOUND_WORDS[at]}, so the table gives that limit"
+                    )
+    if not hits:
+        return "No lowest or highest value sits on a limit of its fit"
+    return ". ".join(hits)
+
+
+#: The corner fit files (Task 16a), by transistor and corner (the typical fit is the calibration).
+CORNER_FITS = "results/tcad/corners/{device}/{corner}.json"
+#: The gate width of the gate-length series of :func:`corner_crossing_gaps` (µm).
+CROSSING_WIDTH_UM = 10.0
+
+
+def corner_crossing_gaps(device: str, root: Path = ROOT) -> dict[str, dict[float, float]]:
+    """``{corner: {gate length (µm): ΔV_dep (V)}}``: the falling-crossing gap of each fit, at
+    every W = 10 µm gate, fitted and held out (1D). Typical from the calibration result file and
+    the validation file, each other corner from its corner file (``per_geometry``, ``held_out``)."""
+    from gf180tcad.devices import CORNERS
+
+    out: dict[str, dict[float, float]] = {}
+    for corner in CORNERS:
+        if corner == "typical":
+            recs = list(_fit_doc(device, root)["per_geometry"].values())
+            val = json.loads((Path(root) / VALIDATION / f"{device}.json").read_text("utf-8"))
+            recs += list(val["one_d"].values())
+        else:
+            path = Path(root) / CORNER_FITS.format(device=device, corner=corner)
+            doc = json.loads(path.read_text("utf-8"))
+            recs = [*doc["per_geometry"].values(), *doc["held_out"].values()]
+        gaps = {
+            r["geometry"]["l_um"]: r["metrics"]["dv_dep_v"]
+            for r in recs
+            if r["geometry"]["w_um"] == CROSSING_WIDTH_UM
+        }
+        out[corner] = dict(sorted(gaps.items()))
+    return out
+
+
+@dataclass(frozen=True)
+class CornerFit:
+    """One fitted number of one fit (typical or a corner): its limits, the fitted value and the
+    limit it sits on (None when it sits on none)."""
+
+    device: str
+    corner: str
+    name: str
+    lower: float
+    fitted: float
+    upper: float
+    at_bound: str | None
+
+
+def corner_fit_limits(device: str, root: Path = ROOT) -> list[CornerFit]:
+    """The :class:`CornerFit` of each of :data:`TUNABLES` at each corner, typical first (the
+    calibration result file), each other corner from its corner file (``bounds``, ``values``,
+    ``bound_hits``)."""
+    from gf180tcad.devices import CORNERS
+
+    out = []
+    for corner in CORNERS:
+        if corner == "typical":
+            doc = _fit_doc(device, root)
+        else:
+            path = Path(root) / CORNER_FITS.format(device=device, corner=corner)
+            doc = json.loads(path.read_text("utf-8"))
+        for name in TUNABLES:
+            lo, hi = doc["bounds"][name]
+            out.append(CornerFit(device, corner, name, lo, doc["values"][name], hi,
+                                 doc["bound_hits"].get(name)))  # fmt: skip
+    return out
+
+
+def corner_fit_hits(root: Path = ROOT) -> str:
+    """A sentence naming every fit, typical or corner, whose fitted value sits on a limit."""
+    hits = [
+        f"The {TUNABLES[f.name][0].lower()} of the {f.device} at {f.corner} stops on its "
+        f"{BOUND_WORDS[f.at_bound]}"
+        for device in FITS
+        for f in corner_fit_limits(device, root)
+        if f.at_bound is not None
+    ]
+    if not hits:
+        return "No fit, typical or corner, stops on a limit"
+    return ". ".join(hits)
+
+
+#: The fitted numbers of the card cross-check: the summary key, the unit and digits a page prints
+#: the gap in, and the factor from the summary unit.
+CROSSCHECK = {"t_ox_eff_nm": ("tox", "nm", 2, 1.0), "dv_fb_v": ("vfb", "mV", 2, 1e3)}
+
+
+def crosscheck_largest(device: str, name: str, root: Path = ROOT) -> tuple[str, float]:
+    """``(corner, difference)`` of the largest ``shift_difference`` (the fit's shift from the
+    typical fit minus the card's shift, by absolute value) of ``name`` in the corner summary of
+    ``device``, in the summary's unit."""
+    diffs = corner_summary(device, root)["tunables"][name]["shift_difference"]
+    corner = max(diffs, key=lambda c: abs(diffs[c]))
+    return corner, diffs[corner]
+
+
+def crosscheck_substitutions(root: Path = ROOT) -> dict[str, str]:
+    """``x_crosscheck_<key>_gap_<transistor>`` (the largest difference of :func:`crosscheck_largest`,
+    signed, with its unit) and ``x_crosscheck_<key>_corner_<transistor>`` for each of
+    :data:`CROSSCHECK` and each transistor (``nfet``, ``pfet``)."""
+    out = {}
+    for device in FITS:
+        short = device.split("_")[0]
+        for name, (key, unit, digits, factor) in CROSSCHECK.items():
+            corner, d = crosscheck_largest(device, name, root)
+            out[f"x_crosscheck_{key}_gap_{short}"] = shortest(d * factor, unit, digits)
+            out[f"x_crosscheck_{key}_corner_{short}"] = corner
+    return out
+
+
+def corner_verdicts(root: Path = ROOT) -> str:
+    """A sentence on the verdict of every corner fit (at its calibration geometries), per
+    transistor, from the corner summaries: one clause per transistor and verdict."""
+    from gf180tcad.devices import CORNERS
+
+    clauses = []
+    for device in FITS:
+        doc = corner_summary(device, root)
+        by: dict[str, list[str]] = {}
+        for corner in CORNERS:
+            if corner != "typical":
+                by.setdefault(doc["corners"][corner]["verdict"], []).append(corner)
+        for verdict, corners in by.items():
+            where = (
+                "at every corner"
+                if len(corners) == len(CORNERS) - 1
+                else ("at " + ", ".join(corners))
+            )
+            clauses.append(f"the {device} is {{term}}`{verdict}` {where}")
+    return "Against each corner's SPICE curves, " + "; ".join(clauses)
+
+
 def _formula(name: str):
     if name in idealised.FORMULAS:
         return idealised.FORMULAS[name]
@@ -600,7 +823,9 @@ def substitutions() -> dict[str, str]:
     entry, and the 2D cells' table and Disagree clause
     (``x_two_d_table``, ``x_two_d_disagree``), the :func:`counts`, the calibration page's
     tables and sentence (``x_fit_table_nfet``, ``x_fit_table_pfet``, ``x_limit_kinds_table``,
-    ``x_bound_hits``, ``x_fit_verdict_table``, ``x_corner_table``), and the :func:`corner_pvth0`
+    ``x_bound_hits``, ``x_fit_verdict_table``, ``x_corner_table``), the corner bounds
+    (``x_corner_bounds_table_nfet``, ``x_corner_bounds_table_pfet``,
+    ``x_corner_extremes_table``, ``x_corner_bound_hits``), and the :func:`corner_pvth0`
     numbers of the reproduce page, for MyST."""
     out: dict[str, str] = {}
     for name, n in REGISTRY.items():
@@ -618,6 +843,13 @@ def substitutions() -> dict[str, str]:
     out["x_bound_hits"] = bound_hits()
     out["x_fit_verdict_table"] = fit_verdict_table()
     out["x_corner_table"] = corner_table()
+    for device in FITS:
+        out[f"x_corner_bounds_table_{device.split('_')[0]}"] = corner_bounds_table(device)
+    out["x_corner_extremes_table"] = corner_extremes_table()
+    out["x_corner_bound_hits"] = corner_bound_hits()
+    out.update(crosscheck_substitutions())
+    out["x_corner_fit_hits"] = corner_fit_hits()
+    out["x_corner_verdicts"] = corner_verdicts()
     out.update({f"x_{k}": v for k, v in corner_pvth0().items()})
     return out
 
