@@ -266,6 +266,9 @@ The pfet's bounds and spread
 
 {{ x_corner_bounds_table_pfet }}
 
+The body doping has no card offset, so its corner range shows the fit trading doping against the
+other two numbers, not a process spread.
+
 The corner of each lowest and highest value:
 
 {{ x_corner_extremes_table }}
