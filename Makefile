@@ -21,7 +21,7 @@ OUTPUT_CACHE ?= tmp/output-cache
 .PHONY: reproduce reproduce-quick manifest spice-reference \
 	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate tcad-meshes \
 	tcad-corners \
-	cache-status cache-push lint pre-push pre-push-docs
+	cache-status cache-push lint pre-push pre-push-docs readme-figures
 
 # Everything, in dependency order: the SPICE reference, then the TCAD trees (mesh convergence,
 # start values, calibration, calibrated values, validation, the reduced mesh artefacts of the
@@ -168,6 +168,11 @@ cache-status:
 # write access to the cache repository; run tools/output-cache push --dry-run first).
 cache-push:
 	$(PYTHON) tools/output-cache push --cache $(OUTPUT_CACHE) --results results --publish
+
+# The README's committed figures (docs/images/readme/), drawn from the committed results by
+# gf180tcad.docgen; tests/test_docgen.py fails when they are stale. Seconds.
+readme-figures:
+	$(PYTHON) -m gf180tcad.docgen readme-figures
 
 # The lint steps of the CI lint-test job, exactly (.github/workflows/ci.yml runs this target).
 # Seconds.

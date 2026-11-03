@@ -6,10 +6,19 @@ validated against the [PDK](https://gf180-tcad.readthedocs.io/en/latest/glossary
 
 ## What and why
 
-This project builds a scriptable TCAD flow (structures from
-[gdsfactory](https://gdsfactory.github.io/gdsfactory/) layouts, simulated with
-[DEVSIM](https://devsim.org/)) for GF180MCU transistors, and measures, quantitatively,
-reproducibly and in public, how closely it agrees with the PDK SPICE models.
+This project builds a scriptable TCAD flow for GF180MCU transistors. Its 2D cells are cut from
+the [gdsfactory](https://gdsfactory.github.io/gdsfactory/) layouts of the PDK's transistor cells,
+as in Figure 1, and simulated with [DEVSIM](https://devsim.org/). The project measures how closely
+the TCAD agrees with the PDK SPICE models, quantitatively, reproducibly and in public.
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/cell-dark.svg">
+<img alt="Cross-section of the simulated transistor: a gate on a thin oxide in the middle, a source and a drain either side at the surface, a large body below." src="docs/images/readme/cell-light.svg">
+</picture>
+
+*Figure 1. The simulated 2D cell of the [`nfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0) at W = 10 µm and L = 0.7 µm, cut along the
+gate's length. Blue parts are n-type and the orange body is p-type. `make readme-figures` draws
+it from the committed results.*
 
 The PDK's SPICE models are the [reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE-reference-results);
 the TCAD is what is being tested. Each mismatch is documented with its cause and the evidence
@@ -35,13 +44,14 @@ uncalibrated start values:
   [report](https://gf180-tcad.readthedocs.io/en/latest/limitations/mesh-convergence.html)), made on the
   [dev-HEAD TCAD image](#images);
 - the 2D MOS capacitor cut from the PDK's [gdsfactory](https://gdsfactory.github.io/gdsfactory/)
-  transistor cells ([`results/tcad/moscap2d`](results/tcad/moscap2d)), at the minimum gate length
-  (0.60 µm nfet, 0.50 µm pfet) and at L = 2 µm, with its own mesh convergence
-  ([`results/tcad/meshconv/moscap2d`](results/tcad/meshconv/moscap2d)), made on the
-  [stable TCAD image](#images). The L = 2 µm cell has no small-signal (AC) result: the
-  AC solve fails in the direct solver at that size. The L = 10 µm cell is not run in 2D, because
-  its equilibrium solve fails there too; see the
-  [2D MOS capacitor page](https://gf180-tcad.readthedocs.io/en/latest/limitations/moscap2d.html).
+  transistor cells ([`results/tcad/moscap2d`](results/tcad/moscap2d)). It runs at the minimum
+  gate length (nfet 0.60 µm, pfet 0.50 µm) and at L = 2 µm, on the
+  [stable TCAD image](#images). Its own mesh convergence is in
+  [`results/tcad/meshconv/moscap2d`](results/tcad/meshconv/moscap2d).
+
+In 2D the L = 2 µm cell has no small-signal (AC) result: the AC solve fails in the direct solver
+at that size. The L = 10 µm cell is not run in 2D, because its equilibrium solve fails there too;
+see the [2D MOS capacitor page](https://gf180-tcad.readthedocs.io/en/latest/limitations/moscap2d.html).
 
 The 1D MOS capacitor is calibrated against the SPICE
 [Cgg](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Cgg)–Vg
@@ -50,10 +60,37 @@ The 1D MOS capacitor is calibrated against the SPICE
 [`results/tcad/validation`](results/tcad/validation),
 [C–V calibration page](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html)):
 three tunables, 3 of the 8-parameter budget. In 1D the nfet agrees with SPICE at every geometry,
-fitted and held out. The pfet is published as a disagreement: the SPICE pfet's [depletion](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-depletion) edge
-moves by 0.57 V between L = 10 µm and the minimum length, which one length-independent 1D stack
-cannot follow. The calibrated 1D curves are in
+fitted and held out. Figure 2 shows both devices, 1D and 2D, at the minimum gate length.
+
+The pfet is published as a disagreement. The SPICE pfet's
+[depletion](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-depletion) edge
+moves by [0.57 V](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html#cv-agreement-mismatch)
+between L = 10 µm and the minimum length, as Figure 3 shows. One
+length-independent 1D stack cannot follow that. The calibrated 1D curves are in
 [`results/tcad/moscap1d`](results/tcad/moscap1d).
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/cv-dark.svg">
+<img alt="Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines." src="docs/images/readme/cv-light.svg">
+</picture>
+
+*Figure 2. Gate capacitance against gate voltage at the minimum gate length. The solid line is the
+SPICE model at the [typical corner](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-typical-corner),
+inside the grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner).
+The 1D TCAD is dotted at the start values and dashed at the fitted ones, the 2D cell dash-dot
+(start orange, fitted blue). `make readme-figures`
+draws it from the committed results.*
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/pfet-lengths-dark.svg">
+<img alt="Gate capacitance against gate voltage of the pfet, L = 0.5 µm above and L = 10 µm below: SPICE in a grey band, a dashed 1D line and two dotted edges." src="docs/images/readme/pfet-lengths-light.svg">
+</picture>
+
+*Figure 3. The pfet's gate capacitance at the shortest and the longest gate of the
+calibration, 0.5 µm and 10 µm. The solid line is SPICE at the typical corner inside the
+grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner),
+and the dashed line the fitted 1D stack. Dotted lines and an arrow mark each length's SPICE
+depletion edge. `make readme-figures` draws it from the committed results.*
 
 Every committed TCAD result has generated
 pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
@@ -94,12 +131,11 @@ section says on which hosts the results are byte-identical.
 ## Images
 
 Every simulation runs in one of three reproducible images on the
-[GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry),
-each pinned by
+[GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+Each is pinned by
 [manifest digest](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-manifest-digest)
-in a one-line file and built by
-[`.github/workflows/image.yml`](.github/workflows/image.yml), which checks that a from-scratch
-rebuild gives the same digests:
+in a one-line file. [`.github/workflows/image.yml`](.github/workflows/image.yml) builds them and
+checks that a from-scratch rebuild gives the same digests:
 
 | Image | Pin file | Role |
 |---|---|---|
@@ -115,9 +151,9 @@ What each holds:
 - **dev-HEAD TCAD**: the TCAD stack at development HEAD (the newest commit), pinned by commit,
   with DEVSIM built from source.
 
-The exact versions in each image are in its `versions.json`
-([base](docker/base/versions.json), [stable](docker/tcad/versions.json),
-[dev HEAD](docker/tcad-dev/versions.json)). The final results are to come from the dev-HEAD
+The exact versions in each image are listed in one JSON file per image:
+[base](docker/base/versions.json), [stable](docker/tcad/versions.json) and
+[dev HEAD](docker/tcad-dev/versions.json). The final results are to come from the dev-HEAD
 image; the stable one is kept for checking how the released versions behave. Which results come
 from which image today
 is on the [image page](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#tcad-results-image).

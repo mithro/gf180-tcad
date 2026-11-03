@@ -286,6 +286,8 @@ at its shortest and longest fit gates.
 The gate capacitance of the pfet_05v0 at its shortest and longest fit gates, against the true
 gate voltage. The solid line is the SPICE model at the typical corner, inside the band of all
 its corners. The dashed line is the simulated stack with the values fitted to the typical corner.
+The dotted lines mark where the SPICE curve leaves accumulation at each length, and the arrow
+gives the shift between them.
 ```
 
 ```{figure} /_generated/explained/calibration-pfet-dark.svg
@@ -295,6 +297,8 @@ its corners. The dashed line is the simulated stack with the values fitted to th
 The gate capacitance of the pfet_05v0 at its shortest and longest fit gates, against the true
 gate voltage. The solid line is the SPICE model at the typical corner, inside the band of all
 its corners. The dashed line is the simulated stack with the values fitted to the typical corner.
+The dotted lines mark where the SPICE curve leaves accumulation at each length, and the arrow
+gives the shift between them.
 ```
 
 The pfet's SPICE curve leaves accumulation at a gate voltage that moves with the gate length.

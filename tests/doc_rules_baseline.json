@@ -1,8 +1,4 @@
 {
- "README.md": {
-  "FIGURE": 2,
-  "FILELINK": 1
- },
  "docs/_generated/results/index.md": {
   "FIGURE": 2
  },
@@ -153,12 +149,6 @@
   "FIGURE": 6,
   "FIGURE-FORM": 2
  },
- "docs/glossary.md": {
-  "FILELINK": 1
- },
- "docs/index.md": {
-  "FIGURE": 1
- },
  "docs/limitations/engine-cross-check.md": {
   "FIGURE": 5
  },
@@ -199,11 +189,7 @@
   "FIGURE": 2,
   "FILELINK": 1
  },
- "docs/results/index.md": {
-  "FIGURE": 1,
-  "FILELINK": 2
- },
  "docs/roadmap.md": {
-  "FIGURE": 2
+  "FIGURE-OK": 1
  }
 }

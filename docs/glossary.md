@@ -1,8 +1,9 @@
 # Glossary
 
 Terms used in these pages. Each definition is condensed from the page it links to, which is the
-authoritative statement. Metric keys (such as `vt_lin_maxgm`) are the keys of `metrics.json`;
-their exact extraction is in {py:mod}`gf180tcad.metrics`.
+authoritative statement. Metric keys (such as `vt_lin_maxgm`) are the keys of the
+{repo}`~results/spice/ngspice/typical/nfet_05v0/w10p0_l0p60/metrics.json` file of each SPICE
+geometry; their exact extraction is in {py:mod}`gf180tcad.metrics`.
 
 ```{glossary}
 :sorted:
