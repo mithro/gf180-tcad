@@ -155,8 +155,7 @@ Expressions in {term}`corner` parameters (such as `nfet_06v0_tox`) are 0 or 1 at
 TT value is the leading number.
 
 Two of the entries below describe the gate stack. TOXE is the thickness of the {term}`gate oxide`
-and NDEP
-the body doping under it. The nfet stack drawn at these two values is
+and NDEP the body doping under it. The nfet stack drawn at these two values is
 {numref}`Figure %s of Process data for the MOS capacitors <process-data-stack-figure>`.
 
 `nfet_06v0.0`:
