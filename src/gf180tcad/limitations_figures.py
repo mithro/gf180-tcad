@@ -181,7 +181,9 @@ def engine_diff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     lo, hi = STYLE["engine_decades"]
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(STYLE["tall_in"])
-        axes = fig.subplots(len(_DEVICES), 1, sharex=True)
+        # Not sharex: the devices' geometries differ (nfet Lmin 0.6 µm, pfet 0.5 µm), so each
+        # panel carries its own tick labels.
+        axes = fig.subplots(len(_DEVICES), 1)
         for ax, device in zip(axes, _DEVICES, strict=True):
             gs = _geometries(device)
             x = np.arange(len(gs))
@@ -314,9 +316,10 @@ def vertex_grid_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                     lw=ef.STYLE["edge_width"] * 2, ls="--", gid=f"drawn {key}")  # fmt: skip
             ax.text(x0, hi, f"{title}, {v[f'{key}_grid_nm']:g} nm", ha="center", va="bottom")
             if key == "default":
-                for y in np.arange(math.ceil(lo), math.floor(hi) + 1):
+                g = v["default_grid_nm"]
+                for y in np.arange(math.ceil(lo / g), math.floor(hi / g) + 1) * g:
                     ax.plot([x0 - half, x0 + half], [y, y], color=pal["muted"],
-                            lw=ef.STYLE["edge_width"], gid="grid line")  # fmt: skip
+                            lw=ef.STYLE["edge_width"], gid=f"grid line {y:g}")  # fmt: skip
                 note = f"Cox {v['default_cox_error'] * UNITS['percent']:+.2g} %"
             else:
                 note = f"Cox within {v['fix_grid_nm'] / 2 / v['t_ox_nm']:.0e}"
