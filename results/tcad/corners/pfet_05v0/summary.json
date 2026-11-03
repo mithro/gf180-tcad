@@ -1,0 +1,172 @@
+{
+  "corners": {
+    "ff": {
+      "bound_hits": {
+        "dv_fb_v": "upper"
+      },
+      "held_out": {
+        "w10p0_l0p70": "Same process",
+        "w10p0_l1p00": "Agree",
+        "w1p6_l0p70": "Same process"
+      },
+      "per_geometry": {
+        "w10p0_l0p50": "Same process",
+        "w10p0_l10p00": "Disagree",
+        "w10p0_l2p00": "Disagree"
+      },
+      "verdict": "Disagree"
+    },
+    "fs": {
+      "bound_hits": {},
+      "held_out": {
+        "w10p0_l0p70": "Disagree",
+        "w10p0_l1p00": "Agree",
+        "w1p6_l0p70": "Disagree"
+      },
+      "per_geometry": {
+        "w10p0_l0p50": "Disagree",
+        "w10p0_l10p00": "Same process",
+        "w10p0_l2p00": "Same process"
+      },
+      "verdict": "Disagree"
+    },
+    "sf": {
+      "bound_hits": {
+        "dv_fb_v": "upper"
+      },
+      "held_out": {
+        "w10p0_l0p70": "Same process",
+        "w10p0_l1p00": "Agree",
+        "w1p6_l0p70": "Same process"
+      },
+      "per_geometry": {
+        "w10p0_l0p50": "Same process",
+        "w10p0_l10p00": "Disagree",
+        "w10p0_l2p00": "Disagree"
+      },
+      "verdict": "Disagree"
+    },
+    "ss": {
+      "bound_hits": {},
+      "held_out": {
+        "w10p0_l0p70": "Disagree",
+        "w10p0_l1p00": "Agree",
+        "w1p6_l0p70": "Disagree"
+      },
+      "per_geometry": {
+        "w10p0_l0p50": "Disagree",
+        "w10p0_l10p00": "Same process",
+        "w10p0_l2p00": "Same process"
+      },
+      "verdict": "Disagree"
+    },
+    "typical": {
+      "bound_hits": {},
+      "per_geometry": {
+        "w10p0_l0p50": "Disagree",
+        "w10p0_l10p00": "Disagree",
+        "w10p0_l2p00": "Same process"
+      },
+      "verdict": "Disagree"
+    }
+  },
+  "device": "pfet_05v0",
+  "pdk_corners_sha256": "6a6befcc7b60db97af78f5c50a6653801d8a8c2123592479ce43da5c56a41f29",
+  "schema": 1,
+  "tunables": {
+    "dv_fb_v": {
+      "card_shift": {
+        "ff": 0.1245,
+        "fs": -0.0829,
+        "sf": 0.0827,
+        "ss": -0.1225
+      },
+      "max": 0.3245,
+      "max_at_bound": "upper",
+      "max_corner": "ff",
+      "min": 0.020171988131035885,
+      "min_at_bound": null,
+      "min_corner": "ss",
+      "shift_difference": {
+        "ff": 0.012769557170520168,
+        "fs": -0.027530645896346503,
+        "sf": 0.012769157266442704,
+        "ss": -0.044558454698425426
+      },
+      "spread": 0.30432801186896413,
+      "tcad_shift": {
+        "ff": 0.13726955717052017,
+        "fs": -0.1104306458963465,
+        "sf": 0.0954691572664427,
+        "ss": -0.16705845469842542
+      },
+      "typical": 0.1872304428294613,
+      "values": {
+        "ff": 0.32449999999998147,
+        "fs": 0.0767997969331148,
+        "sf": 0.282699600095904,
+        "ss": 0.020171988131035885,
+        "typical": 0.1872304428294613
+      }
+    },
+    "n_ch_cm3": {
+      "card_shift": null,
+      "max": 2.4246045757719456e+17,
+      "max_at_bound": null,
+      "max_corner": "ff",
+      "min": 1.8062672190562694e+17,
+      "min_at_bound": null,
+      "min_corner": "ss",
+      "shift_difference": null,
+      "spread": 6.183373567156762e+16,
+      "tcad_shift": null,
+      "typical": 2.14664982697726e+17,
+      "values": {
+        "ff": 2.4246045757719456e+17,
+        "fs": 1.9182206738228586e+17,
+        "sf": 2.3428113622993418e+17,
+        "ss": 1.8062672190562694e+17,
+        "typical": 2.14664982697726e+17
+      }
+    },
+    "t_ox_eff_nm": {
+      "card_shift": {
+        "ff": -1.0,
+        "fs": 0.6699999999999999,
+        "sf": -0.6699999999999999,
+        "ss": 1.0
+      },
+      "max": 16.612743971593606,
+      "max_at_bound": null,
+      "max_corner": "ss",
+      "min": 14.70993008061633,
+      "min_at_bound": null,
+      "min_corner": "ff",
+      "shift_difference": {
+        "ff": -0.010734868475337223,
+        "fs": -0.06577236870420755,
+        "sf": -0.0030168795567373508,
+        "ss": -0.10792097749806118
+      },
+      "spread": 1.902813890977276,
+      "tcad_shift": {
+        "ff": -1.0107348684753372,
+        "fs": 0.6042276312957924,
+        "sf": -0.6730168795567373,
+        "ss": 0.8920790225019388
+      },
+      "typical": 15.720664949091667,
+      "values": {
+        "ff": 14.70993008061633,
+        "fs": 16.32489258038746,
+        "sf": 15.04764806953493,
+        "ss": 16.612743971593606,
+        "typical": 15.720664949091667
+      }
+    }
+  },
+  "typical_source": {
+    "calibration_file_sha256": "60144f8196dbd0bd5e2f99d82fe8aa6e8de0d82faad023c00763c6a584caa995",
+    "param_sha256": "4b850baac972f26280b60ee7d5871852f4612ebd060da2af1a99db2809fb5cbf"
+  }
+}
