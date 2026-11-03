@@ -7,6 +7,7 @@ PYTHON ?= uv run --locked python
 JOBS ?= 8
 TCAD = $(PYTHON) -m gf180tcad.tcad
 CALIBRATE = $(PYTHON) -m gf180tcad.calibrate
+CORNERS = $(PYTHON) -m gf180tcad.calibrate.corners
 # Scratch directories of the split 2D jobs (--method qs, then combine-qs on the same directory);
 # a cut-off job resumes from here when the target runs again.
 TCAD_SCRATCH ?= tmp/reproduce-scratch
@@ -18,7 +19,7 @@ TCAD_SUBSET = tests/crosscheck_tcad_subset.txt
 OUTPUT_CACHE ?= tmp/output-cache
 
 .PHONY: reproduce reproduce-quick manifest spice-reference \
-	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate \
+	tcad-meshconv tcad-start tcad-calibrate tcad-calibrated tcad-validate tcad-corners \
 	cache-status cache-push lint pre-push pre-push-docs readme-figures
 
 # Everything, in dependency order: the SPICE reference, then the TCAD trees (mesh convergence,
@@ -109,6 +110,17 @@ tcad-calibrated:
 tcad-validate:
 	$(CALIBRATE) validate --device nfet_05v0 --out results/tcad/validation
 	$(CALIBRATE) validate --device pfet_05v0 --out results/tcad/validation
+
+# 6. The corner fits (Task 16a): one 2 GiB job per device and corner, then the summary of each
+# device. `make -j4 tcad-corners` runs four fits at once.
+CORNER_FITS = $(foreach d,nfet_05v0 pfet_05v0,$(foreach c,ff ss fs sf,corner-fit-$(d)-$(c)))
+tcad-corners: $(CORNER_FITS)
+	$(CORNERS) summary --device nfet_05v0 --out results/tcad/corners
+	$(CORNERS) summary --device pfet_05v0 --out results/tcad/corners
+
+corner-fit-%:
+	$(CORNERS) run --device $(word 1,$(subst -, ,$*)) --corner $(word 2,$(subst -, ,$*)) \
+		--out results/tcad/corners
 
 # The cross-checked TCAD subset only (as the crosscheck-tcad workflow job): its jobs into
 # $(QUICK_OUT), then compared byte for byte with results/MANIFEST.sha256. Minutes.

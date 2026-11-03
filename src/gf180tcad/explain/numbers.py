@@ -598,9 +598,10 @@ def substitutions() -> dict[str, str]:
     """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, and ``{"x_<name>":
     word}`` and ``{"x_<name>_term": word linked to the glossary}`` for every :data:`WORDS`
     entry, and the 2D cells' table and Disagree clause
-    (``x_two_d_table``, ``x_two_d_disagree``), the :func:`counts`, and the calibration page's
+    (``x_two_d_table``, ``x_two_d_disagree``), the :func:`counts`, the calibration page's
     tables and sentence (``x_fit_table_nfet``, ``x_fit_table_pfet``, ``x_limit_kinds_table``,
-    ``x_bound_hits``, ``x_fit_verdict_table``, ``x_corner_table``), for MyST."""
+    ``x_bound_hits``, ``x_fit_verdict_table``, ``x_corner_table``), and the :func:`corner_pvth0`
+    numbers of the reproduce page, for MyST."""
     out: dict[str, str] = {}
     for name, n in REGISTRY.items():
         out[f"x_{name}"] = text(name)
@@ -617,4 +618,28 @@ def substitutions() -> dict[str, str]:
     out["x_bound_hits"] = bound_hits()
     out["x_fit_verdict_table"] = fit_verdict_table()
     out["x_corner_table"] = corner_table()
+    out.update({f"x_{k}": v for k, v in corner_pvth0().items()})
     return out
+
+
+def corner_pvth0() -> dict[str, str]:
+    """The numbers of the PVTH0 paragraph of the corner fits (docs/reproduce/index.md), from
+    :func:`gf180tcad.calibrate.corners.largest_pvth0_shift`: the corner, the gate, its DVTH0,
+    dL, dW, L_eff, W_eff, ΔP_VTH0 and ΔV_th0, each as the page prints it."""
+    from gf180tcad.calibrate import corners
+
+    corner, g, v = corners.largest_pvth0_shift()
+    row = corners.load_table()["devices"]["pfet_05v0"]["other_lines"]["pvth0"]
+    dvth0 = corners.load_table()["devices"]["pfet_05v0"]["corners"][corner][row["param"]]["value"]
+    return {
+        "corner_pvth0_corner": corner,
+        "corner_pvth0_l": format_value(g.l_um, 1, "µm"),
+        "corner_pvth0_w": format_value(g.w_um, 2, "µm"),
+        "corner_pvth0_dvth0": format_value(dvth0, 4, "V"),
+        "corner_pvth0_dl": format_value(v["dl"] * 1e9, 4, "nm"),
+        "corner_pvth0_dw": format_value(v["dw"] * 1e9, 4, "nm"),
+        "corner_pvth0_leff": format_value(v["leff"] * 1e6, 4, "µm"),
+        "corner_pvth0_weff": format_value(v["weff"] * 1e6, 5, "µm"),
+        "corner_pvth0_dp": format_value(v["dp"], 4, "V·µm²"),
+        "corner_pvth0_dv": format_value(v["dv"] * 1e3, 4, "mV"),
+    }

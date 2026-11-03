@@ -77,6 +77,8 @@ EXPLAINED_FIGURES = [
     "cv-parts",
     "cv-overview",
     "spice-sweeps",
+    "corner-cv",
+    "corner-area",
 ]
 
 

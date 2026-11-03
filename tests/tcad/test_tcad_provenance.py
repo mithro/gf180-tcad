@@ -38,7 +38,10 @@ ROOTS = (TCAD_MAIN, CALIBRATE_MAIN)
 # The reduced mesh artefact generator (renders plan Task R0): an entry point of the registry
 # that writes the per-image trees tcad/meshes/<image> once their artefacts are committed.
 MESHCUT_MAIN = "gf180tcad.meshcut.__main__"
-ENTRY_POINTS = (*ROOTS, MESHCUT_MAIN)
+# The corner fits (Phase 2 plan, Task 16a): an entry point of the registry that writes the tree
+# tcad/corners once its results are committed.
+CORNERS_MAIN = "gf180tcad.calibrate.corners"
+ENTRY_POINTS = (*ROOTS, MESHCUT_MAIN, CORNERS_MAIN)
 # The entry point that writes each tree root, by its path relative to results/
 # (docs/reproduce/index.md, tcad-provenance).
 WRITERS = {
@@ -345,7 +348,7 @@ def test_meshcut_hash_is_its_own(monkeypatch):
     """A change to a meshcut module moves only the meshcut hash; a change to the tcad CLI it
     imports moves it and the TCAD entry point's, never the calibration's."""
     before = {e: tcad.generator_sha256(e) for e in ENTRY_POINTS}
-    assert len(set(before.values())) == 3
+    assert len(set(before.values())) == len(ENTRY_POINTS)
     real = tcad._sha256
     target = ""
 
@@ -355,12 +358,67 @@ def test_meshcut_hash_is_its_own(monkeypatch):
     monkeypatch.setattr(tcad, "_sha256", changed)
     target = "src/gf180tcad/meshcut/job.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
-        TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: True,
+        TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: True, CORNERS_MAIN: False,
     }  # fmt: skip
     target = "src/gf180tcad/tcad/__main__.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
-        TCAD_MAIN: True, CALIBRATE_MAIN: False, MESHCUT_MAIN: True,
+        TCAD_MAIN: True, CALIBRATE_MAIN: False, MESHCUT_MAIN: True, CORNERS_MAIN: False,
     }  # fmt: skip
+
+
+# --- the corners entry point (Phase 2 plan, Task 16a) -----------------------------------------
+
+
+def test_corners_modules_match_the_import_graph():
+    """The corner fits hash their whole static closure: the calibration code they reuse and their
+    own module, never the calibration CLI, the TCAD CLI or meshcut."""
+    listed = set(tcad.TCAD_GENERATORS[CORNERS_MAIN])
+    assert listed == _ast_import_closure((CORNERS_MAIN,))
+    assert {CORNERS_MAIN, "gf180tcad.calibrate.cv", "gf180tcad.tcad.process"} <= listed
+    assert not {CALIBRATE_MAIN, TCAD_MAIN} & listed
+    assert not {m for m in listed if m.startswith(("gf180tcad.meshcut", "gf180tcad.render"))}
+    assert tcad.PLUGIN_EXCLUDES[CORNERS_MAIN] == tcad.PLUGIN_EXCLUDES[CALIBRATE_MAIN]
+
+
+def test_no_other_entry_point_imports_corners():
+    """The corners module imports the calibration code, never the reverse, so no other closure
+    (and no committed tree's generator_sha256) changes with it."""
+    for entry in (*ROOTS, MESHCUT_MAIN):
+        assert CORNERS_MAIN not in tcad.TCAD_GENERATORS[entry]
+        assert CORNERS_MAIN not in _ast_import_closure((entry,))
+
+
+def test_corners_hash_is_its_own(monkeypatch):
+    """A change to corners.py (or to the corner table whose sha256 it pins) moves only the
+    corners hash; a change to the calibration code it reuses moves it and the calibration
+    entry point's, never the TCAD entry point's."""
+    before = {e: tcad.generator_sha256(e) for e in ENTRY_POINTS}
+    real = tcad._sha256
+    target = ""
+
+    def changed(path):
+        return "0" * 64 if path.as_posix().endswith(target) else real(path)
+
+    monkeypatch.setattr(tcad, "_sha256", changed)
+    target = "src/gf180tcad/calibrate/corners.py"
+    assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
+        TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: False, CORNERS_MAIN: True,
+    }  # fmt: skip
+    target = "src/gf180tcad/calibrate/cv.py"
+    assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
+        TCAD_MAIN: False, CALIBRATE_MAIN: True, MESHCUT_MAIN: False, CORNERS_MAIN: True,
+    }  # fmt: skip
+
+
+CORNERS = TCAD_RESULTS / "corners"
+
+
+def test_corners_writes_a_tree_only_with_its_results():
+    """The registry gains the tcad/corners row with the committed corner fits (Task 16a, part
+    2), as every tree row comes with its results."""
+    rows = {k for k, v in tcad.TREE_GENERATORS.items() if v == CORNERS_MAIN}
+    assert rows <= {"tcad/corners"}
+    assert bool(rows) == CORNERS.is_dir()
 
 
 MESHES = TCAD_RESULTS / "meshes"
