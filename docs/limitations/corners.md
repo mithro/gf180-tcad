@@ -15,7 +15,7 @@ fits cannot see, which fits stop on a limit, and how their shifts compare with t
 Each corner fit tunes one 1D stack, the same for every gate length. A corner's change that
 depends on the gate length cannot enter that stack. It shows up as a gap that moves with the
 length.
-{numref}`fig-corner-crossing` shows that shift at the depletion crossing for every fit.
+{numref}`fig-corner-crossing` shows that shift at the {term}`depletion` crossing for every fit.
 
 ```{figure} /_generated/explained/corner-crossing-light.svg
 :figclass: only-light

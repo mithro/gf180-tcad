@@ -1415,8 +1415,9 @@ def corner_area(palette: str) -> bytes:
 # The corner bounds of the calibration page (calibration.md, Task 16a): each fitted number's
 # lowest and highest value over the corners, from the corner summaries.
 
-#: The legend words of :func:`_limit_ring` (a ring ``STYLE["limit_ring_scale"]`` times the marker
-#: size, in the hole colour, as the on-a-limit diamond of :func:`corner_limits`).
+#: The legend words of the ring round a value on a limit of its fit: a ring
+#: ``STYLE["limit_ring_scale"]`` times the marker size, in the hole colour, as the on-a-limit
+#: diamond of :func:`corner_limits`.
 LIMIT_RING_LABEL = "on a limit"
 
 
