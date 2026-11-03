@@ -742,6 +742,43 @@ def corner_nearest_limit_sentence(root: Path = ROOT) -> str:
     )
 
 
+def flatband_half_width(root: Path = ROOT) -> str:
+    """The half-width of the typical shift window, the same for both transistors (ValueError
+    otherwise): upper limit minus start in the process files."""
+    widths = set()
+    for device in FITS:
+        p = _process(device, root)["param"]["dv_fb_v"]
+        widths |= {p["bounds"][1] - p["value"], p["value"] - p["bounds"][0]}
+    if len(widths) != 1:
+        raise ValueError(f"the typical shift windows are not one symmetric width: {widths}")
+    return shortest(widths.pop(), "V", 3)
+
+
+def corner_widened(root: Path = ROOT) -> str:
+    """A sentence per corner fit whose flat-band window is widened
+    (:data:`gf180tcad.calibrate.corners.FLAT_BAND_STAGE`): the limit it stopped on before, read
+    from the window without widening, the widened limit and where the committed fit ends."""
+    from gf180tcad.calibrate import corners
+
+    out = []
+    for (device, corner), k in sorted(corners.FLAT_BAND_STAGE.items()):
+        tt = _process(device, root)["param"]["dv_fb_v"]["bounds"]
+        s = corners.tunable_shifts(device, corner)["dv_fb_v"]
+        lo0, hi0 = tt[0] + s, tt[1] + s
+        lo, hi = corners.corner_bounds(device, corner)["dv_fb_v"]
+        path = Path(root) / CORNER_FITS.format(device=device, corner=corner)
+        v = json.loads(path.read_text("utf-8"))["values"]["dv_fb_v"]
+        upper = v > hi0
+        before, after = (hi0, hi) if upper else (lo0, lo)
+        times = {1: "once", 2: "twice"}.get(k, f"{k} times")
+        out.append(
+            f"The {device} {corner} fit stopped on its {'upper' if upper else 'lower'} shift limit "
+            f"of {shortest(before, 'V', 4)}; widened {times}, that limit is "
+            f"{shortest(after, 'V', 4)} and the fit ends at {shortest(v, 'V', 4)}"
+        )
+    return ". ".join(out) if out else "No corner fit has a widened shift window"
+
+
 def corner_fit_hits(root: Path = ROOT) -> str:
     """A sentence naming every fit, typical or corner, whose fitted value sits on a limit."""
     hits = [
@@ -902,6 +939,8 @@ def substitutions() -> dict[str, str]:
     out.update(crosscheck_substitutions())
     out["x_corner_fit_hits"] = corner_fit_hits()
     out["x_corner_nearest_limit"] = corner_nearest_limit_sentence()
+    out["x_corner_widened"] = corner_widened()
+    out["x_flatband_half_width"] = flatband_half_width()
     out["x_corner_verdicts"] = corner_verdicts()
     out.update({f"x_{k}": v for k, v in corner_pvth0().items()})
     return out

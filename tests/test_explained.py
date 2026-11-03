@@ -2225,6 +2225,30 @@ def test_corner_nearest_limit_is_the_files():
     assert numbers.TUNABLES[f.name][0].lower() in sentence
 
 
+def test_corner_widened_sentence_is_the_files():
+    """Each widened fit of :data:`corners.FLAT_BAND_STAGE` is named with the limit it passed
+    (the window without widening), its widened limit and its committed value, which lies
+    between the two; the half-width is the process files' typical window."""
+    from gf180tcad.calibrate import corners
+
+    numbers = _numbers()
+    sentence = numbers.corner_widened()
+    assert numbers.flatband_half_width() == "0.2\u00a0V"
+    for device, corner in corners.FLAT_BAND_STAGE:
+        tt = tomllib.loads((ROOT / f"data/process/{device}.toml").read_text("utf-8"))
+        lo0, hi0 = (b + corners.tunable_shifts(device, corner)["dv_fb_v"]
+                    for b in tt["param"]["dv_fb_v"]["bounds"])  # fmt: skip
+        lo, hi = corners.corner_bounds(device, corner)["dv_fb_v"]
+        v = json.loads((ROOT / f"results/tcad/corners/{device}/{corner}.json").read_text())[
+            "values"]["dv_fb_v"]  # fmt: skip
+        assert hi0 < v < hi or lo < v < lo0, (device, corner)
+        assert f"The {device} {corner} fit stopped on its " in sentence
+        for x in (hi0 if v > hi0 else lo0, hi if v > hi0 else lo, v):
+            assert numbers.shortest(x, "V", 4) in sentence, x
+    text = LIMITS_CORNERS_PAGE.read_text("utf-8")
+    assert "{{ x_corner_widened }}" in text and "eq-corner-flatband-window" in text
+
+
 def test_corner_verdict_sentence_is_the_summaries():
     numbers = _numbers()
     sentence = numbers.corner_verdicts()

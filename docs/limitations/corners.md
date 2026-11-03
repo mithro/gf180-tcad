@@ -60,7 +60,28 @@ the card's statistical section ([issue #57](https://github.com/mithro/gf180-tcad
 
 Each fit keeps its numbers between limits set before it runs. A corner fit moves the oxide limits
 by the corner's TOXE offset. It moves the shift limits by its VTH0 offset
-({math:numref}`eq-corner-bounds`). {numref}`fig-corner-limits` shows every fit within its limits.
+({math:numref}`eq-corner-bounds`). A fit that stops on a shift limit runs again with a wider
+window, as {math:numref}`eq-corner-flatband-window` gives:
+
+$$
+V_{\mathrm{lo}} = V_s - h - k \, |\Delta V_c|, \qquad V_{\mathrm{hi}} = V_s + h + k \, |\Delta V_c|
+$$ (eq-corner-flatband-window)
+
+where
+
+- $V_{\mathrm{lo}}$, $V_{\mathrm{hi}}$ are the lower and upper shift limits of the fit at corner $c$, in V;
+- $V_s$ is the fit's start value, the typical start plus $\Delta V_c$, in V;
+- $h$ is the half-width of the typical shift window, {{ x_flatband_half_width }}, in V;
+- $k$ is how many times the window was widened, dimensionless;
+- $\Delta V_c$ is the card's VTH0 offset at corner $c$, in V.
+
+The card's VTH0 offset is the size of the corner's own threshold move. Each widening gives the
+fit one more move of that size on each side, so the window favours neither direction. A fit
+still on its limit is widened again. {{ x_corner_widened }}
+([first ff fit](https://github.com/mithro/gf180-tcad/blob/f60ca2d28138751903df564d3f98faf9a7671d61/results/tcad/corners/pfet_05v0/ff.json),
+[first sf fit](https://github.com/mithro/gf180-tcad/blob/f60ca2d28138751903df564d3f98faf9a7671d61/results/tcad/corners/pfet_05v0/sf.json)).
+
+{numref}`fig-corner-limits` shows every fit within its limits.
 
 ```{figure} /_generated/explained/corner-limits-light.svg
 :figclass: only-light
@@ -81,9 +102,11 @@ the fit's limits. The diamond is the fitted value, orange where it sits on a lim
 typical calibration files and the corner files in {repo}`results/tcad/corners`.
 ```
 
-{{ x_corner_fit_hits }}. A value on its limit is set by the limit, not by the SPICE curve. The
-bounds table gives such a lowest or highest value as the limit itself
-({ref}`explained-calibration-corners`). {{ x_corner_bound_hits }}.
+{{ x_corner_fit_hits }}. {{ x_corner_nearest_limit }}. A value on its limit is set by the limit,
+not by the SPICE curve. A table marks such a value with †, and a figure rings it in orange.
+
+The body doping has no card offset, so its corner range shows the fit trading doping against the
+other two numbers, not a process spread.
 
 (limitations-corners-card)=
 

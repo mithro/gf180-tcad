@@ -324,7 +324,8 @@ where
 
 The oxide and flat-band bounds and start values move by the corner's own shift of the same
 quantity, as {math:numref}`eq-corner-bounds` gives. The doping bounds stay as at the typical
-corner.
+corner. A fit that stops on its flat-band limit runs again with a wider window
+({ref}`limitations-corners-limits`).
 
 $$
 t_c = t + \Delta t_c, \qquad V_c = V + \Delta V_c
