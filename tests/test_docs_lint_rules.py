@@ -327,6 +327,18 @@ def test_figure_outside_sphinx_accepts_an_image():
     assert found(page, "FIGURE")  # in Sphinx an image is not a numbered figure
 
 
+def test_figure_outside_sphinx_accepts_a_picture():
+    """README.md's figures follow GitHub's theme: a <picture> whose <img> carries alt text."""
+    page = (
+        "# T\n\n<picture>\n"
+        '<source media="(prefers-color-scheme: dark)" srcset="docs/a-dark.svg">\n'
+        '<img alt="The 2D cell" src="docs/a-light.svg">\n</picture>\n\nThe stack of the cell.\n'
+    )
+    assert lint().rule_findings(page, sphinx=False) == []
+    no_alt = page.replace('alt="The 2D cell" ', "")
+    assert [f for f in lint().rule_findings(no_alt, sphinx=False) if f[1] == "FIGURE"]
+
+
 # --- the house forms build in Sphinx with the docs' MyST settings ---------------------------
 
 
