@@ -23,6 +23,8 @@
   under the gate as its voltage changes, and the bands of each region.
 - {doc}`What sets each part of the C–V curve <cv-curve>`: which of the oxide thickness, the
   body doping and a voltage shift moves each part, and how the fit uses them.
+- {doc}`What the calibration changes <calibration>`: the three fitted numbers within their
+  limits, what stays fixed and what the {term}`corners <corner>` add.
 
 ```{toctree}
 :hidden:
@@ -35,4 +37,5 @@ oxide-and-poly
 mos-capacitor
 accumulation-depletion-inversion
 cv-curve
+calibration
 ```
