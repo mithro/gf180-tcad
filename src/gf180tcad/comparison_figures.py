@@ -107,7 +107,7 @@ def process_cell_model() -> model.Cell:
                       drawn=ef.STYLE["drawn_um"])  # fmt: skip
 
 
-def process_cell_figure(palette: str) -> Figure:
+def process_cell_figure(palette: str):
     """The cell of :func:`process_cell_model` cut along its length, drawn by
     :func:`gf180tcad.explain.figures.cross_section_figure`: the parts whose doping, oxide and
     contacts one process description sets."""
@@ -143,7 +143,7 @@ def instance_extents(device: str = PLAN_DEVICE, gid: str = PLAN_GEOMETRY) -> dic
     return {"w_um": g.w_um, "l_um": g.l_um, "sd_um": sd_um}
 
 
-def instance_plan_figure(palette: str) -> Figure:
+def instance_plan_figure(palette: str):
     """The transistor of the SPICE reference seen from above, to scale: the gate strip of length
     L across the active area of width W, and the source and drain each of the length that AS and
     PS (AD and PD) assume, outlined by the perimeter those parameters count."""
@@ -193,7 +193,7 @@ def instance_plan(palette: str) -> bytes:
         return ef._svg(instance_plan_figure(palette))
 
 
-def geometries_figure(palette: str) -> Figure:
+def geometries_figure(palette: str):
     """W against L of every compared geometry, one panel per device: filled markers for the
     calibration geometries, open markers for the held-out ones (:attr:`Geometry.role`)."""
     pal = ef.PALETTES[palette]
@@ -250,7 +250,7 @@ def meshconv_points(report: dict) -> tuple[list[int], list[float]]:
     return nodes, change
 
 
-def meshconv_figure(palette: str) -> Figure:
+def meshconv_figure(palette: str):
     """The mesh convergence of the 1D and 2D MOS capacitors: the largest change of the C per
     area against the next finer mesh, by node count, with the reports' criterion."""
     pal = ef.PALETTES[palette]
@@ -321,7 +321,7 @@ def _cv_grid_figure(role: str, palette: str) -> Figure:
         return fig
 
 
-def cv_fit_figure(palette: str) -> Figure:
+def cv_fit_figure(palette: str):
     """Cgg against u of each calibration geometry, nfet left and pfet right: the SPICE typical
     corner inside the band of its five corners, and the fitted 1D stack, dashed."""
     return _cv_grid_figure("calibration", palette)
@@ -333,7 +333,7 @@ def cv_fit(palette: str) -> bytes:
         return ef._svg(cv_fit_figure(palette))
 
 
-def cv_validation_figure(palette: str) -> Figure:
+def cv_validation_figure(palette: str):
     """The same as :func:`cv_fit_figure` at the held-out geometries."""
     return _cv_grid_figure("validation", palette)
 
@@ -359,7 +359,7 @@ def metric_regions() -> tuple[np.ndarray, np.ndarray, calcv.Regions]:
     return u, c, calcv.regions(tuple(u.tolist()), tuple(c.tolist()))
 
 
-def cv_metric_figure(palette: str) -> Figure:
+def cv_metric_figure(palette: str):
     """The SPICE curve of :data:`METRIC_GEOMETRY` with the parts the agreement metric reads:
     the two plateaus (shaded), u_fb and u_t, the level C_mid and its two crossings."""
     pal = ef.PALETTES[palette]
@@ -423,7 +423,7 @@ def edge_curves(device: str = "pfet_05v0") -> list[dict]:
     return out
 
 
-def pfet_edge_figure(palette: str) -> Figure:
+def pfet_edge_figure(palette: str):
     """The pfet's depletion edge against gate length: the SPICE typical curve (solid) and the
     fitted 1D curve (dashed) of each W = 10 µm geometry, each over its own accumulation value,
     with the SPICE crossing u_dep marked."""
@@ -459,7 +459,7 @@ def pfet_edge(palette: str) -> bytes:
 # --- the process data ------------------------------------------------------------------------
 
 
-def start_stack_figure(palette: str) -> Figure:
+def start_stack_figure(palette: str):
     """The 1D stack of the nfet at the start values of the calibration, oxide and body shaded."""
     dev = model.device("nfet_05v0", "start", scales=ef.STYLE["scales"])
     return ef.stack_1d_figure(dev, ("oxide", "body"), palette)
@@ -478,7 +478,7 @@ SPLIT_DEVICE = "nfet_05v0"
 SPLIT_GEOMETRY = "w10p0_l0p60"
 
 
-def cgg_split_figure(palette: str) -> Figure:
+def cgg_split_figure(palette: str):
     """The fitted 1D Cgg of :data:`SPLIT_GEOMETRY` and its two parts by the BSIM4 bookkeeping
     (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`): the intrinsic part over the
     capacitance area, and the overlap, fringe and gate-bulk part."""
@@ -525,7 +525,7 @@ def centroid_curves(device: str) -> dict:
             "centroid": process.centroid(cv)}  # fmt: skip
 
 
-def centroid_figure(palette: str) -> Figure:
+def centroid_figure(palette: str):
     """X_DC against u for both devices: the accumulation formula (solid), the plateau windows
     beyond plus and minus :data:`gf180tcad.tcad.process.PLATEAU_V` (shaded), the largest value
     inside the accumulation window (marked) and the inversion supremum (dotted, on the inversion
@@ -584,7 +584,7 @@ def pdk_sweep_curves(device: str, root: Path) -> list[tuple[np.ndarray, np.ndarr
     return out
 
 
-def pdk_sweeps_figure(palette: str) -> Figure:
+def pdk_sweeps_figure(palette: str):
     """|Id| against |Vg| of the linear sweep at :data:`PDK_GEOMETRY`, one panel per device: the
     reference with the PDK of the image (solid) and the rerun with open_pdks d658698 (dashed,
     on top)."""
