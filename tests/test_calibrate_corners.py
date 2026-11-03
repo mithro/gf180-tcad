@@ -25,7 +25,7 @@ from test_calibrate_cv import (
     val_geometries,
 )
 
-from gf180tcad import sandbox
+from gf180tcad import io, sandbox
 from gf180tcad.calibrate import corners, cv
 from gf180tcad.devices import CORNERS, DEVICES, geometry_id
 from gf180tcad.tcad import calibration, process
@@ -513,6 +513,32 @@ def test_summary_refuses_a_stale_or_foreign_fit(tmp_path):
 
 
 # --- the command line ----------------------------------------------------------------------------
+
+
+# --- the committed tree ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("device", process.DEVICES)
+def test_committed_summary_is_the_summary_of_the_committed_fits(device, tmp_path):
+    """Each committed summary.json is, byte for byte, what :func:`corners.summary` writes from
+    the committed corner files and the committed typical fit: a stale or hand-edited summary
+    fails here, not only in the manifest hash."""
+    got = tmp_path / corners.SUMMARY_NAME
+    io.write_json(got, corners.summary(device))
+    assert got.read_bytes() == (corners.CORNERS_ROOT / device / corners.SUMMARY_NAME).read_bytes()
+
+
+@pytest.mark.parametrize("device", process.DEVICES)
+@pytest.mark.parametrize("corner", corners.FIT_CORNERS)
+def test_committed_fit_ran_in_its_window(device, corner):
+    """Each committed corner fit ran with the limits :func:`corners.corner_bounds` gives today,
+    records its flat-band widening (absent at none), and does not stop on its flat-band limit:
+    a fit that does is refitted with the window widened (:data:`corners.FLAT_BAND_STAGE`)."""
+    d = json.loads((corners.CORNERS_ROOT / device / f"{corner}.json").read_bytes())
+    assert d["bounds"] == {n: list(b) for n, b in corners.corner_bounds(device, corner).items()}
+    assert d["corner"].get("flat_band_stage", 0) == corners.flat_band_stage(device, corner)
+    assert "flat_band_stage" in d["corner"] or not corners.flat_band_stage(device, corner)
+    assert "dv_fb_v" not in d["bound_hits"], d["bound_hits"]
 
 
 def test_jobs_refuse_outside_the_sandbox(tmp_path):
