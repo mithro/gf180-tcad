@@ -495,7 +495,8 @@ overlap capacitances as fixed inputs. Its TOXE and VTH0 offsets move the start v
 of two numbers that stay fitted ({ref}`reproduce-corners`).
 
 The tables below give each fitted number's lowest and highest value over the corners. The typical
-fit is beside them. {ref}`The bounds figure <fig-calibration-bounds>` draws the same bounds. What the corner fits cannot see is on {doc}`/limitations/corners`.
+fit is beside them. {numref}`Figure %s of What the calibration changes <fig-calibration-bounds>`
+draws the same bounds. What the corner fits cannot see is on {doc}`/limitations/corners`.
 
 **nfet_05v0**
 
