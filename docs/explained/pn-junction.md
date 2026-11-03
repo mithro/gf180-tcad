@@ -146,31 +146,35 @@ are an idealised example computed from them in the depletion approximation.
 ## Where this repo's results differ
 
 The 2D cell's source and drain are not a step. Their doping peaks at the surface and falls smoothly
-to the body's at the junction depth, in a bell-shaped curve called a Gaussian
-({numref}`fig-junction-profile`). It also spreads
-sideways under the gate edge
-({py:mod}`gf180tcad.tcad.stack`). Near the junction the n side is therefore lightly doped too.
-The textbook treats such a profile as a graded junction ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
+to the body's at the junction depth, in a bell-shaped curve called a Gaussian. The doping also
+spreads sideways under the gate edge ({py:mod}`gf180tcad.tcad.stack`). The two panels of
+{numref}`fig-junction-profile` show both.
+
+Near the junction the n side is therefore lightly doped too. The textbook treats such a profile as a graded junction ({ref}`Sze and Ng, ch. 2 <lit-sze>`).
 
 ```{figure} /_generated/explained/junction-profile-light.svg
 :figclass: only-light
 :name: fig-junction-profile
-:alt: Log-scale dopant density against depth: a donor curve falling from a high value at the surface through a flat acceptor line at the junction depth, and a dashed donor step that drops at the same depth.
+:alt: Two log-scale panels of dopant density. Top, against depth: a donor curve falling from a high value at the surface through a flat acceptor line at the junction depth, and a dashed donor step that drops at the same depth. Bottom, along the surface: the donor curve halves at the gate edge and falls through the acceptor line under the gate.
 
-The donor and acceptor densities of the {term}`nfet_05v0`'s 2D cell `w10p0_l0p70` against the
-depth below its source, away from the gate edge. The source peak and the junction depth are the
+The donor and acceptor densities of the {term}`nfet_05v0`'s 2D cell `w10p0_l0p70`. The top
+panel runs down from the source's surface, away from the gate edge. The bottom one runs along
+the surface across the gate edge. The source peak and the junction depth are the
 {term}`model card`'s values, and the body doping is fitted to the {term}`SPICE` model. The
-dashed step is the abrupt junction of the panels above.
+sideways spread is the downward one times a project choice. The dashed step is the abrupt
+junction of {numref}`fig-junction-panels`.
 ```
 
 ```{figure} /_generated/explained/junction-profile-dark.svg
 :figclass: only-dark
-:alt: Log-scale dopant density against depth: a donor curve falling from a high value at the surface through a flat acceptor line at the junction depth, and a dashed donor step that drops at the same depth.
+:alt: Two log-scale panels of dopant density. Top, against depth: a donor curve falling from a high value at the surface through a flat acceptor line at the junction depth, and a dashed donor step that drops at the same depth. Bottom, along the surface: the donor curve halves at the gate edge and falls through the acceptor line under the gate.
 
-The donor and acceptor densities of the {term}`nfet_05v0`'s 2D cell `w10p0_l0p70` against the
-depth below its source, away from the gate edge. The source peak and the junction depth are the
+The donor and acceptor densities of the {term}`nfet_05v0`'s 2D cell `w10p0_l0p70`. The top
+panel runs down from the source's surface, away from the gate edge. The bottom one runs along
+the surface across the gate edge. The source peak and the junction depth are the
 {term}`model card`'s values, and the body doping is fitted to the {term}`SPICE` model. The
-dashed step is the abrupt junction of the panels above.
+sideways spread is the downward one times a project choice. The dashed step is the abrupt
+junction of {numref}`fig-junction-panels`.
 ```
 
 The {term}`TCAD` solves for the carrier densities everywhere and assumes no depletion

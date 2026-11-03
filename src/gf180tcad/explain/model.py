@@ -22,9 +22,11 @@ It reads no simulator module and imports nothing outside the docs dependency gro
 
 from __future__ import annotations
 
+import ast
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 
@@ -160,10 +162,36 @@ class Cell:
         :func:`gf180tcad.tcad.stack.sd_straggle_um` computes it (tested)."""
         return self.xj_um / math.sqrt(2 * math.log(self.n_sd_cm3 / self.n_body_cm3))
 
-    def sd_doping(self, depth_um):
+    def sd_doping(self, depth_um, past_edge_um=None):
         """The source/drain donor (nfet) or acceptor (pfet) density (cm⁻³) at ``depth_um`` below
-        the surface, away from the gate edge: peak·exp(−y²/(2·s²)) with s :attr:`sd_straggle_um`."""
-        return self.n_sd_cm3 * np.exp(-np.square(depth_um) / (2 * self.sd_straggle_um**2))
+        the surface: peak·exp(−y²/(2·s²)) with s :attr:`sd_straggle_um`. Away from the gate edge
+        (``past_edge_um`` None) that is all; at ``past_edge_um`` from the edge towards the gate
+        (negative in the source) it is times the lateral factor ½·erfc(x/(√2·s_lat)), with
+        s_lat = s × :func:`lateral_straggle_ratio`, the mask-edge factor of the simulated cell's
+        implant (``gplugins.devsim.doping.Lateral``)."""
+        vertical = self.n_sd_cm3 * np.exp(-np.square(depth_um) / (2 * self.sd_straggle_um**2))
+        if past_edge_um is None:
+            return vertical
+        s_lat = self.sd_straggle_um * lateral_straggle_ratio()
+        x = np.asarray(past_edge_um, dtype=float) / (math.sqrt(2) * s_lat)
+        return vertical * np.vectorize(math.erfc)(x) / 2
+
+
+#: The committed source that holds the lateral straggle ratio of the simulated cell.
+STACK_SOURCE = "src/gf180tcad/tcad/stack.py"
+
+
+def lateral_straggle_ratio(root: Path = ROOT) -> float:
+    """``LATERAL_STRAGGLE_RATIO`` of :mod:`gf180tcad.tcad.stack`, the source/drain implant's
+    lateral straggle over its vertical one (a project choice there), read as the literal it is
+    assigned in the committed source :data:`STACK_SOURCE`: the explainer imports no TCAD module
+    (tested), and the value has one home."""
+    tree = ast.parse((root / STACK_SOURCE).read_text(encoding="utf-8"))
+    for node in tree.body:
+        names = [t.id for t in getattr(node, "targets", []) if isinstance(t, ast.Name)]
+        if isinstance(node, ast.Assign) and names == ["LATERAL_STRAGGLE_RATIO"]:
+            return float(ast.literal_eval(node.value))
+    raise LookupError(f"{STACK_SOURCE} assigns no LATERAL_STRAGGLE_RATIO")
 
 
 def cell_meta_path(device: str, params: str, geometry: str) -> str:

@@ -2269,6 +2269,36 @@ def test_sd_straggle_is_the_simulated_cells():
     assert c.sd_doping(c.xj_um) == pytest.approx(c.n_body_cm3, rel=1e-12)
 
 
+def test_lateral_spread_is_the_simulated_cells(tmp_path):
+    """Across the gate edge the explainer's source doping is gplugins' mask-edge factor
+    ½·erfc(x/(√2·s_lat)) with the cell's lateral straggle: half the peak at the edge, the peak far
+    into the source and nothing far under the gate; the ratio is the stack's own (read from its
+    source, tested equal to the import), and a source without it is an error.
+
+    Hand value: one lateral straggle under the gate, ½·erfc(1/√2) = 0.158655."""
+    from gf180tcad.explain import figures, model
+    from gf180tcad.tcad import stack
+
+    assert model.lateral_straggle_ratio() == stack.LATERAL_STRAGGLE_RATIO
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70",
+        scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
+    )  # fmt: skip
+    s_lat = c.sd_straggle_um * stack.LATERAL_STRAGGLE_RATIO
+    peak = c.n_sd_cm3
+    assert c.sd_doping(0.0, 0.0) == pytest.approx(peak / 2)
+    assert c.sd_doping(0.0, s_lat) == pytest.approx(0.158655 * peak, rel=1e-5)
+    assert c.sd_doping(0.0, -10 * s_lat) == pytest.approx(peak)
+    assert c.sd_doping(0.0, 10 * s_lat) < 1e-20 * peak
+    src = tmp_path / model.STACK_SOURCE
+    src.parent.mkdir(parents=True)
+    src.write_text("OTHER = 2.0\n", encoding="utf-8")
+    with pytest.raises(LookupError):
+        model.lateral_straggle_ratio(tmp_path)
+    src.write_text("LATERAL_STRAGGLE_RATIO = 0.7\n", encoding="utf-8")
+    assert model.lateral_straggle_ratio(tmp_path) == 0.7
+
+
 def test_junction_profile_draws_the_cell():
     """The profile plot's lines are the cell's Gaussian, the abrupt step at the junction depth
     and the uniform body, and the figure is registered with no exaggeration statement."""
@@ -2279,7 +2309,11 @@ def test_junction_profile_draws_the_cell():
         scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
     )  # fmt: skip
     fig = figures.junction_profile_figure("light")
-    (ax,) = fig.axes
+    ax, ax_lat = fig.axes
+    (lateral,) = [ln for ln in ax_lat.lines if ln.get_gid() == "lateral"]
+    x = lateral.get_xdata()
+    assert list(lateral.get_ydata()) == pytest.approx(list(c.sd_doping(0.0, x)))
+    assert x[0] < 0 < x[-1]
     lines = {ln.get_label(): ln for ln in ax.lines}
     g = lines[figures.PROFILE_LINES["gaussian"]]
     assert list(g.get_ydata()) == pytest.approx(list(c.sd_doping(g.get_xdata())))

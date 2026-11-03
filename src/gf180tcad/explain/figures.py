@@ -130,8 +130,11 @@ STYLE = {
     # Drawing order (matplotlib zorder) of the lattice: bonds, then atoms, then the bonding
     # electrons, then the free electrons and holes, then the atoms' labels on top.
     "lattice_zorder": {"bond": 1, "atom": 2, "electron": 3, "carrier": 4, "label": 5},
-    # The source doping profile: depths to (1 + pad) junction depths.
+    # The source doping profile: a taller figure for the two rows; depths to (1 + pad) junction
+    # depths; along the surface, this many lateral straggles either side of the gate edge.
+    "profile_size_in": (6.4, 6.4),
     "profile_pad": 0.5,
+    "profile_span": 4.0,
     # The lightly doped drain of the parts page, which the simulated cell does not have: drawn at
     # a chosen size (µm), with no committed source.
     "ldd_drawn_um": {
@@ -1285,33 +1288,47 @@ def junction_profile_figure(palette: str):
         "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
     )
     y = np.linspace(0, (1 + STYLE["profile_pad"]) * c.xj_um, STYLE["regime_points"])
+    span = STYLE["profile_span"] * c.sd_straggle_um * model.lateral_straggle_ratio()
+    x = np.linspace(-span, span, STYLE["regime_points"])
     lo, hi = c.n_body_cm3 / STYLE["headroom"], c.n_sd_cm3 * STYLE["headroom"]
+    label_y = hi / (hi / lo) ** STYLE["label_drop"]
     with matplotlib.rc_context(_rc(palette)):
-        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        fig = Figure(figsize=STYLE["profile_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
-        ax = fig.subplots()
-        ax.set_yscale("log")
+        ax, ax_lat = fig.subplots(2, 1, sharey=True)
+        for a in (ax, ax_lat):
+            a.set_yscale("log")
+            a.grid(True)
+            a.set_ylabel("dopant density (cm⁻³)")
         ax.set_ylim(lo, hi)
         ax.set_xlim(y[0], y[-1])
-        ax.grid(True)
+        ax_lat.set_xlim(x[0], x[-1])
+        ax.set_title("down from the surface, away from the gate", fontsize=STYLE["text_pt"])
+        ax_lat.set_title("along the surface, across the gate edge", fontsize=STYLE["text_pt"])
+        ax_lat.plot(x, c.sd_doping(0.0, x), color=pal["electron"], lw=lw, gid="lateral")
+        ax_lat.plot([x[0], x[-1]], [c.n_body_cm3] * 2, color=pal["hole"], lw=lw)
+        ax_lat.axvline(0.0, color=pal["text"], lw=STYLE["edge_width"])
+        ax_lat.text(0.0, label_y, "source ", ha="right", va="top")
+        ax_lat.text(0.0, label_y, " under the gate", ha="left", va="top")
+        ax_lat.set_xlabel("distance from the gate edge (µm)")
         ax.plot(y, c.sd_doping(y), color=pal["electron"], lw=lw, label=PROFILE_LINES["gaussian"])
         ax.plot([y[0], c.xj_um, c.xj_um], [c.n_sd_cm3, c.n_sd_cm3, lo], color=pal["electron"],
                 lw=lw, ls="--", label=PROFILE_LINES["step"])  # fmt: skip
         ax.plot([y[0], y[-1]], [c.n_body_cm3] * 2, color=pal["hole"], lw=lw,
                 label=PROFILE_LINES["body"])  # fmt: skip
         ax.axvline(c.xj_um, color=pal["text"], lw=STYLE["edge_width"])
-        ax.text(c.xj_um, hi / (hi / lo) ** STYLE["label_drop"], " junction", ha="left", va="top")
+        ax.text(c.xj_um, label_y, " junction", ha="left", va="top")
         ax.set_xlabel("depth below the silicon surface (µm)")
-        ax.set_ylabel("dopant density (cm⁻³)")
         fig.legend(loc="outside lower center", ncols=2, frameon=False)
         return fig
 
 
 def junction_profile(palette: str) -> bytes:
-    """The donor and acceptor densities of the nfet's 2D cell ``w10p0_l0p70`` against the depth
-    below its source, away from the gate edge: the Gaussian of the simulated cell
-    (:meth:`gf180tcad.explain.model.Cell.sd_doping`), the abrupt step of the junction panels and
-    the uniform body, with the junction depth marked."""
+    """The donor and acceptor densities of the nfet's 2D cell ``w10p0_l0p70``: on top against the
+    depth below its source, away from the gate edge, the Gaussian of the simulated cell
+    (:meth:`gf180tcad.explain.model.Cell.sd_doping`) beside the abrupt step of the junction panels
+    and the uniform body, with the junction depth marked; below, along the surface across the
+    gate edge, where the Gaussian spreads under the gate."""
     with matplotlib.rc_context(_rc(palette)):
         return _svg(junction_profile_figure(palette))
 
