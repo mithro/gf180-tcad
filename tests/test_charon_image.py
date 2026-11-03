@@ -211,10 +211,12 @@ def test_charon_single_thread(tmp_path):
 
 @pytest.mark.sandbox
 def test_charon_two_runs_byte_identical(tmp_path):
-    """Two runs of the upstream loca_moscap_cv 1 Hz deck give byte-identical currents.
+    """Two runs of the upstream loca_moscap_cv 1 Hz deck give the same currents and fields.
 
-    The output Exodus file is not compared byte for byte: its QA record holds the run's date,
-    time and host name (Experiment A3). The backend never commits it.
+    The currents file is compared byte for byte. The output Exodus file is not: its QA record
+    holds the run's date, time and host name (Experiment A3), so it is compared through
+    ``exodiff -absolute -tolerance 0`` (every time step and every global, nodal and element
+    variable, with zero difference allowed). The backend never commits the Exodus file.
     """
     for d in ("a", "b"):
         (tmp_path / d).mkdir()
@@ -223,3 +225,10 @@ def test_charon_two_runs_byte_identical(tmp_path):
     a = (tmp_path / "a" / "currents-loca.dat").read_bytes()
     b = (tmp_path / "b" / "currents-loca.dat").read_bytes()
     assert a and a == b
+    exo = LOCA.removesuffix(".inp") + ".exo"
+    out = _run(
+        f"{{ exodiff -absolute -tolerance 0 a/{exo} b/{exo}; echo exodiff-exit=$?; }}", tmp_path
+    )
+    assert "exodiff: Files are the same" in out, out
+    assert "exodiff-exit=0" in out, out
+    assert re.search(r"Times = 2\b", out), out

@@ -654,7 +654,8 @@ computes, and OpenMPI's progress thread.
 
 The Exodus output file holds the date, time and host of the run in its QA record. Two runs of
 the same deck therefore differ in that record only. The text output `currents-loca.dat` is
-byte-identical between runs.
+byte-identical between runs. The image's `exodiff -absolute -tolerance 0` finds no difference
+between the two Exodus files in any variable at any time step.
 
 ### Build cost
 

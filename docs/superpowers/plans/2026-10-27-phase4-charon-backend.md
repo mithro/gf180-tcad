@@ -120,7 +120,8 @@ The build and its checks:
 - **Probe fix (A2).** Charon's `Interpreter.cmake` copies the interpreter with `rsync`, which the base image lacks. It ignores the failure, so the first probe run failed. `0005` (GPL) copies with `file(COPY)`. All four probe tests then pass, and the `ctest -N` count is 4.
 - **Reproducibility fix.** Host and CI builds of one commit differed in 102 generated interpreter modules and their `.pyc` files. The interpreter generator lists its inputs in directory order. `0006` (GPL) sorts the three listings. Both builds then give config `sha256:100d6227…`.
 - **MPI singleton (A3).** Without settings, `charon_mp.exe` as one process forks `orted` and writes `/tmp/pmix-gds-shmem.*` files. `OMPI_MCA_ess_singleton_isolated=1` alone stops both. The plan's transport settings are not needed for one process.
-- **Threads and output.** The process has 2 threads: the solve and OpenMPI's progress thread. The Exodus output differs between runs only in its QA record, so the byte-identity test compares `currents-loca.dat`.
+- **Threads.** The process has 2 threads: the solve and OpenMPI's progress thread.
+- **Output.** The Exodus output differs between runs only in its QA record. The byte-identity test compares `currents-loca.dat` byte for byte and the Exodus file through `exodiff -absolute -tolerance 0` (exit 0, "Files are the same").
 - **Measured.** A1 in `tools/sandbox-run` (16 GiB, 4 CPUs, `-j2`): `make` 2:43:46, container peak 4.48 GB, install 364 MB. Image build: 1 h 11 min on a runner, 3 h 36 min on the loaded host, builder peak 6.35 GB.
 - **Test decks.** `pmoscap.nlp` and `loca_moscap_cv` 1 Hz go to `/opt/charon/share/gf180tcad/tests` for the sandbox tests.
 
