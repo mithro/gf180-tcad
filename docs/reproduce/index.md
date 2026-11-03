@@ -73,6 +73,7 @@ Each step is a target of its own, which can also be run alone:
 | `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
 | `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
+| `tcad-corners` | `python -m gf180tcad.calibrate.corners run` for both devices at ff, ss, fs and sf, four 2 GiB {term}`jobs <job>` at a time, then `summary` for each device ({ref}`reproduce-corners`) | {repo}`results/tcad/corners` |
 
 In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs`. Both use the
 same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job
@@ -96,7 +97,7 @@ parser of the command line it calls, and compare the jobs with the committed job
 default. A host with less than 32 GiB of memory should pass `make reproduce JOBS=4`, because
 each job is admitted at 4 GiB. With `make reproduce JOBS=16` more run at once, up to the
 {ref}`memory admission <reproduce-how-it-works>` limit of 32. The 1D {term}`TCAD` jobs take
-minutes. The 2D ones take hours: the 2D {term}`mesh convergence` and every 2D
+minutes; the eight corner fits take under an hour, four at a time. The 2D ones take hours: the 2D {term}`mesh convergence` and every 2D
 {term}`MOS capacitor` job run one 16 GiB job at a time, hours each ({doc}`../limitations/moscap2d`),
 so the host needs 16 GiB of memory free for the sandbox.
 
@@ -503,6 +504,7 @@ every hash. The results folders, their writers and the commands that regenerate 
 | {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `python -m gf180tcad.tcad meshconv --device D --dim 1` (and `--dim 2 --jobs 1`) `--out results/tcad/meshconv` |
 | {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate run --device D --out results/tcad/calibration` |
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate validate --device D --out results/tcad/validation` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `python -m gf180tcad.calibrate.corners run --device D --corner C --out results/tcad/corners`, then `summary --device D --out results/tcad/corners` |
 
 The 2D jobs run one 16 GiB job at a time, hours each; the L = 2 µm cells run `--method qs`,
 then `--method combine-qs`. The validation is regenerated after the calibration is committed.

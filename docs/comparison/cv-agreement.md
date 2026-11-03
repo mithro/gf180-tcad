@@ -485,6 +485,26 @@ in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call
 `moscap2d.simulate` itself. It reads the committed calibrated 2D results instead, so each
 multi-hour 2D sweep runs once and serves both the results folder and the validation.
 
+(cv-agreement-corners)=
+
+## Corner bounds
+
+The corner fits repeat this calibration against each of the other four SPICE
+{term}`corners <corner>`. Each takes its corner's {term}`model card` offsets as fixed inputs
+({ref}`reproduce-corners`). The tables below give each fitted number's lowest and highest value
+over the corners. The typical fit is beside them. {numref}`Figure %s of What the calibration changes <fig-calibration-bounds>`
+draws the same bounds. What the corner fits cannot see is on {doc}`/limitations/corners`.
+
+**nfet_05v0**
+
+```{include} /_generated/tcad/nfet_05v0/corners.inc.md
+```
+
+**pfet_05v0**
+
+```{include} /_generated/tcad/pfet_05v0/corners.inc.md
+```
+
 ## Reproduce
 
 ```
