@@ -64,13 +64,6 @@ CHARON_ENV = {
 }
 PINS = {"charon-libs": PIN, "charon": CHARON_PIN}
 
-# DRAFT (A-3 in progress): docker/CHARON_IMAGE, docker/charon/IMAGE_ID and versions.json are
-# written from CI's digests once CI has built the image; until then the tests that read them are
-# expected to fail. Remove with the pin.
-_UNPINNED = pytest.mark.xfail(
-    not CHARON_PIN.exists(), reason="docker/CHARON_IMAGE not written yet (A-3)", strict=True
-)
-
 
 def _load(name: str):
     spec = importlib.util.spec_from_file_location(f"charon_libs_{name}", LIBS / f"{name}.py")
@@ -178,13 +171,11 @@ def _lock_command() -> list[str]:
     return shlex.split(head.removeprefix("#    "))
 
 
-@_UNPINNED
 def test_charon_image_pinned_by_digest():
     text = CHARON_PIN.read_text(encoding="utf-8")
     assert re.fullmatch(r"ghcr\.io/mithro/gf180-tcad-charon@sha256:[0-9a-f]{64}\n", text)
 
 
-@_UNPINNED
 def test_charon_image_id_is_a_digest():
     text = (CHARON / "IMAGE_ID").read_text(encoding="utf-8")
     assert re.fullmatch(r"sha256:[0-9a-f]{64}\n", text)
@@ -192,7 +183,6 @@ def test_charon_image_id_is_a_digest():
         assert text != (DOCKER / other / "IMAGE_ID").read_text(encoding="utf-8"), other
 
 
-@_UNPINNED
 def test_charon_versions_json_shape():
     text = CHARON_VERSIONS.read_text(encoding="utf-8")
     data = json.loads(text)
