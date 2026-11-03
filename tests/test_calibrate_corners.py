@@ -184,9 +184,27 @@ def test_corner_bounds_shift_flatband(device):
     for corner in corners.FIT_CORNERS:
         dvth0 = corners.card_shift(device, corner, "vth0")
         lo, hi = corners.corner_bounds(device, corner)["dv_fb_v"]
-        assert (lo, hi) == (tt[0] + dvth0, tt[1] + dvth0), corner
+        w = corners.flat_band_stage(device, corner) * abs(dvth0)
+        assert (lo, hi) == (tt[0] + dvth0 - w, tt[1] + dvth0 + w), corner
     ff = corners.corner_bounds(device, "ff")["dv_fb_v"][0]
     assert (ff < tt[0]) == (device == NFET)
+
+
+def test_flat_band_window_widened_by_the_vth0_offset():
+    """A widened fit's flat-band window is start ± (h + k·|ΔVTH0|): the pfet ff window at
+    stage 1 runs from the TT lower limit to the TT upper limit plus twice the ff offset."""
+    assert dict(corners.FLAT_BAND_STAGE) == {(PFET, "ff"): 1, (PFET, "sf"): 1}
+    assert corners.flat_band_stage(NFET, "ff") == 0
+    tt = process.load(PFET).params["dv_fb_v"]
+    for corner in ("ff", "sf"):
+        dvth0 = corners.card_shift(PFET, corner, "vth0")
+        lo, hi = corners.corner_bounds(PFET, corner)["dv_fb_v"]
+        start = tt.value + dvth0
+        h = tt.bounds[1] - tt.value
+        assert math.isclose(start - lo, h + abs(dvth0)) and math.isclose(hi - start, h + abs(dvth0))
+        assert math.isclose(hi, tt.bounds[1] + 2 * dvth0) and math.isclose(lo, tt.bounds[0])
+    assert corners.corner_process(PFET, "ff").params["dv_fb_v"].bounds == corners.corner_bounds(
+        PFET, "ff")["dv_fb_v"]  # fmt: skip
 
 
 def test_corner_bounds_typical_refused():
