@@ -1958,8 +1958,8 @@ def test_corner_spread_is_the_committed_corners():
         assert [s.lowest, s.highest] == env["ngspice"]["nfet_05v0"][gid][key]
         assert s.lowest < s.typical < s.highest
     for check, key, words in (
-        ("dv_dep", "u_dep", "Falling crossing"),
-        ("dv_inv", "u_inv", "Rising crossing"),
+        ("dv_dep", "u_dep", "Depletion crossing"),
+        ("dv_inv", "u_inv", "Inversion crossing"),
     ):
         w = rec["verdicts"][check]["window"]
         s = got[words]
@@ -2140,7 +2140,7 @@ def test_corner_verdict_sentence_is_the_summaries():
 
 
 def test_corner_crossing_gaps_back_the_limitations_page():
-    """The page says the pfet's falling-crossing gap is positive at its shortest gate and
+    """The page says the pfet's depletion crossing shift is positive at its shortest gate and
     negative at its longest at every corner, and the nfet's lines lie near zero: the nfet's
     largest gap is smaller than the pfet's swing at every corner."""
     numbers = _numbers()
@@ -2153,7 +2153,7 @@ def test_corner_crossing_gaps_back_the_limitations_page():
         assert max(abs(v) for v in nfet[corner].values()) < swing / 5, corner
     text = " ".join(LIMITS_CORNERS_PAGE.read_text("utf-8").split())
     assert (
-        "At every corner the pfet's gap is positive at its shortest gate and negative at its "
+        "At every corner the pfet's shift is positive at its shortest gate and negative at its "
         "longest." in text
     )
 

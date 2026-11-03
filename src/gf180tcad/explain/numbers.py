@@ -512,8 +512,8 @@ def corner_spread(root: Path = ROOT) -> list[Spread]:
         out.append(Spread(words, "fF", metrics["typical"][key], min(vals), max(vals)))
     rec = _fit_doc(SPREAD_DEVICE, root)["per_geometry"][SPREAD_GEOMETRY]
     for check, key, words in (
-        ("dv_dep", "u_dep", "Falling crossing"),
-        ("dv_inv", "u_inv", "Rising crossing"),
+        ("dv_dep", "u_dep", "Depletion crossing"),
+        ("dv_inv", "u_inv", "Inversion crossing"),
     ):
         w = rec["verdicts"][check]["window"]
         if w["source"] != "envelope":
@@ -640,7 +640,7 @@ CROSSING_WIDTH_UM = 10.0
 
 
 def corner_crossing_gaps(device: str, root: Path = ROOT) -> dict[str, dict[float, float]]:
-    """``{corner: {gate length (µm): ΔV_dep (V)}}``: the falling-crossing gap of each fit, at
+    """``{corner: {gate length (µm): ΔV_dep (V)}}``: the depletion crossing shift of each fit, at
     every W = 10 µm gate, fitted and held out (1D). Typical from the calibration result file and
     the validation file, each other corner from its corner file (``per_geometry``, ``held_out``)."""
     from gf180tcad.devices import CORNERS

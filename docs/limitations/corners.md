@@ -15,14 +15,14 @@ fits cannot see, which fits stop on a limit, and how their shifts compare with t
 Each corner fit tunes one 1D stack, the same for every gate length. A corner's change that
 depends on the gate length cannot enter that stack. It shows up as a gap that moves with the
 length.
-{numref}`fig-corner-crossing` shows that gap at the falling crossing for every fit.
+{numref}`fig-corner-crossing` shows that shift at the depletion crossing for every fit.
 
 ```{figure} /_generated/explained/corner-crossing-light.svg
 :figclass: only-light
 :name: fig-corner-crossing
-:alt: Two panels, nfet above pfet, of the falling-crossing gap in millivolts against gate length on a log axis, one line per corner: a solid typical line, dashed ff and ss lines in colour, dotted and dash-dotted fs and sf lines in grey.
+:alt: Two panels, nfet above pfet, of the depletion crossing shift in millivolts against gate length on a log axis, one line per corner: a solid typical line, dashed ff and ss lines in colour, dotted and dash-dotted fs and sf lines in grey.
 
-The falling-crossing gap, simulated minus SPICE, at every W = 10 µm gate of each fit. Solid is
+The depletion crossing shift, simulated minus SPICE, at every W = 10 µm gate of each fit. Solid is
 the typical fit, dashed the ff and ss fits, grey the fs and sf fits. Fitted and held-out gates
 are both drawn. Read from the corner files in {repo}`results/tcad/corners` and the typical
 calibration and validation files.
@@ -30,16 +30,16 @@ calibration and validation files.
 
 ```{figure} /_generated/explained/corner-crossing-dark.svg
 :figclass: only-dark
-:alt: Two panels, nfet above pfet, of the falling-crossing gap in millivolts against gate length on a log axis, one line per corner: a solid typical line, dashed ff and ss lines in colour, dotted and dash-dotted fs and sf lines in grey.
+:alt: Two panels, nfet above pfet, of the depletion crossing shift in millivolts against gate length on a log axis, one line per corner: a solid typical line, dashed ff and ss lines in colour, dotted and dash-dotted fs and sf lines in grey.
 
-The falling-crossing gap, simulated minus SPICE, at every W = 10 µm gate of each fit. Solid is
+The depletion crossing shift, simulated minus SPICE, at every W = 10 µm gate of each fit. Solid is
 the typical fit, dashed the ff and ss fits, grey the fs and sf fits. Fitted and held-out gates
 are both drawn. Read from the corner files in {repo}`results/tcad/corners` and the typical
 calibration and validation files.
 ```
 
 The nfet's lines lie close together, near zero at every gate length. At every corner the pfet's
-gap is positive at its shortest gate and negative at its longest. The typical fit shows the same
+shift is positive at its shortest gate and negative at its longest. The typical fit shows the same
 ({ref}`the pfet mismatch <cv-agreement-mismatch>`). {{ x_corner_verdicts }}.
 
 These corner inputs do not enter a corner fit at all:

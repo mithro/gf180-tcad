@@ -1544,7 +1544,7 @@ def corner_crossing_figure(palette: str):
             ax.set_xscale("log")
             ax.grid(True)
             ax.set_title(device, fontsize=STYLE["text_pt"])
-            ax.set_ylabel("falling-crossing gap (mV)")
+            ax.set_ylabel("depletion crossing shift (mV)")
         axes[-1].set_xlabel("gate length (µm)")
         handles, labels = axes[0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
@@ -1552,8 +1552,8 @@ def corner_crossing_figure(palette: str):
 
 
 def corner_crossing(palette: str) -> bytes:
-    """The falling-crossing gap ΔV_dep of each fit (typical and the four corner fits) against the
-    gate length, at every W = 10 µm gate, one panel per transistor: a 1D stack with one flat band
+    """The depletion crossing shift ΔV_dep of each fit (typical and the four corner fits)
+    against the gate length, at every W = 10 µm gate, one panel per transistor: a 1D stack with one flat band
     for every length leaves a gap that moves with the length, at every corner
     (:func:`gf180tcad.explain.numbers.corner_crossing_gaps`)."""
     with matplotlib.rc_context(_rc(palette)):
