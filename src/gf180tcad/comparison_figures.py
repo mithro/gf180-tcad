@@ -312,7 +312,7 @@ def meshconv_figure(palette: str):
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.set_xlabel("mesh nodes")
-        ax.set_ylabel("largest |C / C_finer − 1|")
+        ax.set_ylabel("largest relative change of C")
         ax.grid(True)
         fig.legend(loc="outside lower center", ncols=2, frameon=False)
         return fig
@@ -483,7 +483,10 @@ def pfet_edge_figure(palette: str):
         ax.set_xlim(*STYLE["edge_u_v"])
         ax.set_ylim(0, STYLE["edge_headroom"])
         ax.set_xlabel("u = −Vg (V)")
-        ax.set_ylabel("Cgg / Cgg(u = −5 V)")
+        (u0,) = {float(cur["u_spice"][0]) for cur in curves} | {
+            float(cur["u"][0]) for cur in curves
+        }
+        ax.set_ylabel(f"Cgg / Cgg(u = {u0:g} V)".replace("-", "−"))
         ax.grid(True)
         fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
         return fig
@@ -643,7 +646,8 @@ def pdk_sweeps_figure(palette: str):
                         label=None if k else "open_pdks d658698", gid=f"d658698 {k}")  # fmt: skip
             ax.set_gid(device)
             ax.set_yscale("log")
-            ax.set_title(f"{_SHORT[device]} W10/L10", fontsize=ef.STYLE["text_pt"])
+            (g,) = [g for g in DEVICES[device].geometries if geometry_id(g) == PDK_GEOMETRY]
+            ax.set_title(f"{_SHORT[device]} {_label(g)}", fontsize=ef.STYLE["text_pt"])
             ax.set_xlabel("|Vg| (V)")
             ax.grid(True)
         axes[0].set_ylabel("|Id| (µA)")

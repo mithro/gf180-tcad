@@ -429,3 +429,59 @@ def test_process_cell_marks_the_channel_and_the_doping(palette):
         assert ef._short(n, "cm⁻³", ef.STYLE["label_digits"]["doping"]) in text, (part, text)
     statement = model.exaggeration(c.scales, c.drawn)
     assert statement == ef.substitutions()["x_fig_parts_cell_scale"]
+
+
+def literal_digits(source: str, allowed: set[str]) -> list[tuple[int, str]]:
+    """(line, text) of each string literal inside a function (f-string parts included) that holds
+    a digit once the ``allowed`` names are taken out; docstrings and raise messages are skipped.
+    A number in a drawn label must come from the data, not be typed into its text."""
+    import ast
+
+    tree = ast.parse(source)
+    skip = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Raise):
+            skip |= set(ast.walk(node))
+        if isinstance(node, ast.FormattedValue) and node.format_spec is not None:
+            skip |= set(ast.walk(node.format_spec))  # ".0%", ":g": formats, not numbers
+        if isinstance(node, ast.FunctionDef) and node.body and isinstance(node.body[0], ast.Expr):
+            skip.add(node.body[0].value)
+    out = []
+    for fn in (n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)):
+        for node in ast.walk(fn):
+            if (
+                node in skip
+                or not isinstance(node, ast.Constant)
+                or not isinstance(node.value, str)
+            ):
+                continue
+            text = node.value
+            for name in sorted(allowed, key=len, reverse=True):
+                text = text.replace(name, "")
+            if re.search(r"\d", text):
+                out.append((node.lineno, node.value))
+    return out
+
+
+def _allowed_names() -> set[str]:
+    """Names that hold digits but are identifiers, not numbers: the devices, their geometry ids,
+    the older PDK's commit and the text encoding."""
+    gids = {geometry_id(g) for d in DEVICES.values() for g in d.geometries}
+    return set(DEVICES) | gids | {"d658698", "utf-8"}
+
+
+def test_drawn_labels_type_no_numbers():
+    found = literal_digits(SRC.read_text(encoding="utf-8"), _allowed_names())
+    assert not found, f"numbers typed into strings (derive them from the data): {found}"
+
+
+def test_positive_control_literal_digits():
+    src = (
+        "def f(ax, g):\n"
+        "    ax.set_title('nfet W10/L10')\n"
+        "    ax.set_ylabel(f'C(u = {g} V) at -5 V')\n"
+        "    ax.text(0, 0, 'nfet_05v0')\n"
+        "    raise ValueError('2 things')\n"
+        "    ax.text(0, 0, f'{g:.0%}')\n"
+    )
+    assert [line for line, _ in literal_digits(src, {"nfet_05v0"})] == [2, 3]
