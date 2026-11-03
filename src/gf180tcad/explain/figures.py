@@ -663,6 +663,14 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
             xy[win.triangles], facecolors=rgba[win.region], edgecolors=to_rgba(pal["text"], STYLE["mesh_alpha"]),
             linewidths=STYLE["mesh_edge_pt"], rasterized=True,
         ), autolim=False)  # fmt: skip
+        # the gate oxide is a few nm thick, so at page width its edges merge into a dark band;
+        # its fill is drawn once more above the edges so the band shows the legend's colour
+        if "oxide" in win.regions:
+            thin = win.region == win.regions.index("oxide")
+            ax.add_collection(PolyCollection(
+                xy[win.triangles[thin]], facecolors=rgba[win.region[thin]], edgecolors="none",
+                rasterized=True,
+            ), autolim=False)  # fmt: skip
         # the boundary lines as one path, NaN between segments, so the SVG holds one element
         seg = xy[win.boundary_lines]
         gaps = np.full((len(seg), 1, 2), np.nan)
