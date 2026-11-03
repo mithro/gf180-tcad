@@ -706,8 +706,9 @@ builder, with other jobs sharing its 8 CPUs. Both gave the same digests. The rec
 | Wall time of the whole build (min) | 71 | 216 |
 | Wall time of `make` (min) | 65 | 209 |
 
-On the project's host the builder's memory peaked at 6.35 GB. The install in `/opt/charon` is
-353 MB, and the layer it adds to the base image is 91.7 MB compressed.
+On the project's host the builder's memory peaked at 6.35 GB. In the pinned image, the files in
+`/opt/charon` add up to 353 MB (`du -sb`), and the layer it adds to the base image is 91.7 MB
+compressed.
 
 ### Checks on GitHub
 
