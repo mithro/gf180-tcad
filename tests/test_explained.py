@@ -1958,7 +1958,7 @@ def test_corner_spread_is_the_committed_corners():
         assert [s.lowest, s.highest] == env["ngspice"]["nfet_05v0"][gid][key]
         assert s.lowest < s.typical < s.highest
     for check, key, words in (
-        ("dv_dep", "u_dep", "Depletion crossing"),
+        ("dv_dep", "u_dep", "{term}`Depletion <depletion>` crossing"),
         ("dv_inv", "u_inv", "Inversion crossing"),
     ):
         w = rec["verdicts"][check]["window"]
@@ -2209,7 +2209,8 @@ def test_corner_limits_doping_axis_has_several_labels():
     lo, hi = ax.get_xlim()
     labels = [t.get_text() for t in ax.get_xticklabels() if lo <= t.get_position()[0] <= hi]
     assert len([x for x in labels if x]) >= 2, labels
-    assert "2\xa0×\xa010¹⁷" in labels
+    assert labels[:3] == ["1", "2", "3"], labels
+    assert ax.get_xlabel().endswith("(10¹⁷ cm⁻³)"), ax.get_xlabel()
 
 
 def test_corner_nearest_limit_is_the_files():

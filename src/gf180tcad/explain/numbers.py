@@ -512,7 +512,7 @@ def corner_spread(root: Path = ROOT) -> list[Spread]:
         out.append(Spread(words, "fF", metrics["typical"][key], min(vals), max(vals)))
     rec = _fit_doc(SPREAD_DEVICE, root)["per_geometry"][SPREAD_GEOMETRY]
     for check, key, words in (
-        ("dv_dep", "u_dep", "Depletion crossing"),
+        ("dv_dep", "u_dep", "{term}`Depletion <depletion>` crossing"),
         ("dv_inv", "u_inv", "Inversion crossing"),
     ):
         w = rec["verdicts"][check]["window"]

@@ -495,7 +495,7 @@ the overlaps as fixed inputs. Its oxide and threshold offsets move the start val
 two numbers that stay fitted ({ref}`reproduce-corners`).
 
 The tables below give each fitted number's lowest and highest value over the corners. The typical
-fit is beside them. {numref}`Figure %s of What the calibration changes <fig-calibration-bounds>`
+fit is beside them. {numref}`fig-calibration-bounds`
 draws the same bounds. What the corner fits cannot see is on {doc}`/limitations/corners`.
 
 **nfet_05v0**
