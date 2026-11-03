@@ -451,20 +451,24 @@ and of the 2D cell at the level C_mid (dotted), labelled with their shift
 ```{figure} /_generated/limitations/twod-metrics-light.svg
 :name: moscap2d-metrics-figure
 :figclass: only-light
-:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV. Bottom: every plateau difference lies below zero.
+:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV, four of those markers hollow. Bottom: every plateau difference lies below zero, most below a grey band of ±5 %, all of those hollow.
 
 Every compared calibrated 2D cell ({repo}`results/tcad/validation`). Top: the shift of its depletion
 crossing from SPICE's, with the ±50 mV tolerance shaded. Bottom: its largest signed difference from
-SPICE on the accumulation (circles) and inversion (squares) plateaus.
+SPICE on the accumulation (circles) and inversion (squares) plateaus, with the ±5 % tolerance shaded.
+A hollow marker is a "Same process" verdict: outside the tolerance, inside the SPICE corner window.
+A filled marker outside the band is Disagree.
 ```
 
 ```{figure} /_generated/limitations/twod-metrics-dark.svg
 :figclass: only-dark
-:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV. Bottom: every plateau difference lies below zero.
+:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV, four of those markers hollow. Bottom: every plateau difference lies below zero, most below a grey band of ±5 %, all of those hollow.
 
 Every compared calibrated 2D cell ({repo}`results/tcad/validation`). Top: the shift of its depletion
 crossing from SPICE's, with the ±50 mV tolerance shaded. Bottom: its largest signed difference from
-SPICE on the accumulation (circles) and inversion (squares) plateaus.
+SPICE on the accumulation (circles) and inversion (squares) plateaus, with the ±5 % tolerance shaded.
+A hollow marker is a "Same process" verdict: outside the tolerance, inside the SPICE corner window.
+A filled marker outside the band is Disagree.
 ```
 
 The committed cells:

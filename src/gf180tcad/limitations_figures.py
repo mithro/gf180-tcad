@@ -25,6 +25,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import matplotlib
+import matplotlib.lines
 import matplotlib.patches
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -479,8 +480,10 @@ def two_d_validation_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def two_d_metrics(roots: Roots = DEFAULT_ROOTS) -> list[dict]:
     """Per compared 2D cell of both devices (validation files, by device then falling W and L):
-    ``device``, ``geometry``, ``verdict``, ``dv_dep_mv``, its tolerance (mV) and the signed
-    plateau residual of largest magnitude, ``acc`` and ``inv`` (per cent)."""
+    ``device``, ``geometry``, the cell's ``verdict``, ``dv_dep_mv`` and the signed plateau
+    residual of largest magnitude, ``acc`` and ``inv`` (per cent), each with its own verdict
+    (``verdict_dv_dep``, ``verdict_acc``, ``verdict_inv``) and tolerance (``tol_mv``, and
+    ``tol_acc`` and ``tol_inv`` in per cent)."""
     out = []
     for device in _DEVICES:
         two_d = validation_record(device, roots)["two_d"]
@@ -488,51 +491,82 @@ def two_d_metrics(roots: Roots = DEFAULT_ROOTS) -> list[dict]:
             rec = two_d.get(geometry_id(g))
             if rec is None or rec["status"] != "compared":
                 continue
-            res = rec["residuals"]
+            res, vds = rec["residuals"], rec["verdicts"]
             row = {
                 "device": device,
                 "geometry": g,
                 "verdict": rec["verdict"],
                 "dv_dep_mv": rec["metrics"]["dv_dep_v"] * UNITS["mv_per_v"],
-                "tol_mv": rec["verdicts"]["dv_dep"]["tolerance_v"] * UNITS["mv_per_v"],
+                "tol_mv": vds["dv_dep"]["tolerance_v"] * UNITS["mv_per_v"],
+                "verdict_dv_dep": vds["dv_dep"]["verdict"],
             }
             for part in ("acc", "inv"):
                 vals = res[f"plateau_{part}_rel"]
                 row[part] = max(vals, key=abs) * UNITS["percent"]
+                row[f"tol_{part}"] = vds[f"plateau_{part}"]["tolerance"] * UNITS["percent"]
+                row[f"verdict_{part}"] = vds[f"plateau_{part}"]["verdict"]
             out.append(row)
     return out
 
 
+# The verdict a hollow marker shows: inside the SPICE corner window, so the same process.
+SAME_PROCESS = "Same process"
+
+
+def _faces(rows: list[dict], key: str, colours: list[str]) -> list[str]:
+    """Marker faces: hollow ("none") where the metric's verdict is :data:`SAME_PROCESS`."""
+    return [
+        "none" if r[f"verdict_{key}"] == SAME_PROCESS else c
+        for r, c in zip(rows, colours, strict=True)
+    ]
+
+
 def two_d_metrics_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
-    """The depletion-crossing shift of every compared 2D cell against its tolerance (top), and
-    the largest signed plateau difference from SPICE of each, accumulation and inversion
-    (bottom), with zero marked."""
+    """The depletion-crossing shift of every compared 2D cell against its tolerance band (top),
+    and the largest signed plateau difference from SPICE of each, accumulation and inversion,
+    against theirs (bottom). A hollow marker is a metric whose verdict is "Same process" (outside
+    the band, inside the SPICE corner window); a filled one is Agree (inside the band) or
+    Disagree (outside both)."""
     pal = ef.PALETTES[palette]
     rows = two_d_metrics(roots)
     x = np.arange(len(rows))
     labels = [f"{_SHORT[r['device']]} {_label(r['geometry'])}" for r in rows]
     colours = [pal[_CARRIER[r["device"]]] for r in rows]
+    size = STYLE["marker_pt"] ** 2
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(STYLE["tall_in"])
         top, bottom = fig.subplots(2, 1, sharex=True)
         (tol,) = {r["tol_mv"] for r in rows}
         top.axhspan(-tol, tol, color=pal["band"], lw=0, gid="tolerance")
         top.text(x[-1], tol, f"±{tol:g} mV", ha="right", va="top")
-        top.scatter(x, [r["dv_dep_mv"] for r in rows], c=colours, s=STYLE["marker_pt"] ** 2,
-                    zorder=ef.STYLE["cv_zorder"], gid="dv_dep")  # fmt: skip
-        top.axhline(0, color=pal["text"], lw=ef.STYLE["edge_width"])
+        top.scatter(x, [r["dv_dep_mv"] for r in rows], facecolors=_faces(rows, "dv_dep", colours),
+                    edgecolors=colours, s=size, zorder=ef.STYLE["cv_zorder"],
+                    gid="dv_dep")  # fmt: skip
+        top.axhline(0, color=pal["text"], lw=ef.STYLE["edge_width"], gid="zero dv_dep")
         top.set_ylabel("depletion crossing\nshift (mV)")
         top.grid(True)
+        proxies = [
+            matplotlib.lines.Line2D([], [], ls="none", marker="o", ms=STYLE["marker_pt"],
+                                    color=pal["text"], label="Agree or Disagree"),
+            matplotlib.lines.Line2D([], [], ls="none", marker="o", ms=STYLE["marker_pt"],
+                                    color=pal["text"], mfc="none", label=SAME_PROCESS),
+        ]  # fmt: skip
+        (ptol,) = {r[f"tol_{part}"] for r in rows for part in ("acc", "inv")}
+        bottom.axhspan(-ptol, ptol, color=pal["band"], lw=0, gid="plateau tolerance")
+        bottom.text(x[-1], ptol, f"±{ptol:g} %", ha="right", va="top")
         for part, marker in (("acc", "o"), ("inv", "s")):
-            bottom.scatter(x, [r[part] for r in rows], c=colours, marker=marker,
-                           s=STYLE["marker_pt"] ** 2, zorder=ef.STYLE["cv_zorder"],
+            bottom.scatter(x, [r[part] for r in rows], facecolors=_faces(rows, part, colours),
+                           edgecolors=colours, marker=marker, s=size,
+                           zorder=ef.STYLE["cv_zorder"],
                            label={"acc": "accumulation", "inv": "inversion"}[part],
                            gid=f"plateau {part}")  # fmt: skip
-        bottom.axhline(0, color=pal["text"], lw=ef.STYLE["edge_width"])
+        bottom.axhline(0, color=pal["text"], lw=ef.STYLE["edge_width"], gid="zero plateau")
         bottom.set_ylabel("plateau difference\nfrom SPICE (%)")
         bottom.grid(True)
-        bottom.legend(loc="lower left", frameon=False)
         bottom.set_xticks(x, labels, rotation=STYLE["tick_deg"])
+        handles, _ = bottom.get_legend_handles_labels()
+        fig.legend(handles=[*handles, *proxies], loc="outside lower center",
+                   ncols=STYLE["legend_cols"], frameon=False)  # fmt: skip
         return fig
 
 
