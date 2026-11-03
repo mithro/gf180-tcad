@@ -97,10 +97,14 @@ def test_figures_have_dark_twins_and_every_page_embeds_pairs(tmp_path):
 
 
 def test_instance_plan_reads_the_netlist_template():
-    """The source/drain length is the template's AS / W (0.18 µm, the xschem symbol's value)."""
+    """The source/drain length is the template's AS / W: the xschem symbol's diffusion length,
+    _DIFF of the netlist module; W and L are the plan geometry's."""
+    from gf180tcad.spice.netlist import _DIFF
+
     e = cf.instance_extents()
-    assert (e["w_um"], e["l_um"]) == (1.6, 0.7)
-    assert math.isclose(e["sd_um"], 0.18, rel_tol=1e-12)
+    g = _plan_geometry()
+    assert (e["w_um"], e["l_um"]) == (g.w_um, g.l_um)
+    assert math.isclose(e["sd_um"], float(_DIFF), rel_tol=1e-12)
 
 
 def _result(device: str) -> dict:
@@ -119,15 +123,30 @@ def test_metric_figure_marks_the_calibration_regions():
 def test_pfet_edge_marks_the_recorded_crossings():
     """Each marked SPICE u_dep is the calibration's (calibration geometries) or the page's."""
     curves = cf.edge_curves()
-    assert [c["geometry"].l_um for c in curves] == [10, 2, 1, 0.7, 0.5]
+    printed = _page_u_dep()
+    assert [c["geometry"].l_um for c in curves] == list(printed)
     per = _result("pfet_05v0")["per_geometry"]
     for c in curves:
         gid = geometry_id(c["geometry"])
         if gid in per:
             assert math.isclose(c["u_dep"], per[gid]["spice_regions"]["u_dep"], rel_tol=1e-12)
     # The values the cv-agreement page prints for the five lengths (mismatch analysis).
-    printed = [-0.590, -0.688, -0.827, -0.961, -1.160]
-    assert [round(c["u_dep"], 3) for c in curves] == printed
+    assert [round(c["u_dep"], 3) for c in curves] == list(printed.values())
+
+
+def _page_u_dep() -> dict[float, float]:
+    """L (µm) -> the SPICE u_dep (V) that the committed C-V page prints for the pfet, in the
+    page's order (mismatch analysis)."""
+    page = (REPO_ROOT / "docs/comparison/cv-agreement.md").read_text("utf-8")
+    segment = " ".join(page[page.index("it is at u_dep = ") : page.index(", a spread")].split())
+    pairs = re.findall(r"−([\d.]+) V for (?:L = |Lmin \()?([\d.]+) µm", segment)
+    assert len(pairs) == 5, segment
+    return {float(l_um): -float(u) for u, l_um in pairs}
+
+
+def _plan_geometry():
+    (g,) = [g for g in DEVICES[cf.PLAN_DEVICE].geometries if geometry_id(g) == cf.PLAN_GEOMETRY]
+    return g
 
 
 def test_centroid_figure_marks_the_allowance_maximum():
@@ -271,20 +290,27 @@ def test_meshconv_figure_draws_the_reports(palette):
 
 @pytest.mark.parametrize("palette", ["light", "dark"])
 def test_centroid_figure_draws_the_allowance(palette):
-    """The dots are the largest X_DC of the process-data table (2.841 and 2.361 nm at
-    polarity × Vg = -2 V), the windows start at the files' plateau_v and the inversion lines are
-    the table's suprema (0.943 and 0.844 nm)."""
+    """The dots are the largest X_DC of the committed process-data table at the files'
+    plateau_v, and each times EPSROX/eps_si, rounded up, is the delta_nm the process file records;
+    the windows start at plateau_v and the inversion lines are the table's suprema."""
     import tomllib
 
+    from gf180tcad.tcad import process
+
     fig = cf.centroid_figure(palette)
-    table = {"nfet_05v0": (2.841, 0.943), "pfet_05v0": (2.361, 0.844)}
-    for device, (largest, inv) in table.items():
+    largest = _process_table("X_DC, accumulation plateau edge (polarity·Vg = −2 V) (nm)")
+    inv = _process_table("X_DC, inversion supremum (nm)")
+    for k, device in enumerate(("nfet_05v0", "pfet_05v0")):
         toml = tomllib.loads((REPO_ROOT / "data/process" / f"{device}.toml").read_text("utf-8"))
-        edge = toml["centroid_allowance"]["plateau_v"]
+        table = toml["centroid_allowance"]
+        edge = table["plateau_v"]
         dot = _artist(fig, f"largest {device}")
+        y = float(dot.get_ydata()[0])
         assert list(dot.get_xdata()) == [-edge]
-        assert round(dot.get_ydata()[0], 3) == largest
-        assert round(_artist(fig, f"inversion {device}").get_ydata()[0], 3) == inv
+        assert round(y, 3) == largest[k]
+        epsrox = process.load(device).card_values()["epsrox"]
+        assert process.round_up_nm(y * epsrox / process.CONSTANTS.eps_si) == table["delta_nm"]
+        assert round(_artist(fig, f"inversion {device}").get_ydata()[0], 3) == inv[k]
         assert _span(_artist(fig, "accumulation window"))[1] == -edge
         assert _span(_artist(fig, "inversion window"))[0] == edge
 
@@ -296,8 +322,9 @@ def test_pfet_edge_figure_draws_the_recorded_crossings(palette):
     at the grid's first point."""
     fig = cf.pfet_edge_figure(palette)
     per = _result("pfet_05v0")["per_geometry"]
-    printed = {"w10p0_l10p00": -0.590, "w10p0_l2p00": -0.688, "w10p0_l1p00": -0.827,
-               "w10p0_l0p70": -0.961, "w10p0_l0p50": -1.160}  # fmt: skip
+    wide = [g for g in DEVICES["pfet_05v0"].geometries if g.w_um == 10]
+    by_l = {g.l_um: geometry_id(g) for g in wide}
+    printed = {by_l[l_um]: u for l_um, u in _page_u_dep().items()}
     for gid, u_dep in printed.items():
         x = _artist(fig, f"u_dep {gid}").get_xdata()[0]
         assert round(x, 3) == u_dep
@@ -312,15 +339,19 @@ def test_pfet_edge_figure_draws_the_recorded_crossings(palette):
 
 @pytest.mark.parametrize("palette", ["light", "dark"])
 def test_instance_plan_draws_the_template_extents(palette):
-    """Source and drain are W tall and AS / W = 0.18 µm long, either side of a gate L long."""
+    """Source and drain are W tall and AS / W long (the template's diffusion length), either
+    side of a gate L long."""
+    from gf180tcad.spice.netlist import _DIFF
+
+    g = _plan_geometry()
     fig = cf.instance_plan_figure(palette)
     for name in ("source", "drain"):
         line = _artist(fig, name)
         xs, ys = line.get_xdata(), line.get_ydata()
-        assert math.isclose(max(xs) - min(xs), 0.18, rel_tol=1e-12)
-        assert math.isclose(max(ys) - min(ys), 1.6, rel_tol=1e-12)
+        assert math.isclose(max(xs) - min(xs), float(_DIFF), rel_tol=1e-12)
+        assert math.isclose(max(ys) - min(ys), g.w_um, rel_tol=1e-12)
     gate = _artist(fig, "gate").get_xdata()
-    assert math.isclose(max(gate) - min(gate), 0.7, rel_tol=1e-12)
+    assert math.isclose(max(gate) - min(gate), g.l_um, rel_tol=1e-12)
     src, drn = _artist(fig, "source").get_xdata(), _artist(fig, "drain").get_xdata()
     assert math.isclose(max(src), min(gate)) and math.isclose(min(drn), max(gate))
 
@@ -356,15 +387,41 @@ def test_cv_grid_draws_the_committed_curves(figure):
 
 
 @pytest.mark.parametrize("palette", ["light", "dark"])
-def test_cgg_split_draws_parts_that_add_up(palette):
-    """total = intrinsic + parasitic at every bias, and at u = -5 V the parasitic part and the
-    total are the 3.97 of 14.36 fF the C-V page prints for the calibrated nfet at Lmin."""
+def test_cgg_split_draws_the_bookkeeping(palette):
+    """The intrinsic part is the committed 1D C per area times (L + XL - 2 DLC)(W + XW - 2 DWC)
+    from the process file's card values; the total is SPICE x (1 + the recorded error) at every
+    plateau bias; the parts add up; and the C-V page prints the drawn parasitic and total at
+    u = -5 V."""
+    from gf180tcad.tcad import process
+
     fig = cf.cgg_split_figure(palette)
-    total, intr, par = (_artist(fig, k).get_ydata() for k in ("total", "intrinsic", "parasitic"))
-    assert _close(total, intr + par, rel=1e-9)
-    u = _artist(fig, "total").get_xdata()
-    i = int(abs(u - (-5.0)).argmin())
-    assert u[i] == -5.0 and round(par[i], 2) == 3.97 and round(total[i], 2) == 14.36
+    u = _artist(fig, "total").get_xdata().tolist()
+    total, intr, par = (
+        dict(zip(u, _artist(fig, k).get_ydata().tolist(), strict=True))
+        for k in ("total", "intrinsic", "parasitic")
+    )
+    for x in u:
+        assert math.isclose(total[x], intr[x] + par[x], rel_tol=1e-9)
+    dev = DEVICES[cf.SPLIT_DEVICE]
+    (g,) = [g for g in dev.geometries if geometry_id(g) == cf.SPLIT_GEOMETRY]
+    cv = process.load(cf.SPLIT_DEVICE).card_values()
+    area_um2 = (
+        (g.l_um * 1e-6 + cv["xl"] - 2 * cv["dlc"])
+        * (g.w_um * 1e-6 + cv["xw"] - 2 * cv["dwc"])
+        * 1e12
+    )
+    cols = _csv("tcad", "moscap1d", cf.SPLIT_DEVICE, "calibrated", "per_area.csv")
+    per_area = dict(
+        zip((dev.polarity * cols["vg"]).tolist(), cols["c_per_area"].tolist(), strict=True)
+    )
+    for x in u:
+        assert math.isclose(intr[x], per_area[x] * area_um2, rel_tol=1e-9), x
+    tt = _typical(cf.SPLIT_DEVICE, cf.SPLIT_GEOMETRY)
+    for x, rel in _residual_curve(_record(cf.SPLIT_DEVICE, cf.SPLIT_GEOMETRY)).items():
+        assert math.isclose(total[x], tt[x] * (1 + rel), rel_tol=1e-9), x
+    page = (REPO_ROOT / "docs/comparison/cv-agreement.md").read_text("utf-8")
+    end = min(u)
+    assert f"it is {par[end]:.2f} of {total[end]:.2f} fF" in page
 
 
 @pytest.mark.parametrize("palette", ["light", "dark"])
