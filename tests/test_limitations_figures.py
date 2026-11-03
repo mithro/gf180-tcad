@@ -44,6 +44,8 @@ FIGURES = [
     "mesh-grading",
     "meshconv-1d",
     "meshconv-2d",
+    "pn-slab",
+    "pin-depletion",
 ]
 
 _RENDER = textwrap.dedent(

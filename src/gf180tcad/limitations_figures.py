@@ -901,6 +901,8 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "mesh-grading": _svg_of(mesh_grading_figure),
     "meshconv-1d": _svg_of(meshconv_1d_figure),
     "meshconv-2d": _svg_of(meshconv_2d_figure),
+    "pn-slab": _svg_of(pn_slab_figure),
+    "pin-depletion": _svg_of(pin_depletion_figure),
 }
 
 
