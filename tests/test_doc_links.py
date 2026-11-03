@@ -27,6 +27,8 @@ Each detector has a positive control below that proves it fires.
 from __future__ import annotations
 
 import ast
+import html as html_lib
+import posixpath
 import re
 import subprocess
 import sys
@@ -1264,17 +1266,22 @@ def numref_findings(pages: dict[str, str]) -> list[str]:
     read "Figure N" for a figure on the same page, or "Figure N of <title>" for one on another
     page, <title> being the title of the page the link leads to (numbers restart on each page,
     so a citation across pages names the page: the FIGURE-FORM rule of tools/docs_lint.py)."""
-    titles = {path: m.group("title") for path, html in pages.items() if (m := _TITLE.search(html))}
+    titles = {
+        path: html_lib.unescape(m.group("title"))
+        for path, html in pages.items()
+        if (m := _TITLE.search(html))
+    }
     bad = []
     for path, html in pages.items():
         for m in _NUMREF.finditer(html):
-            href, text = m.group("href"), m.group("text").strip()
+            href, text = m.group("href"), html_lib.unescape(m.group("text")).strip()
             target = href.split("#", 1)[0]
-            if not target:
+            # "../explained/x.html" from "comparison/y.html" is "explained/x.html".
+            dest = posixpath.normpath(posixpath.join(posixpath.dirname(path), target))
+            if not target or dest == path:
                 if not re.fullmatch(r"Figure \d+", text):
                     bad.append(f"{path}: {text!r} (a figure on the same page)")
                 continue
-            dest = (Path(path).parent / target).as_posix()
             other = re.fullmatch(r"Figure \d+ of (?P<title>.+)", text)
             if not other or other.group("title") != titles.get(dest):
                 bad.append(f"{path}: {text!r} (a figure on {dest}, title {titles.get(dest)!r})")
@@ -1314,11 +1321,23 @@ def test_positive_control_numref_titles():
             + _numref_html("calibration.html#fig-b", "Figure 2 of What the calibration changes")),
     }  # fmt: skip
     assert numref_findings(ok) == []
+    # From another directory, through "../", and with the title HTML-escaped on both sides.
+    across = {
+        **ok,
+        "explained/cv-curve.html": head.format("What sets each part of the C&#8211;V curve", ""),
+        "comparison/cv-agreement.html": head.format("C-V agreement",
+            _numref_html("../explained/calibration.html#fig-b",
+                         "Figure 1 of What the calibration changes")
+            + _numref_html("../explained/cv-curve.html#fig-c",
+                           "Figure 1 of What sets each part of the C&#8211;V curve")),
+    }  # fmt: skip
+    assert numref_findings(across) == []
     for href, text in (
         ("calibration.html#fig-b", "Figure 2"),
         ("calibration.html#fig-b", "Figure 2 of The MOS capacitor"),
         ("#fig-a", "Figure 1 of C-V"),
         ("#fig-a", "Fig. 1"),
+        ("../explained/calibration.html#fig-b", "Figure 2 of C-V"),
     ):
         bad = {**ok, "explained/x.html": head.format("X", _numref_html(href, text))}
         assert numref_findings(bad), (href, text)
