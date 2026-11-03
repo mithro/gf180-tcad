@@ -175,6 +175,9 @@ def test_charon_runs_the_upstream_pmoscap_nlp(tmp_path):
     out = _solve(tmp_path, "pmoscap.nlp.inp", "pmoscap.exo")
     assert "Charon run completed." in out
     assert (tmp_path / "pmoscap.nlp.exo").stat().st_size > 0
+    info = _run("io_info pmoscap.nlp.exo", tmp_path)
+    # the nonlinear Poisson solve writes one state to the output Exodus file
+    assert re.search(r"^\s*Time steps\s*=\s*1\s*$", info, re.MULTILINE), info
 
 
 @pytest.mark.sandbox

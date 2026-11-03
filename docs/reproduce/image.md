@@ -682,4 +682,5 @@ run. Every other pull request skips both and passes.
 
 {repo}`tests/test_charon_image.py` runs the image's checks. Its sandbox tests run the upstream
 `pmoscap.nlp` and `loca_moscap_cv` decks in the pinned image, which installs them under
-`/opt/charon/share/gf180tcad/tests`.
+`/opt/charon/share/gf180tcad/tests`. The image's `io_info` reads one time step in the
+`pmoscap.nlp` output file.

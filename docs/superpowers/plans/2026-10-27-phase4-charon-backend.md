@@ -123,7 +123,7 @@ The build and its checks:
 - **Threads.** The process has 2 threads: the solve and OpenMPI's progress thread.
 - **Output.** The Exodus output differs between runs only in its QA record. The byte-identity test compares `currents-loca.dat` byte for byte and the Exodus file through `exodiff -absolute -tolerance 0` (exit 0, "Files are the same").
 - **Measured.** A1 in `tools/sandbox-run` (16 GiB, 4 CPUs, `-j2`): `make` 2:43:46, container peak 4.48 GB, install 364 MB. Image build: 1 h 11 min on a runner, 3 h 36 min on the loaded host, builder peak 6.35 GB.
-- **Test decks.** `pmoscap.nlp` and `loca_moscap_cv` 1 Hz go to `/opt/charon/share/gf180tcad/tests` for the sandbox tests.
+- **Test decks.** `pmoscap.nlp` and `loca_moscap_cv` 1 Hz go to `/opt/charon/share/gf180tcad/tests` for the sandbox tests. The `pmoscap.nlp` output has one state: the image's `io_info` prints "Time steps = 1".
 
 Process, tools and docs:
 - **Publishing (owner decision, 2026-11-03).** CI's build-push job publishes the image with `GITHUB_TOKEN`. The host's token has no `write:packages` scope. The recipe went first, so CI printed the digests; the pin, `IMAGE_ID` and `versions.json` followed, and CI verified them.
