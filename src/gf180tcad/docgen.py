@@ -1032,6 +1032,8 @@ def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
             "triangles, kept by the window rule ({ref}`mesh-artefact`). Drawn to scale from "
             f"{{repo}}`results/{rel}`; full mesh sha256 `{meta['full_mesh_sha256']}`."
         )
+        target = f"mesh-{name}-{gid}-{params}"
+        lines += [f"{{numref}}`{target}` shows the mesh of the 2D cell at the {params} values.", ""]
         for palette in figures.PALETTES:
             svg = f"{gid}_mesh_{params}-{palette}.svg"
             # cells that share a mesh (W1.6/L0.7 and W10/L0.7) have the same npz: drawn once
@@ -1041,7 +1043,7 @@ def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
             (ddir / svg).write_bytes(_MESH_SVG[key])
             head = [f"```{{figure}} {svg}"]
             if palette == "light":
-                head.append(f":name: mesh-{name}-{gid}-{params}")
+                head.append(f":name: {target}")
             lines += [*head, f":figclass: only-{palette}", f":alt: {_MESH_ALT}", "", caption,
                       "```", ""]  # fmt: skip
     return lines

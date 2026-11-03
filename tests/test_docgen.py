@@ -732,6 +732,7 @@ def test_mesh_figure_from_committed_artefact(tmp_path):
     text = "\n".join(lines)
     assert text.count("```{figure}") == 2  # a light and a dark twin
     assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
+    assert "{numref}`mesh-nfet_05v0-w1p0_l0p50-calibrated` shows the mesh" in text
     assert ":figclass: only-light" in text and ":figclass: only-dark" in text
     assert f"{meta['triangle_count']} of the full mesh's 40 triangles" in text
     assert "results/tcad/meshes/stable/nfet_05v0/calibrated/w1p0_l0p50" in text
