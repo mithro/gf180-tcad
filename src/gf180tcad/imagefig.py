@@ -37,8 +37,9 @@ from gf180tcad import plots
 #: The stages as the Dockerfile names them (``FROM ... AS <name>``), in build order.
 STAGES = ("deps", "build")
 
-#: WCAG 2.1 contrast floors: normal-size text (success criterion 1.4.3) and graphics (1.4.11).
+#: The WCAG 2.1 contrast floor for normal-size text (success criterion 1.4.3).
 MIN_TEXT_CONTRAST = 4.5
+#: The WCAG 2.1 contrast floor for graphics: arrows and box edges (success criterion 1.4.11).
 MIN_GRAPHIC_CONTRAST = 3.0
 
 STYLE = {
@@ -162,7 +163,10 @@ CI_BOXES = {
     ),
     "build": ("Build; push only", "the tag unverified"),
     "skip": ("Skip every", "later step;", "the job passes"),
-    "publish": ("All three pass: push the published tags,", "pr-<number>, or latest and sha-<commit>"),
+    "publish": (
+        "All three pass: push the published tags,",
+        "pr-<number>, or latest and sha-<commit>",
+    ),
 }
 
 
