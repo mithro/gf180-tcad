@@ -35,7 +35,13 @@ root_doc = "index"
 # Internal design spec and plans are not reader-facing; _build is output; _ext is code.
 # The corner fragments of the TCAD device pages (docgen.CORNER_FRAGMENT) are included by
 # docs/comparison/cv-agreement.md, never pages of their own.
-exclude_patterns = ["_build", "_ext", "superpowers", "superpowers/**", "_generated/tcad/*/corners.inc.md"]
+exclude_patterns = [
+    "_build",
+    "_ext",
+    "superpowers",
+    "superpowers/**",
+    "_generated/tcad/*/corners.inc.md",
+]
 
 html_theme = "furo"
 # docs/_static/narrow.css: tables at phone width (docs/_ext/table_cells.py adds it).
