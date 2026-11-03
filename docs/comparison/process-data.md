@@ -343,8 +343,9 @@ bounds ({py:func}`gf180tcad.tcad.process.ctm_x_dc_inv_sup_m`).
 Δ = max X_DC · EPSROX/ε_si over the plateaus, rounded up to 0.01 nm. In three places the manual's
 text and the reference C code of the same release differ. That code is
 [`src/b4ld.c`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) and
-[`src/b4temp.c`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip) in the
-BSIM4.5.0 release, the code {{ ngspice }} runs. Each is settled by the code:
+[`src/b4temp.c`](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip). Both
+files are inside the BSIM4.5.0 release archive, which both links download; {{ ngspice }} runs
+this code. Each difference is settled by the code:
 - Eq. 7.3.2 prints VFBeff in the exponent; `b4ld.c` uses Vfbzb. VFBeff tracks Vgb in
   accumulation, so with it X_DC could not change with bias there.
 - The manual gives no formula for Ldebye; `b4temp.c` uses √(ε_si·vt/(q·NDEP)).
