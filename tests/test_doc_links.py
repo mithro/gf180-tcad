@@ -1252,15 +1252,73 @@ def test_journal_name_is_not_the_electron_term():
     assert any("Electrons" in f for f in found), found
 
 
+_NUMREF = re.compile(
+    r'<a class="reference internal" href="(?P<href>[^"]*)">'
+    r'<span class="std std-numref">(?P<text>[^<]*)</span>'
+)
+_TITLE = re.compile(r"<title>(?P<title>[^<]*?) - gf180-tcad</title>")
+
+
+def numref_findings(pages: dict[str, str]) -> list[str]:
+    """The {numref} citations of ``pages`` (page path relative to the site -> its HTML) that do not
+    read "Figure N" for a figure on the same page, or "Figure N of <title>" for one on another
+    page, <title> being the title of the page the link leads to (numbers restart on each page,
+    so a citation across pages names the page: the FIGURE-FORM rule of tools/docs_lint.py)."""
+    titles = {path: m.group("title") for path, html in pages.items() if (m := _TITLE.search(html))}
+    bad = []
+    for path, html in pages.items():
+        for m in _NUMREF.finditer(html):
+            href, text = m.group("href"), m.group("text").strip()
+            target = href.split("#", 1)[0]
+            if not target:
+                if not re.fullmatch(r"Figure \d+", text):
+                    bad.append(f"{path}: {text!r} (a figure on the same page)")
+                continue
+            dest = (Path(path).parent / target).as_posix()
+            other = re.fullmatch(r"Figure \d+ of (?P<title>.+)", text)
+            if not other or other.group("title") != titles.get(dest):
+                bad.append(f"{path}: {text!r} (a figure on {dest}, title {titles.get(dest)!r})")
+    return bad
+
+
 def test_site_figures_are_numbered_as_figure_n(built_html):
     """numfig is on and numfig_format is "Figure %s" in docs/conf.py: every numbered figure of
-    the built site reads "Figure N", and every {numref} citation names it the same way."""
-    captions, cited = [], []
+    the built site reads "Figure N", and every {numref} citation names it the same way, with the
+    other page's title when it cites a figure on another page."""
+    captions, pages = [], {}
     for page in _html_pages(built_html):
         html = page.read_text(encoding="utf-8")
         captions += re.findall(r'<span class="caption-number">([^<]*)</span>', html)
-        cited += re.findall(r'<span class="std std-numref">([^<]*)</span>', html)
+        pages[page.relative_to(built_html).as_posix()] = html
     assert captions, "no numbered figure in the built site: is numfig on in docs/conf.py?"
-    assert cited, "no {numref} citation in the built site"
-    bad = [c for c in captions + cited if not re.fullmatch(r"Figure \d+\s*", c)]
+    assert any(_NUMREF.search(html) for html in pages.values()), "no {numref} in the built site"
+    bad = [c for c in captions if not re.fullmatch(r"Figure \d+\s*", c)]
     assert not bad, f"figure numbers not in the form 'Figure N': {sorted(set(bad))}"
+    bad = numref_findings(pages)
+    assert not bad, "\n".join(bad)
+
+
+def _numref_html(href: str, text: str) -> str:
+    return (f'<a class="reference internal" href="{href}">'
+            f'<span class="std std-numref">{text}</span></a>')  # fmt: skip
+
+
+def test_positive_control_numref_titles():
+    """A citation across pages passes only with the target page's own title; one on the same
+    page only as "Figure N"."""
+    head = "<html><head><title>{} - gf180-tcad</title></head><body>{}</body></html>"
+    target = head.format("What the calibration changes", "")
+    ok = {
+        "explained/calibration.html": target,
+        "explained/cv-curve.html": head.format("C-V", _numref_html("#fig-a", "Figure 1")
+            + _numref_html("calibration.html#fig-b", "Figure 2 of What the calibration changes")),
+    }  # fmt: skip
+    assert numref_findings(ok) == []
+    for href, text in (
+        ("calibration.html#fig-b", "Figure 2"),
+        ("calibration.html#fig-b", "Figure 2 of The MOS capacitor"),
+        ("#fig-a", "Figure 1 of C-V"),
+        ("#fig-a", "Fig. 1"),
+    ):
+        bad = {**ok, "explained/x.html": head.format("X", _numref_html(href, text))}
+        assert numref_findings(bad), (href, text)
