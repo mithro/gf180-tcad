@@ -11,7 +11,10 @@ the [gdsfactory](https://gdsfactory.github.io/gdsfactory/) layouts of the PDK's 
 as in Figure 1, and simulated with [DEVSIM](https://devsim.org/). The project measures how closely
 the TCAD agrees with the PDK SPICE models, quantitatively, reproducibly and in public.
 
-![Cross-section of the simulated transistor: a gate on a thin oxide in the middle, a source and a drain either side at the surface, a large body below.](docs/images/readme/cell.svg)
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/cell-dark.svg">
+<img alt="Cross-section of the simulated transistor: a gate on a thin oxide in the middle, a source and a drain either side at the surface, a large body below." src="docs/images/readme/cell-light.svg">
+</picture>
 
 *Figure 1. The simulated 2D cell of the [`nfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0) at W = 10 µm and L = 0.7 µm, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type. `make readme-figures` draws
@@ -65,13 +68,16 @@ moves by 0.57 V between L = 10 µm and the minimum length. One length-independen
 cannot follow that. Figure 2 shows both devices at the minimum length. The calibrated 1D curves
 are in [`results/tcad/moscap1d`](results/tcad/moscap1d).
 
-![Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.](docs/images/readme/cv.svg)
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/cv-dark.svg">
+<img alt="Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines." src="docs/images/readme/cv-light.svg">
+</picture>
 
 *Figure 2. Gate capacitance against gate voltage at the minimum gate length. The solid line is the
 SPICE model at the [typical corner](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-typical-corner),
 inside the grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner).
-Dotted and dashed lines are the 1D TCAD at the start and fitted values; dash-dot lines are the
-2D cell at the start (orange) and fitted (blue) values. `make readme-figures`
+The 1D TCAD is dotted at the start values and dashed at the fitted ones, the 2D cell dash-dot
+(start orange, fitted blue). `make readme-figures`
 draws it from the committed results.*
 
 Every committed TCAD result has generated

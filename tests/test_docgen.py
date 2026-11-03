@@ -678,7 +678,7 @@ def test_readme_figures_are_current():
     """README.md's committed figures are what docgen draws from the committed results now (run
     `make readme-figures` when this fails after a results change)."""
     drawn = docgen.readme_figures()
-    assert sorted(drawn) == sorted(docgen.README_FIGURES)
+    assert len(drawn) == 2 * len(docgen.README_FIGURES)
     for name, svg in drawn.items():
         committed = (docgen.README_FIGURES_DIR / name).read_bytes()
         assert committed == svg, f"{name} is stale: run make readme-figures"
@@ -693,15 +693,33 @@ def readme_prose(text: str) -> str:
 
 
 def test_readme_shows_each_figure():
-    """Each README figure is shown in README.md, captioned "*Figure N. ...*" in order, and cited
-    as "Figure N" in the prose outside every caption."""
+    """Each README figure is a <picture> in README.md that follows the theme (the dark twin as
+    the dark source, the light one as the image, with alt text), captioned "*Figure N. ...*" in
+    order and cited as "Figure N" in the prose outside every caption."""
     text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     prose = readme_prose(text)
     rel = docgen.README_FIGURES_DIR.relative_to(REPO_ROOT).as_posix()
     for n, name in enumerate(docgen.README_FIGURES, start=1):
-        assert f"{rel}/{name}" in text, name
+        picture = (
+            r"<picture>\s*"
+            rf'<source media="\(prefers-color-scheme: dark\)" srcset="{rel}/{name}-dark\.svg">\s*'
+            rf'<img alt="(?P<alt>[^"]+)" src="{rel}/{name}-light\.svg">\s*</picture>'
+        )
+        m = re.search(picture, text)
+        assert m, f"no <picture> of {name}"
+        assert len(m.group("alt")) <= 150, name
         assert f"*Figure {n}. " in text, name
         assert re.search(rf"\bFigure {n}\b", prose), f"no prose citation of Figure {n} ({name})"
+
+
+def test_readme_corner_count_is_the_registry():
+    """The README's C-V captions give the number of SPICE corners the figures draw."""
+    from gf180tcad.devices import CORNERS
+
+    text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    n = len(CORNERS)
+    found = re.findall(r"grey band of its (\d+)\s*\[corners\]", text)
+    assert found and all(int(k) == n for k in found), (found, n)
 
 
 def test_readme_prose_drops_the_captions():

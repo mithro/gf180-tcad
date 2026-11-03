@@ -1288,33 +1288,40 @@ def generate_tcad(out_dir: Path, tcad_root: Path = TCAD_RESULTS, spice_root: Pat
 
 
 # README.md is read on GitHub, where no docs build runs, so its figures are committed files. Each
-# is an explainer figure (gf180tcad.explain.figures) in the light palette, whose opaque white
-# background reads in GitHub's light and dark themes. tests/test_docgen.py fails when a committed
-# file differs from what this draws: rerun `make readme-figures` after the results change.
+# is an explainer figure (gf180tcad.explain.figures) in both palettes; README.md shows them in a
+# <picture> whose dark source follows GitHub's dark theme. tests/test_docgen.py fails when a
+# committed file differs from what this draws: rerun `make readme-figures` after the results
+# change.
 #: The folder of README.md's committed figures.
 README_FIGURES_DIR = REPO_ROOT / "docs" / "images" / "readme"
-#: README figure file name -> the explainer figure (:data:`gf180tcad.explain.figures.FIGURES`).
-README_FIGURES = {"cell.svg": "parts-cell", "cv.svg": "cv-overview"}
-#: The palette of the README figures: light, whose opaque background reads in both themes.
-README_PALETTE = "light"
+#: README figure name -> the explainer figure (:data:`gf180tcad.explain.figures.FIGURES`); each is
+#: written as ``<name>-light.svg`` and ``<name>-dark.svg``.
+README_FIGURES = {"cell": "parts-cell", "cv": "cv-overview"}
 
 
 def readme_figures() -> dict[str, bytes]:
-    """``{file name: svg bytes}`` of every README figure of :data:`README_FIGURES`."""
+    """``{file name: svg bytes}`` of every README figure of :data:`README_FIGURES`, in each
+    palette of :data:`gf180tcad.explain.figures.PALETTES`."""
     from gf180tcad.explain import figures as explained_figures
 
     return {
-        name: explained_figures.FIGURES[figure](README_PALETTE)
+        f"{name}-{palette}.svg": explained_figures.FIGURES[figure](palette)
         for name, figure in README_FIGURES.items()
+        for palette in explained_figures.PALETTES
     }
 
 
 def write_readme_figures(out_dir: Path = README_FIGURES_DIR) -> list[Path]:
-    """Write :func:`readme_figures` into ``out_dir``; return the paths written."""
+    """Write :func:`readme_figures` into ``out_dir``, removing any other SVG there; return the
+    paths written."""
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    drawn = readme_figures()
+    for stale in out.glob("*.svg"):
+        if stale.name not in drawn:
+            stale.unlink()
     written = []
-    for name, svg in readme_figures().items():
+    for name, svg in drawn.items():
         (out / name).write_bytes(svg)
         written.append(out / name)
     return written
