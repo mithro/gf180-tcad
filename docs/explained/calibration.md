@@ -4,7 +4,7 @@
 
 What does the calibration change, and what does it leave alone? This page answers that for the
 {term}`nfet_05v0` and the {term}`pfet_05v0`, for a reader who has read {doc}`cv-curve`. It shows
-the three fitted numbers, what stays fixed and what the {term}`corners <corner>` add.
+the three fitted numbers, what stays fixed and their bounds over the {term}`corners <corner>`.
 {numref}`fig-calibration-stack` shows the stack the fit changes.
 
 ```{figure} /_generated/explained/calibration-stack-light.svg
@@ -225,9 +225,50 @@ leaves out the extra solves that measure how each number moves the curve
 ## What the corners give
 
 The SPICE reference runs {{ x_corner_count }} {term}`corners <corner>`, the typical one among
-them. This repo fits the typical corner alone, so this page shows no lower or upper bound of a
-fitted number. Fits at the other corners give those bounds and the spread
-(issues [#57](https://github.com/mithro/gf180-tcad/issues/57) and [#121](https://github.com/mithro/gf180-tcad/issues/121)).
+them. A corner fit repeats the calibration against one other corner's SPICE curves. It takes that
+corner's model-card offsets of the gate area, the overlaps, the oxide and the threshold as fixed
+inputs ({ref}`reproduce-corners`). Over the {{ x_corner_count }} fits, each fitted number gets a
+lowest and a highest value. The spread is the highest minus the lowest.
+{numref}`fig-calibration-bounds` shows them.
+
+```{figure} /_generated/explained/corner-bounds-light.svg
+:figclass: only-light
+:name: fig-calibration-bounds
+:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor from its lowest to its highest value, four triangles for the corner fits and a filled diamond at the typical fit.
+
+Each fitted number of both transistors over the corners. The grey bar runs from the lowest to the
+highest value. The triangles are the fits at the four other corners, ff and ss in colour. The
+diamond is the typical fit. Read from the corner summaries
+({repo}`nfet_05v0 <results/tcad/corners/nfet_05v0/summary.json>`,
+{repo}`pfet_05v0 <results/tcad/corners/pfet_05v0/summary.json>`).
+```
+
+```{figure} /_generated/explained/corner-bounds-dark.svg
+:figclass: only-dark
+:alt: Three panels, one per fitted number: oxide thickness, body doping on a log axis and gate voltage shift. Each has a grey bar per transistor from its lowest to its highest value, four triangles for the corner fits and a filled diamond at the typical fit.
+
+Each fitted number of both transistors over the corners. The grey bar runs from the lowest to the
+highest value. The triangles are the fits at the four other corners, ff and ss in colour. The
+diamond is the typical fit. Read from the corner summaries
+({repo}`nfet_05v0 <results/tcad/corners/nfet_05v0/summary.json>`,
+{repo}`pfet_05v0 <results/tcad/corners/pfet_05v0/summary.json>`).
+```
+
+The nfet's bounds and spread
+({repo}`summary.json <results/tcad/corners/nfet_05v0/summary.json>`):
+
+{{ x_corner_bounds_table_nfet }}
+
+The pfet's bounds and spread
+({repo}`summary.json <results/tcad/corners/pfet_05v0/summary.json>`):
+
+{{ x_corner_bounds_table_pfet }}
+
+The corner of each lowest and highest value:
+
+{{ x_corner_extremes_table }}
+
+{{ x_corner_bound_hits }}. What the corner fits leave out is on {doc}`/limitations/corners`.
 
 The spread of the target itself is committed. {numref}`fig-calibration-corners` shows it as the
 grey band round the typical SPICE curve.
