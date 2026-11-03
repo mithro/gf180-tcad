@@ -78,6 +78,8 @@ EXPLAINED_FIGURES = [
     "silicon-dopants",
     "junction-profile",
     "ldd-cell",
+    "corner-cv",
+    "corner-area",
 ]
 
 

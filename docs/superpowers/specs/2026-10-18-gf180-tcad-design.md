@@ -164,6 +164,8 @@ file is not the pinned one: the pinned PDK's copy (sha256 `69a7ab87…`, recorde
 `nfet_05v0`/`pfet_05v0` wrappers. The first step of the implementing task re-reads every value
 from the pinned copy and corrects these tables where they differ.
 
+Task 16a re-read them into `data/pdk_corners.json` (2026-11-03): the pinned copy has the same values for these sections.
+
 Offsets added to the card value:
 
 | Input | BSIM4 parameter | Unit | nfet ff | nfet ss | pfet ff | pfet ss |
@@ -181,10 +183,13 @@ Factors that multiply the card value:
 | Overlap capacitance | CGSO, CGDO, CGSL, CGDL | 0.90 | 1.10 | 0.90 | 1.10 |
 | Saturation velocity | VSAT | 1.0846 | 0.899 | not applicable | not applicable |
 
-The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet card shifts
-TOXE only, not TOXP. `fs` and `sf` scale the nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT)
-or 0.75 (VTH0, TOXE) and give the pfet its own values between those of `ff` and `ss`; their
-overlap factors are 0.93 and 1.07 (nfet) and 1.07 and 0.93 (pfet). The `statistical` section gives each of the same inputs a Gaussian spread (for
+The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet model has
+no TOXP line, so its TOXP follows TOXE and moves with the TOXE offset. `fs` and `sf` scale the
+nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT) or 0.75 (VTH0, TOXE) and give the pfet its
+own values between those of `ff` and `ss`; their overlap factors are 0.93 and 1.07 (nfet) and
+1.07 and 0.93 (pfet).
+
+The `statistical` section gives each of the same inputs a Gaussian spread (for
 the 6 V nfet, for example, a VTH0 term of 8 mV shared with the pfet plus 28 mV of its own, and
 a TOXE term of 0.4 nm plus 0.13 nm, each at one standard deviation with `mc_skew = 3`).
 
