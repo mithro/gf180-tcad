@@ -369,8 +369,9 @@ and it equals the job's committed `mesh_sha256`
 | pfet `w1p6_l0p70` | 123351 | 244427 | 489146 | 3913892 |
 
 The sizes come from each meta file's `size_bytes`. A W1.6/L0.7 cell has the W10/L0.7 mesh,
-so its `.npz` has the same bytes. At L = 2 µm the window is wider than the cell. A quarter
-gate length is 0.5 µm there, and the source and the drain are 0.44 µm wide.
+so its `.npz` has the same bytes. In the two `w10p0_l2p00` cells the window is wider than the
+cell. There a quarter of the gate length is 0.5 µm by our arithmetic, more than the source or
+the drain is wide. Their widths are in each meta file's `region_bounds_um`.
 
 The 2D start cells have no artefact. Their full meshes are in no cache and on no disk, so
 each must be regenerated first ([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
@@ -379,7 +380,7 @@ Their geometry pages say why they have no mesh picture.
 **Memory and time of a cut.** The nfet W10/L0.6 cut was measured alone in a 4 GiB
 {term}`sandbox` with one CPU. Its peak memory, under an eighth of the limit, and its wall time
 are in the {ref}`run record <reproduce-meshcut-memory>`. The 4 GiB limit stays, because the
-L = 2 µm full meshes have more than twice as many triangles. The ten cuts and their exit codes
+`w10p0_l2p00` full meshes have more than twice as many triangles. The ten cuts and their exit codes
 are on {ref}`tcad-provenance`.
 
 **A regenerated mesh.** {test}`tests/tcad/test_meshcut_job.py::test_regenerated_mesh_sha_reported`
