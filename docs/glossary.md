@@ -1,8 +1,9 @@
 # Glossary
 
 Terms used in these pages. Each definition is condensed from the page it links to, which is the
-authoritative statement. Metric keys (such as `vt_lin_maxgm`) are the keys of `metrics.json`;
-their exact extraction is in {py:mod}`gf180tcad.metrics`.
+authoritative statement. Metric keys (such as `vt_lin_maxgm`) are the keys of the
+{repo}`~results/spice/ngspice/typical/nfet_05v0/w10p0_l0p60/metrics.json` file of each SPICE
+geometry; their exact extraction is in {py:mod}`gf180tcad.metrics`.
 
 ```{glossary}
 :sorted:
@@ -161,6 +162,12 @@ calibrated parameter budget
 parameter budget
   At most 8 calibrated parameters per device type (n or p), shared across all geometries. See
   {ref}`parameter-budget`.
+
+least-squares fit
+  A search for the parameter values that make the sum of the squared differences between a model
+  and its target smallest. The {term}`C–V` calibration runs {{ scipy }}'s `least_squares`
+  ([scipy 1.18.0 manual](https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.optimize.least_squares.html)).
+  See {ref}`explained-calibration-search`.
 
 process description
 process file

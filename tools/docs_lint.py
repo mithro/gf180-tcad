@@ -287,7 +287,8 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             "electric field") or "the figure above" has no {figure} directive and no {numref}
             role. Tables, headings, code, comments, glossary bodies and role targets are not
             prose; a {term} role's text is; a software stack is not a stack. In README.md and
-            CONTRIBUTING.md (read on GitHub) a Markdown image counts as a figure. Opt-out for a
+            CONTRIBUTING.md (read on GitHub) a Markdown image, or an <img> with alt
+            text (as in a <picture>), counts as a figure. Opt-out for a
             section whose noun is not a physical thing (a mesh file, a sweep command):
             <!-- figure-ok: a reason of six words or more --> in the section. Each opt-out
             prints PATH:LINE: NOTE FIGURE-OK reason.
@@ -540,7 +541,8 @@ _SOFTWARE_STACK = re.compile(r"\b(software|TCAD|tool|image|latest|stable|dev|202
                              r"|\b(?:entry|quality|review|merge)\s+gates?\b",
                              flags=re.I)
 _FIGURE_OK = re.compile(r"<!--\s*figure-ok:\s*(?P<reason>[^>]*?)\s*-->")
-_IMAGE_LINE = re.compile(r"^\s*!\[[^\]]+\]\([^)]+\)")
+# README.md's figure: a Markdown image, or the <img> of a <picture> that follows the theme.
+_IMAGE_LINE = re.compile(r"^\s*(!\[[^\]]+\]\([^)]+\)|<img\s[^>]*\balt=\"[^\"]+\"[^>]*\bsrc=)")
 
 
 def figure_findings(lines, sphinx=True):
