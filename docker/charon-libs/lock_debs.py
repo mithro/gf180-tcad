@@ -12,9 +12,10 @@ docker/tcad-dev/upstream.json uses for its GCC 14 packages). INSTALLED is the ou
 universe, amd64) of that snapshot, resolves the Depends and Pre-Depends of every PACKAGE (not
 Recommends or Suggests), and keeps what the base image does not already satisfy. A dependency
 that the base image has installed at a version that does not satisfy the constraint is an error:
-the build stage never upgrades a package of the base image. The tool reads no Breaks,
-Conflicts or Replaces field: ``dpkg -i`` refuses a package that Breaks or Conflicts with an
-installed one, but a package that Replaces files of a base image package is not detected.
+the build stage never upgrades a package of the base image. A resolved package whose Breaks,
+Conflicts or Replaces field matches a package the base image has installed (name and version
+range) is an error too: ``dpkg -i`` would stop on the first two, and would let the third take
+over files of a base image package silently.
 OUT_JSON (upstream.json) keeps its other entries; its ``deb`` entries are replaced by one per resolved .deb (``url`` in the snapshot
 pool, ``sha256`` from the index, ``install_order`` its place in dependency order, so that
 ``dpkg -i`` in that order sees each package after its dependencies).
@@ -202,6 +203,14 @@ def resolve(
         if p is None:
             sys.exit(f"lock_debs: no package {w}")
         visit(p, (w,))
+    for p in order:
+        for field in ("Breaks", "Conflicts", "Replaces"):
+            for n, op, v in (a for g in parse_relation(p.get(field, "")) for a in g):
+                if n != p["Package"] and n in installed and satisfies(installed[n], op, v):
+                    sys.exit(
+                        f"lock_debs: {p['Package']} {field} {n} {op or ''} {v or ''}".rstrip()
+                        + f"; the base image has {n} {installed[n]}"
+                    )
     return order
 
 

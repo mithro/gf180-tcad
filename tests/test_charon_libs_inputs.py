@@ -166,10 +166,22 @@ def test_patches_are_named_and_hashed():
     for i, p in enumerate(patches, start=1):
         assert re.fullmatch(rf"{i:04d}-[a-z0-9-]+\.patch", p.name), p.name
         head = p.read_text(encoding="utf-8").splitlines()[:3]
-        assert head[0] == "# SPDX-License-Identifier: GPL-3.0-or-later", p.name
-        assert re.fullmatch(r"# Patches: tcad-charon/\S+ \(Charon 2\.2\.0\)\.", head[1]), p.name
+        m = re.fullmatch(
+            r"# Patches: tcad-charon/(\S+) \((Charon 2\.2\.0|Trilinos 81e9581a)\)\.", head[1]
+        )
+        assert m, p.name
+        # A patch carries the licence of the files it changes: Charon's GPL, or the Trilinos
+        # package's own licence (Kokkos, Teuchos, SEACAS ...: BSD-3-Clause).
+        trilinos = m.group(2).startswith("Trilinos")
+        assert trilinos == m.group(1).startswith("Trilinos/"), p.name
+        spdx = "BSD-3-Clause" if trilinos else "GPL-3.0-or-later"
+        assert head[0] == f"# SPDX-License-Identifier: {spdx}", p.name
         assert head[2].startswith("# Reason: ") and len(head[2]) > 20, p.name
         assert f"`{p.name}`" in readme, f"{p.name} missing from the licence note"
+        # every file the patch changes is under the directory its header names
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.startswith(("--- a/", "+++ b/")):
+                assert line[6:].startswith(m.group(1)), (p.name, line)
     # The build records each patch with its sha256 in SOURCES.json.
     src = inputs.sources(UPSTREAM, LIBS)
     for p in patches:
@@ -306,6 +318,30 @@ def test_resolve_refuses_to_replace_a_base_package():
         lock_debs.resolve(["a-dev"], pkgs, {"liba": "1"})
 
 
+@pytest.mark.parametrize("field", ["Breaks", "Conflicts", "Replaces"])
+def test_resolve_refuses_a_package_that_breaks_conflicts_or_replaces_a_base_package(field):
+    """dpkg -i stops on Breaks and Conflicts, but would let Replaces take over a base package's
+    files silently: the resolver refuses all three when they match what the base image has."""
+    new = _pkg("a-dev", "2") | {field: "libold (<< 3)"}
+    pkgs = {"a-dev": [new], "libold": [_pkg("libold", "2")]}
+    with pytest.raises(SystemExit, match=f"a-dev {field} libold"):
+        lock_debs.resolve(["a-dev"], pkgs, {"libold": "2"})
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "libold (<< 2)",  # the base image's version is outside the range
+        "a-dev (<< 2)",  # a package naming older versions of itself
+        "other",  # a package the base image does not have
+    ],
+)
+def test_resolve_accepts_relations_that_miss_the_base_image(rel):
+    pkgs = {"a-dev": [_pkg("a-dev", "2") | {"Breaks": rel, "Conflicts": rel, "Replaces": rel}]}
+    order = lock_debs.resolve(["a-dev"], pkgs, {"libold": "2"})
+    assert [q["Package"] for q in order] == ["a-dev"]
+
+
 # --- docker/charon-libs/build: the memory-limited builder ------------------------------------
 
 BUILD = LIBS / "build"
@@ -313,9 +349,12 @@ _BUILD_TEXT = BUILD.read_text(encoding="utf-8")
 BUILDKIT_IMAGE = re.search(r'^BUILDKIT_IMAGE="([^"]+)"$', _BUILD_TEXT, re.MULTILINE).group(1)
 DEFAULT_BUILDER = re.search(r'BUILDER="\$\{GF180TCAD_BUILDER:-([^}]+)\}"', _BUILD_TEXT).group(1)
 
-# A ``docker`` stand-in: logs every call; ``buildx inspect`` prints $FAKE_STATE/inspect.txt (or
-# fails if there is none), ``buildx create`` writes it from its own --driver-opt options, and
-# ``buildx build`` fails (these tests stop before or at the build).
+# A ``docker`` stand-in: logs every call. ``buildx inspect [--bootstrap] NAME`` prints
+# $FAKE_STATE/inspect.txt (or fails if there is none); ``buildx create`` writes a one-node
+# inspect.txt from its own --driver-opt options; ``inspect -f FMT CONTAINER`` prints
+# $FAKE_STATE/container-CONTAINER.txt (Memory|MemorySwap|CgroupParent, as docker would apply
+# them), else fails like a missing container; ``buildx build`` fails (these tests stop before
+# or at the build).
 _FAKE_DOCKER = r"""#!/usr/bin/env bash
 echo "$*" >> "$FAKE_STATE/calls.log"
 case "$1 $2" in
@@ -328,21 +367,30 @@ case "$1 $2" in
                 *) shift ;;
             esac
         done
-        printf 'Name: x\nDriver:        docker-container\n\nNodes:\nDriver Options:      %s\n' \
+        printf 'Name: x\nDriver:        docker-container\n\nNodes:\nName:     x0\nDriver Options:      %s\n' \
             "$opts" > "$FAKE_STATE/inspect.txt" ;;
+    "inspect -f")
+        f="$FAKE_STATE/container-$4.txt"; [ -f "$f" ] || exit 1; cat "$f" ;;
     *) exit 3 ;;
 esac
 """
 
-
-def _inspect(opts: str) -> str:
-    return (
-        "Name:          b\nDriver:        docker-container\n\nNodes:\nName:                  b0\n"
-        f"Driver Options:        {opts}\nStatus:                stopped\n"
-    )
+GIB16 = 16 * 1073741824
 
 
-def _run_build(tmp_path, inspect: str | None):
+def _inspect(*nodes: str | None) -> str:
+    """`docker buildx inspect` text for nodes b0, b1, ... with these Driver Options (None: the
+    node has no Driver Options line)."""
+    out = "Name:          b\nDriver:        docker-container\n\nNodes:\n"
+    for i, opts in enumerate(nodes):
+        out += f"Name:                  b{i}\n"
+        if opts is not None:
+            out += f"Driver Options:        {opts}\n"
+        out += "Status:                running\n\n"
+    return out
+
+
+def _run_build(tmp_path, inspect: str | None, containers: dict[str, str] | None = None):
     bindir, state = tmp_path / "bin", tmp_path / "state"
     bindir.mkdir()
     state.mkdir()
@@ -351,6 +399,8 @@ def _run_build(tmp_path, inspect: str | None):
     docker.chmod(0o755)
     if inspect is not None:
         (state / "inspect.txt").write_text(inspect, encoding="utf-8")
+    for name, real in (containers or {}).items():
+        (state / f"container-{name}.txt").write_text(real + "\n", encoding="utf-8")
     env = {k: v for k, v in os.environ.items() if k != "GF180TCAD_BUILDER"}
     env |= {"PATH": f"{bindir}:{env['PATH']}", "FAKE_STATE": str(state)}
     res = subprocess.run([str(BUILD)], capture_output=True, text=True, env=env, check=False)
@@ -358,50 +408,100 @@ def _run_build(tmp_path, inspect: str | None):
     return res, calls
 
 
-_SLICE = 'cgroup-parent="gf180-tcad.slice" '
+def _opts() -> str:
+    return f'image="{BUILDKIT_IMAGE}" memory="16g" memory-swap="16g"'
 
 
 @pytest.mark.parametrize(
-    "opts",
+    "real",
     [
-        'image="{img}"',
-        _SLICE + 'image="{img}" memory="16g"',
-        _SLICE + 'image="{img}" memory="16g" memory-swap="32g"',
-        _SLICE + 'image="{img}" memory-swap="16g"',
-        _SLICE + 'image="{img}" memory="17g" memory-swap="17g"',
-        _SLICE + 'image="{img}" memory="lots" memory-swap="lots"',
-        'image="{img}" memory="16g" memory-swap="16g"',
-        'cgroup-parent="other.slice" image="{img}" memory="16g" memory-swap="16g"',
+        "0|0|",  # no limit
+        f"{GIB16}|{2 * GIB16}|",  # swap above the limit
+        f"{GIB16}|-1|",  # unlimited swap
+        f"{GIB16 + 1}|{GIB16 + 1}|",  # above 16 GiB
+        "lots|lots|",
     ],
 )
-def test_build_refuses_a_builder_without_the_limits(tmp_path, opts):
-    """No memory limit, one above 16 GiB, swap above it, or a builder outside gf180-tcad.slice."""
-    res, calls = _run_build(tmp_path, _inspect(opts.format(img=BUILDKIT_IMAGE)))
+def test_build_refuses_a_builder_container_without_the_limits(tmp_path, real):
+    """The check reads the limits docker applied to the running container, not the options."""
+    res, calls = _run_build(tmp_path, _inspect(_opts()), {"buildx_buildkit_b0": real})
     assert res.returncode == 2, res.stderr
     assert "no memory limit of at most 16 GiB" in res.stderr
     assert not [c for c in calls if c.startswith("buildx build")]
 
 
-@pytest.mark.parametrize("mem", ["16g", "8G", "16384m", "17179869184"])
-def test_build_accepts_a_limit_of_at_most_16g_in_the_slice(tmp_path, mem):
-    opts = _SLICE + f'image="{BUILDKIT_IMAGE}" memory="{mem}" memory-swap="{mem}"'
-    res, _calls = _run_build(tmp_path, _inspect(opts))
-    assert "build: builder" not in res.stderr, res.stderr
+def test_build_refuses_a_builder_whose_container_is_missing(tmp_path):
+    res, _calls = _run_build(tmp_path, _inspect(_opts()), {})
+    assert res.returncode != 0
+    assert not [c for c in _calls if c.startswith("buildx build")]
 
 
-def test_build_accepts_the_16g_builder(tmp_path):
-    opts = (
-        f'cgroup-parent="gf180-tcad.slice" image="{BUILDKIT_IMAGE}" memory="16g" memory-swap="16g"'
-    )
-    res, _calls = _run_build(tmp_path, _inspect(opts))
-    assert "build: builder" not in res.stderr, res.stderr
+def test_build_refuses_a_multi_node_builder_with_a_node_without_options(tmp_path):
+    """Every node is checked: one node with no Driver Options line is refused (issue #126)."""
+    good = f"{GIB16}|{GIB16}|"
+    containers = {"buildx_buildkit_b0": good, "buildx_buildkit_b1": good}
+    res, calls = _run_build(tmp_path, _inspect(_opts(), None), containers)
+    assert res.returncode == 2, res.stderr
+    assert "node b1: BuildKit image is not" in res.stderr
+    assert not [c for c in calls if c.startswith("buildx build")]
 
 
-def test_build_creates_the_16g_builder_in_the_slice(tmp_path):
-    res, calls = _run_build(tmp_path, None)
-    assert "build: builder" not in res.stderr, res.stderr
+def test_build_checks_every_node_container(tmp_path):
+    containers = {"buildx_buildkit_b0": f"{GIB16}|{GIB16}|", "buildx_buildkit_b1": "0|0|"}
+    res, _calls = _run_build(tmp_path, _inspect(_opts(), _opts()), containers)
+    assert res.returncode == 2, res.stderr
+    assert "node b1" in res.stderr
+
+
+@pytest.mark.parametrize("mem", [GIB16, 8 * 1073741824])
+def test_build_accepts_a_container_limit_of_at_most_16g(tmp_path, mem):
+    res, calls = _run_build(tmp_path, _inspect(_opts()), {"buildx_buildkit_b0": f"{mem}|{mem}|"})
+    assert "has no memory limit" not in res.stderr and "is not" not in res.stderr, res.stderr
+    assert f"node b0: Memory={mem} MemorySwap={mem}" in res.stderr
+    assert f"buildx inspect --bootstrap {DEFAULT_BUILDER}" in calls
+
+
+def test_build_creates_the_16g_builder(tmp_path):
+    res, calls = _run_build(tmp_path, None, {"buildx_buildkit_x0": f"{GIB16}|{GIB16}|"})
+    assert "has no memory limit" not in res.stderr, res.stderr
     assert calls[1] == (
         f"buildx create --name {DEFAULT_BUILDER} --driver docker-container "
         f"--driver-opt image={BUILDKIT_IMAGE} --driver-opt memory=16g "
-        "--driver-opt memory-swap=16g --driver-opt cgroup-parent=gf180-tcad.slice"
+        "--driver-opt memory-swap=16g"
     )
+
+
+def test_interpreter_is_copied_without_rsync():
+    """The base image has no rsync; Charon's Interpreter.cmake ignores the failed rsync and
+    leaves no charonInterpreter, so the probe tests could not convert their decks."""
+    text = (LIBS / "patches" / "0005-interpreter-copy-without-rsync.patch").read_text("utf-8")
+    removed = [ln for ln in text.splitlines() if ln.startswith("-") and not ln.startswith("---")]
+    added = [ln for ln in text.splitlines() if ln.startswith("+") and not ln.startswith("+++")]
+    assert len(removed) == 1 and "rsync" in removed[0]
+    assert not any("rsync" in ln for ln in added)
+    copy = " ".join(added)
+    assert (
+        "file (COPY ${CMAKE_SOURCE_DIR}/scripts/charonInterpreter DESTINATION src/interpreter"
+        in copy
+    )
+    for name in ("generateParserDocumentation", "parsers", "modifiers"):
+        assert f"--exclude {name}" in removed[0] and f"PATTERN {name} EXCLUDE" in copy, name
+
+
+def test_interpreter_generator_lists_its_inputs_sorted():
+    """The generated interpreter libraries differed between the host and a GitHub runner
+    (directory order); patch 0006 sorts every listing the generator iterates over."""
+    text = (LIBS / "patches" / "0006-interpreter-sorted-listings.patch").read_text("utf-8")
+    added = [ln[1:].strip() for ln in text.splitlines() if ln[:1] == "+" and ln[:3] != "+++"]
+    removed = [ln[1:].strip() for ln in text.splitlines() if ln[:1] == "-" and ln[:3] != "---"]
+    assert sorted(removed) == [
+        "for filename in filenames:",
+        "for filename in listdir(sourcePath):",
+        "for filename in listdir(subLineSource):",
+    ]
+    assert sorted(added) == [
+        "dirnames.sort()",
+        "for filename in sorted(filenames):",
+        "for filename in sorted(listdir(sourcePath)):",
+        "for filename in sorted(listdir(subLineSource)):",
+    ]
