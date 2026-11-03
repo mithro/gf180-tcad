@@ -154,7 +154,8 @@ same line with the same expression. The links go to the latest card's source in 
 Expressions in {term}`corner` parameters (such as `nfet_06v0_tox`) are 0 or 1 at TT, so the
 TT value is the leading number.
 
-Two of the entries below describe the gate stack. TOXE is the gate oxide's thickness and NDEP
+Two of the entries below describe the gate stack. TOXE is the thickness of the {term}`gate oxide`
+and NDEP
 the body doping under it. The nfet stack drawn at these two values is
 {numref}`Figure %s of Process data for the MOS capacitors <process-data-stack-figure>`.
 
