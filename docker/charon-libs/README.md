@@ -14,16 +14,16 @@ The patches under `patches/` change upstream source code, so each one keeps the 
 the files it changes, not the repository's Apache-2.0 grant. Its first line is the
 `SPDX-License-Identifier`. These patches change Charon and are GPL-3.0-or-later:
 
-- `0001-codata2018-constants.patch`;
-- `0005-interpreter-copy-without-rsync.patch`;
-- `0006-interpreter-sorted-listings.patch`.
+- [`0001-codata2018-constants.patch`](patches/0001-codata2018-constants.patch);
+- [`0005-interpreter-copy-without-rsync.patch`](patches/0005-interpreter-copy-without-rsync.patch);
+- [`0006-interpreter-sorted-listings.patch`](patches/0006-interpreter-sorted-listings.patch).
 
 These patches change the Trilinos packages Kokkos, SEACAS and Teuchos, and are
 BSD-3-Clause, the licence of those packages:
 
-- `0002-kokkos-include-cstdint.patch`;
-- `0003-exodus-netcdf-szip-macro.patch`;
-- `0004-teuchos-include-cstdint.patch`.
+- [`0002-kokkos-include-cstdint.patch`](patches/0002-kokkos-include-cstdint.patch);
+- [`0003-exodus-netcdf-szip-macro.patch`](patches/0003-exodus-netcdf-szip-macro.patch);
+- [`0004-teuchos-include-cstdint.patch`](patches/0004-teuchos-include-cstdint.patch).
 
 Every other file in this directory is Apache-2.0, like the rest of gf180-tcad. The opts file
 `opts/gf180.opts` holds only the project's own CMake options. The build reads Charon's
