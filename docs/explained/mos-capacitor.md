@@ -55,7 +55,7 @@ volts ({ref}`Sze and Ng, ch. 4 <lit-sze>`). Its curve against the gate voltage i
 
 ```{figure} /_generated/explained/moscap-cv-light.svg
 :figclass: only-light
-:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
+:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip a little above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`PDK`'s
 SPICE model at the {term}`typical corner`, and the grey band spans its {{ x_corner_count }}
@@ -66,7 +66,7 @@ model.
 
 ```{figure} /_generated/explained/moscap-cv-dark.svg
 :figclass: only-dark
-:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip just above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
+:alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip a little above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`PDK`'s
 SPICE model at the {term}`typical corner`, and the grey band spans its {{ x_corner_count }}

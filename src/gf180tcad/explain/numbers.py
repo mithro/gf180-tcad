@@ -22,12 +22,18 @@ calibration files, so a new verdict changes the page's sentence (:func:`word`).
 :func:`two_d_cells` reads every 2D cell with a verdict from the validation files
 (``results/tcad/validation/*.json``), so the page's table of them (:func:`two_d_table`) and
 its sentence on the Disagree cells (:func:`two_d_disagree`) grow with each new cell.
+
+The calibration page's tables are written from the calibration result files and the process
+files: the fitted numbers within their limits (:func:`fit_table`), where each start and limit
+comes from (:func:`limit_kinds_table`), the :term:`SPICE` :term:`corner` spread (:func:`corner_table`) and the
+fit's verdicts (:func:`fit_verdict_table`).
 """
 
 from __future__ import annotations
 
 import json
 import math
+import tomllib
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -299,14 +305,230 @@ def two_d_disagree(root: Path = ROOT) -> str:
 
 
 def counts(root: Path = ROOT) -> dict[str, int]:
-    """Counts a page prints: ``corner_count``, the SPICE corners of
+    """Counts a page prints: ``corner_count``, the :term:`SPICE` :term:`corners <corner>` of
     :data:`gf180tcad.devices.CORNERS`; ``fit_length_count``, the gate lengths of the nfet
-    calibration's fit (``per_geometry`` of its result file under ``root``)."""
+    calibration's fit (``per_geometry`` of its result file under ``root``); ``budget`` and
+    ``budget_used``, the parameter budget of each transistor and the part its fit uses (the
+    same in both result files, else ValueError); ``nfev_nfet`` and ``nfev_pfet``, the
+    evaluations each fit counted (``optimiser.nfev``)."""
     from gf180tcad.devices import CORNERS
 
     fit = json.loads((Path(root) / _RESULT).read_text("utf-8"))["per_geometry"]
     lengths = {g["geometry"]["l_um"] for g in fit.values()}
-    return {"corner_count": len(CORNERS), "fit_length_count": len(lengths)}
+    docs = {d: _fit_doc(d, root) for d in FITS}
+    budgets = {(doc["budget"], doc["budget_used"]) for doc in docs.values()}
+    if len(budgets) != 1:
+        raise ValueError(f"the transistors' budgets differ: {sorted(budgets)}")
+    ((budget, used),) = budgets
+    return {
+        "corner_count": len(CORNERS),
+        "fit_length_count": len(lengths),
+        "budget": budget,
+        "budget_used": used,
+        "nfev_nfet": docs["nfet_05v0"]["optimiser"]["nfev"],
+        "nfev_pfet": docs["pfet_05v0"]["optimiser"]["nfev"],
+    }
+
+
+# --- the calibration page (calibration.md) ---------------------------------------------------
+
+#: The calibration's result files, by transistor, relative to the repo root.
+FITS = {d: f"results/tcad/calibration/{d}.result.json" for d in ("nfet_05v0", "pfet_05v0")}
+
+#: The three numbers the calibration fits, in the order of a result file's ``params``: the words
+#: a page names each by, its unit, and the most significant digits it is printed with.
+TUNABLES = {
+    "t_ox_eff_nm": ("Oxide thickness", "nm", 4),
+    "n_ch_cm3": ("Body doping", _CM3, 3),
+    "dv_fb_v": ("Gate voltage shift", "V", 3),
+}
+
+#: The kinds of a start value or limit in a process file (``start_kind``, ``bounds_kind``;
+#: :data:`gf180tcad.tcad.process.KINDS`), in plain words.
+KIND_WORDS = {
+    "card": "model card",
+    "derived": "derived from the model card",
+    "project-choice": "project choice",
+}
+
+
+def shortest(v: float, unit: str, most: int) -> str:
+    """``v`` with the fewest significant digits (up to ``most``) that print the same value as
+    ``most`` digits do: 0.2 V, not 0.200 V (:func:`format_value`)."""
+    target = float(f"{v:.{most - 1}e}")
+    for d in range(1, most + 1):
+        if float(f"{v:.{d - 1}e}") == target:
+            return format_value(v, d, unit)
+    return format_value(v, most, unit)
+
+
+@dataclass(frozen=True)
+class Fit:
+    """One fitted number of one transistor: its limits, start and fitted value (its unit)."""
+
+    device: str
+    name: str
+    lower: float
+    start: float
+    fitted: float
+    upper: float
+
+
+def _fit_doc(device: str, root: Path) -> dict:
+    doc = json.loads((Path(root) / FITS[device]).read_text("utf-8"))
+    if doc["params"] != list(TUNABLES):
+        raise KeyError(f"{FITS[device]}: params {doc['params']} are not {list(TUNABLES)}")
+    return doc
+
+
+def fits(device: str, root: Path = ROOT) -> list[Fit]:
+    """The limits (``bounds``), start (``start``) and fitted value (``values``) of each of
+    :data:`TUNABLES`, read from the result file of ``device`` under ``root``."""
+    doc = _fit_doc(device, root)
+    out = []
+    for name in TUNABLES:
+        lo, hi = doc["bounds"][name]
+        out.append(Fit(device, name, lo, doc["start"][name], doc["values"][name], hi))
+    return out
+
+
+def fit_record(device: str, gid: str, root: Path = ROOT) -> dict:
+    """The ``per_geometry`` entry ``gid`` of the result file of ``device`` under ``root``."""
+    return _fit_doc(device, root)["per_geometry"][gid]
+
+
+def fit_geometries(device: str, root: Path = ROOT) -> dict[str, float]:
+    """The gate length (µm) of each geometry of the fit of ``device``, by geometry id."""
+    return {g: e["geometry"]["l_um"] for g, e in _fit_doc(device, root)["per_geometry"].items()}
+
+
+def fit_table(device: str, root: Path = ROOT) -> str:
+    """A Markdown table of :func:`fits` of ``device``: one row per fitted number, its lower
+    limit, start, fitted value and upper limit. The unit is in the row label and the cells hold
+    the values alone, so the five columns fit a phone's width."""
+    rows = ["| Number | Lower limit | Start | Fitted | Upper limit |", "|---|---|---|---|---|"]
+    for f in fits(device, root):
+        words, unit, most = TUNABLES[f.name]
+        cells = (shortest(v, "", most) for v in (f.lower, f.start, f.fitted, f.upper))
+        rows.append(f"| {words} ({unit}) | " + " | ".join(cells) + " |")
+    return "\n".join(rows)
+
+
+def _process(device: str, root: Path) -> dict:
+    return tomllib.loads((Path(root) / _proc(device)).read_text("utf-8"))
+
+
+def limit_kinds(root: Path = ROOT) -> dict[str, tuple[str, str, str]]:
+    """The kind of the start, lower limit and upper limit of each of :data:`TUNABLES`, read from
+    the process files under ``root``; ValueError when the two transistors' kinds differ."""
+    out: dict[str, tuple[str, str, str]] = {}
+    for device in FITS:
+        params = _process(device, root)["param"]
+        kinds = {n: (params[n]["start_kind"], *params[n]["bounds_kind"]) for n in TUNABLES}
+        if out and kinds != out:
+            raise ValueError(f"{device}: the kinds of the starts and limits differ: {kinds} {out}")
+        out = kinds
+    return out
+
+
+def limit_kinds_table(root: Path = ROOT) -> str:
+    """A Markdown table of :func:`limit_kinds` in :data:`KIND_WORDS`: where each fitted number's
+    start and limits come from, the same for both transistors."""
+    rows = ["| Number | Start | Lower limit | Upper limit |", "|---|---|---|---|"]
+    for name, kinds in limit_kinds(root).items():
+        rows.append(f"| {TUNABLES[name][0]} | " + " | ".join(KIND_WORDS[k] for k in kinds) + " |")
+    return "\n".join(rows)
+
+
+def bound_hits(root: Path = ROOT) -> str:
+    """A sentence on the fitted values that sit on a limit (``bound_hits`` of the result files)."""
+    hits = [
+        f"the {TUNABLES[name][0].lower()} of the {device}"
+        for device in FITS
+        for name in _fit_doc(device, root)["bound_hits"]
+    ]
+    if not hits:
+        return "No fitted value of either transistor sits on a limit"
+    return "The fit stopped on a limit for " + " and ".join(hits)
+
+
+def fit_verdict_table(root: Path = ROOT) -> str:
+    """A Markdown table of the verdict of each gate length of the fit (``per_geometry`` of the
+    result files): transistor, gate width, gate length, verdict."""
+    rows = ["| Transistor | Gate width | Gate length | Verdict |", "|---|---|---|---|"]
+    cells = []
+    for device in FITS:
+        for e in _fit_doc(device, root)["per_geometry"].values():
+            g = e["geometry"]
+            cells.append((device, g["w_um"], g["l_um"], e["verdict"]))
+    rows += [
+        f"| {{term}}`{d}` | {_um(w)} | {_um(length)} | {{term}}`{v}` |"
+        for d, w, length, v in sorted(cells)
+    ]
+    return "\n".join(rows)
+
+
+#: The SPICE corner spread of the calibration page: the nfet at its longest fit gate.
+SPREAD_DEVICE, SPREAD_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
+
+
+@dataclass(frozen=True)
+class Spread:
+    """One quantity of the SPICE curve at the typical corner, and its lowest and highest value
+    over the corners."""
+
+    words: str
+    unit: str
+    typical: float
+    lowest: float
+    highest: float
+
+
+def corner_spread(root: Path = ROOT) -> list[Spread]:
+    """The flat parts and halfway-level crossings of the SPICE curve of :data:`SPREAD_DEVICE` at
+    :data:`SPREAD_GEOMETRY`: the flat parts' Cgg from each corner's ``metrics.json``, the crossings
+    from the nfet result file (``spice_regions`` at the typical corner and the corner window of
+    each crossing check, ``verdicts.<check>.window``)."""
+    from gf180tcad.devices import CORNERS
+
+    base = Path(root) / "results" / "spice" / "ngspice"
+    rel = Path(SPREAD_DEVICE) / SPREAD_GEOMETRY / "metrics.json"
+    metrics = {c: json.loads((base / c / rel).read_text("utf-8"))["metrics"] for c in CORNERS}
+    out = []
+    for key, words in (
+        ("cgg_acc_ff", "Accumulation flat part"),
+        ("cgg_inv_ff", "Inversion flat part"),
+    ):
+        vals = [m[key] for m in metrics.values()]
+        out.append(Spread(words, "fF", metrics["typical"][key], min(vals), max(vals)))
+    rec = _fit_doc(SPREAD_DEVICE, root)["per_geometry"][SPREAD_GEOMETRY]
+    for check, key, words in (
+        ("dv_dep", "u_dep", "Falling crossing"),
+        ("dv_inv", "u_inv", "Rising crossing"),
+    ):
+        w = rec["verdicts"][check]["window"]
+        if w["source"] != "envelope":
+            raise ValueError(f"{check}: the window is {w['source']!r}, not the corner envelope")
+        out.append(Spread(words, "V", rec["spice_regions"][key], w["lo"], w["hi"]))
+    return out
+
+
+#: Most significant digits of the corner spread table.
+SPREAD_DIGITS = 3
+
+
+def corner_table(root: Path = ROOT) -> str:
+    """A Markdown table of :func:`corner_spread`: typical, lowest, highest and the spread
+    (highest minus lowest)."""
+    rows = ["| Quantity | Typical | Lowest | Highest | Spread |", "|---|---|---|---|---|"]
+    for s in corner_spread(root):
+        vals = (s.typical, s.lowest, s.highest, s.highest - s.lowest)
+        rows.append(
+            f"| {s.words} | "
+            + " | ".join(format_value(v, SPREAD_DIGITS, s.unit) for v in vals)
+            + " |"
+        )
+    return "\n".join(rows)
 
 
 def _formula(name: str):
@@ -374,15 +596,50 @@ def text(name: str) -> str:
 
 def substitutions() -> dict[str, str]:
     """``{"x_<name>": text, "x_<name>_label": label}`` for every entry, and ``{"x_<name>":
-    word}`` for every :data:`WORDS` entry, and the 2D cells' table and Disagree clause
-    (``x_two_d_table``, ``x_two_d_disagree``) and the :func:`counts`, for MyST."""
+    word}`` and ``{"x_<name>_term": word linked to the glossary}`` for every :data:`WORDS`
+    entry, and the 2D cells' table and Disagree clause
+    (``x_two_d_table``, ``x_two_d_disagree``), the :func:`counts`, the calibration page's
+    tables and sentence (``x_fit_table_nfet``, ``x_fit_table_pfet``, ``x_limit_kinds_table``,
+    ``x_bound_hits``, ``x_fit_verdict_table``, ``x_corner_table``), and the :func:`corner_pvth0`
+    numbers of the reproduce page, for MyST."""
     out: dict[str, str] = {}
     for name, n in REGISTRY.items():
         out[f"x_{name}"] = text(name)
         out[f"x_{name}_label"] = LABELS[n.kind]
     for name in WORDS:
         out[f"x_{name}"] = word(name)
+        out[f"x_{name}_term"] = f"{{term}}`{word(name)}`"
     out.update({f"x_{k}": str(v) for k, v in counts().items()})
     out["x_two_d_table"] = two_d_table()
     out["x_two_d_disagree"] = two_d_disagree()
+    for device in FITS:
+        out[f"x_fit_table_{device.split('_')[0]}"] = fit_table(device)
+    out["x_limit_kinds_table"] = limit_kinds_table()
+    out["x_bound_hits"] = bound_hits()
+    out["x_fit_verdict_table"] = fit_verdict_table()
+    out["x_corner_table"] = corner_table()
+    out.update({f"x_{k}": v for k, v in corner_pvth0().items()})
     return out
+
+
+def corner_pvth0() -> dict[str, str]:
+    """The numbers of the PVTH0 paragraph of the corner fits (docs/reproduce/index.md), from
+    :func:`gf180tcad.calibrate.corners.largest_pvth0_shift`: the corner, the gate, its DVTH0,
+    dL, dW, L_eff, W_eff, ΔP_VTH0 and ΔV_th0, each as the page prints it."""
+    from gf180tcad.calibrate import corners
+
+    corner, g, v = corners.largest_pvth0_shift()
+    row = corners.load_table()["devices"]["pfet_05v0"]["other_lines"]["pvth0"]
+    dvth0 = corners.load_table()["devices"]["pfet_05v0"]["corners"][corner][row["param"]]["value"]
+    return {
+        "corner_pvth0_corner": corner,
+        "corner_pvth0_l": format_value(g.l_um, 1, "µm"),
+        "corner_pvth0_w": format_value(g.w_um, 2, "µm"),
+        "corner_pvth0_dvth0": format_value(dvth0, 4, "V"),
+        "corner_pvth0_dl": format_value(v["dl"] * 1e9, 4, "nm"),
+        "corner_pvth0_dw": format_value(v["dw"] * 1e9, 4, "nm"),
+        "corner_pvth0_leff": format_value(v["leff"] * 1e6, 4, "µm"),
+        "corner_pvth0_weff": format_value(v["weff"] * 1e6, 5, "µm"),
+        "corner_pvth0_dp": format_value(v["dp"], 4, "V·µm²"),
+        "corner_pvth0_dv": format_value(v["dv"] * 1e3, 4, "mV"),
+    }

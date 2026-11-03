@@ -466,6 +466,63 @@ def test_figures_legible_at_400px():
     assert px >= 9, f"{px:.1f} px at 400 px"
 
 
+# --- copied images and their licence notes ---------------------------------------------------
+
+IMAGES = EXPLAINED / "images"
+_LICENCE_LINE = re.compile(r"^Licence:\s*\S", re.MULTILINE)
+_SOURCE_LINE = re.compile(r"^Source:\s*https://\S", re.MULTILINE)
+
+
+def licence_problems(images: Path) -> list[str]:
+    """Each copied image needs ``<name>.licence.txt`` beside it naming its source and licence;
+    each note needs its image."""
+    out = []
+    for f in sorted(images.iterdir()):
+        if f.name.endswith(".licence.txt"):
+            if not (images / f.name.removesuffix(".licence.txt")).is_file():
+                out.append(f"{f.name}: a licence note with no image")
+            continue
+        note = images / f"{f.name}.licence.txt"
+        if not note.is_file():
+            out.append(f"{f.name}: no licence note")
+            continue
+        text = note.read_text(encoding="utf-8")
+        if not _LICENCE_LINE.search(text):
+            out.append(f"{note.name}: no 'Licence:' line")
+        if not _SOURCE_LINE.search(text):
+            out.append(f"{note.name}: no 'Source: https://' line")
+    return out
+
+
+def test_every_copied_image_has_a_licence_note():
+    assert IMAGES.is_dir() and any(IMAGES.iterdir())
+    problems = licence_problems(IMAGES)
+    assert not problems, "\n".join(problems)
+
+
+def test_positive_control_licence_notes(tmp_path):
+    (tmp_path / "a.png").write_bytes(b"x")
+    (tmp_path / "b.jpg").write_bytes(b"x")
+    (tmp_path / "b.jpg.licence.txt").write_text(
+        "Source: https://example.org/b\nLicence:\n", encoding="utf-8"
+    )
+    (tmp_path / "c.png.licence.txt").write_text(
+        "Source: https://x\nLicence: CC BY\n", encoding="utf-8"
+    )
+    assert licence_problems(tmp_path) == [
+        "a.png: no licence note",
+        "b.jpg.licence.txt: no 'Licence:' line",
+        "c.png.licence.txt: a licence note with no image",
+    ]
+
+
+def test_every_copied_image_is_on_a_page():
+    used = "".join(p.read_text(encoding="utf-8") for p in pages())
+    for f in IMAGES.iterdir():
+        if not f.name.endswith(".licence.txt"):
+            assert f"images/{f.name}" in used, f.name
+
+
 def test_exaggeration_statement_follows_the_scales():
     from gf180tcad.explain import model
 
@@ -1165,6 +1222,7 @@ def test_verdict_words_are_read_from_the_result_files():
             v = v[k]
         assert numbers.word(name) == v == subs[f"x_{name}"], name
         assert v in ("Agree", "Same process", "Disagree"), (name, v)
+        assert subs[f"x_{name}_term"] == f"{{term}}`{v}`", name
 
 
 def _render(text: str, subs: dict[str, str]) -> str:
@@ -1380,7 +1438,17 @@ def test_counts_are_derived(tmp_path):
     src = "results/tcad/calibration/nfet_05v0.result.json"
     fit = json.loads((ROOT / src).read_text("utf-8"))
     lengths = {g["geometry"]["l_um"] for g in fit["per_geometry"].values()}
-    assert numbers.counts() == {"corner_count": len(CORNERS), "fit_length_count": len(lengths)}
+    pfet_fit = json.loads(
+        (ROOT / "results/tcad/calibration/pfet_05v0.result.json").read_text("utf-8")
+    )
+    assert numbers.counts() == {
+        "corner_count": len(CORNERS),
+        "fit_length_count": len(lengths),
+        "budget": fit["budget"],
+        "budget_used": fit["budget_used"],
+        "nfev_nfet": fit["optimiser"]["nfev"],
+        "nfev_pfet": pfet_fit["optimiser"]["nfev"],
+    }
     subs = numbers.substitutions()
     assert subs["x_corner_count"] == str(len(CORNERS))
     assert subs["x_fit_length_count"] == str(len(lengths))
@@ -1390,6 +1458,8 @@ def test_counts_are_derived(tmp_path):
     fit["per_geometry"]["w10p0_l5p00"] = extra
     (tmp_path / src).parent.mkdir(parents=True)
     (tmp_path / src).write_text(json.dumps(fit), "utf-8")
+    pfet = "results/tcad/calibration/pfet_05v0.result.json"  # counts() also reads the budgets
+    (tmp_path / pfet).write_text((ROOT / pfet).read_text("utf-8"), "utf-8")
     assert numbers.counts(root=tmp_path)["fit_length_count"] == len(lengths) + 1
 
 
@@ -1758,6 +1828,332 @@ def test_cv_page_table_rows_are_the_registry():
     for start, fitted in zip(_START_KEYS, _FITTED_KEYS, strict=True):
         row = rf"^\|[^|\n]+\| \{{\{{ x_{start} \}}\}} \| \{{\{{ x_{fitted} \}}\}} \|$"
         assert re.search(row, text, re.MULTILINE), (start, fitted)
+
+
+# --- the calibration page (task E2d) ---------------------------------------------------------
+
+CALIBRATION_PAGE = EXPLAINED / "calibration.md"
+_FITS = {d: f"results/tcad/calibration/{d}.result.json" for d in ("nfet_05v0", "pfet_05v0")}
+
+
+def _fit(device: str, root: Path = ROOT) -> dict:
+    return json.loads((root / _FITS[device]).read_text("utf-8"))
+
+
+def _fit_copy(tmp_path: Path) -> Path:
+    for path in _FITS.values():
+        dst = tmp_path / path
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text((ROOT / path).read_text("utf-8"), "utf-8")
+    return tmp_path
+
+
+def test_calibration_table_from_result_file():
+    """Plan E2 test: each row of a fit table is the result file's bounds, start and values."""
+    numbers = _numbers()
+    for device in _FITS:
+        doc = _fit(device)
+        assert doc["params"] == list(numbers.TUNABLES)
+        rows = numbers.fit_table(device).splitlines()
+        assert rows[0] == "| Number | Lower limit | Start | Fitted | Upper limit |"
+        assert len(rows) == 2 + len(numbers.TUNABLES)
+        for row, name in zip(rows[2:], numbers.TUNABLES, strict=True):
+            words, unit, most = numbers.TUNABLES[name]
+            lo, hi = doc["bounds"][name]
+            # The unit sits in the row label, so the cells are narrow enough for a phone.
+            want = [f"{words} ({unit})"] + [
+                numbers.shortest(v, "", most)
+                for v in (lo, doc["start"][name], doc["values"][name], hi)
+            ]
+            assert [c.strip() for c in row.strip("|").split("|")] == want, (device, name)
+
+
+def test_fit_table_follows_an_edited_result_file(tmp_path):
+    numbers = _numbers()
+    root = _fit_copy(tmp_path)
+    doc = _fit("pfet_05v0")
+    doc["values"]["t_ox_eff_nm"] = 16.25
+    doc["bounds"]["dv_fb_v"] = [-0.3, 0.3]
+    (root / _FITS["pfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+    table = numbers.fit_table("pfet_05v0", root=root)
+    assert table != numbers.fit_table("pfet_05v0")
+    assert "| Oxide thickness (nm) |" in table and "| 16.25 |" in table
+    assert "| −0.3 |" in table and "| 0.3 |" in table
+
+
+def test_shortest_keeps_the_value():
+    numbers = _numbers()
+    assert numbers.shortest(0.2, "V", 3) == "0.2\u00a0V"
+    assert numbers.shortest(-0.2, "V", 3) == "−0.2\u00a0V"
+    assert numbers.shortest(0.0, "V", 3) == "0\u00a0V"
+    assert numbers.shortest(16.050483616382458, "nm", 4) == "16.05\u00a0nm"
+    assert numbers.shortest(1.7e17, "cm⁻³", 3) == "1.7\u00a0×\u00a010¹⁷\u00a0cm⁻³"
+    assert numbers.shortest(6.2967947909822296e16, "cm⁻³", 3) == "6.3\u00a0×\u00a010¹⁶\u00a0cm⁻³"
+
+
+def test_limit_kinds_are_the_process_files(tmp_path):
+    numbers = _numbers()
+    want = {}
+    for device in _FITS:
+        params = tomllib.loads((ROOT / f"data/process/{device}.toml").read_text("utf-8"))["param"]
+        want[device] = {
+            n: (params[n]["start_kind"], *params[n]["bounds_kind"]) for n in numbers.TUNABLES
+        }
+    assert want["nfet_05v0"] == want["pfet_05v0"] == numbers.limit_kinds()
+    rows = numbers.limit_kinds_table().splitlines()[2:]
+    for row, (name, kinds) in zip(rows, want["nfet_05v0"].items(), strict=True):
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        assert cells == [numbers.TUNABLES[name][0], *(numbers.KIND_WORDS[k] for k in kinds)]
+    # A copy whose pfet start comes from elsewhere: the two transistors differ, which the table
+    # cannot show in one row, so it refuses.
+    for device in _FITS:
+        dst = tmp_path / f"data/process/{device}.toml"
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text((ROOT / f"data/process/{device}.toml").read_text("utf-8"), "utf-8")
+    p = tmp_path / "data/process/pfet_05v0.toml"
+    text = p.read_text("utf-8")
+    assert text.count('start_kind = "project-choice"') == 1
+    p.write_text(text.replace('start_kind = "project-choice"', 'start_kind = "card"'), "utf-8")
+    with pytest.raises(ValueError, match="differ"):
+        numbers.limit_kinds(root=tmp_path)
+
+
+def test_bound_hits_sentence_follows_the_result_files(tmp_path):
+    numbers = _numbers()
+    assert all(_fit(d)["bound_hits"] == {} for d in _FITS)
+    assert numbers.bound_hits() == "No fitted value of either transistor sits on a limit"
+    root = _fit_copy(tmp_path)
+    doc = _fit("nfet_05v0")
+    doc["bound_hits"] = {"t_ox_eff_nm": "upper"}
+    (root / _FITS["nfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+    assert numbers.bound_hits(root=root) == (
+        "The fit stopped on a limit for the oxide thickness of the nfet_05v0"
+    )
+
+
+def test_every_fit_verdict_is_a_row(tmp_path):
+    numbers = _numbers()
+    want = sorted(
+        (d, e["geometry"]["w_um"], e["geometry"]["l_um"], e["verdict"])
+        for d in _FITS
+        for e in _fit(d)["per_geometry"].values()
+    )
+    rows = numbers.fit_verdict_table().splitlines()[2:]
+    assert rows == [_row(*c) for c in want]
+    root = _fit_copy(tmp_path)
+    doc = _fit("pfet_05v0")
+    doc["per_geometry"]["w10p0_l2p00"]["verdict"] = "Agree"
+    (root / _FITS["pfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+    assert _row("pfet_05v0", 10, 2, "Agree") in numbers.fit_verdict_table(root=root)
+
+
+def test_corner_spread_is_the_committed_corners():
+    """The lowest and highest of each quantity are the min and max over every corner's file;
+    the crossings' are the corner window of the result file, which is the same min and max."""
+    from gf180tcad.devices import CORNERS
+
+    numbers = _numbers()
+    gid = numbers.SPREAD_GEOMETRY
+    metrics = {
+        c: json.loads(
+            (ROOT / f"results/spice/ngspice/{c}/nfet_05v0/{gid}/metrics.json").read_text("utf-8")
+        )["metrics"]
+        for c in CORNERS
+    }
+    env = json.loads((ROOT / "results/spice/envelope.json").read_text("utf-8"))
+    rec = _fit("nfet_05v0")["per_geometry"][gid]
+    got = {s.words: s for s in numbers.corner_spread()}
+    for key, words in (
+        ("cgg_acc_ff", "Accumulation flat part"),
+        ("cgg_inv_ff", "Inversion flat part"),
+    ):
+        vals = [m[key] for m in metrics.values()]
+        s = got[words]
+        assert (s.typical, s.lowest, s.highest) == (metrics["typical"][key], min(vals), max(vals))
+        assert [s.lowest, s.highest] == env["ngspice"]["nfet_05v0"][gid][key]
+        assert s.lowest < s.typical < s.highest
+    for check, key, words in (
+        ("dv_dep", "u_dep", "Falling crossing"),
+        ("dv_inv", "u_inv", "Rising crossing"),
+    ):
+        w = rec["verdicts"][check]["window"]
+        s = got[words]
+        assert (s.typical, s.lowest, s.highest) == (rec["spice_regions"][key], w["lo"], w["hi"])
+        assert s.lowest < s.typical < s.highest
+    rows = numbers.corner_table().splitlines()
+    assert rows[0] == "| Quantity | Typical | Lowest | Highest | Spread |"
+    for row, s in zip(rows[2:], numbers.corner_spread(), strict=True):
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        spread = numbers.format_value(s.highest - s.lowest, numbers.SPREAD_DIGITS, s.unit)
+        assert cells[0] == s.words and cells[-1] == spread
+
+
+def test_calibration_counts_are_derived():
+    numbers = _numbers()
+    docs = {d: _fit(d) for d in _FITS}
+    c = numbers.counts()
+    assert {doc["budget"] for doc in docs.values()} == {c["budget"]}
+    assert {doc["budget_used"] for doc in docs.values()} == {c["budget_used"]}
+    assert c["budget_used"] == len(numbers.TUNABLES)
+    assert c["nfev_nfet"] == docs["nfet_05v0"]["optimiser"]["nfev"]
+    assert c["nfev_pfet"] == docs["pfet_05v0"]["optimiser"]["nfev"]
+
+
+def test_calibration_figure_draws_the_result_files():
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    for palette in figures.PALETTES:
+        fig = figures.calibration_limits_figure(palette)
+        assert len(fig.axes) == len(numbers.TUNABLES)
+        for ax, name in zip(fig.axes, numbers.TUNABLES, strict=True):
+            assert (ax.get_xscale() == "log") == (name in figures.LOG_TUNABLES)
+            xs = [list(line.get_xdata()) for line in ax.get_lines()]
+            for device in _FITS:
+                doc = _fit(device)
+                lo, hi = doc["bounds"][name]
+                assert [lo, hi] in xs, (device, name)
+                assert [doc["start"][name]] in xs and [doc["values"][name]] in xs, (device, name)
+                left, right = ax.get_xlim()
+                assert left < lo and hi < right, (palette, name)  # the limit marks are not clipped
+
+
+def test_calibration_figure_is_registered():
+    from gf180tcad.explain import figures
+
+    assert "calibration-limits" in figures.FIGURES
+    light = figures.FIGURES["calibration-limits"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["calibration-limits"]("dark")
+    assert "x_fig_calibration_limits_scale" not in figures.substitutions()
+
+
+def test_calibration_page_prints_its_numbers():
+    text = CALIBRATION_PAGE.read_text(encoding="utf-8")
+    for key in ("fit_table_nfet", "fit_table_pfet", "limit_kinds_table", "bound_hits",
+                "fit_verdict_table", "corner_table", "corner_count", "fit_length_count",
+                "budget", "budget_used", "nfev_nfet", "nfev_pfet", "verdict_pfet_1d_term",
+                "two_d_disagree"):  # fmt: skip
+        assert "{{ x_" + key + " }}" in text, key
+    assert "/_generated/explained/calibration-limits-light.svg" in text
+    for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-windows",
+                   "process-data-tunables"):  # fmt: skip
+        assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor
+    assert "issues/57" in text  # the corner fits that give each fitted number its bounds
+    assert not _COUNT_WORDS.findall(text)
+
+
+def test_two_d_cells_reuse_the_fit():
+    """The page says the 2D cells reuse the 1D fit unchanged: the validation files' values are the
+    calibration files' values."""
+    for device in _FITS:
+        cal = json.loads((ROOT / f"results/tcad/calibration/{device}.json").read_text("utf-8"))
+        val = json.loads((_VALIDATION / f"{device}.json").read_text("utf-8"))
+        assert val["values"] == cal["values"], device
+
+
+def test_crossing_gap_is_weighed_by_the_allowed_gap():
+    """The page says the fit weighs each crossing gap by the allowed gap: the scaled residuals
+    are the gaps over the tolerance."""
+    for device in _FITS:
+        for gid, e in _fit(device)["per_geometry"].items():
+            for check in ("dv_dep", "dv_inv"):
+                v = e["verdicts"][check]
+                scaled = e["residuals"][f"{check}_scaled"]
+                assert math.isclose(scaled, v["dv_v"] / v["tolerance_v"]), (device, gid, check)
+
+
+def test_cost_is_half_the_sum_of_the_squared_residuals():
+    """The page's cost equation: the optimiser's cost is half the sum of the squares of every
+    geometry's residuals (flat-part relative errors and crossing gaps over the tolerance)."""
+    for device in _FITS:
+        doc = _fit(device)
+        res = []
+        for e in doc["per_geometry"].values():
+            r = e["residuals"]
+            res += [
+                *r["plateau_acc_rel"],
+                *r["plateau_inv_rel"],
+                r["dv_dep_scaled"],
+                r["dv_inv_scaled"],
+            ]
+        assert len(res) == doc["optimiser"]["residuals"], device
+        assert math.isclose(
+            0.5 * math.fsum(x * x for x in res), doc["optimiser"]["cost"], rel_tol=1e-9
+        )
+
+
+def test_compare_figure_marks_what_the_fit_compares():
+    """The flat parts the fit compares are shaded from the result file's residual voltages, and
+    each curve's crossings are marked at the result file's voltages."""
+    from gf180tcad.explain import figures
+
+    rec = _fit("nfet_05v0")["per_geometry"][figures.REGIONS_GEOMETRY]
+    acc, inv = rec["residuals"]["plateau_acc_u"], rec["residuals"]["plateau_inv_u"]
+    for palette in figures.PALETTES:
+        (ax,) = figures.calibration_compare_figure(palette).axes
+        spans = sorted(
+            (p.get_x(), p.get_x() + p.get_width()) for p in ax.patches if p.get_width() > 0
+        )
+        assert spans == [(min(acc), max(acc)), (min(inv), max(inv))]
+        marks = {line.get_label(): list(line.get_xdata()) for line in ax.get_lines()}
+        sp, tc = rec["spice_regions"], rec["tcad_crossings"]
+        assert marks[figures.COMPARE_MARKS["spice"]] == [sp["u_dep"], sp["u_inv"]]
+        assert marks[figures.COMPARE_MARKS["tcad"]] == [tc["u_dep"], tc["u_inv"]]
+
+
+def test_pfet_figure_draws_the_shortest_and_longest_fit_gates():
+    """One panel per end of the pfet's fit lengths, on the true gate voltage (−u for the pfet),
+    the SPICE typical and the fitted curves read by the shared readers."""
+    from gf180tcad.devices import DEVICES
+    from gf180tcad.explain import figures
+
+    pol = DEVICES["pfet_05v0"].polarity
+    fit = _fit("pfet_05v0")["per_geometry"]
+    by_l = sorted(fit, key=lambda g: fit[g]["geometry"]["l_um"])
+    assert figures.pfet_geometries() == (by_l[0], by_l[-1])
+    for palette in figures.PALETTES:
+        axes = figures.calibration_pfet_figure(palette).axes
+        assert len(axes) == len(figures.pfet_geometries())
+        for ax, gid in zip(axes, figures.pfet_geometries(), strict=True):
+            c = figures.cv_curves("pfet_05v0", "calibrated", gid)
+            xs = [list(line.get_xdata()) for line in ax.get_lines()]
+            assert list(pol * c["u_spice"]) in xs and list(pol * c["u"]) in xs, gid
+            assert ax.get_xlabel() == "gate voltage (V)"
+
+
+def test_calibration_figures_are_registered():
+    from gf180tcad.explain import figures
+
+    for name in ("calibration-compare", "calibration-pfet"):
+        assert name in figures.FIGURES, name
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark")
+        assert f"x_fig_{name.replace('-', '_')}_scale" not in figures.substitutions()
+        assert f"/_generated/explained/{name}-light.svg" in CALIBRATION_PAGE.read_text("utf-8")
+
+
+def test_calibration_page_numbers_its_figures():
+    """Owner rule (2026-11-03): each figure has a name and the text refers to it by number."""
+    text = CALIBRATION_PAGE.read_text("utf-8")
+    names = re.findall(r"^:name: (fig-[\w-]+)$", text, re.MULTILINE)
+    assert len(names) == text.count(":figclass: only-light") and len(set(names)) == len(names)
+    for name in names:
+        assert f"{{numref}}`{name}`" in text or f"<{name}>`" in text, name
+
+
+def test_calibration_stack_highlights_the_fitted_layers(monkeypatch):
+    """The opening drawing highlights the oxide and the body, the two layers the fit changes."""
+    from gf180tcad.explain import figures
+
+    seen = []
+    real = figures.stack_1d
+    monkeypatch.setattr(
+        figures, "stack_1d", lambda dev, hl, pal: seen.append((dev, hl)) or real(dev, hl, pal)
+    )
+    assert figures.FIGURES["calibration-stack"]("light").startswith(b"<?xml")
+    ((dev, hl),) = seen
+    assert set(hl) == {"oxide", "body"} and dev.name == "nfet_05v0"
+    assert "x_fig_calibration_stack_scale" in figures.substitutions()
 
 
 # --- the SPICE model's quasi-static switches (cv-curve.md) -----------------------------------

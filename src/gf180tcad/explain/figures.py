@@ -121,6 +121,24 @@ STYLE = {
     # width long, a drawing choice (the fitted shift is too small to see at its true length).
     "part_offset": 0.14,
     "shift_arrow": 0.1,
+    # The calibration limits: a taller figure for the three panels; each limit drawn as a bar this
+    # wide (pt) with end ticks this tall (pt); the start and fitted markers this size (pt); room of
+    # this fraction of a row above and below the two rows, and of the axis width at either end, so
+    # no marker on a limit is clipped.
+    "limits_size_in": (6.4, 6.4),
+    "limit_width": 10.0,
+    "limit_tick_pt": 16.0,
+    "marker_pt": 9.0,
+    # The SPICE crossings of the compare plot: hollow rings this size (pt) round the simulated ones.
+    "ring_pt": 16.0,
+    "row_pad": 0.6,
+    "limit_margin": 0.08,
+    # The gate-area figure of the corner fits, in drawing units: the drawn gate's length and
+    # width, then the size drawn for |X_L| and |X_W| and for D_L and D_W.
+    "area_drawn": {"gate length and width": (4.0, 2.6), "length and width offsets": (0.45, 0.3)},
+    "dim_gap": 0.45,
+    "dim_width_spacing": 1.6,
+    "dim_label_pad": 0.06,
 }
 
 #: Unit conversions of the junction panels: cm to µm, V/cm to kV/cm.
@@ -263,12 +281,8 @@ def doping_profile(dev: model.Device, highlight: str, palette: str) -> bytes:
 
 def _short(v: float, unit: str, most: int) -> str:
     """``v`` with the fewest significant digits (up to ``most``) that print the same value as
-    ``most`` digits do: 0.2 µm, not 0.2000 µm."""
-    target = float(f"{v:.{most - 1}e}")
-    for d in range(1, most + 1):
-        if float(f"{v:.{d - 1}e}") == target:
-            return numbers.format_value(v, d, unit)
-    return numbers.format_value(v, most, unit)
+    ``most`` digits do: 0.2 µm, not 0.2000 µm (:func:`gf180tcad.explain.numbers.shortest`)."""
+    return numbers.shortest(v, unit, most)
 
 
 def _thickness(layer: model.Layer) -> str:
@@ -402,6 +416,12 @@ def _silicon_doping(palette: str) -> bytes:
 def _oxide_stack(palette: str) -> bytes:
     dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
     return stack_1d(dev, ("gate", "oxide"), palette)
+
+
+def _calibration_stack(palette: str) -> bytes:
+    # The calibration page: the two layers the fit changes, the oxide and the body, highlighted.
+    dev = model.device("nfet_05v0", "calibrated", scales=STYLE["scales"])
+    return stack_1d(dev, ("oxide", "body"), palette)
 
 
 def _bands_stack(palette: str) -> bytes:
@@ -673,7 +693,7 @@ TYPICAL = "typical"
 def cv_curves(device: str, params: str, gid: str) -> dict[str, np.ndarray]:
     """The curves of :func:`cv_against_spice`, read by the readers the results pages use
     (:mod:`gf180tcad.explain.data`): the simulated gate capacitance of ``gid`` from the committed
-    1D C per area at ``params`` with the BSIM4 bookkeeping, and the :term:`SPICE` ``cv`` sweep at
+    1D C per area at ``params`` with the BSIM4 bookkeeping, and the :term:`SPICE` :term:`cv` sweep at
     the :term:`typical corner` with the lowest and highest of the five :term:`corners <corner>` at
     each voltage. Keys ``u``,
     ``tcad``, ``u_spice``, ``spice_tt``, ``spice_lo``, ``spice_hi`` (V and fF)."""
@@ -944,6 +964,333 @@ def cv_parts(palette: str) -> bytes:
         return _svg(cv_parts_figure(palette))
 
 
+# The calibration page (calibration.md): the fitted numbers of both transistors within their limits.
+#: The fitted numbers drawn on a log axis (a doping spans powers of ten).
+LOG_TUNABLES = ("n_ch_cm3",)
+
+
+def calibration_limits_figure(palette: str):
+    """The matplotlib figure of :func:`calibration_limits`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    fits = {d: numbers.fits(d) for d in devices}
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(numbers.TUNABLES), 1)
+        for i, (ax, (name, (words, unit, _most))) in enumerate(
+            zip(axes, numbers.TUNABLES.items(), strict=True)
+        ):
+            if name in LOG_TUNABLES:
+                ax.set_xscale("log")
+            for row, device in enumerate(devices):
+                (f,) = [f for f in fits[device] if f.name == name]
+                ax.plot([f.lower, f.upper], [row, row], color=pal["band"], lw=STYLE["limit_width"],
+                        solid_capstyle="butt", label="limits" if row == 0 else None)  # fmt: skip
+                ax.plot([f.lower, f.upper], [row, row], ls="none", marker="|", color=pal["text"],
+                        ms=STYLE["limit_tick_pt"], mew=STYLE["edge_width"] * 2)  # fmt: skip
+                ax.plot([f.start], [row], ls="none", marker="o", ms=STYLE["marker_pt"], mfc=pal["background"],
+                        mec=pal["text"], mew=STYLE["edge_width"] * 2, label="start" if row == 0 else None)  # fmt: skip
+                ax.plot([f.fitted], [row], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["highlight"],
+                        mec=pal["text"], mew=STYLE["edge_width"], label="fitted" if row == 0 else None)  # fmt: skip
+            ax.set_yticks(range(len(devices)), [d.split("_")[0] for d in devices])
+            ax.set_ylim(-STYLE["row_pad"], len(devices) - 1 + STYLE["row_pad"])
+            ax.margins(x=STYLE["limit_margin"])
+            ax.set_xlabel(f"{words.lower()} ({unit})" if unit else words.lower())
+            ax.grid(True, axis="x")
+            if i == 0:
+                handles, labels = ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
+        return fig
+
+
+def calibration_limits(palette: str) -> bytes:
+    """Each fitted number of the nfet and the pfet (:data:`gf180tcad.explain.numbers.TUNABLES`)
+    on its own axis: a bar from its lower to its upper limit, its start (open circle) and its
+    fitted value (filled diamond), read from the calibration result files
+    (:func:`gf180tcad.explain.numbers.fits`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_limits_figure(palette))
+
+
+#: The legend words of the crossing marks of :func:`calibration_compare`, by curve.
+COMPARE_MARKS = {"spice": "SPICE crossings", "tcad": "simulated crossings"}
+
+
+def calibration_compare_figure(palette: str):
+    """The matplotlib figure of :func:`calibration_compare`, for the tests to read it."""
+    from gf180tcad.devices import DEVICES
+
+    if DEVICES[REGIONS_DEVICE].polarity != 1:
+        raise ValueError(f"{REGIONS_DEVICE}: u is not the gate voltage")
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    c = cv_curves(REGIONS_DEVICE, "calibrated", REGIONS_GEOMETRY)
+    rec = numbers.fit_record(REGIONS_DEVICE, REGIONS_GEOMETRY)
+    res, sp, tc = rec["residuals"], rec["spice_regions"], rec["tcad_crossings"]
+    u = c["u_spice"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.set_xlim(u[0], u[-1])
+        top = max(c["spice_tt"].max(), c["tcad"].max()) * STYLE["region_headroom"]
+        ax.set_ylim(0, top)
+        ax.grid(True)
+        for key in ("plateau_acc_u", "plateau_inv_u"):
+            a, b = min(res[key]), max(res[key])
+            ax.axvspan(a, b, color=pal["highlight"], alpha=STYLE["region_alpha"], lw=0,
+                       label="flat parts compared" if key == "plateau_acc_u" else None)  # fmt: skip
+        ax.plot(u, c["spice_tt"], color=pal["text"], lw=lw, label="SPICE, typical")
+        ax.plot(c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
+                zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
+        for key, xs, uu, cc, marker in (
+            ("tcad", [tc["u_dep"], tc["u_inv"]], c["u"], c["tcad"], "D"),
+            ("spice", [sp["u_dep"], sp["u_inv"]], u, c["spice_tt"], "o"),
+        ):
+            # The two crossings lie close together: the SPICE ones are hollow rings, larger and
+            # on top, so the simulated diamond shows through each.
+            ring = key == "spice"
+            ax.plot(xs, np.interp(xs, uu, cc), ls="none", marker=marker,
+                    ms=STYLE["ring_pt"] if ring else STYLE["marker_pt"],
+                    mfc="none" if ring else pal["highlight"], mec=pal["text"],
+                    mew=STYLE["edge_width"] * 2, zorder=STYLE["spike_zorder"] + (2 if ring else 1),
+                    label=COMPARE_MARKS[key])  # fmt: skip
+        ax.set_xlabel("gate voltage (V)")
+        ax.set_ylabel("gate capacitance (fF)")
+        fig.legend(loc="outside lower center", ncols=2, frameon=False)
+        return fig
+
+
+def calibration_compare(palette: str) -> bytes:
+    """The nfet at ``w10p0_l10p00``: the :term:`SPICE` curve at the :term:`typical corner` and the
+    fitted simulated curve, the flat parts the fit compares shaded (the voltages of the result
+    file's residuals) and each curve's halfway-level crossings marked (``spice_regions`` and
+    ``tcad_crossings``)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_compare_figure(palette))
+
+
+#: The transistor of :func:`calibration_pfet`.
+PFET = "pfet_05v0"
+
+
+def pfet_geometries() -> tuple[str, str]:
+    """The shortest and the longest gate of the pfet's fit (``per_geometry`` of its result file)."""
+    fit = numbers.fit_geometries(PFET)
+    by_l = sorted(fit, key=lambda g: fit[g])
+    return by_l[0], by_l[-1]
+
+
+def calibration_pfet_figure(palette: str):
+    """The matplotlib figure of :func:`calibration_pfet`, for the tests to read its lines."""
+    from gf180tcad.devices import DEVICES
+
+    pol = DEVICES[PFET].polarity
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    gids = pfet_geometries()
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(gids), 1)
+        for ax, gid in zip(axes, gids, strict=True):
+            c = cv_curves(PFET, "calibrated", gid)
+            ax.fill_between(pol * c["u_spice"], c["spice_lo"], c["spice_hi"], color=pal["band"],
+                            linewidth=0, label="SPICE, all corners")  # fmt: skip
+            ax.plot(
+                pol * c["u_spice"], c["spice_tt"], color=pal["text"], lw=lw, label="SPICE, typical"
+            )
+            ax.plot(pol * c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
+                    zorder=STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
+            ax.set_ylim(bottom=0)
+            ax.grid(True)
+            ax.set_title(
+                f"gate length {numbers.fit_geometries(PFET)[gid]:g} µm", fontsize=STYLE["text_pt"]
+            )
+            ax.set_xlabel("gate voltage (V)")
+            ax.set_ylabel("gate capacitance (fF)")
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
+        return fig
+
+
+def calibration_pfet(palette: str) -> bytes:
+    """The pfet's gate capacitance at the shortest and the longest gate of its fit
+    (:func:`pfet_geometries`), on the true gate voltage: the :term:`SPICE` band of all
+    :term:`corners <corner>`, the typical curve and the fitted simulated curve."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(calibration_pfet_figure(palette))
+
+
+# The corner-fit figure of docs/reproduce/index.md (Task 16a): the nfet at the longest
+# calibration gate, the geometry of the MOS capacitor page's C-V figure.
+CORNER_DEVICE, CORNER_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
+#: The corners drawn in colour: the slow and the fast nfet, the two ends of its corner range.
+CORNER_HIGHLIGHT = {"ss": "hole", "ff": "electron"}
+#: The line style of each mixed corner, drawn thin and muted.
+CORNER_MIXED_STYLE = {"fs": ":", "sf": "-."}
+
+
+def corner_cv_curves(device: str, gid: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """``{corner: (u, cgg_ff)}``: the committed :term:`SPICE` :term:`cv` sweep of ``gid`` at each of
+    the five :term:`corners <corner>`, u = polarity × gate voltage (V), Cgg in fF."""
+    from gf180tcad.devices import CORNERS, DEVICES
+
+    pol = DEVICES[device].polarity
+    return {
+        c: data.spice_cv(data.spice_columns(SPICE_ROOT, "ngspice", c, device, gid, "cv"), pol)
+        for c in CORNERS
+    }
+
+
+def corner_cv(palette: str) -> bytes:
+    """The five SPICE corner curves of one geometry: the typical corner (solid, text colour),
+    the slow and fast corners in colour, the two mixed corners muted, dotted (fs) and
+    dash-dotted (sf). A corner fit takes one of
+    the coloured curves as its target instead of the typical one."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    curves = corner_cv_curves(CORNER_DEVICE, CORNER_GEOMETRY)
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        for corner, (u, c) in curves.items():
+            if corner == TYPICAL:
+                ax.plot(u, c, color=pal["text"], lw=lw, label="typical",
+                        zorder=STYLE["cv_zorder"])  # fmt: skip
+            elif corner in CORNER_HIGHLIGHT:
+                ax.plot(u, c, color=pal[CORNER_HIGHLIGHT[corner]], lw=lw, ls="--", label=corner)
+            else:
+                ax.plot(u, c, color=pal["muted"], lw=STYLE["line_width"] / 2,
+                        ls=CORNER_MIXED_STYLE[corner], label=corner)  # fmt: skip
+        ax.set_ylim(bottom=0)
+        ax.grid(True)
+        ax.set_xlabel("gate voltage (V)")
+        ax.set_ylabel("gate capacitance (fF)")
+        fig.legend(loc="outside lower center", ncols=len(curves), frameon=False)
+        return _svg(fig)
+
+
+# The gate-area figure of the corner-fit section of docs/reproduce/index.md (eq-corner-area and
+# eq-corner-overlap): the gate seen from above at one corner, with the signs of that corner's
+# XL and XW for the nfet of the corner-cv figure.
+#: The corner whose XL and XW signs the gate-area figure draws: the slow corner.
+AREA_CORNER = "ss"
+_OVERLAP_LABEL = {
+    "source overlap": "source overlap:\nCGSO, CGSL",
+    "drain overlap": "drain overlap:\nCGDO, CGDL",
+}
+
+
+def corner_area_extents() -> dict[str, Box]:
+    """The drawn extents of the gate-area figure, in drawing units, the gate centred on 0, x
+    along the length and y along the width: ``drawn`` (L by W), ``corner`` (L + X_L by W + X_W,
+    each offset with the sign of the ``CORNER_DEVICE``'s ``AREA_CORNER`` value in
+    :repo:`data/pdk_corners.json`), ``area`` (the corner outline less D_L at each end and D_W at
+    each side: the capacitance area L_c by W_c), and ``source overlap`` and ``drain overlap`` (the
+    D_L strips at the two ends, W_c wide). The sizes are :data:`STYLE` ``area_drawn``."""
+    from gf180tcad.calibrate import corners
+
+    size = STYLE["area_drawn"]
+    length, width = size["gate length and width"]
+    x, d = size["length and width offsets"]
+    lc = length + np.copysign(x, corners.card_shift(CORNER_DEVICE, AREA_CORNER, "xl"))
+    wc = width + np.copysign(x, corners.card_shift(CORNER_DEVICE, AREA_CORNER, "xw"))
+    return {
+        "drawn": Box(-length / 2, length / 2, -width / 2, width / 2),
+        "corner": Box(-lc / 2, lc / 2, -wc / 2, wc / 2),
+        "area": Box(-lc / 2 + d, lc / 2 - d, -wc / 2 + d, wc / 2 - d),
+        "source overlap": Box(-lc / 2, -lc / 2 + d, -wc / 2 + d, wc / 2 - d),
+        "drain overlap": Box(lc / 2 - d, lc / 2, -wc / 2 + d, wc / 2 - d),
+    }
+
+
+def _dimension(ax, a: float, b: float, at: float, label: str, colour: str, along: str) -> None:
+    """A two-headed dimension line from ``a`` to ``b`` at ``at``, labelled outside the drawing:
+    along x (a length, label above) or along y (a width, label to the right)."""
+    ends = ((a, at), (b, at)) if along == "x" else ((at, a), (at, b))
+    ax.annotate("", xy=ends[0], xytext=ends[1],
+                arrowprops={"arrowstyle": "<->", "color": colour, "lw": STYLE["edge_width"],
+                            "shrinkA": 0, "shrinkB": 0})  # fmt: skip
+    mid = (a + b) / 2
+    pad = STYLE["dim_label_pad"]
+    if along == "x":
+        ax.text(mid, at + pad, label, ha="center", va="bottom")
+    else:
+        ax.text(at + pad, mid, label, ha="left", va="center", rotation=STYLE["upright_deg"])
+
+
+def _guide(ax, xs: tuple[float, float], ys: tuple[float, float], colour: str) -> None:
+    ax.plot(xs, ys, color=colour, lw=STYLE["edge_width"], ls=":")
+
+
+def corner_area(palette: str) -> bytes:
+    """The gate seen from above at one corner: the drawn outline (solid), the corner's outline
+    L + X_L by W + X_W (dashed), the capacitance area L_c by W_c inside it (filled, the
+    highlight), and the two D_L strips at the source and drain ends that carry the overlap
+    capacitances (filled, the electron colour), each length and width dimensioned with the
+    symbols of eq-corner-area. Not to scale; the statement says so."""
+    pal = PALETTES[palette]
+    ext = corner_area_extents()
+    gap = STYLE["dim_gap"]
+    fills = {"area": pal["highlight"], "source overlap": pal["electron"],
+             "drain overlap": pal["electron"]}  # fmt: skip
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.subplots()
+        ax.set_axis_off()
+        ax.set_aspect("equal")
+        for part, colour in fills.items():
+            a, b, y0, y1 = ext[part]
+            ax.fill_between([a, b], y0, y1, color=colour, alpha=STYLE["cell_alpha"], linewidth=0)
+        for part, ls in (("drawn", "-"), ("corner", "--")):
+            a, b, y0, y1 = ext[part]
+            ax.plot([a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"],
+                    lw=STYLE["line_width"] / 2, ls=ls)  # fmt: skip
+        area = ext["area"]
+        ax.text(0.0, (area.y0 + area.y1) / 2, "capacitance area\n$L_c \\times W_c$",
+                ha="center", va="center")  # fmt: skip
+        top = max(ext["drawn"].y1, ext["corner"].y1)
+        right = max(ext["drawn"].x1, ext["corner"].x1)
+        lengths = (("drawn", "$L$"), ("corner", "$L + X_{L,c}$"), ("area", "$L_c$"))
+        for n, (part, label) in enumerate(lengths, start=1):
+            a, b, _y0, y1 = ext[part]
+            at = top + n * gap
+            for x in (a, b):
+                _guide(ax, (x, x), (y1, at), pal["grid"])
+            _dimension(ax, a, b, at, label, pal["text"], "x")
+        widths = (("drawn", "$W$"), ("corner", "$W + X_{W,c}$"), ("area", "$W_c$"))
+        for n, (part, label) in enumerate(widths, start=1):
+            _a, b, y0, y1 = ext[part]
+            at = right + n * gap * STYLE["dim_width_spacing"]
+            for y in (y0, y1):
+                _guide(ax, (b, at), (y, y), pal["grid"])
+            _dimension(ax, y0, y1, at, label, pal["text"], "y")
+        corner = ext["corner"]
+        bottom = corner.y0 - gap
+        _dimension(ax, corner.x0, area.x0, bottom, "", pal["text"], "x")
+        ax.text(corner.x0 - STYLE["dim_label_pad"], bottom, "$D_L$", ha="right", va="center")
+        _guide(ax, (area.x0, area.x0), (corner.y0, bottom), pal["grid"])
+        _guide(ax, (corner.x0, corner.x0), (corner.y0, bottom), pal["grid"])
+        left = corner.x0 - gap
+        _dimension(ax, area.y1, corner.y1, left, "", pal["text"], "y")
+        ax.text(left - STYLE["dim_label_pad"], corner.y1, "$D_W$", ha="right", va="center")
+        _guide(ax, (left, area.x0), (area.y1, area.y1), pal["grid"])
+        _guide(ax, (left, corner.x0), (corner.y1, corner.y1), pal["grid"])
+        for part, label in _OVERLAP_LABEL.items():
+            a, b, y0, _y1 = ext[part]
+            ha = "left" if part == "source overlap" else "right"
+            ax.annotate(label, xy=((a + b) / 2, (y0 + area.y1) / 2),
+                        xytext=(a if ha == "left" else b, bottom - gap), ha=ha, va="top",
+                        arrowprops={"arrowstyle": "-", "color": pal["text"],
+                                    "lw": STYLE["edge_width"]})  # fmt: skip
+        ax.set_title(_statement("corner-area").replace(". ", ".\n"), fontsize=STYLE["text_pt"])
+        return _svg(fig)
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -959,22 +1306,46 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "band-regimes": band_regimes,
     "mesh-window": _mesh_window,
     "cv-parts": cv_parts,
+    "calibration-limits": calibration_limits,
+    "calibration-compare": calibration_compare,
+    "calibration-pfet": calibration_pfet,
+    "calibration-stack": _calibration_stack,
+    "corner-cv": corner_cv,
+    "corner-area": corner_area,
 }
 
 
 # The plots of computed curves (not drawings of the device) carry no statement.
-_PLOTS = ("bands-flat", "junction-panels", "moscap-cv", "cv-regions", "band-regimes", "cv-parts")
+_PLOTS = (
+    "bands-flat",
+    "junction-panels",
+    "moscap-cv",
+    "cv-regions",
+    "band-regimes",
+    "cv-parts",
+    "calibration-limits",
+    "calibration-compare",
+    "calibration-pfet",
+    "corner-cv",
+)
+
+
+def _statement(name: str) -> str:
+    """The exaggeration statement of the drawing ``name``: the gate-area figure scales no layer
+    and chooses its sizes for the drawing; the others use the layer scale factors."""
+    if name == "corner-area":
+        return model.exaggeration({}, STYLE["area_drawn"])
+    return model.exaggeration(STYLE["scales"])
 
 
 def substitutions() -> dict[str, str]:
     """``{"x_fig_<name>_scale": statement}``: the exaggeration statement of each drawing of the
-    device, for its caption, from the same scale factors the drawing uses."""
-    out = {}
-    for name in FIGURES:
-        if name in _PLOTS:
-            continue
-        out[f"x_fig_{name.replace('-', '_')}_scale"] = model.exaggeration(STYLE["scales"])
-    return out
+    device, for its caption, from the same scale factors (and drawn sizes) the drawing uses."""
+    return {
+        f"x_fig_{name.replace('-', '_')}_scale": _statement(name)
+        for name in FIGURES
+        if name not in _PLOTS
+    }
 
 
 def write_all(out_dir: Path) -> None:

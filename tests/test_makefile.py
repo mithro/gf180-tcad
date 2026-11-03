@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from gf180tcad import manifest, outcache, reference
+from gf180tcad.calibrate import corners
 from gf180tcad.calibrate.__main__ import _parser as calibrate_parser
 from gf180tcad.meshcut.__main__ import _parser as meshcut_parser
 from gf180tcad.tcad import process
@@ -69,6 +70,8 @@ def _commands(target: str) -> list[tuple[str, object]]:
             out.append((module, calibrate_parser().parse_args(rest)))
         elif module == "gf180tcad.meshcut":
             out.append((module, meshcut_parser().parse_args(rest)))
+        elif module == "gf180tcad.calibrate.corners":
+            out.append((module, corners._parser().parse_args(rest)))
         elif module == "gf180tcad.manifest":
             out.append((module, manifest._parser().parse_args(rest)))
         else:
@@ -227,3 +230,18 @@ def test_cache_targets():
     assert (pu.cache, pu.results, pu.publish, pu.dry_run) == (
         Path("tmp/output-cache"), Path("results"), True, False,
     )  # fmt: skip
+
+
+def test_tcad_corners_target():
+    """tcad-corners: the eight corner fits (both devices, ff ss fs sf) into results/tcad/corners,
+    then the summary of each device after all of them."""
+    cmds = _commands("tcad-corners")
+    assert {m for m, _ in cmds} == {"gf180tcad.calibrate.corners"}
+    runs = [a for _, a in cmds if a.command == "run"]
+    assert sorted((a.device, a.corner) for a in runs) == sorted(
+        (d, c) for d in process.DEVICES for c in corners.FIT_CORNERS
+    )
+    assert [(a.command, a.device) for _, a in cmds[len(runs) :]] == [
+        ("summary", d) for d in process.DEVICES
+    ]
+    assert {a.out.as_posix() for _, a in cmds} == {"results/tcad/corners"}

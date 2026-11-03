@@ -38,6 +38,7 @@ All Phase 2 Global Constraints apply where they touch the docs (licences, git ru
 - **Light and dark are one figure.** Each figure is written as `<name>-light.svg` and `<name>-dark.svg` from one palette table (Okabe–Ito categories, cividis for magnitudes, a diverging map for signed quantities, the renders' material colours once `render/style.toml` exists), and embedded with the `{image}` directive twice, classes `only-light` and `only-dark` (Furo shows the one that matches the reader's theme). The reader never chooses between links.
 - **Phone first.** Explainer figures are 6.4 × 4.8 in with 12 pt text. `gf180tcad.plots.figure_svg` is fixed at 10 × 4 in today (`plots.py` lines 37 and 94), so E0 adds a `size` parameter whose default keeps every existing generated SVG byte-identical. An SVG is scaled to the content width, so at 400 px the text is 12 pt × 400 / (6.4 × 72 pt) ≈ 10.4 px high, independent of dpi; `tests/test_explained.py::test_figures_legible_at_400px` computes that from `STYLE` and requires at least 9 px. Tables follow spec §10.3 (one value per cell, at most 5 columns of numbers or 3 with prose) and are checked at 400 px by screenshot.
 - **One page type per page.** Every page in `docs/explained/` is an explanation (noun title, the one question in the opening sentences, at most seven headings, no numbered steps, a diagram where it replaces the longest paragraph, and each concept in plain words first, then its equation as `$$` display math with the literature reference, as spec §10.2 requires), except `docs/explained/index.md`, a landing page (one line per page). A page that starts to instruct links a how-to in `docs/reproduce/` instead.
+- **Figures, equations and file links.** The rules of spec §10.3, owner 2026-11-03: a named, captioned `{figure}` cited with `{numref}` for every described situation; every equation as `$$ … $$ (eq-name)` with a `where` list giving each symbol and its unit; every file a `{repo}` link. `uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules all <page>` checks a page, and `tests/doc_rules_baseline.json` may only fall. The explainer pages' findings are the work order of [#129](https://github.com/mithro/gf180-tcad/issues/129).
 - **Present state, no hedges, no future.** Spec §10.3: no hedge word, no "not yet", no history phrase, no promise. A missing render is not mentioned; the page shows the plain diagram. A missing TCAD MOSFET result is stated as the present state in one sentence linking the roadmap, never as "coming".
 - **Honest about the gap** (spec §10.2). Each page ends with a section "Where this repo's results differ" that links the results and limitations pages of the same device and states, with its evidence, where the simple picture and the simulated or SPICE result differ.
 - **No provenance change.** `gf180tcad.explain` is imported by no module in any hashed closure (`tests/test_explained.py::test_explain_in_no_generator_closure`: the TCAD entry points, `gf180tcad.reference.GENERATOR_MODULES` and the render closure); no committed tree is restamped; `tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` and `tests/test_results_provenance.py` stay green. A reader moved out of `gf180tcad.docgen` goes to `gf180tcad.explain.data`, never into a hashed module (`gf180tcad.io`, `gf180tcad.metrics`, `gf180tcad.devices` or any other name in those closures), because moving code into a hashed module changes its hash and restamps its trees. `gf180tcad.quantity` is in the render closure only (Decisions); no SPICE or TCAD closure imports it.
@@ -297,7 +298,18 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   licence, and its Silicon Prawn page answers 403. No cross-section photo turned up. The page uses
   the design manual's PMOS matched-pair drawing (`google/gf180mcu-pdk` at `de3240d7`,
   Apache-2.0), committed with its source, author and licence beside it
-  (`docs/explained/images/*.licence.txt`). The wanted photo is #104.
+  (`docs/explained/images/*.licence.txt`). The wanted photo was #104.
+- Die photo (#104, 2026-11-03): the owner confirmed the Silicon Prawn images and the die photos
+  in the wafer.space Crowd Supply updates are CC BY. [`transistor-parts.md`](../../explained/transistor-parts.md) shows the OpenFASoC
+  `mpw18h1` analog front-end die from the Crowd Supply OpenFASoC update
+  ([`gf180mcu-afe-die-photo.jpg`](../../explained/images/gf180mcu-afe-die-photo.jpg), 1265 x 741 px, copied unchanged) below the cross-section,
+  with [its licence note](../../explained/images/gf180mcu-afe-die-photo.jpg.licence.txt). The page cites it with `{numref}`; [`docs/_ext/theme_figures.py`](../../_ext/theme_figures.py) (#140) numbers the figures. Silicon Prawn still answered 403 (Cloudflare challenge), so the caption
+  links it as the full-resolution source and credits wafer.space. No readable source names the
+  photographer (the update, its source post, the tapeout README); recording the name from the
+  Silicon Prawn page is #122. A photo has no dark twin: it reads the same on both themes.
+  `test_every_copied_image_has_a_licence_note` and `test_every_copied_image_is_on_a_page` ([`tests/test_explained.py`](../../../tests/test_explained.py)) hold
+  [`docs/explained/images/`](../../explained/images) to its notes. The chip is from the efabless `mpw18h1` shuttle (the
+  Silicon Prawn path), not from a wafer.space run, so the caption does not say it is.
 - The glossary gains "pn junction" only. "Well" is not an entry: the link checkers would demand a
   link at every use of the common word, so the pages use the existing `n-well` and name the
   PDK's LVPWELL layer. "Gate oxide" and "poly-silicon" landed in E0 (#99 comment).
@@ -344,7 +356,15 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - [x] **E2c Step 2:** the gap section states the 1D nfet and pfet verdicts and the 2D Disagree
   clause by substitution, linking `cv-agreement-deviation`, `cv-agreement-mismatch` and
   `cv-agreement-validation`.
-- [ ] **E2c Step 3:** PR; review by use, audit; merge.
+- [x] **E2c Step 3:** PR #118; review by use, audit; merged (73abcf3).
+- [x] **E2d Step 1:** tests first (red commit `467cb69`); the fit, limit-kind, corner-spread and
+  fit-verdict tables and the bound-hit sentence in `explain.numbers`, the budget and evaluation
+  counts, the `calibration-limits` figure; the page `calibration.md`; the glossary entry
+  "least-squares fit"; lint, measure, build, screenshots.
+- [x] **E2d Step 2:** the gap section states every fit geometry's verdict in a generated table,
+  the pfet 1D verdict and the 2D Disagree clause by substitution, linking `cv-agreement-mismatch`
+  and `cv-agreement-validation`.
+- [ ] **E2d Step 3:** PR; review by use, audit; merge.
 
 **As built (E2a).**
 
@@ -447,6 +467,46 @@ docgen reader move and the verdict words; E2b to E2d are the other three pages.
 - The landing page now has one heading per tier, so each list stays within seven items;
   `test_landing_lists_every_page` allows the three tier headings.
 - No glossary entry is added: the page uses existing terms only.
+
+**As built (E2d).**
+
+- The plan's "Start and final" and "Bounds" tables are one generated table per transistor,
+  `numbers.fit_table` (number, lower limit, start, fitted, upper limit), read from `bounds`,
+  `start` and `values` of the result file; a test edits a copy and sees the table change.
+  `numbers.shortest` prints each value with the fewest digits that keep it (the figures' `_short`
+  now calls it, one copy of the rule).
+- Where each start and limit comes from is a generated table of the process files' `start_kind`
+  and `bounds_kind` in plain words (`numbers.KIND_WORDS`); it refuses when the nfet and pfet kinds
+  differ, since one row then cannot show both.
+- The figure is a new one, `calibration-limits`, in place of a reuse of `cv-parts`: each fitted
+  number of both transistors on its own true axis (doping on a log axis), a bar between the
+  limits, the start and the fitted value. A test reads the drawn lines back against the result
+  files and checks that no limit mark is clipped.
+- Corner bounds and spread (spec §5.3): no corner fit is committed (issue #57), so the page says
+  it shows no bound of a fitted number and links #57. It shows the spread of the target instead,
+  `numbers.corner_table`: typical, lowest, highest and spread over the corners of the SPICE flat
+  parts (`metrics.json` of each corner, equal to `envelope.json`, tested) and halfway-level
+  crossings (the result file's corner windows) of the nfet at `w10p0_l10p00`.
+- Counts by substitution: the parameter budget and the part each fit uses (`budget`,
+  `budget_used`, the same in both result files or a ValueError) and scipy's evaluation counts
+  (`optimiser.nfev`; the page says they leave out the slope solves, as the scipy 1.18.0 manual
+  states; 1.18.1, the version in the TCAD image, has no published manual).
+- Owner rules of 2026-11-03 (a marked figure for every description, equations explained, every
+  file a link): each section has a named figure referred to with `{numref}`: the opening
+  `calibration-stack` (the 1D stack, the fitted oxide and body highlighted), `calibration-limits`,
+  the reused `moscap-cell` for what stays fixed, `calibration-compare` (the flat parts the fit
+  compares, shaded from the result file's residual voltages, and both curves' crossings),
+  the reused `moscap-cv` for the corner band, and `calibration-pfet` (the pfet at its shortest and
+  longest fit gates, on the true gate voltage). The site's `docs/_ext/theme_figures.py` (PR
+  #140) merges each light/dark pair into one numbered figure, so each light twin carries the
+  `:name:` and its dark twin follows it with the same caption. The cost equation is three
+  labelled display blocks (`eq-calibration-cost`, `-rc`, `-gap`) in the spec §10.3 house form,
+  each cited with `{math:numref}` and followed by a "where" list of every symbol and its unit; a
+  test checks the committed cost is half the sum of the squared committed residuals.
+- The fit verdicts per gate length are a generated table of `per_geometry` of both result files.
+  Tests also pin two sentences of the page to the data: the 2D cells reuse the 1D fit
+  (validation `values` equal calibration `values`) and the crossing residuals are the gaps over
+  the tolerance.
 
 **Exit criteria.** The four pages are on `main` and linked from the landing page; the docgen reader move left `docs/_generated/` byte-identical (log in the PR); the region shading and the calibration tables are read from the result files (tests green); the verdict sentences change when a result file's verdict changes (a test edits a copy of the file and sees the sentence change); the four new glossary terms are defined; the docs tools report nothing for `docs/explained/**`; the review by use has no open stop.
 

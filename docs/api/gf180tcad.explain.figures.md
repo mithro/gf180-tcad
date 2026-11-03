@@ -1,8 +1,8 @@
 # {py:mod}`gf180tcad.explain.figures`
 
 Source: {repo}`src/gf180tcad/explain/figures.py`. Its figures appear on the
-{ref}`explainer pages <explained>`, including {ref}`explained-regions` and
-{ref}`explained-cv-curve`.
+{ref}`explainer pages <explained>`, including {ref}`explained-regions`,
+{ref}`explained-cv-curve` and {ref}`explained-calibration`.
 
 ```{eval-rst}
 .. automodule:: gf180tcad.explain.figures

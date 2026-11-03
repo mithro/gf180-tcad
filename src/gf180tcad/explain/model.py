@@ -106,13 +106,18 @@ def device(
     )
 
 
-def exaggeration(scales: Mapping[str, float]) -> str:
-    """The statement a figure and its caption carry: which parts are stretched, and by what."""
+def exaggeration(scales: Mapping[str, float], drawn: Mapping[str, float] | None = None) -> str:
+    """The statement a figure and its caption carry: which parts are stretched, and by what, and
+    which extents (``drawn``: their names) have a size chosen for the drawing, with no committed
+    source."""
     parts = [f"{_SCALED[p]} ×{f:g}" for p, f in sorted(scales.items()) if f != 1]
-    if not parts:
-        return "Drawn to scale."
-    first = parts[0][0].upper() + parts[0][1:]
-    return " and ".join([first, *parts[1:]]) + ", not to scale."
+    out = []
+    if parts:
+        first = parts[0][0].upper() + parts[0][1:]
+        out.append(" and ".join([first, *parts[1:]]) + ", not to scale.")
+    for name in sorted(drawn or {}):
+        out.append(f"{name[0].upper()}{name[1:]} chosen for the drawing, not to scale.")
+    return " ".join(out) if out else "Drawn to scale."
 
 
 @dataclass(frozen=True)

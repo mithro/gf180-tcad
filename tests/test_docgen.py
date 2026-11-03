@@ -69,7 +69,13 @@ EXPLAINED_FIGURES = [
     "cv-regions",
     "band-regimes",
     "mesh-window",
+    "calibration-limits",
+    "calibration-compare",
+    "calibration-pfet",
+    "calibration-stack",
     "cv-parts",
+    "corner-cv",
+    "corner-area",
 ]
 
 

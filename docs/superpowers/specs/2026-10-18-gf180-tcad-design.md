@@ -164,6 +164,8 @@ file is not the pinned one: the pinned PDK's copy (sha256 `69a7ab87…`, recorde
 `nfet_05v0`/`pfet_05v0` wrappers. The first step of the implementing task re-reads every value
 from the pinned copy and corrects these tables where they differ.
 
+Task 16a re-read them into `data/pdk_corners.json` (2026-11-03): the pinned copy has the same values for these sections.
+
 Offsets added to the card value:
 
 | Input | BSIM4 parameter | Unit | nfet ff | nfet ss | pfet ff | pfet ss |
@@ -181,10 +183,13 @@ Factors that multiply the card value:
 | Overlap capacitance | CGSO, CGDO, CGSL, CGDL | 0.90 | 1.10 | 0.90 | 1.10 |
 | Saturation velocity | VSAT | 1.0846 | 0.899 | not applicable | not applicable |
 
-The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet card shifts
-TOXE only, not TOXP. `fs` and `sf` scale the nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT)
-or 0.75 (VTH0, TOXE) and give the pfet its own values between those of `ff` and `ss`; their
-overlap factors are 0.93 and 1.07 (nfet) and 1.07 and 0.93 (pfet). The `statistical` section gives each of the same inputs a Gaussian spread (for
+The pfet VTH0 is negative, so a positive offset makes the pfet faster. The pfet model has
+no TOXP line, so its TOXP follows TOXE and moves with the TOXE offset. `fs` and `sf` scale the
+nfet `ff` and `ss` offsets by 0.67 (XL, XW, VSAT) or 0.75 (VTH0, TOXE) and give the pfet its
+own values between those of `ff` and `ss`; their overlap factors are 0.93 and 1.07 (nfet) and
+1.07 and 0.93 (pfet).
+
+The `statistical` section gives each of the same inputs a Gaussian spread (for
 the 6 V nfet, for example, a VTH0 term of 8 mV shared with the pfet plus 28 mV of its own, and
 a TOXE term of 0.4 nm plus 0.13 nm, each at one standard deviation with `mc_skew = 3`).
 
@@ -588,11 +593,85 @@ writing-sourced-docs': at least three claims per page checked against the cited 
 fact diff, the rendered page read at desktop and 400 px width, and findings returned as
 `file:line — severity — what is wrong — what the source says`.
 
+**Figures, equations and file links**. The owner's words, 2026-11-03 02:00 ACDT (§16):
+
+> "Make sure that text never describes a situation without a clearly marked diagram or graph
+> that shows the item being described. Make sure that equations are always fully explained and
+> formatted correctly. Make sure that a file is never mentioned without being a link."
+
+The three rules apply to every reader page. That is everything under `docs/` except
+`docs/superpowers/` and the API pages autodoc generates, plus `README.md` and the `docgen` pages.
+
+- **A figure for every described situation**. Some sections describe a physical situation: a
+  cross section, a band diagram, a curve, a process step, a stack or a mesh. Such a section
+  carries a figure of that item: a `{figure}` directive with a caption and a `:name:`, cited
+  from the text with `{numref}`.
+- **Figure numbers**. `numfig` is on in `docs/conf.py`. A figure extension in `docs/_ext/`
+  numbers the figures of each page from 1, as "Figure N". So a `{numref}` cites a figure of its
+  own page. One that cites another page's figure puts that page's title in its link text.
+- **Light/dark pairs**. A pair is two adjacent `{figure}` directives with the same caption,
+  `only-light` first. The extension merges them into one figure with one number. Only the light
+  twin carries the `:name:` that the text cites.
+- **Every equation explained, in one form**. Every equation is a display block in the house
+  form below. A line `where` follows it, then a list with one item per symbol. Each item starts
+  with the symbol in `$…$` and says in words what it is. It ends with the unit in SI symbols
+  (`, in F/m²`, not "farads per square metre") or `, dimensionless`.
+- **No extra symbols**. No `where` item names a symbol that the equation does not use.
+- **Every file a link**. Every mention of a file or path is a link. A file of this repository
+  takes the `{repo}` role, which pins the link to the commit and fails the build on a wrong
+  path. A file of another repository takes a GitHub URL at a pinned commit.
+- **Kinds of file and pages outside Sphinx**. `README.md` and `CONTRIBUTING.md`, read on
+  GitHub, use Markdown links, and a figure there is a Markdown image. A text about a kind of
+  file, such as every `cv.meta.json`, links one example or the folder.
+
+A path under `~/` is on the reader's own computer and has no link target. The text links the
+code that writes it instead, and FILELINK does not report it.
+
+*House decision (equation form)*. The house form is MyST `dollarmath`, enabled in
+`docs/conf.py`. A label follows the closing `$$`, and the text cites it with `{math:numref}`:
+
+```text
+The capacitance per area of the oxide is {math:numref}`eq-cox`.
+
+$$
+C_{ox} = \frac{\varepsilon_{ox} \, \varepsilon_0}{t_{ox}}
+$$ (eq-cox)
+
+where
+
+- $C_{ox}$ is the oxide capacitance per area, in F/m²;
+- $\varepsilon_{ox}$ is the relative permittivity of the oxide, dimensionless;
+- $\varepsilon_0$ is the permittivity of vacuum, in F/m;
+- $t_{ox}$ is the oxide thickness, in m.
+```
+
+The `{math}` directive is not used. Inline `$…$` names a symbol in prose and never holds an
+equation.
+
+*House decision (the two skills on figures)*. The docs-writing skill asks that every physical
+thing named be pictured at first mention. The writing-sourced-docs skill asks for a generated
+figure of a cross section, a flow or a to-scale stack, and forbids a `{numref}` with `numfig` off.
+The `{figure}` form above meets all three. Figures come from committed inputs:
+
+- explainer figures from `gf180tcad.explain.figures`, written by `docgen`;
+- results figures from `docgen`;
+- the 3D renders from the §10.1 pipeline.
+
+Some sections name a noun that is not a physical thing: a mesh file, a software stack, a sweep
+command. Such a section carries `<!-- figure-ok: reason -->` instead, with a reason of six words
+or more. `docs_lint.py --rules` prints each one as a NOTE line. The baseline counts them per
+page, so each added opt-out shows in the PR's diff.
+
+Issues #129 to #134 are the work orders for the pages that broke these rules when they came in.
+They cover the explainer pages (#129), comparison (#130), limitations (#131) and reproduce
+(#132). The other two are README with the index pages (#133) and the `docgen` pages (#134).
+They also list the figures that break the form: no `:name:`, no caption, or no `{numref}`.
+
 **What enforces it.** The docs style pass that follows this amendment adds:
-- `tools/measure_docs.py` and `tools/docs_lint.py`, the two skills' scripts, vendored unchanged
-  with origin headers (both Apache-2.0), and a test that runs them over `docs/` and `README.md`,
-  holding the current counts of findings as a ceiling that may only fall until the pages meet
-  the caps;
+- `tools/measure_docs.py` and `tools/docs_lint.py`, the two skills' scripts, vendored with
+  origin headers (both Apache-2.0). `docs_lint.py` is unchanged except one block marked LOCAL,
+  for the house rules above. A test runs both over `docs/` and `README.md`. It holds the
+  current counts of findings as a ceiling that may only fall until the pages meet the caps;
 - `tests/test_doc_style.py`: `test_table_cells` (Markdown sources) and
   `test_generated_table_cells` (generated pages) for the one-value-per-cell and 25-word rules,
   with an explicit per-table opt-out `<!-- table-ok: reason -->`;
@@ -600,6 +679,13 @@ fact diff, the rendered page read at desktop and 400 px width, and findings retu
   `test_generated_terms_are_defined`; `test_no_history_phrases`, which fails on narrative
   phrases ("previously", "no longer", "before PR", "was changed") outside the places listed
   above, with a per-line opt-out `<!-- history-ok: reason -->`.
+- `tools/docs_lint.py --rules all` (2026-11-03): FIGURE, FIGURE-FORM, EQUATION and FILELINK,
+  the three rules of the owner's amendment above, each documented in `docs_lint.py --help` and
+  tested in `tests/test_docs_lint_rules.py`.
+- `test_house_rules_do_not_grow` and `test_generated_pages_house_rules_do_not_grow` in
+  `tests/test_doc_style.py`: the checks above over the reader pages, `CONTRIBUTING.md` and the
+  `docgen` pages, against `tests/doc_rules_baseline.json`. Its counts, FIGURE-OK included, may
+  only fall. Its writer refuses to raise a count without `--allow-raise`.
 
 The evidence rules, the 400 px check and the review protocol are checked by review, not by a
 test.
@@ -864,3 +950,11 @@ that the intent survives later rewording of the sections it changed.
   not the window. The size budget of the render files (stills, animations, `results/renders/`) is
   unchanged. The owner's words:
   > "Go ahead with changing the budget, no budget is fixed."
+- **2026-11-03 02:00 ACDT: figures, equations and file links**. Section 10.3 gains three rules.
+  A clearly marked figure shows every described situation, every equation is explained in one
+  house form, and every file is a link. `docs_lint.py --rules` checks them. Issues #129 to #134
+  list the pages to fix. The user's words:
+
+  > "Make sure that text never describes a situation without a clearly marked diagram or graph
+  > that shows the item being described. Make sure that equations are always fully explained
+  > and formatted correctly. Make sure that a file is never mentioned without being a link."

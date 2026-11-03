@@ -225,6 +225,217 @@ published as they are; the ngspice/Xyce cross-check is a separate test
 ({test}`tests/spice/test_xyce.py::test_engines_agree`), described in
 {doc}`../limitations/engine-cross-check`.
 
+(reproduce-corners)=
+
+## The corner fits
+
+A corner fit repeats the {ref}`C–V calibration <cv-agreement>` against one SPICE {term}`corner`
+instead of the {term}`typical corner`. Over the corners, each fitted number gets a lowest and a
+highest value, and the spread between them (design spec §5.3,
+[issue #57](https://github.com/mithro/gf180-tcad/issues/57)). The typical value is the committed
+calibration, never refitted.
+
+```{figure} /_generated/explained/corner-cv-light.svg
+:figclass: only-light
+:name: fig-corner-cv
+:alt: Gate capacitance against gate voltage for five model corners: a solid black typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, a dotted grey fs curve between typical and fast, and a dash-dotted grey sf curve between typical and slow.
+
+The gate capacitance of the {term}`nfet_05v0` at `w10p0_l10p00` in the five SPICE corners
+({repo}`results/spice/ngspice`). A corner fit takes one corner's curve as its target, here the
+dashed ss or ff curve instead of the solid typical one. The grey fs curve lies between typical
+and ff, the sf curve between typical and ss. Their nfet oxide offsets are −0.75 nm and +0.75 nm,
+against −1 nm at ff and +1 nm at ss ({repo}`data/pdk_corners.json`).
+```
+
+```{figure} /_generated/explained/corner-cv-dark.svg
+:figclass: only-dark
+:name: fig-corner-cv-dark
+:alt: Gate capacitance against gate voltage for five model corners: a solid light typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, a dotted grey fs curve between typical and fast, and a dash-dotted grey sf curve between typical and slow.
+
+The gate capacitance of the {term}`nfet_05v0` at `w10p0_l10p00` in the five SPICE corners
+({repo}`results/spice/ngspice`). A corner fit takes one corner's curve as its target, here the
+dashed ss or ff curve instead of the solid typical one. The grey fs curve lies between typical
+and ff, the sf curve between typical and ss. Their nfet oxide offsets are −0.75 nm and +0.75 nm,
+against −1 nm at ff and +1 nm at ss ({repo}`data/pdk_corners.json`).
+```
+
+**What a corner fit changes.** Its targets are the corner's ngspice curves at the three
+calibration geometries, as {numref}`fig-corner-cv` shows. Its fixed inputs come from the
+corner's section of the {term}`model card`, read into {repo}`data/pdk_corners.json` with each
+line number. The table also holds the card's second nfet {term}`bin`, `nfet_06v0.1`, which has
+the shortest calibration gate. Its lines for these inputs equal the first bin's. The 1D stack is the same; the residuals and the optimiser settings are the typical
+fit's ({py:mod}`gf180tcad.calibrate.corners`).
+
+```{figure} /_generated/explained/corner-area-light.svg
+:figclass: only-light
+:name: fig-corner-area
+:alt: The gate seen from above: a solid drawn outline, a dashed corner outline longer and narrower than it, a filled capacitance area inside the dashed outline, and two thin strips at its left and right ends labelled source overlap and drain overlap, with the lengths L, L plus X_L, L_c, D_L and the widths W, W plus X_W, W_c, D_W dimensioned.
+
+The gate seen from above at a corner $c$, drawn with the signs of the nfet's ss offsets: longer
+and narrower. The solid outline is the drawn gate, $L$ by $W$. The dashed outline adds the
+corner's $X_{L,c}$ and $X_{W,c}$. The filled middle is the capacitance area, $L_c$ by $W_c$, of
+{math:numref}`eq-corner-area`. The two strips at the source and drain ends, $D_L$ long and $W_c$
+wide, carry the overlap capacitances of {math:numref}`eq-corner-overlap`.
+{{ x_fig_corner_area_scale }}
+```
+
+```{figure} /_generated/explained/corner-area-dark.svg
+:figclass: only-dark
+:name: fig-corner-area-dark
+:alt: The gate seen from above: a solid drawn outline, a dashed corner outline longer and narrower than it, a filled capacitance area inside the dashed outline, and two thin strips at its left and right ends labelled source overlap and drain overlap, with the lengths L, L plus X_L, L_c, D_L and the widths W, W plus X_W, W_c, D_W dimensioned.
+
+The gate seen from above at a corner $c$, drawn with the signs of the nfet's ss offsets: longer
+and narrower. The solid outline is the drawn gate, $L$ by $W$. The dashed outline adds the
+corner's $X_{L,c}$ and $X_{W,c}$. The filled middle is the capacitance area, $L_c$ by $W_c$, of
+{math:numref}`eq-corner-area`. The two strips at the source and drain ends, $D_L$ long and $W_c$
+wide, carry the overlap capacitances of {math:numref}`eq-corner-overlap`.
+{{ x_fig_corner_area_scale }}
+```
+
+The capacitance area uses the corner's length and width offsets, as {math:numref}`eq-corner-area`
+gives and {numref}`fig-corner-area` shows:
+
+$$
+L_c = L + X_{L,c} - 2 D_L, \qquad W_c = W + X_{W,c} - 2 D_W
+$$ (eq-corner-area)
+
+where
+
+- $L_c$, $W_c$ are the capacitance length and width at corner $c$, in µm;
+- $L$, $W$ are the drawn gate length and width, in µm;
+- $X_{L,c}$, $X_{W,c}$ are the card's {term}`XL` and {term}`XW` at that corner, in µm;
+- $D_L$, $D_W$ are the card's {term}`DLC` and {term}`DWC`, in µm.
+
+The four overlap capacitances scale by the corner's factor, as {math:numref}`eq-corner-overlap`
+gives. They sit on the source and drain strips of {numref}`fig-corner-area`. The fringe capacitance CF is the {{ BSIM4_site }} default at the corner's oxide thickness TOXE.
+
+$$
+C_{o,c} = f_c \, C_o
+$$ (eq-corner-overlap)
+
+where
+
+- $C_{o,c}$ is CGSO, CGDO, CGSL or CGDL at corner $c$, in F/m;
+- $f_c$ is the corner's overlap factor, dimensionless;
+- $C_o$ is the same capacitance at the typical corner, in F/m.
+
+The oxide and flat-band bounds and start values move by the corner's own shift of the same
+quantity, as {math:numref}`eq-corner-bounds` gives. The doping bounds stay as at the typical
+corner.
+
+$$
+t_c = t + \Delta t_c, \qquad V_c = V + \Delta V_c
+$$ (eq-corner-bounds)
+
+where
+
+- $t_c$, $t$ are an oxide bound or start value at corner $c$ and at the typical corner, in nm;
+- $\Delta t_c$ is the corner's TOXE offset, in nm;
+- $V_c$, $V$ are a {term}`flat band` bound or start value at corner $c$ and at the typical corner, in V;
+- $\Delta V_c$ is the corner's VTH0 offset, in V.
+
+The typical oxide upper bound is TOXP plus the charge-centroid allowance of the typical fit
+({py:func}`~gf180tcad.tcad.process.centroid_allowance_nm`). A corner fit moves that bound by its
+TOXE offset and keeps the typical allowance, not recomputed at the corner's TOXP and VTH0.
+
+The flat-band shift is in true-sign gate voltage for both transistors. The pfet card sets no
+TOXP, so its TOXP follows TOXE and both oxide bounds move.
+
+**What a fit leaves out.** A 1D C–V fit takes no VSAT, VSAT binning or TOXM line of a corner.
+The pfet's PVTH0 binning line is also left out. It moves the SPICE VTH0 of a corner as
+{math:numref}`eq-corner-pvth0` gives, a binning term of {{ ngspice }}
+([`b4temp.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c), `Inv_LW`):
+
+$$
+\Delta V_{\mathrm{th0}} = \frac{\Delta P_{\mathrm{VTH0}}}{L_{\mathrm{eff}} \, W_{\mathrm{eff}}}
+$$ (eq-corner-pvth0)
+
+where
+
+- $\Delta V_{\mathrm{th0}}$ is the change of the pfet's VTH0 at the corner, in V;
+- $\Delta P_{\mathrm{VTH0}}$ is 8.47 × 10⁻³ times the corner's DVTH0
+  ({repo}`data/pdk_corners.json`, row `pvth0`), in V·µm²;
+- $L_{\mathrm{eff}}$, $W_{\mathrm{eff}}$ are the effective channel length and width, in µm.
+
+The effective size follows §1.3 of the [BSIM4.5.0 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), with the bias terms
+off. Its equations 1.3.1 to 1.3.4 become {math:numref}`eq-corner-leff`,
+{math:numref}`eq-corner-dl` and {math:numref}`eq-corner-dw` as `b4temp.c` computes them:
+
+$$
+L_{\mathrm{eff}} = L + X_L - 2\,d_L, \qquad W_{\mathrm{eff}} = W + X_W - 2\,d_W
+$$ (eq-corner-leff)
+
+where
+
+- $L_{\mathrm{eff}}$, $W_{\mathrm{eff}}$ are the effective channel length and width, in m;
+- $L$, $W$ are the drawn gate length and width, in m;
+- $X_L$, $X_W$ are the corner's {term}`XL` and {term}`XW`, in m;
+- $d_L$, $d_W$ are the length and width reductions per side, in m.
+
+$$
+d_L = \mathrm{LINT} + \frac{\mathrm{LL}}{(L + X_L)^{\mathrm{LLN}}} + \frac{\mathrm{LW}}{(W + X_W)^{\mathrm{LWN}}}
++ \frac{\mathrm{LWL}}{(L + X_L)^{\mathrm{LLN}} (W + X_W)^{\mathrm{LWN}}}
+$$ (eq-corner-dl)
+
+where
+
+- $d_L$ is the length reduction per side, in m;
+- $L$, $W$ are the drawn gate length and width, in m;
+- $X_L$, $X_W$ are the corner's XL and XW, in m;
+- $\mathrm{LINT}$ is the card's length offset ([line 38173](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38173)), in m;
+- $\mathrm{LL}$, $\mathrm{LW}$ are its coefficients ([LL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38174), [LW](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38186)); with
+  LLN = LWN = 1, in m²;
+- $\mathrm{LWL}$ is its cross coefficient ([line 38187](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38187)), in m³;
+- $\mathrm{LLN}$, $\mathrm{LWN}$ are exponents ([LLN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38175), [LWN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38188)), dimensionless.
+
+$$
+d_W = \mathrm{WINT} + \frac{\mathrm{WL}}{(L + X_L)^{\mathrm{WLN}}} + \frac{\mathrm{WW}}{(W + X_W)^{\mathrm{WWN}}}
++ \frac{\mathrm{WWL}}{(L + X_L)^{\mathrm{WLN}} (W + X_W)^{\mathrm{WWN}}}
+$$ (eq-corner-dw)
+
+where
+
+- $d_W$ is the width reduction per side, in m;
+- $L$, $W$ are the drawn gate length and width, in m;
+- $X_L$, $X_W$ are the corner's XL and XW, in m;
+- $\mathrm{WINT}$ is the card's width offset ([line 38278](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38278)), in m;
+- $\mathrm{WL}$, $\mathrm{WW}$ are its coefficients ([WL](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38280), [WW](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38288)); with
+  WLN = WWN = 1, in m²;
+- $\mathrm{WWL}$ is its cross coefficient ([line 38289](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38289)), in m³;
+- $\mathrm{WLN}$, $\mathrm{WWN}$ are exponents ([WLN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38281), [WWN](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38290)), dimensionless.
+
+The function {py:func}`~gf180tcad.calibrate.corners.largest_pvth0_shift` evaluates these at
+every fitted corner and calibration gate. The largest shift is at {{ x_corner_pvth0_corner }}
+on the W = {{ x_corner_pvth0_w }}, L = {{ x_corner_pvth0_l }} gate. There DVTH0 is
+{{ x_corner_pvth0_dvth0 }}, and the reductions are {{ x_corner_pvth0_dl }} and
+{{ x_corner_pvth0_dw }}. The effective size is {{ x_corner_pvth0_leff }} by
+{{ x_corner_pvth0_weff }}. The PVTH0 change is {{ x_corner_pvth0_dp }}, which moves VTH0 by
+{{ x_corner_pvth0_dv }}.
+
+**What the summary reports.** For each fitted number it gives the typical value and the value at
+each corner. It names the corners of the lowest and the highest value. The spread is the highest value minus
+the lowest. A lowest or highest value on a bound of its fit is reported as
+that bound.
+
+For the oxide and the flat band it also sets the fit's shift from the typical value beside the
+card's shift, and their difference.
+
+**Run them.** `make -j4 tcad-corners` runs the eight fits, four at a time, then the summary of
+each device. Each fit is one {term}`job` of one CPU and 2 GiB in the 1D results image, through
+the sandbox ({doc}`sandbox`). One fit and one summary alone:
+
+```sh
+uv run --locked python -m gf180tcad.calibrate.corners run --device nfet_05v0 --corner ss --out results/tcad/corners
+uv run --locked python -m gf180tcad.calibrate.corners summary --device nfet_05v0 --out results/tcad/corners
+```
+
+The fits write a corners folder beside {repo}`results/tcad/calibration`. It holds one result file
+per device and corner, a summary file per device and a provenance file.
+
+The job prints the path of its progress log when it starts. The summary needs the four corner
+files of the device and runs on the host. Both commands refuse an output folder under
+{repo}`results` other than the corners folder.
+
 (tcad-provenance)=
 
 ## Provenance of the TCAD results
@@ -273,6 +484,7 @@ The registry's entry points:
 
 - {py:mod}`gf180tcad.tcad.__main__` writes the MOS capacitor and mesh-convergence folders;
 - {py:mod}`gf180tcad.calibrate.__main__` writes the calibration and validation folders;
+- {py:mod}`gf180tcad.calibrate.corners` writes the corner fits ({ref}`reproduce-corners`);
 - {py:mod}`gf180tcad.meshcut.__main__` cuts the reduced mesh artefact of a 2D job and writes
   {repo}`results/tcad/meshes/stable`.
 

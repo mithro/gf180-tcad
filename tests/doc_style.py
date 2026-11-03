@@ -250,8 +250,9 @@ def hedge_lines(text: str) -> list[tuple[int, str]]:
 
 
 def source_pages() -> list[Path]:
-    """The Markdown sources the docs build reads (no plans, spec or API stubs) and README."""
-    pages = [ROOT / "README.md"]
+    """The Markdown sources the docs build reads (no plans, spec or API stubs), README and
+    CONTRIBUTING."""
+    pages = [ROOT / "README.md", ROOT / "CONTRIBUTING.md"]
     for p in sorted(DOCS.rglob("*.md")):
         rel = p.relative_to(ROOT).as_posix()
         if rel.startswith(("docs/superpowers/", "docs/_build/", "docs/_generated", "docs/api/")):

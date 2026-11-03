@@ -874,6 +874,8 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
 
 Requires the docs-links infrastructure on main.
 
+The pages `docgen` writes follow the rules of spec §10.3, owner 2026-11-03: a named, captioned `{figure}` cited with `{numref}` for every described situation; every equation as `$$ … $$ (eq-name)` with a `where` list giving each symbol and its unit; every file a `{repo}` link. `uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules all <page>` checks a page, and `tests/doc_rules_baseline.json` may only fall. Their findings are the work order of [#134](https://github.com/mithro/gf180-tcad/issues/134).
+
 **Files:**
 - `src/gf180tcad/docgen.py` (not a generator module). It renders MOSCAP pages from the committed `results/tcad/**` only:
   - the TCAD vs ngspice Cgg–Vg overlay, with the per-bias corner envelope;
@@ -1099,7 +1101,7 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   percentiles (linear interpolation) of each tunable, and the number of samples whose fit hit a
   bound.
 
-- [ ] **Step 1:** Write `data/pdk_corners.json` from the pinned PDK, read inside the base image
+- [x] **Step 1:** Write `data/pdk_corners.json` from the pinned PDK, read inside the base image
   through `tools/sandbox-run` (`--network none`, a read-only job). Write the tests first:
   `test_corner_table_matches_pinned_pdk` (each value at its recorded line of the file with the
   recorded sha256), `test_typical_refused`, `test_corner_cannot_write_calibration_dir`,
@@ -1114,7 +1116,30 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   `results/tcad/calibration/<device>.json`), `test_card_cross_check_reported`,
   `test_corner_fits_deterministic`, `test_docgen_corner_table_one_value_per_cell`. Run them:
   they FAIL.
-- [ ] **Step 2:** Implement. Run the tests: they PASS.
+- [x] **Step 2:** Implement. Run the tests: they PASS.
+
+  Done in PR 16a part 1 (branch `task/p2-16a-corner-fits`). What differs from the text above:
+  - The table was written from the upstream copy of the card, byte-identical to the image's
+    (`test_upstream_card_is_the_image_card`). Its check, `check_corner_table`, passed on that
+    copy. The sandbox test runs it on the image's card under the docker lock in part 2.
+  - The pinned values equal the upstream ones spec §5.3 quotes, so the spec tables stand.
+  - `with_corner_card` is a function of `gf180tcad.calibrate.corners`, not a
+    `ProcessDescription` method. `tcad/process.py` is in every entry point's closure, so a change
+    to it would move every committed tree's `generator_sha256`. The same holds for `calibrate/cv.py`
+    (calibration and validation trees), so `calibrate_corner` imports `cv`'s residuals
+    (`_compare_1d`), settings (`LSQ`) and result type rather than generalising `calibrate_cv`.
+    No committed hash moved.
+  - `data/pdk_corners.json` is not a hashed generator file; `corners.py` pins its sha256
+    (`PDK_CORNERS_SHA256`) and refuses another table, so a table change moves only the corners
+    hash.
+  - The corner bookkeeping also applies the BSIM4 default CF at the corner's TOXE (the card's CF
+    is derived from TOXE). The pfet card has no TOXP line (TOXP = TOXE), so both pfet oxide
+    bounds move by the TOXE offset, as the nfet's do.
+  - Each corner fit also compares the fitted 1D C-V with that corner's curves at the held-out
+    geometries (`held_out` in the result file; 1D only).
+  - `test_docgen_corner_table_one_value_per_cell` moves to part 2 with the table it tests.
+  - The table records every model bin (`bins`). The nfet's shortest calibration gate is in
+    `nfet_06v0.1`. `check_corner_table` requires its applied lines to equal `nfet_06v0.0`'s.
 - [ ] **Step 3:** Run the eight corner fits (4 corners × 2 devices), 2 GiB each, up to four at a
   time, each with a progress log in `tmp/` (spec §8.1); commit the corner tree in a results-only
   commit, then the summary and the docs. Open PR 16a, get it reviewed and merge.
