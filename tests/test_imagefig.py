@@ -79,7 +79,9 @@ def test_image_page_embeds_both_twins_and_cites_the_figure(name):
 def test_box_edges_read_on_the_container_fill(palette):
     """The container and the dashed boxes have edges in the arrow colour, drawn on that fill."""
     pal = imagefig.PALETTES[palette]
-    assert imagefig.contrast(pal["arrow"], pal["fill"]["container"]) >= imagefig.MIN_GRAPHIC_CONTRAST
+    assert (
+        imagefig.contrast(pal["arrow"], pal["fill"]["container"]) >= imagefig.MIN_GRAPHIC_CONTRAST
+    )
 
 
 def _drawn(svg: bytes, lines) -> None:
