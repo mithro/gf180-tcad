@@ -607,6 +607,7 @@ running container has a memory limit of at most 16 GiB and no swap, as docker ap
 The builder runs outside {term}`gf180-tcad.slice`, with that limit of its own. Docker's
 buildx places a builder in a given {term}`cgroup` only when docker uses the cgroupfs driver,
 and the project's host runs docker with {{ systemd }}.
+[Issue #155](https://github.com/mithro/gf180-tcad/issues/155) holds the ways to place it in the slice.
 
 {numref}`charon-stages` shows the three stages of {repo}`docker/charon-libs/Dockerfile`:
 
