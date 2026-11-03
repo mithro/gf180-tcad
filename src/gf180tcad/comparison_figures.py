@@ -100,13 +100,24 @@ def _figure(size: tuple[float, float]) -> Figure:
 # --- the definition of agreement ----------------------------------------------------------------
 
 
+def process_cell_model() -> model.Cell:
+    """The 2D cell of the calibrated nfet at ``w10p0_l0p70``, at the explainer figures' scale
+    factors and drawn extents."""
+    return model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=ef.STYLE["scales"],
+                      drawn=ef.STYLE["drawn_um"])  # fmt: skip
+
+
+def process_cell_figure(palette: str) -> Figure:
+    """The cell of :func:`process_cell_model` cut along its length, drawn by
+    :func:`gf180tcad.explain.figures.cross_section_figure`: the parts whose doping, oxide and
+    contacts one process description sets."""
+    return ef.cross_section_figure(process_cell_model(), (), palette)
+
+
 def process_cell(palette: str) -> bytes:
-    """The 2D cell of the calibrated nfet at ``w10p0_l0p70`` cut along its length, drawn by
-    :func:`gf180tcad.explain.figures.cross_section`: the parts whose doping, oxide and contacts
-    one process description sets."""
-    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=ef.STYLE["scales"],
-                   drawn=ef.STYLE["drawn_um"])  # fmt: skip
-    return ef.cross_section(c, (), palette)
+    """:func:`process_cell_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(process_cell_figure(palette))
 
 
 # The device of the plan view.
@@ -132,7 +143,7 @@ def instance_extents(device: str = PLAN_DEVICE, gid: str = PLAN_GEOMETRY) -> dic
     return {"w_um": g.w_um, "l_um": g.l_um, "sd_um": sd_um}
 
 
-def instance_plan(palette: str) -> bytes:
+def instance_plan_figure(palette: str) -> Figure:
     """The transistor of the SPICE reference seen from above, to scale: the gate strip of length
     L across the active area of width W, and the source and drain each of the length that AS and
     PS (AD and PD) assume, outlined by the perimeter those parameters count."""
@@ -151,13 +162,13 @@ def instance_plan(palette: str) -> bytes:
                                     (half, half + sd, "drain", "AD, PD")):  # fmt: skip
             ax.fill_between([x0, x1], 0, w, color=fill, alpha=ef.STYLE["cell_alpha"], lw=0)
             ax.plot([x0, x1, x1, x0, x0], [0, 0, w, w, 0], color=pal["text"],
-                    lw=ef.STYLE["line_width"], ls=ef.STYLE["window_dash"])  # fmt: skip
+                    lw=ef.STYLE["line_width"], ls=ef.STYLE["window_dash"], gid=name)  # fmt: skip
             ax.text((x0 + x1) / 2, w / 2, f"{name}\n{short}", ha="center", va="center",
                     rotation=ef.STYLE["upright_deg"])  # fmt: skip
         ax.fill_between([-half, half], -over, w + over, color=pal["muted"],
                         alpha=ef.STYLE["cell_alpha"], lw=0)  # fmt: skip
         ax.plot([-half, half, half, -half, -half], [-over, -over, w + over, w + over, -over],
-                color=pal["text"], lw=ef.STYLE["edge_width"])  # fmt: skip
+                color=pal["text"], lw=ef.STYLE["edge_width"], gid="gate")  # fmt: skip
         ax.text(0, w / 2, "gate", ha="center", va="center", rotation=ef.STYLE["upright_deg"])
         arrow = {"arrowstyle": "<->", "color": pal["text"], "lw": ef.STYLE["edge_width"]}
         right = half + sd + off
@@ -173,10 +184,16 @@ def instance_plan(palette: str) -> bytes:
         pad = span * STYLE["plan_margin"]
         ax.set_xlim(-half - sd - pad, half + sd + pad * 2)
         ax.set_ylim(bottom - pad, top + pad)
-        return ef._svg(fig)
+        return fig
 
 
-def geometries(palette: str) -> bytes:
+def instance_plan(palette: str) -> bytes:
+    """:func:`instance_plan_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(instance_plan_figure(palette))
+
+
+def geometries_figure(palette: str) -> Figure:
     """W against L of every compared geometry, one panel per device: filled markers for the
     calibration geometries, open markers for the held-out ones (:attr:`Geometry.role`)."""
     pal = ef.PALETTES[palette]
@@ -190,7 +207,8 @@ def geometries(palette: str) -> bytes:
                 gs = _geometries(device, role)
                 ax.plot([g.l_um for g in gs], [g.w_um for g in gs], ls="none", marker="o",
                         ms=STYLE["marker_pt"], mfc=face, mec=colour,
-                        mew=ef.STYLE["edge_width"] * 2, label=name)  # fmt: skip
+                        mew=ef.STYLE["edge_width"] * 2, label=name,
+                        gid=f"{device} {role}")  # fmt: skip
             every = DEVICES[device].geometries
             ax.set_xscale("log")
             ax.set_xticks(sorted({g.l_um for g in every}), minor=False)
@@ -205,7 +223,13 @@ def geometries(palette: str) -> bytes:
             ax.grid(True)
             ax.legend(loc="center right", frameon=False)
             ax.set_xlabel("L (µm)")
-        return ef._svg(fig)
+        return fig
+
+
+def geometries(palette: str) -> bytes:
+    """:func:`geometries_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(geometries_figure(palette))
 
 
 def meshconv_report(dim: int, device: str) -> dict:
@@ -226,7 +250,7 @@ def meshconv_points(report: dict) -> tuple[list[int], list[float]]:
     return nodes, change
 
 
-def meshconv(palette: str) -> bytes:
+def meshconv_figure(palette: str) -> Figure:
     """The mesh convergence of the 1D and 2D MOS capacitors: the largest change of the C per
     area against the next finer mesh, by node count, with the reports' criterion."""
     pal = ef.PALETTES[palette]
@@ -241,9 +265,9 @@ def meshconv(palette: str) -> bytes:
                 crit.add(report["criterion"])
                 nodes, change = meshconv_points(report)
                 ax.plot(nodes, change, color=pal[_CARRIER[device]], ls=style, lw=lw, marker="o",
-                        label=f"{dim}D {_SHORT[device]}")  # fmt: skip
+                        label=f"{dim}D {_SHORT[device]}", gid=f"{dim}D {device}")  # fmt: skip
         (c,) = crit
-        ax.axhline(c, color=pal["text"], lw=ef.STYLE["edge_width"], ls=":")
+        ax.axhline(c, color=pal["text"], lw=ef.STYLE["edge_width"], ls=":", gid="criterion")
         ax.text(STYLE["criterion_x"], c, f"criterion {c:.0%}", va="bottom", ha="left",
                 transform=ax.get_yaxis_transform())  # fmt: skip
         ax.set_xscale("log")
@@ -252,13 +276,19 @@ def meshconv(palette: str) -> bytes:
         ax.set_ylabel("largest |C / C_finer − 1|")
         ax.grid(True)
         fig.legend(loc="outside lower center", ncols=2, frameon=False)
-        return ef._svg(fig)
+        return fig
+
+
+def meshconv(palette: str) -> bytes:
+    """:func:`meshconv_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(meshconv_figure(palette))
 
 
 # --- the C-V calibration ---------------------------------------------------------------------
 
 
-def _cv_grid(role: str, palette: str) -> bytes:
+def _cv_grid_figure(role: str, palette: str) -> Figure:
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     rows = {d: _geometries(d, role) for d in _DEVICES}
@@ -271,11 +301,13 @@ def _cv_grid(role: str, palette: str) -> bytes:
                 ax = axes[row][col]
                 c = ef.cv_curves(device, "calibrated", geometry_id(g))
                 ax.fill_between(c["u_spice"], c["spice_lo"], c["spice_hi"], color=pal["band"],
-                                linewidth=0, label="SPICE, all corners")  # fmt: skip
+                                linewidth=0, label="SPICE, all corners", gid="corners")  # fmt: skip
                 ax.plot(c["u_spice"], c["spice_tt"], color=pal["text"], lw=lw,
-                        label="SPICE, typical")  # fmt: skip
+                        label="SPICE, typical", gid="typical")  # fmt: skip
                 ax.plot(c["u"], c["tcad"], color=pal["highlight"], lw=lw, ls="--",
-                        zorder=ef.STYLE["cv_zorder"], label="simulated, fitted")  # fmt: skip
+                        zorder=ef.STYLE["cv_zorder"], label="simulated, fitted",
+                        gid="simulated")  # fmt: skip
+                ax.set_gid(f"{device} {geometry_id(g)}")
                 ax.set_ylim(bottom=0)
                 ax.grid(True)
                 ax.set_title(f"{_SHORT[device]} {_label(g)}", fontsize=ef.STYLE["text_pt"])
@@ -286,18 +318,30 @@ def _cv_grid(role: str, palette: str) -> bytes:
         handles, labels = axes[0][0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="outside lower center", ncols=len(labels),
                    frameon=False)  # fmt: skip
-        return ef._svg(fig)
+        return fig
+
+
+def cv_fit_figure(palette: str) -> Figure:
+    """Cgg against u of each calibration geometry, nfet left and pfet right: the SPICE typical
+    corner inside the band of its five corners, and the fitted 1D stack, dashed."""
+    return _cv_grid_figure("calibration", palette)
 
 
 def cv_fit(palette: str) -> bytes:
-    """Cgg against u of each calibration geometry, nfet left and pfet right: the SPICE typical
-    corner inside the band of its five corners, and the fitted 1D stack, dashed."""
-    return _cv_grid("calibration", palette)
+    """:func:`cv_fit_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(cv_fit_figure(palette))
+
+
+def cv_validation_figure(palette: str) -> Figure:
+    """The same as :func:`cv_fit_figure` at the held-out geometries."""
+    return _cv_grid_figure("validation", palette)
 
 
 def cv_validation(palette: str) -> bytes:
-    """The same as :func:`cv_fit` at the held-out geometries."""
-    return _cv_grid("validation", palette)
+    """:func:`cv_validation_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(cv_validation_figure(palette))
 
 
 # The device of the curve the metric figure marks.
@@ -315,7 +359,7 @@ def metric_regions() -> tuple[np.ndarray, np.ndarray, calcv.Regions]:
     return u, c, calcv.regions(tuple(u.tolist()), tuple(c.tolist()))
 
 
-def cv_metric(palette: str) -> bytes:
+def cv_metric_figure(palette: str) -> Figure:
     """The SPICE curve of :data:`METRIC_GEOMETRY` with the parts the agreement metric reads:
     the two plateaus (shaded), u_fb and u_t, the level C_mid and its two crossings."""
     pal = ef.PALETTES[palette]
@@ -326,16 +370,19 @@ def cv_metric(palette: str) -> bytes:
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
-        ax.axvspan(u[0], r.u_fb - off, color=pal["hole"], alpha=STYLE["plateau_alpha"], lw=0)
-        ax.axvspan(r.u_t + off, u[-1], color=pal["electron"], alpha=STYLE["plateau_alpha"], lw=0)
-        ax.plot(u, c, color=pal["text"], lw=lw)
+        ax.axvspan(u[0], r.u_fb - off, color=pal["hole"], alpha=STYLE["plateau_alpha"], lw=0,
+                   gid="accumulation plateau")  # fmt: skip
+        ax.axvspan(r.u_t + off, u[-1], color=pal["electron"], alpha=STYLE["plateau_alpha"], lw=0,
+                   gid="inversion plateau")  # fmt: skip
+        ax.plot(u, c, color=pal["text"], lw=lw, gid="typical")
         for x, name in ((r.u_fb, "u_fb"), (r.u_t, "u_t")):
-            ax.axvline(x, color=pal["intrinsic"], lw=ef.STYLE["edge_width"], ls=":")
+            ax.axvline(x, color=pal["intrinsic"], lw=ef.STYLE["edge_width"], ls=":", gid=name)
             ax.text(x, lift, f" {name}", ha="left", va="bottom", color=pal["intrinsic"])
-        ax.axhline(r.c_mid, color=pal["highlight"], lw=ef.STYLE["edge_width"], ls="--")
+        ax.axhline(r.c_mid, color=pal["highlight"], lw=ef.STYLE["edge_width"], ls="--",
+                   gid="c_mid")  # fmt: skip
         ax.text(u[-1], r.c_mid + lift, "C_mid ", ha="right", va="bottom", color=pal["highlight"])
         ax.plot([r.u_dep, r.u_inv], [r.c_mid, r.c_mid], ls="none", marker="o",
-                ms=STYLE["marker_pt"], color=pal["highlight"])  # fmt: skip
+                ms=STYLE["marker_pt"], color=pal["highlight"], gid="crossings")  # fmt: skip
         ax.text(r.u_dep, r.c_mid - lift, "u_dep ", ha="right", va="top", color=pal["highlight"])
         ax.text(r.u_inv, r.c_mid - lift, " u_inv", ha="left", va="top", color=pal["highlight"])
         ax.text((u[0] + r.u_fb - off) / 2, r.c_acc + lift, "accumulation\nplateau",
@@ -346,7 +393,13 @@ def cv_metric(palette: str) -> bytes:
         ax.set_xlabel("u = Vg (V)")
         ax.set_ylabel("SPICE Cgg, typical corner (fF)")
         ax.grid(True)
-        return ef._svg(fig)
+        return fig
+
+
+def cv_metric(palette: str) -> bytes:
+    """:func:`cv_metric_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(cv_metric_figure(palette))
 
 
 def edge_curves(device: str = "pfet_05v0") -> list[dict]:
@@ -370,7 +423,7 @@ def edge_curves(device: str = "pfet_05v0") -> list[dict]:
     return out
 
 
-def pfet_edge(palette: str) -> bytes:
+def pfet_edge_figure(palette: str) -> Figure:
     """The pfet's depletion edge against gate length: the SPICE typical curve (solid) and the
     fitted 1D curve (dashed) of each W = 10 µm geometry, each over its own accumulation value,
     with the SPICE crossing u_dep marked."""
@@ -382,27 +435,40 @@ def pfet_edge(palette: str) -> bytes:
         ax = fig.subplots()
         for k, cur in zip(_SERIES, curves, strict=False):
             colour = pal[k]
+            gid = geometry_id(cur["geometry"])
             ax.plot(cur["u_spice"], cur["spice"], color=colour, lw=lw,
-                    label=f"L = {cur['geometry'].l_um:g} µm")  # fmt: skip
-            ax.plot(cur["u"], cur["tcad"], color=colour, lw=lw, ls="--")
+                    label=f"L = {cur['geometry'].l_um:g} µm", gid=f"typical {gid}")  # fmt: skip
+            ax.plot(cur["u"], cur["tcad"], color=colour, lw=lw, ls="--", gid=f"simulated {gid}")
             ax.plot([cur["u_dep"]], [cur["level"]], ls="none", marker="o",
-                    ms=STYLE["marker_pt"], color=colour)  # fmt: skip
+                    ms=STYLE["marker_pt"], color=colour, gid=f"u_dep {gid}")  # fmt: skip
         ax.set_xlim(*STYLE["edge_u_v"])
         ax.set_ylim(0, STYLE["edge_headroom"])
         ax.set_xlabel("u = −Vg (V)")
         ax.set_ylabel("Cgg / Cgg(u = −5 V)")
         ax.grid(True)
         fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
-        return ef._svg(fig)
+        return fig
+
+
+def pfet_edge(palette: str) -> bytes:
+    """:func:`pfet_edge_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(pfet_edge_figure(palette))
 
 
 # --- the process data ------------------------------------------------------------------------
 
 
-def start_stack(palette: str) -> bytes:
+def start_stack_figure(palette: str) -> Figure:
     """The 1D stack of the nfet at the start values of the calibration, oxide and body shaded."""
     dev = model.device("nfet_05v0", "start", scales=ef.STYLE["scales"])
-    return ef.stack_1d(dev, ("oxide", "body"), palette)
+    return ef.stack_1d_figure(dev, ("oxide", "body"), palette)
+
+
+def start_stack(palette: str) -> bytes:
+    """:func:`start_stack_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(start_stack_figure(palette))
 
 
 # The device of the split plot.
@@ -412,7 +478,7 @@ SPLIT_DEVICE = "nfet_05v0"
 SPLIT_GEOMETRY = "w10p0_l0p60"
 
 
-def cgg_split(palette: str) -> bytes:
+def cgg_split_figure(palette: str) -> Figure:
     """The fitted 1D Cgg of :data:`SPLIT_GEOMETRY` and its two parts by the BSIM4 bookkeeping
     (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`): the intrinsic part over the
     capacitance area, and the overlap, fringe and gate-bulk part."""
@@ -425,16 +491,23 @@ def cgg_split(palette: str) -> bytes:
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
-        ax.plot(u, total, color=pal["text"], lw=lw, label="total")
-        ax.plot(u, intrinsic, color=pal["highlight"], lw=lw, ls="--", label="intrinsic")
+        ax.plot(u, total, color=pal["text"], lw=lw, label="total", gid="total")
+        ax.plot(u, intrinsic, color=pal["highlight"], lw=lw, ls="--", label="intrinsic",
+                gid="intrinsic")  # fmt: skip
         ax.plot(u, parasitic, color=pal["hole"], lw=lw, ls=":",
-                label="overlap, fringe, gate-bulk")  # fmt: skip
+                label="overlap, fringe, gate-bulk", gid="parasitic")  # fmt: skip
         ax.set_ylim(bottom=0)
         ax.set_xlabel("u = Vg (V)")
         ax.set_ylabel(f"Cgg, nfet {_label(g)} (fF)")
         ax.grid(True)
         fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
-        return ef._svg(fig)
+        return fig
+
+
+def cgg_split(palette: str) -> bytes:
+    """:func:`cgg_split_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(cgg_split_figure(palette))
 
 
 def centroid_curves(device: str) -> dict:
@@ -452,7 +525,7 @@ def centroid_curves(device: str) -> dict:
             "centroid": process.centroid(cv)}  # fmt: skip
 
 
-def centroid(palette: str) -> bytes:
+def centroid_figure(palette: str) -> Figure:
     """X_DC against u for both devices: the accumulation formula (solid), the plateau windows
     beyond plus and minus :data:`gf180tcad.tcad.process.PLATEAU_V` (shaded), the largest value
     inside the accumulation window (marked) and the inversion supremum (dotted, on the inversion
@@ -466,22 +539,32 @@ def centroid(palette: str) -> bytes:
         for device in _DEVICES:
             k = centroid_curves(device)
             colour = pal[_CARRIER[device]]
-            ax.plot(k["u"], k["x_acc_nm"], color=colour, lw=lw, label=_SHORT[device])
+            ax.plot(k["u"], k["x_acc_nm"], color=colour, lw=lw, label=_SHORT[device],
+                    gid=f"accumulation {device}")  # fmt: skip
             cen = k["centroid"]
             ax.plot([cen.vg_at_max_v * k["polarity"]],
                     [cen.x_dc_acc_max_m * UNITS["nm_per_m"]], ls="none", marker="o",
-                    ms=STYLE["marker_pt"], color=colour)  # fmt: skip
-            ax.plot([edge, -process.CV_VG[0]], [k["x_inv_nm"]] * 2, color=colour, lw=lw, ls=":")
+                    ms=STYLE["marker_pt"], color=colour, gid=f"largest {device}")  # fmt: skip
+            ax.plot([edge, -process.CV_VG[0]], [k["x_inv_nm"]] * 2, color=colour, lw=lw, ls=":",
+                    gid=f"inversion {device}")  # fmt: skip
         lo, hi = process.CV_VG[0], -process.CV_VG[0]
-        ax.axvspan(lo, -edge, color=pal["muted"], alpha=STYLE["plateau_alpha"], lw=0)
-        ax.axvspan(edge, hi, color=pal["muted"], alpha=STYLE["plateau_alpha"], lw=0)
+        ax.axvspan(lo, -edge, color=pal["muted"], alpha=STYLE["plateau_alpha"], lw=0,
+                   gid="accumulation window")  # fmt: skip
+        ax.axvspan(edge, hi, color=pal["muted"], alpha=STYLE["plateau_alpha"], lw=0,
+                   gid="inversion window")  # fmt: skip
         ax.set_xlim(lo, hi)
         ax.set_ylim(bottom=0)
         ax.set_xlabel("u = polarity × Vg (V)")
         ax.set_ylabel("X_DC (nm)")
         ax.grid(True)
         fig.legend(loc="outside lower center", ncols=2, frameon=False)
-        return ef._svg(fig)
+        return fig
+
+
+def centroid(palette: str) -> bytes:
+    """:func:`centroid_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(centroid_figure(palette))
 
 
 # --- the PDK versions ------------------------------------------------------------------------
@@ -501,7 +584,7 @@ def pdk_sweep_curves(device: str, root: Path) -> list[tuple[np.ndarray, np.ndarr
     return out
 
 
-def pdk_sweeps(palette: str) -> bytes:
+def pdk_sweeps_figure(palette: str) -> Figure:
     """|Id| against |Vg| of the linear sweep at :data:`PDK_GEOMETRY`, one panel per device: the
     reference with the PDK of the image (solid) and the rerun with open_pdks d658698 (dashed,
     on top)."""
@@ -515,10 +598,11 @@ def pdk_sweeps(palette: str) -> bytes:
             old = pdk_sweep_curves(device, OLDER_PDK_ROOT)
             for k, ((vg, i_new), (vg_old, i_old)) in enumerate(zip(new, old, strict=True)):
                 ax.plot(vg, i_new, color=pal[_CARRIER[device]], lw=lw,
-                        label=None if k else "PDK of the image")  # fmt: skip
+                        label=None if k else "PDK of the image", gid=f"image {k}")  # fmt: skip
                 ax.plot(vg_old, i_old, color=pal["text"], lw=lw, ls=STYLE["older_dash"],
                         zorder=STYLE["older_zorder"],
-                        label=None if k else "open_pdks d658698")  # fmt: skip
+                        label=None if k else "open_pdks d658698", gid=f"d658698 {k}")  # fmt: skip
+            ax.set_gid(device)
             ax.set_yscale("log")
             ax.set_title(f"{_SHORT[device]} W10/L10", fontsize=ef.STYLE["text_pt"])
             ax.set_xlabel("|Vg| (V)")
@@ -526,7 +610,13 @@ def pdk_sweeps(palette: str) -> bytes:
         axes[0].set_ylabel("|Id| (µA)")
         fig.legend(*axes[0].get_legend_handles_labels(), loc="outside lower center",
                    ncols=2, frameon=False)  # fmt: skip
-        return ef._svg(fig)
+        return fig
+
+
+def pdk_sweeps(palette: str) -> bytes:
+    """:func:`pdk_sweeps_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef._rc(palette)):
+        return ef._svg(pdk_sweeps_figure(palette))
 
 
 # name -> function of the palette name; each is written in both palettes by write_all.

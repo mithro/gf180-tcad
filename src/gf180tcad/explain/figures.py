@@ -270,7 +270,7 @@ def _thickness(layer: model.Layer) -> str:
 _STACK_NAME = {"gate": "gate", "oxide": "gate oxide", "body": "body"}
 
 
-def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
+def stack_1d_figure(dev: model.Device, highlight: tuple[str, ...], palette: str):
     """The 1D stack as layers, gate on top, each labelled with its material, its thickness and
     its doping from the model. The parts in ``highlight`` are shaded (a silicon layer in its
     majority carrier's colour), the rest muted. Drawn at
@@ -318,7 +318,13 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
                 fontweight="bold" if layer.part in highlight else "normal",
             )
         ax.set_title(model.exaggeration(dev.scales), fontsize=STYLE["text_pt"])
-        return _svg(fig)
+        return fig
+
+
+def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
+    """:func:`stack_1d_figure` as SVG bytes."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(stack_1d_figure(dev, highlight, palette))
 
 
 def band_levels(dev: model.Device, part: str) -> dict[str, float]:
@@ -448,9 +454,9 @@ def window_box(c: model.Cell) -> Box:
     return Box(gate.x0 - margin, gate.x1 + margin, gate.y0, meshcut.WINDOW_DEPTH_UM)
 
 
-def cross_section(
+def cross_section_figure(
     c: model.Cell, highlight: tuple[str, ...], palette: str, window: Box | None = None
-) -> bytes:
+):
     """The 2D cell cut along its length: gate, gate oxide, source, drain and body, each filled
     with its carrier's colour (n-type: electrons, p-type: holes; the oxide its own) and labelled
     on the part, and the contacts of ``c.contacts`` as dark bars. With ``highlight``, the parts
@@ -542,7 +548,15 @@ def cross_section(
                     color=pal["highlight"], fontweight="bold")  # fmt: skip
         statement = model.exaggeration(c.scales, c.drawn).replace(". ", ".\n")
         ax.set_title(statement, fontsize=STYLE["text_pt"])
-        return _svg(fig)
+        return fig
+
+
+def cross_section(
+    c: model.Cell, highlight: tuple[str, ...], palette: str, window: Box | None = None
+) -> bytes:
+    """:func:`cross_section_figure` as SVG bytes."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(cross_section_figure(c, highlight, palette, window))
 
 
 _JUNCTION_PANELS = ("charge", "field", "potential")
