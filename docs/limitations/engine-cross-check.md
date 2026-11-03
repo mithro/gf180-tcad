@@ -146,7 +146,9 @@ subdirectory of the working directory. It asserts three things:
 - Patched ngspice against Xyce stays below 0.005.
 
 The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6.
-The stock values are the nfet markers of {numref}`engine-diff-figure`. The `idvg_lin` sweep:
+The stock values are the nfet markers of {numref}`engine-diff-figure`.
+
+The `idvg_lin` sweep:
 
 | W (µm) | L (µm) | Stock | At 4.6 |
 |---|---|---|---|
