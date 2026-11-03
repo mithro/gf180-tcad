@@ -121,16 +121,15 @@ def test_metric_figure_marks_the_calibration_regions():
 
 
 def test_pfet_edge_marks_the_recorded_crossings():
-    """Each marked SPICE u_dep is the calibration's (calibration geometries) or the page's."""
+    """Each SPICE u_dep is the one its committed record holds: the calibration result file for a
+    calibration geometry, the validation file for a held-out one."""
     curves = cf.edge_curves()
     printed = _page_u_dep()
     assert [c["geometry"].l_um for c in curves] == list(printed)
-    per = _result("pfet_05v0")["per_geometry"]
     for c in curves:
-        gid = geometry_id(c["geometry"])
-        if gid in per:
-            assert math.isclose(c["u_dep"], per[gid]["spice_regions"]["u_dep"], rel_tol=1e-12)
-    # The values the cv-agreement page prints for the five lengths (mismatch analysis).
+        rec = _record("pfet_05v0", geometry_id(c["geometry"]))
+        assert math.isclose(c["u_dep"], rec["spice_regions"]["u_dep"], rel_tol=1e-12)
+    # Page consistency: the cv-agreement page prints these five values (mismatch analysis).
     assert [round(c["u_dep"], 3) for c in curves] == list(printed.values())
 
 
@@ -317,19 +316,17 @@ def test_centroid_figure_draws_the_allowance(palette):
 
 @pytest.mark.parametrize("palette", ["light", "dark"])
 def test_pfet_edge_figure_draws_the_recorded_crossings(palette):
-    """Each marker sits at the u_dep the page prints for its length, and those the calibration
-    covers equal its result file; each solid line is the committed typical cv.csv over its value
-    at the grid's first point."""
+    """Each marker sits at the u_dep of its geometry's committed record (calibration result file
+    or validation file), which the page also prints; each solid line is the committed typical
+    cv.csv over its value at the grid's first point."""
     fig = cf.pfet_edge_figure(palette)
-    per = _result("pfet_05v0")["per_geometry"]
     wide = [g for g in DEVICES["pfet_05v0"].geometries if g.w_um == 10]
     by_l = {g.l_um: geometry_id(g) for g in wide}
     printed = {by_l[l_um]: u for l_um, u in _page_u_dep().items()}
     for gid, u_dep in printed.items():
         x = _artist(fig, f"u_dep {gid}").get_xdata()[0]
-        assert round(x, 3) == u_dep
-        if gid in per:
-            assert _close([x], [per[gid]["spice_regions"]["u_dep"]])
+        assert _close([x], [_record("pfet_05v0", gid)["spice_regions"]["u_dep"]])
+        assert round(x, 3) == u_dep  # page consistency
         cols = _csv("spice", "ngspice", "typical", "pfet_05v0", gid, "cv.csv")
         order = (-cols["vg"]).argsort()
         c = cols["cgg"][order]
