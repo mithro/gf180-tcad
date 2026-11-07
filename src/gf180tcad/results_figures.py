@@ -91,7 +91,7 @@ U_LABEL = "u = polarity × Vg (V)"
 TWO_D_PARAMS = ("calibrated", "start")
 
 
-def svg(draw: Callable[..., Figure], *args, palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
+def svg(draw: Callable, *args, palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """The SVG bytes of ``draw(*args, palette, roots)``, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef._rc(palette)):
         return ef._svg(draw(*args, palette, roots))
@@ -511,7 +511,7 @@ def meshconv_report(tcad_root: pathlib.Path, device: str, structure: str) -> dic
 
 def meshconv_figure(device: str, structure: str, palette: str, roots: Roots = DEFAULT_ROOTS):
     """Top: the C per area at each mesh level (gid ``level <i>``; the selected level solid, the
-    others dashed). Bottom: each level's relative change |C / C_finer − 1| against the next finer level
+    others dashed). Bottom: each level's relative change ``|C / C_finer − 1|`` against the next finer level
     (gid ``change <i>``, floored at ``change_floor``), and the criterion (gid ``criterion``)."""
     pal = ef.PALETTES[palette]
     lw = STYLE["line_width"]
