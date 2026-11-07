@@ -103,9 +103,9 @@ entry from this file and no other ({py:meth}`gf180tcad.render.manifest.Manifest.
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
 silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
-the conduction and valence band offsets above and below silicon's. The file's oxide band gap
-is not drawn: it differs from silicon's gap plus the two offsets
-([issue #167](https://github.com/mithro/gf180-tcad/issues/167)).
+the conduction and valence band offsets above and below silicon's. The oxide gap drawn is their
+sum. The file's separately cited oxide gap agrees with it to the precision of the cited values,
+and its `drawing` entry says which three values a drawing uses.
 ```
 
 ```{figure} /_generated/reproduce/render-band-offsets-dark.svg
@@ -114,9 +114,9 @@ is not drawn: it differs from silicon's gap plus the two offsets
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
 silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
-the conduction and valence band offsets above and below silicon's. The file's oxide band gap
-is not drawn: it differs from silicon's gap plus the two offsets
-([issue #167](https://github.com/mithro/gf180-tcad/issues/167)).
+the conduction and valence band offsets above and below silicon's. The oxide gap drawn is their
+sum. The file's separately cited oxide gap agrees with it to the precision of the cited values,
+and its `drawing` entry says which three values a drawing uses.
 ```
 
 ## What the check rejects
