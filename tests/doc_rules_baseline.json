@@ -36,28 +36,7 @@
   "FIGURE": 1
  },
  "docs/limitations/engine-cross-check.md": {
-  "FIGURE": 5
- },
- "docs/limitations/index.md": {
-  "FIGURE": 6
- },
- "docs/limitations/literature.md": {
-  "FIGURE": 3
- },
- "docs/limitations/mesh-convergence.md": {
-  "FIGURE": 6,
-  "FILELINK": 1
- },
- "docs/limitations/moscap2d.md": {
-  "FIGURE": 11,
-  "FILELINK": 13
- },
- "docs/limitations/plugin-history.md": {
-  "FIGURE": 9,
-  "FILELINK": 5
- },
- "docs/limitations/silicon-validation.md": {
-  "FIGURE": 1
+  "FIGURE-OK": 1
  },
  "docs/reproduce/image.md": {
   "FIGURE": 2

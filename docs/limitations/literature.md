@@ -43,6 +43,8 @@ Each annotation names what the project uses the item for.
   Its §8.1 and appendix A give the switches
   ACNQSMOD and TRNQSMOD of the non-quasi-static model: the value 0, the default, turns it off.
 
+The project models no {term}`LDD`: its modelled source/drain doping under the gate edge is in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-sd-figure>`.
+
 ## Physics models
 
 (lit-sze)=
@@ -109,6 +111,8 @@ Each annotation names what the project uses the item for.
 - Ancona and Iafrate, Phys. Rev. B 39, 9536, 1989, {doi}`10.1103/PhysRevB.39.9536`:
   {term}`density-gradient` quantum correction.
 
+A simulated p-n junction and its built-in potential are in {numref}`Figure %s of The gplugins DEVSIM plugin: it once worked <plugin-history-pn-figure>`.
+
 ## Textbooks for the explainer pages
 
 Each chapter below is named from the Crossref record of the edition cited, with its title.
@@ -143,6 +147,8 @@ Each chapter below is named from the Crossref record of the edition cited, with 
 - Lee, McIlrath and Antoniadis, IEEE Trans. Electron Devices 46(8), 1999,
   {doi}`10.1109/16.777152`: the 2D doping of a MOSFET by inverse modelling of its subthreshold
   I-V characteristics.
+
+The doping of each part of the simulated cell is in {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`.
 
 ## Simulators
 
