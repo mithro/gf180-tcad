@@ -445,11 +445,11 @@ result kind in it: the image's name, its reference and its probe record. That re
   the dev image, and {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`
   runs both 1D CLIs on both images and requires the same bytes. That last test is the drift
   guard between the two stacks.
-- **2D on stable.** {{ gmsh }} 5 (the dev image) meshes the 2D cells differently
-  from gmsh 4.15.2 (the stable image). A 2D result on dev therefore needs its own mesh
-  convergence on dev; the stable image's selected 2D mesh does not carry over. The 2D results of
+- **2D on stable.** The selected 2D mesh comes from the 2D mesh convergence on the stable
+  image, which has {{ gmsh }} 4.15.2. The dev image has gmsh 5 and no 2D mesh convergence of its
+  own (next item), so a 2D result on dev would need one first. The 2D results of
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
-  are therefore made on the stable image, explicitly.
+  are therefore made on the stable image, explicitly, as {numref}`results-images` shows.
 - **No 2D mesh convergence on dev.** The 2D mesh convergence has not been rerun on the dev
   image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
 - **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, has the laxer
