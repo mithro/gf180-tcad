@@ -1162,16 +1162,25 @@ _SPICE_L10 = f"results/spice/ngspice/typical/nfet_05v0/{_L10}/metrics.json"
 
 
 def test_docgen_reads_curves_through_explain_data():
-    """The 1D and SPICE curve readers live once, in ``gf180tcad.explain.data``; docgen imports
-    them (plan, task E2) and keeps no copy."""
-    from gf180tcad import docgen
-    from gf180tcad.explain import data
+    """The 1D and SPICE curve readers live once, in ``gf180tcad.explain.data``; the results
+    figures (:mod:`gf180tcad.results_figures`, which docgen draws through) call them (plan, task
+    E2), and neither module keeps a copy."""
+    import ast
 
-    for name in ("spice_columns", "spice_cv", "tcad_cgg", "u_sorted"):
-        assert getattr(docgen, name) is getattr(data, name), name
-    src = (SRC / "gf180tcad" / "docgen.py").read_text(encoding="utf-8")
-    for gone in ("def _cols(", "def _u_sorted(", "1e15"):
-        assert gone not in src, gone
+    for module in ("docgen.py", "results_figures.py"):
+        src = (SRC / "gf180tcad" / module).read_text(encoding="utf-8")
+        for gone in ("def _cols(", "def _u_sorted(", "1e15", "def spice_columns(", "def u_sorted("):
+            assert gone not in src, (module, gone)
+    tree = ast.parse((SRC / "gf180tcad" / "results_figures.py").read_text(encoding="utf-8"))
+    called = {
+        n.func.attr
+        for n in ast.walk(tree)
+        if isinstance(n, ast.Call)
+        and isinstance(n.func, ast.Attribute)
+        and isinstance(n.func.value, ast.Name)
+        and n.func.value.id == "data"
+    }
+    assert {"spice_columns", "spice_cv", "tcad_cgg", "u_sorted", "read_moscap"} <= called
 
 
 def test_cv_figure_reads_the_committed_curves():
