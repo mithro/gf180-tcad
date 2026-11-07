@@ -2,21 +2,6 @@
  "docs/limitations/engine-cross-check.md": {
   "FIGURE-OK": 1
  },
- "docs/reproduce/image.md": {
-  "FIGURE": 2
- },
- "docs/reproduce/index.md": {
-  "FIGURE": 7,
-  "FILELINK": 18
- },
- "docs/reproduce/output-cache.md": {
-  "FIGURE": 4,
-  "FILELINK": 9
- },
- "docs/reproduce/render-manifest.md": {
-  "FIGURE": 2,
-  "FILELINK": 1
- },
  "docs/roadmap.md": {
   "FIGURE-OK": 1
  }

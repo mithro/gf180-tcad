@@ -2,13 +2,37 @@
 
 # The output cache
 
-Some generated files are too large to commit but take hours to regenerate: today the 25–62 MB
-`mesh.msh` of each 2D {term}`job` ({ref}`moscap2d-meshes`). The output cache,
+Some generated files are too large to commit but take hours to regenerate.
+The 25–62 MB {repo}`mesh.msh <.gitignore#L15>` of each 2D {term}`job` is one ({ref}`moscap2d-meshes`). The output cache,
 {{ output_cache }}, is a separate plain git repository that holds such files so that anyone can
 fetch them instead of rerunning the job. It is effectively a shared cache for everyone
 ({repo}`design spec, section 9.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#91-output-cache-for-large-regenerable-artefacts>`).
+A file goes in with `push` and comes back with `pull`, as {numref}`output-cache-flow` shows.
 
-The cache holds eight objects, the `mesh.msh` of ten calibrated cells of
+```{figure} /_generated/reproduce/output-cache-flow-light.svg
+:name: output-cache-flow
+:figclass: only-light
+:alt: Four boxes. Left, a job's git-ignored mesh file above its committed record that names the mesh's sha256. Right, the cache's compressed object above the cache's index. Arrows: push from the file to the object, pull back, the record checking the pull, the index listing the object.
+
+The output cache beside this repository. `push` copies a job's git-ignored {repo}`mesh.msh <.gitignore#L15>` into the
+cache repository as a compressed object named by its sha256, and the index lists it. `pull`
+copies the object back and checks its sha256 against the `mesh_sha256` of the job's committed
+{repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`.
+The object drawn is the first that the committed calibrated 2D jobs name.
+```
+
+```{figure} /_generated/reproduce/output-cache-flow-dark.svg
+:figclass: only-dark
+:alt: Four boxes. Left, a job's git-ignored mesh file above its committed record that names the mesh's sha256. Right, the cache's compressed object above the cache's index. Arrows: push from the file to the object, pull back, the record checking the pull, the index listing the object.
+
+The output cache beside this repository. `push` copies a job's git-ignored {repo}`mesh.msh <.gitignore#L15>` into the
+cache repository as a compressed object named by its sha256, and the index lists it. `pull`
+copies the object back and checks its sha256 against the `mesh_sha256` of the job's committed
+{repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`.
+The object drawn is the first that the committed calibrated 2D jobs name.
+```
+
+The cache holds eight objects, the {repo}`mesh.msh <.gitignore#L15>` of ten calibrated cells of
 [issue #35](https://github.com/mithro/gf180-tcad/issues/35):
 
 | Cell | Mesh sha256 |
@@ -30,12 +54,13 @@ They have to be regenerated before they can be pushed ({ref}`first population <o
 - **Everything in it is regenerable** from this repository. It holds no original data.
 - **It may be wiped and recreated at any time.** Clone it with `git clone --depth 1` and never
   depend on its history.
-- **No {term}`provenance` lives there.** {repo}`results/MANIFEST.sha256` and the `provenance.json` and
-  `cv.meta.json` files here are the truth. The cache stores a file under the sha256 of its
+- **No {term}`provenance` lives there.** {repo}`results/MANIFEST.sha256` and the {repo}`provenance.json <results/tcad/moscap2d/provenance.json>` and
+  {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>` files here are the truth. The cache stores a file under the sha256 of its
   uncompressed content, the hash a committed meta already names (`mesh_sha256`), and
-  `tools/output-cache pull` writes a file only if its sha256 is that hash. Using the cache never
-  changes a result or its provenance: {py:mod}`gf180tcad.outcache` is not a generator module,
-  so it is not part of any {term}`generator_sha256`.
+  `tools/output-cache pull` writes a file only if its sha256 is that hash.
+- **Using the cache changes no result and no provenance.** {py:mod}`gf180tcad.outcache` is not
+  a generator module. So it is in no {term}`generator_sha256`. The hash check of
+  `pull` is the lower arrow of {numref}`output-cache-flow`.
 - **One generator reads it.** The `cut` command of {py:mod}`gf180tcad.meshcut.__main__` cuts
   the reduced mesh artefact of a 2D job. It fetches the job's mesh with a `tools/output-cache pull`
   subprocess, before its sandboxed run, which has no network. The `crosscheck-tcad` job runs it
@@ -50,13 +75,31 @@ They have to be regenerated before they can be pushed ({ref}`first population <o
 
 - `objects/sha256/<first 2 hex>/<sha256>.<ext>.gz`: the file, gzip-compressed deterministically
   (level 9, no file name, mtime 0), keyed by the sha256 of the uncompressed content.
-- `index.json`: sorted JSON mapping each sha256 to its object path, sizes, the results paths it
+- [`index.json`](https://github.com/mithro/gf180-tcad-output-cache/blob/8224e570509220553d3e2c0abd774f07efde81c1/index.json): sorted JSON mapping each sha256 to its object path, sizes, the results paths it
   was found at, the `generator_sha256` of its results folder, the commit of this repository it was
   pushed from, the date and the job (device, dimension, parameter set, directory).
 - a README: the contract, written by `tools/output-cache init`, so the whole repository can
   be recreated from nothing.
 
+The files of the cache repository are drawn in {numref}`output-cache-tree`.
 The cacheable files, the repository URLs and the size cap are in {repo}`data/output-cache.json`.
+
+```{figure} /_generated/reproduce/output-cache-tree-light.svg
+:name: output-cache-tree
+:figclass: only-light
+:alt: A file tree: the cache repository holds a README, a git attributes file, the index, and under objects/sha256 one compressed mesh file per distinct mesh, each in a folder named by the first two hex digits of its hash.
+
+The files of the cache repository. The objects are drawn from the committed calibrated 2D jobs
+({repo}`results/tcad/moscap2d`), one per distinct `mesh_sha256`. Each name is cut short.
+```
+
+```{figure} /_generated/reproduce/output-cache-tree-dark.svg
+:figclass: only-dark
+:alt: A file tree: the cache repository holds a README, a git attributes file, the index, and under objects/sha256 one compressed mesh file per distinct mesh, each in a folder named by the first two hex digits of its hash.
+
+The files of the cache repository. The objects are drawn from the committed calibrated 2D jobs
+({repo}`results/tcad/moscap2d`), one per distinct `mesh_sha256`. Each name is cut short.
+```
 A {{ gmsh }} mesh compresses from 27.5 MB to 9.5 MB (measured, 10 s).
 
 ## Commands
@@ -70,12 +113,12 @@ tools/output-cache pull 8dad0ca787dc3d805661e6262725bb833ba33edf1b46bf7b4a3ce69a
 tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh
 ```
 
-The first `pull` fetches the one cached mesh by its sha256. The second form writes a
-committed job's mesh into place by the `mesh_sha256` its `cv.meta.json` names; the committed
+Both are the `pull` arrow of {numref}`output-cache-flow`. The first `pull` fetches the one cached mesh by its sha256. The second form writes a
+committed job's mesh into place by the `mesh_sha256` its {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>` names. The committed
 start meshes are not in the cache, so for them it fails.
 
 `status` and `pull` clone the cache shallow and blobless into a temporary directory under `tmp/`
-(`--scratch` elsewhere) and download only `index.json` and the one object; `--cache` takes a
+(`--scratch` elsewhere) and download only [`index.json`](https://github.com/mithro/gf180-tcad-output-cache/blob/8224e570509220553d3e2c0abd774f07efde81c1/index.json) and the one object; `--cache` takes a
 local checkout or another URL. `pull` refuses a file whose sha256 does not match and an existing
 destination with other content (`--force` overwrites it). `make cache-status` runs `status`.
 
@@ -91,7 +134,7 @@ tools/output-cache verify --cache tmp/output-cache
 (output-cache-first-population)=
 
 **First population.** While the cache repository is still empty, a clone of it has no
-`index.json`, and `push`, `status` and `pull` say the cache is not initialised. Create the
+[`index.json`](https://github.com/mithro/gf180-tcad-output-cache/blob/8224e570509220553d3e2c0abd774f07efde81c1/index.json), and `push`, `status` and `pull` say the cache is not initialised. Create the
 checkout with `init` instead of cloning, then push:
 
 ```sh
@@ -101,7 +144,7 @@ tools/output-cache push --cache tmp/output-cache --publish
 
 `push` scans {repo}`results/` (`--results` elsewhere) for the configured files, refuses one whose
 sha256 differs from the hash its meta names (a stale mesh), compresses and adds the missing
-objects, rewrites `index.json` and the README, and commits with a message naming this
+objects, rewrites [`index.json`](https://github.com/mithro/gf180-tcad-output-cache/blob/8224e570509220553d3e2c0abd774f07efde81c1/index.json) and the README, and commits with a message naming this
 repository's commit; `--publish` then pushes. `verify` checks every object's hash against its
 name, the sizes, the size cap and that the index and the objects agree.
 

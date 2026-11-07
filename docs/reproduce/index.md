@@ -62,8 +62,27 @@ make reproduce
 ```
 
 This target of the {repo}`Makefile` regenerates every committed result in place, in dependency
-order, and then runs `python -m gf180tcad.manifest verify results/` ({py:mod}`gf180tcad.manifest`).
+order ({numref}`reproduce-targets`), and then runs `python -m gf180tcad.manifest verify results/` ({py:mod}`gf180tcad.manifest`).
 Each step is a target of its own, which can also be run alone:
+
+```{figure} /_generated/reproduce/reproduce-targets-light.svg
+:name: reproduce-targets
+:figclass: only-light
+:alt: A column of boxes joined by downward arrows: one box per make target in the order make reproduce runs them, each naming the results folders it writes, and a last box with the manifest check.
+
+The targets that `make reproduce` runs, top to bottom, as its recipe in the {repo}`Makefile`
+lists them. Each box names the results folders its target writes. The last box is the
+{term}`manifest` check.
+```
+
+```{figure} /_generated/reproduce/reproduce-targets-dark.svg
+:figclass: only-dark
+:alt: A column of boxes joined by downward arrows: one box per make target in the order make reproduce runs them, each naming the results folders it writes, and a last box with the manifest check.
+
+The targets that `make reproduce` runs, top to bottom, as its recipe in the {repo}`Makefile`
+lists them. Each box names the results folders its target writes. The last box is the
+{term}`manifest` check.
+```
 
 | target | runs | writes |
 |---|---|---|
@@ -157,6 +176,27 @@ uv run --locked python -m gf180tcad spice-reference --engine ngspice \
     --corner typical --device nfet_05v0 --out /tmp/nfet-typical
 ```
 
+Its jobs are the highlighted squares of {numref}`reference-jobs`.
+
+```{figure} /_generated/reproduce/reference-jobs-light.svg
+:name: reference-jobs
+:figclass: only-light
+:alt: A grid of squares, one per job: columns are the devices and geometries, rows are the engines and corners. The six squares of the row ngspice typical under the nfet columns are highlighted.
+
+Every job of the SPICE reference, one square per job folder under {repo}`results/spice`: a
+column per device and geometry, a row per engine and corner. The highlighted squares are the
+jobs of the example run below.
+```
+
+```{figure} /_generated/reproduce/reference-jobs-dark.svg
+:figclass: only-dark
+:alt: A grid of squares, one per job: columns are the devices and geometries, rows are the engines and corners. The six squares of the row ngspice typical under the nfet columns are highlighted.
+
+Every job of the SPICE reference, one square per job folder under {repo}`results/spice`: a
+column per device and geometry, a row per engine and corner. The highlighted squares are the
+jobs of the example run below.
+```
+
 `--out` is *replaced* by the jobs that were run, so write a partial run to a
 directory of its own, not to {repo}`results/spice`: a filtered run whose `--out` resolves to
 the committed {repo}`results/spice` is refused before any job starts
@@ -203,13 +243,16 @@ results/spice/<engine>/<corner>/<device>/<geometry_id>/metrics.json
 
 Browse it: {repo}`results/spice`.
 
-- `<sweep>.csv` holds the simulated columns (`vd vg vb id ig ib`, or `vg cgg`
+Three of the sweep files of one geometry are plotted in
+{numref}`Figure %s of Results <results-sweeps-figure>`.
+
+- Each sweep file, such as {repo}`idvg_lin.csv <results/spice/ngspice/typical/nfet_05v0/w10p0_l0p60/idvg_lin.csv>`, holds the simulated columns (`vd vg vb id ig ib`, or `vg cgg`
   for `cv`). Its `# key: value` header holds only engine, corner, device,
   {term}`geometry_id`, w_um, l_um, sweep, temp_c and units.
-- `metrics.json` holds the same identifying fields plus the extracted metrics
+- {repo}`metrics.json <results/spice/ngspice/typical/nfet_05v0/w10p0_l0p60/metrics.json>` holds the same identifying fields plus the extracted metrics
   (definitions in {py:mod}`gf180tcad.metrics`).
-- **Xyce has no cv analysis.** Xyce directories therefore have no `cv.csv`,
-  and their `metrics.json` has no {term}`cgg_inv_ff` or {term}`cgg_acc_ff`.
+- **Xyce has no cv analysis.** Xyce directories therefore have no
+  {repo}`cv.csv <results/spice/ngspice/typical/nfet_05v0/w10p0_l0p60/cv.csv>`, and their {repo}`metrics.json <results/spice/xyce/typical/nfet_05v0/w10p0_l0p60/metrics.json>` has no {term}`cgg_inv_ff` or {term}`cgg_acc_ff`.
 - {repo}`provenance.json <results/spice/provenance.json>` ({term}`provenance`) holds the
   contents of {repo}`docker/base/versions.json`, the pinned image reference with its
   {term}`digest <manifest digest>` ({repo}`docker/IMAGE`) and
@@ -445,7 +488,7 @@ files of the device and runs on the host. Both commands refuse an output folder 
 
 ## Provenance of the TCAD results
 
-The top folder of each set of TCAD results holds one `provenance.json`
+The top folder of each set of TCAD results holds one {repo}`provenance.json <results/tcad/moscap1d/provenance.json>`
 ({py:func}`gf180tcad.tcad.tree_provenance`). It records the images that made it, the plugin
 commit and the calibration applied (if any). It also records the entry point that wrote the
 folder (`generator`) and a {term}`generator_sha256`.
@@ -463,17 +506,38 @@ requires every results folder to name its writer and to carry that writer's curr
 **The generator registry.** It is a data file, {repo}`src/gf180tcad/generators.json`. It holds
 the module lists, each results folder's writer, the images and the calibration folder. At
 import, {py:mod}`gf180tcad.tcad` reads it once into the dicts named above.
+{numref}`tcad-registry` draws its entry points and results folders.
+
+```{figure} /_generated/reproduce/tcad-registry-light.svg
+:name: tcad-registry
+:figclass: only-light
+:alt: Boxes in two columns. Left, the entry points of the generator registry, each with the number of modules its hash covers. Right, the results folders, each joined by an arrow from the entry point that writes it.
+
+The entry points of {repo}`src/gf180tcad/generators.json` (left), each with the number of
+modules in its hash, and the results folders of its `trees` (right). An arrow joins each
+folder to its writer.
+```
+
+```{figure} /_generated/reproduce/tcad-registry-dark.svg
+:figclass: only-dark
+:alt: Boxes in two columns. Left, the entry points of the generator registry, each with the number of modules its hash covers. Right, the results folders, each joined by an arrow from the entry point that writes it.
+
+The entry points of {repo}`src/gf180tcad/generators.json` (left), each with the number of
+modules in its hash, and the results folders of its `trees` (right). An arrow joins each
+folder to its writer.
+```
+
 
 The file is not hashed: it decides what is hashed. A change to its module lists or plugin
 exclusions adds or removes a hashed file, which changes the hash. A renamed results folder
 changes the manifest. A changed image or calibration folder changes the image digest or the
-calibration that `provenance.json` records. Its keys:
+calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>` records. Its keys:
 
 | key | holds |
 |---|---|
 | `entry_points` | each entry point's sorted module list |
 | `trees` | each results folder, by its path under {repo}`results/`, and its writer |
-| `images` | each image's pin file and `versions.json` |
+| `images` | each image's pin file and {repo}`versions.json <docker/tcad-dev/versions.json>` |
 | `plugin_excludes` | each entry point's plugin files left out of its hash |
 | `calibration_dirs` | each backend's calibration folder |
 
@@ -483,7 +547,7 @@ Every entry point leaves the plugin's `gplugins/devsim/backends/charon/` out of 
 checks that no hashed plugin file imports it. An entry point, a results folder or an image for
 another simulator is a row in the file. Adding one leaves every committed hash as it is.
 {test}`tests/tcad/test_tcad_provenance.py::test_registry_trees_cover_every_committed_root`
-requires every results folder under `results/tcad*/` to be a row of `trees`.
+requires every results folder under {repo}`results/tcad*/ <results/tcad>` to be a row of `trees`.
 
 The registry's entry points:
 
@@ -536,7 +600,7 @@ recorded below, with the hash the folder had before. The records before the
 backend-seam record predate the design spec §9 rule that a representative job is rerun first.
 
 **Results folders written under the old scheme.** Before [issue #34](https://github.com/mithro/gf180-tcad/issues/34) one hash covered both entry points, and
-`provenance.json` had no `generator`. A results folder produced that way, for example on a branch that
+{repo}`provenance.json <results/tcad/moscap1d/provenance.json>` had no `generator`. A results folder produced that way, for example on a branch that
 was started before the per-folder hash and merges after it, fails
 {test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current`.
 Bring it to the new scheme by rerunning its writer at the merged code, or by updating its
@@ -647,7 +711,7 @@ wall time are from `/usr/bin/time -v`; `memory.peak` is the container's {term}`c
 Its `.npz` sha256, node count, triangle count and `size_bytes` equal those in the committed
 {repo}`results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p60/mesh-window.meta.json`.
 
-The nfet jobs ran at gplugins `1c071d0`. The folder's `provenance.json` names the later pin, `0715c81`.
+The nfet jobs ran at gplugins `1c071d0`. The folder's {repo}`provenance.json <results/tcad/moscap2d/provenance.json>` names the later pin, `0715c81`.
 The nfet W10/L2 job was committed after the "Restamped without a rerun" list below, so that list does not name it.
 The 2D code path is the same at both pins. `DDComponent` moved verbatim, and `sweep_cv` differs only in its docstring.
 
@@ -676,7 +740,7 @@ The 2D data were therefore **not** regenerated (hours per job):
 {repo}`results/tcad/moscap2d/provenance.json <results/tcad/moscap2d/provenance.json>` was
 rewritten from generator `8fd11fb03ced74d0fae78c4a84e9b8974d4beff5d8c75e1b41602657ec6d1326`, the
 code that made the committed 2D results (Task 11), to the current hash. The same holds for the
-whole {repo}`results/tcad/meshconv` folder: its `provenance.json` (1D and 2D) was rewritten, and
+whole {repo}`results/tcad/meshconv` folder. Its {repo}`provenance.json <results/tcad/meshconv/provenance.json>` (1D and 2D) was rewritten, and
 its 1D data were last regenerated in 690cf7b. The shared module {py:mod}`gf180tcad.tcad` also
 changed since that generator, but only in provenance bookkeeping (the module list,
 `VALIDATION_DIR`, `calibrated_devices`), not in anything that computes a result.
@@ -689,7 +753,7 @@ the committed files by {test}`tests/tcad/test_meshconv.py::test_meshconv_byte_id
 (passed; the sandbox session of two tests took 3 min 54 s).
 
 That test compares the folder's
-`provenance.json` without its `moscap2d` image, which a 1D rerun cannot know
+{repo}`provenance.json <results/tcad/meshconv/provenance.json>` without its `moscap2d` image, which a 1D rerun cannot know
 ([issue #36](https://github.com/mithro/gf180-tcad/issues/36)). The 2D mesh-convergence results
 had their provenance updated, not rerun, and have no such evidence. With the per-folder hash ([issue #34](https://github.com/mithro/gf180-tcad/issues/34)) such a
 calibration-only change no longer touches these results folders.
@@ -726,14 +790,14 @@ This reran the two calibrated 1D jobs and compared their files and
 The 1D jobs among them build the device through the same code that the gate reran.
 On the 2D path, only the file holding `DDComponent` moved, verbatim.
 `create_2Duz_simulation` and the solve code of `sweep_cv` did not change.
-The result types moved unchanged to `results.py`.
+The result types moved unchanged to [`results.py`](https://github.com/mithro/gplugins/blob/0715c81c4439533512621a97358d9d779411ebf6/gplugins/devsim/results.py).
 The package import became lazy, which changes when modules load, not what they compute.
 
 **Generator registry, not regenerated.** The registry moved into a data file.
 It moved from {py:mod}`gf180tcad.tcad` into {repo}`src/gf180tcad/generators.json`.
 {py:mod}`gf180tcad.calibrate.cv` gained the `simulate_2d` parameter. Both are hashed modules.
 The plugin exclusion also takes the
-tracked file `gplugins/devsim/backends/charon/__init__.py` out of both hashes. Nothing that
+tracked file [`gplugins/devsim/backends/charon/__init__.py`](https://github.com/mithro/gplugins/blob/0715c81c4439533512621a97358d9d779411ebf6/gplugins/devsim/backends/charon/__init__.py) out of both hashes. Nothing that
 computes a result changed.
 
 {repo}`tools/restamp-tcad-provenance` then set each `generator_sha256`, starting from the
@@ -764,7 +828,7 @@ That write added the pfet calibration to {repo}`results/tcad/moscap2d/provenance
 {repo}`tools/restamp-tcad-provenance` then set the hash to `bf8f2dcc…`; nothing else in the file changed.
 
 Between the two hashes, two entries of the hashed file list differ.
-{repo}`src/gf180tcad/tcad/__init__.py` changed, and `gplugins/devsim/backends/charon/__init__.py` left the list.
+{repo}`src/gf180tcad/tcad/__init__.py` changed, and [`gplugins/devsim/backends/charon/__init__.py`](https://github.com/mithro/gplugins/blob/0715c81c4439533512621a97358d9d779411ebf6/gplugins/devsim/backends/charon/__init__.py) left the list.
 Every file on the 2D compute path is byte-identical, including all of `gplugins/devsim`.
 The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `make reproduce-quick` run above.
 
@@ -805,8 +869,8 @@ cross-checked in part ({ref}`cross-host-tcad`).
 
 **What we found and fixed.** The first full cross-check
 ([run](https://github.com/mithro/gf180-tcad/actions/runs/39115902279), on an
-AMD EPYC 7763) failed. Every raw simulator CSV was identical, but five
-`metrics.json` files differed in the last digits: {term}`Vt`, {term}`subthreshold slope` and
+AMD EPYC 7763) failed. Every raw simulator CSV was identical.
+Five {repo}`metrics.json <results/spice/ngspice/typical/nfet_05v0/w10p0_l0p60/metrics.json>` files differed in the last digits: {term}`Vt`, {term}`subthreshold slope` and
 the {term}`DIBL` derived from them. The cause was numpy's run-time {term}`SIMD dispatch`.
 numpy picks a kernel for each operation by CPU feature level, and its
 `log10` kernels for AVX-512 and for AVX2 differ by one {term}`ulp` on some inputs.
@@ -833,10 +897,32 @@ min/max over all five corners and a partial run lacks some of them, so its
 envelope always differs from the committed one. The envelope is computed only
 by selecting from the metrics floats, and those are compared.
 
-The workflow runs on pull requests that change the sources, tools, image
-pins, results, project metadata, lock file, Makefile, either subset file, the plugin
-submodule, the process files, the TCAD tests or the workflow itself, and also weekly and on
-demand. The steps of its SPICE job, `crosscheck`, are:
+The workflow runs weekly, on demand, and on a pull request that changes one of these:
+
+- the code: the sources, the tools, the {repo}`Makefile`, the project metadata and the lock file;
+- the inputs: the image pins, the plugin submodule and the process files;
+- the results, either subset file and the TCAD tests;
+- the workflow itself.
+
+The steps of its SPICE job, `crosscheck`, are drawn in {numref}`crosscheck-steps`:
+
+```{figure} /_generated/reproduce/crosscheck-steps-light.svg
+:name: crosscheck-steps
+:figclass: only-light
+:alt: A column of boxes joined by downward arrows: the steps of the crosscheck job in order. The last two boxes are dashed.
+
+The steps of the `crosscheck` job of {repo}`.github/workflows/crosscheck.yml`, top to bottom.
+A dashed box runs only when a step before it failed.
+```
+
+```{figure} /_generated/reproduce/crosscheck-steps-dark.svg
+:figclass: only-dark
+:alt: A column of boxes joined by downward arrows: the steps of the crosscheck job in order. The last two boxes are dashed.
+
+The steps of the `crosscheck` job of {repo}`.github/workflows/crosscheck.yml`, top to bottom.
+A dashed box runs only when a step before it failed.
+```
+
 
 1. Free disk space and pull {repo}`docker/IMAGE` by its {term}`digest <manifest digest>`.
 2. Install the sandbox {term}`slice` with `sudo tools/sandbox-setup`
@@ -889,7 +975,24 @@ GitHub-hosted runner and requires every file to be byte-identical to the manifes
 - `meshes/stable/nfet_05v0/calibrated` and `meshes/stable/pfet_05v0/calibrated`: the reduced
   mesh artefacts, cut again from full meshes pulled from the {ref}`output cache <output-cache>`.
 
-Its steps are:
+Its steps are drawn in {numref}`crosscheck-tcad-steps`:
+
+```{figure} /_generated/reproduce/crosscheck-tcad-steps-light.svg
+:name: crosscheck-tcad-steps
+:figclass: only-light
+:alt: A column of boxes joined by downward arrows: the steps of the crosscheck-tcad job in order. The last two boxes are dashed.
+
+The steps of the `crosscheck-tcad` job of {repo}`.github/workflows/crosscheck.yml`, top to
+bottom. A dashed box runs only when a step before it failed.
+```
+
+```{figure} /_generated/reproduce/crosscheck-tcad-steps-dark.svg
+:figclass: only-dark
+:alt: A column of boxes joined by downward arrows: the steps of the crosscheck-tcad job in order. The last two boxes are dashed.
+
+The steps of the `crosscheck-tcad` job of {repo}`.github/workflows/crosscheck.yml`, top to
+bottom. A dashed box runs only when a step before it failed.
+```
 
 1. Free disk space, check out with `submodules: true` (the plugin is imported from
    {repo}`third_party/gplugins <third_party>`, and its commit is recorded in the results folder's provenance),
@@ -904,11 +1007,19 @@ Its steps are:
    `python -m gf180tcad.tcad moscap --device D --dim 1 --params calibrated --out <out>/moscap1d`
    (2 GiB, 1 CPU). An artefact job is one `python -m gf180tcad.meshcut cut` per committed artefact
    (4 GiB, 1 CPU).
-4. `python -m gf180tcad.manifest verify-subset <out> --kind tcad --against results/MANIFEST.sha256
-   --prefix tcad/ --subset tests/crosscheck_tcad_subset.txt`. TCAD jobs are `<tree>/<device>/<params>`
-   paths; each results folder the jobs name must have its own `provenance.json`, which is compared (it holds
-   the calibration file's sha256 for both devices, which is why both are listed). There is no
-   envelope. On success it prints `identical: 26 files of 4 jobs ...`.
+4. The manifest check runs this command:
+
+   ```sh
+   python -m gf180tcad.manifest verify-subset <out> --kind tcad --against results/MANIFEST.sha256 \
+       --prefix tcad/ --subset tests/crosscheck_tcad_subset.txt
+   ```
+
+   TCAD jobs are `<tree>/<device>/<params>`
+   paths. Each results folder the jobs name must have its own {repo}`provenance.json <results/tcad/moscap1d/provenance.json>`, and it is compared.
+   It holds the calibration file's sha256 for both devices, which is why both are listed. There is no
+   envelope.
+
+   On success it prints `identical: 26 files of 4 jobs ...`.
 5. On failure, the artefact `crosscheck-tcad-differences` holds the generated and committed copy
    of each differing file, their `diff -u`, the logs and the scratch directory of any failed job.
 
@@ -929,7 +1040,8 @@ rerun byte for byte locally by
 Large regenerable files that are not committed, such as the 2D meshes, go into a shared,
 content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
 the sha256 the committed results name. It holds the meshes of the calibrated 2D nfet and pfet cells,
-W1.6/L0.7 included; {doc}`output-cache` lists them.
+W1.6/L0.7 included; {doc}`output-cache` lists them. A mesh goes in with `push` and comes back with
+`pull`, as {numref}`Figure %s of The output cache <output-cache-flow>` shows.
 
 (mesh-artefact)=
 
