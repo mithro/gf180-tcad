@@ -330,13 +330,9 @@ def _singular(word: str, index: dict[str, int]) -> str:
 
 
 @pytest.fixture(scope="module")
-def generated(tmp_path_factory) -> Path:
-    importorskip("matplotlib", reason="needs the docs dependency group")
-    from gf180tcad import docgen
-
-    out = tmp_path_factory.mktemp("generated")
-    docgen.generate(out)
-    return out
+def generated(generated_pages) -> Path:
+    """The session's generated pages (tests/conftest.py)."""
+    return generated_pages
 
 
 def _pages(generated: Path) -> list[tuple[str, str, bool, bool]]:
@@ -828,31 +824,10 @@ def check_html(name: str, html_text: str) -> list[Problem]:
     return problems
 
 
-def _offline_build(out: Path) -> Path:
-    """sphinx-build -W of docs/ with every socket call blocked; returns the HTML directory."""
-    importorskip("sphinx")
-    importorskip("matplotlib", reason="needs the docs dependency group")
-    (out / "sitecustomize.py").write_text(
-        "import socket\n"
-        "def _blocked(*a, **k):\n"
-        "    raise OSError('network disabled by test_doc_links')\n"
-        "socket.socket.connect = socket.create_connection = socket.getaddrinfo = _blocked\n",
-        encoding="utf-8",
-    )
-    env = {**__import__("os").environ, "PYTHONPATH": str(out)}
-    html = out / "html"
-    r = subprocess.run(
-        [sys.executable, "-m", "sphinx", "-W", "-q", "-b", "html", "-d", str(out / "dt"),
-         str(DOCS), str(html)],
-        capture_output=True, text=True, env=env, check=False, timeout=900,
-    )  # fmt: skip
-    assert r.returncode == 0, (r.stdout + r.stderr)[-3000:]
-    return html
-
-
 @pytest.fixture(scope="module")
-def built_html(tmp_path_factory) -> Path:
-    return _offline_build(tmp_path_factory.mktemp("htmlbuild"))
+def built_html(offline_html) -> Path:
+    """The session's offline docs build (tests/conftest.py)."""
+    return offline_html
 
 
 def _html_pages(root: Path) -> list[Path]:

@@ -14,6 +14,8 @@ from optional import importorskip
 
 importorskip("matplotlib", reason="needs the docs dependency group")
 
+from offline_build import NO_NETWORK
+
 from gf180tcad import docgen
 from gf180tcad import results_figures as rf
 from gf180tcad.devices import DEVICES, geometry_id
@@ -88,8 +90,8 @@ def test_explained_svg_deterministic(figure, palette):
     assert b"<dc:date>" not in a and str(REPO_ROOT).encode() not in a
 
 
-def test_pages_cover_all_geometries(tmp_path):
-    docgen.generate(tmp_path)
+def test_pages_cover_all_geometries(generated_pages):
+    tmp_path = generated_pages
     expected = {f"{name}/{geometry_id(g)}.md" for name, d in DEVICES.items() for g in d.geometries}
     pages = {
         str(p.relative_to(tmp_path / "results")) for p in (tmp_path / "results").glob("*/*.md")
@@ -103,8 +105,8 @@ def test_pages_cover_all_geometries(tmp_path):
         assert (tmp_path / "results" / "nfet_05v0" / f"w10p0_l0p60_idvd-{palette}.svg").is_file()
 
 
-def test_summary_lists_status_and_engine_diffs(tmp_path):
-    docgen.generate(tmp_path)
+def test_summary_lists_status_and_engine_diffs(generated_pages):
+    tmp_path = generated_pages
     s = (tmp_path / "results" / "index.md").read_text(encoding="utf-8")
     assert "pdk-spec-check" in s and "engine-cross-check" in s
     # Six compared spec entries, all inside; nfet idvg_sat rows carry the known-case marker.
@@ -129,13 +131,12 @@ def test_table_numbers_do_not_break_at_the_exponent():
     assert docgen.unit_text("fF/um^2") == "fF/µm²" and docgen.unit_text("um") == "µm"
 
 
-def test_geometry_links_name_the_geometry(tmp_path):
+def test_geometry_links_name_the_geometry(generated_pages):
     """S7: a link to a geometry page shows the geometry id, never a bare W that links to
     different pages; each page with such links says how to read the id."""
     import re
 
-    docgen.generate(tmp_path)
-    for p in tmp_path.rglob("*.md"):
+    for p in generated_pages.rglob("*.md"):
         text = p.read_text(encoding="utf-8")
         links = re.findall(r"\{doc\}`([^`<]*?)\s*<([^`>]*)>`", text)
         for label, target in links:
@@ -147,25 +148,8 @@ def test_geometry_links_name_the_geometry(tmp_path):
         assert " um" not in text and "um^2" not in text, p
 
 
-_NO_NETWORK = textwrap.dedent(
-    """
-    import socket
-
-    def _blocked(*a, **k):
-        raise OSError("network disabled by test_docs_build_offline")
-
-    socket.socket.connect = _blocked
-    socket.socket.connect_ex = _blocked
-    socket.socket.sendto = _blocked
-    socket.create_connection = _blocked
-    socket.getaddrinfo = _blocked
-    socket.gethostbyname = _blocked
-    """
-)
-
-
 def test_offline_block_positive_control(tmp_path):
-    (tmp_path / "sitecustomize.py").write_text(_NO_NETWORK, encoding="utf-8")
+    (tmp_path / "sitecustomize.py").write_text(NO_NETWORK, encoding="utf-8")
     code = textwrap.dedent(
         """
         import socket
@@ -191,19 +175,9 @@ def test_offline_block_positive_control(tmp_path):
     assert r.returncode == 0 and r.stdout.strip() == "blocked", r.stdout + r.stderr
 
 
-def test_docs_build_offline(tmp_path):
-    importorskip("sphinx")
-    (tmp_path / "sitecustomize.py").write_text(_NO_NETWORK, encoding="utf-8")
-    env = {**os.environ, "PYTHONPATH": str(tmp_path)}
-    out = tmp_path / "html"
-    log = tmp_path / "build.log"
-    with log.open("wb") as f:
-        r = subprocess.run(
-            [sys.executable, "-m", "sphinx", "-W", "-b", "html", "-d", str(tmp_path / "dt"),
-             str(DOCS), str(out)],
-            check=False, env=env, stdout=f, stderr=subprocess.STDOUT, timeout=900,
-        )  # fmt: skip
-    assert r.returncode == 0, log.read_text(encoding="utf-8")[-3000:]
+def test_docs_build_offline(offline_html):
+    """The session's offline build (tests/offline_build.py) passed with -W; check its pages."""
+    out = offline_html
     assert (out / "results" / "index.html").is_file()
     assert Path(out / "_images").is_dir()
     # the TCAD MOS capacitor pages (Task 13a) are in the build, with their figures
@@ -379,7 +353,7 @@ def test_window_column_shows_the_envelope_where_there_is_no_spec():
         assert (v[3] == "not applicable") == name.startswith("cgg_")
 
 
-def test_per_area_spec_entries_are_tcad_only(tmp_path):
+def test_per_area_spec_entries_are_tcad_only(generated_pages):
     """The Cox spec is per area (no geometry) and SPICE extracts no such metric: it is left out
     of the SPICE spec table and the geometry pages and listed under "TCAD only"."""
     spec = docgen.specwindow.load_spec()
@@ -394,8 +368,7 @@ def test_per_area_spec_entries_are_tcad_only(tmp_path):
     ((header, tcad),) = _md_tables(docgen._tcad_only_rows(spec))
     assert header[-2:] == ["Spec min (fF/µm²)", "Spec max (fF/µm²)"]
     assert len(tcad) == 2 and all(r[-3:] == ["`cox_ff_per_um2`", "1.8", "2.8"] for r in tcad)
-    docgen.generate(tmp_path)
-    s = (tmp_path / "results" / "index.md").read_text(encoding="utf-8")
+    s = (generated_pages / "results" / "index.md").read_text(encoding="utf-8")
     # the two rows sit under "TCAD only", whose lead-in gives their one status
     section = s.split("### TCAD only", 1)[1].split("\n## ", 1)[0]
     assert 'The status of every row is "TCAD only"' in section
@@ -416,8 +389,8 @@ def _tcad_json(device: str, gid: str) -> dict:
     return val["one_d"][gid]
 
 
-def test_moscap_page_per_device_geometry(tmp_path):
-    docgen.generate(tmp_path)
+def test_moscap_page_per_device_geometry(generated_pages):
+    tmp_path = generated_pages
     root = tmp_path / "tcad"
     expected = {f"{name}/{geometry_id(g)}.md" for name, d in DEVICES.items() for g in d.geometries}
     pages = {
