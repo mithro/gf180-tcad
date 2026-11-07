@@ -151,8 +151,8 @@ What each holds:
 - **stable TCAD**: the TCAD stack at its latest releases.
 - **dev-HEAD TCAD**: the TCAD stack at development HEAD (the newest commit), pinned by commit,
   with DEVSIM built from source.
-- **charon-libs**: the base image with Charon 2.2.0 and Trilinos built from source in `/opt/charon`.
-- **charon**: the dev-HEAD TCAD image with that `/opt/charon` and netCDF4.
+- **charon-libs**: the base image with Charon 2.2.0 and [Trilinos](https://github.com/trilinos/Trilinos) built from source in `/opt/charon`.
+- **charon**: the [dev-HEAD TCAD image](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-dev-HEAD-TCAD-image) with that `/opt/charon` and [netCDF4](https://github.com/Unidata/netcdf4-python).
 
 The exact versions in each image are listed in one JSON file per image:
 [base](docker/base/versions.json), [stable](docker/tcad/versions.json),
