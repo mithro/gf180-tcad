@@ -430,7 +430,7 @@ def cgg_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROOTS
 def split_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROOTS):
     """The calibrated 1D TCAD Cgg of one geometry (gid ``total``) and its two parts:
     ``intrinsic``, the C per area times the BSIM4 capacitance area, and ``parasitic``, the
-    overlap, fringe and gate-bulk terms; with the ngspice typical line (``typical 0``)."""
+    overlap, fringe and gate-bulk terms; with the ngspice typical line (``typical``)."""
     pal = ef.PALETTES[palette]
     lw = STYLE["line_width"]
     u, intrinsic, parasitic, total = tcad_cgg(roots.tcad, device, gid, "calibrated")
@@ -439,7 +439,7 @@ def split_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROO
         fig = _figure(STYLE["one_in"])
         ax = fig.subplots()
         ((_v, x, tt),) = s.corners[TYPICAL]
-        ax.plot(x, tt, color=pal["text"], lw=lw, gid="typical 0")
+        ax.plot(x, tt, color=pal["text"], lw=lw, gid="typical")
         ax.plot(u, total, color=pal["highlight"], lw=lw, gid="total")
         ax.plot(u, intrinsic, color=pal["electron"], lw=lw, ls="--", gid="intrinsic")
         ax.plot(u, parasitic, color=pal["highlight_oxide"], lw=lw, ls=":", gid="parasitic")
@@ -511,7 +511,7 @@ def meshconv_report(tcad_root: pathlib.Path, device: str, structure: str) -> dic
 
 def meshconv_figure(device: str, structure: str, palette: str, roots: Roots = DEFAULT_ROOTS):
     """Top: the C per area at each mesh level (gid ``level <i>``; the selected level solid, the
-    others dashed). Bottom: each level's |C / C_finer − 1| against the next finer level
+    others dashed). Bottom: each level's relative change |C / C_finer − 1| against the next finer level
     (gid ``change <i>``, floored at ``change_floor``), and the criterion (gid ``criterion``)."""
     pal = ef.PALETTES[palette]
     lw = STYLE["line_width"]
@@ -541,7 +541,7 @@ def meshconv_figure(device: str, structure: str, palette: str, roots: Roots = DE
         keys.append(Line2D([], [], color=pal["muted"], lw=lw, label=f"criterion {crit:g}"))
         changes.set_yscale("log")
         vals.set_ylabel("C per area (fF/µm²)")
-        changes.set_ylabel("|C / C_finer − 1|")
+        changes.set_ylabel("relative change")
         vals.set_title(f"{device}, by mesh level")
         changes.set_title("change against the next finer level")
         for ax in (vals, changes):

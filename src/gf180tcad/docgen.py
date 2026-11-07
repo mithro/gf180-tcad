@@ -1403,8 +1403,8 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
         (
             "Pages generated at documentation build time from the committed {term}`TCAD` "
             "results ({repo}`results/tcad`). They give the {term}`C–V` calibration of the 1D "
-            "{term}`MOS capacitor <MOSCAP>` against the {term}`SPICE` {term}`Cgg`-Vg, and its "
-            "validation at the {term}`held-out geometries <held-out geometry>` "
+            "{term}`MOS capacitor <MOSCAP>` against the {term}`SPICE` {term}`Cgg`-Vg. They also "
+            "give its validation at the {term}`held-out geometries <held-out geometry>` "
             f"({{doc}}`{CV_DOC}`). Every verdict is read from "
             "{repo}`results/tcad/calibration` and {repo}`results/tcad/validation`, which were "
             "computed in the {term}`dev-HEAD TCAD image`; these pages only render them. How "
