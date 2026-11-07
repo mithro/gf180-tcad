@@ -181,7 +181,7 @@ def engine_diff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     diffs = engine_diffs(roots)
     thr = xyce.ENGINE_DIFF_THRESHOLD
     lo, hi = STYLE["engine_decades"]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         # Not sharex: the devices' geometries differ (nfet Lmin 0.6 µm, pfet 0.5 µm), so each
         # panel carries its own tick labels.
@@ -246,7 +246,7 @@ def engine_subthreshold_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     lw = ef.STYLE["line_width"]
     c = evidence_curves(roots)
     thr = xyce.ENGINE_DIFF_THRESHOLD * UNITS["percent"]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         top, bottom = fig.subplots(2, 1, sharex=True)
         top.plot(c["vg"], np.abs(c["id_ngspice"]), color=pal["electron"], lw=lw,
@@ -305,7 +305,7 @@ def vertex_grid_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     v = vertex_grid()
     lo, hi = STYLE["grid_span_nm"]
     half = STYLE["box_width"] / 2
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         for x0, key, title in ((0, "default", "meshwell default grid"),
@@ -386,7 +386,7 @@ def c_over_cox_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     lo, hi = STYLE["ccox_span"]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         axes = fig.subplots(len(_DEVICES), 1, sharex=True)
         for ax, device in zip(axes, _DEVICES, strict=True):
@@ -448,7 +448,7 @@ def two_d_validation_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     depletion crossing of each (SPICE ring, 2D dot), with the recorded shift."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         axes = fig.subplots(len(VALIDATION_CELLS), 1, sharex=True)
         for ax, (device, gid) in zip(axes, VALIDATION_CELLS, strict=True):
@@ -538,7 +538,7 @@ def two_d_metrics_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     labels = [f"{_SHORT[r['device']]} {_label(r['geometry'])}" for r in rows]
     colours = [pal[_CARRIER[r["device"]]] for r in rows]
     size = STYLE["marker_pt"] ** 2
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         top, bottom = fig.subplots(2, 1, sharex=True)
         (tol,) = {r["tol_mv"] for r in rows}
@@ -607,7 +607,7 @@ def roundoff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     lo, hi = STYLE["psi_decades"]
     psi = np.logspace(lo, hi, STYLE["psi_points"])
     need = k["rel_tol"] * (psi + TOOLS["devsim_rel_offset_v"])
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         ax.plot(psi, need, color=pal["text"], lw=lw, label="update the criterion asks for",
@@ -671,7 +671,7 @@ def sd_profile_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     k = sd_profiles()
     colours = ("electron", "highlight", "hole")
     nm = UNITS["nm_per_um"]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         top, bottom = fig.subplots(2, 1)
         for p, colour in zip(k["peaks"], colours, strict=True):
@@ -735,7 +735,7 @@ def mesh_grading_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     lw = ef.STYLE["line_width"]
     k = grading_curves(roots)
     colours = ("electron", "hole", "highlight")
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         for lv, colour in zip(k["levels"], colours, strict=True):
@@ -783,7 +783,7 @@ def _meshconv_figure(dim: int, palette: str, roots: Roots):
     k = meshconv_curves(dim, roots)
     colours = ("electron", "hole", "highlight")
     cols = 2 if dim == 2 else 1
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         axes = np.atleast_2d(fig.subplots(len(_DEVICES), cols, sharex="col", squeeze=False))
         for row, device in enumerate(_DEVICES):
@@ -903,7 +903,7 @@ def pn_slab_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     names = list(plugin_records(root))
     records = tuple(zip(names, ("-", "--"), ("", STYLE["hatch"]), strict=True))
     regions = (("core", "hole", "rib"), ("slab90", "electron", "slab"))
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         top, bottom = fig.subplots(2, 1, sharex=True)
         ends, handles = [], []
@@ -961,7 +961,7 @@ def pin_depletion_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     k = pin_widths(plugin_root(roots))
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         for (name, pts), (colour, ls, marker) in zip(k.items(), (("electron", "-", "o"),
@@ -1018,8 +1018,8 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
 
 def _svg_of(draw: Callable) -> Callable[[str, Roots], bytes]:
     def svg(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
-        with matplotlib.rc_context(ef._rc(palette)):
-            return ef._svg(draw(palette, roots))
+        with matplotlib.rc_context(ef.palette_rc(palette)):
+            return ef.svg_bytes(draw(palette, roots))
 
     svg.__doc__ = f":func:`{draw.__name__}` as SVG bytes, saved inside the palette's rc context."
     return svg

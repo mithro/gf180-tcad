@@ -160,7 +160,7 @@ def process_cell_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     def doping(dopant: str, n: float) -> str:
         return f"{_DOPED[dopant]}, {ef._short(n, 'cm⁻³', digits)}"
 
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         for side in ("source", "drain"):
             box = ext[side]
             ax.text((box.x0 + box.x1) / 2, box.y1 + gap, doping(c.sd_dopant, c.n_sd_cm3),
@@ -183,8 +183,8 @@ def process_cell_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def process_cell(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`process_cell_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(process_cell_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(process_cell_figure(palette, roots))
 
 
 # The device of the plan view.
@@ -226,7 +226,7 @@ def instance_plan_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     x_lo, x_hi = -half - sd - side, half + sd + side
     y_lo, y_hi = bottom - off * STYLE["plan_rows"], top + off * STYLE["plan_rows"]
     width_in = STYLE["plan_in"][0]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure((width_in, width_in * (y_hi - y_lo) / (x_hi - x_lo)))
         ax = fig.subplots()
         ax.set_axis_off()
@@ -259,15 +259,15 @@ def instance_plan_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def instance_plan(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`instance_plan_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(instance_plan_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(instance_plan_figure(palette, roots))
 
 
 def geometries_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """W against L of every compared geometry, one panel per device: filled markers for the
     calibration geometries, open markers for the held-out ones (:attr:`Geometry.role`)."""
     pal = ef.PALETTES[palette]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         axes = fig.subplots(len(_DEVICES), 1)
         for ax, device in zip(axes, _DEVICES, strict=True):
@@ -298,8 +298,8 @@ def geometries_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def geometries(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`geometries_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(geometries_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(geometries_figure(palette, roots))
 
 
 def meshconv_report(dim: int, device: str, root: Path = TCAD_ROOT) -> dict:
@@ -326,7 +326,7 @@ def meshconv_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     crit = set()
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         for dim, style in ((1, "-"), (2, "--")):
@@ -355,8 +355,8 @@ def meshconv_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def meshconv(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`meshconv_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(meshconv_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(meshconv_figure(palette, roots))
 
 
 # --- the C-V calibration ---------------------------------------------------------------------
@@ -367,7 +367,7 @@ def _cv_grid_figure(role: str, palette: str, roots: Roots) -> Figure:
     lw = ef.STYLE["line_width"]
     rows = {d: _geometries(d, role) for d in _DEVICES}
     (n,) = {len(gs) for gs in rows.values()}
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         axes = fig.subplots(n, len(_DEVICES), sharex=True)
         for col, device in enumerate(_DEVICES):
@@ -408,8 +408,8 @@ def cv_fit_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def cv_fit(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`cv_fit_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(cv_fit_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(cv_fit_figure(palette, roots))
 
 
 def cv_validation_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
@@ -419,8 +419,8 @@ def cv_validation_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def cv_validation(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`cv_validation_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(cv_validation_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(cv_validation_figure(palette, roots))
 
 
 # The device of the curve the metric figure marks.
@@ -446,7 +446,7 @@ def cv_metric_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     u, c, r = metric_regions(roots.spice)
     off = calcv.PLATEAU_OFFSET_V
     lift = r.c_acc * STYLE["label_lift"]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         ax.axvspan(u[0], r.u_fb - off, color=pal["hole"], alpha=STYLE["plateau_alpha"], lw=0,
@@ -477,8 +477,8 @@ def cv_metric_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def cv_metric(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`cv_metric_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(cv_metric_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(cv_metric_figure(palette, roots))
 
 
 def edge_curves(
@@ -511,7 +511,7 @@ def pfet_edge_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     curves = edge_curves("pfet_05v0", roots.spice, roots.tcad)
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         for k, cur in zip(_SERIES, curves, strict=False):
@@ -536,8 +536,8 @@ def pfet_edge_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def pfet_edge(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`pfet_edge_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(pfet_edge_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(pfet_edge_figure(palette, roots))
 
 
 # --- the process data ------------------------------------------------------------------------
@@ -551,8 +551,8 @@ def start_stack_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def start_stack(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`start_stack_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(start_stack_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(start_stack_figure(palette, roots))
 
 
 # The device of the split plot.
@@ -572,7 +572,7 @@ def cgg_split_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     (g,) = [g for g in dev.geometries if geometry_id(g) == SPLIT_GEOMETRY]
     moscap, proc = data.read_moscap(roots.tcad, SPLIT_DEVICE, "calibrated")
     u, intrinsic, parasitic, total = data.tcad_cgg(moscap, g, proc, dev.polarity)
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         ax.plot(u, total, color=pal["text"], lw=lw, label="total", gid="total")
@@ -590,8 +590,8 @@ def cgg_split_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def cgg_split(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`cgg_split_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(cgg_split_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(cgg_split_figure(palette, roots))
 
 
 def centroid_curves(device: str) -> dict:
@@ -617,7 +617,7 @@ def centroid_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     edge = process.PLATEAU_V
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         ax = fig.subplots()
         for device in _DEVICES:
@@ -647,8 +647,8 @@ def centroid_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def centroid(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`centroid_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(centroid_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(centroid_figure(palette, roots))
 
 
 # --- the PDK versions ------------------------------------------------------------------------
@@ -674,7 +674,7 @@ def pdk_sweeps_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     on top)."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(ef.STYLE["size_in"])
         axes = fig.subplots(1, len(_DEVICES), sharey=True)
         for ax, device in zip(axes, _DEVICES, strict=True):
@@ -700,8 +700,8 @@ def pdk_sweeps_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def pdk_sweeps(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`pdk_sweeps_figure` as SVG bytes, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(pdk_sweeps_figure(palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(pdk_sweeps_figure(palette, roots))
 
 
 # name -> function of the palette name; each is written in both palettes by write_all.
