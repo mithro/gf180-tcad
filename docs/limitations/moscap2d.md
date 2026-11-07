@@ -641,7 +641,7 @@ drift-diffusion solve that sets up every 2D device fails on it. It fails inside 
 0.86 million unknowns, still solves.
 
 This is an open correctness
-problem, tracked in [issue #58](https://github.com/mithro/gf180-tcad/issues/58). Its long-channel
+problem, tracked in the same issue. Its long-channel
 C per area is covered by the 2D-equals-1D check and by the 1D MOS capacitor. The directions to
 test (another direct or an iterative solver, a symmetric half domain) are on the issue.
 
