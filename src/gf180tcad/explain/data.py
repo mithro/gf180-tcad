@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """The curve readers the explainer figures share with the results pages.
 
-:mod:`gf180tcad.docgen` imports these, so a results-page plot and an explainer figure read a
+:mod:`gf180tcad.results_figures` calls these, so a results-page plot and an explainer figure read a
 committed curve the same way and nothing is copied. Of the explain modules, this one alone reads
 through :mod:`gf180tcad.tcad`, and only its two standard-library readers,
 :mod:`gf180tcad.tcad.moscap1d` and :mod:`gf180tcad.tcad.process` (tested). It sits outside every

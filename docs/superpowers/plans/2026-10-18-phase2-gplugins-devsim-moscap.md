@@ -874,7 +874,7 @@ Here u_fb is the u at which SPICE C = 0.9·C_acc(u = −5), and u_t is the u at 
 
 Requires the docs-links infrastructure on main.
 
-The pages `docgen` writes follow the rules of spec §10.3, owner 2026-11-03: a named, captioned `{figure}` cited with `{numref}` for every described situation; every equation as `$$ … $$ (eq-name)` with a `where` list giving each symbol and its unit; every file a `{repo}` link. `uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules all <page>` checks a page, and `tests/doc_rules_baseline.json` may only fall. Their findings are the work order of [#134](https://github.com/mithro/gf180-tcad/issues/134).
+The pages `docgen` writes follow the rules of spec §10.3, owner 2026-11-03: a named, captioned `{figure}` cited with `{numref}` for every described situation; every equation as `$$ … $$ (eq-name)` with a `where` list giving each symbol and its unit; every file a `{repo}` link. `uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules all <page>` checks a page, and `tests/doc_rules_baseline.json` may only fall. The generated pages have no finding and no opt-out ([#134](https://github.com/mithro/gf180-tcad/issues/134)).
 
 **Files:**
 - `src/gf180tcad/docgen.py` (not a generator module). It renders MOSCAP pages from the committed `results/tcad/**` only:
