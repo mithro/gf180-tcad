@@ -121,18 +121,26 @@ make lint
 uv run pytest -m "not sandbox"
 ```
 
-`make lint` (ruff check, ruff format --check) is exactly the lint step of the `lint-test` check of
-[CI](.github/workflows/ci.yml), which then runs the tests. [`tools/install-hooks`](tools/install-hooks) installs, once per
-clone (it covers every git worktree of it), the pre-push hook
-[`tools/git-hooks/pre-push`](tools/git-hooks/pre-push): each `git push` first runs `make pre-push` (`make lint`, then
-every non-sandbox test except the slow docs build and calibration fits, about a minute) and,
-when a pushed commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), [README.md](README.md) or [CONTRIBUTING.md](CONTRIBUTING.md),
-`make pre-push-docs` (the docs-links rule, a few minutes). A failure refuses the push. A push
-can therefore take three minutes or more: an agent runs `git push` in the background or with a
-timeout of at least 300 s, and never with `--no-verify`. The hook only checks what most often
-broke CI, so run the full `uv run pytest -m "not sandbox"` before asking for review. CI cancels
-the run of a superseded commit when a newer one is pushed to the same pull request (runs on
-`main` are never cancelled).
+`make lint` (ruff check, ruff format --check) is the lint step of the `lint-test` check of
+[CI](.github/workflows/ci.yml), which then runs the tests.
+
+[`tools/install-hooks`](tools/install-hooks) installs the pre-push hook
+[`tools/git-hooks/pre-push`](tools/git-hooks/pre-push) once per clone, for every git worktree of it.
+A failure of either step refuses the push:
+
+- `make pre-push` runs on every push. It runs `make lint`, then every non-sandbox test except the
+  docs build, the generated pages and the calibration fits.
+- `make pre-push-docs` runs when a pushed commit changes [`docs/`](docs), [`src/`](src),
+  [`results/`](results), [README.md](README.md) or [CONTRIBUTING.md](CONTRIBUTING.md). It runs the
+  docs build, [`tests/test_doc_links.py`](tests/test_doc_links.py), and the generated pages,
+  [`tests/test_docgen.py`](tests/test_docgen.py).
+
+A push that runs both steps takes many minutes. An agent runs `git push` in the
+background with no timeout, and never with `--no-verify`. The hook skips the calibration fits, so
+run the full `uv run pytest -m "not sandbox"` before asking for review.
+
+CI cancels the run of a superseded commit when a newer one is pushed to the same pull request.
+Runs on `main` are never cancelled.
 
 The [linkcheck workflow](.github/workflows/linkcheck.yml) fails a pull request when an external link answers with an error
 such as 404. It also fails when a linked issue or pull request number does not exist. A site that

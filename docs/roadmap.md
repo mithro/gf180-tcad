@@ -87,8 +87,8 @@ Its curves at the minimum gate length are in {numref}`roadmap-cv-figure`, beside
 - **{{ Charon }} beside {{ DEVSIM }} on every {term}`job`**, and the comparison of the two
   ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)). No Charon job has run.
-  The charon-libs image, built from {repo}`docker/charon-libs/`, is pinned
-  ({ref}`charon-images`). The Charon backend and the thin `charon` image come next.
+  The charon-libs image, built from {repo}`docker/charon-libs/`, and the `charon` image, built
+  from {repo}`docker/charon/`, are pinned ({ref}`charon-images`). The Charon backend comes next.
 
 ## Phase 5: temperature and silicon
 

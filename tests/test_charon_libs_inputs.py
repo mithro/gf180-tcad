@@ -12,7 +12,8 @@
 - the helper scripts: the fetch script is the dev image's, the deb resolver compares Debian
   versions and resolves dependencies as dpkg would, the build script's SOURCE_DATE_EPOCH inputs
   cover every file the Dockerfile reads, and the build script refuses a builder without a
-  memory limit.
+  memory limit. docker/charon/build (the thin charon image) is a copy with the same builder
+  check, so the builder tests run against both scripts.
 """
 
 import hashlib
@@ -342,9 +343,10 @@ def test_resolve_accepts_relations_that_miss_the_base_image(rel):
     assert [q["Package"] for q in order] == ["a-dev"]
 
 
-# --- docker/charon-libs/build: the memory-limited builder ------------------------------------
+# --- docker/charon-libs/build and docker/charon/build: the memory-limited builder --------------
 
 BUILD = LIBS / "build"
+BUILDS = (BUILD, REPO / "docker" / "charon" / "build")
 _BUILD_TEXT = BUILD.read_text(encoding="utf-8")
 BUILDKIT_IMAGE = re.search(r'^BUILDKIT_IMAGE="([^"]+)"$', _BUILD_TEXT, re.MULTILINE).group(1)
 DEFAULT_BUILDER = re.search(r'BUILDER="\$\{GF180TCAD_BUILDER:-([^}]+)\}"', _BUILD_TEXT).group(1)
@@ -390,7 +392,22 @@ def _inspect(*nodes: str | None) -> str:
     return out
 
 
-def _run_build(tmp_path, inspect: str | None, containers: dict[str, str] | None = None):
+@pytest.fixture(params=BUILDS, ids=lambda b: b.parent.name)
+def build(request) -> Path:
+    return request.param
+
+
+def test_both_builds_use_the_same_buildkit_and_builder():
+    for b in BUILDS:
+        text = b.read_text(encoding="utf-8")
+        assert f'BUILDKIT_IMAGE="{BUILDKIT_IMAGE}"' in text, b
+        assert f'BUILDER="${{GF180TCAD_BUILDER:-{DEFAULT_BUILDER}}}"' in text, b
+        assert "BUILDER_MEMORY=16g" in text, b
+
+
+def _run_build(
+    build: Path, tmp_path, inspect: str | None, containers: dict[str, str] | None = None
+):
     bindir, state = tmp_path / "bin", tmp_path / "state"
     bindir.mkdir()
     state.mkdir()
@@ -403,7 +420,7 @@ def _run_build(tmp_path, inspect: str | None, containers: dict[str, str] | None 
         (state / f"container-{name}.txt").write_text(real + "\n", encoding="utf-8")
     env = {k: v for k, v in os.environ.items() if k != "GF180TCAD_BUILDER"}
     env |= {"PATH": f"{bindir}:{env['PATH']}", "FAKE_STATE": str(state)}
-    res = subprocess.run([str(BUILD)], capture_output=True, text=True, env=env, check=False)
+    res = subprocess.run([str(build)], capture_output=True, text=True, env=env, check=False)
     calls = (state / "calls.log").read_text(encoding="utf-8").splitlines()
     return res, calls
 
@@ -422,47 +439,49 @@ def _opts() -> str:
         "lots|lots|",
     ],
 )
-def test_build_refuses_a_builder_container_without_the_limits(tmp_path, real):
+def test_build_refuses_a_builder_container_without_the_limits(build, tmp_path, real):
     """The check reads the limits docker applied to the running container, not the options."""
-    res, calls = _run_build(tmp_path, _inspect(_opts()), {"buildx_buildkit_b0": real})
+    res, calls = _run_build(build, tmp_path, _inspect(_opts()), {"buildx_buildkit_b0": real})
     assert res.returncode == 2, res.stderr
     assert "no memory limit of at most 16 GiB" in res.stderr
     assert not [c for c in calls if c.startswith("buildx build")]
 
 
-def test_build_refuses_a_builder_whose_container_is_missing(tmp_path):
-    res, _calls = _run_build(tmp_path, _inspect(_opts()), {})
+def test_build_refuses_a_builder_whose_container_is_missing(build, tmp_path):
+    res, _calls = _run_build(build, tmp_path, _inspect(_opts()), {})
     assert res.returncode != 0
     assert not [c for c in _calls if c.startswith("buildx build")]
 
 
-def test_build_refuses_a_multi_node_builder_with_a_node_without_options(tmp_path):
+def test_build_refuses_a_multi_node_builder_with_a_node_without_options(build, tmp_path):
     """Every node is checked: one node with no Driver Options line is refused (issue #126)."""
     good = f"{GIB16}|{GIB16}|"
     containers = {"buildx_buildkit_b0": good, "buildx_buildkit_b1": good}
-    res, calls = _run_build(tmp_path, _inspect(_opts(), None), containers)
+    res, calls = _run_build(build, tmp_path, _inspect(_opts(), None), containers)
     assert res.returncode == 2, res.stderr
     assert "node b1: BuildKit image is not" in res.stderr
     assert not [c for c in calls if c.startswith("buildx build")]
 
 
-def test_build_checks_every_node_container(tmp_path):
+def test_build_checks_every_node_container(build, tmp_path):
     containers = {"buildx_buildkit_b0": f"{GIB16}|{GIB16}|", "buildx_buildkit_b1": "0|0|"}
-    res, _calls = _run_build(tmp_path, _inspect(_opts(), _opts()), containers)
+    res, _calls = _run_build(build, tmp_path, _inspect(_opts(), _opts()), containers)
     assert res.returncode == 2, res.stderr
     assert "node b1" in res.stderr
 
 
 @pytest.mark.parametrize("mem", [GIB16, 8 * 1073741824])
-def test_build_accepts_a_container_limit_of_at_most_16g(tmp_path, mem):
-    res, calls = _run_build(tmp_path, _inspect(_opts()), {"buildx_buildkit_b0": f"{mem}|{mem}|"})
+def test_build_accepts_a_container_limit_of_at_most_16g(build, tmp_path, mem):
+    res, calls = _run_build(
+        build, tmp_path, _inspect(_opts()), {"buildx_buildkit_b0": f"{mem}|{mem}|"}
+    )
     assert "has no memory limit" not in res.stderr and "is not" not in res.stderr, res.stderr
     assert f"node b0: Memory={mem} MemorySwap={mem}" in res.stderr
     assert f"buildx inspect --bootstrap {DEFAULT_BUILDER}" in calls
 
 
-def test_build_creates_the_16g_builder(tmp_path):
-    res, calls = _run_build(tmp_path, None, {"buildx_buildkit_x0": f"{GIB16}|{GIB16}|"})
+def test_build_creates_the_16g_builder(build, tmp_path):
+    res, calls = _run_build(build, tmp_path, None, {"buildx_buildkit_x0": f"{GIB16}|{GIB16}|"})
     assert "has no memory limit" not in res.stderr, res.stderr
     assert calls[1] == (
         f"buildx create --name {DEFAULT_BUILDER} --driver docker-container "

@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Reproducible build of the gf180-tcad charon image (the dev-HEAD TCAD image plus /opt/charon from
+# the charon-libs image and netCDF4; used locally and by .github/workflows/image.yml).
+#   docker/charon/build [--push] [--tag REF]... [--no-cache] [--metadata FILE] [--load]
+# --load also loads the image into the local docker image store as $NAME:local (its image ID is
+# the same config digest), so that tools/sandbox-run --image can run it before it is pushed.
+# Prints the image config digest (== `docker/charon/IMAGE_ID` when reproducible) on stdout.
+#
+# A copy of docker/charon-libs/build with the charon inputs. The image is built FROM the pinned
+# dev-HEAD TCAD image (TCAD_DEV_IMAGE = docker/TCAD_DEV_IMAGE) and copies /opt/charon from the
+# pinned charon-libs image (CHARON_LIBS_IMAGE = docker/CHARON_LIBS_IMAGE), so both pin files are
+# build inputs and date the build too. The charon-libs recipe directory is a named build context
+# (charon-libs-recipe) for its build-charon.sh, so that file is an input as well.
+# Reproducibility: a pinned BuildKit (docker-container driver), SOURCE_DATE_EPOCH = commit time of
+# the last change to the build inputs (so committing IMAGE_ID/TCAD_IMAGE/versions.json does not
+# change it), rewrite-timestamp=true, no provenance/SBOM attestations, single platform.
+set -euo pipefail
+
+BUILDKIT_IMAGE="moby/buildkit:v0.34.0@sha256:b059f8d7226d0b326bc871af489a5dddf65e36af4d20d14251b072974d9ee87c"
+# The same memory-limited builder as docker/charon-libs/build: the default one, created on first
+# use, is a docker-container builder of $BUILDKIT_IMAGE with 16 GiB of memory and no swap.
+# GF180TCAD_BUILDER names another builder of the same BuildKit image; the image does not depend
+# on the builder's limits. Either builder must use the docker-container driver and
+# $BUILDKIT_IMAGE on every node, and every node's running container must have a memory limit of
+# at most 16 GiB with no swap above it, as docker applied them (checked below), or the build
+# refuses. The builder runs outside gf180-tcad.slice: buildx's cgroup-parent option takes
+# effect only when docker uses the cgroupfs cgroup driver, and this host's docker uses systemd.
+BUILDER="${GF180TCAD_BUILDER:-gf180tcad-charon-16g}"
+BUILDER_MEMORY=16g
+NAME="ghcr.io/mithro/gf180-tcad-charon"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$HERE/../.." && pwd)"
+
+PUSH=false NO_CACHE=() TAGS=() METADATA="" LOAD=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --push) PUSH=true; shift ;;
+        --tag) TAGS+=("${2:?}"); shift 2 ;;
+        --no-cache) NO_CACHE=(--no-cache); shift ;;
+        --metadata) METADATA="${2:?}"; shift 2 ;;
+        --load) LOAD=(--output "type=docker,name=$NAME:local,rewrite-timestamp=true"); shift ;;
+        *) echo "build: unknown option: $1" >&2; exit 2 ;;
+    esac
+done
+if [ -z "$METADATA" ]; then
+    METADATA="$(mktemp)"
+    trap 'rm -f "$METADATA"' EXIT
+fi
+if [ "${#TAGS[@]}" -eq 0 ]; then
+    "$PUSH" && { echo "build: --push needs at least one --tag" >&2; exit 2; }
+    TAGS=("$NAME:local")
+fi
+
+if ! INSPECT="$(docker buildx inspect "$BUILDER")"; then
+    docker buildx create --name "$BUILDER" --driver docker-container \
+        --driver-opt "image=$BUILDKIT_IMAGE" --driver-opt "memory=$BUILDER_MEMORY" \
+        --driver-opt "memory-swap=$BUILDER_MEMORY" >&2
+fi
+# Start every node, so that the containers checked below are the ones that will build.
+INSPECT="$(docker buildx inspect --bootstrap "$BUILDER")"
+echo "$INSPECT" >&2
+# An existing builder of that name (the default or GF180TCAD_BUILDER) is used as it is, so check
+# that it is what the build is reproducible with: the docker-container driver running exactly
+# $BUILDKIT_IMAGE on every node.
+DRIVER="$(awk '/^Driver:/ {print $2; exit}' <<<"$INSPECT")"
+if [ "$DRIVER" != docker-container ]; then
+    echo "build: builder $BUILDER: driver is '$DRIVER', not docker-container" >&2
+    exit 2
+fi
+NODES="$(awk '/^Nodes:/ {n = 1; next} n && /^Name:/ {print $2}' <<<"$INSPECT")"
+[ -n "$NODES" ] || { echo "build: builder $BUILDER has no nodes" >&2; exit 2; }
+MAX_BYTES=$((16 * 1073741824))
+for node in $NODES; do
+    # This node's lines of `docker buildx inspect`: from its Name: line to the next one.
+    block="$(awk -v n="$node" '/^Name:/ {on = ($2 == n)} on' <<<"$INSPECT")"
+    opts="$(grep '^Driver Options:' <<<"$block" || true)"
+    if [ -z "$opts" ] || ! grep -qF "image=\"$BUILDKIT_IMAGE\"" <<<"$opts"; then
+        echo "build: builder $BUILDER node $node: BuildKit image is not $BUILDKIT_IMAGE:" >&2
+        echo "${opts:-  (no Driver Options)}" >&2
+        exit 2
+    fi
+    # The limits docker applied to the node's running container, not the options' text: at most
+    # 16 GiB of memory and no swap (MemorySwap equal to Memory).
+    real="$(docker inspect -f '{{.HostConfig.Memory}}|{{.HostConfig.MemorySwap}}|{{.HostConfig.CgroupParent}}' \
+        "buildx_buildkit_$node")"
+    IFS='|' read -r mem swap parent <<<"$real"
+    if ! [[ "$mem" =~ ^[0-9]+$ ]] || [ "$mem" -le 0 ] || [ "$mem" -gt "$MAX_BYTES" ] ||
+        [ "$swap" != "$mem" ]; then
+        echo "build: builder $BUILDER node $node: its container buildx_buildkit_$node has no" \
+            "memory limit of at most 16 GiB, or swap above it (Memory=$mem" \
+            "MemorySwap=$swap CgroupParent='$parent'); create the builder as this script does" >&2
+        exit 2
+    fi
+    echo "build: builder $BUILDER node $node: Memory=$mem MemorySwap=$swap CgroupParent='$parent'" >&2
+done
+
+INPUTS=(docker/charon/Dockerfile docker/charon/build docker/charon/requirements.lock
+        docker/charon-libs/build-charon.sh docker/TCAD_DEV_IMAGE docker/CHARON_LIBS_IMAGE)
+if [ -n "$(git -C "$REPO" status --porcelain -- "${INPUTS[@]}")" ]; then
+    echo "build: uncommitted changes in ${INPUTS[*]}; commit them first" >&2
+    exit 2
+fi
+SOURCE_DATE_EPOCH="$(git -C "$REPO" log -1 --format=%ct -- "${INPUTS[@]}")"
+[ -n "$SOURCE_DATE_EPOCH" ] || { echo "build: cannot date ${INPUTS[*]} (shallow clone?)" >&2; exit 2; }
+export SOURCE_DATE_EPOCH
+echo "build: SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" >&2
+
+TCAD_DEV_IMAGE="$(head -n1 "$REPO/docker/TCAD_DEV_IMAGE")"
+case "$TCAD_DEV_IMAGE" in
+    ghcr.io/mithro/gf180-tcad-tcad-dev@sha256:*) ;;
+    *) echo "build: docker/TCAD_DEV_IMAGE is not a pinned dev image: $TCAD_DEV_IMAGE" >&2; exit 2 ;;
+esac
+CHARON_LIBS_IMAGE="$(head -n1 "$REPO/docker/CHARON_LIBS_IMAGE")"
+case "$CHARON_LIBS_IMAGE" in
+    ghcr.io/mithro/gf180-tcad-charon-libs@sha256:*) ;;
+    *) echo "build: docker/CHARON_LIBS_IMAGE is not a pinned charon-libs image: $CHARON_LIBS_IMAGE" >&2
+       exit 2 ;;
+esac
+echo "build: TCAD_DEV_IMAGE=$TCAD_DEV_IMAGE" >&2
+echo "build: CHARON_LIBS_IMAGE=$CHARON_LIBS_IMAGE" >&2
+
+NAMES="$(IFS=,; echo "${TAGS[*]}")"
+docker buildx build --builder "$BUILDER" --progress plain \
+    --platform linux/amd64 --provenance=false --sbom=false \
+    "${NO_CACHE[@]}" \
+    --build-arg "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" \
+    --build-arg "TCAD_DEV_IMAGE=$TCAD_DEV_IMAGE" \
+    --build-arg "CHARON_LIBS_IMAGE=$CHARON_LIBS_IMAGE" \
+    --build-context "charon-libs-recipe=$REPO/docker/charon-libs" \
+    --output "type=image,\"name=$NAMES\",push=$PUSH,rewrite-timestamp=true" "${LOAD[@]}" \
+    --metadata-file "$METADATA" \
+    "$HERE" >&2
+
+python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["containerimage.config.digest"])' \
+    "$METADATA"

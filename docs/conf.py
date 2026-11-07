@@ -69,6 +69,8 @@ _TOOLS = {
     "Charon": ("Charon", "https://charon.sandia.gov/"),
     "Trilinos": ("Trilinos", "https://github.com/trilinos/Trilinos"),
     "TriBITS": ("TriBITS", "https://github.com/TriBITSPub/TriBITS"),
+    "netCDF4": ("netCDF4", "https://github.com/Unidata/netcdf4-python"),
+    "cftime": ("cftime", "https://github.com/Unidata/cftime"),
     "gdsfactory": ("gdsfactory", "https://gdsfactory.github.io/gdsfactory/"),
     "KLayout": ("KLayout", "https://www.klayout.de/"),
     "meshwell": ("meshwell", "https://github.com/simbilod/meshwell"),

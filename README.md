@@ -123,7 +123,9 @@ GitHub-hosted runner cuts all ten again byte for byte.
 Planned work, each item with its issue, is on the
 [roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html), among it a
 [Charon](https://charon.sandia.gov/) backend beside DEVSIM for cross-comparison
-([issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
+([issue #44](https://github.com/mithro/gf180-tcad/issues/44)). Both Charon images are built and
+pinned ([Charon images](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#charon-images)),
+and no Charon job has run.
 The current limitations, including the deviations from the design spec, are listed on the
 [limitations page](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html).
 
@@ -138,8 +140,9 @@ section says on which hosts the results are byte-identical.
 
 ## Images
 
-Every simulation runs in one of three reproducible images on the
+The project builds five reproducible images on the
 [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+Every committed result comes from one of the first three.
 Each is pinned by
 [manifest digest](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-manifest-digest)
 in a one-line file. [`.github/workflows/image.yml`](.github/workflows/image.yml) builds them and
@@ -150,6 +153,8 @@ checks that a from-scratch rebuild gives the same digests:
 | [`ghcr.io/mithro/gf180-tcad-base`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base) | [`docker/IMAGE`](docker/IMAGE) | the SPICE reference |
 | [`ghcr.io/mithro/gf180-tcad-tcad`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-tcad) | [`docker/TCAD_IMAGE`](docker/TCAD_IMAGE) | the [stable TCAD image](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#tcad-image) |
 | [`ghcr.io/mithro/gf180-tcad-tcad-dev`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-tcad-dev) | [`docker/TCAD_DEV_IMAGE`](docker/TCAD_DEV_IMAGE) | the [dev-HEAD TCAD image](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#tcad-dev-image) |
+| [`ghcr.io/mithro/gf180-tcad-charon-libs`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-charon-libs) | [`docker/CHARON_LIBS_IMAGE`](docker/CHARON_LIBS_IMAGE) | Charon built from source |
+| [`ghcr.io/mithro/gf180-tcad-charon`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-charon) | [`docker/CHARON_IMAGE`](docker/CHARON_IMAGE) | the [charon image](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#charon-image) |
 
 What each holds:
 
@@ -158,10 +163,13 @@ What each holds:
 - **stable TCAD**: the TCAD stack at its latest releases.
 - **dev-HEAD TCAD**: the TCAD stack at development HEAD (the newest commit), pinned by commit,
   with DEVSIM built from source.
+- **charon-libs**: the base image with Charon 2.2.0 and [Trilinos](https://github.com/trilinos/Trilinos) built from source in `/opt/charon`.
+- **charon**: the [dev-HEAD TCAD image](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-dev-HEAD-TCAD-image) with that `/opt/charon` and [netCDF4](https://github.com/Unidata/netcdf4-python).
 
 The exact versions in each image are listed in one JSON file per image:
-[base](docker/base/versions.json), [stable](docker/tcad/versions.json) and
-[dev HEAD](docker/tcad-dev/versions.json). The final results are to come from the dev-HEAD
+[base](docker/base/versions.json), [stable](docker/tcad/versions.json),
+[dev HEAD](docker/tcad-dev/versions.json), [charon-libs](docker/charon-libs/versions.json) and
+[charon](docker/charon/versions.json). The final results are to come from the dev-HEAD
 image; the stable one is kept for checking how the released versions behave. Which results come
 from which image today
 is on the [image page](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#tcad-results-image).
@@ -180,7 +188,7 @@ uv run pytest -m "not sandbox"
 ```
 
 `make lint` is the lint step of CI; [`tools/install-hooks`](tools/install-hooks) installs the pre-push hook that
-runs it and the fast tests before every push ([CONTRIBUTING.md](CONTRIBUTING.md#development)).
+runs it and the non-sandbox tests before every push ([CONTRIBUTING.md](CONTRIBUTING.md#development)).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution rules.
 

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Reproducible builds of the three project images, one matrix entry each:
+# Reproducible builds of the project images, one matrix entry each:
 #   base: ghcr.io/mithro/gf180-tcad-base  (docker/base/, pinned by docker/IMAGE)
 #   tcad: ghcr.io/mithro/gf180-tcad-tcad  (docker/tcad/, pinned by docker/TCAD_IMAGE; built FROM
 #         docker/IMAGE, which is public, so no login is needed to pull it)
@@ -14,6 +14,9 @@
 #         (docker/charon-libs, docker/IMAGE, docker/CHARON_LIBS_IMAGE) and on manual dispatch,
 #         the reproducible rebuild only on the weekly schedule and on manual dispatch; a gated
 #         entry that does not run skips every step after the gate and passes)
+#   charon: ghcr.io/mithro/gf180-tcad-charon  (docker/charon/, pinned by docker/CHARON_IMAGE; FROM
+#         docker/TCAD_DEV_IMAGE plus /opt/charon copied from docker/CHARON_LIBS_IMAGE and the
+#         hash-locked netCDF4; minutes to build, so not gated)
 #   PRs:  push tag pr-<number>;  main: push latest and sha-<commit>; both only after the
 #         IMAGE_ID, pin and versions checks passed (the build pushes only the staging tag
 #         `unverified`, which may point at an unverified image);
@@ -75,6 +78,9 @@ jobs:
             pin: docker/CHARON_LIBS_IMAGE
             timeout: 350
             gated: true
+          - image: charon
+            name: ghcr.io/mithro/gf180-tcad-charon
+            pin: docker/CHARON_IMAGE
     env:
       IMAGE_NAME: ${{ matrix.name }}
       DIR: docker/${{ matrix.image }}
@@ -217,6 +223,9 @@ jobs:
             pin: docker/CHARON_LIBS_IMAGE
             timeout: 350
             gated: true
+          - image: charon
+            name: ghcr.io/mithro/gf180-tcad-charon
+            pin: docker/CHARON_IMAGE
     env:
       IMAGE_NAME: ${{ matrix.name }}
       DIR: docker/${{ matrix.image }}
