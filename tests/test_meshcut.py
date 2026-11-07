@@ -440,6 +440,47 @@ def _cut_fixture(tmp_path, out=None, **kw):
     return meta, out, d
 
 
+def _brute_bounds(path):
+    """Each region's node bounds in um, from the MSH text without the reader."""
+    text = Path(path).read_text(encoding="utf-8").split("\n")
+    names = {}
+    i = text.index("$PhysicalNames")
+    for line in text[i + 2 : text.index("$EndPhysicalNames")]:
+        d, tag, name = line.split()
+        if d == "2":
+            names[int(tag)] = name.strip('"')
+    xy = {int(f[0]): (float(f[1]), float(f[2]))
+          for f in (line.split() for line in text[text.index("$Nodes") + 2 : text.index("$EndNodes")])}  # fmt: skip
+    pts: dict[str, list] = {}
+    for line in text[text.index("$Elements") + 2 : text.index("$EndElements")]:
+        f = [int(v) for v in line.split()]
+        if f[1] == 2:
+            pts.setdefault(names[f[3]], []).extend(xy[n] for n in f[-3:])
+    um = meshcut.UM_PER_MSH_UNIT
+    return {
+        name: {"x_um": (min(x for x, _ in p) * um, max(x for x, _ in p) * um),
+               "y_um": (min(y for _, y in p) * um, max(y for _, y in p) * um)}
+        for name, p in sorted(pts.items())
+    }  # fmt: skip
+
+
+def test_region_bounds_are_the_full_mesh_s():
+    """Each region's bounds come from all its nodes in the full mesh, not the window's."""
+    got = job.region_bounds(msh.read(FIXTURE))
+    assert got == _brute_bounds(FIXTURE)
+    assert sorted(got) == ["body", "gate_poly", "oxide"]
+    assert got["body"]["y_um"][1] == 0.0  # the silicon surface
+
+
+def test_meta_records_region_bounds_of_the_full_mesh_beyond_the_window(tmp_path):
+    """A window shallower than the body still records the body's full extent (#128)."""
+    meta, _, _ = _cut_fixture(tmp_path, depth_um=0.05)
+    assert meta["window"]["y_um"][0] > meta["region_bounds_um"]["body"]["y_um"][0]
+    assert meta["region_bounds_um"]["body"] == {
+        k: list(v) for k, v in _brute_bounds(FIXTURE)["body"].items()
+    }
+
+
 def test_window_with_net_doping_has_seven_members():
     mesh = msh.read(FIXTURE)
     w = window.cut(mesh, x_um=(0.15, 0.35), y_um=(-0.15, 0.15))
@@ -465,8 +506,12 @@ def test_meta_schema_sorted_and_complete(tmp_path):
     assert tuple(sorted(on_disk["window"]["rule"])) == artefact.RULE_KEYS
     assert on_disk["format"] == meshcut.FORMAT
     assert on_disk["units"] == {
-        "net_doping_cm3": "cm^-3", "nodes_cm": "cm", "um_per_mesh_unit": 1e4, "window": "um",
+        "net_doping_cm3": "cm^-3", "nodes_cm": "cm", "region_bounds_um": "um",
+        "um_per_mesh_unit": 1e4, "window": "um",
     }  # fmt: skip
+    assert on_disk["region_bounds_um"] == {
+        name: {k: list(v) for k, v in b.items()} for name, b in _brute_bounds(FIXTURE).items()
+    }
     assert on_disk["job"] == {
         "cv_meta_sha256": _sha(d / "cv.meta.json"),
         "device": "nfet_05v0",
@@ -508,6 +553,10 @@ def test_meta_schema_sorted_and_complete(tmp_path):
         lambda m: m.update(regions="body"),
         lambda m: m.update(size_bytes=-1),
         lambda m: m.update(size_bytes="3 MB"),
+        lambda m: m.pop("region_bounds_um"),
+        lambda m: m["region_bounds_um"].pop("body"),
+        lambda m: m["region_bounds_um"]["body"].update(x_um=[1.0, 0.0]),
+        lambda m: m["region_bounds_um"]["oxide"].pop("y_um"),
     ],
 )
 def test_meta_schema_refuses_a_bad_meta(tmp_path, spoil):

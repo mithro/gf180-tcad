@@ -48,5 +48,8 @@ def test_regenerated_mesh_sha_reported(tmp_path, capsys):
     assert report["committed_mesh_sha256"] == cv_meta["mesh_sha256"]
     assert len(report["regenerated_mesh_sha256"]) == 64
     assert report["match"] == (report["regenerated_mesh_sha256"] == cv_meta["mesh_sha256"])
+    # the limitations page states that the regenerated mesh equals the committed one
+    assert report["match"] is True
+    assert report["regenerated_mesh_sha256"] == cv_meta["mesh_sha256"]
     printed = capsys.readouterr().out
     assert report["regenerated_mesh_sha256"] in printed and cv_meta["mesh_sha256"] in printed

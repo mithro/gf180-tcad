@@ -199,14 +199,35 @@ Nothing is resampled, smoothed or decimated: every kept element is a mesh elemen
     - That section shows the window on the cell in a numbered figure, `mesh-window` of
       `gf180tcad.explain.figures`, and gives the rule as an equation. `numfig` is on;
       `docs/_ext/theme_figures.py` merges each light/dark figure pair so it gets one number.
-- [ ] **Step 3: Experiment M1, the default window in the sandbox.** The window is fixed ("What M1 decided"); M1 measures it:
+- [x] **Step 3: Experiment M1, the default window in the sandbox.** The window is fixed ("What M1 decided"); M1 measures it:
   - It waits until no 16 GiB job runs: a 4 GiB cut job never runs beside one.
   - It cuts the #35 calibrated nfet `w10p0_l0p60` mesh with `cut --scratch DIR`, DIR outside the repository. `cut` pulls the mesh from the output cache; `cut-job` runs in the sandbox with 4 GiB.
   - It logs the node count, the triangle count and `size_bytes`, `net_doping_cm3` included, to `tmp/meshcut-m1.log`.
   - Peak RSS of the cut job (`/usr/bin/time -v` in the job log) sets the `--mem` value.
   - The limitations page records the result.
+
+  As built (branch `task/p5-renders-artefacts`, PR #148, 2026-11-03), recorded in the run record
+  `reproduce-meshcut-memory` on `docs/reproduce/index.md`:
+  - The default window of the nfet `w10p0_l0p60` mesh: 109,188 nodes, 216,407 triangles,
+    3,444,020 bytes with `net_doping_cm3`.
+  - `/usr/bin/time -v`: peak RSS 479,624 kB, wall 24.7 s; the container's `memory.peak`
+    479,981,568 bytes. `JOB_MEM` stays 4 GiB: the L = 2 µm meshes have over twice the triangles.
+  - The sandbox tests `tests/tcad/test_meshcut_job.py` ran and passed (264 s). The regeneration
+    test meshed the calibrated nfet W10/L0.6 cell again and matched its committed `mesh_sha256`.
 - [ ] **Step 4: Experiment M0, the four start meshes.** `uv run --locked python -m gf180tcad.meshcut regenerate --job results/tcad/moscap2d/<device>/start/<gid>` for each of the four, **one at a time**, nothing else heavy running; logs `tmp/meshcut-m0-<device>-<gid>.log`; record wall time, peak RSS and the regenerated sha against the committed one. Commit the record (docs only) whatever the outcome.
-- [ ] **Step 5: Cut and commit** the artefacts that are tied: matching regenerated start meshes (outcome 1) and every #35 calibrated job whose `cv.meta.json` is on `main` by then (pulled from the cache, or regenerated if #35 did not push). `make manifest`; results-only commits per job. List each artefact's `size_bytes` on the reproduce page. Update the docs pages and the limitations bullet. Open the PR, get it reviewed, merge.
+- [x] **Step 5: Cut and commit** the artefacts that are tied: matching regenerated start meshes (outcome 1) and every #35 calibrated job whose `cv.meta.json` is on `main` by then (pulled from the cache, or regenerated if #35 did not push). `make manifest`; results-only commits per job. List each artefact's `size_bytes` on the reproduce page. Update the docs pages and the limitations bullet. Open the PR, get it reviewed, merge.
+  As built (PR #148, 2026-11-03):
+  - The ten calibrated 2D cells' artefacts are in `results/tcad/meshes/stable`, cut from the
+    cached meshes, each exit 0; the run record and sizes are on the reproduce and
+    limitations pages. The four start cells wait for M0 (issue #149).
+  - The meta gains `region_bounds_um` (each full-mesh region's node bounds), so the explainer
+    reads the source and drain width from the artefact (#128).
+  - `generators.json` gains the `tcad/meshes/stable` tree row. `manifest.tcad_axes()` adds the
+    registry's `tcad/meshes/<image>` trees; `tools/crosscheck-tcad-run` cuts a meshes job's
+    artefacts in the tree's recorded image. The subset lists both devices' meshes jobs,
+    because the tree's provenance names both calibrations.
+  - docgen draws each artefact as a light/dark figure on its geometry page; `_NO_MESH` is gone.
+    `make reproduce` gains `tcad-meshes`.
 - [ ] **Step 6: Report on #39** (it is closed in Task R4): a comment saying which 2D docs pages show a mesh figure from a committed artefact and which jobs still wait (for M0-failure reruns or #35), linking the limitations page. If no artefact can be tied yet (M0 no match, #35 not merged), the PR still merges the generator, the tests and the M0/M1 record, and the comment says so.
 
 **Provenance impact.** New entry point and tree (data rows in `generators.json`, Task B0 format); no existing closure changes (meshcut imports TCAD modules; nothing imports meshcut), so no existing tree is restamped. `docgen.py` is not a generator module. **Decision: per-image subtrees.** `provenance()` and `check_same_image` record one image per result kind per tree root, and the artefacts come from two images: today's start meshes from the stable image, and #35's calibrated and dev-image meshes possibly from the dev image. So the tree is split by the image that made the source mesh, `results/tcad/meshes/stable/` and `results/tcad/meshes/dev/`, each its own tree root with its own `provenance.json` and `generators.json` row. The cut job runs in that same image, and `check_same_image` holds per subtree.

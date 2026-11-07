@@ -137,9 +137,8 @@ def _figure(size: tuple[float, float]) -> Figure:
 
 def process_cell_model() -> model.Cell:
     """The 2D cell of the calibrated nfet at ``w10p0_l0p70``, at the explainer figures' scale
-    factors and drawn extents."""
-    return model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=ef.STYLE["scales"],
-                      drawn=ef.STYLE["drawn_um"])  # fmt: skip
+    factors."""
+    return model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=ef.STYLE["scales"])
 
 
 _DOPED = {"donor": "n-type", "acceptor": "p-type"}
