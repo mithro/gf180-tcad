@@ -538,12 +538,12 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     (out / "results").mkdir(parents=True)
     spec = specwindow.load_spec()
     envelope = json.loads((Path(results_root) / specwindow.ENVELOPE_NAME).read_text("utf-8"))
-    roots = rf.Roots(spice=Path(results_root), tcad=Path(TCAD_RESULTS if tcad_root is None
-                                                          else tcad_root))  # fmt: skip
+    results_roots = rf.Roots(spice=Path(results_root), tcad=Path(TCAD_RESULTS if tcad_root is None
+                                                                  else tcad_root))  # fmt: skip
     for device in DEVICES.values():
         for g in device.geometries:
-            _geometry_page(roots, device, g, spec, envelope, out)
-    _summary_page(roots, spec, out)
+            _geometry_page(results_roots, device, g, spec, envelope, out)
+    _summary_page(results_roots, spec, out)
     generate_tcad(out, TCAD_RESULTS if tcad_root is None else tcad_root, results_root)
     shutil.rmtree(out / "explained", ignore_errors=True)
     explained_figures.write_all(out / "explained")
