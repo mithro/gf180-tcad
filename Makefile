@@ -23,8 +23,9 @@ OUTPUT_CACHE ?= tmp/output-cache
 	cache-status cache-push lint pre-push pre-push-docs readme-figures
 
 # Everything, in dependency order: the SPICE reference, then the TCAD trees (mesh convergence,
-# start values, calibration, calibrated values, validation), then the manifest check. Hours:
-# the 2D jobs (16 GiB each) run one at a time.
+# start values, calibration, calibrated values, validation, corner fits), then the manifest
+# check. Hours: the 2D jobs (16 GiB each) run one at a time, the 1D corner fits (2 GiB each)
+# four at a time.
 reproduce:
 	$(MAKE) spice-reference
 	$(MAKE) tcad-meshconv
@@ -32,6 +33,7 @@ reproduce:
 	$(MAKE) tcad-calibrate
 	$(MAKE) tcad-calibrated
 	$(MAKE) tcad-validate
+	$(MAKE) -j4 tcad-corners
 	$(PYTHON) -m gf180tcad.manifest verify results/
 
 # The SPICE reference (both engines, all corners) into results/spice.

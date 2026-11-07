@@ -1842,7 +1842,7 @@ def test_calibration_table_from_result_file():
         rows = numbers.fit_table(device).splitlines()
         assert rows[0] == "| Number | Lower limit | Start | Fitted | Upper limit |"
         assert len(rows) == 2 + len(numbers.TUNABLES)
-        for row, name in zip(rows[2:], numbers.TUNABLES, strict=True):
+        for row, name in zip(rows[2 : 2 + len(numbers.TUNABLES)], numbers.TUNABLES, strict=True):
             words, unit, most = numbers.TUNABLES[name]
             lo, hi = doc["bounds"][name]
             # The unit sits in the row label, so the cells are narrow enough for a phone.
@@ -1958,8 +1958,8 @@ def test_corner_spread_is_the_committed_corners():
         assert [s.lowest, s.highest] == env["ngspice"]["nfet_05v0"][gid][key]
         assert s.lowest < s.typical < s.highest
     for check, key, words in (
-        ("dv_dep", "u_dep", "Falling crossing"),
-        ("dv_inv", "u_inv", "Rising crossing"),
+        ("dv_dep", "u_dep", "{term}`Depletion <depletion>` crossing"),
+        ("dv_inv", "u_inv", "Inversion crossing"),
     ):
         w = rec["verdicts"][check]["window"]
         s = got[words]
@@ -1971,6 +1971,342 @@ def test_corner_spread_is_the_committed_corners():
         cells = [c.strip() for c in row.strip("|").split("|")]
         spread = numbers.format_value(s.highest - s.lowest, numbers.SPREAD_DIGITS, s.unit)
         assert cells[0] == s.words and cells[-1] == spread
+
+
+_CORNERS = {d: f"results/tcad/corners/{d}/summary.json" for d in _FITS}
+
+
+def _corners(device: str, root: Path = ROOT) -> dict:
+    return json.loads((root / _CORNERS[device]).read_text("utf-8"))
+
+
+def _corners_copy(tmp_path: Path) -> Path:
+    for path in _CORNERS.values():
+        dst = tmp_path / path
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text((ROOT / path).read_text("utf-8"), "utf-8")
+    return tmp_path
+
+
+def _cells(row: str) -> list[str]:
+    return [c.strip() for c in row.strip("|").split("|")]
+
+
+def test_corner_bounds_table_is_the_summary():
+    """Issue #121: each row of a bounds table is the corner summary's typical, lowest, highest
+    and spread of that number; the typical is the committed calibration's fitted value."""
+    numbers = _numbers()
+    for device in _FITS:
+        doc = _corners(device)
+        rows = numbers.corner_bounds_table(device).splitlines()
+        assert rows[0] == "| Number | Typical | Lowest | Highest | Spread |"
+        marked = any(numbers.LIMIT_MARK in r for r in rows)
+        assert len(rows) == 2 + len(numbers.TUNABLES) + (2 if marked else 0)
+        assert (rows[-1] == numbers.LIMIT_NOTE) == marked
+        for row, name in zip(rows[2 : 2 + len(numbers.TUNABLES)], numbers.TUNABLES, strict=True):
+            words, unit, most = numbers.TUNABLES[name]
+            t = doc["tunables"][name]
+            assert t["typical"] == _fit(device)["values"][name], (device, name)
+            assert t["min"] <= t["typical"] <= t["max"], (device, name)
+            assert t["spread"] == t["max"] - t["min"]
+            on = {"typical": name in doc["corners"]["typical"]["bound_hits"],
+                  "min": t["min_at_bound"] is not None, "max": t["max_at_bound"] is not None,
+                  "spread": False}  # fmt: skip
+            want = [f"{words} ({unit})"] + [
+                numbers.shortest(t[k], "", most) + (numbers.LIMIT_MARK if on[k] else "")
+                for k in ("typical", "min", "max", "spread")
+            ]
+            assert _cells(row) == want, (device, name)
+
+
+def test_corner_bounds_follow_an_edited_summary(tmp_path):
+    numbers = _numbers()
+    root = _corners_copy(tmp_path)
+    doc = _corners("nfet_05v0")
+    t = doc["tunables"]["t_ox_eff_nm"]
+    t["min"], t["min_corner"], t["min_at_bound"] = 15.0, "sf", "lower"
+    t["spread"] = t["max"] - t["min"]
+    (root / _CORNERS["nfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+    table = numbers.corner_bounds_table("nfet_05v0", root=root)
+    assert table != numbers.corner_bounds_table("nfet_05v0")
+    assert _cells(table.splitlines()[2])[2] == "15†"  # the lowest oxide, on its limit
+    assert table.splitlines()[-1] == numbers.LIMIT_NOTE
+    rows = numbers.corner_extremes_table(root=root).splitlines()
+    assert _cells(rows[2])[2] == "sf"
+    assert "The lowest oxide thickness of the nfet_05v0, at sf, sits on its lower limit" in (
+        numbers.corner_bound_hits(root=root)
+    )
+    with pytest.raises(KeyError):
+        doc["device"] = "pfet_05v0"
+        (root / _CORNERS["nfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+        numbers.corner_bounds("nfet_05v0", root=root)
+
+
+def test_corner_extremes_and_hits_are_the_summaries():
+    numbers = _numbers()
+    rows = numbers.corner_extremes_table().splitlines()
+    assert rows[0] == "| Transistor | Number | Lowest at | Highest at |"
+    want = [
+        [f"{{term}}`{d}`", numbers.TUNABLES[n][0], t["min_corner"], t["max_corner"]]
+        for d in _FITS
+        for n in numbers.TUNABLES
+        for t in [_corners(d)["tunables"][n]]
+    ]
+    assert [_cells(r) for r in rows[2:]] == want
+    hits = [
+        (d, n, side)
+        for d in _FITS
+        for n, t in _corners(d)["tunables"].items()
+        for side in ("min", "max")
+        if t[f"{side}_at_bound"] is not None
+    ]
+    sentence = numbers.corner_bound_hits()
+    assert (sentence == "No lowest or highest value sits on a limit of its fit") == (not hits)
+    for d, n, side in hits:
+        words = numbers.TUNABLES[n][0].lower()
+        assert f"The {'lowest' if side == 'min' else 'highest'} {words} of the {d}" in sentence
+
+
+def test_corner_bounds_figure_draws_the_summaries():
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    for palette in figures.PALETTES:
+        fig = figures.corner_bounds_figure(palette)
+        assert len(fig.axes) == len(numbers.TUNABLES)
+        for ax, name in zip(fig.axes, numbers.TUNABLES, strict=True):
+            assert (ax.get_xscale() == "log") == (name in figures.LOG_TUNABLES)
+            xs = [list(line.get_xdata()) for line in ax.get_lines()]
+            for device in _FITS:
+                t = _corners(device)["tunables"][name]
+                assert [t["min"], t["max"]] in xs, (device, name)
+                assert [t["typical"]] in xs, (device, name)
+                for c in figures.STYLE["corner_markers"]:
+                    assert [t["values"][c]] in xs, (device, name, c)
+                left, right = ax.get_xlim()
+                assert left < t["min"] and t["max"] < right, (palette, name)
+    assert "corner-bounds" in figures.FIGURES
+    light = figures.FIGURES["corner-bounds"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["corner-bounds"]("dark")
+    assert "x_fig_corner_bounds_scale" not in figures.substitutions()
+    assert "/_generated/explained/corner-bounds-light.svg" in CALIBRATION_PAGE.read_text("utf-8")
+
+
+LIMITS_CORNERS_PAGE = ROOT / "docs" / "limitations" / "corners.md"
+
+
+def test_crosscheck_numbers_are_the_summaries():
+    """The largest cross-check difference of each transistor and number is the summary's
+    ``shift_difference`` of largest size, printed with its corner."""
+    numbers = _numbers()
+    subs = numbers.crosscheck_substitutions()
+    for device in _FITS:
+        short = device.split("_")[0]
+        for name, (key, unit, digits, factor) in numbers.CROSSCHECK.items():
+            diffs = _corners(device)["tunables"][name]["shift_difference"]
+            corner = max(diffs, key=lambda c: abs(diffs[c]))
+            t = _corners(device)["tunables"][name]
+            assert diffs[corner] == t["tcad_shift"][corner] - t["card_shift"][corner]
+            assert subs[f"x_crosscheck_{key}_corner_{short}"] == corner
+            assert subs[f"x_crosscheck_{key}_gap_{short}"] == numbers.shortest(
+                diffs[corner] * factor, unit, digits
+            )
+
+
+def test_corner_fit_limits_are_the_files():
+    from gf180tcad.devices import CORNERS
+
+    numbers = _numbers()
+    for device, typical in _FITS.items():
+        fits = {(f.corner, f.name): f for f in numbers.corner_fit_limits(device)}
+        assert set(fits) == {(c, n) for c in CORNERS for n in numbers.TUNABLES}
+        for c in CORNERS:
+            path = typical if c == "typical" else f"results/tcad/corners/{device}/{c}.json"
+            doc = json.loads((ROOT / path).read_text("utf-8"))
+            for n in numbers.TUNABLES:
+                f = fits[(c, n)]
+                assert [f.lower, f.upper] == doc["bounds"][n] and f.fitted == doc["values"][n]
+                assert f.at_bound == doc["bound_hits"].get(n)
+    hits = numbers.corner_fit_hits()
+    for device in _FITS:
+        for f in numbers.corner_fit_limits(device):
+            named = f"The {numbers.TUNABLES[f.name][0].lower()} of the {device} at {f.corner}"
+            assert (named in hits) == (f.at_bound is not None), named
+
+
+def _limit_hit_copy(tmp_path: Path, monkeypatch) -> tuple[Path, float]:
+    """A copy of the corner summaries with the pfet's ff flat band on its upper limit (the
+    highest value), and :func:`numbers.corner_summary` reading the copy; the ff value."""
+    numbers = _numbers()
+    root = _corners_copy(tmp_path)
+    doc = _corners("pfet_05v0")
+    t = doc["tunables"]["dv_fb_v"]
+    v = t["values"]["ff"] = t["max"] + 0.05
+    t["max"], t["max_corner"], t["max_at_bound"] = v, "ff", "upper"
+    t["spread"] = t["max"] - t["min"]
+    t["tcad_shift"]["ff"] = v - t["typical"]
+    t["shift_difference"]["ff"] = t["tcad_shift"]["ff"] - t["card_shift"]["ff"]
+    doc["corners"]["ff"]["bound_hits"] = {"dv_fb_v": "upper"}
+    (root / _CORNERS["pfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+    real = numbers.corner_summary
+    monkeypatch.setattr(numbers, "corner_summary", lambda device, root_=None: real(device, root))
+    return root, v
+
+
+def _rings(fig, colour: str) -> set[tuple[float, float]]:
+    """The centres of the open rings in ``colour`` drawn on ``fig`` (the on-a-limit mark)."""
+    from matplotlib.colors import same_color
+
+    return {
+        (float(line.get_xdata()[0]), float(line.get_ydata()[0]))
+        for ax in fig.axes
+        for line in ax.get_lines()
+        if len(line.get_xdata()) == 1
+        and line.get_marker() == "o"
+        and line.get_markerfacecolor() == "none"
+        and same_color(line.get_markeredgecolor(), colour)
+    }
+
+
+def test_a_limit_set_value_is_marked(tmp_path, monkeypatch):
+    """A value that sits on a limit of its fit is marked wherever it is shown: † in the bounds
+    table with the note below it, a ring in the hole colour in the bounds and cross-check figures
+    (with a legend entry), and no ring or mark when no value sits on a limit."""
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    for palette in figures.PALETTES:
+        pal = figures.PALETTES[palette]
+        assert not _rings(figures.corner_bounds_figure(palette), pal["hole"]) or any(
+            _corners(d)["corners"][c]["bound_hits"] for d in _FITS for c in _corners(d)["corners"]
+        )
+    root, v = _limit_hit_copy(tmp_path, monkeypatch)
+    rows = numbers.corner_bounds_table("pfet_05v0", root=root).splitlines()
+    assert _cells(rows[4])[3] == numbers.shortest(v, "", 3) + numbers.LIMIT_MARK
+    assert rows[-1] == numbers.LIMIT_NOTE
+    for palette in figures.PALETTES:
+        hole = figures.PALETTES[palette]["hole"]
+        fig = figures.corner_bounds_figure(palette)
+        row = list(numbers.FITS).index("pfet_05v0")
+        assert (v, row) in _rings(fig, hole)
+        assert figures.LIMIT_RING_LABEL in [t.get_text() for t in fig.legends[0].get_texts()]
+        fig = figures.corner_crosscheck_figure(palette)
+        t = numbers.corner_summary("pfet_05v0")["tunables"]["dv_fb_v"]
+        assert (t["card_shift"]["ff"], t["tcad_shift"]["ff"]) in _rings(fig, hole)
+        assert len(_rings(fig, hole)) == 1
+        assert figures.LIMIT_RING_LABEL in [t.get_text() for t in fig.legends[0].get_texts()]
+
+
+def test_corner_limits_doping_axis_has_several_labels():
+    """The doping panel of the corner-limits figure (a log axis spanning under a decade) labels
+    more than one tick inside its limits."""
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    fig = figures.corner_limits_figure("light")
+    ax = fig.axes[list(numbers.TUNABLES).index("n_ch_cm3")]
+    fig.canvas.draw()
+    lo, hi = ax.get_xlim()
+    labels = [t.get_text() for t in ax.get_xticklabels() if lo <= t.get_position()[0] <= hi]
+    assert len([x for x in labels if x]) >= 2, labels
+    assert labels[:3] == ["1", "2", "3"], labels
+    assert ax.get_xlabel().endswith("(10¹⁷ cm⁻³)"), ax.get_xlabel()
+
+
+def test_corner_nearest_limit_is_the_files():
+    """The sentence names the fit value, not on a limit, closest to one relative to the width
+    between its limits, and how far it is from that limit."""
+    numbers = _numbers()
+    fits = [f for d in _FITS for f in numbers.corner_fit_limits(d) if f.at_bound is None]
+    rel = {f: min(f.fitted - f.lower, f.upper - f.fitted) / (f.upper - f.lower) for f in fits}
+    f = min(rel, key=rel.get)
+    assert numbers.corner_nearest_limit() == f
+    sentence = numbers.corner_nearest_limit_sentence()
+    assert f"of the {f.device} at {f.corner}" in sentence
+    assert numbers.TUNABLES[f.name][0].lower() in sentence
+
+
+def test_corner_widened_sentence_is_the_files():
+    """Each widened fit of :data:`corners.FLAT_BAND_STAGE` is named with the limit it passed
+    (the window without widening), its widened limit and its committed value, which lies
+    between the two; the half-width is the process files' typical window."""
+    from gf180tcad.calibrate import corners
+
+    numbers = _numbers()
+    sentence = numbers.corner_widened()
+    assert numbers.flatband_half_width() == "0.2\u00a0V"
+    for device, corner in corners.FLAT_BAND_STAGE:
+        tt = tomllib.loads((ROOT / f"data/process/{device}.toml").read_text("utf-8"))
+        lo0, hi0 = (b + corners.tunable_shifts(device, corner)["dv_fb_v"]
+                    for b in tt["param"]["dv_fb_v"]["bounds"])  # fmt: skip
+        lo, hi = corners.corner_bounds(device, corner)["dv_fb_v"]
+        v = json.loads((ROOT / f"results/tcad/corners/{device}/{corner}.json").read_text())[
+            "values"]["dv_fb_v"]  # fmt: skip
+        assert hi0 < v < hi or lo < v < lo0, (device, corner)
+        assert f"The {device} {corner} fit stopped on its " in sentence
+        for x in (hi0 if v > hi0 else lo0, hi if v > hi0 else lo, v):
+            assert numbers.shortest(x, "V", 4) in sentence, x
+    text = LIMITS_CORNERS_PAGE.read_text("utf-8")
+    assert "{{ x_corner_widened }}" in text and "eq-corner-flatband-window" in text
+
+
+def test_corner_verdict_sentence_is_the_summaries():
+    numbers = _numbers()
+    sentence = numbers.corner_verdicts()
+    for device in _FITS:
+        verdicts = {
+            c: e["verdict"] for c, e in _corners(device)["corners"].items() if c != "typical"
+        }
+        if len(set(verdicts.values())) == 1:
+            (v,) = set(verdicts.values())
+            assert f"the {{term}}`{device}` is {{term}}`{v}` at every corner" in sentence
+
+
+def test_corner_crossing_gaps_back_the_limitations_page():
+    """The page says the pfet's depletion crossing shift is positive at its shortest gate and
+    negative at its longest at every corner, and the nfet's lines lie near zero: the nfet's
+    largest gap is smaller than the pfet's swing at every corner."""
+    numbers = _numbers()
+    nfet = numbers.corner_crossing_gaps("nfet_05v0")
+    pfet = numbers.corner_crossing_gaps("pfet_05v0")
+    for corner, gaps in pfet.items():
+        lengths = sorted(gaps)
+        assert gaps[lengths[0]] > 0 > gaps[lengths[-1]], corner
+        swing = gaps[lengths[0]] - gaps[lengths[-1]]
+        assert max(abs(v) for v in nfet[corner].values()) < swing / 5, corner
+    text = " ".join(LIMITS_CORNERS_PAGE.read_text("utf-8").split())
+    assert (
+        "At every corner the pfet's shift is positive at its shortest gate and negative at its "
+        "longest." in text
+    )
+
+
+def test_corner_figures_are_registered_and_drawn():
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    text = LIMITS_CORNERS_PAGE.read_text("utf-8")
+    for name in ("corner-crosscheck", "corner-crossing", "corner-limits"):
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark")
+        assert f"x_fig_{name.replace('-', '_')}_scale" not in figures.substitutions()
+        assert f"/_generated/explained/{name}-light.svg" in text
+        assert f"/_generated/explained/{name}-dark.svg" in text
+    fig = figures.corner_crosscheck_figure("light")
+    xs = {(line.get_xdata()[0], line.get_ydata()[0]) for ax in fig.axes for line in ax.get_lines()
+          if len(line.get_xdata()) == 1}  # fmt: skip
+    for device in _FITS:
+        for name, (_w, _u, factor) in figures.CROSSCHECK.items():
+            t = _corners(device)["tunables"][name]
+            for c in figures.STYLE["corner_markers"]:
+                assert (t["card_shift"][c] * factor, t["tcad_shift"][c] * factor) in xs
+    fig = figures.corner_limits_figure("light")
+    for ax, name in zip(fig.axes, numbers.TUNABLES, strict=True):
+        drawn = [list(line.get_xdata()) for line in ax.get_lines()]
+        for device in _FITS:
+            for f in numbers.corner_fit_limits(device):
+                if f.name == name:
+                    assert [f.lower, f.upper] in drawn and [f.fitted] in drawn
 
 
 def test_calibration_counts_are_derived():
@@ -2017,13 +2353,16 @@ def test_calibration_page_prints_its_numbers():
     for key in ("fit_table_nfet", "fit_table_pfet", "limit_kinds_table", "bound_hits",
                 "fit_verdict_table", "corner_table", "corner_count", "fit_length_count",
                 "budget", "budget_used", "nfev_nfet", "nfev_pfet", "verdict_pfet_1d_term",
-                "two_d_disagree"):  # fmt: skip
+                "two_d_disagree", "corner_bounds_table_nfet", "corner_bounds_table_pfet",
+                "corner_extremes_table", "corner_bound_hits"):  # fmt: skip
         assert "{{ x_" + key + " }}" in text, key
     assert "/_generated/explained/calibration-limits-light.svg" in text
     for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-windows",
                    "process-data-tunables"):  # fmt: skip
         assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor
-    assert "issues/57" in text  # the corner fits that give each fitted number its bounds
+    # the corner fits that give each fitted number its bounds, and their limitations page
+    assert "{ref}`reproduce-corners`" in text and "{doc}`/limitations/corners`" in text
+    assert "/_generated/explained/corner-bounds-light.svg" in text
     assert not _COUNT_WORDS.findall(text)
 
 
