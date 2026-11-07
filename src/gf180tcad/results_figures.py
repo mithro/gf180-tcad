@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Every figure of the generated results pages (``docs/_generated/``), in a light and a dark twin.
 
-The SPICE pages (``results/``) draw the four sweeps of each geometry and the ngspice-against-Xyce
+The :term:`SPICE` pages (``results/``) draw the four sweeps of each geometry and the ngspice-against-Xyce
 difference of every geometry; the TCAD pages (``tcad/``) draw the 1D C-V of each geometry against
 SPICE, its intrinsic and parasitic parts, the committed 2D cells and the mesh-convergence studies.
 Each figure is drawn from committed files only: the SPICE reference (``results/spice``) and the
