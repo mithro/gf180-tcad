@@ -966,3 +966,59 @@ def test_readme_prose_drops_the_captions():
     text = "Some text.\n\n![alt](a.svg)\n\n*Figure 2. A caption that names Figure 1\nover two lines.*\n"
     assert "Figure 1" not in readme_prose(text)
     assert "Figure 1" in readme_prose(text + "\nAs Figure 1 shows.\n")
+
+
+def _link_tree(src: Path, dst: Path) -> Path:
+    """A tree of symlinks to every file of ``src`` under ``dst``, a folder of another name."""
+    for p in src.rglob("*"):
+        if p.is_file():
+            q = dst / p.relative_to(src)
+            q.parent.mkdir(parents=True, exist_ok=True)
+            q.symlink_to(p)
+    return dst
+
+
+def test_repo_path_maps_a_tree_of_any_name_to_the_committed_layout(tmp_path):
+    """Issue #173: a file in the repository is linked by its own path; a file of a tree given
+    from elsewhere by the same place in the committed tree, whatever the tree's folder name."""
+    inside = docgen.RESULTS / "ngspice" / "typical" / "a.csv"
+    assert docgen.repo_path(inside, docgen.RESULTS, docgen.RESULTS) == (
+        "results/spice/ngspice/typical/a.csv"
+    )
+    outside = tmp_path / "other_name" / "ngspice" / "typical" / "a.csv"
+    assert docgen.repo_path(outside, tmp_path / "other_name", docgen.RESULTS) == (
+        "results/spice/ngspice/typical/a.csv"
+    )
+    mesh = tmp_path / "tcad_in" / "meshes" / "x"
+    assert docgen.repo_path(mesh, tmp_path / "tcad_in", docgen.TCAD_RESULTS) == (
+        "results/tcad/meshes/x"
+    )
+
+
+def test_csv_links_of_a_spice_tree_of_another_name_exist(tmp_path):
+    """Issue #173: the Id-Vg sentence and caption of a SPICE tree under another folder name
+    link the CSV at its committed path, and that file exists."""
+    tree = _link_tree(docgen.RESULTS, tmp_path / "spice_in")
+    roots = rf.Roots(spice=tree, tcad=rf.TCAD_ROOT)
+    device = DEVICES["nfet_05v0"]
+    gid = geometry_id(device.geometries[0])
+    links = []
+    for sweep in ("idvg_lin", "idvg_sat"):
+        for text in docgen._sweep_text(device, gid, sweep, roots):
+            links += re.findall(r"\{repo\}`[^<`]+<([^>]+)>`", text)
+    assert len(links) == 4
+    for link in links:
+        assert link.startswith("results/spice/") and (REPO_ROOT / link).is_file(), link
+
+
+def test_mesh_links_of_a_tcad_tree_of_another_name_exist(tmp_path):
+    """Issue #173: the mesh captions of a TCAD tree under another folder name link the mesh
+    artefact folders at their committed paths, and those folders exist."""
+    tree = _link_tcad_tree(tmp_path / "tcad_in")
+    docgen.generate_tcad(tmp_path / "out", tcad_root=tree)
+    links = []
+    for page in (tmp_path / "out" / "tcad").rglob("*.md"):
+        links += re.findall(r"\{repo\}`(results/[^`]*meshes/[^`]*)`", page.read_text("utf-8"))
+    assert links
+    for link in links:
+        assert (REPO_ROOT / link).is_dir(), link
