@@ -748,8 +748,8 @@ builder, with other jobs sharing its 8 CPUs. Both gave the same digests. The rec
 | Wall time of `make` (min) | 65 | 209 |
 
 On the project's host the builder's memory peaked at 6.35 GB. In the pinned image, the files in
-`/opt/charon` add up to 353 MB (`du -sb`). The {term}`manifest` of the pin in {repo}`docker/CHARON_LIBS_IMAGE`
-gives the layer it adds to the base image as 91.7 MB compressed.
+`/opt/charon` add up to 353 MB (`du -sb`). The {term}`manifest` pinned by {repo}`docker/CHARON_LIBS_IMAGE`
+lists the two layers it adds to the base image: one of 91.7 MB compressed and one of 32 bytes.
 
 ### Checks on GitHub
 
@@ -853,7 +853,7 @@ builder. Its build inputs are the files in {repo}`docker/charon/`, the two pin f
 The pinned image was built twice from the same commit, once on a GitHub runner and once on the
 project's host. Both gave the same digests, as [pull request #164](https://github.com/mithro/gf180-tcad/pull/164)
 records. The runner's time includes the push of the image, and the host's its load into the
-local image store. The table gives the two build logs that the pull request records.
+local image store. The table gives values from the two build logs that the pull request records.
 
 | Quantity | GitHub runner | Project's host |
 |---|---|---|
