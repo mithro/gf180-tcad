@@ -277,7 +277,11 @@ def _sweep_text(device: Device, gid: str, sweep: str, roots: rf.Roots) -> tuple[
     where = f"{device.name} `{gid}`"
     if sweep in ("idvg_lin", "idvg_sat"):
         vds = fmt(rf.bias(device.name, gid, sweep, "vd", roots.spice))
-        csv = f"results/{roots.spice.name}/ngspice/{rf.TYPICAL}/{device.name}/{gid}/{sweep}.csv"
+        csv = repo_path(
+            roots.spice / "ngspice" / rf.TYPICAL / device.name / gid / f"{sweep}.csv",
+            roots.spice,
+            RESULTS,
+        )
         return (
             (
                 f"{label} shows |Id| against |Vgs| at |Vds| = {vds} V, read from "
@@ -606,6 +610,17 @@ def gitignore_line(pattern: str) -> int:
         if line.strip() == pattern:
             return n
     raise ValueError(f".gitignore has no line {pattern!r}")
+
+
+def repo_path(path: Path, root: Path, committed: Path) -> str:
+    """The repository path a page links ``path``, a file or folder under the results tree
+    ``root``, by: its own path when it lies in the repository, otherwise the same place in the
+    committed tree ``committed``. A tree given to :func:`generate` from elsewhere has the
+    committed layout, whatever its folder is named (issue #173)."""
+    path, root = Path(path), Path(root)
+    if path.is_relative_to(REPO_ROOT):
+        return path.relative_to(REPO_ROOT).as_posix()
+    return (Path(committed) / path.relative_to(root)).relative_to(REPO_ROOT).as_posix()
 
 
 def _mesh_link() -> str:
@@ -1028,12 +1043,12 @@ def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
             continue
         adir = found[0].parent
         meta = _read_json(adir / meshcut.META)
-        rel = adir.relative_to(d.root.parent).as_posix()
+        rel = repo_path(adir, d.root, TCAD_RESULTS)
         caption = (
             f"The mesh of the 2D cell at the {params} values, around the gate: "
             f"{meta['triangle_count']} of the full mesh's {meta['full_mesh_triangle_count']} "
             "triangles, kept by the window rule ({ref}`mesh-artefact`). Drawn to scale from "
-            f"{{repo}}`results/{rel}`; full mesh sha256 `{meta['full_mesh_sha256']}`."
+            f"{{repo}}`{rel}`; full mesh sha256 `{meta['full_mesh_sha256']}`."
         )
         target = f"mesh-{name}-{gid}-{params}"
         lines += [f"{{numref}}`{target}` shows the mesh of the 2D cell at the {params} values.", ""]
