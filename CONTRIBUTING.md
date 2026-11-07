@@ -130,11 +130,11 @@ A failure of either step refuses the push:
 
 - `make pre-push` runs on every push. It runs `make lint`, then every non-sandbox test except the
   docs build, the generated pages and the calibration fits.
-- `make pre-push-docs` runs when a pushed commit changes [`docs/`](docs), [`src/`](src),
-  [`results/`](results), [README.md](README.md) or [CONTRIBUTING.md](CONTRIBUTING.md). It also runs
-  when the commit changes one of its own test files, which the hook lists. It runs the
-  docs build, [`tests/test_doc_links.py`](tests/test_doc_links.py), and the generated pages,
-  [`tests/test_docgen.py`](tests/test_docgen.py).
+- `make pre-push-docs` runs the docs build, [`tests/test_doc_links.py`](tests/test_doc_links.py),
+  and the generated pages, [`tests/test_docgen.py`](tests/test_docgen.py). It runs when a pushed
+  commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), [README.md](README.md) or
+  [CONTRIBUTING.md](CONTRIBUTING.md). It also runs when the commit changes one of those two test
+  files, [`tests/conftest.py`](tests/conftest.py) or [`tests/offline_build.py`](tests/offline_build.py).
 
 A push that runs both steps takes many minutes. An agent runs `git push` in the
 background with no timeout, and never with `--no-verify`. The hook skips the calibration fits, so
