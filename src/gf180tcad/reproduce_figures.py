@@ -88,14 +88,23 @@ STYLE = {
 #: Unit conversions: the nanometres in one of each length unit of a render manifest.
 UNITS = {"nm_per": {"nm": 1.0, "um": 1e3}}
 
+#: The Makefile whose ``reproduce`` recipe :func:`reproduce_figure` draws.
 MAKEFILE = REPO_ROOT / "Makefile"
+#: The committed SPICE reference, whose job folders :func:`jobs_figure` draws.
 SPICE_ROOT = REPO_ROOT / "results" / "spice"
+#: The committed TCAD results: the 2D job records and the plugin commit.
 TCAD_ROOT = REPO_ROOT / "results" / "tcad"
+#: The generator registry that :func:`registry_figure` draws.
 REGISTRY = REPO_ROOT / "src" / "gf180tcad" / "generators.json"
+#: The cross-check workflow whose job steps :func:`crosscheck_figure` draws.
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "crosscheck.yml"
+#: The synthetic render manifest that :func:`exaggeration_figure` draws.
 RENDER_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "renders" / "r-test.render.json"
+#: The display values of the renders that :func:`band_offset_figure` draws.
 DISPLAY = REPO_ROOT / "data" / "render" / "display.toml"
+#: The input list of the dev-HEAD image, which names the forks it builds.
 DEV_INPUTS = REPO_ROOT / "docker" / "tcad-dev" / "upstream.json"
+#: The submodule list, which names the plugin fork.
 GITMODULES = REPO_ROOT / ".gitmodules"
 
 #: The example of a partial run on the reproduce page: one engine, one corner, one device.
