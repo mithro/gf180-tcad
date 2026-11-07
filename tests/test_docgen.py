@@ -968,7 +968,7 @@ def test_readme_prose_drops_the_captions():
     assert "Figure 1" in readme_prose(text + "\nAs Figure 1 shows.\n")
 
 
-def _link_tree(src: Path, dst: Path) -> Path:
+def _symlink_tree(src: Path, dst: Path) -> Path:
     """A tree of symlinks to every file of ``src`` under ``dst``, a folder of another name."""
     for p in src.rglob("*"):
         if p.is_file():
@@ -998,7 +998,7 @@ def test_repo_path_maps_a_tree_of_any_name_to_the_committed_layout(tmp_path):
 def test_csv_links_of_a_spice_tree_of_another_name_exist(tmp_path):
     """Issue #173: the Id-Vg sentence and caption of a SPICE tree under another folder name
     link the CSV at its committed path, and that file exists."""
-    tree = _link_tree(docgen.RESULTS, tmp_path / "spice_in")
+    tree = _symlink_tree(docgen.RESULTS, tmp_path / "spice_in")
     roots = rf.Roots(spice=tree, tcad=rf.TCAD_ROOT)
     device = DEVICES["nfet_05v0"]
     gid = geometry_id(device.geometries[0])
