@@ -492,10 +492,11 @@ def _summary_page(root, spec: dict, out: Path):
 def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None = None) -> None:
     """Write the SPICE pages under ``out_dir/results`` (summary, 12 geometry pages, SVGs), the
     TCAD pages under ``out_dir/tcad`` (:func:`generate_tcad`), the explainer figures under
-    ``out_dir/explained`` (:func:`gf180tcad.explain.figures.write_all`) and the reproduce pages'
+    ``out_dir/explained`` (:func:`gf180tcad.explain.figures.write_all`), the reproduce pages'
     figures under ``out_dir/reproduce`` (:func:`gf180tcad.imagefig.write_all` and
-    :func:`gf180tcad.reproduce_figures.write_all`)."""
-    from gf180tcad import imagefig, reproduce_figures
+    :func:`gf180tcad.reproduce_figures.write_all`) and the figures of the comparison pages under
+    ``out_dir/comparison`` (:func:`gf180tcad.comparison_figures.write_all`)."""
+    from gf180tcad import comparison_figures, imagefig, reproduce_figures
     from gf180tcad.explain import figures as explained_figures
 
     out = Path(out_dir)
@@ -513,6 +514,13 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     shutil.rmtree(out / "reproduce", ignore_errors=True)
     imagefig.write_all(out / "reproduce")
     reproduce_figures.write_all(out / "reproduce")
+    shutil.rmtree(out / "comparison", ignore_errors=True)
+    comparison_figures.write_all(
+        out / "comparison",
+        comparison_figures.Roots(
+            spice=Path(results_root), tcad=TCAD_RESULTS if tcad_root is None else Path(tcad_root)
+        ),
+    )
 
 
 # --- TCAD MOS capacitor pages (Task 13a) ------------------------------------------------------

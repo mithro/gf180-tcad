@@ -334,7 +334,7 @@ def _thickness(layer: model.Layer) -> str:
 _STACK_NAME = {"gate": "gate", "oxide": "gate oxide", "body": "body"}
 
 
-def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
+def stack_1d_figure(dev: model.Device, highlight: tuple[str, ...], palette: str):
     """The 1D stack as layers, gate on top, each labelled with its material, its thickness and
     its doping from the model. The parts in ``highlight`` are shaded (a silicon layer in its
     majority carrier's colour), the rest muted. Drawn at
@@ -382,7 +382,13 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
                 fontweight="bold" if layer.part in highlight else "normal",
             )
         ax.set_title(model.exaggeration(dev.scales), fontsize=STYLE["text_pt"])
-        return _svg(fig)
+        return fig
+
+
+def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
+    """:func:`stack_1d_figure` as SVG bytes."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(stack_1d_figure(dev, highlight, palette))
 
 
 def band_levels(dev: model.Device, part: str) -> dict[str, float]:
@@ -541,13 +547,13 @@ def ldd_parts(c: model.Cell) -> dict[str, Box]:
     }
 
 
-def cross_section(
+def cross_section_figure(
     c: model.Cell,
     highlight: tuple[str, ...],
     palette: str,
     window: Box | None = None,
     ldd: bool = False,
-) -> bytes:
+):
     """The 2D cell cut along its length: gate, gate oxide, source, drain and body, each filled
     with its carrier's colour (n-type: electrons, p-type: holes; the oxide its own) and labelled
     on the part, and the contacts of ``c.contacts`` as dark bars. With ``highlight``, the parts
@@ -667,7 +673,19 @@ def cross_section(
         ax.set_title(
             wrap_statement(model.exaggeration(c.scales, c.drawn)), fontsize=STYLE["text_pt"]
         )
-        return _svg(fig)
+        return fig
+
+
+def cross_section(
+    c: model.Cell,
+    highlight: tuple[str, ...],
+    palette: str,
+    window: Box | None = None,
+    ldd: bool = False,
+) -> bytes:
+    """:func:`cross_section_figure` as SVG bytes."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(cross_section_figure(c, highlight, palette, window, ldd))
 
 
 _JUNCTION_PANELS = ("charge", "field", "potential")
@@ -752,22 +770,29 @@ SPICE_ROOT = numbers.ROOT / "results" / "spice"
 TYPICAL = "typical"
 
 
-def cv_curves(device: str, params: str, gid: str) -> dict[str, np.ndarray]:
+def cv_curves(
+    device: str,
+    params: str,
+    gid: str,
+    spice_root: Path = SPICE_ROOT,
+    tcad_root: Path = numbers.ROOT / "results" / "tcad",
+) -> dict[str, np.ndarray]:
     """The curves of :func:`cv_against_spice`, read by the readers the results pages use
     (:mod:`gf180tcad.explain.data`): the simulated gate capacitance of ``gid`` from the committed
     1D C per area at ``params`` with the BSIM4 bookkeeping, and the :term:`SPICE` :term:`cv` sweep at
     the :term:`typical corner` with the lowest and highest of the five :term:`corners <corner>` at
     each voltage. Keys ``u``,
-    ``tcad``, ``u_spice``, ``spice_tt``, ``spice_lo``, ``spice_hi`` (V and fF)."""
+    ``tcad``, ``u_spice``, ``spice_tt``, ``spice_lo``, ``spice_hi`` (V and fF). The trees are
+    the committed ones unless ``spice_root`` and ``tcad_root`` name others."""
     from gf180tcad.devices import CORNERS, DEVICES, geometry_id
 
     dev = DEVICES[device]
     (geom,) = [g for g in dev.geometries if geometry_id(g) == gid]
-    moscap, proc = data.read_moscap(numbers.ROOT / "results" / "tcad", device, params)
+    moscap, proc = data.read_moscap(tcad_root, device, params)
     u, _intrinsic, _parasitic, total = data.tcad_cgg(moscap, geom, proc, dev.polarity)
     spice = {}
     for corner in CORNERS:
-        cols = data.spice_columns(SPICE_ROOT, "ngspice", corner, device, gid, "cv")
+        cols = data.spice_columns(spice_root, "ngspice", corner, device, gid, "cv")
         spice[corner] = data.spice_cv(cols, dev.polarity)
     u_s, tt = spice[TYPICAL]
     for corner, (uc, _c) in spice.items():

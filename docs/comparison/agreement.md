@@ -15,6 +15,27 @@ for every gate length and width. It must match the {term}`typical corner <TT>`
 used to tune it**. Every remaining mismatch is listed with its
 physical or modelling cause and the evidence that shows it.
 
+{numref}`agreement-cell-figure` shows the parts of the device that the process description sets.
+
+```{figure} /_generated/comparison/process-cell-light.svg
+:name: agreement-cell-figure
+:figclass: only-light
+:alt: Cross-section of the transistor: gate on a thin oxide, source left, drain right, body below, each with its doping, an arrow marking the channel.
+
+The 2D cell of the {term}`nfet_05v0` with {term}`geometry id` `w10p0_l0p70`, cut along the gate's length.
+One process description sets the doping of each part, the oxide and the contacts. Each doped
+part is labelled with its type and doping, and the arrow marks the channel. {{ x_fig_parts_cell_scale }}
+```
+
+```{figure} /_generated/comparison/process-cell-dark.svg
+:figclass: only-dark
+:alt: Cross-section of the transistor: gate on a thin oxide, source left, drain right, body below, each with its doping, an arrow marking the channel.
+
+The 2D cell of the {term}`nfet_05v0` with {term}`geometry id` `w10p0_l0p70`, cut along the gate's length.
+One process description sets the doping of each part, the oxide and the contacts. Each doped
+part is labelled with its type and doping, and the arrow marks the channel. {{ x_fig_parts_cell_scale }}
+```
+
 (agreement-verdicts)=
 
 Each device and each metric gets one of three verdicts:
@@ -63,6 +84,27 @@ instantiate it from a schematic, with the PDK's default instance parameters:
 - SA, SB, SCA and SCB, the default layout distances used by the stress and well-proximity models;
 - nf = 1 and m = 1.
 
+{numref}`agreement-instance-figure` shows the source and drain that AS, AD, PS and PD describe.
+
+```{figure} /_generated/comparison/instance-plan-light.svg
+:name: agreement-instance-figure
+:figclass: only-light
+:alt: A transistor seen from above: a grey gate strip with a dashed source on its left and a dashed drain on its right, W, L and the source length marked.
+
+The {term}`nfet_05v0` at W = 1.6 µm and L = 0.7 µm seen from above, to scale. The source and the drain
+(dashed) have the length that AS = AD = W × 0.18 µm implies, and PS and PD are their perimeters
+({py:func}`gf180tcad.spice.netlist.instance_params`). The gate's ends past them are a drawing choice.
+```
+
+```{figure} /_generated/comparison/instance-plan-dark.svg
+:figclass: only-dark
+:alt: A transistor seen from above: a grey gate strip with a dashed source on its left and a dashed drain on its right, W, L and the source length marked.
+
+The {term}`nfet_05v0` at W = 1.6 µm and L = 0.7 µm seen from above, to scale. The source and the drain
+(dashed) have the length that AS = AD = W × 0.18 µm implies, and PS and PD are their perimeters
+({py:func}`gf180tcad.spice.netlist.instance_params`). The gate's ends past them are a drawing choice.
+```
+
 It is the only reference built.
 
 (secondary-reference)=
@@ -96,6 +138,26 @@ To stop the TCAD from being tuned to the answer, the targets are split.
   1.6/0.7 are held out for validation only. All metrics at held-out geometries
   are validation evidence, and Idsat, gm, gds and DIBL are validation at every
   geometry.
+
+The oxide and the channel doping are parts of the cell in {numref}`agreement-cell-figure`.
+{numref}`agreement-geometries-figure` shows the calibration and held-out geometries of each device.
+
+```{figure} /_generated/comparison/geometries-light.svg
+:name: agreement-geometries-figure
+:figclass: only-light
+:alt: Two panels of width against gate length, nfet above and pfet below: filled circles for the calibration geometries, open for the held-out ones.
+
+The compared geometries of each device: filled, the calibration geometries; open, the held-out
+geometries ({py:data}`gf180tcad.devices.DEVICES`).
+```
+
+```{figure} /_generated/comparison/geometries-dark.svg
+:figclass: only-dark
+:alt: Two panels of width against gate length, nfet above and pfet below: filled circles for the calibration geometries, open for the held-out ones.
+
+The compared geometries of each device: filled, the calibration geometries; open, the held-out
+geometries ({py:data}`gf180tcad.devices.DEVICES`).
+```
 
 (parameter-budget)=
 
@@ -166,8 +228,10 @@ means that the design spec sets no bias or no stretch goal for that metric:
 | Cgd | none | 5 | 5 | none |
 | Effective {term}`Rsd` | none | none | 10 | none |
 
-The Cgg-Vg {term}`sweep` covers {term}`accumulation`, {term}`depletion` and {term}`inversion`. The effective Rsd is
-extracted from 1/Id versus L.
+The Cgg-Vg {term}`sweep` covers {term}`accumulation`, {term}`depletion` and {term}`inversion`, left to right
+along the curve of
+{numref}`Figure %s of C–V calibration of the TCAD MOS capacitor <cv-metric-figure>`.
+The effective Rsd is extracted from 1/Id versus L.
 
 The other metrics:
 
@@ -180,7 +244,9 @@ The other metrics:
 (metrics-not-yet-extracted)=
 
 **Not extracted, or defined differently.** The SPICE reference
-({py:mod}`gf180tcad.metrics`, keys of `metrics.json`) does not cover the whole table. That is a
+({py:mod}`gf180tcad.metrics`, keys of
+{repo}`metrics.json <results/spice/ngspice/typical/nfet_05v0/w10p0_l10p00/metrics.json>`) does not
+cover the whole table. That is a
 recorded deviation from the design spec ({ref}`limitations-spec-deviations`). Extracting these
 is a {term}`Phase 3 entry gate`
 ([issue #70](https://github.com/mithro/gf180-tcad/issues/70)):
@@ -211,6 +277,25 @@ in µm. So par_vth is A_Vt in the Pelgrom convention for the Vt difference of a 
 ### Numerical acceptance
 
 These are prerequisites: no comparison counts unless they pass.
+{numref}`agreement-meshconv-figure` shows the {term}`mesh convergence` of the
+{term}`MOS capacitors <MOSCAP>`.
+
+```{figure} /_generated/comparison/meshconv-light.svg
+:name: agreement-meshconv-figure
+:figclass: only-light
+:alt: Log-log plot of the largest change against mesh nodes: four short falling lines, 1D on the left and 2D on the right, below a dotted 1 % line.
+
+The largest change of the C per area of the MOS capacitors against the next finer mesh, by node count
+({repo}`results/tcad/meshconv`). The dotted line is the 1 % criterion.
+```
+
+```{figure} /_generated/comparison/meshconv-dark.svg
+:figclass: only-dark
+:alt: Log-log plot of the largest change against mesh nodes: four short falling lines, 1D on the left and 2D on the right, below a dotted 1 % line.
+
+The largest change of the C per area of the MOS capacitors against the next finer mesh, by node count
+({repo}`results/tcad/meshconv`). The dotted line is the 1 % criterion.
+```
 
 - **{term}`Mesh convergence <mesh convergence>`**: a uniformly refined mesh changes every metric by less
   than 1 % (Vt by less than 1 mV).
@@ -252,7 +337,8 @@ The tags and the metrics each one is expected to show up in:
 | `thermal` | Idsat at high power |
 | `numerics` | fails the {ref}`numerical acceptance checks <numerical-acceptance>` |
 
-The cause behind each tag, in three groups. The process and structure of the device:
+The cause behind each tag, in three groups. The channel is the body's surface under the
+{term}`gate oxide` in {numref}`agreement-cell-figure`. The process and structure of the device:
 
 - `doping`: the channel, {term}`LDD`, {term}`S/D` and well profiles are unknown, and analytic
   stand-ins replace them.

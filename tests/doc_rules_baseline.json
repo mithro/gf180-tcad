@@ -94,22 +94,6 @@
   "FIGURE": 5,
   "FILELINK": 2
  },
- "docs/comparison/agreement.md": {
-  "FIGURE": 6,
-  "FILELINK": 1
- },
- "docs/comparison/cv-agreement.md": {
-  "FIGURE": 9,
-  "FILELINK": 4
- },
- "docs/comparison/pdk-versions.md": {
-  "FIGURE": 3,
-  "FILELINK": 2
- },
- "docs/comparison/process-data.md": {
-  "FIGURE": 3,
-  "FILELINK": 2
- },
  "docs/limitations/engine-cross-check.md": {
   "FIGURE": 5
  },
