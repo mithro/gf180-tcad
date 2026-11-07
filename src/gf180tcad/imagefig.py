@@ -247,13 +247,17 @@ def _box(ax, key: str, x: float, y: float, w: float, fill: str) -> None:
     ax.text(x, y, "\n".join(BOXES[key]), ha="center", va="center")
 
 
-def _arrow(ax, start: tuple[float, float], end: tuple[float, float], colour: str) -> None:
-    ax.annotate(
+def _arrow(
+    ax, start: tuple[float, float], end: tuple[float, float], colour: str, gid: str | None = None
+) -> None:
+    ann = ax.annotate(
         "",
         xy=end,
         xytext=start,
         arrowprops={"arrowstyle": "-|>", "color": colour, "lw": STYLE["arrow_width"]},
     )
+    if gid is not None:
+        ann.set_gid(gid)
 
 
 def charon_stages(palette: str = "light", fmt: str = "svg") -> bytes:
@@ -400,8 +404,13 @@ LAYER_BOXES = {
 }
 
 
-def charon_layers(palette: str = "light", fmt: str = "svg") -> bytes:
-    """The thin charon image: the dev image with two layers and its ENV, and where each comes from."""
+#: The arrows of the layer figure: each side box (source) feeds the layer beside it (target).
+LAYER_ARROWS = (("libs", "opt"), ("wheels", "venv"))
+
+
+def charon_layers_figure(palette: str = "light") -> Figure:
+    """The layer figure as a Figure; each box text has the gid ``layers-text-<box>`` and each
+    arrow ``layers-arrow-<source>-<target>``, so a test can read what is drawn."""
     pal = PALETTES[palette]
     fill, arrow, b = pal["fill"], pal["arrow"], STYLE["layers"]
     pad = STYLE["pad"]
@@ -411,19 +420,25 @@ def charon_layers(palette: str = "light", fmt: str = "svg") -> bytes:
         _rect(ax, b["container"], fill["container"], edge=arrow)
         x0, _, x1, y1 = b["container"]
         ax.text((x0 + x1) / 2, y1 - 0.025, "\n".join(LAYER_BOXES["container"]), ha="center",
-                va="top")  # fmt: skip
+                va="top", gid="layers-text-container")  # fmt: skip
         roles = {"dev": "base", "opt": "stage", "venv": "inputs", "env": "check",
                  "libs": "stage", "wheels": "inputs"}  # fmt: skip
         for key, role in roles.items():
             _rect(ax, b[key], fill[role])
             x0, y0, x1, y1 = b[key]
             ax.text((x0 + x1) / 2, (y0 + y1) / 2, "\n".join(LAYER_BOXES[key]), ha="center",
-                    va="center")  # fmt: skip
-        # each side box feeds the layer beside it
-        for src, dst in (("libs", "opt"), ("wheels", "venv")):
+                    va="center", gid=f"layers-text-{key}")  # fmt: skip
+        for src, dst in LAYER_ARROWS:
             sy = (b[src][1] + b[src][3]) / 2
-            _arrow(ax, (b[src][2] + pad, sy), (b[dst][0] - pad, sy), arrow)
-        return _save(fig, fmt)
+            _arrow(ax, (b[src][2] + pad, sy), (b[dst][0] - pad, sy), arrow,
+                   gid=f"layers-arrow-{src}-{dst}")  # fmt: skip
+    return fig
+
+
+def charon_layers(palette: str = "light", fmt: str = "svg") -> bytes:
+    """The thin charon image: the dev image with two layers and its ENV, and where each comes from."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _save(charon_layers_figure(palette), fmt)
 
 
 #: Every figure of the image page, by file name stem; each is drawn once per palette.
