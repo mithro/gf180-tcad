@@ -1,0 +1,168 @@
+{
+  "corners": {
+    "ff": {
+      "bound_hits": {},
+      "held_out": {
+        "w10p0_l0p70": "Agree",
+        "w10p0_l1p00": "Agree",
+        "w1p6_l0p70": "Agree"
+      },
+      "per_geometry": {
+        "w10p0_l0p60": "Agree",
+        "w10p0_l10p00": "Agree",
+        "w10p0_l2p00": "Agree"
+      },
+      "verdict": "Agree"
+    },
+    "fs": {
+      "bound_hits": {},
+      "held_out": {
+        "w10p0_l0p70": "Agree",
+        "w10p0_l1p00": "Agree",
+        "w1p6_l0p70": "Agree"
+      },
+      "per_geometry": {
+        "w10p0_l0p60": "Agree",
+        "w10p0_l10p00": "Agree",
+        "w10p0_l2p00": "Agree"
+      },
+      "verdict": "Agree"
+    },
+    "sf": {
+      "bound_hits": {},
+      "held_out": {
+        "w10p0_l0p70": "Agree",
+        "w10p0_l1p00": "Agree",
+        "w1p6_l0p70": "Agree"
+      },
+      "per_geometry": {
+        "w10p0_l0p60": "Agree",
+        "w10p0_l10p00": "Agree",
+        "w10p0_l2p00": "Agree"
+      },
+      "verdict": "Agree"
+    },
+    "ss": {
+      "bound_hits": {},
+      "held_out": {
+        "w10p0_l0p70": "Agree",
+        "w10p0_l1p00": "Agree",
+        "w1p6_l0p70": "Agree"
+      },
+      "per_geometry": {
+        "w10p0_l0p60": "Agree",
+        "w10p0_l10p00": "Agree",
+        "w10p0_l2p00": "Agree"
+      },
+      "verdict": "Agree"
+    },
+    "typical": {
+      "bound_hits": {},
+      "per_geometry": {
+        "w10p0_l0p60": "Agree",
+        "w10p0_l10p00": "Agree",
+        "w10p0_l2p00": "Agree"
+      },
+      "verdict": "Agree"
+    }
+  },
+  "device": "nfet_05v0",
+  "pdk_corners_sha256": "6a6befcc7b60db97af78f5c50a6653801d8a8c2123592479ce43da5c56a41f29",
+  "schema": 1,
+  "tunables": {
+    "dv_fb_v": {
+      "card_shift": {
+        "ff": -0.1298,
+        "fs": -0.09734999999999999,
+        "sf": 0.089475,
+        "ss": 0.1193
+      },
+      "max": 0.21361900971272502,
+      "max_at_bound": null,
+      "max_corner": "ss",
+      "min": -0.02924662082672727,
+      "min_at_bound": null,
+      "min_corner": "ff",
+      "shift_difference": {
+        "ff": 0.001805847703628377,
+        "fs": 0.001935313543393144,
+        "sf": -0.001448819747890559,
+        "ss": -0.004428521756919351
+      },
+      "spread": 0.2428656305394523,
+      "tcad_shift": {
+        "ff": -0.12799415229637162,
+        "fs": -0.09541468645660685,
+        "sf": 0.08802618025210944,
+        "ss": 0.11487147824308065
+      },
+      "typical": 0.09874753146964436,
+      "values": {
+        "ff": -0.02924662082672727,
+        "fs": 0.003332845013037523,
+        "sf": 0.1867737117217538,
+        "ss": 0.21361900971272502,
+        "typical": 0.09874753146964436
+      }
+    },
+    "n_ch_cm3": {
+      "card_shift": null,
+      "max": 9.827262104704821e+16,
+      "max_at_bound": null,
+      "max_corner": "ff",
+      "min": 8.081814035337942e+16,
+      "min_at_bound": null,
+      "min_corner": "ss",
+      "shift_difference": null,
+      "spread": 1.7454480693668784e+16,
+      "tcad_shift": null,
+      "typical": 8.813323306821749e+16,
+      "values": {
+        "ff": 9.827262104704821e+16,
+        "fs": 9.53520049844571e+16,
+        "sf": 8.166473643775851e+16,
+        "ss": 8.081814035337942e+16,
+        "typical": 8.813323306821749e+16
+      }
+    },
+    "t_ox_eff_nm": {
+      "card_shift": {
+        "ff": -1.0,
+        "fs": -0.7500000000000001,
+        "sf": 0.7500000000000001,
+        "ss": 1.0
+      },
+      "max": 17.044314941395385,
+      "max_at_bound": null,
+      "max_corner": "ss",
+      "min": 15.06436192106056,
+      "min_at_bound": null,
+      "min_corner": "ff",
+      "shift_difference": {
+        "ff": 0.013878304678101472,
+        "fs": 0.007994580027883669,
+        "sf": -0.006392370251912749,
+        "ss": -0.006168674987073075
+      },
+      "spread": 1.9799530203348255,
+      "tcad_shift": {
+        "ff": -0.9861216953218985,
+        "fs": -0.7420054199721164,
+        "sf": 0.7436076297480874,
+        "ss": 0.9938313250129269
+      },
+      "typical": 16.050483616382458,
+      "values": {
+        "ff": 15.06436192106056,
+        "fs": 15.308478196410341,
+        "sf": 16.794091246130545,
+        "ss": 17.044314941395385,
+        "typical": 16.050483616382458
+      }
+    }
+  },
+  "typical_source": {
+    "calibration_file_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+    "param_sha256": "791e01ae1b48d92cc287e575324a83aa1cf9b60987a76f06fe57468c0941125c"
+  }
+}
