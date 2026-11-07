@@ -462,7 +462,7 @@ def test_moscap_page_per_device_geometry(tmp_path):
                     for palette in ("light", "dark"):
                         assert (root / name / f"{gid}_mesh_{params}-{palette}.svg").is_file()
                 else:
-                    assert docgen._NO_ARTEFACT[params] in page
+                    assert docgen._no_artefact(params) in page
             meta = TCAD / "moscap2d" / name / "start" / gid / "cv.meta.json"
             if meta.is_file():
                 assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page
@@ -758,11 +758,13 @@ def test_mesh_figure_absent_states_why(tmp_path):
     ddir = tmp_path / "page"
     ddir.mkdir()
     text = "\n".join(docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir))
-    assert docgen._NO_ARTEFACT["start"] in text
+    assert docgen._no_artefact("start") in text
+    # the start cell's sentence links mesh.msh to its .gitignore line (spec §10.3 file links)
+    assert "{repo}`mesh.msh <.gitignore#L" in text and "MESH" not in text
     assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
     assert not list(ddir.glob("*_mesh_start-*.svg"))
-    none = "\n".join(docgen._mesh_section(_fake_device(tcad), "w9p9_l9p90", ddir))
-    assert "No 2D result exists for this geometry" in none
+    # a geometry with no 2D cell gets no mesh section: its 2D section already says why
+    assert docgen._mesh_section(_fake_device(tcad), "w9p9_l9p90", ddir) == []
 
 
 def test_no_mesh_deviation_text_when_artefact_exists(tmp_path):

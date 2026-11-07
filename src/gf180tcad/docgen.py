@@ -616,6 +616,13 @@ _NO_ARTEFACT = {
         "committed for it ({ref}`moscap2d-mesh-artefact`)."
     ),
 }
+
+
+def _no_artefact(params: str) -> str:
+    """The sentence a geometry page prints for a 2D cell at ``params`` with no artefact."""
+    return _NO_ARTEFACT[params].replace("MESH", _mesh_link())
+
+
 _MESH_ALT = (
     "The mesh around the gate of the 2D cell: thousands of small triangles, densest in a thin "
     "band at the silicon surface under the gate, coloured by region: the gate on top, the gate "
@@ -1007,7 +1014,7 @@ def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
     for params in cells:
         found = sorted((d.root / "meshes").glob(f"*/{name}/{params}/{gid}/{meshcut.META}"))
         if not found:
-            lines += [_NO_ARTEFACT[params].replace("MESH", _mesh_link()), ""]
+            lines += [_no_artefact(params), ""]
             continue
         adir = found[0].parent
         meta = _read_json(adir / meshcut.META)
