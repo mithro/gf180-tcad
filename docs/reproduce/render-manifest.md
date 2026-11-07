@@ -100,7 +100,7 @@ entry from this file and no other ({py:meth}`gf180tcad.render.manifest.Manifest.
 :alt: Band edges against energy. On the left, the oxide's conduction band edge high above and its valence band edge far below. On the right, silicon's two band edges close together. Arrows mark the silicon band gap and the two offsets.
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
-silicon's valence band edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
+silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
 the conduction and valence band offsets above and below silicon's.
 ```
 

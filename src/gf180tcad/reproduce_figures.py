@@ -109,7 +109,7 @@ def _wrap(text: str, share: float = 1.0) -> list[str]:
     return textwrap.wrap(text, int(STYLE["wrap_chars"] * share), break_on_hyphens=False)
 
 
-def _diagram(rows: float, palette: str, row_in: float | None = None) -> tuple[Figure, object]:
+def _diagram(rows: float, palette: str, row_in: float | None = None):
     pal = imagefig.PALETTES[palette]
     row_in = row_in or STYLE["row_in"]
     height = row_in * rows + 2 * STYLE["pad_in"]
@@ -177,7 +177,7 @@ def _arrow(ax, key: str, start: tuple[float, float], end: tuple[float, float], p
 
 
 def _chain(rows: list[tuple[str, list[str], str, bool]], palette: str,
-           row_in: float | None = None) -> Figure:  # fmt: skip
+           row_in: float | None = None):  # fmt: skip
     """Full-width boxes top to bottom, each joined to the next by an arrow."""
     fig, ax = _diagram(len(rows), palette, row_in)
     x, w = STYLE["full"]
@@ -191,7 +191,7 @@ def _chain(rows: list[tuple[str, list[str], str, bool]], palette: str,
 
 def _two_columns(left: list[tuple[str, list[str], str]], right: list[tuple[str, list[str], str]],
                  edges: list[tuple[str, str]], palette: str,
-                 row_in: float | None = None) -> Figure:  # fmt: skip
+                 row_in: float | None = None):  # fmt: skip
     """Two columns of boxes, each column spread over the taller one's rows, with an arrow from
     the right edge of each left box to the left edge of the right box it names."""
     rows = max(len(left), len(right))
@@ -247,7 +247,7 @@ def reproduce_steps(makefile: Path = MAKEFILE) -> list[tuple[str, list[str]]]:
     return steps
 
 
-def reproduce_figure(palette: str) -> Figure:
+def reproduce_figure(palette: str):
     """The targets of ``make reproduce`` in the order it runs them, each with what it writes,
     then the manifest check."""
     rows = []
@@ -293,7 +293,7 @@ def _geometry_label(device: str, gid: str) -> str:
     return f"{device.split('_')[0]} W{g.w_um:g}/L{g.l_um:g}"
 
 
-def jobs_figure(palette: str, root: Path = SPICE_ROOT) -> Figure:
+def jobs_figure(palette: str, root: Path = SPICE_ROOT):
     """One square per job of the reference: a column per device and geometry, a row per engine
     and corner; the jobs of the page's example partial run highlighted."""
     pal = ef.PALETTES[palette]
@@ -332,7 +332,7 @@ def registry(path: Path = REGISTRY) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def registry_figure(palette: str) -> Figure:
+def registry_figure(palette: str):
     """The entry points of the registry (left), each with the number of modules its hash covers,
     and the results folders of ``trees`` (right), each joined to the entry point that writes it."""
     reg = registry()
@@ -373,18 +373,18 @@ def workflow_steps(job: str, path: Path = WORKFLOW) -> list[tuple[str, bool]]:
     return steps
 
 
-def _workflow_figure(job: str, palette: str) -> Figure:
+def _workflow_figure(job: str, palette: str):
     rows = [(f"step {i}", _wrap(title), "container" if failure else "check", failure)
             for i, (title, failure) in enumerate(workflow_steps(job))]  # fmt: skip
     return _chain(rows, palette, STYLE["step_row_in"])
 
 
-def crosscheck_figure(palette: str) -> Figure:
+def crosscheck_figure(palette: str):
     """The steps of the ``crosscheck`` job; a dashed box runs only when a step before it failed."""
     return _workflow_figure("crosscheck", palette)
 
 
-def crosscheck_tcad_figure(palette: str) -> Figure:
+def crosscheck_tcad_figure(palette: str):
     """The steps of the ``crosscheck-tcad`` job, drawn as :func:`crosscheck_figure`."""
     return _workflow_figure("crosscheck-tcad", palette)
 
@@ -398,7 +398,7 @@ def cached_meshes(root: Path = TCAD_ROOT) -> list[str]:
     return sorted({json.loads(p.read_text(encoding="utf-8"))["mesh_sha256"] for p in metas})
 
 
-def cache_flow_figure(palette: str) -> Figure:
+def cache_flow_figure(palette: str):
     """Push and pull: a job's file and the hash its committed record names (left), the object
     and the index of the cache repository (right)."""
     config = outcache.load_config()
@@ -460,7 +460,7 @@ def cache_tree(root: Path = TCAD_ROOT) -> list[str]:
     return lines
 
 
-def cache_tree_figure(palette: str) -> Figure:
+def cache_tree_figure(palette: str):
     """The cache repository's files: the README, the attributes, the index and one object per
     distinct mesh of the committed calibrated 2D jobs."""
     lines = cache_tree()
@@ -498,7 +498,7 @@ def exaggerated_geometry(path: Path = RENDER_FIXTURE) -> list[dict]:
     return out
 
 
-def exaggeration_figure(palette: str) -> Figure:
+def exaggeration_figure(palette: str):
     """The fixture's stack at true scale (left) and as the render draws it (right): the oxide at
     its scale, the gate at 1."""
     pal = ef.PALETTES[palette]
@@ -540,7 +540,7 @@ def band_edges(path: Path = DISPLAY) -> dict[str, tuple[float, float]]:
     }
 
 
-def band_offset_figure(palette: str) -> Figure:
+def band_offset_figure(palette: str):
     """The band edges of the oxide (left) and silicon (right) at their interface, with the
     silicon band gap and the two offsets of the display file marked."""
     pal = ef.PALETTES[palette]
@@ -602,7 +602,7 @@ def forks() -> list[dict]:
     return out
 
 
-def forks_figure(palette: str) -> Figure:
+def forks_figure(palette: str):
     """Each fork at its commit (left) and where it enters the flow (right)."""
     fs = forks()
     left = []
@@ -623,7 +623,7 @@ def forks_figure(palette: str) -> Figure:
     return _two_columns(left, right, edges, palette, STYLE["fork_row_in"])
 
 
-def results_images_figure(palette: str) -> Figure:
+def results_images_figure(palette: str):
     """Each result kind of :data:`gf180tcad.tcad.RESULTS_IMAGE` (left) and the image it is
     made in (right), by the image's pin file."""
     from gf180tcad.tcad import RESULTS_IMAGE
@@ -638,7 +638,7 @@ def results_images_figure(palette: str) -> Figure:
 # --- every figure -------------------------------------------------------------------------------------
 
 
-def _svg_of(draw: Callable[[str], Figure]) -> Callable[[str], bytes]:
+def _svg_of(draw: Callable) -> Callable[[str], bytes]:
     def svg(palette: str = "light") -> bytes:
         return _svg(draw(palette), palette)
 
@@ -647,7 +647,7 @@ def _svg_of(draw: Callable[[str], Figure]) -> Callable[[str], bytes]:
 
 
 #: The figure functions, by file name stem. Each returns the matplotlib figure of one palette.
-DRAW: dict[str, Callable[[str], Figure]] = {
+DRAW: dict[str, Callable] = {
     "image-forks": forks_figure,
     "results-images": results_images_figure,
     "reproduce-targets": reproduce_figure,

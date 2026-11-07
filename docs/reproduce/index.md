@@ -72,7 +72,7 @@ Each step is a target of its own, which can also be run alone:
 
 The targets that `make reproduce` runs, top to bottom, as its recipe in the {repo}`Makefile`
 lists them. Each box names the results folders its target writes. The last box is the
-manifest check.
+{term}`manifest` check.
 ```
 
 ```{figure} /_generated/reproduce/reproduce-targets-dark.svg
