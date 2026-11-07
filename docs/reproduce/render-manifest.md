@@ -113,7 +113,7 @@ is not drawn: it differs from silicon's gap plus the two offsets
 :alt: Band edges against energy. On the left, the oxide's conduction band edge high above and its valence band edge far below. On the right, silicon's two band edges close together. Arrows mark the silicon band gap and the two offsets.
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
-silicon's valence band edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
+silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
 the conduction and valence band offsets above and below silicon's. The file's oxide band gap
 is not drawn: it differs from silicon's gap plus the two offsets
 ([issue #167](https://github.com/mithro/gf180-tcad/issues/167)).

@@ -81,7 +81,7 @@ lists them. Each box names the results folders its target writes. The last box i
 
 The targets that `make reproduce` runs, top to bottom, as its recipe in the {repo}`Makefile`
 lists them. Each box names the results folders its target writes. The last box is the
-manifest check.
+{term}`manifest` check.
 ```
 
 | target | runs | writes |
