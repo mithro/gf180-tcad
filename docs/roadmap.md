@@ -18,10 +18,11 @@ the issue says what is open and what settles it. The phases are those of the
   ([issue #58](https://github.com/mithro/gf180-tcad/issues/58)).
 - **2D results on the {term}`dev-HEAD TCAD image`**, with the 2D {term}`mesh convergence` rerun there
   ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
-- **{term}`Corner <corner>` bounds and spread** of the {term}`TCAD` physical inputs
+- **The Monte Carlo spread** of the {term}`TCAD` physical inputs, beside the {term}`corner`
+  bounds. It gives the mean, standard deviation and percentiles of the global variation
   ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
-- **Mesh pictures** on the TCAD results pages
-  ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
+- **Mesh pictures of the 2D start cells**, after their meshes are regenerated
+  ([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
 
 ```{figure} /_generated/explained/moscap-cell-light.svg
 :figclass: only-light
@@ -115,5 +116,6 @@ Its curves at the minimum gate length are in {numref}`roadmap-cv-figure`, beside
   and {term}`poly-silicon`. The second tier covers the {term}`MOS capacitor <MOSCAP>`, its
   regions, what sets each part of its {term}`C–V` curve and what the calibration changes.
 - **The figure, equation and file-link rules** on every page. Each described thing gets a
-  figure, each equation its symbols and units, each file a link. Issues #129 to #134 hold the
-  work, one issue per group of pages.
+  figure, each equation its symbols and units, each file a link. The explainer pages (issue
+  #129), the comparison pages and the limitations pages (issue #131) meet them. Issues #132 to
+  #134 hold the work on the other pages, one issue per group of pages.

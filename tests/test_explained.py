@@ -1033,7 +1033,7 @@ def test_cell_reads_the_committed_files():
     stack = json.loads(
         (ROOT / "results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json").read_text("utf-8")
     )["stack"]
-    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={}, drawn={})
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={})
     assert c.l_um == meta["geometry"]["l_um"] and c.w_um == meta["geometry"]["w_um"]
     assert c.t_ox_um == meta["meshed_t_ox_nm"] / 1000
     assert c.xj_um == proc["param"]["xj_um"]["value"]
@@ -1044,15 +1044,57 @@ def test_cell_reads_the_committed_files():
     assert (c.sd_dopant, c.body_dopant) == ("donor", "acceptor")
 
 
+def test_cell_source_and_drain_widths_come_from_the_artefact():
+    """The source and drain widths are the reduced mesh artefact's (issue #128): from the body's
+    ends to the gate's edges in the full mesh, and the gate there is the cell's drawn L."""
+    from gf180tcad.explain import model
+
+    path = ROOT / model.artefact_meta_path("nfet_05v0", "calibrated", "w10p0_l0p70")
+    assert path == ROOT / "results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p70" / (
+        "mesh-window.meta.json"
+    )
+    bounds = json.loads(path.read_text("utf-8"))["region_bounds_um"]
+    body, gate = bounds["body"]["x_um"], bounds["gate_poly"]["x_um"]
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={})
+    assert (c.source_um, c.drain_um) == (gate[0] - body[0], body[1] - gate[1])
+    assert c.source_um > 0 and c.drain_um > 0
+    assert gate[1] - gate[0] == pytest.approx(c.l_um)
+    with pytest.raises(ValueError, match="expected one reduced mesh artefact"):
+        model.artefact_meta_path("nfet_05v0", "start", "w10p0_l0p70")
+
+
+def test_cell_source_and_drain_widths_follow_an_edited_artefact(tmp_path, monkeypatch):
+    """Issue #128, mutation-proof: in a copy of the committed files whose artefact meta moves the
+    body's ends out by 0.25 µm (source) and 0.13 µm (drain), the cell's widths move by exactly
+    those amounts. A width written into the code as a literal cannot follow the edit."""
+    import shutil
+
+    from gf180tcad.explain import model
+
+    args = ("nfet_05v0", "calibrated", "w10p0_l0p70")
+    committed = model.cell(*args, scales={})
+    for rel in (model.cell_meta_path(*args), model.meta_path(*args[:2]),
+                f"data/process/{args[0]}.toml"):  # fmt: skip
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / rel, tmp_path / rel)
+    rel = model.artefact_meta_path(*args)
+    meta = json.loads((ROOT / rel).read_text("utf-8"))
+    body = meta["region_bounds_um"]["body"]["x_um"]
+    meta["region_bounds_um"]["body"]["x_um"] = [body[0] - 0.25, body[1] + 0.13]
+    (tmp_path / rel).parent.mkdir(parents=True)
+    (tmp_path / rel).write_text(json.dumps(meta), encoding="utf-8")
+    monkeypatch.setattr(model, "ROOT", tmp_path)
+    edited = model.cell(*args, scales={})
+    assert edited.source_um == pytest.approx(committed.source_um + 0.25)
+    assert edited.drain_um == pytest.approx(committed.drain_um + 0.13)
+
+
 def test_cross_section_matches_cell():
-    """Every drawn part of the cross-section is the cell's dimension times its stated scale, and a
-    drawn-not-to-scale extent is named in the exaggeration statement."""
+    """Every drawn part of the cross-section is the cell's dimension times its stated scale; the
+    source and drain are drawn at the artefact's widths, so the statement names only scales."""
     from gf180tcad.explain import figures, model
 
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70",
-        scales=figures.STYLE["scales"], drawn=figures.STYLE["drawn_um"],
-    )  # fmt: skip
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=figures.STYLE["scales"])
     ext = figures.cell_extents(c)
     s_ox = c.scales.get("oxide", 1)
     gx0, gx1, gy0, gy1 = ext["gate"]
@@ -1063,17 +1105,17 @@ def test_cross_section_matches_cell():
         c.t_ox_um * s_ox
     )
     assert ox[2] == pytest.approx(gy1) and ox[3] == pytest.approx(0)
-    for side in ("source", "drain"):
+    for side, width in (("source", c.source_um), ("drain", c.drain_um)):
         x0, x1, y0, y1 = ext[side]
         assert (y0, y1) == (0, pytest.approx(c.xj_um))
-        assert x1 - x0 == pytest.approx(c.drawn["source and drain width"])
+        assert x1 - x0 == pytest.approx(width)
     assert ext["source"][1] == pytest.approx(gx0) and ext["drain"][0] == pytest.approx(gx1)
     bx0, bx1, by0, by1 = ext["body"]
     assert (bx0, bx1) == (pytest.approx(ext["source"][0]), pytest.approx(ext["drain"][1]))
     assert by1 - by0 == pytest.approx(c.body_um)
-    statement = model.exaggeration(c.scales, c.drawn)
-    assert "Oxide thickness ×5" in statement and "source and drain width" in statement.lower()
-    assert "Source and drain width chosen for the drawing, not to scale." in statement
+    statement = model.exaggeration(c.scales)
+    assert statement == "Oxide thickness ×5, not to scale."
+    assert "drawing" not in statement and "source" not in statement.lower()
     subs = figures.substitutions()
     assert subs["x_fig_parts_cell_scale"] == subs["x_fig_junction_cell_scale"] == statement
     assert "x_fig_junction_panels_scale" not in subs  # a plot of curves, not a drawing
@@ -1657,8 +1699,7 @@ def test_mesh_window_figure_draws_the_window_rule():
     from gf180tcad import meshcut
     from gf180tcad.explain import figures, model
 
-    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=figures.STYLE["scales"],
-                   drawn=figures.STYLE["drawn_um"])  # fmt: skip
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=figures.STYLE["scales"])
     gate = figures.cell_extents(c)["gate"]
     box = figures.window_box(c)
     assert box.x0 == pytest.approx(gate.x0 - meshcut.WINDOW_KX * c.l_um)
@@ -1842,7 +1883,7 @@ def test_calibration_table_from_result_file():
         rows = numbers.fit_table(device).splitlines()
         assert rows[0] == "| Number | Lower limit | Start | Fitted | Upper limit |"
         assert len(rows) == 2 + len(numbers.TUNABLES)
-        for row, name in zip(rows[2:], numbers.TUNABLES, strict=True):
+        for row, name in zip(rows[2 : 2 + len(numbers.TUNABLES)], numbers.TUNABLES, strict=True):
             words, unit, most = numbers.TUNABLES[name]
             lo, hi = doc["bounds"][name]
             # The unit sits in the row label, so the cells are narrow enough for a phone.
@@ -1958,8 +1999,8 @@ def test_corner_spread_is_the_committed_corners():
         assert [s.lowest, s.highest] == env["ngspice"]["nfet_05v0"][gid][key]
         assert s.lowest < s.typical < s.highest
     for check, key, words in (
-        ("dv_dep", "u_dep", "Falling crossing"),
-        ("dv_inv", "u_inv", "Rising crossing"),
+        ("dv_dep", "u_dep", "{term}`Depletion <depletion>` crossing"),
+        ("dv_inv", "u_inv", "Inversion crossing"),
     ):
         w = rec["verdicts"][check]["window"]
         s = got[words]
@@ -1971,6 +2012,342 @@ def test_corner_spread_is_the_committed_corners():
         cells = [c.strip() for c in row.strip("|").split("|")]
         spread = numbers.format_value(s.highest - s.lowest, numbers.SPREAD_DIGITS, s.unit)
         assert cells[0] == s.words and cells[-1] == spread
+
+
+_CORNERS = {d: f"results/tcad/corners/{d}/summary.json" for d in _FITS}
+
+
+def _corners(device: str, root: Path = ROOT) -> dict:
+    return json.loads((root / _CORNERS[device]).read_text("utf-8"))
+
+
+def _corners_copy(tmp_path: Path) -> Path:
+    for path in _CORNERS.values():
+        dst = tmp_path / path
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text((ROOT / path).read_text("utf-8"), "utf-8")
+    return tmp_path
+
+
+def _cells(row: str) -> list[str]:
+    return [c.strip() for c in row.strip("|").split("|")]
+
+
+def test_corner_bounds_table_is_the_summary():
+    """Issue #121: each row of a bounds table is the corner summary's typical, lowest, highest
+    and spread of that number; the typical is the committed calibration's fitted value."""
+    numbers = _numbers()
+    for device in _FITS:
+        doc = _corners(device)
+        rows = numbers.corner_bounds_table(device).splitlines()
+        assert rows[0] == "| Number | Typical | Lowest | Highest | Spread |"
+        marked = any(numbers.LIMIT_MARK in r for r in rows)
+        assert len(rows) == 2 + len(numbers.TUNABLES) + (2 if marked else 0)
+        assert (rows[-1] == numbers.LIMIT_NOTE) == marked
+        for row, name in zip(rows[2 : 2 + len(numbers.TUNABLES)], numbers.TUNABLES, strict=True):
+            words, unit, most = numbers.TUNABLES[name]
+            t = doc["tunables"][name]
+            assert t["typical"] == _fit(device)["values"][name], (device, name)
+            assert t["min"] <= t["typical"] <= t["max"], (device, name)
+            assert t["spread"] == t["max"] - t["min"]
+            on = {"typical": name in doc["corners"]["typical"]["bound_hits"],
+                  "min": t["min_at_bound"] is not None, "max": t["max_at_bound"] is not None,
+                  "spread": False}  # fmt: skip
+            want = [f"{words} ({unit})"] + [
+                numbers.shortest(t[k], "", most) + (numbers.LIMIT_MARK if on[k] else "")
+                for k in ("typical", "min", "max", "spread")
+            ]
+            assert _cells(row) == want, (device, name)
+
+
+def test_corner_bounds_follow_an_edited_summary(tmp_path):
+    numbers = _numbers()
+    root = _corners_copy(tmp_path)
+    doc = _corners("nfet_05v0")
+    t = doc["tunables"]["t_ox_eff_nm"]
+    t["min"], t["min_corner"], t["min_at_bound"] = 15.0, "sf", "lower"
+    t["spread"] = t["max"] - t["min"]
+    (root / _CORNERS["nfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+    table = numbers.corner_bounds_table("nfet_05v0", root=root)
+    assert table != numbers.corner_bounds_table("nfet_05v0")
+    assert _cells(table.splitlines()[2])[2] == "15†"  # the lowest oxide, on its limit
+    assert table.splitlines()[-1] == numbers.LIMIT_NOTE
+    rows = numbers.corner_extremes_table(root=root).splitlines()
+    assert _cells(rows[2])[2] == "sf"
+    assert "The lowest oxide thickness of the nfet_05v0, at sf, sits on its lower limit" in (
+        numbers.corner_bound_hits(root=root)
+    )
+    with pytest.raises(KeyError):
+        doc["device"] = "pfet_05v0"
+        (root / _CORNERS["nfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+        numbers.corner_bounds("nfet_05v0", root=root)
+
+
+def test_corner_extremes_and_hits_are_the_summaries():
+    numbers = _numbers()
+    rows = numbers.corner_extremes_table().splitlines()
+    assert rows[0] == "| Transistor | Number | Lowest at | Highest at |"
+    want = [
+        [f"{{term}}`{d}`", numbers.TUNABLES[n][0], t["min_corner"], t["max_corner"]]
+        for d in _FITS
+        for n in numbers.TUNABLES
+        for t in [_corners(d)["tunables"][n]]
+    ]
+    assert [_cells(r) for r in rows[2:]] == want
+    hits = [
+        (d, n, side)
+        for d in _FITS
+        for n, t in _corners(d)["tunables"].items()
+        for side in ("min", "max")
+        if t[f"{side}_at_bound"] is not None
+    ]
+    sentence = numbers.corner_bound_hits()
+    assert (sentence == "No lowest or highest value sits on a limit of its fit") == (not hits)
+    for d, n, side in hits:
+        words = numbers.TUNABLES[n][0].lower()
+        assert f"The {'lowest' if side == 'min' else 'highest'} {words} of the {d}" in sentence
+
+
+def test_corner_bounds_figure_draws_the_summaries():
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    for palette in figures.PALETTES:
+        fig = figures.corner_bounds_figure(palette)
+        assert len(fig.axes) == len(numbers.TUNABLES)
+        for ax, name in zip(fig.axes, numbers.TUNABLES, strict=True):
+            assert (ax.get_xscale() == "log") == (name in figures.LOG_TUNABLES)
+            xs = [list(line.get_xdata()) for line in ax.get_lines()]
+            for device in _FITS:
+                t = _corners(device)["tunables"][name]
+                assert [t["min"], t["max"]] in xs, (device, name)
+                assert [t["typical"]] in xs, (device, name)
+                for c in figures.STYLE["corner_markers"]:
+                    assert [t["values"][c]] in xs, (device, name, c)
+                left, right = ax.get_xlim()
+                assert left < t["min"] and t["max"] < right, (palette, name)
+    assert "corner-bounds" in figures.FIGURES
+    light = figures.FIGURES["corner-bounds"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["corner-bounds"]("dark")
+    assert "x_fig_corner_bounds_scale" not in figures.substitutions()
+    assert "/_generated/explained/corner-bounds-light.svg" in CALIBRATION_PAGE.read_text("utf-8")
+
+
+LIMITS_CORNERS_PAGE = ROOT / "docs" / "limitations" / "corners.md"
+
+
+def test_crosscheck_numbers_are_the_summaries():
+    """The largest cross-check difference of each transistor and number is the summary's
+    ``shift_difference`` of largest size, printed with its corner."""
+    numbers = _numbers()
+    subs = numbers.crosscheck_substitutions()
+    for device in _FITS:
+        short = device.split("_")[0]
+        for name, (key, unit, digits, factor) in numbers.CROSSCHECK.items():
+            diffs = _corners(device)["tunables"][name]["shift_difference"]
+            corner = max(diffs, key=lambda c: abs(diffs[c]))
+            t = _corners(device)["tunables"][name]
+            assert diffs[corner] == t["tcad_shift"][corner] - t["card_shift"][corner]
+            assert subs[f"x_crosscheck_{key}_corner_{short}"] == corner
+            assert subs[f"x_crosscheck_{key}_gap_{short}"] == numbers.shortest(
+                diffs[corner] * factor, unit, digits
+            )
+
+
+def test_corner_fit_limits_are_the_files():
+    from gf180tcad.devices import CORNERS
+
+    numbers = _numbers()
+    for device, typical in _FITS.items():
+        fits = {(f.corner, f.name): f for f in numbers.corner_fit_limits(device)}
+        assert set(fits) == {(c, n) for c in CORNERS for n in numbers.TUNABLES}
+        for c in CORNERS:
+            path = typical if c == "typical" else f"results/tcad/corners/{device}/{c}.json"
+            doc = json.loads((ROOT / path).read_text("utf-8"))
+            for n in numbers.TUNABLES:
+                f = fits[(c, n)]
+                assert [f.lower, f.upper] == doc["bounds"][n] and f.fitted == doc["values"][n]
+                assert f.at_bound == doc["bound_hits"].get(n)
+    hits = numbers.corner_fit_hits()
+    for device in _FITS:
+        for f in numbers.corner_fit_limits(device):
+            named = f"The {numbers.TUNABLES[f.name][0].lower()} of the {device} at {f.corner}"
+            assert (named in hits) == (f.at_bound is not None), named
+
+
+def _limit_hit_copy(tmp_path: Path, monkeypatch) -> tuple[Path, float]:
+    """A copy of the corner summaries with the pfet's ff flat band on its upper limit (the
+    highest value), and :func:`numbers.corner_summary` reading the copy; the ff value."""
+    numbers = _numbers()
+    root = _corners_copy(tmp_path)
+    doc = _corners("pfet_05v0")
+    t = doc["tunables"]["dv_fb_v"]
+    v = t["values"]["ff"] = t["max"] + 0.05
+    t["max"], t["max_corner"], t["max_at_bound"] = v, "ff", "upper"
+    t["spread"] = t["max"] - t["min"]
+    t["tcad_shift"]["ff"] = v - t["typical"]
+    t["shift_difference"]["ff"] = t["tcad_shift"]["ff"] - t["card_shift"]["ff"]
+    doc["corners"]["ff"]["bound_hits"] = {"dv_fb_v": "upper"}
+    (root / _CORNERS["pfet_05v0"]).write_text(json.dumps(doc), "utf-8")
+    real = numbers.corner_summary
+    monkeypatch.setattr(numbers, "corner_summary", lambda device, root_=None: real(device, root))
+    return root, v
+
+
+def _rings(fig, colour: str) -> set[tuple[float, float]]:
+    """The centres of the open rings in ``colour`` drawn on ``fig`` (the on-a-limit mark)."""
+    from matplotlib.colors import same_color
+
+    return {
+        (float(line.get_xdata()[0]), float(line.get_ydata()[0]))
+        for ax in fig.axes
+        for line in ax.get_lines()
+        if len(line.get_xdata()) == 1
+        and line.get_marker() == "o"
+        and line.get_markerfacecolor() == "none"
+        and same_color(line.get_markeredgecolor(), colour)
+    }
+
+
+def test_a_limit_set_value_is_marked(tmp_path, monkeypatch):
+    """A value that sits on a limit of its fit is marked wherever it is shown: † in the bounds
+    table with the note below it, a ring in the hole colour in the bounds and cross-check figures
+    (with a legend entry), and no ring or mark when no value sits on a limit."""
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    for palette in figures.PALETTES:
+        pal = figures.PALETTES[palette]
+        assert not _rings(figures.corner_bounds_figure(palette), pal["hole"]) or any(
+            _corners(d)["corners"][c]["bound_hits"] for d in _FITS for c in _corners(d)["corners"]
+        )
+    root, v = _limit_hit_copy(tmp_path, monkeypatch)
+    rows = numbers.corner_bounds_table("pfet_05v0", root=root).splitlines()
+    assert _cells(rows[4])[3] == numbers.shortest(v, "", 3) + numbers.LIMIT_MARK
+    assert rows[-1] == numbers.LIMIT_NOTE
+    for palette in figures.PALETTES:
+        hole = figures.PALETTES[palette]["hole"]
+        fig = figures.corner_bounds_figure(palette)
+        row = list(numbers.FITS).index("pfet_05v0")
+        assert (v, row) in _rings(fig, hole)
+        assert figures.LIMIT_RING_LABEL in [t.get_text() for t in fig.legends[0].get_texts()]
+        fig = figures.corner_crosscheck_figure(palette)
+        t = numbers.corner_summary("pfet_05v0")["tunables"]["dv_fb_v"]
+        assert (t["card_shift"]["ff"], t["tcad_shift"]["ff"]) in _rings(fig, hole)
+        assert len(_rings(fig, hole)) == 1
+        assert figures.LIMIT_RING_LABEL in [t.get_text() for t in fig.legends[0].get_texts()]
+
+
+def test_corner_limits_doping_axis_has_several_labels():
+    """The doping panel of the corner-limits figure (a log axis spanning under a decade) labels
+    more than one tick inside its limits."""
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    fig = figures.corner_limits_figure("light")
+    ax = fig.axes[list(numbers.TUNABLES).index("n_ch_cm3")]
+    fig.canvas.draw()
+    lo, hi = ax.get_xlim()
+    labels = [t.get_text() for t in ax.get_xticklabels() if lo <= t.get_position()[0] <= hi]
+    assert len([x for x in labels if x]) >= 2, labels
+    assert labels[:3] == ["1", "2", "3"], labels
+    assert ax.get_xlabel().endswith("(10¹⁷ cm⁻³)"), ax.get_xlabel()
+
+
+def test_corner_nearest_limit_is_the_files():
+    """The sentence names the fit value, not on a limit, closest to one relative to the width
+    between its limits, and how far it is from that limit."""
+    numbers = _numbers()
+    fits = [f for d in _FITS for f in numbers.corner_fit_limits(d) if f.at_bound is None]
+    rel = {f: min(f.fitted - f.lower, f.upper - f.fitted) / (f.upper - f.lower) for f in fits}
+    f = min(rel, key=rel.get)
+    assert numbers.corner_nearest_limit() == f
+    sentence = numbers.corner_nearest_limit_sentence()
+    assert f"of the {f.device} at {f.corner}" in sentence
+    assert numbers.TUNABLES[f.name][0].lower() in sentence
+
+
+def test_corner_widened_sentence_is_the_files():
+    """Each widened fit of :data:`corners.FLAT_BAND_STAGE` is named with the limit it passed
+    (the window without widening), its widened limit and its committed value, which lies
+    between the two; the half-width is the process files' typical window."""
+    from gf180tcad.calibrate import corners
+
+    numbers = _numbers()
+    sentence = numbers.corner_widened()
+    assert numbers.flatband_half_width() == "0.2\u00a0V"
+    for device, corner in corners.FLAT_BAND_STAGE:
+        tt = tomllib.loads((ROOT / f"data/process/{device}.toml").read_text("utf-8"))
+        lo0, hi0 = (b + corners.tunable_shifts(device, corner)["dv_fb_v"]
+                    for b in tt["param"]["dv_fb_v"]["bounds"])  # fmt: skip
+        lo, hi = corners.corner_bounds(device, corner)["dv_fb_v"]
+        v = json.loads((ROOT / f"results/tcad/corners/{device}/{corner}.json").read_text())[
+            "values"]["dv_fb_v"]  # fmt: skip
+        assert hi0 < v < hi or lo < v < lo0, (device, corner)
+        assert f"The {device} {corner} fit stopped on its " in sentence
+        for x in (hi0 if v > hi0 else lo0, hi if v > hi0 else lo, v):
+            assert numbers.shortest(x, "V", 4) in sentence, x
+    text = LIMITS_CORNERS_PAGE.read_text("utf-8")
+    assert "{{ x_corner_widened }}" in text and "eq-corner-flatband-window" in text
+
+
+def test_corner_verdict_sentence_is_the_summaries():
+    numbers = _numbers()
+    sentence = numbers.corner_verdicts()
+    for device in _FITS:
+        verdicts = {
+            c: e["verdict"] for c, e in _corners(device)["corners"].items() if c != "typical"
+        }
+        if len(set(verdicts.values())) == 1:
+            (v,) = set(verdicts.values())
+            assert f"the {{term}}`{device}` is {{term}}`{v}` at every corner" in sentence
+
+
+def test_corner_crossing_gaps_back_the_limitations_page():
+    """The page says the pfet's depletion crossing shift is positive at its shortest gate and
+    negative at its longest at every corner, and the nfet's lines lie near zero: the nfet's
+    largest gap is smaller than the pfet's swing at every corner."""
+    numbers = _numbers()
+    nfet = numbers.corner_crossing_gaps("nfet_05v0")
+    pfet = numbers.corner_crossing_gaps("pfet_05v0")
+    for corner, gaps in pfet.items():
+        lengths = sorted(gaps)
+        assert gaps[lengths[0]] > 0 > gaps[lengths[-1]], corner
+        swing = gaps[lengths[0]] - gaps[lengths[-1]]
+        assert max(abs(v) for v in nfet[corner].values()) < swing / 5, corner
+    text = " ".join(LIMITS_CORNERS_PAGE.read_text("utf-8").split())
+    assert (
+        "At every corner the pfet's shift is positive at its shortest gate and negative at its "
+        "longest." in text
+    )
+
+
+def test_corner_figures_are_registered_and_drawn():
+    from gf180tcad.explain import figures
+
+    numbers = _numbers()
+    text = LIMITS_CORNERS_PAGE.read_text("utf-8")
+    for name in ("corner-crosscheck", "corner-crossing", "corner-limits"):
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark")
+        assert f"x_fig_{name.replace('-', '_')}_scale" not in figures.substitutions()
+        assert f"/_generated/explained/{name}-light.svg" in text
+        assert f"/_generated/explained/{name}-dark.svg" in text
+    fig = figures.corner_crosscheck_figure("light")
+    xs = {(line.get_xdata()[0], line.get_ydata()[0]) for ax in fig.axes for line in ax.get_lines()
+          if len(line.get_xdata()) == 1}  # fmt: skip
+    for device in _FITS:
+        for name, (_w, _u, factor) in figures.CROSSCHECK.items():
+            t = _corners(device)["tunables"][name]
+            for c in figures.STYLE["corner_markers"]:
+                assert (t["card_shift"][c] * factor, t["tcad_shift"][c] * factor) in xs
+    fig = figures.corner_limits_figure("light")
+    for ax, name in zip(fig.axes, numbers.TUNABLES, strict=True):
+        drawn = [list(line.get_xdata()) for line in ax.get_lines()]
+        for device in _FITS:
+            for f in numbers.corner_fit_limits(device):
+                if f.name == name:
+                    assert [f.lower, f.upper] in drawn and [f.fitted] in drawn
 
 
 def test_calibration_counts_are_derived():
@@ -2017,13 +2394,16 @@ def test_calibration_page_prints_its_numbers():
     for key in ("fit_table_nfet", "fit_table_pfet", "limit_kinds_table", "bound_hits",
                 "fit_verdict_table", "corner_table", "corner_count", "fit_length_count",
                 "budget", "budget_used", "nfev_nfet", "nfev_pfet", "verdict_pfet_1d_term",
-                "two_d_disagree"):  # fmt: skip
+                "two_d_disagree", "corner_bounds_table_nfet", "corner_bounds_table_pfet",
+                "corner_extremes_table", "corner_bound_hits"):  # fmt: skip
         assert "{{ x_" + key + " }}" in text, key
     assert "/_generated/explained/calibration-limits-light.svg" in text
     for anchor in ("cv-agreement-mismatch", "cv-agreement-validation", "cv-agreement-windows",
                    "process-data-tunables"):  # fmt: skip
         assert f"<{anchor}>`" in text or f"{{ref}}`{anchor}`" in text, anchor
-    assert "issues/57" in text  # the corner fits that give each fitted number its bounds
+    # the corner fits that give each fitted number its bounds, and their limitations page
+    assert "{ref}`reproduce-corners`" in text and "{doc}`/limitations/corners`" in text
+    assert "/_generated/explained/corner-bounds-light.svg" in text
     assert not _COUNT_WORDS.findall(text)
 
 
@@ -2177,3 +2557,260 @@ def test_cv_page_says_quasi_static_only_when_both_switches_are_off():
     )
     assert "SPICE capacitance is\nquasi-static" in text
     assert numbers.value("acnqsmod_nfet") == 0 and numbers.value("trnqsmod_nfet") == 0
+
+
+# --- the figures of the docs rules (issue #129) ------------------------------------------------
+
+
+def _gids(fig) -> Counter:
+    """How many artists of each gid the figure holds, over all its axes."""
+    found = Counter()
+    for ax in fig.axes:
+        for artist in [*ax.lines, *ax.patches, *ax.collections]:
+            if artist.get_gid():
+                found[artist.get_gid()] += 1
+    return found
+
+
+def test_lattice_bonds_give_every_atom_four():
+    """Each atom of the grid has four bonds (neighbours or stubs off the edge), so the drawing
+    is the four-neighbour bond picture of the silicon page."""
+    from gf180tcad.explain import figures
+
+    n = figures.STYLE["lattice_atoms"]
+    ends = Counter()
+    for a, b in figures.lattice_bonds(n):
+        for end in (a, b):
+            if end in {(i, j) for i in range(n) for j in range(n)}:
+                ends[end] += 1
+    assert set(ends) == {(i, j) for i in range(n) for j in range(n)}
+    assert set(ends.values()) == {4}
+
+
+@pytest.mark.parametrize(
+    ("panel", "bond_electrons", "free", "holes", "ions"),
+    [
+        ("perfect crystal", 0, 0, 0, 0),
+        ("one broken bond", -1, 1, 1, 0),
+        ("donor", 0, 1, 0, 1),
+        ("acceptor", -1, 0, 1, 1),
+    ],
+)
+def test_lattice_panels_count_the_carriers(panel, bond_electrons, free, holes, ions):
+    """Every bond holds two electrons but the broken one; a broken bond gives one free electron
+    and one hole; a donor adds a free electron and an acceptor a hole, the dopant an ion."""
+    from gf180tcad.explain import figures
+
+    n = figures.STYLE["lattice_atoms"]
+    bonds = len(figures.lattice_bonds(n))
+    found = _gids(figures.lattice_figure((panel,), "light"))
+    assert found["bond-electron"] == 2 * bonds + bond_electrons
+    assert found["free-electron"] == free
+    assert found["hole"] == holes
+    assert found["ion"] == ions
+    assert found["atom"] == n * n - ions
+
+
+def test_lattice_figures_are_registered():
+    from gf180tcad.explain import figures
+
+    for name in ("silicon-bonds", "silicon-dopants"):
+        light = figures.FIGURES[name]("light")
+        assert light.startswith(b"<?xml") and light != figures.FIGURES[name]("dark"), name
+        assert light == figures.FIGURES[name]("light"), name  # byte-deterministic
+        assert f"x_fig_{name.replace('-', '_')}_scale" not in figures.substitutions()
+    text = (EXPLAINED / "silicon-and-carriers.md").read_text(encoding="utf-8")
+    for name in ("silicon-bonds", "silicon-dopants"):
+        assert f"/_generated/explained/{name}-light.svg" in text, name
+
+
+def test_sd_straggle_is_the_simulated_cells():
+    """The explainer's source/drain Gaussian is the one the 2D cell is built with: the same
+    straggle as gf180tcad.tcad.stack.sd_straggle_um for the cell's peak, body doping and junction
+    depth, the peak at the surface and the body doping at the junction depth.
+
+    Hand value: peak 1e20, body 8.813323e16 and XJ 0.15 µm give
+    s = 0.15 / √(2 · ln(1e20 / 8.813323e16)) = 0.15 / √(2 · 7.03409) = 0.0399922 µm."""
+    from gf180tcad.explain import figures, model
+    from gf180tcad.tcad import stack
+
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70",
+        scales=figures.STYLE["scales"],
+    )  # fmt: skip
+
+    meta = json.loads((ROOT / _CELL).read_text("utf-8"))
+    assert c.n_sd_cm3 == meta["sd_peak_cm3"]
+    assert c.n_body_cm3 == meta["tunables"]["n_ch_cm3"]["value"]
+    proc = tomllib.loads((ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))
+    assert c.xj_um == proc["param"]["xj_um"]["value"]
+
+    class _Proc:
+        def values(self):
+            return {"xj_um": c.xj_um, "n_ch_cm3": c.n_body_cm3}
+
+    assert c.sd_straggle_um == pytest.approx(stack.sd_straggle_um(_Proc(), c.n_sd_cm3), rel=1e-12)
+    assert c.sd_straggle_um == pytest.approx(0.0399922, rel=1e-5)
+    assert c.sd_doping(0.0) == pytest.approx(c.n_sd_cm3)
+    assert c.sd_doping(c.xj_um) == pytest.approx(c.n_body_cm3, rel=1e-12)
+
+
+def test_lateral_spread_is_the_simulated_cells(tmp_path):
+    """Across the gate edge the explainer's source doping is gplugins' mask-edge factor
+    ½·erfc(x/(√2·s_lat)) with the cell's lateral straggle: half the peak at the edge, the peak far
+    into the source and nothing far under the gate; the ratio is the stack's own (read from its
+    source, tested equal to the import), and a source without it is an error.
+
+    Hand value: one lateral straggle under the gate, ½·erfc(1/√2) = 0.158655."""
+    from gf180tcad.explain import figures, model
+    from gf180tcad.tcad import stack
+
+    assert model.lateral_straggle_ratio() == stack.LATERAL_STRAGGLE_RATIO
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70",
+        scales=figures.STYLE["scales"],
+    )  # fmt: skip
+    s_lat = c.sd_straggle_um * stack.LATERAL_STRAGGLE_RATIO
+    peak = c.n_sd_cm3
+    assert c.sd_doping(0.0, 0.0) == pytest.approx(peak / 2)
+    assert c.sd_doping(0.0, s_lat) == pytest.approx(0.158655 * peak, rel=1e-5)
+    assert c.sd_doping(0.0, -10 * s_lat) == pytest.approx(peak)
+    assert c.sd_doping(0.0, 10 * s_lat) < 1e-20 * peak
+    src = tmp_path / model.STACK_SOURCE
+    src.parent.mkdir(parents=True)
+    src.write_text("OTHER = 2.0\n", encoding="utf-8")
+    with pytest.raises(LookupError):
+        model.lateral_straggle_ratio(tmp_path)
+    src.write_text("LATERAL_STRAGGLE_RATIO = 0.7\n", encoding="utf-8")
+    assert model.lateral_straggle_ratio(tmp_path) == 0.7
+
+
+def test_junction_profile_draws_the_cell():
+    """The profile plot's lines are the cell's Gaussian, the abrupt step at the junction depth
+    and the uniform body, and the figure is registered with no exaggeration statement."""
+    from gf180tcad.explain import figures, model
+
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70",
+        scales=figures.STYLE["scales"],
+    )  # fmt: skip
+    fig = figures.junction_profile_figure("light")
+    ax, ax_lat = fig.axes
+    (lateral,) = [ln for ln in ax_lat.lines if ln.get_gid() == "lateral"]
+    x = lateral.get_xdata()
+    assert list(lateral.get_ydata()) == pytest.approx(list(c.sd_doping(0.0, x)))
+    assert x[0] < 0 < x[-1]
+    # The labels either side of the gate edge stand apart (PR #153 review should-fix 3).
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    (src,) = [t for t in ax_lat.texts if t.get_gid() == "label-source"]
+    (gate,) = [t for t in ax_lat.texts if t.get_gid() == "label-gate"]
+    edge = ax_lat.transData.transform((0.0, 1.0))[0]
+    assert src.get_window_extent(r).x1 < edge < gate.get_window_extent(r).x0
+    lines = {ln.get_label(): ln for ln in ax.lines}
+    g = lines[figures.PROFILE_LINES["gaussian"]]
+    assert list(g.get_ydata()) == pytest.approx(list(c.sd_doping(g.get_xdata())))
+    step = lines[figures.PROFILE_LINES["step"]]
+    assert list(step.get_xdata())[1:] == pytest.approx([c.xj_um, c.xj_um])
+    assert step.get_ydata()[0] == pytest.approx(c.n_sd_cm3)
+    assert set(lines[figures.PROFILE_LINES["body"]].get_ydata()) == {c.n_body_cm3}
+    assert "x_fig_junction_profile_scale" not in figures.substitutions()
+    light = figures.FIGURES["junction-profile"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["junction-profile"]("dark")
+
+
+def test_ldd_structure_is_the_textbook_one():
+    """The drawn structure is Taur and Ning's (PR #153 review should-fix 4): a spacer against
+    each side of the gate and its oxide; the heavily doped source and drain start at the spacers'
+    outer edges; the lightly doped drain runs from there under the spacer to a little under the
+    gate, from the surface to less than the junction depth. Its drawn sizes are named in the
+    statement, and the SVG carries the spacers and the LDD."""
+    from gf180tcad.explain import figures, model
+
+    drawn = figures.STYLE["ldd_drawn_um"]
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=figures.STYLE["scales"], drawn=drawn
+    )
+    ext = figures.cell_extents(c)
+    gate = ext["gate"]
+    parts = figures.ldd_parts(c)
+    w, reach = drawn["spacer width"], drawn["LDD overlap"]
+    for side, sign, edge in (("source", -1, gate.x0), ("drain", 1, gate.x1)):
+        sp, ldd, sd = parts[f"spacer-{side}"], parts[f"ldd-{side}"], parts[side]
+        outer = edge + sign * w
+        assert (sp.y0, sp.y1) == (gate.y0, 0.0), side  # from the gate's top to the surface
+        assert sorted((sp.x0, sp.x1)) == pytest.approx(sorted((edge, outer))), side
+        near = sd.x1 if side == "source" else sd.x0
+        assert near == pytest.approx(outer), side  # n+ starts at the spacer's outer edge
+        assert sd.y1 == pytest.approx(c.xj_um), side
+        assert sorted((ldd.x0, ldd.x1)) == pytest.approx(sorted((outer, edge - sign * reach))), side
+        assert ldd.y0 == 0 and 0 < ldd.y1 < c.xj_um, side
+    statement = figures.substitutions()["x_fig_ldd_cell_scale"]
+    assert statement == model.exaggeration(c.scales, drawn)
+    for name in figures.STYLE["ldd_drawn_um"]:
+        assert f"{name[0].upper()}{name[1:]} chosen for the drawing" in statement, name
+    light = figures.FIGURES["ldd-cell"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["ldd-cell"]("dark")
+    for gid in ("spacer-source", "spacer-drain", "ldd-source", "ldd-drain"):
+        assert f'id="{gid}'.encode() in light, gid
+
+
+def _drawn_figures(monkeypatch) -> dict[str, object]:
+    """Every figure of FIGURES in the light palette as its matplotlib figure, caught as it is
+    saved."""
+    from gf180tcad.explain import figures
+
+    caught = {}
+    for name, draw in figures.FIGURES.items():
+        monkeypatch.setattr(
+            figures, "_svg", lambda fig, name=name: caught.setdefault(name, fig) and b""
+        )
+        draw("light")
+    return caught
+
+
+def text_outside(fig) -> list[str]:
+    """What of ``fig`` is drawn outside the figure: its tight bounding box (every drawn artist,
+    tick labels and texts included) against the figure's own, and each title, text and legend
+    entry that leaves it, as 'text: extent'. Half a pixel of rounding is allowed."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    w, h = fig.bbox.width, fig.bbox.height
+
+    def outside(bb) -> bool:
+        return bb.x0 < -0.5 or bb.y0 < -0.5 or bb.x1 > w + 0.5 or bb.y1 > h + 0.5
+
+    out = []
+    texts = [*fig.texts, *(t for lg in fig.legends for t in lg.get_texts())]
+    for ax in fig.axes:
+        texts += [ax.title, ax._left_title, ax._right_title, *ax.texts]
+        if ax.get_legend():
+            texts += ax.get_legend().get_texts()
+    for t in texts:
+        if t.get_visible() and t.get_text().strip() and outside(t.get_window_extent(renderer)):
+            out.append(f"{t.get_text()!r}: {t.get_window_extent(renderer).bounds}")
+    tight = fig.get_tightbbox(renderer).transformed(fig.dpi_scale_trans)
+    if not out and outside(tight):
+        out.append(f"drawn extent {tight.bounds} beyond the figure {(0, 0, w, h)}")
+    return out
+
+
+def test_every_figure_keeps_its_text_inside(monkeypatch):
+    """No title, label or legend entry of any explainer figure is cut off at the figure's edge
+    (PR #153 review: the LDD cell's statement lost its first letter and its period)."""
+    found = {n: bad for n, fig in _drawn_figures(monkeypatch).items() if (bad := text_outside(fig))}
+    assert not found, found
+
+
+def test_positive_control_text_outside():
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+
+    fig = Figure(figsize=(2, 2), layout="constrained")
+    FigureCanvasAgg(fig)
+    fig.subplots().set_title("a title much too long for a figure two inches wide, cut at both ends")
+    assert text_outside(fig)
+    fig = Figure(figsize=(2, 2), layout="constrained")
+    FigureCanvasAgg(fig)
+    fig.subplots().set_title("short")
+    assert not text_outside(fig)

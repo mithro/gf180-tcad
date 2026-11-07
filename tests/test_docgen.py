@@ -75,10 +75,18 @@ EXPLAINED_FIGURES = [
     "calibration-pfet",
     "calibration-stack",
     "cv-parts",
+    "silicon-bonds",
+    "silicon-dopants",
+    "junction-profile",
+    "ldd-cell",
     "cv-overview",
     "spice-sweeps",
     "corner-cv",
     "corner-area",
+    "corner-bounds",
+    "corner-crosscheck",
+    "corner-crossing",
+    "corner-limits",
 ]
 
 
@@ -435,7 +443,11 @@ def test_moscap_page_per_device_geometry(tmp_path):
     docgen.generate(tmp_path)
     root = tmp_path / "tcad"
     expected = {f"{name}/{geometry_id(g)}.md" for name, d in DEVICES.items() for g in d.geometries}
-    pages = {str(p.relative_to(root)) for p in root.glob("*/*.md") if p.name != "index.md"}
+    pages = {
+        str(p.relative_to(root))
+        for p in root.glob("*/*.md")
+        if p.name not in ("index.md", docgen.CORNER_FRAGMENT)
+    }
     assert len(expected) == 12 and pages == expected
     for name, device in DEVICES.items():
         for g in device.geometries:
@@ -455,8 +467,17 @@ def test_moscap_page_per_device_geometry(tmp_path):
             assert f"| {1e3 * m['dv_inv_v']:+.1f} |" in page
             assert f"{100 * m['depletion_max_rel']:.2f} %" in page
             assert g.role in page
-            # mesh pictures: no mesh file is committed, and the page says so
-            assert "mesh.msh" in page and "not committed" in page and "issues/39" in page
+            # mesh pictures: from each 2D cell's committed reduced mesh artefact, or a reason
+            assert "issues/39" not in page and "### Mesh picture" in page
+            for params in ("calibrated", "start"):
+                if not (TCAD / "moscap2d" / name / params / gid / "cv.meta.json").is_file():
+                    continue
+                if list((TCAD / "meshes").glob(f"*/{name}/{params}/{gid}/mesh-window.meta.json")):
+                    assert f":name: mesh-{name}-{gid}-{params}" in page
+                    for palette in ("light", "dark"):
+                        assert (root / name / f"{gid}_mesh_{params}-{palette}.svg").is_file()
+                else:
+                    assert docgen._NO_ARTEFACT[params] in page
             meta = TCAD / "moscap2d" / name / "start" / gid / "cv.meta.json"
             if meta.is_file():
                 assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page
@@ -674,6 +695,232 @@ def test_moscap_missing_result_raises(tmp_path):
     (tcad / "validation" / "pfet_05v0.json").unlink()
     with pytest.raises(FileNotFoundError, match="pfet_05v0.json"):
         docgen.generate(tmp_path / "out", tcad_root=tcad)
+
+
+# --- the mesh picture of a 2D cell (renders plan, Task R0) ------------------------------------
+
+
+def _fake_device(tcad, name="nfet_05v0"):
+    from types import SimpleNamespace
+
+    def two_d(gid, params="start"):
+        job = tcad / "moscap2d" / name / params / gid
+        return job if (job / "cv.meta.json").is_file() else None
+
+    return SimpleNamespace(root=tcad, device=SimpleNamespace(name=name), two_d=two_d)
+
+
+def _synthetic_artefact(tcad, name, params, gid):
+    """A 2D job and a reduced mesh artefact of it cut from the meshcut test fixture."""
+    import numpy as np
+
+    from gf180tcad.meshcut import artefact, msh, window
+
+    job = tcad / "moscap2d" / name / params / gid
+    job.mkdir(parents=True)
+    (job / "cv.meta.json").write_text("{}\n", encoding="utf-8")
+    fixture = REPO_ROOT / "tests" / "fixtures" / "meshcut" / "grid30.msh"
+    mesh = msh.read(fixture)
+    win = window.cut(mesh, x_um=(0.0, 0.5), y_um=(-0.15, 0.2))
+    win = win.with_net_doping(np.zeros(len(win.node_id)))
+    out = tcad / "meshes" / "stable" / name / params / gid
+    out.mkdir(parents=True)
+    rule = {"depth_um": 0.15, "gate_x_um": [0.0, 0.5], "kx": 0.0, "poly_top_um": 0.2,
+            "surface_um": 0.0}  # fmt: skip
+    job_rec = {"cv_meta_sha256": "0" * 64, "device": name, "geometry_id": gid, "params": params,
+               "tree": "tcad/moscap2d"}  # fmt: skip
+    from gf180tcad.meshcut import job as cut_job
+
+    return out, artefact.write(
+        out, win, job=job_rec, full_mesh_sha256="a" * 64, full_mesh_node_count=30,
+        full_mesh_triangle_count=40, rule=rule, source="cache",
+        region_bounds_um=cut_job.region_bounds(mesh),
+    )  # fmt: skip
+
+
+def test_mesh_figure_from_committed_artefact(tmp_path):
+    tcad = tmp_path / "results" / "tcad"
+    _, meta = _synthetic_artefact(tcad, "nfet_05v0", "calibrated", "w1p0_l0p50")
+    ddir = tmp_path / "page"
+    ddir.mkdir()
+    lines = docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir)
+    text = "\n".join(lines)
+    assert text.count("```{figure}") == 2  # a light and a dark twin
+    assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
+    assert "{numref}`mesh-nfet_05v0-w1p0_l0p50-calibrated` shows the mesh" in text
+    assert ":figclass: only-light" in text and ":figclass: only-dark" in text
+    assert f"{meta['triangle_count']} of the full mesh's 40 triangles" in text
+    assert "results/tcad/meshes/stable/nfet_05v0/calibrated/w1p0_l0p50" in text
+    assert "a" * 64 in text
+    light = (ddir / "w1p0_l0p50_mesh_calibrated-light.svg").read_bytes()
+    dark = (ddir / "w1p0_l0p50_mesh_calibrated-dark.svg").read_bytes()
+    assert light.startswith(b"<?xml") and light != dark
+    again = tmp_path / "again"
+    again.mkdir()
+    docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", again)
+    assert (again / "w1p0_l0p50_mesh_calibrated-light.svg").read_bytes() == light
+
+
+def test_mesh_figure_absent_states_why(tmp_path):
+    tcad = tmp_path / "results" / "tcad"
+    _synthetic_artefact(tcad, "nfet_05v0", "calibrated", "w1p0_l0p50")
+    start = tcad / "moscap2d" / "nfet_05v0" / "start" / "w1p0_l0p50"
+    start.mkdir(parents=True)
+    (start / "cv.meta.json").write_text("{}\n", encoding="utf-8")
+    ddir = tmp_path / "page"
+    ddir.mkdir()
+    text = "\n".join(docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir))
+    assert docgen._NO_ARTEFACT["start"] in text
+    assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
+    assert not list(ddir.glob("*_mesh_start-*.svg"))
+    none = "\n".join(docgen._mesh_section(_fake_device(tcad), "w9p9_l9p90", ddir))
+    assert "No 2D result exists for this geometry" in none
+
+
+def test_no_mesh_deviation_text_when_artefact_exists(tmp_path):
+    tcad = tmp_path / "results" / "tcad"
+    _synthetic_artefact(tcad, "nfet_05v0", "calibrated", "w1p0_l0p50")
+    ddir = tmp_path / "page"
+    ddir.mkdir()
+    text = "\n".join(docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir))
+    for old in ("issues/39", "deviation", "not committed (git-ignored", "No mesh picture"):
+        assert old not in text
+    assert not hasattr(docgen, "_NO_MESH")
+
+
+_RENDER_MESH = textwrap.dedent(
+    """
+    import sys
+    from pathlib import Path
+    from gf180tcad.explain import figures
+    sys.stdout.buffer.write(figures.mesh_artefact(Path(sys.argv[1]), sys.argv[2]))
+    """
+)
+
+
+@pytest.mark.parametrize("palette", ["light", "dark"])
+def test_mesh_figure_svg_deterministic(tmp_path, palette):
+    """The mesh figure (its triangles embedded as an image): two fresh processes, same bytes."""
+    out, _ = _synthetic_artefact(tmp_path / "tcad", "nfet_05v0", "calibrated", "w1p0_l0p50")
+    runs = []
+    for seed in ("1", "2"):
+        env = {**os.environ, "PYTHONHASHSEED": seed}
+        r = subprocess.run(
+            [sys.executable, "-c", _RENDER_MESH, str(out), palette],
+            env=env, capture_output=True, check=True, timeout=300,
+        )  # fmt: skip
+        runs.append(r.stdout)
+    a, b = runs
+    assert a.startswith(b"<?xml") and b"<text" in a and b"data:image/png;base64" in a and a == b
+    assert b"<dc:date>" not in a and str(tmp_path).encode() not in a
+
+
+def _corner_summary() -> dict:
+    """A synthetic corner summary of the nfet (the layout of
+    :func:`gf180tcad.calibrate.corners.summary`), with the ff oxide on its lower limit."""
+    from gf180tcad.devices import CORNERS
+
+    fit = [c for c in CORNERS if c != "typical"]
+    values = {
+        "t_ox_eff_nm": dict(zip(CORNERS, (16.05, 15.05, 17.0, 15.3, 16.8), strict=True)),
+        "n_ch_cm3": dict(zip(CORNERS, (8.8e16, 8.1e16, 9.6e16, 8.5e16, 9.1e16), strict=True)),
+        "dv_fb_v": dict(zip(CORNERS, (0.0987, -0.03, 0.22, 0.01, 0.18), strict=True)),
+    }
+    tunables = {}
+    for n, per in values.items():
+        lo = min(per, key=per.get)
+        hi = max(per, key=per.get)
+        row = {"typical": per["typical"], "values": per, "min": per[lo], "min_corner": lo,
+               "max": per[hi], "max_corner": hi, "spread": per[hi] - per[lo],
+               "min_at_bound": "lower" if n == "t_ox_eff_nm" else None, "max_at_bound": None}  # fmt: skip
+        if n == "n_ch_cm3":
+            row["card_shift"] = row["tcad_shift"] = row["shift_difference"] = None
+        else:
+            card = {c: (per[c] - per["typical"]) * 0.9 for c in fit}
+            tcad = {c: per[c] - per["typical"] for c in fit}
+            row |= {"card_shift": card, "tcad_shift": tcad,
+                    "shift_difference": {c: tcad[c] - card[c] for c in fit}}  # fmt: skip
+        tunables[n] = row
+    corners = {"typical": {"bound_hits": {}, "per_geometry": {"g": "Agree"}, "verdict": "Agree"}}
+    for c in fit:
+        corners[c] = {
+            "bound_hits": {"t_ox_eff_nm": "lower"} if c == "ff" else {},
+            "held_out": {"a": "Agree", "b": "Same process" if c == "ss" else "Agree"},
+            "per_geometry": {"g": "Agree"},
+            "verdict": "Agree",
+        }
+    return {"corners": corners, "device": "nfet_05v0", "tunables": tunables}
+
+
+def test_docgen_corner_table_one_value_per_cell():
+    """The corner tables of a device page: at most five columns, one value per cell (a number,
+    a corner, a verdict or a limit word), each read from the summary, the unit in the row label
+    or the header; a limit hit is named below the tables, not in a cell."""
+    import re
+
+    from gf180tcad.explain.numbers import shortest
+
+    s = _corner_summary()
+    lines = docgen.corner_tables("nfet_05v0", s)
+    tables = _md_tables(lines)
+    assert len(tables) == 6
+    one_value = re.compile(r"^(`[a-z_0-9]+`( \([^)]+\))?|−?[0-9.]+(\xa0×\xa010[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+)?†?|"
+                           r"[a-z]+|lower limit|upper limit|"
+                           r"\{term\}`(Agree|Same process|Disagree)`|not applicable)$")  # fmt: skip
+    for header, rows in tables:
+        assert len(header) <= 5, header
+        for r in rows:
+            assert len(r) == len(header)
+            for cell in r:
+                assert one_value.match(cell), (header, cell)
+    bounds, where, per, tox, fb, verdicts = tables
+    assert bounds[0] == ["Number", "Typical", "Lowest", "Highest", "Spread"]
+    tox_row = s["tunables"]["t_ox_eff_nm"]
+    assert bounds[1][0] == ["`t_ox_eff_nm` (nm)", shortest(tox_row["typical"], "", 4),
+                            shortest(tox_row["min"], "", 4) + "†", shortest(tox_row["max"], "", 4),
+                            shortest(tox_row["spread"], "", 4)]  # fmt: skip
+    fb_row = s["tunables"]["dv_fb_v"]
+    assert bounds[1][2][1:] == [
+        shortest(fb_row[k], "", 3) for k in ("typical", "min", "max", "spread")
+    ]
+    assert bounds[1][2][2] == "−0.03"
+    assert bounds[1][1][1] == "8.8\xa0×\xa010¹⁶"
+    assert where[0] == ["Number", "Lowest at", "On a limit", "Highest at", "On a limit"]
+    assert where[1][0] == ["`t_ox_eff_nm`", "ff", "lower limit", "ss", "no"]
+    assert [r[0] for r in per[1]] == ["typical", "ff", "ss", "fs", "sf"]
+    assert per[1][2][1:] == ["17", "9.6\xa0×\xa010¹⁶", "0.22"]
+    assert per[1][1][1] == "15.05†" and per[1][1][3] == "−0.03"
+    assert tox[0] == ["Corner", "Card (nm)", "Fit (nm)", "Difference (nm)"]
+    assert tox[1][0][2].endswith("†") and tox[1][0][3].endswith("†") and "†" not in tox[1][0][1]
+    assert not any("†" in c for r in fb[1] for c in r)
+    assert fb[0][1] == "Card (V)"
+    assert [r[0] for r in tox[1]] == ["ff", "ss", "fs", "sf"]
+    assert verdicts[1][0] == ["typical", "{term}`Agree`", "not applicable"]
+    assert verdicts[1][2] == ["ss", "{term}`Agree`", "{term}`Same process`"]
+    assert "Limit hits: `t_ox_eff_nm` at ff is on its lower limit." in lines
+    # the note below each table with a marked value, and only below those
+    note = [i for i, ln in enumerate(lines) if ln == docgen.LIMIT_NOTE]
+    marked = [i for i, ln in enumerate(lines) if ln.startswith("|") and "†" in ln]
+    assert len(note) == 3 and all(any(m < n for m in marked) for n in note)
+    assert not any(
+        "bound" in ln.lower().replace("bounds", "") for ln in lines if "{repo}" not in ln
+    )
+
+
+def test_docgen_corner_tables_mark_nothing_without_a_limit_hit():
+    """With no fit on a limit, no cell carries the mark and no note is written."""
+    s = _corner_summary()
+    s["tunables"]["t_ox_eff_nm"]["min_at_bound"] = None
+    s["corners"]["ff"]["bound_hits"] = {}
+    lines = docgen.corner_tables("nfet_05v0", s)
+    assert not any("†" in ln for ln in lines)
+    assert docgen.LIMIT_NOTE not in lines
+    assert "No fit, typical or corner, sits on a limit." in lines
+
+
+def test_docgen_corner_table_refuses_another_device():
+    with pytest.raises(ValueError, match="pfet_05v0"):
+        docgen.corner_tables("pfet_05v0", _corner_summary())
 
 
 def test_readme_figures_are_current():

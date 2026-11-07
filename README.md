@@ -92,6 +92,14 @@ grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossar
 and the dashed line the fitted 1D stack. Dotted lines and an arrow mark each length's SPICE
 depletion edge. `make readme-figures` draws it from the committed results.*
 
+The same 1D calibration is repeated against the four other SPICE corners: ff, ss, fs and sf
+([`results/tcad/corners`](results/tcad/corners)). Each corner fit takes that corner's model-card
+offsets of the gate area and the overlaps as fixed inputs. Its oxide and threshold offsets move
+the start value and limits of two numbers that stay fitted. Each fitted number thus has a lower and an upper bound, and the spread
+between them
+([bounds and limitations](https://gf180-tcad.readthedocs.io/en/latest/explained/calibration.html#explained-calibration-corners)).
+The Monte Carlo spread has no code (issue #57, on the roadmap).
+
 Every committed TCAD result has generated
 pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
 [results page](https://gf180-tcad.readthedocs.io/en/latest/results/index.html), and
@@ -107,6 +115,10 @@ The calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7
 at L = 0.6 and 0.7 µm and are
 [Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) at W10/L1 and W10/L2.
 Five calibrated 2D pfet cells are committed. W10/L0.5, W10/L0.7 and W1.6/L0.7 are Same process, and W10/L1 and W10/L2 disagree.
+
+Each calibrated 2D cell also has a committed reduced mesh artefact, the mesh around its gate, in
+[`results/tcad/meshes/stable`](results/tcad/meshes/stable). Its geometry page draws it, and a
+GitHub-hosted runner cuts all ten again byte for byte.
 
 Planned work, each item with its issue, is on the
 [roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html), among it a

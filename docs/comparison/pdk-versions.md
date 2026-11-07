@@ -14,9 +14,31 @@ every run-2 project used ({ref}`pdk-versions-run2`).
 **Answer: no, between d658698 and the latest.** For these two devices the models are the
 same. Rerun with the d658698 models, every {{ ngspice }} result file at the {term}`TT`
 {term}`corner` is byte-identical to the committed reference. That is 72 files: at each of 12
-geometries, 5 {term}`sweep` comma-separated value (CSV) files and `metrics.json`. So every
-metric delta is exactly 0. The two PDKs' model libraries differ in one `.lib` section only,
+geometries, 5 {term}`sweep` comma-separated value (CSV) files and
+{repo}`metrics.json <results/spice-pdk-d658698/ngspice/typical/nfet_05v0/w10p0_l10p00/metrics.json>`.
+So every metric delta is exactly 0. The two PDKs' model libraries differ in one `.lib` section only,
 [`res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571), which the transistors never load.
+
+One sweep of each device from both PDKs is in {numref}`pdk-versions-sweeps-figure`.
+
+```{figure} /_generated/comparison/pdk-sweeps-light.svg
+:name: pdk-versions-sweeps-figure
+:figclass: only-light
+:alt: Two log plots of drain current against gate voltage, nfet and pfet, three curves each; every dashed curve lies on a solid one.
+
+The {term}`idvg_lin` sweep of each device at W = 10 µm and L = 10 µm, at the {term}`TT` corner, one line per
+body bias. The solid lines use the PDK of the image ({repo}`results/spice`), the dashed lines open_pdks d658698
+({repo}`results/spice-pdk-d658698`). Each dashed line lies on its solid line.
+```
+
+```{figure} /_generated/comparison/pdk-sweeps-dark.svg
+:figclass: only-dark
+:alt: Two log plots of drain current against gate voltage, nfet and pfet, three curves each; every dashed curve lies on a solid one.
+
+The {term}`idvg_lin` sweep of each device at W = 10 µm and L = 10 µm, at the {term}`TT` corner, one line per
+body bias. The solid lines use the PDK of the image ({repo}`results/spice`), the dashed lines open_pdks d658698
+({repo}`results/spice-pdk-d658698`). Each dashed line lies on its solid line.
+```
 
 ## How it was checked
 
@@ -47,7 +69,8 @@ uv run --locked python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698
    `.lib` sections and card values, and {py:func}`gf180tcad.pdkdiff.compare` the metrics.
 
 The results are in {repo}`results/spice-pdk-d658698`. The job results are in
-{repo}`results/spice-pdk-d658698/ngspice/typical`, with the same layout as {repo}`results/spice`.
+{repo}`results/spice-pdk-d658698/ngspice/typical`, with the same folders and file names as
+{repo}`results/spice`.
 Beside them are {repo}`results/spice-pdk-d658698/cards.json`,
 {repo}`results/spice-pdk-d658698/comparison.json`, the two unified diffs and
 {repo}`results/spice-pdk-d658698/provenance.json`.
@@ -125,11 +148,15 @@ Per metric, over the 12 geometries:
 ## Card values re-checked
 
 The design spec §4 quotes card values read from the run-1/2 card. Both cards are re-read here
-(`cards.json`). The d658698 card and the latest card have every one of these entries on the
+({repo}`cards.json <results/spice-pdk-d658698/cards.json>`). The d658698 card and the latest card have every one of these entries on the
 same line with the same expression. The links go to the latest card's source in the
 {{ gf180mcu_models }}, which is byte-identical to the image's card ({ref}`process-data`).
 Expressions in {term}`corner` parameters (such as `nfet_06v0_tox`) are 0 or 1 at TT, so the
 TT value is the leading number.
+
+Two of the entries below describe the gate stack. TOXE is the thickness of the {term}`gate oxide`
+and NDEP the body doping under it. The nfet stack drawn at these two values is
+{numref}`Figure %s of Process data for the MOS capacitors <process-data-stack-figure>`.
 
 `nfet_06v0.0`:
 

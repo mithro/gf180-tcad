@@ -73,6 +73,8 @@ Each step is a target of its own, which can also be run alone:
 | `tcad-calibrate` | `python -m gf180tcad.calibrate run` for both devices | {repo}`results/tcad/calibration` |
 | `tcad-calibrated` | `python -m gf180tcad.tcad moscap --dim 1 --params calibrated` for both devices, and `--dim 2 --params calibrated` for each committed calibrated 2D cell ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) | {repo}`results/tcad/moscap1d`, {repo}`results/tcad/moscap2d` |
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
+| `tcad-meshes` | `python -m gf180tcad.meshcut cut` for each calibrated 2D cell, from its full mesh in the output cache ({ref}`mesh-artefact`) | {repo}`results/tcad/meshes/stable` |
+| `tcad-corners` | `python -m gf180tcad.calibrate.corners run` for both devices at ff, ss, fs and sf, four 2 GiB {term}`jobs <job>` at a time, then `summary` for each device ({ref}`reproduce-corners`) | {repo}`results/tcad/corners` |
 
 In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs`. Both use the
 same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job
@@ -100,6 +102,9 @@ minutes. The 2D ones take hours: the 2D {term}`mesh convergence` and every 2D
 {term}`MOS capacitor` job run one 16 GiB job at a time, hours each ({doc}`../limitations/moscap2d`),
 so the host needs 16 GiB of memory free for the sandbox.
 
+The eight 1D corner fits of `tcad-corners` run four at a time, 2 GiB each, and take under an
+hour in all.
+
 **Not run end to end, and the 2D files are not expected to match.** Its TCAD half has not
 been run in one go. Its 2D job files were made by older code, and the
 L = 2 µm {term}`sweeps <sweep>` were resumed, so a fresh run differs from them; see {ref}`moscap2d-reproduce`.
@@ -115,7 +120,7 @@ half alone.
 {ref}`crosscheck-tcad job <cross-host-tcad>` does: {repo}`tools/crosscheck-tcad-run` writes the jobs
 into `tmp/reproduce-quick` (`QUICK_OUT=`; a path under {repo}`results`, or inside the repository but outside `tmp/`, is refused), then
 `python -m gf180tcad.manifest verify-subset tmp/reproduce-quick --kind tcad --prefix tcad/`
-compares them byte for byte with the manifest. A TCAD subset `all` covers the `moscap1d` and `moscap2d` results folders only and reports `moscap2d/*/calibrated` as `unknown job`; the 2D calibrated results are issue [#35](https://github.com/mithro/gf180-tcad/issues/35). On 2026-10-26 it printed
+compares them byte for byte with the manifest. A TCAD subset `all` covers the `moscap1d` and `moscap2d` results folders only; a reduced mesh artefact job is listed on its own line. On 2026-10-26 it printed
 `identical: 5 files of 2 jobs in tmp/reproduce-quick match results/MANIFEST.sha256 under tcad/`.
 
 After an intended change to the results, regenerate them and rewrite the
@@ -320,7 +325,8 @@ where
 
 The oxide and flat-band bounds and start values move by the corner's own shift of the same
 quantity, as {math:numref}`eq-corner-bounds` gives. The doping bounds stay as at the typical
-corner.
+corner. A fit that stops on its flat-band limit runs again with a wider window
+({ref}`limitations-corners-limits`).
 
 $$
 t_c = t + \Delta t_c, \qquad V_c = V + \Delta V_c
@@ -485,7 +491,7 @@ The registry's entry points:
 - {py:mod}`gf180tcad.calibrate.__main__` writes the calibration and validation folders;
 - {py:mod}`gf180tcad.calibrate.corners` writes the corner fits ({ref}`reproduce-corners`);
 - {py:mod}`gf180tcad.meshcut.__main__` cuts the reduced mesh artefact of a 2D job and writes
-  no committed folder.
+  {repo}`results/tcad/meshes/stable`.
 
 A change to a module that a folder's writer never imports therefore leaves the folder's hash alone.
 The calibration code ({py:mod}`gf180tcad.calibrate`, {py:mod}`gf180tcad.specwindow`) is not in
@@ -503,6 +509,8 @@ every hash. The results folders, their writers and the commands that regenerate 
 | {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `python -m gf180tcad.tcad meshconv --device D --dim 1` (and `--dim 2 --jobs 1`) `--out results/tcad/meshconv` |
 | {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate run --device D --out results/tcad/calibration` |
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate validate --device D --out results/tcad/validation` |
+| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `python -m gf180tcad.meshcut cut --job results/tcad/moscap2d/D/calibrated/GID --out results/tcad/meshes/stable` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `python -m gf180tcad.calibrate.corners run --device D --corner C --out results/tcad/corners`, then `summary --device D --out results/tcad/corners` |
 
 The 2D jobs run one 16 GiB job at a time, hours each; the L = 2 µm cells run `--method qs`,
 then `--method combine-qs`. The validation is regenerated after the calibration is committed.
@@ -591,6 +599,53 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w1p6_l0p70` | 5.35 | 0 | 2026-10-28 21:45 |
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
+
+**Reduced mesh artefacts.** Each artefact under {repo}`results/tcad/meshes/stable` is one host
+command, run alone in the same stable image, one at a time, on 2026-11-03:
+
+```
+python -m gf180tcad.meshcut cut --job results/tcad/moscap2d/D/calibrated/GID \
+    --out results/tcad/meshes/stable --scratch DIR
+```
+
+The command pulls the full mesh from the {ref}`output cache <output-cache>`, then cuts it in a
+4 GiB sandbox with one CPU and no network. The wall time is the host command's, pull included.
+
+| Device | Geometry | Wall time (s) | Exit code |
+|---|---|---|---|
+| `nfet_05v0` | `w10p0_l0p60` | 24.8 | 0 |
+| `nfet_05v0` | `w10p0_l0p70` | 30.0 | 0 |
+| `nfet_05v0` | `w10p0_l1p00` | 29.4 | 0 |
+| `nfet_05v0` | `w10p0_l2p00` | 39.0 | 0 |
+| `nfet_05v0` | `w1p6_l0p70` | 26.3 | 0 |
+| `pfet_05v0` | `w10p0_l0p50` | 23.7 | 0 |
+| `pfet_05v0` | `w10p0_l0p70` | 26.4 | 0 |
+| `pfet_05v0` | `w10p0_l1p00` | 28.2 | 0 |
+| `pfet_05v0` | `w10p0_l2p00` | 40.4 | 0 |
+| `pfet_05v0` | `w1p6_l0p70` | 28.9 | 0 |
+
+{ref}`moscap2d-mesh-artefact` gives each artefact's node count and size. The logs of these ten
+cuts hold the wall time and the exit code; the peak memory was measured on one cut, below.
+
+(reproduce-meshcut-memory)=
+
+**Memory of a cut.** The nfet `w10p0_l0p60` cut ran once more on 2026-11-03, alone in the same
+4 GiB sandbox with one CPU, under `/usr/bin/time -v`. The peak resident memory and the job's
+wall time are from `/usr/bin/time -v`; `memory.peak` is the container's {term}`cgroup` peak.
+
+| Quantity | Value |
+|---|---|
+| Nodes kept | 109188 |
+| Triangles kept | 216407 |
+| `size_bytes` | 3444020 |
+| Wall time of the cut job (s) | 24.69 |
+| Wall time of the host command (s) | 25.6 |
+| Peak resident memory (kB) | 479624 |
+| `memory.peak` (bytes) | 479981568 |
+| Exit code | 0 |
+
+Its `.npz` sha256, node count, triangle count and `size_bytes` equal those in the committed
+{repo}`results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p60/mesh-window.meta.json`.
 
 The nfet jobs ran at gplugins `1c071d0`. The folder's `provenance.json` names the later pin, `0715c81`.
 The nfet W10/L2 job was committed after the "Restamped without a rerun" list below, so that list does not name it.
@@ -825,34 +880,45 @@ regenerated and the manifest updated, the same as `make reproduce`.
 ### The TCAD cross-check: `crosscheck-tcad`
 
 A second job of the same workflow, `crosscheck-tcad`, does the same for the {term}`TCAD`
-results. It regenerates the jobs of {repo}`tests/crosscheck_tcad_subset.txt`, the calibrated
-1D {term}`MOS capacitor` of both devices (`moscap1d/nfet_05v0/calibrated` and
-`moscap1d/pfet_05v0/calibrated`), on a GitHub-hosted runner and requires every file to be
-byte-identical to the manifest. The jobs rerun exactly the committed configuration: the selected
-mesh, the SPICE `cv` gate biases and the committed calibrated values. Its steps are:
+results. It regenerates the jobs of {repo}`tests/crosscheck_tcad_subset.txt` on a
+GitHub-hosted runner and requires every file to be byte-identical to the manifest. The jobs are:
+
+- `moscap1d/nfet_05v0/calibrated` and `moscap1d/pfet_05v0/calibrated`: the calibrated 1D
+  {term}`MOS capacitor`, rerun with the selected mesh, the SPICE `cv` gate biases and the
+  calibrated values;
+- `meshes/stable/nfet_05v0/calibrated` and `meshes/stable/pfet_05v0/calibrated`: the reduced
+  mesh artefacts, cut again from full meshes pulled from the {ref}`output cache <output-cache>`.
+
+Its steps are:
 
 1. Free disk space, check out with `submodules: true` (the plugin is imported from
    {repo}`third_party/gplugins <third_party>`, and its commit is recorded in the results folder's provenance),
    and install the sandbox slice as above.
-2. Pull, by {term}`digest <manifest digest>`, the image the jobs run in. That is the image of the
-   1D results ({py:data}`gf180tcad.tcad.RESULTS_IMAGE`), the {term}`dev-HEAD TCAD image`
-   {repo}`docker/TCAD_DEV_IMAGE`, which made the committed files; `tools/crosscheck-tcad-run
-   --images` prints it.
-3. {repo}`tools/crosscheck-tcad-run` runs each job as the host command that made it,
+2. Pull, by {term}`digest <manifest digest>`, the images the jobs run in; `tools/crosscheck-tcad-run
+   --images` prints them. The 1D jobs run in the image of the 1D results
+   ({py:data}`gf180tcad.tcad.RESULTS_IMAGE`), the {term}`dev-HEAD TCAD image`
+   {repo}`docker/TCAD_DEV_IMAGE`. The artefact jobs run in the image that
+   {repo}`results/tcad/meshes/stable/provenance.json` records, the {term}`stable TCAD image`.
+3. {repo}`tools/crosscheck-tcad-run` runs each job as the host command that made it, one at a time,
+   into a temporary results folder. It refuses an `--out` under {repo}`results`. A 1D job is
    `python -m gf180tcad.tcad moscap --device D --dim 1 --params calibrated --out <out>/moscap1d`
-   (2 GiB, 1 CPU), one at a time, into a temporary results folder. It refuses an `--out` under
-   {repo}`results`.
+   (2 GiB, 1 CPU). An artefact job is one `python -m gf180tcad.meshcut cut` per committed artefact
+   (4 GiB, 1 CPU).
 4. `python -m gf180tcad.manifest verify-subset <out> --kind tcad --against results/MANIFEST.sha256
    --prefix tcad/ --subset tests/crosscheck_tcad_subset.txt`. TCAD jobs are `<tree>/<device>/<params>`
    paths; each results folder the jobs name must have its own `provenance.json`, which is compared (it holds
    the calibration file's sha256 for both devices, which is why both are listed). There is no
-   envelope. On success it prints `identical: 5 files of 2 jobs ...`. The first run passed on an AMD EPYC 7763
-   ([run](https://github.com/mithro/gf180-tcad/actions/runs/40308867413), 2026-10-26).
+   envelope. On success it prints `identical: 26 files of 4 jobs ...`.
 5. On failure, the artefact `crosscheck-tcad-differences` holds the generated and committed copy
    of each differing file, their `diff -u`, the logs and the scratch directory of any failed job.
 
-**Checked only locally.** The 1D start values, the calibration and validation, the mesh
-convergence and the 2D results are not cross-checked on GitHub-hosted runners. The 2D jobs take
+The cross-check first passed with the 1D jobs on an AMD EPYC 7763
+([run](https://github.com/mithro/gf180-tcad/actions/runs/40308867413), 2026-10-26). It first
+passed with the artefact jobs on an AMD EPYC 9V74
+([run](https://github.com/mithro/gf180-tcad/actions/runs/41549254923), 2026-11-03).
+
+**Checked only locally.** GitHub-hosted runners do not cross-check the 1D start values, the
+calibration and validation, the mesh convergence or the 2D C–V results. The 2D jobs take
 hours at 16 GiB each, more than the runner has. The 1D start-value and calibrated jobs are
 rerun byte for byte locally by
 {test}`tests/tcad/test_moscap1d.py::test_byte_identical`, and the 1D mesh convergence by
@@ -928,7 +994,9 @@ The artefact has no size cap. `cut` measures the file, records its size in the m
 `size_bytes` and prints it
 ({repo}`design spec §10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`).
 The meta file also records the sha256 of the full mesh, which must equal the job's committed
-`mesh_sha256`. No artefact is committed. The command for one job:
+`mesh_sha256`. The artefacts of the ten calibrated 2D cells are committed, in
+{repo}`results/tcad/meshes/stable`; {ref}`moscap2d-mesh-artefact` lists each one's
+`size_bytes`. The command for one job:
 
 ```sh
 uv run --locked python -m gf180tcad.meshcut cut \

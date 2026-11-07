@@ -13,6 +13,8 @@ committed files (tested).
 
 from __future__ import annotations
 
+import math
+import textwrap
 from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
@@ -21,8 +23,12 @@ from typing import NamedTuple
 import matplotlib
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.collections import PolyCollection
+from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
+from matplotlib.patches import Circle, Patch
+from matplotlib.ticker import FixedFormatter, FixedLocator, NullFormatter
 
 from gf180tcad import meshcut, plots
 from gf180tcad.explain import data, idealised, model, numbers
@@ -60,8 +66,6 @@ STYLE = {
     "level_label_lift": 0.02,
     "level_label_x": 0.04,
     "fill_alpha": 0.22,
-    # The 2D cross-section: extents with no committed source, drawn at a chosen size (µm).
-    "drawn_um": {"source and drain width": 0.6},
     # Contacts are bars this fraction of the drawing's height thick, the source and drain ones
     # this fraction of their region's width wide.
     "contact_frac": 0.025,
@@ -70,9 +74,29 @@ STYLE = {
     "junction_width": 4.0,
     # Labels of the cross-section sit this fraction of the drawing's height off their part.
     "cell_label_gap": 0.03,
+    # A title line holds at most this many characters: 12 pt text across a 6.4 in figure.
+    "title_chars": 60,
     # The reduced mesh artefact's window, outlined on the cross-section: dashed, this wide.
     "window_width": 2.4,
     "window_dash": (0, (4, 2)),
+    # The mesh figure of a reduced mesh artefact: each region filled in its Okabe-Ito colour at
+    # this opacity, every mesh edge this thin (pt), the region boundaries at "edge_width". The
+    # triangles are embedded as an image at this resolution (dots per inch), the rest as
+    # vectors. The figure's height follows the window's aspect (to scale), within these bounds
+    # (in), plus room for the axis labels and the legend.
+    "mesh_regions": {
+        "body": ("#E69F00", "body (silicon)"),
+        "gate_poly": ("#56B4E9", "gate (polysilicon)"),
+        "ild": ("#F0E442", "insulator around the gate"),
+        "oxide": ("#CC79A7", "gate oxide"),
+    },
+    "mesh_alpha": 0.55,
+    "mesh_edge_pt": 0.2,
+    "mesh_dpi": 150,
+    "mesh_height_in": (1.2, 3.6),
+    "mesh_room_in": 1.3,
+    # The axes' margins (in): fixed, so the figure is drawn once (no layout pass over the mesh).
+    "mesh_margin_in": {"left": 0.9, "right": 0.2, "bottom": 1.05, "top": 0.15},
     # The junction panels: positions from (1 + pad) widths into the body to pad widths into the
     # source, on this many points; the charge axis spans the dopings with headroom.
     "junction_pad": 0.25,
@@ -122,22 +146,60 @@ STYLE = {
     "limits_size_in": (6.4, 6.4),
     "limit_width": 10.0,
     "limit_tick_pt": 16.0,
+    # the ring round a value on a limit of its fit, as a multiple of the marker size
+    "limit_ring_scale": 1.9,
+    # a log axis under a decade wide is labelled at these multiples of each power of the base
+    "log_tick_mantissas": (1, 2, 3, 5),
+    "log_base": 10.0,
     "marker_pt": 9.0,
     # The SPICE crossings of the compare plot: hollow rings this size (pt) round the simulated ones.
     "ring_pt": 16.0,
     "row_pad": 0.6,
     "limit_margin": 0.08,
+    # The lattice drawings: a figure this size; this many atoms per side, one atom spacing apart;
+    # the bonds off the edge this long (spacings), so the crystal reads as going on; atoms of this
+    # radius (spacings); a bond's two electrons this far either side of its line (spacings); the
+    # dots this size (pt).
+    "lattice_size_in": (6.4, 3.9),
+    "lattice_atoms": 3,
+    "lattice_stub": 0.75,
+    "atom_radius": 0.22,
+    "bond_pair_gap": 0.07,
+    "bond_electron_pt": 5.0,
+    "free_electron_pt": 10.0,
+    "hole_pt": 11.0,
+    # Drawing order (matplotlib zorder) of the lattice: bonds, then atoms, then the bonding
+    # electrons, then the free electrons and holes, then the atoms' labels on top.
+    "lattice_zorder": {"bond": 1, "atom": 2, "electron": 3, "carrier": 4, "label": 5},
+    # The source doping profile: a taller figure for the two rows; depths to (1 + pad) junction
+    # depths; along the surface, this many lateral straggles either side of the gate edge.
+    "profile_size_in": (6.4, 6.4),
+    "profile_pad": 0.5,
+    "profile_span": 4.0,
+    # The labels either side of the gate edge sit this fraction of the axis width off its line.
+    "edge_label_gap": 0.03,
+    # The lightly doped drain of the parts page, which the simulated cell does not have: drawn at
+    # a chosen size (µm), with no committed source.
+    "ldd_drawn_um": {"LDD depth": 0.05, "LDD overlap": 0.08, "spacer width": 0.15},
     # The gate-area figure of the corner fits, in drawing units: the drawn gate's length and
     # width, then the size drawn for |X_L| and |X_W| and for D_L and D_W.
     "area_drawn": {"gate length and width": (4.0, 2.6), "length and width offsets": (0.45, 0.3)},
     "dim_gap": 0.45,
     "dim_width_spacing": 1.6,
     "dim_label_pad": 0.06,
+    # The corner bounds of the calibration page: one marker shape per fitted corner, and the
+    # legend in this many columns.
+    "corner_markers": {"ff": "^", "ss": "v", "fs": "<", "sf": ">"},
+    "bounds_legend_cols": 3,
+    # The card cross-check of the corner limitations page: one marker shape per transistor.
+    "device_markers": {"nfet_05v0": "o", "pfet_05v0": "s"},
+    # The corner limits figure: one row per fit (two transistors by five corners), so taller.
+    "corner_limits_size_in": (6.4, 7.2),
 }
 
-#: Unit conversions of the junction panels (cm to µm, V/cm to kV/cm) and the SPICE sweeps (A to
-#: mA).
-UNITS = {"um_per_cm": 1e4, "kv_per_v": 1e-3, "ma_per_a": 1e3}
+#: Unit conversions of the junction panels (cm to µm, V/cm to kV/cm), the SPICE sweeps (A to
+#: mA) and the corner cross-check (V to mV).
+UNITS = {"um_per_cm": 1e4, "kv_per_v": 1e-3, "ma_per_a": 1e3, "mv_per_v": 1e3}
 
 # Okabe-Ito colours for the carriers and the highlight; greys for the muted parts.
 PALETTES = {
@@ -290,7 +352,7 @@ def _thickness(layer: model.Layer) -> str:
 _STACK_NAME = {"gate": "gate", "oxide": "gate oxide", "body": "body"}
 
 
-def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
+def stack_1d_figure(dev: model.Device, highlight: tuple[str, ...], palette: str):
     """The 1D stack as layers, gate on top, each labelled with its material, its thickness and
     its doping from the model. The parts in ``highlight`` are shaded (a silicon layer in its
     majority carrier's colour), the rest muted. Drawn at
@@ -338,7 +400,13 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
                 fontweight="bold" if layer.part in highlight else "normal",
             )
         ax.set_title(model.exaggeration(dev.scales), fontsize=STYLE["text_pt"])
-        return _svg(fig)
+        return fig
+
+
+def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
+    """:func:`stack_1d_figure` as SVG bytes."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(stack_1d_figure(dev, highlight, palette))
 
 
 def band_levels(dev: model.Device, part: str) -> dict[str, float]:
@@ -441,16 +509,15 @@ class Box(NamedTuple):
 def cell_extents(c: model.Cell) -> dict[str, Box]:
     """The drawn extent ``(x0, x1, y0, y1)`` of each part of the 2D cell (µm), the silicon surface
     at y = 0 and depth growing downwards, the gate centred on x = 0. The oxide is drawn at its
-    scale factor; the source and drain width is the drawn extent ``c.drawn``."""
+    scale factor; the source and drain widths are the cell's, from its reduced mesh artefact."""
     half = c.l_um / 2
-    sd = c.drawn["source and drain width"]
     t_ox = c.t_ox_um * c.scales.get("oxide", 1)
     return {
         "gate": Box(-half, half, -(t_ox + c.poly_um), -t_ox),
         "oxide": Box(-half, half, -t_ox, 0.0),
-        "source": Box(-half - sd, -half, 0.0, c.xj_um),
-        "drain": Box(half, half + sd, 0.0, c.xj_um),
-        "body": Box(-half - sd, half + sd, 0.0, c.body_um),
+        "source": Box(-half - c.source_um, -half, 0.0, c.xj_um),
+        "drain": Box(half, half + c.drain_um, 0.0, c.xj_um),
+        "body": Box(-half - c.source_um, half + c.drain_um, 0.0, c.body_um),
     }
 
 
@@ -468,17 +535,55 @@ def window_box(c: model.Cell) -> Box:
     return Box(gate.x0 - margin, gate.x1 + margin, gate.y0, meshcut.WINDOW_DEPTH_UM)
 
 
-def cross_section(
-    c: model.Cell, highlight: tuple[str, ...], palette: str, window: Box | None = None
-) -> bytes:
+def wrap_statement(statement: str) -> str:
+    """An exaggeration statement as a figure title: one sentence per line, and a sentence longer
+    than :data:`STYLE` ``title_chars`` wrapped, so no line is wider than the figure (tested)."""
+    sentences = [s if s.endswith(".") else s + "." for s in statement.split(". ")]
+    return "\n".join(textwrap.fill(s, STYLE["title_chars"]) for s in sentences)
+
+
+def ldd_parts(c: model.Cell) -> dict[str, Box]:
+    """The textbook lightly doped drain structure drawn on the cell, in the coordinates of
+    :func:`cell_extents` (Taur and Ning, lit-taur): a spacer of the drawn width
+    against each side of the gate and its oxide; the heavily doped source and drain pulled back
+    to the spacers' outer edges; and the lightly doped drain from there, under the spacer, to the
+    drawn reach under the gate, as deep as the drawn depth (``c.drawn``). Keys ``spacer-source``,
+    ``spacer-drain``, ``ldd-source``, ``ldd-drain``, ``source`` and ``drain``."""
+    ext = cell_extents(c)
+    gate, src, drn = ext["gate"], ext["source"], ext["drain"]
+    w = c.drawn["spacer width"]
+    depth = c.drawn["LDD depth"]
+    reach = c.drawn["LDD overlap"]
+    return {
+        "spacer-source": Box(gate.x0 - w, gate.x0, gate.y0, 0.0),
+        "spacer-drain": Box(gate.x1, gate.x1 + w, gate.y0, 0.0),
+        "ldd-source": Box(gate.x0 - w, gate.x0 + reach, 0.0, depth),
+        "ldd-drain": Box(gate.x1 - reach, gate.x1 + w, 0.0, depth),
+        "source": Box(src.x0, gate.x0 - w, src.y0, src.y1),
+        "drain": Box(gate.x1 + w, drn.x1, drn.y0, drn.y1),
+    }
+
+
+def cross_section_figure(
+    c: model.Cell,
+    highlight: tuple[str, ...],
+    palette: str,
+    window: Box | None = None,
+    ldd: bool = False,
+):
     """The 2D cell cut along its length: gate, gate oxide, source, drain and body, each filled
     with its carrier's colour (n-type: electrons, p-type: holes; the oxide its own) and labelled
     on the part, and the contacts of ``c.contacts`` as dark bars. With ``highlight``, the parts
     named there keep their colour and the rest are muted; ``"junction"`` draws the boundary of
     the source and the drain with the body in the highlight colour. With ``window``, that box
-    is outlined, dashed, in the highlight colour and labelled "mesh window"."""
+    is outlined, dashed, in the highlight colour and labelled "mesh window". With ``ldd``, the
+    structure of :func:`ldd_parts` is drawn: the spacers (labelled "spacer", in the oxide's
+    colour when ``"spacer"`` is highlighted), the source and drain pulled back to them and the
+    lightly doped drain (labelled "LDD", in its carrier's colour when ``"ldd"`` is highlighted)."""
     pal = PALETTES[palette]
     ext = cell_extents(c)
+    extra = ldd_parts(c) if ldd else {}
+    ext.update({k: v for k, v in extra.items() if k in ("source", "drain")})
     carrier = {"donor": "electron", "acceptor": "hole"}
     fill = {
         "gate": pal[carrier[c.sd_dopant]],
@@ -511,6 +616,28 @@ def cross_section(
             ax.plot(
                 [a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"], lw=STYLE["edge_width"]
             )
+        for name, box in extra.items():
+            kind = name.split("-")[0]
+            if kind not in ("ldd", "spacer"):
+                continue
+            muted = kind not in highlight
+            own = fill["source"] if kind == "ldd" else pal["highlight_oxide"]
+            colour = pal["muted"] if muted else own
+            alpha = STYLE["band_alpha"]["muted"] if muted else STYLE["cell_alpha"]
+            a, b, y0, y1 = box
+            ax.fill_between([a, b], y0, y1, color=pal["background"], linewidth=0)
+            ax.fill_between([a, b], y0, y1, color=colour, alpha=alpha, linewidth=0, gid=name)
+            ax.plot([a, b, b, a, a], [y0, y0, y1, y1, y0], color=pal["text"],
+                    lw=STYLE["edge_width"])  # fmt: skip
+            # The LDD's label below the source and drain, the spacer's above the gate's contact.
+            label, at, to = "LDD", y1, ext["source"].y1 + gap
+            if kind == "spacer":
+                label, at, to = "spacer", y0, top - bar - gap / 2
+            ax.annotate(label, xy=((a + b) / 2, at), xytext=((a + b) / 2, to),
+                        ha="center", va="top" if kind == "ldd" else "bottom",
+                        fontweight="normal" if muted else "bold",
+                        arrowprops={"arrowstyle": "-", "color": pal["text"],
+                                    "lw": STYLE["edge_width"]})  # fmt: skip
         if "junction" in highlight:
             for side in ("source", "drain"):
                 a, b, _y0, y1 = ext[side]
@@ -560,9 +687,22 @@ def cross_section(
             # parts' boundaries.
             ax.text(a - pad / 2, top + gap, "mesh window", ha="right", va="center",
                     color=pal["highlight"], fontweight="bold")  # fmt: skip
-        statement = model.exaggeration(c.scales, c.drawn).replace(". ", ".\n")
-        ax.set_title(statement, fontsize=STYLE["text_pt"])
-        return _svg(fig)
+        ax.set_title(
+            wrap_statement(model.exaggeration(c.scales, c.drawn)), fontsize=STYLE["text_pt"]
+        )
+        return fig
+
+
+def cross_section(
+    c: model.Cell,
+    highlight: tuple[str, ...],
+    palette: str,
+    window: Box | None = None,
+    ldd: bool = False,
+) -> bytes:
+    """:func:`cross_section_figure` as SVG bytes."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(cross_section_figure(c, highlight, palette, window, ldd))
 
 
 _JUNCTION_PANELS = ("charge", "field", "potential")
@@ -620,24 +760,71 @@ def junction_panels(palette: str) -> bytes:
         return _svg(fig)
 
 
+def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
+    """The mesh figure of the committed reduced mesh artefact in ``artefact_dir``
+    (:func:`gf180tcad.meshcut.read`): every kept triangle filled in its region's colour, every
+    mesh edge drawn, the mesh's region boundaries on top, in µm and to scale."""
+    win = meshcut.read(artefact_dir)
+    pal = PALETTES[palette]
+    xy = win.nodes_cm * meshcut.UM_PER_MSH_UNIT
+    (x0, x1), (y0, y1) = win.x_um, win.y_um
+    width = STYLE["size_in"][0]
+    low, high = STYLE["mesh_height_in"]
+    height = min(max(width * (y1 - y0) / (x1 - x0), low), high) + STYLE["mesh_room_in"]
+    colours = {name: STYLE["mesh_regions"].get(name, (pal["muted"], name)) for name in win.regions}
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=(width, height))
+        FigureCanvasAgg(fig)
+        m = STYLE["mesh_margin_in"]
+        fig.subplots_adjust(left=m["left"] / width, right=1 - m["right"] / width,
+                            bottom=m["bottom"] / height, top=1 - m["top"] / height)  # fmt: skip
+        ax = fig.add_subplot()
+        # one RGBA row per region, the opacity in it, indexed by each triangle's region
+        rgba = np.array([to_rgba(colours[n][0], STYLE["mesh_alpha"]) for n in win.regions])
+        ax.add_collection(PolyCollection(
+            xy[win.triangles], facecolors=rgba[win.region], edgecolors=to_rgba(pal["text"], STYLE["mesh_alpha"]),
+            linewidths=STYLE["mesh_edge_pt"], rasterized=True,
+        ), autolim=False)  # fmt: skip
+        # the gate oxide is a few nm thick, so at page width its edges merge into a dark band;
+        # its fill is drawn once more above the edges so the band shows the legend's colour
+        if "oxide" in win.regions:
+            thin = win.region == win.regions.index("oxide")
+            ax.add_collection(PolyCollection(
+                xy[win.triangles[thin]], facecolors=rgba[win.region[thin]], edgecolors="none",
+                rasterized=True,
+            ), autolim=False)  # fmt: skip
+        # the boundary lines as one path, NaN between segments, so the SVG holds one element
+        seg = xy[win.boundary_lines]
+        gaps = np.full((len(seg), 1, 2), np.nan)
+        path = np.concatenate([seg, gaps], axis=1).reshape(-1, 2)
+        ax.plot(path[:, 0], path[:, 1], color=pal["text"], lw=STYLE["edge_width"])
+        ax.set_xlim(x0, x1)
+        ax.set_ylim(y0, y1)
+        ax.set_aspect("equal")
+        ax.grid(False)
+        ax.set_xlabel("position across the cell (µm)")
+        ax.set_ylabel("height (µm)")
+        present = sorted({win.regions[r] for r in np.unique(win.region)})
+        keys = [Patch(facecolor=colours[n][0], alpha=STYLE["mesh_alpha"], label=colours[n][1])
+                for n in present]  # fmt: skip
+        fig.legend(handles=keys, loc="lower center", ncols=2, frameon=False)
+        buf = BytesIO()
+        fig.savefig(buf, format="svg", metadata=plots.METADATA, dpi=STYLE["mesh_dpi"])
+        return buf.getvalue()
+
+
 def _parts_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, (), palette)
 
 
 def _mesh_window(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"])
     return cross_section(c, (), palette, window=window_box(c))
 
 
 def _junction_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, ("junction",), palette)
 
 
@@ -647,22 +834,29 @@ SPICE_ROOT = numbers.ROOT / "results" / "spice"
 TYPICAL = "typical"
 
 
-def cv_curves(device: str, params: str, gid: str) -> dict[str, np.ndarray]:
+def cv_curves(
+    device: str,
+    params: str,
+    gid: str,
+    spice_root: Path = SPICE_ROOT,
+    tcad_root: Path = numbers.ROOT / "results" / "tcad",
+) -> dict[str, np.ndarray]:
     """The curves of :func:`cv_against_spice`, read by the readers the results pages use
     (:mod:`gf180tcad.explain.data`): the simulated gate capacitance of ``gid`` from the committed
     1D C per area at ``params`` with the BSIM4 bookkeeping, and the :term:`SPICE` :term:`cv` sweep at
     the :term:`typical corner` with the lowest and highest of the five :term:`corners <corner>` at
     each voltage. Keys ``u``,
-    ``tcad``, ``u_spice``, ``spice_tt``, ``spice_lo``, ``spice_hi`` (V and fF)."""
+    ``tcad``, ``u_spice``, ``spice_tt``, ``spice_lo``, ``spice_hi`` (V and fF). The trees are
+    the committed ones unless ``spice_root`` and ``tcad_root`` name others."""
     from gf180tcad.devices import CORNERS, DEVICES, geometry_id
 
     dev = DEVICES[device]
     (geom,) = [g for g in dev.geometries if geometry_id(g) == gid]
-    moscap, proc = data.read_moscap(numbers.ROOT / "results" / "tcad", device, params)
+    moscap, proc = data.read_moscap(tcad_root, device, params)
     u, _intrinsic, _parasitic, total = data.tcad_cgg(moscap, geom, proc, dev.polarity)
     spice = {}
     for corner in CORNERS:
-        cols = data.spice_columns(SPICE_ROOT, "ngspice", corner, device, gid, "cv")
+        cols = data.spice_columns(spice_root, "ngspice", corner, device, gid, "cv")
         spice[corner] = data.spice_cv(cols, dev.polarity)
     u_s, tt = spice[TYPICAL]
     for corner, (uc, _c) in spice.items():
@@ -698,10 +892,16 @@ def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
 
 
 def _moscap_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, ("gate", "oxide", "body"), palette)
+
+
+def _ldd_cell(palette: str) -> bytes:
+    c = model.cell(
+        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"],
+        drawn=STYLE["ldd_drawn_um"],
+    )  # fmt: skip
+    return cross_section(c, ("ldd", "spacer"), palette, ldd=True)
 
 
 def _moscap_cv(palette: str) -> bytes:
@@ -1229,6 +1429,206 @@ def calibration_pfet(palette: str) -> bytes:
         return _svg(calibration_pfet_figure(palette))
 
 
+# The silicon page (silicon-and-carriers.md): the bonds of the crystal, drawn flat.
+#: The panels of the lattice drawings by title: the centre atom (silicon, or a dopant ion), whether
+#: an electron moves free, and whether a bond away from the centre has lost an electron (a hole).
+LATTICE_PANELS = {
+    "perfect crystal": {"centre": None, "free": False, "hole": False},
+    "one broken bond": {"centre": None, "free": True, "hole": True},
+    "donor": {"centre": "donor", "free": True, "hole": False},
+    "acceptor": {"centre": "acceptor", "free": False, "hole": True},
+}
+_ION = {"donor": "+", "acceptor": "−"}
+_ION_CARRIER = {"donor": "electron", "acceptor": "hole"}
+
+
+def lattice_bonds(n: int) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    """Each bond of an ``n`` by ``n`` grid of atoms one spacing apart, as its two ends: one between
+    each pair of neighbours, and a stub :data:`STYLE` ``lattice_stub`` long off each edge atom."""
+    stub = STYLE["lattice_stub"]
+    out = []
+    for i in range(n):
+        for j in range(n):
+            if i + 1 < n:
+                out.append(((i, j), (i + 1, j)))
+            if j + 1 < n:
+                out.append(((i, j), (i, j + 1)))
+            if i == 0:
+                out.append(((i - stub, j), (i, j)))
+            if i == n - 1:
+                out.append(((i, j), (i + stub, j)))
+            if j == 0:
+                out.append(((i, j - stub), (i, j)))
+            if j == n - 1:
+                out.append(((i, j), (i, j + stub)))
+    return out
+
+
+def lattice_figure(panels: tuple[str, ...], palette: str):
+    """The matplotlib figure of :func:`lattice`, for the tests to count its electrons and holes:
+    each artist carries a gid, ``bond-electron``, ``free-electron``, ``hole``, ``atom`` or
+    ``ion``."""
+    pal = PALETTES[palette]
+    n = STYLE["lattice_atoms"]
+    mid = (n - 1) / 2
+    stub, r, gap = STYLE["lattice_stub"], STYLE["atom_radius"], STYLE["bond_pair_gap"]
+    bonds = lattice_bonds(n)
+    # The bond that loses an electron leaves the centre atom's own four bonds whole, and the free
+    # electron sits in the gap of the grid beside it.
+    broken = {(mid + 1, mid), (mid + 1, mid + 1)}
+    free_at = (mid + 1 / 2, mid + 1 / 2)
+    dot = {"ls": "none", "marker": "o"}
+    z = STYLE["lattice_zorder"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["lattice_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(panels), squeeze=False).ravel()
+        for ax, name in zip(axes, panels, strict=True):
+            spec = LATTICE_PANELS[name]
+            ax.set_aspect("equal")
+            ax.set_axis_off()
+            ax.set_xlim(-stub, n - 1 + stub)
+            ax.set_ylim(-stub, n - 1 + stub)
+            for (x0, y0), (x1, y1) in bonds:
+                ax.plot(
+                    [x0, x1], [y0, y1], color=pal["muted"], lw=STYLE["edge_width"], zorder=z["bond"]
+                )
+                xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
+                pair = [(0, gap), (0, -gap)] if y0 == y1 else [(gap, 0), (-gap, 0)]
+                for k, (dx, dy) in enumerate(pair):
+                    if spec["hole"] and k == 0 and {(x0, y0), (x1, y1)} == broken:
+                        ax.plot([xm + dx], [ym + dy], **dot, ms=STYLE["hole_pt"], mfc="none",
+                                mec=pal["hole"], mew=STYLE["edge_width"] * 2, zorder=z["carrier"], gid="hole")  # fmt: skip
+                        continue
+                    ax.plot([xm + dx], [ym + dy], **dot, ms=STYLE["bond_electron_pt"],
+                            color=pal["text"], zorder=z["electron"], gid="bond-electron")  # fmt: skip
+            for i in range(n):
+                for j in range(n):
+                    ion = spec["centre"] if (i, j) == (mid, mid) else None
+                    # An opaque ground, then the ion's tint, then the outline.
+                    ax.add_patch(Circle((i, j), r, facecolor=pal["background"], edgecolor="none",
+                                        zorder=z["atom"]))  # fmt: skip
+                    if ion:
+                        ax.add_patch(Circle((i, j), r, facecolor=pal[_ION_CARRIER[ion]],
+                                            alpha=STYLE["cell_alpha"], edgecolor="none", zorder=z["atom"]))  # fmt: skip
+                    ax.add_patch(Circle((i, j), r, facecolor="none", edgecolor=pal["text"],
+                                        lw=STYLE["edge_width"], zorder=z["atom"], gid="ion" if ion else "atom"))  # fmt: skip
+                    ax.text(i, j, _ION[ion] if ion else "Si", ha="center", va="center", zorder=z["label"],
+                            fontweight="bold" if ion else "normal")  # fmt: skip
+            if spec["free"]:
+                ax.plot([free_at[0]], [free_at[1]], **dot, ms=STYLE["free_electron_pt"],
+                        color=pal["electron"], mec=pal["text"], zorder=z["carrier"], gid="free-electron")  # fmt: skip
+            ax.set_title(name, fontsize=STYLE["text_pt"])
+        handles = [
+            Line2D(
+                [],
+                [],
+                **dot,
+                ms=STYLE["bond_electron_pt"],
+                color=pal["text"],
+                label="electron in a bond",
+            ),
+            Line2D(
+                [],
+                [],
+                **dot,
+                ms=STYLE["free_electron_pt"],
+                color=pal["electron"],
+                mec=pal["text"],
+                label="free electron",
+            ),
+            Line2D(
+                [],
+                [],
+                **dot,
+                ms=STYLE["hole_pt"],
+                mfc="none",
+                mec=pal["hole"],
+                mew=STYLE["edge_width"] * 2,
+                label="hole",
+            ),
+        ]
+        fig.legend(handles=handles, loc="outside lower center", ncols=len(handles), frameon=False)
+        return fig
+
+
+def lattice(panels: tuple[str, ...], palette: str) -> bytes:
+    """The bonds of silicon drawn flat, one panel per name of :data:`LATTICE_PANELS`: a grid of
+    atoms, each bond a line with its two electrons, the free electrons and the holes. A drawing of
+    the bond picture of Sze and Ng 2006 (lit-sze), ch. 1, with no data and not to scale."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(lattice_figure(panels, palette))
+
+
+def _silicon_bonds(palette: str) -> bytes:
+    return lattice(("perfect crystal", "one broken bond"), palette)
+
+
+def _silicon_dopants(palette: str) -> bytes:
+    return lattice(("donor", "acceptor"), palette)
+
+
+# The pn junction page (pn-junction.md): the source doping of the 2D cell against depth.
+#: The curves of the profile plot by their legend labels.
+PROFILE_LINES = {
+    "gaussian": "donors, simulated cell",
+    "step": "donors, abrupt step",
+    "body": "acceptors, body",
+}
+
+
+def junction_profile_figure(palette: str):
+    """The matplotlib figure of :func:`junction_profile`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
+    y = np.linspace(0, (1 + STYLE["profile_pad"]) * c.xj_um, STYLE["regime_points"])
+    span = STYLE["profile_span"] * c.sd_straggle_um * model.lateral_straggle_ratio()
+    x = np.linspace(-span, span, STYLE["regime_points"])
+    lo, hi = c.n_body_cm3 / STYLE["headroom"], c.n_sd_cm3 * STYLE["headroom"]
+    label_y = hi / (hi / lo) ** STYLE["label_drop"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["profile_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax, ax_lat = fig.subplots(2, 1, sharey=True)
+        for a in (ax, ax_lat):
+            a.set_yscale("log")
+            a.grid(True)
+            a.set_ylabel("dopant density (cm⁻³)")
+        ax.set_ylim(lo, hi)
+        ax.set_xlim(y[0], y[-1])
+        ax_lat.set_xlim(x[0], x[-1])
+        ax.set_title("down from the surface, away from the gate", fontsize=STYLE["text_pt"])
+        ax_lat.set_title("along the surface, across the gate edge", fontsize=STYLE["text_pt"])
+        ax_lat.plot(x, c.sd_doping(0.0, x), color=pal["electron"], lw=lw, gid="lateral")
+        ax_lat.plot([x[0], x[-1]], [c.n_body_cm3] * 2, color=pal["hole"], lw=lw)
+        ax_lat.axvline(0.0, color=pal["text"], lw=STYLE["edge_width"])
+        off = STYLE["edge_label_gap"] * (x[-1] - x[0])
+        ax_lat.text(-off, label_y, "source", ha="right", va="top", gid="label-source")
+        ax_lat.text(off, label_y, "under the gate", ha="left", va="top", gid="label-gate")
+        ax_lat.set_xlabel("distance from the gate edge (µm)")
+        ax.plot(y, c.sd_doping(y), color=pal["electron"], lw=lw, label=PROFILE_LINES["gaussian"])
+        ax.plot([y[0], c.xj_um, c.xj_um], [c.n_sd_cm3, c.n_sd_cm3, lo], color=pal["electron"],
+                lw=lw, ls="--", label=PROFILE_LINES["step"])  # fmt: skip
+        ax.plot([y[0], y[-1]], [c.n_body_cm3] * 2, color=pal["hole"], lw=lw,
+                label=PROFILE_LINES["body"])  # fmt: skip
+        ax.axvline(c.xj_um, color=pal["text"], lw=STYLE["edge_width"])
+        ax.text(c.xj_um, label_y, " junction", ha="left", va="top")
+        ax.set_xlabel("depth below the silicon surface (µm)")
+        fig.legend(loc="outside lower center", ncols=2, frameon=False)
+        return fig
+
+
+def junction_profile(palette: str) -> bytes:
+    """The donor and acceptor densities of the nfet's 2D cell ``w10p0_l0p70``: on top against the
+    depth below its source, away from the gate edge, the Gaussian of the simulated cell
+    (:meth:`gf180tcad.explain.model.Cell.sd_doping`) beside the abrupt step of the junction panels
+    and the uniform body, with the junction depth marked; below, along the surface across the
+    gate edge, where the Gaussian spreads under the gate."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(junction_profile_figure(palette))
+
+
 # The corner-fit figure of docs/reproduce/index.md (Task 16a): the nfet at the longest
 # calibration gate, the geometry of the MOS capacitor page's C-V figure.
 CORNER_DEVICE, CORNER_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
@@ -1397,6 +1797,261 @@ def corner_area(palette: str) -> bytes:
         return _svg(fig)
 
 
+# The corner bounds of the calibration page (calibration.md, Task 16a): each fitted number's
+# lowest and highest value over the corners, from the corner summaries.
+
+#: The legend words of the ring round a value on a limit of its fit: a ring
+#: ``STYLE["limit_ring_scale"]`` times the marker size, in the hole colour, as the on-a-limit
+#: diamond of :func:`corner_limits`.
+LIMIT_RING_LABEL = "on a limit"
+
+
+def _limit_ring(ax, x: float, y: float, pal: dict, label: str | None = None) -> None:
+    """A ring in the hole colour round the marker at (``x``, ``y``): a value set by a limit of its
+    fit, not by the SPICE curve."""
+    ax.plot([x], [y], ls="none", marker="o", ms=STYLE["marker_pt"] * STYLE["limit_ring_scale"], mfc="none",
+            mec=pal["hole"], mew=STYLE["edge_width"] * 2, label=label)  # fmt: skip
+
+
+def _limit_ring_handle(pal: dict) -> Line2D:
+    return Line2D([], [], ls="none", marker="o", ms=STYLE["marker_pt"] * STYLE["limit_ring_scale"],
+                  mfc="none", mec=pal["hole"], mew=STYLE["edge_width"] * 2, label=LIMIT_RING_LABEL)  # fmt: skip
+
+
+def _log_ticks(ax) -> str:
+    """Label a log axis spanning less than a decade at ``STYLE["log_tick_mantissas"]`` times each
+    power of ten inside its limits (the default labels only the power of ten itself), in units
+    of the power of ten of its upper limit so the labels stay short; returns that unit (10ⁿ)."""
+    lo, hi = sorted(ax.get_xlim())
+    base = STYLE["log_base"]
+    powers = range(math.floor(math.log(lo, base)), math.ceil(math.log(hi, base)) + 1)
+    ticks = [
+        m * base**e for e in powers for m in STYLE["log_tick_mantissas"] if lo <= m * base**e <= hi
+    ]
+    scale = base ** math.floor(math.log(hi, base))
+    ax.xaxis.set_major_locator(FixedLocator(ticks))
+    ax.xaxis.set_major_formatter(
+        FixedFormatter([numbers.shortest(t / scale, "", 2) for t in ticks])
+    )
+    ax.xaxis.set_minor_formatter(NullFormatter())
+    return numbers.format_value(scale, 1, "").split("×")[-1].strip()
+
+
+def corner_bounds_figure(palette: str):
+    """The matplotlib figure of :func:`corner_bounds`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    bounds = {d: {b.name: b for b in numbers.corner_bounds(d)} for d in devices}
+    marks = STYLE["corner_markers"]
+    hits = False
+    colour = {c: pal[CORNER_HIGHLIGHT[c]] if c in CORNER_HIGHLIGHT else pal["muted"] for c in marks}
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(numbers.TUNABLES), 1)
+        for i, (ax, (name, (words, unit, _most))) in enumerate(
+            zip(axes, numbers.TUNABLES.items(), strict=True)
+        ):
+            if name in LOG_TUNABLES:
+                ax.set_xscale("log")
+            for row, device in enumerate(devices):
+                b = bounds[device][name]
+                first = row == 0
+                ax.plot([b.lowest, b.highest], [row, row], color=pal["band"], lw=STYLE["limit_width"],
+                        solid_capstyle="butt", label="lowest to highest" if first else None)  # fmt: skip
+                ax.plot([b.lowest, b.highest], [row, row], ls="none", marker="|", color=pal["text"],
+                        ms=STYLE["limit_tick_pt"], mew=STYLE["edge_width"] * 2)  # fmt: skip
+                for corner, m in marks.items():
+                    ax.plot([b.values[corner]], [row], ls="none", marker=m, ms=STYLE["marker_pt"],
+                            color=colour[corner], mec=pal["text"], mew=STYLE["edge_width"],
+                            label=corner if first else None)  # fmt: skip
+                ax.plot([b.typical], [row], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["highlight"],
+                        mec=pal["text"], mew=STYLE["edge_width"], label="typical" if first else None)  # fmt: skip
+                for corner in b.on_limit:
+                    _limit_ring(ax, b.values[corner], row, pal)
+                    hits = True
+            ax.set_yticks(range(len(devices)), [d.split("_")[0] for d in devices])
+            ax.set_ylim(-STYLE["row_pad"], len(devices) - 1 + STYLE["row_pad"])
+            ax.margins(x=STYLE["limit_margin"])
+            ax.set_xlabel(f"{words.lower()} ({unit})")
+            ax.grid(True, axis="x")
+            if i == 0:
+                handles, labels = ax.get_legend_handles_labels()
+        if hits:
+            handles, labels = [*handles, _limit_ring_handle(pal)], [*labels, LIMIT_RING_LABEL]
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["bounds_legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
+def corner_bounds(palette: str) -> bytes:
+    """Each fitted number of the nfet and the pfet on its own axis: a bar from its lowest to its
+    highest value over the corners, a marker at each corner's fit and a diamond at the typical
+    fit, read from the corner summaries (:func:`gf180tcad.explain.numbers.corner_bounds`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(corner_bounds_figure(palette))
+
+
+#: The fitted numbers of the card cross-check, each with its axis words, unit and the factor
+#: from its summary unit: the oxide (TOXE) and the flat band (VTH0).
+CROSSCHECK = {
+    "t_ox_eff_nm": ("oxide thickness shift", "nm", 1.0),
+    "dv_fb_v": ("gate voltage shift", "V", 1.0),
+}
+
+
+def corner_crosscheck_figure(palette: str):
+    """The matplotlib figure of :func:`corner_crosscheck`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    marks = STYLE["corner_markers"]
+    colour = {c: pal[CORNER_HIGHLIGHT[c]] if c in CORNER_HIGHLIGHT else pal["muted"] for c in marks}
+    shapes = STYLE["device_markers"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(CROSSCHECK))
+        hits = False
+        for ax, (name, (words, unit, factor)) in zip(axes, CROSSCHECK.items(), strict=True):
+            lo = hi = 0.0
+            for device, shape in shapes.items():
+                doc = numbers.corner_summary(device)
+                t = doc["tunables"][name]
+                for corner in marks:
+                    card = t["card_shift"][corner] * factor
+                    fit = t["tcad_shift"][corner] * factor
+                    lo, hi = min(lo, card, fit), max(hi, card, fit)
+                    ax.plot([card], [fit], ls="none", marker=shape, ms=STYLE["marker_pt"],
+                            color=colour[corner], mec=pal["text"], mew=STYLE["edge_width"])  # fmt: skip
+                    if name in doc["corners"][corner]["bound_hits"]:
+                        _limit_ring(ax, card, fit, pal)
+                        hits = True
+            ax.plot([lo, hi], [lo, hi], color=pal["text"], lw=STYLE["edge_width"], ls="--",
+                    zorder=STYLE["junction_line_zorder"])  # fmt: skip
+            pad = STYLE["limit_margin"] * (hi - lo)
+            ax.set_xlim(lo - pad, hi + pad)
+            ax.set_ylim(lo - pad, hi + pad)
+            ax.grid(True)
+            ax.set_xlabel(f"card {words} ({unit})")
+            ax.set_ylabel(f"fitted {words} ({unit})")
+        swatches: dict[str, list[str]] = {}
+        for c in marks:
+            swatches.setdefault(colour[c], []).append(c)
+        handles = [
+            Line2D([], [], color=col, lw=STYLE["limit_width"], label=" or ".join(cs))
+            for col, cs in swatches.items()
+        ] + [
+            Line2D([], [], ls="none", marker=shape, ms=STYLE["marker_pt"], color=pal["band"],
+                   mec=pal["text"], label=device.split("_")[0])
+            for device, shape in shapes.items()
+        ] + [Line2D([], [], color=pal["text"], lw=STYLE["edge_width"], ls="--", label="fit = card")]  # fmt: skip
+        if hits:
+            handles.append(_limit_ring_handle(pal))
+        fig.legend(handles=handles, loc="outside lower center", ncols=STYLE["bounds_legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
+def corner_crosscheck(palette: str) -> bytes:
+    """The card cross-check of the corner fits: for the oxide and the flat band, each corner
+    fit's shift from the typical fit against the model card's shift of the same quantity at
+    that corner, one marker per transistor and corner, and the line where the two are equal;
+    read from the corner summaries (``card_shift``, ``tcad_shift``)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(corner_crosscheck_figure(palette))
+
+
+def corner_crossing_figure(palette: str):
+    """The matplotlib figure of :func:`corner_crossing`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(devices), 1, sharex=True)
+        for ax, device in zip(axes, devices, strict=True):
+            for corner, gaps in numbers.corner_crossing_gaps(device).items():
+                xs = list(gaps)
+                ys = [v * UNITS["mv_per_v"] for v in gaps.values()]
+                if corner == TYPICAL:
+                    style = {"color": pal["text"], "ls": "-", "lw": STYLE["line_width"]}
+                elif corner in CORNER_HIGHLIGHT:
+                    style = {"color": pal[CORNER_HIGHLIGHT[corner]], "ls": "--",
+                             "lw": STYLE["line_width"]}  # fmt: skip
+                else:
+                    style = {"color": pal["muted"], "ls": CORNER_MIXED_STYLE[corner],
+                             "lw": STYLE["line_width"] / 2}  # fmt: skip
+                ax.plot(xs, ys, marker="o", ms=STYLE["marker_pt"] / 2, label=corner, **style)
+            ax.set_xscale("log")
+            ax.grid(True)
+            ax.set_title(device, fontsize=STYLE["text_pt"])
+            ax.set_ylabel("depletion crossing shift (mV)")
+        axes[-1].set_xlabel("gate length (µm)")
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
+        return fig
+
+
+def corner_crossing(palette: str) -> bytes:
+    """The depletion crossing shift ΔV_dep of each fit (typical and the four corner fits)
+    against the gate length, at every W = 10 µm gate, one panel per transistor: a 1D stack with one flat band
+    for every length leaves a gap that moves with the length, at every corner
+    (:func:`gf180tcad.explain.numbers.corner_crossing_gaps`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(corner_crossing_figure(palette))
+
+
+def corner_limits_figure(palette: str):
+    """The matplotlib figure of :func:`corner_limits`, for the tests to read its lines."""
+    from gf180tcad.devices import CORNERS
+
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    fits = {(f.device, f.corner, f.name): f for d in devices for f in numbers.corner_fit_limits(d)}
+    rows = [(d, c) for d in devices for c in CORNERS]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["corner_limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(numbers.TUNABLES), sharey=True)
+        for ax, (name, (words, unit, _most)) in zip(axes, numbers.TUNABLES.items(), strict=True):
+            if name in LOG_TUNABLES:
+                ax.set_xscale("log")
+            for row, (device, corner) in enumerate(rows):
+                f = fits[(device, corner, name)]
+                first = row == 0
+                ax.plot([f.lower, f.upper], [row, row], color=pal["band"], lw=STYLE["limit_width"],
+                        solid_capstyle="butt", label="limits" if first else None)  # fmt: skip
+                ax.plot([f.lower, f.upper], [row, row], ls="none", marker="|", color=pal["text"],
+                        ms=STYLE["limit_tick_pt"], mew=STYLE["edge_width"] * 2)  # fmt: skip
+                hit = f.at_bound is not None
+                ax.plot([f.fitted], [row], ls="none", marker="D", ms=STYLE["marker_pt"],
+                        color=pal["hole"] if hit else pal["highlight"], mec=pal["text"],
+                        mew=STYLE["edge_width"])  # fmt: skip
+            ax.set_ylim(len(rows) - 1 + STYLE["row_pad"], -STYLE["row_pad"])
+            ax.margins(x=STYLE["limit_margin"])
+            if name in LOG_TUNABLES:
+                unit = f"{_log_ticks(ax)} {unit}"
+            ax.set_xlabel(f"{words.lower()}\n({unit})")
+            ax.grid(True, axis="x")
+        axes[0].set_yticks(range(len(rows)), [f"{d.split('_')[0]} {c}" for d, c in rows])
+        handles = [
+            Line2D([], [], color=pal["band"], lw=STYLE["limit_width"], label="limits"),
+            Line2D([], [], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["highlight"],
+                   mec=pal["text"], label="fitted"),
+            Line2D([], [], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["hole"],
+                   mec=pal["text"], label="on a limit"),
+        ]  # fmt: skip
+        fig.legend(handles=handles, loc="outside lower center", ncols=len(handles), frameon=False)
+        return fig
+
+
+def corner_limits(palette: str) -> bytes:
+    """Each fitted number of every fit, typical and the four corners of both transistors, one
+    row per fit: a bar between the fit's limits and a diamond at the fitted value, in the hole
+    colour when it sits on a limit (:func:`gf180tcad.explain.numbers.corner_fit_limits`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(corner_limits_figure(palette))
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -1418,14 +2073,23 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "calibration-compare": calibration_compare,
     "calibration-pfet": calibration_pfet,
     "calibration-stack": _calibration_stack,
+    "silicon-bonds": _silicon_bonds,
+    "silicon-dopants": _silicon_dopants,
+    "junction-profile": junction_profile,
+    "ldd-cell": _ldd_cell,
     "corner-cv": corner_cv,
     "corner-area": corner_area,
+    "corner-bounds": corner_bounds,
+    "corner-crosscheck": corner_crosscheck,
+    "corner-crossing": corner_crossing,
+    "corner-limits": corner_limits,
 }
 
 
-# The figures drawn from the 2D cell, whose statement also names the drawn extents; the plots of
-# computed curves (not drawings of the device) carry no statement.
-_CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell", "mesh-window")
+# The LDD cell's statement also names the sizes chosen for its drawing (the source and drain
+# widths of every cell come from its artefact, so no other cell names any); the plots of computed
+# curves and the drawings of the crystal (not drawings of the device) carry no statement.
+_DRAWN = {"ldd-cell": STYLE["ldd_drawn_um"]}
 _PLOTS = (
     "bands-flat",
     "junction-panels",
@@ -1438,7 +2102,14 @@ _PLOTS = (
     "calibration-limits",
     "calibration-compare",
     "calibration-pfet",
+    "junction-profile",
+    "silicon-bonds",
+    "silicon-dopants",
     "corner-cv",
+    "corner-bounds",
+    "corner-crosscheck",
+    "corner-crossing",
+    "corner-limits",
 )
 
 
@@ -1447,13 +2118,12 @@ def _statement(name: str) -> str:
     and chooses its sizes for the drawing; the others use the layer scale factors."""
     if name == "corner-area":
         return model.exaggeration({}, STYLE["area_drawn"])
-    drawn = STYLE["drawn_um"] if name in _CELL_FIGURES else None
-    return model.exaggeration(STYLE["scales"], drawn)
+    return model.exaggeration(STYLE["scales"], _DRAWN.get(name))
 
 
 def substitutions() -> dict[str, str]:
     """``{"x_fig_<name>_scale": statement}``: the exaggeration statement of each drawing of the
-    device, for its caption, from the same scale factors (and drawn extents) the drawing uses."""
+    device, for its caption, from the same scale factors (and drawn sizes) the drawing uses."""
     return {
         f"x_fig_{name.replace('-', '_')}_scale": _statement(name)
         for name in FIGURES

@@ -13,17 +13,24 @@ them; the factors are the same for every device (passed in by
 ``results/tcad/moscap2d/<device>/<params>/<geometry>/cv.meta.json`` (gate length and width,
 meshed oxide thickness, source/drain peak doping, body doping, contacts), the process file
 (the junction depth ``param.xj_um`` and the gate doping ``param.ngate_cm3``) and the 1D stack
-of the same device and parameters (the gate and body depths, which the 2D cell shares). A
-drawn extent with no committed source, the lateral width of the source and drain, is passed in
-as ``drawn`` and named in the exaggeration statement.
+of the same device and parameters (the gate and body depths, which the 2D cell shares). The
+lateral widths of the source and the drain come from the cell's reduced mesh artefact,
+``results/tcad/meshes/<image>/<device>/<params>/<geometry>/mesh-window.meta.json``: the body's
+ends and the gate's edges in the full mesh (``region_bounds_um``), so their widths are not drawn
+at a chosen size (issue #128).
 
 It reads no simulator module and imports nothing outside the docs dependency group (tested).
 """
 
 from __future__ import annotations
 
+import ast
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
+
+import numpy as np
 
 from gf180tcad import quantity
 from gf180tcad.explain.numbers import ROOT
@@ -121,7 +128,10 @@ def exaggeration(scales: Mapping[str, float], drawn: Mapping[str, float] | None 
 @dataclass(frozen=True)
 class Cell:
     """The 2D cell of one committed geometry: the gate across the channel, the oxide under it,
-    the source and drain either side, the body below; lengths in µm, densities in cm⁻³."""
+    the source and drain either side, the body below; lengths in µm, densities in cm⁻³.
+    ``source_um`` and ``drain_um`` are the lateral widths of the source and the drain, from the
+    gate's edges to the body's ends. ``drawn`` holds the extents with no committed source that a
+    drawing adds to the cell (the lightly doped drain's), named in its exaggeration statement."""
 
     name: str
     params: str
@@ -137,6 +147,8 @@ class Cell:
     n_body_cm3: float
     n_gate_cm3: float
     contacts: tuple[str, ...]
+    source_um: float
+    drain_um: float
     scales: Mapping[str, float] = field(default_factory=dict)
     drawn: Mapping[str, float] = field(default_factory=dict)
 
@@ -149,20 +161,88 @@ class Cell:
     def body_dopant(self) -> str:
         return _DOPANTS[self.polarity][1]
 
+    @property
+    def sd_straggle_um(self) -> float:
+        """The vertical straggle s (µm) of the source/drain Gaussian of the simulated cell: the
+        peak at the surface falls to the body doping at the junction depth, so
+        peak·exp(−XJ²/(2·s²)) = body and s = XJ/√(2·ln(peak/body)), as
+        :func:`gf180tcad.tcad.stack.sd_straggle_um` computes it (tested)."""
+        return self.xj_um / math.sqrt(2 * math.log(self.n_sd_cm3 / self.n_body_cm3))
+
+    def sd_doping(self, depth_um, past_edge_um=None):
+        """The source/drain donor (nfet) or acceptor (pfet) density (cm⁻³) at ``depth_um`` below
+        the surface: peak·exp(−y²/(2·s²)) with s :attr:`sd_straggle_um`. Away from the gate edge
+        (``past_edge_um`` None) that is all; at ``past_edge_um`` from the edge towards the gate
+        (negative in the source) it is times the lateral factor ½·erfc(x/(√2·s_lat)), with
+        s_lat = s × :func:`lateral_straggle_ratio`, the mask-edge factor of the simulated cell's
+        implant (``gplugins.devsim.doping.Lateral``)."""
+        vertical = self.n_sd_cm3 * np.exp(-np.square(depth_um) / (2 * self.sd_straggle_um**2))
+        if past_edge_um is None:
+            return vertical
+        s_lat = self.sd_straggle_um * lateral_straggle_ratio()
+        x = np.asarray(past_edge_um, dtype=float) / (math.sqrt(2) * s_lat)
+        return vertical * np.vectorize(math.erfc)(x) / 2
+
+
+#: The committed source that holds the lateral straggle ratio of the simulated cell.
+STACK_SOURCE = "src/gf180tcad/tcad/stack.py"
+
+
+def lateral_straggle_ratio(root: Path = ROOT) -> float:
+    """``LATERAL_STRAGGLE_RATIO`` of :mod:`gf180tcad.tcad.stack`, the source/drain implant's
+    lateral straggle over its vertical one (a project choice there), read as the literal it is
+    assigned in the committed source :data:`STACK_SOURCE`: the explainer imports no TCAD module
+    (tested), and the value has one home."""
+    tree = ast.parse((root / STACK_SOURCE).read_text(encoding="utf-8"))
+    for node in tree.body:
+        names = [t.id for t in getattr(node, "targets", []) if isinstance(t, ast.Name)]
+        if isinstance(node, ast.Assign) and names == ["LATERAL_STRAGGLE_RATIO"]:
+            return float(ast.literal_eval(node.value))
+    raise LookupError(f"{STACK_SOURCE} assigns no LATERAL_STRAGGLE_RATIO")
+
 
 def cell_meta_path(device: str, params: str, geometry: str) -> str:
     """The committed 2D metadata file of ``device`` at ``params`` and ``geometry``."""
     return f"results/tcad/moscap2d/{device}/{params}/{geometry}/cv.meta.json"
 
 
-def cell(device: str, params: str, geometry: str, *, scales: Mapping, drawn: Mapping) -> Cell:
-    """The 2D cell of ``device`` at ``params`` and ``geometry`` from committed files only."""
+def artefact_meta_path(device: str, params: str, geometry: str) -> str:
+    """The committed meta file of the reduced mesh artefact of ``device`` at ``params`` and
+    ``geometry`` (:mod:`gf180tcad.meshcut`), under whichever image's tree holds it; ValueError
+    unless exactly one does."""
+    found = sorted(
+        (ROOT / "results/tcad/meshes").glob(f"*/{device}/{params}/{geometry}/mesh-window.meta.json")
+    )
+    if len(found) != 1:
+        raise ValueError(
+            f"expected one reduced mesh artefact of {device}/{params}/{geometry}, found {found}"
+        )
+    return found[0].relative_to(ROOT).as_posix()
+
+
+def sd_widths(device: str, params: str, geometry: str) -> tuple[float, float]:
+    """``(source_um, drain_um)``: the lateral widths of the source and the drain of the 2D cell,
+    from its reduced mesh artefact. The source runs from the body's left end to the gate's left
+    edge, the drain from the gate's right edge to the body's right end (the cut runs through
+    the active area, :func:`gf180tcad.tcad.stack.build`)."""
+    path = ROOT / artefact_meta_path(device, params, geometry)
+    body = quantity.read(quantity.Selector("json", ["region_bounds_um", "body", "x_um"]), path)
+    gate = quantity.read(quantity.Selector("json", ["region_bounds_um", "gate_poly", "x_um"]), path)
+    return gate[0] - body[0], body[1] - gate[1]
+
+
+def cell(
+    device: str, params: str, geometry: str, *, scales: Mapping, drawn: Mapping | None = None
+) -> Cell:
+    """The 2D cell of ``device`` at ``params`` and ``geometry`` from committed files only;
+    ``drawn`` is :attr:`Cell.drawn`."""
     meta_file = ROOT / cell_meta_path(device, params, geometry)
     meta = quantity.read(quantity.Selector("json", []), meta_file)
     stack = quantity.read(quantity.Selector("json", ["stack"]), ROOT / meta_path(device, params))
     proc = ROOT / f"data/process/{device}.toml"
     xj = quantity.read(quantity.Selector("toml", ["param", "xj_um", "value"]), proc)
     ngate = quantity.read(quantity.Selector("toml", ["param", "ngate_cm3", "value"]), proc)
+    source_um, drain_um = sd_widths(device, params, geometry)
     return Cell(
         device,
         params,
@@ -178,6 +258,8 @@ def cell(device: str, params: str, geometry: str, *, scales: Mapping, drawn: Map
         meta["tunables"]["n_ch_cm3"]["value"],
         ngate,
         tuple(meta["contacts"]),
+        source_um,
+        drain_um,
         dict(scales),
-        dict(drawn),
+        dict(drawn or {}),
     )

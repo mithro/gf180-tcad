@@ -1140,9 +1140,20 @@ two PRs (16a corners, 16b Monte Carlo), after Task 12 and after Charon plan Task
   - `test_docgen_corner_table_one_value_per_cell` moves to part 2 with the table it tests.
   - The table records every model bin (`bins`). The nfet's shortest calibration gate is in
     `nfet_06v0.1`. `check_corner_table` requires its applied lines to equal `nfet_06v0.0`'s.
-- [ ] **Step 3:** Run the eight corner fits (4 corners × 2 devices), 2 GiB each, up to four at a
+- [x] **Step 3:** Run the eight corner fits (4 corners × 2 devices), 2 GiB each, up to four at a
   time, each with a progress log in `tmp/` (spec §8.1); commit the corner tree in a results-only
   commit, then the summary and the docs. Open PR 16a, get it reviewed and merge.
+
+  Done in PR 16a part 2 (branch `task/p2-16a-corner-results`). What differs from the text above:
+  - The docgen corner table is split into tables of at most five columns, one value per cell
+    (spec §10.3): bounds and spread; the corner of each bound and whether it sits on a fit bound;
+    the value at each corner; the card cross-check of the oxide and the flat band; the verdicts
+    per corner. The Monte Carlo columns come with PR 16b. The tables are on each TCAD device
+    page and, through the generated `corners.inc.md`, on `docs/comparison/cv-agreement.md`.
+  - The calibration explainer (`docs/explained/calibration.md`, issue #121) prints a bounds
+    table per transistor from the summaries (`gf180tcad.explain.numbers.corner_bounds_table`)
+    and the figure `corner-bounds`.
+  - `make reproduce` runs `make -j4 tcad-corners` after `tcad-validate`.
 - [ ] **Step 4 (PR 16b):** Tests first: `test_mc_seed_reproducible` (one seed, two runs, same
   bytes), `test_mc_seeds_recorded`, `test_mc_statistics_on_synthetic_samples`,
   `test_mc_bound_hits_counted`, `test_mc_sample_bookkeeping_recorded`,

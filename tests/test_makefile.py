@@ -20,6 +20,7 @@ import pytest
 from gf180tcad import manifest, outcache, reference
 from gf180tcad.calibrate import corners
 from gf180tcad.calibrate.__main__ import _parser as calibrate_parser
+from gf180tcad.meshcut.__main__ import _parser as meshcut_parser
 from gf180tcad.tcad import process
 from gf180tcad.tcad.__main__ import _parser as tcad_parser
 from gf180tcad.tcad.moscap2d import AC_INFEASIBLE
@@ -67,6 +68,8 @@ def _commands(target: str) -> list[tuple[str, object]]:
             out.append((module, tcad_parser().parse_args(rest)))
         elif module == "gf180tcad.calibrate":
             out.append((module, calibrate_parser().parse_args(rest)))
+        elif module == "gf180tcad.meshcut":
+            out.append((module, meshcut_parser().parse_args(rest)))
         elif module == "gf180tcad.calibrate.corners":
             out.append((module, corners._parser().parse_args(rest)))
         elif module == "gf180tcad.manifest":
@@ -103,8 +106,13 @@ def test_reproduce_runs_in_dependency_order(reproduce):
     validate = _index(
         reproduce, lambda m, a: m == "gf180tcad.calibrate" and a.command == "validate"
     )
+    meshes = _index(reproduce, lambda m, a: m == "gf180tcad.meshcut")
+    fits = _index(reproduce, lambda m, a: m == "gf180tcad.calibrate.corners" and a.command == "run")
+    summaries = _index(
+        reproduce, lambda m, a: m == "gf180tcad.calibrate.corners" and a.command == "summary"
+    )
     verify = _index(reproduce, lambda m, a: m == "gf180tcad.manifest")
-    groups = [spice, meshconv, start, cal, calibrated, validate, verify]
+    groups = [spice, meshconv, start, cal, calibrated, validate, meshes, fits, summaries, verify]
     assert all(groups), groups
     assert sorted(i for g in groups for i in g) == list(range(len(reproduce)))
     for a, b in itertools.pairwise(groups):
@@ -172,6 +180,24 @@ def test_reproduce_2d_moscap_jobs_are_the_committed_cells(reproduce):
             assert steps[0].resume == steps[1].resume is not None
         else:
             assert [(s.method, s.resume) for s in steps] == [("both", None)]
+
+
+def test_reproduce_cuts_every_committed_artefact(reproduce):
+    """tcad-meshes cuts each committed reduced mesh artefact once, from its 2D job, with the
+    default window rule, into the tree named after the image of the 2D jobs."""
+    cuts = [a for m, a in reproduce if m == "gf180tcad.meshcut"]
+    root = TCAD / "meshes" / "stable"
+    committed = sorted(
+        p.parent.relative_to(root).as_posix() for p in root.glob("*/*/*/mesh-window.meta.json")
+    )
+    assert committed
+    got = sorted(a.job.relative_to("results/tcad/moscap2d").as_posix() for a in cuts)
+    assert got == committed
+    for a in cuts:
+        assert (a.command, a.out, a.kx, a.depth_um) == (
+            "cut", Path("results/tcad/meshes/stable"), 0.25, 0.1,
+        )  # fmt: skip
+        assert (a.cache, a.scratch) == (None, None)
 
 
 def test_reproduce_calibration_and_validation(reproduce):

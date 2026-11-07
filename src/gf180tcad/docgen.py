@@ -14,8 +14,10 @@ validation and mesh convergence. Every TCAD-vs-SPICE number and verdict on them 
 the committed calibration and validation files, which were computed in the TCAD image; this
 module never compares TCAD with SPICE itself. For the plots it applies the fixed BSIM4
 bookkeeping (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`, the function the
-calibration uses) to the committed 1D C per area. No mesh picture is drawn: the 2D meshes are
-not committed, and the pages say so.
+calibration uses) to the committed 1D C per area. A geometry page draws the mesh of each 2D
+cell from its committed reduced mesh artefact (``results/tcad/meshes/<image>/...``,
+:mod:`gf180tcad.meshcut`), never from a full mesh, which is not committed; a 2D cell without an
+artefact gets a sentence that says why.
 
 Plots are drawn against sign-flipped axes (|Vgs|, |Vds|, |Id|) so the nfet and the pfet
 look alike. Numbers in tables use :func:`fmt` (fixed significant figures, locale independent),
@@ -492,9 +494,12 @@ def _summary_page(root, spec: dict, out: Path):
 def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None = None) -> None:
     """Write the SPICE pages under ``out_dir/results`` (summary, 12 geometry pages, SVGs), the
     TCAD pages under ``out_dir/tcad`` (:func:`generate_tcad`), the explainer figures under
-    ``out_dir/explained`` (:func:`gf180tcad.explain.figures.write_all`) and the image page's
-    figures under ``out_dir/reproduce`` (:func:`gf180tcad.imagefig.write_all`)."""
-    from gf180tcad import imagefig
+    ``out_dir/explained`` (:func:`gf180tcad.explain.figures.write_all`), the image page's
+    figures under ``out_dir/reproduce`` (:func:`gf180tcad.imagefig.write_all`), the figures of
+    the comparison pages under ``out_dir/comparison``
+    (:func:`gf180tcad.comparison_figures.write_all`) and those of the limitations pages under
+    ``out_dir/limitations`` (:func:`gf180tcad.limitations_figures.write_all`)."""
+    from gf180tcad import comparison_figures, imagefig, limitations_figures
     from gf180tcad.explain import figures as explained_figures
 
     out = Path(out_dir)
@@ -511,6 +516,13 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     explained_figures.write_all(out / "explained")
     shutil.rmtree(out / "reproduce", ignore_errors=True)
     imagefig.write_all(out / "reproduce")
+    shutil.rmtree(out / "comparison", ignore_errors=True)
+    roots = comparison_figures.Roots(
+        spice=Path(results_root), tcad=TCAD_RESULTS if tcad_root is None else Path(tcad_root)
+    )
+    comparison_figures.write_all(out / "comparison", roots)
+    shutil.rmtree(out / "limitations", ignore_errors=True)
+    limitations_figures.write_all(out / "limitations", roots)
 
 
 # --- TCAD MOS capacitor pages (Task 13a) ------------------------------------------------------
@@ -541,13 +553,22 @@ _URL_ALIASES = {
         "https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip"
     ),
 }
-_NO_MESH = (
-    "No mesh picture: the 2D meshes (`mesh.msh`) are not committed (git-ignored, "
-    "{ref}`for their size <moscap2d-meshes>`), and this page renders only committed files. A "
-    "{term}`job`'s `cv.meta.json` records the sha256 of its mesh, from which it regenerates "
-    "byte for byte. The design spec asks for mesh pictures here: a recorded "
-    "{ref}`deviation <limitations-spec-deviations>`, "
-    "[issue #39](https://github.com/mithro/gf180-tcad/issues/39)."
+# Why a committed 2D cell has no reduced mesh artefact, by its parameter set.
+_NO_ARTEFACT = {
+    "start": (
+        "The 2D cell at the start values has no mesh picture. Its full mesh (`mesh.msh`) is not "
+        "committed and is in no cache, so no reduced mesh artefact is cut from it "
+        "({ref}`moscap2d-mesh-artefact`)."
+    ),
+    "calibrated": (
+        "The 2D cell at the calibrated values has no mesh picture: no reduced mesh artefact is "
+        "committed for it ({ref}`moscap2d-mesh-artefact`)."
+    ),
+}
+_MESH_ALT = (
+    "The mesh around the gate of the 2D cell: thousands of small triangles, densest in a thin "
+    "band at the silicon surface under the gate, coloured by region: the gate on top, the gate "
+    "oxide under it, the insulator beside the gate and the silicon body below."
 )
 
 
@@ -603,6 +624,7 @@ class _Device:
             dim: _read_json(self.root / "meshconv" / f"moscap{dim}" / name / "report.json")
             for dim in ("1d", "2d")
         }
+        self.corners = _read_json(self.root / "corners" / name / "summary.json")
 
     def comparison(self, gid: str) -> tuple[dict, str]:
         """``(record, repo path)`` of the committed 1D comparison of one geometry."""
@@ -992,10 +1014,54 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
             "",
         ]
         (ddir / f"{gid}_2d.svg").write_bytes(_two_d_svg(d, job))
-    lines += ["### Mesh picture", "", _NO_MESH, ""]
-    if job is None and cal_job is None:
-        lines += ["No 2D result exists for this geometry, so there is no mesh either.", ""]
+    lines += _mesh_section(d, gid, ddir)
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
+
+
+# The mesh figures drawn in this process, by the artefact's npz sha256 and the palette.
+_MESH_SVG: dict[tuple[str, str], bytes] = {}
+
+
+def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
+    """The geometry page's mesh pictures: for each committed 2D cell, the figure of its reduced
+    mesh artefact in a light and a dark twin (written into ``ddir``), or why it has none."""
+    from gf180tcad import meshcut
+    from gf180tcad.explain import figures
+
+    name = d.device.name
+    lines = ["### Mesh picture", ""]
+    cells = [p for p in ("calibrated", "start") if d.two_d(gid, p) is not None]
+    if not cells:
+        return [*lines, "No 2D result exists for this geometry, so there is no mesh either.", ""]
+    for params in cells:
+        found = sorted((d.root / "meshes").glob(f"*/{name}/{params}/{gid}/{meshcut.META}"))
+        if not found:
+            lines += [_NO_ARTEFACT[params], ""]
+            continue
+        adir = found[0].parent
+        meta = _read_json(adir / meshcut.META)
+        rel = adir.relative_to(d.root.parent).as_posix()
+        caption = (
+            f"The mesh of the 2D cell at the {params} values, around the gate: "
+            f"{meta['triangle_count']} of the full mesh's {meta['full_mesh_triangle_count']} "
+            "triangles, kept by the window rule ({ref}`mesh-artefact`). Drawn to scale from "
+            f"{{repo}}`results/{rel}`; full mesh sha256 `{meta['full_mesh_sha256']}`."
+        )
+        target = f"mesh-{name}-{gid}-{params}"
+        lines += [f"{{numref}}`{target}` shows the mesh of the 2D cell at the {params} values.", ""]
+        for palette in figures.PALETTES:
+            svg = f"{gid}_mesh_{params}-{palette}.svg"
+            # cells that share a mesh (W1.6/L0.7 and W10/L0.7) have the same npz: drawn once
+            key = (meta["npz_sha256"], palette)
+            if key not in _MESH_SVG:
+                _MESH_SVG[key] = figures.mesh_artefact(adir, palette)
+            (ddir / svg).write_bytes(_MESH_SVG[key])
+            head = [f"```{{figure}} {svg}"]
+            if palette == "light":
+                head.append(f":name: {target}")
+            lines += [*head, f":figclass: only-{palette}", f":alt: {_MESH_ALT}", "", caption,
+                      "```", ""]  # fmt: skip
+    return lines
 
 
 def _param_rows(d: _Device) -> list[str]:
@@ -1054,6 +1120,146 @@ def _meshconv_rows(report: dict) -> list[str]:
             row.append("not applicable" if a is None else num(a, 3))
         rows.append(row)
     return [*_table(header, rows), "", f"Level {sel} is the selected mesh."]
+
+
+# The corner bounds of the three tunables (Task 16a): read from results/tcad/corners/<device>/
+# summary.json (gf180tcad.calibrate.corners.summary), never recomputed here.
+#: Each tunable's unit on the pages, the factor from its process-file unit and the most
+#: significant digits shown: those of the explainer's tables
+#: (:data:`gf180tcad.explain.numbers.TUNABLES`), so one quantity reads the same on every page.
+CORNER_UNITS = {
+    "t_ox_eff_nm": ("nm", 1.0, 4),
+    "n_ch_cm3": ("cm⁻³", 1.0, 3),
+    "dv_fb_v": ("V", 1.0, 3),
+}
+#: The mark of a value that sits on a limit of its fit, explained in prose below its table.
+LIMIT_MARK = "†"
+#: The note below a table holding a :data:`LIMIT_MARK`.
+LIMIT_NOTE = f"A value marked {LIMIT_MARK} sits on a limit of its fit: the limit sets it, not the SPICE curve."
+#: The tunables with a card shift (the oxide's TOXE, the flat band's VTH0) for the cross-check.
+CORNER_SHIFT_TUNABLES = ("t_ox_eff_nm", "dv_fb_v")
+#: The name of the generated corner fragment of a device, included by docs/comparison/cv-agreement.md.
+CORNER_FRAGMENT = "corners.inc.md"
+
+
+def _corner_value(name: str, v: float, on_limit: bool = False) -> str:
+    """A tunable's value as the explainer prints it (:func:`gf180tcad.explain.numbers.shortest`:
+    a typographic minus, a power of ten as × 10ⁿ), with :data:`LIMIT_MARK` when ``on_limit``."""
+    from gf180tcad.explain.numbers import shortest
+
+    _unit, factor, digits = CORNER_UNITS[name]
+    return shortest(v * factor, "", digits) + (LIMIT_MARK if on_limit else "")
+
+
+def _corner_label(name: str) -> str:
+    return f"`{name}` ({CORNER_UNITS[name][0]})"
+
+
+def _verdict_term(verdict: str) -> str:
+    """A verdict linked to its glossary entry; "not applicable" as it is."""
+    return verdict if verdict == "not applicable" else f"{{term}}`{verdict}`"
+
+
+def _limit_word(hit: str | None) -> str:
+    return {"lower": "lower limit", "upper": "upper limit", None: "no"}[hit]
+
+
+def _with_note(table: list[str]) -> list[str]:
+    """``table`` followed by :data:`LIMIT_NOTE` when one of its cells holds :data:`LIMIT_MARK`."""
+    return [*table, "", LIMIT_NOTE] if any(LIMIT_MARK in r for r in table) else table
+
+
+def corner_tables(name: str, summary: dict) -> list[str]:
+    """The corner tables of one device from its corner ``summary``
+    (:func:`gf180tcad.calibrate.corners.summary`): the bounds and spread of each tunable, the
+    corner of each bound and whether it sits on a limit of its fit, the value at each corner, the
+    card cross-check of the oxide and the flat band, and the verdicts at each corner. One value
+    per cell; the unit is in the row label or the header. A value on a limit of its fit carries
+    :data:`LIMIT_MARK`, and :data:`LIMIT_NOTE` follows its table."""
+    from gf180tcad.calibrate import cv
+    from gf180tcad.calibrate.corners import FIT_CORNERS
+
+    if summary["device"] != name or set(summary["tunables"]) != set(CORNER_UNITS):
+        tun = summary["tunables"]
+        raise ValueError(f"{name}: the corner summary is of {summary['device']}, {sorted(tun)}")
+    tun = {n: summary["tunables"][n] for n in CORNER_UNITS}
+    src = f"{{repo}}`results/tcad/corners/{name}/summary.json`"
+    corners = [cv.TT, *FIT_CORNERS]
+    on = {c: summary["corners"][c]["bound_hits"] for c in corners}
+    bounds, where = [], []
+    for n, row in tun.items():
+        bounds.append([
+            _corner_label(n),
+            _corner_value(n, row["typical"], n in on[cv.TT]),
+            _corner_value(n, row["min"], row["min_at_bound"] is not None),
+            _corner_value(n, row["max"], row["max_at_bound"] is not None),
+            _corner_value(n, row["spread"]),
+        ])  # fmt: skip
+        where.append([f"`{n}`", row["min_corner"], _limit_word(row["min_at_bound"]),
+                      row["max_corner"], _limit_word(row["max_at_bound"])])  # fmt: skip
+    per = [[c, *(_corner_value(n, tun[n]["values"][c], n in on[c]) for n in tun)] for c in corners]
+    verdicts, hits = [], []
+    for c in corners:
+        e = summary["corners"][c]
+        held = cv.worst(e["held_out"].values()) if "held_out" in e else "not applicable"
+        verdicts.append([c, _verdict_term(e["verdict"]), _verdict_term(held)])
+        hits += [f"`{k}` at {c} is on its {v} limit" for k, v in sorted(e["bound_hits"].items())]
+    lines = [
+        (
+            f"From {src}: each fitted number at the {{term}}`typical corner` (the committed "
+            "calibration) and the lowest and highest value over the five {term}`corners <corner>`. "
+            "The spread is the highest minus the lowest. A lowest or highest value on a limit of "
+            "its fit is reported as that limit ({ref}`reproduce-corners`)."
+        ),
+        "",
+        *_with_note(_table(["Number", "Typical", "Lowest", "Highest", "Spread"], bounds)),
+        "",
+        "The corner of the lowest and the highest value, and whether it sits on a limit of its fit:",
+        "",
+        *_table(["Number", "Lowest at", "On a limit", "Highest at", "On a limit"], where),
+        "",
+        "The fitted value at each corner:",
+        "",
+        *_with_note(_table(["Corner", *(_corner_label(n) for n in tun)], per)),
+        "",
+    ]
+    for n in CORNER_SHIFT_TUNABLES:
+        row = tun[n]
+        unit = CORNER_UNITS[n][0]
+        shifts = [
+            [c, _corner_value(n, row["card_shift"][c]),
+             _corner_value(n, row["tcad_shift"][c], n in on[c]),
+             _corner_value(n, row["shift_difference"][c], n in on[c])]
+            for c in FIT_CORNERS
+        ]  # fmt: skip
+        lines += [
+            (
+                f"Card cross-check of `{n}`: the {{term}}`model card`'s shift of the same quantity at each "
+                "corner, the fit's shift from the typical value, and the fit's minus the card's:"
+            ),
+            "",
+            *_with_note(
+                _table(
+                    ["Corner", f"Card ({unit})", f"Fit ({unit})", f"Difference ({unit})"], shifts
+                )
+            ),
+            "",
+        ]
+    lines += [
+        (
+            "The verdict at each corner against that corner's {term}`SPICE` reference: at the "
+            "calibration geometries, and the worst at the held-out geometries (1D):"
+        ),
+        "",
+        *_table(["Corner", "Calibration", "Held out (1D)"], verdicts),
+        "",
+        (
+            "Limit hits: " + "; ".join(hits) + "."
+            if hits
+            else "No fit, typical or corner, sits on a limit."
+        ),
+    ]
+    return lines
 
 
 def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
@@ -1122,11 +1328,16 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         *_bookkeeping_rows(d),
         "",
+        "## Corner bounds",
+        "",
+        *corner_tables(name, d.corners),
+        "",
         "## Geometries",
         "",
         _GEOMETRY_ID_TEXT,
         "",
     ]
+    (ddir / CORNER_FRAGMENT).write_bytes("\n".join(corner_tables(name, d.corners) + [""]).encode())
     verdicts, errors, shifts = [], [], []
     for g in d.device.geometries:
         gid = geometry_id(g)
@@ -1200,7 +1411,9 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
                 (
                     f"The 2D study runs at the geometry {{doc}}`{study} <{study}>`, "
                     "where the 2D C per area exceeds {term}`Cox` by the fringe and the source/drain "
-                    "overlap at the gate edges ({doc}`/limitations/moscap2d`). " + _NO_MESH
+                    "overlap at the gate edges ({doc}`/limitations/moscap2d`). The 2D cells "
+                    "use the selected level's mesh; each geometry page draws the mesh of its "
+                    "cells from their reduced mesh artefacts."
                 ),
                 "",
             ]

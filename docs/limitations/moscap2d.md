@@ -11,6 +11,8 @@ doping. {py:func}`gf180tcad.tcad.moscap2d.simulate` meshes the cross-section wit
 {term}`QS <C–V>` (the counterpart of the {term}`SPICE` {term}`Cgg` of {term}`BSIM4`
 `capMod=2`) and 1 MHz AC with every non-gate contact's charge response.
 
+The cell, cut along its length, is drawn in {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`.
+
 ## The structure
 
 - **Thick oxide only.** The 5 V devices carry {term}`Dualgate` over the gate.
@@ -35,6 +37,8 @@ doping. {py:func}`gf180tcad.tcad.moscap2d.simulate` meshes the cross-section wit
 - **Normalisation.** The C per area divides the per-width Cgg by the drawn gate length. {term}`DLC`
   and the BSIM4 parasitics are never applied in 2D: the cross-section has its own overlap and
   fringe.
+
+The parts and their doping are drawn in {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`. The source/drain profile is in {numref}`moscap2d-sd-figure`.
 
 (moscap2d-artefact)=
 
@@ -78,6 +82,30 @@ vertex to its `point_tolerance`, which defaults to 1e-3 µm, and the plugin's cr
 leaves it at the default unless it is passed in. At the default, a 15.2 nm oxide is meshed
 **15.0 nm** thick (its nodes span y = 0 to 0.015 µm). That makes {term}`Cox` 1.3 % too large.
 It turns the 1D C/Cox of 0.981 into 1.0013 (and, in the prototype, into 1.0039).
+
+The meshed and drawn oxide are compared in {numref}`moscap2d-vertex-figure`.
+
+```{figure} /_generated/limitations/vertex-grid-light.svg
+:name: moscap2d-vertex-figure
+:figclass: only-light
+:alt: Two bars of oxide seen from the side, top few nanometres only. On the left, grey grid lines 1 nm apart and the filled oxide stopping at 15 nm, below a dashed line at 15.2 nm. On the right the filled oxide reaches the dashed line.
+
+The top of the {term}`nfet_05v0` start oxide, 15.2 nm thick in its {term}`process file`, meshed on
+the {{ meshwell }} default vertex grid (left) and on the grid of the fix,
+{py:data}`gf180tcad.tcad.stack.POINT_TOLERANCE_UM` (right). The dashed line is the drawn thickness,
+the fill the meshed oxide.
+```
+
+```{figure} /_generated/limitations/vertex-grid-dark.svg
+:figclass: only-dark
+:alt: Two bars of oxide seen from the side, top few nanometres only. On the left, grey grid lines 1 nm apart and the filled oxide stopping at 15 nm, below a dashed line at 15.2 nm. On the right the filled oxide reaches the dashed line.
+
+The top of the {term}`nfet_05v0` start oxide, 15.2 nm thick in its {term}`process file`, meshed on
+the {{ meshwell }} default vertex grid (left) and on the grid of the fix,
+{py:data}`gf180tcad.tcad.stack.POINT_TOLERANCE_UM` (right). The dashed line is the drawn thickness,
+the fill the meshed oxide.
+```
+
 
 A 16 nm oxide lies on the 1 nm grid, so it is meshed exactly. That is why the two thicknesses disagree:
 1.00126 against 0.98765 at the {{ meshwell }} defaults. The fix passes a `point_tolerance` through
@@ -151,7 +179,7 @@ The design spec requires both mesh convergence (less than 1 % on refinement) and
 within 0.5 % ({test}`tests/tcad/test_moscap2d.py::test_2d_equals_1d_without_sd`), so the 2D
 mesh-convergence study selects the coarsest level that meets both
 ({py:data}`gf180tcad.tcad.meshconv.AGREEMENT_1D`, {py:func}`gf180tcad.tcad.meshconv.agreement_1d`).
-Its `selected.json` and report record both criteria and the level each chooses
+Its {repo}`selected.json <results/tcad/meshconv/moscap2d/nfet_05v0/selected.json>` and report record both criteria and the level each chooses
 ({ref}`mesh-convergence-2d`). C/Cox ≤ 1 at ±5 V holds at the selected level
 ({test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1`).
 
@@ -187,6 +215,8 @@ does this with `refine_grading=True`, and the 2D study uses it
 ({py:data}`gf180tcad.tcad.meshconv.REFINE_GRADING`). 1D keeps the grading, since there it only
 caps the ratio of neighbouring spacings.
 
+The mesh size of both kinds of refinement is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-grading-figure>`.
+
 (moscap2d-solver)=
 
 ## Two solver findings of the 2D sweep
@@ -196,7 +226,9 @@ caps the ratio of neighbouring spacings.
   (`precision_fallback`), and the 2D results record every such point (`extended_fallback`).
 - **A relative criterion that is unreachable at a potential near 0 V.** {{ DEVSIM }}'s relative error is
   |update| / (|ψ| + 1e-10 V) per node, summed over the equations and regions of the device
-  (`src/Equation/Equation.cc`, `src/Geometry/Region.cc` and `Device.cc` of DEVSIM 2.11.1). Where the
+  ([`src/Equation/Equation.cc`](https://github.com/devsim/devsim/blob/c83824c7a84e3154b690e4d59966a136fb00296f/src/Equation/Equation.cc),
+  [`src/Geometry/Region.cc` and `Device.cc`](https://github.com/devsim/devsim/tree/c83824c7a84e3154b690e4d59966a136fb00296f/src/Geometry)
+  of DEVSIM 2.11.1). Where the
   potential passes through 0 V in the charge-free dielectric next to the gate, the 1e-10 criterion
   asks for an update below 1e-10·(|ψ| + 1e-10 V), 1e-20 V at ψ = 0. That is beyond the round-off of the linear solve (1.6–1.7e-16 V,
   in double and extended precision alike). At the nfet's −0.6 V point, on three of the four
@@ -205,14 +237,39 @@ caps the ratio of neighbouring spacings.
   ≤ 32·eps·max|ψ| over the last 10 iterations, a plateau of the relative error, and a node
   with |ψ| small enough to explain it), after solving it again to that round-off state, because
   DEVSIM restores the previous solution of a solve it calls non-converged. Every accepted point is
-  recorded. At the nfet level-1 point the accepted update is 1.6e-16 V (the bound 4.2e-15 V), the
-  dielectric's smallest |ψ| is 2.7e-8 V, Cgg there is smooth against its neighbours (second
+  recorded. At the nfet level-1 point the accepted update is {{ lim_roundoff_update }} V (the bound
+  {{ lim_roundoff_bound }} V), the dielectric's smallest |ψ| is {{ lim_roundoff_min_psi }} V (region
+  {{ lim_roundoff_region }} of the {repo}`report <results/tcad/meshconv/moscap2d/nfet_05v0/report.json>`). Cgg there is smooth against its neighbours (second
   difference 1.20e-3 C against 1.19e-3 on the level that needed no acceptance). A ±0.1 mV
   nudge of the gate bias reproduces it within 5e-9, but that check was run on the identical
   {py:mod}`meshconv <gf180tcad.tcad.meshconv>` level-1 {term}`job`, not on the production results
   folder. The production run's acceptances are checked by the second difference alone. The two
   {py:mod}`meshconv <gf180tcad.tcad.meshconv>` level-2 acceptances (at −0.601 V and −0.599 V)
   are unchecked.
+
+The accepted solves of the mesh-convergence study sit where the criterion asks for less than the round-off, as {numref}`moscap2d-roundoff-figure` shows.
+
+```{figure} /_generated/limitations/roundoff-light.svg
+:name: moscap2d-roundoff-figure
+:figclass: only-light
+:alt: A log-log plot: a line rising from 1e-20 V at small potentials, three dots above it at 3e-8 to 3e-7 V of potential and 1.5e-16 V of update, and a dashed level line above the dots.
+
+The potential update the relative criterion asks for at a node, 1e-10 × (|psi| + 1e-10 V), against
+the node's potential |psi| (solid). The dots are the three solves of the nfet 2D mesh-convergence
+study accepted at round-off, at their smallest |psi| and their update. The dashed line is the
+acceptance bound ({repo}`report <results/tcad/meshconv/moscap2d/nfet_05v0/report.json>`).
+```
+
+```{figure} /_generated/limitations/roundoff-dark.svg
+:figclass: only-dark
+:alt: A log-log plot: a line rising from 1e-20 V at small potentials, three dots above it at 3e-8 to 3e-7 V of potential and 1.5e-16 V of update, and a dashed level line above the dots.
+
+The potential update the relative criterion asks for at a node, 1e-10 × (|psi| + 1e-10 V), against
+the node's potential |psi| (solid). The dots are the three solves of the nfet 2D mesh-convergence
+study accepted at round-off, at their smallest |psi| and their update. The dashed line is the
+acceptance bound ({repo}`report <results/tcad/meshconv/moscap2d/nfet_05v0/report.json>`).
+```
+
 
 (moscap2d-sd)=
 
@@ -222,6 +279,30 @@ The pfet source/drain peak, `sd_peak_cm3` = 1e20 cm⁻³, is a `literature` valu
 With the junction depth {term}`XJ` fixed, the peak also sets the straggle (44.5, 42.0 and 39.9 nm
 for 5e19, 1e20 and 2e20 cm⁻³), and so how far the p⁺ edge reaches under the gate: fixing XJ is a
 modelling choice that couples the two.
+
+The three profiles are in {numref}`moscap2d-sd-figure`.
+
+```{figure} /_generated/limitations/sd-profile-light.svg
+:name: moscap2d-sd-figure
+:figclass: only-light
+:alt: Two plots of doping on a log axis. Top: three Gaussian curves against depth that all cross a dashed body-doping line at the same depth, XJ. Bottom: the same three along the surface, falling under the gate and reaching the body doping at slightly different distances.
+
+The {term}`pfet_05v0` source/drain doping at the start values for the peaks 5e19, 1e20 and 2e20
+cm⁻³, with {term}`XJ` fixed ({py:func}`gf180tcad.tcad.stack.sd_straggle_um`). Top: against depth
+inside the source/drain, away from the gate edge. Bottom: along the surface, the gate edge
+at 0, where each is half its peak. The dashed line is the body doping.
+```
+
+```{figure} /_generated/limitations/sd-profile-dark.svg
+:figclass: only-dark
+:alt: Two plots of doping on a log axis. Top: three Gaussian curves against depth that all cross a dashed body-doping line at the same depth, XJ. Bottom: the same three along the surface, falling under the gate and reaching the body doping at slightly different distances.
+
+The {term}`pfet_05v0` source/drain doping at the start values for the peaks 5e19, 1e20 and 2e20
+cm⁻³, with {term}`XJ` fixed ({py:func}`gf180tcad.tcad.stack.sd_straggle_um`). Top: against depth
+inside the source/drain, away from the gate edge. Bottom: along the surface, the gate edge
+at 0, where each is half its peak. The dashed line is the body doping.
+```
+
 
 At the pfet {term}`Lmin` (0.5 µm) a factor of two in the
 peak moves Cgg by −1.52 % / +1.25 % at worst (depletion), −0.56 % / +0.50 % in accumulation and
@@ -237,7 +318,7 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
 
 ## The L = 2 µm cells: QS only, resumed, with a memory growth that is not fixed
 
-- **QS only.** The L = 2 µm cells (501k nodes for the nfet, 504k for the pfet) have no AC result (no `cgx.csv`). Their AC
+- **QS only.** The L = 2 µm cells (501k nodes for the nfet, 504k for the pfet) have no AC result. Their {repo}`folders <results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00>` hold no {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>` like Lmin's. Their AC
   sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
   solver ({term}`UMFPACK` 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
@@ -261,6 +342,8 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
   dielectric region), or memory-allocator fragmentation at large node counts. The resume
   mechanism works around it; the cause is open ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)).
 
+The resumed start cells are the dotted QS curves of {numref}`moscap2d-ccox-figure`, with no AC points.
+
 (moscap2d-reproduce)=
 
 ## `make reproduce` does not reproduce the 2D files
@@ -269,7 +352,7 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
 committed 2D {term}`job` files cannot come out byte for byte:
 
 - **Job files without `ac` and `resumed`.** Older code wrote the job files of the Lmin cells
-  (`w10p0_l0p60`, `w10p0_l0p50`). Their `cv.meta.json` has no `ac` and no `resumed` entry. The current job writes both
+  (`w10p0_l0p60`, `w10p0_l0p50`). Their {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.meta.json>` has no `ac` and no `resumed` entry. The current job writes both
   (`"ac": "computed"`, `"resumed": {}`).
 - **Resumed sweeps.** The L = 2 µm cells are resumed sweeps, four restarts each
   ({ref}`moscap2d-l2`): `resumed` records
@@ -279,19 +362,27 @@ committed 2D {term}`job` files cannot come out byte for byte:
   ({ref}`tcad-provenance`, [issue #34](https://github.com/mithro/gf180-tcad/issues/34)). The
   files were not regenerated with that code. So nothing shows that today's code gives their bytes.
 
-So a full `make reproduce` is expected to report at least the four 2D `cv.meta.json` files in
-`manifest verify`, and the L = 2 µm `cv.csv` too (a resumed sweep agrees with an uninterrupted one
-only within the solver tolerance), as long as these are the committed 2D results. No end-to-end
+So a full `make reproduce` is expected to report at least the four 2D
+{repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.meta.json>` files in
+`manifest verify`. This holds as long as these are the committed 2D results. Under the same
+condition the L = 2 µm {repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00/cv.csv>`
+is expected there too. A resumed sweep agrees with an uninterrupted one only within the solver
+tolerance.
+
+No end-to-end
 run of a full `make reproduce` is recorded. All the 1D results are reproduced byte for byte locally, and the calibrated 1D
 results on GitHub-hosted runners ({ref}`cross-host-tcad`).
+
+The resumed sweeps are the dotted curves of {numref}`moscap2d-ccox-figure`.
 
 (moscap2d-meshes)=
 
 ## The meshes are not committed
 
-Each {term}`job` under {repo}`results/tcad/moscap2d` has a 25–62 MB `mesh.msh` ({{ gmsh }} MSH 2.2). They are
-git-ignored (`results/**/mesh.msh`) and left out of the {py:mod}`manifest <gf180tcad.manifest>`;
-the job's `cv.meta.json` records the sha256 of the mesh as `mesh_sha256`. The mesh is a function of
+Each {term}`job` under {repo}`results/tcad/moscap2d` has a 25–62 MB
+{repo}`mesh.msh <.gitignore#L15>` ({{ gmsh }} MSH 2.2). They are
+git-ignored ({repo}`results/**/mesh.msh <.gitignore#L15>`) and left out of the {py:mod}`manifest <gf180tcad.manifest>`;
+the job's {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.meta.json>` records the sha256 of the mesh as `mesh_sha256`. The mesh is a function of
 the committed cell geometry and the committed
 {repo}`selected.json <results/tcad/meshconv/moscap2d/nfet_05v0/selected.json>` of the
 {ref}`mesh-convergence study <mesh-convergence>` (nfet; the pfet's is beside it), so it regenerates
@@ -310,11 +401,14 @@ dd.delete_device()
 "
 ```
 
-Its `sha256sum mesh.msh` must equal the `mesh_sha256` in `cv.meta.json`
+Its `sha256sum mesh.msh` must equal the `mesh_sha256` in
+{repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.meta.json>`
 ({repo}`tests/tcad/test_moscap2d.py` checks a regenerated mesh placed beside the job's files). A full
 rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 --params start
 --geometry w10p0_l0p60 --out <tree root>` writes the mesh too, and the
 {py:func}`~gf180tcad.tcad.moscap2d.simulate` it runs takes hours.
+
+The mesh size the selected file sets is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-grading-figure>`. The window a reduced mesh artefact keeps is in {numref}`Figure %s of Reproduce <mesh-window-figure>`.
 
 **Output cache.** Instead of regenerating it, a mesh can be fetched from the shared
 {ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
@@ -323,14 +417,126 @@ None of the four committed start-value 2D jobs' meshes is in the cache, nor on a
 calibrated cells of [issue #35](https://github.com/mithro/gf180-tcad/issues/35), listed on {doc}`/reproduce/output-cache`. Once a mesh is in the cache,
 `tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh` writes it
 into place only if its sha256 matches. The cache is regenerable and holds no provenance; the
-committed `cv.meta.json` stays the truth.
+committed {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.meta.json>` stays the truth.
+
+(moscap2d-mesh-artefact)=
+
+## The reduced mesh artefact
+
+The mesh pictures come from a committed reduced mesh artefact per 2D cell, not from the full mesh.
+The window rule and the file format are in {ref}`mesh-artefact`. The artefact of the calibrated
+nfet at W10/L0.6 is in {numref}`mesh-artefact-l0p60`.
+
+```{figure} /_generated/tcad/nfet_05v0/w10p0_l0p60_mesh_calibrated-light.svg
+:name: mesh-artefact-l0p60
+:figclass: only-light
+:alt: The mesh around the gate of the calibrated nfet W10/L0.6 cell: small triangles, densest in a thin band at the silicon surface under the gate, coloured by region: the gate on top, the gate oxide under it, the insulator beside the gate and the silicon body below.
+
+The committed reduced mesh artefact of the calibrated nfet W10/L0.6 cell, drawn to scale from
+{repo}`results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p60`.
+```
+
+```{figure} /_generated/tcad/nfet_05v0/w10p0_l0p60_mesh_calibrated-dark.svg
+:figclass: only-dark
+:alt: The mesh around the gate of the calibrated nfet W10/L0.6 cell: small triangles, densest in a thin band at the silicon surface under the gate, coloured by region: the gate on top, the gate oxide under it, the insulator beside the gate and the silicon body below.
+
+The committed reduced mesh artefact of the calibrated nfet W10/L0.6 cell, drawn to scale from
+{repo}`results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p60`.
+```
+
+Each calibrated 2D cell has one, in {repo}`results/tcad/meshes/stable`. The cuts ran in the
+{term}`stable TCAD image`, which made the 2D jobs. Each artefact records the full mesh's sha256,
+and it equals the job's committed `mesh_sha256`
+({test}`tests/test_meshcut.py::test_committed_artefacts_match_their_jobs`).
+
+| Cell | Nodes kept | Triangles kept | Full-mesh triangles | Size (bytes) |
+|---|---|---|---|---|
+| nfet `w10p0_l0p60` | 109188 | 216407 | 451341 | 3444020 |
+| nfet `w10p0_l0p70` | 123989 | 245698 | 490416 | 3928161 |
+| nfet `w10p0_l1p00` | 169991 | 336824 | 611577 | 5372303 |
+| nfet `w10p0_l2p00` | 316448 | 626859 | 1011620 | 10058583 |
+| nfet `w1p6_l0p70` | 123989 | 245698 | 490416 | 3928161 |
+| pfet `w10p0_l0p50` | 93543 | 185407 | 410480 | 2943782 |
+| pfet `w10p0_l0p70` | 123351 | 244427 | 489146 | 3913892 |
+| pfet `w10p0_l1p00` | 168640 | 334122 | 608867 | 5367277 |
+| pfet `w10p0_l2p00` | 313845 | 621643 | 1006380 | 10039177 |
+| pfet `w1p6_l0p70` | 123351 | 244427 | 489146 | 3913892 |
+
+The sizes come from each meta file's `size_bytes`. A W1.6/L0.7 cell has the W10/L0.7 mesh,
+so its `.npz` has the same bytes. In the two `w10p0_l2p00` cells the window is wider than the
+cell. There a quarter of the gate length is 0.5 µm by our arithmetic, more than the source or
+the drain is wide. Their widths are in each meta file's `region_bounds_um`.
+
+The 2D start cells have no artefact. Their full meshes are in no cache and on no disk, so
+each must be regenerated first ([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
+Their geometry pages say why they have no mesh picture.
+
+**Memory and time of a cut.** The nfet W10/L0.6 cut was measured alone in a 4 GiB
+{term}`sandbox` with one CPU. Its peak memory, under an eighth of the limit, and its wall time
+are in the {ref}`run record <reproduce-meshcut-memory>`. The 4 GiB limit stays, because the
+`w10p0_l2p00` full meshes have more than twice as many triangles. The ten cuts and their exit codes
+are on {ref}`tcad-provenance`.
+
+**A regenerated mesh.** {test}`tests/tcad/test_meshcut_job.py::test_regenerated_mesh_sha_reported`
+meshed the calibrated nfet W10/L0.6 cell again in the stable image. Its sha256 equals the
+committed `mesh_sha256`.
 
 (moscap2d-calibrated)=
 
 ## The calibrated 2D cells
 
 The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed
-cells with `--params calibrated`, one 16 GiB {term}`job` at a time. The committed cells:
+cells with `--params calibrated`, one 16 GiB {term}`job` at a time.
+
+Two of them are compared with SPICE in {numref}`moscap2d-validation-figure`. Every compared cell's crossing shift and plateau difference is in {numref}`moscap2d-metrics-figure`.
+
+```{figure} /_generated/limitations/twod-validation-light.svg
+:name: moscap2d-validation-figure
+:figclass: only-light
+:alt: Two panels of gate capacitance against voltage. In each a dashed 2D curve lies below a black SPICE curve inside a grey band on both plateaus, and a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
+
+{term}`Cgg` of the calibrated 2D cells nfet W10/L0.6 (top) and pfet W10/L1 (bottom) against u =
+polarity × Vg. The black line is SPICE at the {term}`typical corner`, inside the grey band of its five
+{term}`corners <corner>`; the dashed line is the 2D cell. The ring and the dot are the depletion crossings of SPICE
+and of the 2D cell at the level C_mid (dotted), labelled with their shift
+({repo}`results/tcad/validation`).
+```
+
+```{figure} /_generated/limitations/twod-validation-dark.svg
+:figclass: only-dark
+:alt: Two panels of gate capacitance against voltage. In each a dashed 2D curve lies below a black SPICE curve inside a grey band on both plateaus, and a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
+
+{term}`Cgg` of the calibrated 2D cells nfet W10/L0.6 (top) and pfet W10/L1 (bottom) against u =
+polarity × Vg. The black line is SPICE at the {term}`typical corner`, inside the grey band of its five
+{term}`corners <corner>`; the dashed line is the 2D cell. The ring and the dot are the depletion crossings of SPICE
+and of the 2D cell at the level C_mid (dotted), labelled with their shift
+({repo}`results/tcad/validation`).
+```
+
+```{figure} /_generated/limitations/twod-metrics-light.svg
+:name: moscap2d-metrics-figure
+:figclass: only-light
+:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV, four of those markers hollow. Bottom: every plateau difference lies below zero, most below a grey band of ±5 %, all of those hollow.
+
+Every compared calibrated 2D cell ({repo}`results/tcad/validation`). Top: the shift of its depletion
+crossing from SPICE's, with the ±50 mV tolerance shaded. Bottom: its largest signed difference from
+SPICE on the accumulation (circles) and inversion (squares) plateaus, with the ±5 % tolerance shaded.
+A hollow marker is a {term}`Same process` verdict: outside the tolerance, inside the SPICE corner window.
+A filled marker outside the band is {term}`Disagree`.
+```
+
+```{figure} /_generated/limitations/twod-metrics-dark.svg
+:figclass: only-dark
+:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV, four of those markers hollow. Bottom: every plateau difference lies below zero, most below a grey band of ±5 %, all of those hollow.
+
+Every compared calibrated 2D cell ({repo}`results/tcad/validation`). Top: the shift of its depletion
+crossing from SPICE's, with the ±50 mV tolerance shaded. Bottom: its largest signed difference from
+SPICE on the accumulation (circles) and inversion (squares) plateaus, with the ±5 % tolerance shaded.
+A hollow marker is a {term}`Same process` verdict: outside the tolerance, inside the SPICE corner window.
+A filled marker outside the band is {term}`Disagree`.
+```
+
+The committed cells:
 
 | Cell | Nodes | QS sweep (min) | AC sweep (min) | Job total (min) |
 |---|---|---|---|---|
@@ -374,7 +580,7 @@ In each job the solve is on the ramp to the first QS point (+5 V).
 Its gate was at 4.487 V; the update was 2.6e-16 V, in the body.
 
 The +5 V point itself converged to the full tolerance, so no committed Cgg comes from that solve.
-Each job's `cv.meta.json` records it in `qs_roundoff_accepted` ({ref}`moscap2d-solver` gives the conditions).
+Each job's {repo}`cv.meta.json <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>` records it in `qs_roundoff_accepted` ({ref}`moscap2d-solver` gives the conditions).
 The two entries are identical ({test}`tests/test_calibrate_cv.py::test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell`).
 The entry's `vg` is a ramp bias, not a grid point ([issue #102](https://github.com/mithro/gf180-tcad/issues/102)).
 
@@ -435,7 +641,7 @@ drift-diffusion solve that sets up every 2D device fails on it. It fails inside 
 0.86 million unknowns, still solves.
 
 This is an open correctness
-problem, tracked in [issue #58](https://github.com/mithro/gf180-tcad/issues/58). Its long-channel
+problem, tracked in the same issue. Its long-channel
 C per area is covered by the 2D-equals-1D check and by the 1D MOS capacitor. The directions to
 test (another direct or an iterative solver, a symmetric half domain) are on the issue.
 
@@ -447,10 +653,35 @@ and inter-layer dielectric, and 0.987 and 0.977 when that dielectric is replaced
 boundaries. The difference, 0.121 Cox at −5 V and 0.115 Cox at +5 V, is the outer fringe.
 It runs from the poly sidewalls to the silicon outside the gate.
 
+The committed cells with source and drain lie above 1 at Lmin in {numref}`moscap2d-ccox-figure`.
+
+```{figure} /_generated/limitations/c-over-cox-light.svg
+:name: moscap2d-ccox-figure
+:figclass: only-light
+:alt: Two panels, nfet and pfet, of C/Cox against gate voltage. A solid 1D curve stays below the line at 1. A dashed Lmin curve with dots on it rises above 1 on both plateaus. A dotted L = 2 µm curve without dots lies near 1.
+
+C/{term}`Cox` at the start values against u = polarity × Vg, nfet above and pfet below: the 1D stack
+(solid), the 2D cell at {term}`Lmin` (dashed, with its 1 MHz AC points) and the 2D cell at L = 2 µm
+({term}`QS <C–V>` only, dotted), each per drawn gate area ({repo}`results/tcad/moscap2d`). Cox is
+that of the 15.2 nm (nfet) or 15.6 nm (pfet) oxide.
+```
+
+```{figure} /_generated/limitations/c-over-cox-dark.svg
+:figclass: only-dark
+:alt: Two panels, nfet and pfet, of C/Cox against gate voltage. A solid 1D curve stays below the line at 1. A dashed Lmin curve with dots on it rises above 1 on both plateaus. A dotted L = 2 µm curve without dots lies near 1.
+
+C/{term}`Cox` at the start values against u = polarity × Vg, nfet above and pfet below: the 1D stack
+(solid), the 2D cell at {term}`Lmin` (dashed, with its 1 MHz AC points) and the 2D cell at L = 2 µm
+({term}`QS <C–V>` only, dotted), each per drawn gate area ({repo}`results/tcad/moscap2d`). Cox is
+that of the 15.2 nm (nfet) or 15.6 nm (pfet) oxide.
+```
+
+
 BSIM4's CF of 0.0727 fF/µm per side would add
 2 × 0.0727 / (0.6 µm × 2.272 fF/µm²) = 0.107 Cox. With source and drain, their doping that
-reaches under the gate edges adds the overlap, and C/Cox per drawn area is 1.071 (accumulation) and
-1.090 (inversion) at Lmin. {test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1` therefore
+reaches under the gate edges adds the overlap. C/Cox per drawn area of the start cell at Lmin
+({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cv.csv>`) is then {{ lim_ccox_acc }}
+(accumulation) and {{ lim_ccox_inv }} (inversion). {test}`tests/tcad/test_moscap2d.py::test_c_over_cox_le_1` therefore
 checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is reported, not tested.
 
 ## Limitations
@@ -468,3 +699,5 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   They are the nfet W10/L0.6, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7.
   The pfet cells are W10/L0.5, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7.
 - **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).
+
+The modelled cell is in {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`. Its fringe and plateaus are in {numref}`moscap2d-ccox-figure`.

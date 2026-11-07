@@ -212,6 +212,25 @@ def check_gate(mesh: msh.Mesh, xs) -> None:
         )
 
 
+def region_bounds(mesh: msh.Mesh) -> dict[str, dict[str, tuple[float, float]]]:
+    """Each 2D region of the full ``mesh`` with the ``x_um`` and ``y_um`` bounds of its nodes,
+    in um (file coordinates times :data:`gf180tcad.meshcut.UM_PER_MSH_UNIT`).
+
+    The body spans the cut through the active area, so the source and drain beside the gate
+    have the lateral extent from the body's ends to the gate's edges (issue #128)."""
+    um = meshcut.UM_PER_MSH_UNIT
+    out = {}
+    for name in sorted(set(mesh.region_names())):
+        tags = [t for (d, t), n in mesh.names.items() if d == 2 and n == name]
+        nodes = np.unique(mesh.triangles[np.isin(mesh.triangle_tag, tags)])
+        if len(nodes) == 0:
+            raise JobMismatch(f"the mesh's region {name!r} has no triangle")
+        x, y = mesh.nodes[nodes, 0] * um, mesh.nodes[nodes, 1] * um
+        out[name] = {"x_um": (float(x.min()), float(x.max())),
+                     "y_um": (float(y.min()), float(y.max()))}  # fmt: skip
+    return out
+
+
 def _total(profiles, x_range, y_range, x_um, depth_um) -> np.ndarray:
     out = np.zeros(len(x_um))
     for p in profiles:
@@ -280,6 +299,7 @@ def cut(
         full_mesh_triangle_count=len(mesh.triangles),
         rule=rule,
         source=source,
+        region_bounds_um=region_bounds(mesh),
     )
 
 

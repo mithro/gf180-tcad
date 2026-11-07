@@ -2,19 +2,22 @@
 
 # The MOS capacitor
 
-What is a {term}`MOS capacitor <MOSCAP>`, and why does this project simulate it before the transistor? This page
-answers that for a reader who knows basic circuits and has read {doc}`oxide-and-poly`. It leaves
-out why the capacitance changes with the gate voltage.
+What is a {term}`MOS capacitor <MOSCAP>`, and why does this project simulate it before the
+transistor? This page answers that for a reader who knows basic circuits and has read
+{doc}`oxide-and-poly`. It leaves out why the capacitance changes with the gate voltage. The column
+of {numref}`fig-moscap-cell` under the gate is the MOS capacitor.
 
 ```{figure} /_generated/explained/moscap-cell-light.svg
 :figclass: only-light
+:name: fig-moscap-cell
 :alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey, with dark contact bars on the gate, the source, the drain and the bottom of the body.
 
 The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`. The 1D stack is the column under the
 gate: the gate, the {term}`gate oxide` and the body, in colour. The source and the drain, muted,
 are the parts the MOS capacitor leaves out. The oxide thickness and the body doping are fitted
 to the {term}`SPICE` model. The junction depth is the {term}`model card`'s value. The gate and
-body depths and the source and drain width are project choices. {{ x_fig_moscap_cell_scale }}
+body depths are project choices. The source and drain widths come from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_moscap_cell_scale }}
 ```
 
 ```{figure} /_generated/explained/moscap-cell-dark.svg
@@ -25,7 +28,8 @@ The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`. The 1D stack is the column u
 gate: the gate, the {term}`gate oxide` and the body, in colour. The source and the drain, muted,
 are the parts the MOS capacitor leaves out. The oxide thickness and the body doping are fitted
 to the {term}`SPICE` model. The junction depth is the {term}`model card`'s value. The gate and
-body depths and the source and drain width are project choices. {{ x_fig_moscap_cell_scale }}
+body depths are project choices. The source and drain widths come from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_moscap_cell_scale }}
 ```
 
 (explained-moscap-stack)=
@@ -35,7 +39,8 @@ body depths and the source and drain width are project choices. {{ x_fig_moscap_
 MOS stands for metal, oxide and semiconductor, the three layers of the stack
 ({ref}`Sze and Ng, ch. 4 <lit-sze>`). Here the "metal" is the {term}`poly-silicon` gate, the
 oxide is silicon dioxide and the semiconductor is the silicon body. The stack is the middle of a
-transistor, with the source and the drain left out.
+transistor, with the source and the drain left out, as the colours of {numref}`fig-moscap-cell`
+show.
 
 The gate and the body are the two plates of a capacitor, and the oxide is the insulator between
 them ({ref}`Taur and Ning, ch. 4 <lit-taur>`). This repo's 1D
@@ -49,10 +54,11 @@ the gate and one on the bottom of the body ({py:mod}`gf180tcad.tcad.moscap1d`).
 A capacitance is the charge a capacitor takes for each volt across it. The gate capacitance
 {term}`Cgg` is that ratio for a small change of the gate voltage, with the body held at zero
 volts ({ref}`Sze and Ng, ch. 4 <lit-sze>`). Its curve against the gate voltage is the
-{term}`C–V` curve.
+{term}`C–V` curve, drawn in {numref}`fig-moscap-cv`.
 
 ```{figure} /_generated/explained/moscap-cv-light.svg
 :figclass: only-light
+:name: fig-moscap-cv
 :alt: Gate capacitance against gate voltage: high and flat at both ends, a deep dip a little above zero volts, with a solid line inside a grey band and a dashed line lying almost on top of the solid one.
 
 The gate capacitance of the nfet_05v0 at `w10p0_l10p00`. The solid line is the {term}`PDK`'s
@@ -87,6 +93,7 @@ Under the gate, the ceiling is the {term}`oxide capacitance <Cox>` times the gat
 The oxide is an insulator, so no current flows through the stack. The simulation solves it at
 rest, with the body at zero volts ({py:mod}`gf180tcad.tcad.moscap1d`). Its capacitance is then
 set by the oxide and by the doping of the gate and the body ({ref}`Sze and Ng, ch. 4 <lit-sze>`).
+Those are the three coloured parts of {numref}`fig-moscap-cell`.
 
 So the stack is where this repo fits the oxide thickness, the body doping and a shift of the
 gate voltage. The fitted shift is {{ x_dv_fb_nfet_cal }} for the nfet
@@ -105,16 +112,18 @@ where the gate overlaps the source and the drain ({ref}`BSIM4 manual, §7.1 <lit
 
 This repo multiplies the simulated capacitance per area by that effective area. It then adds the
 same overlap terms, with the model card's values
-({py:meth}`~gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). The dashed line in the figure is
-that sum.
+({py:meth}`~gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). The dashed line in
+{numref}`fig-moscap-cv` is that sum. The overlaps are where the gate of {numref}`fig-moscap-cell`
+meets the muted source and drain.
 
 (explained-moscap-differs)=
 
 ## Where this repo's results differ
 
-At `w10p0_l10p00` the simulated curve lies within {{ x_plateau_acc_l10 }} of the SPICE curve at
-the most negative gate voltage. At the most positive it lies within {{ x_plateau_inv_l10 }}. The allowed error is
-{{ x_plateau_tol_l10 }} ({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
+{numref}`fig-moscap-cv` shows the geometry `w10p0_l10p00`. There the simulated curve lies within
+{{ x_plateau_acc_l10 }} of the SPICE curve at the most negative gate voltage. At the most positive
+it lies within {{ x_plateau_inv_l10 }}. The allowed error is {{ x_plateau_tol_l10 }}
+({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
 
 A verdict says whether the simulation matches the SPICE model: {term}`Agree`,
 {term}`Same process` or {term}`Disagree` ({ref}`the verdicts <agreement-verdicts>`). Each check

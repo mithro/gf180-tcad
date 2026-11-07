@@ -18,7 +18,9 @@ the applied inputs are those of ``nfet_06v0.0`` (tested). A corner fit applies t
 and the BSIM4 default CF of its TOXE to the area and overlap bookkeeping as fixed inputs
 (:func:`corner_bookkeeping`, :func:`with_corner_card`). It moves the oxide bounds and start by
 the corner's TOXE offset and the flat-band bounds and start by its VTH0 offset, in true-sign
-gate bias for both devices (:func:`corner_bounds`). The doping bounds stay as at TT. The TT
+gate bias for both devices (:func:`corner_bounds`). A fit that stops on its flat-band limit is
+refitted with that window widened by the VTH0 offset on each side (:data:`FLAT_BAND_STAGE`).
+The doping bounds stay as at TT. The TT
 oxide upper bound is TOXP plus the charge-centroid allowance Δ (:mod:`gf180tcad.tcad.process`);
 a corner fit moves that bound by the TOXE offset and keeps the TT Δ, not recomputed at the
 corner's TOXP and VTH0.
@@ -176,12 +178,33 @@ def tunable_shifts(device: str, corner: str) -> dict[str, float]:
     }
 
 
+#: The widening stage of the flat-band window of each corner fit not at stage 0 (design spec
+#: §5.3). At stage k the window is the TT window moved by the VTH0 offset ΔVTH0 and widened by
+#: k·|ΔVTH0| on each side: start ± (h + k·|ΔVTH0|), h the TT half-width (0.2 V). The card's
+#: offset sizes the corner's threshold move; a fit that stops on its flat-band limit at stage k
+#: is refitted at stage k + 1, the room it gets on each side growing by one more such move.
+#: The pfet ff and sf fits stopped on their upper flat-band limit at stage 0.
+FLAT_BAND_STAGE = MappingProxyType({("pfet_05v0", "ff"): 1, ("pfet_05v0", "sf"): 1})
+
+
+def flat_band_stage(device: str, corner: str) -> int:
+    """The widening stage of the flat-band window of the ``corner`` fit of ``device``."""
+    return FLAT_BAND_STAGE.get((device, corner), 0)
+
+
 def corner_bounds(device: str, corner: str) -> dict[str, tuple[float, float]]:
-    """The TT bounds of the tunables, each moved by :func:`tunable_shifts`."""
+    """The TT bounds of the tunables, each moved by :func:`tunable_shifts`; the flat-band
+    window then widened by k·|ΔVTH0| on each side, k = :func:`flat_band_stage`."""
     _check_corner(corner)
     proc = process.load(device)
     s = tunable_shifts(device, corner)
-    return {n: tuple(b + s[n] for b in proc.params[n].bounds) for n in process.TUNABLES}
+    out = {n: tuple(b + s[n] for b in proc.params[n].bounds) for n in process.TUNABLES}
+    k = flat_band_stage(device, corner)
+    if k:
+        w = k * abs(s["dv_fb_v"])
+        lo, hi = out["dv_fb_v"]
+        out["dv_fb_v"] = (lo - w, hi + w)
+    return out
 
 
 # --- the PVTH0 binning term the fits leave out ---------------------------------------------------
@@ -373,6 +396,9 @@ class CornerFit:
             "pdk_corners_sha256": PDK_CORNERS_SHA256,
             "tunable_shifts": dict(self.shifts),
         }
+        k = flat_band_stage(self.result.device, self.corner)
+        if k:  # absent at stage 0, so the stage-0 files are unchanged
+            d["corner"]["flat_band_stage"] = k
         d["held_out"] = self.held_out
         return d
 
