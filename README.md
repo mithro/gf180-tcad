@@ -188,7 +188,7 @@ uv run pytest -m "not sandbox"
 ```
 
 `make lint` is the lint step of CI; [`tools/install-hooks`](tools/install-hooks) installs the pre-push hook that
-runs it and the fast tests before every push ([CONTRIBUTING.md](CONTRIBUTING.md#development)).
+runs it and the non-sandbox tests before every push ([CONTRIBUTING.md](CONTRIBUTING.md#development)).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution rules.
 

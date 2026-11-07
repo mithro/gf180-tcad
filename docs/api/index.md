@@ -48,6 +48,7 @@ gf180tcad.reference
 gf180tcad.render
 gf180tcad.render.manifest
 gf180tcad.reproduce_figures
+gf180tcad.results_figures
 gf180tcad.sandbox
 gf180tcad.specwindow
 gf180tcad.spice

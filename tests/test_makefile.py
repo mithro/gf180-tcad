@@ -249,3 +249,23 @@ def test_tcad_corners_target():
         ("summary", d) for d in process.DEVICES
     ]
     assert {a.out.as_posix() for _, a in cmds} == {"results/tcad/corners"}
+
+
+def _pytest_line(target: str) -> list[str]:
+    """The argv of the one pytest command ``make -n target`` prints."""
+    out = subprocess.run(
+        ["make", "--no-print-directory", "-n", target],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=Path(__file__).parents[1],
+    ).stdout
+    lines = [shlex.split(x) for x in out.replace("\\\n", " ").splitlines() if "pytest" in x]
+    assert len(lines) == 1, out
+    return lines[0]
+
+
+def test_pre_push_docs_runs_the_generated_pages():
+    # issue #165: a docgen failure reached CI only, because no hook target ran tests/test_docgen.py
+    assert "tests/test_docgen.py" in _pytest_line("pre-push-docs")
+    assert "--ignore=tests/test_docgen.py" in _pytest_line("pre-push")
