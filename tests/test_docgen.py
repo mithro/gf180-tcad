@@ -939,3 +939,87 @@ def test_readme_prose_drops_the_captions():
     text = "Some text.\n\n![alt](a.svg)\n\n*Figure 2. A caption that names Figure 1\nover two lines.*\n"
     assert "Figure 1" not in readme_prose(text)
     assert "Figure 1" in readme_prose(text + "\nAs Figure 1 shows.\n")
+
+
+def _symlink_tree(src: Path, dst: Path) -> Path:
+    """A tree of symlinks to every file of ``src`` under ``dst``, a folder of another name."""
+    for p in src.rglob("*"):
+        if p.is_file():
+            q = dst / p.relative_to(src)
+            q.parent.mkdir(parents=True, exist_ok=True)
+            q.symlink_to(p)
+    return dst
+
+
+def test_repo_path_maps_a_tree_of_any_name_to_the_committed_layout(tmp_path, monkeypatch):
+    """Issue #173 and the review of #174: a tree in the repository's results/ folder is linked
+    where it lies; any other tree, inside the checkout or not, at the same place in the
+    committed tree; a path outside its tree is an error."""
+    rel = Path("ngspice") / "typical" / "a.csv"
+    committed = "results/spice/ngspice/typical/a.csv"
+    # the committed tree, and another tree under results/, are linked where they lie
+    assert docgen.repo_path(docgen.RESULTS / rel, docgen.RESULTS, docgen.RESULTS) == committed
+    other = REPO_ROOT / "results" / "spice-pdk-x"
+    assert docgen.repo_path(other / rel, other, docgen.RESULTS) == (
+        "results/spice-pdk-x/ngspice/typical/a.csv"
+    )
+    # a tree outside the repository, and a scratch tree inside the checkout, map to committed
+    assert docgen.repo_path(tmp_path / "x" / rel, tmp_path / "x", docgen.RESULTS) == committed
+    scratch = REPO_ROOT / "tmp" / "spice_in"
+    assert docgen.repo_path(scratch / rel, scratch, docgen.RESULTS) == committed
+    mesh = tmp_path / "tcad_in" / "meshes" / "x"
+    assert docgen.repo_path(mesh, tmp_path / "tcad_in", docgen.TCAD_RESULTS) == (
+        "results/tcad/meshes/x"
+    )
+    # relative paths are taken from the working directory
+    monkeypatch.chdir(REPO_ROOT)
+    assert (
+        docgen.repo_path(Path("results/spice-pdk-x") / rel, "results/spice-pdk-x", docgen.RESULTS)
+        == "results/spice-pdk-x/ngspice/typical/a.csv"
+    )
+    # a path that is not under its tree is an error, inside the repository or not
+    for path in (
+        REPO_ROOT / "README.md",
+        tmp_path / "elsewhere.csv",
+        docgen.RESULTS / ".." / "tcad" / "x.csv",
+    ):
+        with pytest.raises(ValueError, match="is not under the results tree"):
+            docgen.repo_path(path, docgen.RESULTS, docgen.RESULTS)
+
+
+def test_csv_links_of_a_spice_tree_of_another_name_exist(tmp_path):
+    """Issue #173: the Id-Vg sentence and caption of a SPICE tree under another folder name
+    link the CSV at its committed path, and that file exists."""
+    tree = _symlink_tree(docgen.RESULTS, tmp_path / "spice_in")
+    roots = rf.Roots(spice=tree, tcad=rf.TCAD_ROOT)
+    device = DEVICES["nfet_05v0"]
+    gid = geometry_id(device.geometries[0])
+    links = []
+    for sweep in ("idvg_lin", "idvg_sat"):
+        for text in docgen._sweep_text(device, gid, sweep, roots):
+            links += re.findall(r"\{repo\}`[^<`]+<([^>]+)>`", text)
+    assert len(links) == 4
+    for link in links:
+        assert link.startswith("results/spice/") and (REPO_ROOT / link).is_file(), link
+
+
+def test_mesh_links_of_a_tcad_tree_of_another_name_exist(tmp_path):
+    """Issue #173: the mesh captions of a TCAD tree under another folder name link the mesh
+    artefact folders at their committed paths, and those folders exist. The mesh section of one
+    geometry with a committed mesh artefact per device is made directly, not the whole TCAD
+    pages: every section builds its links the same way."""
+    tree = _link_tcad_tree(tmp_path / "tcad_in")
+    metas = sorted((TCAD / "meshes").glob("*/*/*/*/mesh-window.meta.json"))
+    first = {}
+    for m in metas:
+        first.setdefault(m.parts[-4], m.parts[-2])
+    assert first
+    for name, gid in sorted(first.items()):
+        d = docgen._Device(tree, DEVICES[name])
+        out = tmp_path / "out" / name
+        out.mkdir(parents=True, exist_ok=True)
+        text = "\n".join(docgen._mesh_section(d, gid, out))
+        links = re.findall(r"\{repo\}`(results/[^`]*meshes/[^`]*)`", text)
+        assert links, (name, gid)
+        for link in links:
+            assert (REPO_ROOT / link).is_dir(), link
