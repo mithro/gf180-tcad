@@ -852,9 +852,11 @@ PLUGIN_ROOT = REPO_ROOT / "results" / "plugin-history"
 
 
 def plugin_root(roots: Roots = DEFAULT_ROOTS) -> Path:
-    """The plugin-history records of ``roots``: ``plugin-history`` beside its TCAD tree, so the
-    committed :data:`PLUGIN_ROOT` for the committed trees."""
-    return Path(roots.tcad).parent / "plugin-history"
+    """The plugin-history records of ``roots``: ``plugin-history`` beside its SPICE tree, the
+    results tree :func:`gf180tcad.docgen.generate` is given as ``results_root``, so the committed
+    :data:`PLUGIN_ROOT` for the committed trees. (A TCAD tree given on its own, as the docgen
+    tests do, keeps the committed records.)"""
+    return Path(roots.spice).parent / "plugin-history"
 
 
 def plugin_records(root: Path = PLUGIN_ROOT) -> dict[str, dict]:

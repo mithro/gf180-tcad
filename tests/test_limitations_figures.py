@@ -306,8 +306,10 @@ def test_figure_data_come_from_the_roots(name, tmp_path):
         lf.FIGURES[name]("light", roots)
 
 
-def test_plugin_root_is_beside_the_tcad_tree():
+def test_plugin_root_is_beside_the_spice_tree(tmp_path):
     assert lf.plugin_root() == lf.PLUGIN_ROOT
+    roots = lf.Roots(spice=tmp_path / "spice", tcad=tmp_path / "tcad")
+    assert lf.plugin_root(roots) == tmp_path / "plugin-history"
 
 
 def test_validation_files_exist():
