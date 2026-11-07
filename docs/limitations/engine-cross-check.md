@@ -19,7 +19,27 @@ The threshold is not loosened. **Twelve of the 36 cases fail:** `idvg_lin`
 (0.555 to 0.562 %) and `idvg_sat` (0.56 to 0.61 %) for all six `nfet_05v0` geometries. They are marked as
 {term}`strict expected failures <strict expected failure>` (listed in
 {py:data}`gf180tcad.known.KNOWN_ENGINE_DIFFS`) that point to this page, so a fix would show up as an
-unexpected pass.
+unexpected pass. The engine difference of every sweep and geometry is plotted against the
+threshold in {numref}`engine-diff-figure`.
+
+```{figure} /_generated/limitations/engine-diff-light.svg
+:name: engine-diff-figure
+:figclass: only-light
+:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the circles and squares sit above a dashed threshold line; every pfet marker sits below it.
+
+The {term}`engine_diff` of each {term}`typical corner` sweep, nfet above and pfet below, from the
+committed {{ ngspice }} and {{ Xyce }} files ({repo}`results/spice`). The dashed line is the 0.5 %
+threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry.
+```
+
+```{figure} /_generated/limitations/engine-diff-dark.svg
+:figclass: only-dark
+:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the circles and squares sit above a dashed threshold line; every pfet marker sits below it.
+
+The {term}`engine_diff` of each {term}`typical corner` sweep, nfet above and pfet below, from the
+committed {{ ngspice }} and {{ Xyce }} files ({repo}`results/spice`). The dashed line is the 0.5 %
+threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry.
+```
 
 (engine-cause)=
 
@@ -55,7 +75,27 @@ the drain current Id reaches each level:
 
 In subthreshold, Xyce's current is a nearly constant 0.59 % higher. That is
 a gate-voltage shift of 0.229 to 0.254 mV, and its effect fades in strong
-{term}`inversion` (7e-5 at Vgs = 5 V).
+{term}`inversion` (7e-5 at Vgs = 5 V). Both currents and their difference over the whole gate
+sweep are in {numref}`engine-subthreshold-figure`.
+
+```{figure} /_generated/limitations/engine-subthreshold-light.svg
+:name: engine-subthreshold-figure
+:figclass: only-light
+:alt: Top, two drain-current curves on a log axis that lie on each other. Bottom, their relative difference: a flat step above the 0.5 % line at low gate voltage, falling towards zero above 1 V.
+
+The nfet at W = 10 µm, L = 0.6 µm, Vds = 5 V and Vbs = 0, typical corner. Top: |Id| of both
+engines, with the 1 pA floor dotted. Bottom: (Id,Xyce − Id,ngspice) / max(|Id|), blank where both
+currents are below the floor, with the ±0.5 % threshold dashed.
+```
+
+```{figure} /_generated/limitations/engine-subthreshold-dark.svg
+:figclass: only-dark
+:alt: Top, two drain-current curves on a log axis that lie on each other. Bottom, their relative difference: a flat step above the 0.5 % line at low gate voltage, falling towards zero above 1 V.
+
+The nfet at W = 10 µm, L = 0.6 µm, Vds = 5 V and Vbs = 0, typical corner. Top: |Id| of both
+engines, with the 1 pA floor dotted. Bottom: (Id,Xyce − Id,ngspice) / max(|Id|), blank where both
+currents are below the floor, with the ±0.5 % threshold dashed.
+```
 
 These model-card changes were tried as a bisection. Each was applied
 identically to scratch copies of both libraries.
@@ -106,6 +146,8 @@ subdirectory of the working directory. It asserts three things:
 - Patched ngspice against Xyce stays below 0.005.
 
 The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6.
+The stock values are the nfet markers of {numref}`engine-diff-figure`.
+
 The `idvg_lin` sweep:
 
 | W (µm) | L (µm) | Stock | At 4.6 |
@@ -154,7 +196,8 @@ The Xyce cross-check claims exactly the following, at the typical corner and
 | pfet | `idvg_lin` | 0.02 % |
 | pfet | `idvg_sat` | 0.221 % |
 
-The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA.
+The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA. These four cases
+are the markers below the threshold in {numref}`engine-diff-figure`.
 
 For scale, the effect of the nfet version is small next to the
 {term}`TCAD`-vs-SPICE comparison ({doc}`../comparison/agreement`): 0.229 to 0.254 mV of {term}`threshold voltage <Vt>`. It is still a
@@ -165,6 +208,8 @@ it.
 (engine-other-differences)=
 
 ## Other differences between the two libraries (checked, harmless here)
+
+<!-- figure-ok: these are model-card and netlist text differences; the junction diode levels are card switches of subcircuits never instantiated, with no curve to draw -->
 
 - **Missing 5 V wrappers.** The image's Xyce library has no `nfet_05v0` /
   `pfet_05v0` wrappers. In the ngspice library those wrappers are line for line
