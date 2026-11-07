@@ -277,11 +277,15 @@ def _sweep_text(device: Device, gid: str, sweep: str, roots: rf.Roots) -> tuple[
     where = f"{device.name} `{gid}`"
     if sweep in ("idvg_lin", "idvg_sat"):
         vds = fmt(rf.bias(device.name, gid, sweep, "vd", roots.spice))
+        csv = f"results/{roots.spice.name}/ngspice/{rf.TYPICAL}/{device.name}/{gid}/{sweep}.csv"
         return (
-            f"{label} shows |Id| against |Vgs| at |Vds| = {vds} V, on a linear and a log axis.",
             (
-                f"|Id| against |Vgs| of {where} at |Vds| = {vds} V and |Vbs| = 0: a linear axis "
-                "(top) and a log axis (bottom)."
+                f"{label} shows |Id| against |Vgs| at |Vds| = {vds} V, read from "
+                f"{{repo}}`{sweep}.csv <{csv}>`, on a linear and a log axis."
+            ),
+            (
+                f"|Id| against |Vgs| of {where} at |Vds| = {vds} V and |Vbs| = 0 "
+                f"({{repo}}`{sweep}.csv <{csv}>`): a linear axis (top) and a log axis (bottom)."
             ),
         )
     if sweep == "idvd":
@@ -440,7 +444,11 @@ def _summary_page(roots: rf.Roots, spec: dict, out: Path):
             "Pages generated at documentation build time from the committed {term}`SPICE` "
             "reference dataset ({repo}`results/spice`). It is the "
             "{term}`SPICE reference <SPICE reference results>` that {term}`TCAD` is compared "
-            "against ({doc}`/comparison/agreement`). The TCAD results are on "
+            "against ({doc}`/comparison/agreement`)."
+        ),
+        "",
+        (
+            "The TCAD results are on "
             "{doc}`/_generated/tcad/index`. They are the {term}`C–V` calibration of the "
             "{term}`MOS capacitors <MOSCAP>` against these {term}`Cgg`-Vg curves "
             f"({{doc}}`/comparison/cv-agreement`). {cv_ref} shows them."
@@ -986,8 +994,8 @@ def _tcad_geometry_page(roots: rf.Roots, d: _Device, g: Geometry, out: Path) -> 
                 rf.two_d_figure,
                 (name, gid),
                 two_d,
-                "C per area against u of the 2D cell and of the 1D stack, close together, with "
-                "the cell's curve a little higher.",
+                "C per area against u of the 2D cell and of the 1D stack, with the cell's curve "
+                "higher everywhere and most of all near depletion.",
                 f"The C per area of each committed 2D cell of {name} `{gid}`, against the 1D "
                 "stack at the same values.",
                 roots,
@@ -1272,7 +1280,11 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
             "page gives the {term}`C–V` calibration of its 1D stack against the {term}`SPICE` "
             "{term}`Cgg`-Vg, and its validation at the "
             "{term}`held-out geometries <held-out geometry>`. It also gives the "
-            "{term}`mesh convergence` of the 1D and 2D structures. Generated from "
+            "{term}`mesh convergence` of the 1D and 2D structures."
+        ),
+        "",
+        (
+            "Generated from "
             f"{{repo}}`results/tcad/calibration/{name}.result.json`, "
             f"{{repo}}`results/tcad/validation/{name}.json`, {{repo}}`results/tcad/meshconv` "
             f"and the {{term}}`process file` {{repo}}`data/process/{name}.toml`. The method and "
@@ -1311,8 +1323,11 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
             f'"{opt["message"].replace("`", "")}", {opt["nfev"]} evaluations and '
             f"{opt['njev']} Jacobians, final cost {fmt(opt['cost'])}. A value within "
             f"{bound_rel} of a bound, relative to the bound width, is a bound hit "
-            "({py:data}`~gf180tcad.calibrate.cv.BOUND_HIT_REL`). The tag is the "
-            "{term}`provenance tag`. The kinds say where the start value and each bound come "
+            "({py:data}`~gf180tcad.calibrate.cv.BOUND_HIT_REL`)."
+        ),
+        "",
+        (
+            "The tag is the {term}`provenance tag`. The kinds say where the start value and each bound come "
             "from ({ref}`process-data-tunables`). A kind is the {term}`model card` (card), "
             "computed from card values (derived), or a project choice."
         ),
@@ -1463,7 +1478,11 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
             "results ({repo}`results/tcad`). They give the {term}`C–V` calibration of the 1D "
             "{term}`MOS capacitor <MOSCAP>` against the {term}`SPICE` {term}`Cgg`-Vg. They also "
             "give its validation at the {term}`held-out geometries <held-out geometry>` "
-            f"({{doc}}`{CV_DOC}`). Every verdict is read from "
+            f"({{doc}}`{CV_DOC}`)."
+        ),
+        "",
+        (
+            "Every verdict is read from "
             "{repo}`results/tcad/calibration` and {repo}`results/tcad/validation`, which were "
             "computed in the {term}`dev-HEAD TCAD image`; these pages only render them. How "
             "each results folder was made: {ref}`tcad-provenance`. " + _VERDICT_TERMS
