@@ -265,6 +265,19 @@ def test_display_offsets_add_up_to_the_oxide_gap():
     assert total == pytest.approx(ox["band_gap_ev"], abs=0.1)
 
 
+def test_display_drawing_statement_derives_the_oxide_gap():
+    """Issue #167: the file says which three values a band diagram uses and states the oxide gap
+    they imply; both numbers in the statement are the file's own."""
+    d = tomllib.loads(DISPLAY.read_text(encoding="utf-8"))
+    si, ox = d["silicon"], d["sio2"]
+    total = si["band_gap_ev"] + ox["conduction_offset_ev"] + ox["valence_offset_ev"]
+    for key in ("silicon.band_gap_ev", "conduction_offset_ev", "valence_offset_ev"):
+        assert key in d["drawing"]
+    assert f"their sum, {total:.2f} eV" in d["drawing"]
+    assert f"sio2.band_gap_ev, {ox['band_gap_ev']:.1f} eV" in d["drawing"]
+    assert "never uses sio2.band_gap_ev" in d["drawing"]
+
+
 def test_display_mismatch_statement_matches_the_simulation():
     """The file states the band gap the simulation's n_i scaling implies: 2 * 6726 K * k_B/q."""
     from gf180tcad.tcad import process

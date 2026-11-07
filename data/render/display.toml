@@ -6,6 +6,7 @@
 
 note = "display only: not an input to any simulation"
 mismatch = "The simulation runs at T = 298.15 K and scales n_i by exp(-6726 K (1/T - 1/300 K)) (gf180tcad.tcad.process.Constants.n_i_cm3), which implies E_g = 1.16 eV (2 x 6726 K x k_B/q). The drawing uses the 300 K value of the Ioffe archive and Sze and Ng, E_g = 1.12 eV. The band gap in the image is a display value, not the simulation's."
+drawing = "A band diagram is drawn from three values: silicon.band_gap_ev and the two sio2 offsets, conduction_offset_ev above silicon's conduction band edge and valence_offset_ev below its valence band edge. The oxide gap it shows is their sum, 9.02 eV. sio2.band_gap_ev, 9.0 eV, is the separately cited oxide gap; the two agree to the 0.1 eV the cited values carry, and the drawing never uses sio2.band_gap_ev."
 
 [silicon]
 band_gap_ev = 1.12
