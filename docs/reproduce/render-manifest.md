@@ -88,13 +88,15 @@ render never recomputes what a simulation computed.
 
 ## Display-only values
 
-The file {repo}`data/render/display.toml` holds the {term}`band gaps <band gap>` and the Si–SiO₂ band offsets that a band
-diagram is drawn with. Silicon's band gap and the two offsets are drawn in {numref}`render-band-offsets`.
+The file {repo}`data/render/display.toml` holds the {term}`band gaps <band gap>` of silicon and
+of the oxide, and the two Si–SiO₂ band offsets. A band diagram is drawn with silicon's band gap and
+the two offsets, as the file's `drawing` entry says. {numref}`render-band-offsets` draws those three.
 
 No simulation reads the file. Each value has a unit and a source in the
 {ref}`literature list <lit-sze>`. The file's `mismatch` text compares the band gap the simulation
 implies with the band gap the drawing uses. A committed render manifest reads every `display`
-entry from this file and no other ({py:meth}`gf180tcad.render.manifest.Manifest.display_problems`).
+entry from this file and no other, and never reads the oxide gap
+({py:meth}`gf180tcad.render.manifest.Manifest.display_problems`).
 
 ```{figure} /_generated/reproduce/render-band-offsets-light.svg
 :name: render-band-offsets
@@ -103,9 +105,9 @@ entry from this file and no other ({py:meth}`gf180tcad.render.manifest.Manifest.
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
 silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
-the conduction and valence band offsets above and below silicon's. The oxide gap drawn is their
-sum. The file's separately cited oxide gap agrees with it to the precision of the cited values,
-and its `drawing` entry says which three values a drawing uses.
+the conduction and valence band offsets above and below silicon's. The oxide gap drawn, 9.02 eV,
+is silicon's band gap plus both offsets. The figure leaves it unlabelled, because the file cites the
+oxide gap separately as 9.0 eV. The file's `drawing` entry says which three values a drawing uses.
 ```
 
 ```{figure} /_generated/reproduce/render-band-offsets-dark.svg
@@ -114,9 +116,9 @@ and its `drawing` entry says which three values a drawing uses.
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
 silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
-the conduction and valence band offsets above and below silicon's. The oxide gap drawn is their
-sum. The file's separately cited oxide gap agrees with it to the precision of the cited values,
-and its `drawing` entry says which three values a drawing uses.
+the conduction and valence band offsets above and below silicon's. The oxide gap drawn, 9.02 eV,
+is silicon's band gap plus both offsets. The figure leaves it unlabelled, because the file cites the
+oxide gap separately as 9.0 eV. The file's `drawing` entry says which three values a drawing uses.
 ```
 
 ## What the check rejects
