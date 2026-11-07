@@ -612,6 +612,7 @@ class _Device:
             dim: _read_json(self.root / "meshconv" / f"moscap{dim}" / name / "report.json")
             for dim in ("1d", "2d")
         }
+        self.corners = _read_json(self.root / "corners" / name / "summary.json")
 
     def comparison(self, gid: str) -> tuple[dict, str]:
         """``(record, repo path)`` of the committed 1D comparison of one geometry."""
@@ -1065,6 +1066,146 @@ def _meshconv_rows(report: dict) -> list[str]:
     return [*_table(header, rows), "", f"Level {sel} is the selected mesh."]
 
 
+# The corner bounds of the three tunables (Task 16a): read from results/tcad/corners/<device>/
+# summary.json (gf180tcad.calibrate.corners.summary), never recomputed here.
+#: Each tunable's unit on the pages, the factor from its process-file unit and the most
+#: significant digits shown: those of the explainer's tables
+#: (:data:`gf180tcad.explain.numbers.TUNABLES`), so one quantity reads the same on every page.
+CORNER_UNITS = {
+    "t_ox_eff_nm": ("nm", 1.0, 4),
+    "n_ch_cm3": ("cm⁻³", 1.0, 3),
+    "dv_fb_v": ("V", 1.0, 3),
+}
+#: The mark of a value that sits on a limit of its fit, explained in prose below its table.
+LIMIT_MARK = "†"
+#: The note below a table holding a :data:`LIMIT_MARK`.
+LIMIT_NOTE = f"A value marked {LIMIT_MARK} sits on a limit of its fit: the limit sets it, not the SPICE curve."
+#: The tunables with a card shift (the oxide's TOXE, the flat band's VTH0) for the cross-check.
+CORNER_SHIFT_TUNABLES = ("t_ox_eff_nm", "dv_fb_v")
+#: The name of the generated corner fragment of a device, included by docs/comparison/cv-agreement.md.
+CORNER_FRAGMENT = "corners.inc.md"
+
+
+def _corner_value(name: str, v: float, on_limit: bool = False) -> str:
+    """A tunable's value as the explainer prints it (:func:`gf180tcad.explain.numbers.shortest`:
+    a typographic minus, a power of ten as × 10ⁿ), with :data:`LIMIT_MARK` when ``on_limit``."""
+    from gf180tcad.explain.numbers import shortest
+
+    _unit, factor, digits = CORNER_UNITS[name]
+    return shortest(v * factor, "", digits) + (LIMIT_MARK if on_limit else "")
+
+
+def _corner_label(name: str) -> str:
+    return f"`{name}` ({CORNER_UNITS[name][0]})"
+
+
+def _verdict_term(verdict: str) -> str:
+    """A verdict linked to its glossary entry; "not applicable" as it is."""
+    return verdict if verdict == "not applicable" else f"{{term}}`{verdict}`"
+
+
+def _limit_word(hit: str | None) -> str:
+    return {"lower": "lower limit", "upper": "upper limit", None: "no"}[hit]
+
+
+def _with_note(table: list[str]) -> list[str]:
+    """``table`` followed by :data:`LIMIT_NOTE` when one of its cells holds :data:`LIMIT_MARK`."""
+    return [*table, "", LIMIT_NOTE] if any(LIMIT_MARK in r for r in table) else table
+
+
+def corner_tables(name: str, summary: dict) -> list[str]:
+    """The corner tables of one device from its corner ``summary``
+    (:func:`gf180tcad.calibrate.corners.summary`): the bounds and spread of each tunable, the
+    corner of each bound and whether it sits on a limit of its fit, the value at each corner, the
+    card cross-check of the oxide and the flat band, and the verdicts at each corner. One value
+    per cell; the unit is in the row label or the header. A value on a limit of its fit carries
+    :data:`LIMIT_MARK`, and :data:`LIMIT_NOTE` follows its table."""
+    from gf180tcad.calibrate import cv
+    from gf180tcad.calibrate.corners import FIT_CORNERS
+
+    if summary["device"] != name or set(summary["tunables"]) != set(CORNER_UNITS):
+        tun = summary["tunables"]
+        raise ValueError(f"{name}: the corner summary is of {summary['device']}, {sorted(tun)}")
+    tun = {n: summary["tunables"][n] for n in CORNER_UNITS}
+    src = f"{{repo}}`results/tcad/corners/{name}/summary.json`"
+    corners = [cv.TT, *FIT_CORNERS]
+    on = {c: summary["corners"][c]["bound_hits"] for c in corners}
+    bounds, where = [], []
+    for n, row in tun.items():
+        bounds.append([
+            _corner_label(n),
+            _corner_value(n, row["typical"], n in on[cv.TT]),
+            _corner_value(n, row["min"], row["min_at_bound"] is not None),
+            _corner_value(n, row["max"], row["max_at_bound"] is not None),
+            _corner_value(n, row["spread"]),
+        ])  # fmt: skip
+        where.append([f"`{n}`", row["min_corner"], _limit_word(row["min_at_bound"]),
+                      row["max_corner"], _limit_word(row["max_at_bound"])])  # fmt: skip
+    per = [[c, *(_corner_value(n, tun[n]["values"][c], n in on[c]) for n in tun)] for c in corners]
+    verdicts, hits = [], []
+    for c in corners:
+        e = summary["corners"][c]
+        held = cv.worst(e["held_out"].values()) if "held_out" in e else "not applicable"
+        verdicts.append([c, _verdict_term(e["verdict"]), _verdict_term(held)])
+        hits += [f"`{k}` at {c} is on its {v} limit" for k, v in sorted(e["bound_hits"].items())]
+    lines = [
+        (
+            f"From {src}: each fitted number at the {{term}}`typical corner` (the committed "
+            "calibration) and the lowest and highest value over the five {term}`corners <corner>`. "
+            "The spread is the highest minus the lowest. A lowest or highest value on a limit of "
+            "its fit is reported as that limit ({ref}`reproduce-corners`)."
+        ),
+        "",
+        *_with_note(_table(["Number", "Typical", "Lowest", "Highest", "Spread"], bounds)),
+        "",
+        "The corner of the lowest and the highest value, and whether it sits on a limit of its fit:",
+        "",
+        *_table(["Number", "Lowest at", "On a limit", "Highest at", "On a limit"], where),
+        "",
+        "The fitted value at each corner:",
+        "",
+        *_with_note(_table(["Corner", *(_corner_label(n) for n in tun)], per)),
+        "",
+    ]
+    for n in CORNER_SHIFT_TUNABLES:
+        row = tun[n]
+        unit = CORNER_UNITS[n][0]
+        shifts = [
+            [c, _corner_value(n, row["card_shift"][c]),
+             _corner_value(n, row["tcad_shift"][c], n in on[c]),
+             _corner_value(n, row["shift_difference"][c], n in on[c])]
+            for c in FIT_CORNERS
+        ]  # fmt: skip
+        lines += [
+            (
+                f"Card cross-check of `{n}`: the {{term}}`model card`'s shift of the same quantity at each "
+                "corner, the fit's shift from the typical value, and the fit's minus the card's:"
+            ),
+            "",
+            *_with_note(
+                _table(
+                    ["Corner", f"Card ({unit})", f"Fit ({unit})", f"Difference ({unit})"], shifts
+                )
+            ),
+            "",
+        ]
+    lines += [
+        (
+            "The verdict at each corner against that corner's {term}`SPICE` reference: at the "
+            "calibration geometries, and the worst at the held-out geometries (1D):"
+        ),
+        "",
+        *_table(["Corner", "Calibration", "Held out (1D)"], verdicts),
+        "",
+        (
+            "Limit hits: " + "; ".join(hits) + "."
+            if hits
+            else "No fit, typical or corner, sits on a limit."
+        ),
+    ]
+    return lines
+
+
 def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
     from gf180tcad.calibrate.cv import BOUND_HIT_REL
 
@@ -1131,11 +1272,16 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         *_bookkeeping_rows(d),
         "",
+        "## Corner bounds",
+        "",
+        *corner_tables(name, d.corners),
+        "",
         "## Geometries",
         "",
         _GEOMETRY_ID_TEXT,
         "",
     ]
+    (ddir / CORNER_FRAGMENT).write_bytes("\n".join(corner_tables(name, d.corners) + [""]).encode())
     verdicts, errors, shifts = [], [], []
     for g in d.device.geometries:
         gid = geometry_id(g)

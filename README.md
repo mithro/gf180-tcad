@@ -92,6 +92,14 @@ grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossar
 and the dashed line the fitted 1D stack. Dotted lines and an arrow mark each length's SPICE
 depletion edge. `make readme-figures` draws it from the committed results.*
 
+The same 1D calibration is repeated against the four other SPICE corners: ff, ss, fs and sf
+([`results/tcad/corners`](results/tcad/corners)). Each corner fit takes that corner's model-card
+offsets of the gate area and the overlaps as fixed inputs. Its oxide and threshold offsets move
+the start value and limits of two numbers that stay fitted. Each fitted number thus has a lower and an upper bound, and the spread
+between them
+([bounds and limitations](https://gf180-tcad.readthedocs.io/en/latest/explained/calibration.html#explained-calibration-corners)).
+The Monte Carlo spread has no code (issue #57, on the roadmap).
+
 Every committed TCAD result has generated
 pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
 [results page](https://gf180-tcad.readthedocs.io/en/latest/results/index.html), and

@@ -204,7 +204,10 @@ a TOXE term of 0.4 nm plus 0.13 nm, each at one standard deviation with `mc_skew
   L = 1–2 µm, would be absorbed into the oxide and doping tunables. The bounds of a tunable
   follow the corner where the card shifts the same quantity: the oxide bounds move by the
   corner's TOXE offset and the flat-band bounds by its VTH0 offset; the doping bounds stay as at
-  TT. A bound hit is reported, as at TT, and a minimum or maximum that sits on a bound is
+  TT. A fit whose flat band stops on its bound is refitted with the flat-band window widened by
+  k·|ΔVTH0| on each side, k = 1, 2, … until it ends inside: the card's VTH0 offset is the size
+  of the corner's own threshold move, and each widening gives the fit one more such move in
+  either direction (`corners.FLAT_BAND_STAGE` records k per fit). A bound hit is reported, as at TT, and a minimum or maximum that sits on a bound is
   reported as that bound, not as a measured value. Anti-goal A1 applies: the corner fits never change the
   typical calibration, and each corner's validation uses the held-out geometries of §5.2
   against the same corner.
@@ -959,3 +962,12 @@ that the intent survives later rewording of the sections it changed.
   > "Make sure that text never describes a situation without a clearly marked diagram or graph
   > that shows the item being described. Make sure that equations are always fully explained
   > and formatted correctly. Make sure that a file is never mentioned without being a link."
+- **2026-11-03: the corner fits are committed (Task 16a, issue #57).** `results/tcad/corners/`
+  holds the eight 1D corner fits (nfet and pfet at ff, ss, fs and sf) and one summary per
+  device. §5.3's lower and upper bound and spread of the three 1D tunables are on the
+  calibration explainer page and the TCAD device pages. The corner table of §10 items (b) and (c) is
+  split into tables of at most five columns, one value per cell (§10.3). The Monte Carlo spread
+  of §5.3 stays with Task 16b. The pfet flat-band fit stopped on its upper limit at ff and sf
+  (0.3245 V and 0.2827 V). Following the review of PR #160, §5.3 now widens such a window by
+  the VTH0 offset on each side; refitted once widened, both end inside it (ff 0.3455 V of
+  0.449 V, sf 0.2917 V of 0.3654 V) and no corner fit sits on a limit.

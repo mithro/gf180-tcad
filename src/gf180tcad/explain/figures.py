@@ -13,6 +13,7 @@ committed files (tested).
 
 from __future__ import annotations
 
+import math
 import textwrap
 from collections.abc import Callable
 from io import BytesIO
@@ -25,6 +26,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
+from matplotlib.ticker import FixedFormatter, FixedLocator, NullFormatter
 
 from gf180tcad import meshcut, plots
 from gf180tcad.explain import data, idealised, model, numbers
@@ -126,6 +128,11 @@ STYLE = {
     "limits_size_in": (6.4, 6.4),
     "limit_width": 10.0,
     "limit_tick_pt": 16.0,
+    # the ring round a value on a limit of its fit, as a multiple of the marker size
+    "limit_ring_scale": 1.9,
+    # a log axis under a decade wide is labelled at these multiples of each power of the base
+    "log_tick_mantissas": (1, 2, 3, 5),
+    "log_base": 10.0,
     "marker_pt": 9.0,
     # The SPICE crossings of the compare plot: hollow rings this size (pt) round the simulated ones.
     "ring_pt": 16.0,
@@ -162,11 +169,19 @@ STYLE = {
     "dim_gap": 0.45,
     "dim_width_spacing": 1.6,
     "dim_label_pad": 0.06,
+    # The corner bounds of the calibration page: one marker shape per fitted corner, and the
+    # legend in this many columns.
+    "corner_markers": {"ff": "^", "ss": "v", "fs": "<", "sf": ">"},
+    "bounds_legend_cols": 3,
+    # The card cross-check of the corner limitations page: one marker shape per transistor.
+    "device_markers": {"nfet_05v0": "o", "pfet_05v0": "s"},
+    # The corner limits figure: one row per fit (two transistors by five corners), so taller.
+    "corner_limits_size_in": (6.4, 7.2),
 }
 
-#: Unit conversions of the junction panels (cm to µm, V/cm to kV/cm) and the SPICE sweeps (A to
-#: mA).
-UNITS = {"um_per_cm": 1e4, "kv_per_v": 1e-3, "ma_per_a": 1e3}
+#: Unit conversions of the junction panels (cm to µm, V/cm to kV/cm), the SPICE sweeps (A to
+#: mA) and the corner cross-check (V to mV).
+UNITS = {"um_per_cm": 1e4, "kv_per_v": 1e-3, "ma_per_a": 1e3, "mv_per_v": 1e3}
 
 # Okabe-Ito colours for the carriers and the highlight; greys for the muted parts.
 PALETTES = {
@@ -1722,6 +1737,261 @@ def corner_area(palette: str) -> bytes:
         return _svg(fig)
 
 
+# The corner bounds of the calibration page (calibration.md, Task 16a): each fitted number's
+# lowest and highest value over the corners, from the corner summaries.
+
+#: The legend words of the ring round a value on a limit of its fit: a ring
+#: ``STYLE["limit_ring_scale"]`` times the marker size, in the hole colour, as the on-a-limit
+#: diamond of :func:`corner_limits`.
+LIMIT_RING_LABEL = "on a limit"
+
+
+def _limit_ring(ax, x: float, y: float, pal: dict, label: str | None = None) -> None:
+    """A ring in the hole colour round the marker at (``x``, ``y``): a value set by a limit of its
+    fit, not by the SPICE curve."""
+    ax.plot([x], [y], ls="none", marker="o", ms=STYLE["marker_pt"] * STYLE["limit_ring_scale"], mfc="none",
+            mec=pal["hole"], mew=STYLE["edge_width"] * 2, label=label)  # fmt: skip
+
+
+def _limit_ring_handle(pal: dict) -> Line2D:
+    return Line2D([], [], ls="none", marker="o", ms=STYLE["marker_pt"] * STYLE["limit_ring_scale"],
+                  mfc="none", mec=pal["hole"], mew=STYLE["edge_width"] * 2, label=LIMIT_RING_LABEL)  # fmt: skip
+
+
+def _log_ticks(ax) -> str:
+    """Label a log axis spanning less than a decade at ``STYLE["log_tick_mantissas"]`` times each
+    power of ten inside its limits (the default labels only the power of ten itself), in units
+    of the power of ten of its upper limit so the labels stay short; returns that unit (10ⁿ)."""
+    lo, hi = sorted(ax.get_xlim())
+    base = STYLE["log_base"]
+    powers = range(math.floor(math.log(lo, base)), math.ceil(math.log(hi, base)) + 1)
+    ticks = [
+        m * base**e for e in powers for m in STYLE["log_tick_mantissas"] if lo <= m * base**e <= hi
+    ]
+    scale = base ** math.floor(math.log(hi, base))
+    ax.xaxis.set_major_locator(FixedLocator(ticks))
+    ax.xaxis.set_major_formatter(
+        FixedFormatter([numbers.shortest(t / scale, "", 2) for t in ticks])
+    )
+    ax.xaxis.set_minor_formatter(NullFormatter())
+    return numbers.format_value(scale, 1, "").split("×")[-1].strip()
+
+
+def corner_bounds_figure(palette: str):
+    """The matplotlib figure of :func:`corner_bounds`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    bounds = {d: {b.name: b for b in numbers.corner_bounds(d)} for d in devices}
+    marks = STYLE["corner_markers"]
+    hits = False
+    colour = {c: pal[CORNER_HIGHLIGHT[c]] if c in CORNER_HIGHLIGHT else pal["muted"] for c in marks}
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(numbers.TUNABLES), 1)
+        for i, (ax, (name, (words, unit, _most))) in enumerate(
+            zip(axes, numbers.TUNABLES.items(), strict=True)
+        ):
+            if name in LOG_TUNABLES:
+                ax.set_xscale("log")
+            for row, device in enumerate(devices):
+                b = bounds[device][name]
+                first = row == 0
+                ax.plot([b.lowest, b.highest], [row, row], color=pal["band"], lw=STYLE["limit_width"],
+                        solid_capstyle="butt", label="lowest to highest" if first else None)  # fmt: skip
+                ax.plot([b.lowest, b.highest], [row, row], ls="none", marker="|", color=pal["text"],
+                        ms=STYLE["limit_tick_pt"], mew=STYLE["edge_width"] * 2)  # fmt: skip
+                for corner, m in marks.items():
+                    ax.plot([b.values[corner]], [row], ls="none", marker=m, ms=STYLE["marker_pt"],
+                            color=colour[corner], mec=pal["text"], mew=STYLE["edge_width"],
+                            label=corner if first else None)  # fmt: skip
+                ax.plot([b.typical], [row], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["highlight"],
+                        mec=pal["text"], mew=STYLE["edge_width"], label="typical" if first else None)  # fmt: skip
+                for corner in b.on_limit:
+                    _limit_ring(ax, b.values[corner], row, pal)
+                    hits = True
+            ax.set_yticks(range(len(devices)), [d.split("_")[0] for d in devices])
+            ax.set_ylim(-STYLE["row_pad"], len(devices) - 1 + STYLE["row_pad"])
+            ax.margins(x=STYLE["limit_margin"])
+            ax.set_xlabel(f"{words.lower()} ({unit})")
+            ax.grid(True, axis="x")
+            if i == 0:
+                handles, labels = ax.get_legend_handles_labels()
+        if hits:
+            handles, labels = [*handles, _limit_ring_handle(pal)], [*labels, LIMIT_RING_LABEL]
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["bounds_legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
+def corner_bounds(palette: str) -> bytes:
+    """Each fitted number of the nfet and the pfet on its own axis: a bar from its lowest to its
+    highest value over the corners, a marker at each corner's fit and a diamond at the typical
+    fit, read from the corner summaries (:func:`gf180tcad.explain.numbers.corner_bounds`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(corner_bounds_figure(palette))
+
+
+#: The fitted numbers of the card cross-check, each with its axis words, unit and the factor
+#: from its summary unit: the oxide (TOXE) and the flat band (VTH0).
+CROSSCHECK = {
+    "t_ox_eff_nm": ("oxide thickness shift", "nm", 1.0),
+    "dv_fb_v": ("gate voltage shift", "V", 1.0),
+}
+
+
+def corner_crosscheck_figure(palette: str):
+    """The matplotlib figure of :func:`corner_crosscheck`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    marks = STYLE["corner_markers"]
+    colour = {c: pal[CORNER_HIGHLIGHT[c]] if c in CORNER_HIGHLIGHT else pal["muted"] for c in marks}
+    shapes = STYLE["device_markers"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(CROSSCHECK))
+        hits = False
+        for ax, (name, (words, unit, factor)) in zip(axes, CROSSCHECK.items(), strict=True):
+            lo = hi = 0.0
+            for device, shape in shapes.items():
+                doc = numbers.corner_summary(device)
+                t = doc["tunables"][name]
+                for corner in marks:
+                    card = t["card_shift"][corner] * factor
+                    fit = t["tcad_shift"][corner] * factor
+                    lo, hi = min(lo, card, fit), max(hi, card, fit)
+                    ax.plot([card], [fit], ls="none", marker=shape, ms=STYLE["marker_pt"],
+                            color=colour[corner], mec=pal["text"], mew=STYLE["edge_width"])  # fmt: skip
+                    if name in doc["corners"][corner]["bound_hits"]:
+                        _limit_ring(ax, card, fit, pal)
+                        hits = True
+            ax.plot([lo, hi], [lo, hi], color=pal["text"], lw=STYLE["edge_width"], ls="--",
+                    zorder=STYLE["junction_line_zorder"])  # fmt: skip
+            pad = STYLE["limit_margin"] * (hi - lo)
+            ax.set_xlim(lo - pad, hi + pad)
+            ax.set_ylim(lo - pad, hi + pad)
+            ax.grid(True)
+            ax.set_xlabel(f"card {words} ({unit})")
+            ax.set_ylabel(f"fitted {words} ({unit})")
+        swatches: dict[str, list[str]] = {}
+        for c in marks:
+            swatches.setdefault(colour[c], []).append(c)
+        handles = [
+            Line2D([], [], color=col, lw=STYLE["limit_width"], label=" or ".join(cs))
+            for col, cs in swatches.items()
+        ] + [
+            Line2D([], [], ls="none", marker=shape, ms=STYLE["marker_pt"], color=pal["band"],
+                   mec=pal["text"], label=device.split("_")[0])
+            for device, shape in shapes.items()
+        ] + [Line2D([], [], color=pal["text"], lw=STYLE["edge_width"], ls="--", label="fit = card")]  # fmt: skip
+        if hits:
+            handles.append(_limit_ring_handle(pal))
+        fig.legend(handles=handles, loc="outside lower center", ncols=STYLE["bounds_legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
+def corner_crosscheck(palette: str) -> bytes:
+    """The card cross-check of the corner fits: for the oxide and the flat band, each corner
+    fit's shift from the typical fit against the model card's shift of the same quantity at
+    that corner, one marker per transistor and corner, and the line where the two are equal;
+    read from the corner summaries (``card_shift``, ``tcad_shift``)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(corner_crosscheck_figure(palette))
+
+
+def corner_crossing_figure(palette: str):
+    """The matplotlib figure of :func:`corner_crossing`, for the tests to read its lines."""
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(devices), 1, sharex=True)
+        for ax, device in zip(axes, devices, strict=True):
+            for corner, gaps in numbers.corner_crossing_gaps(device).items():
+                xs = list(gaps)
+                ys = [v * UNITS["mv_per_v"] for v in gaps.values()]
+                if corner == TYPICAL:
+                    style = {"color": pal["text"], "ls": "-", "lw": STYLE["line_width"]}
+                elif corner in CORNER_HIGHLIGHT:
+                    style = {"color": pal[CORNER_HIGHLIGHT[corner]], "ls": "--",
+                             "lw": STYLE["line_width"]}  # fmt: skip
+                else:
+                    style = {"color": pal["muted"], "ls": CORNER_MIXED_STYLE[corner],
+                             "lw": STYLE["line_width"] / 2}  # fmt: skip
+                ax.plot(xs, ys, marker="o", ms=STYLE["marker_pt"] / 2, label=corner, **style)
+            ax.set_xscale("log")
+            ax.grid(True)
+            ax.set_title(device, fontsize=STYLE["text_pt"])
+            ax.set_ylabel("depletion crossing shift (mV)")
+        axes[-1].set_xlabel("gate length (µm)")
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels), frameon=False)
+        return fig
+
+
+def corner_crossing(palette: str) -> bytes:
+    """The depletion crossing shift ΔV_dep of each fit (typical and the four corner fits)
+    against the gate length, at every W = 10 µm gate, one panel per transistor: a 1D stack with one flat band
+    for every length leaves a gap that moves with the length, at every corner
+    (:func:`gf180tcad.explain.numbers.corner_crossing_gaps`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(corner_crossing_figure(palette))
+
+
+def corner_limits_figure(palette: str):
+    """The matplotlib figure of :func:`corner_limits`, for the tests to read its lines."""
+    from gf180tcad.devices import CORNERS
+
+    pal = PALETTES[palette]
+    devices = list(numbers.FITS)
+    fits = {(f.device, f.corner, f.name): f for d in devices for f in numbers.corner_fit_limits(d)}
+    rows = [(d, c) for d in devices for c in CORNERS]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["corner_limits_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(numbers.TUNABLES), sharey=True)
+        for ax, (name, (words, unit, _most)) in zip(axes, numbers.TUNABLES.items(), strict=True):
+            if name in LOG_TUNABLES:
+                ax.set_xscale("log")
+            for row, (device, corner) in enumerate(rows):
+                f = fits[(device, corner, name)]
+                first = row == 0
+                ax.plot([f.lower, f.upper], [row, row], color=pal["band"], lw=STYLE["limit_width"],
+                        solid_capstyle="butt", label="limits" if first else None)  # fmt: skip
+                ax.plot([f.lower, f.upper], [row, row], ls="none", marker="|", color=pal["text"],
+                        ms=STYLE["limit_tick_pt"], mew=STYLE["edge_width"] * 2)  # fmt: skip
+                hit = f.at_bound is not None
+                ax.plot([f.fitted], [row], ls="none", marker="D", ms=STYLE["marker_pt"],
+                        color=pal["hole"] if hit else pal["highlight"], mec=pal["text"],
+                        mew=STYLE["edge_width"])  # fmt: skip
+            ax.set_ylim(len(rows) - 1 + STYLE["row_pad"], -STYLE["row_pad"])
+            ax.margins(x=STYLE["limit_margin"])
+            if name in LOG_TUNABLES:
+                unit = f"{_log_ticks(ax)} {unit}"
+            ax.set_xlabel(f"{words.lower()}\n({unit})")
+            ax.grid(True, axis="x")
+        axes[0].set_yticks(range(len(rows)), [f"{d.split('_')[0]} {c}" for d, c in rows])
+        handles = [
+            Line2D([], [], color=pal["band"], lw=STYLE["limit_width"], label="limits"),
+            Line2D([], [], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["highlight"],
+                   mec=pal["text"], label="fitted"),
+            Line2D([], [], ls="none", marker="D", ms=STYLE["marker_pt"], color=pal["hole"],
+                   mec=pal["text"], label="on a limit"),
+        ]  # fmt: skip
+        fig.legend(handles=handles, loc="outside lower center", ncols=len(handles), frameon=False)
+        return fig
+
+
+def corner_limits(palette: str) -> bytes:
+    """Each fitted number of every fit, typical and the four corners of both transistors, one
+    row per fit: a bar between the fit's limits and a diamond at the fitted value, in the hole
+    colour when it sits on a limit (:func:`gf180tcad.explain.numbers.corner_fit_limits`)."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(corner_limits_figure(palette))
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -1749,6 +2019,10 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "ldd-cell": _ldd_cell,
     "corner-cv": corner_cv,
     "corner-area": corner_area,
+    "corner-bounds": corner_bounds,
+    "corner-crosscheck": corner_crosscheck,
+    "corner-crossing": corner_crossing,
+    "corner-limits": corner_limits,
 }
 
 
@@ -1773,6 +2047,10 @@ _PLOTS = (
     "silicon-bonds",
     "silicon-dopants",
     "corner-cv",
+    "corner-bounds",
+    "corner-crosscheck",
+    "corner-crossing",
+    "corner-limits",
 )
 
 

@@ -50,9 +50,10 @@ WRITERS = {
     "tcad/meshconv": TCAD_MAIN,
     "tcad/calibration": CALIBRATE_MAIN,
     "tcad/validation": CALIBRATE_MAIN,
+    "tcad/corners": CORNERS_MAIN,
 }
-# The tree roots of the plan's results layout (Global Constraints, "Result files").
-TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation")
+# The tree roots of the plan's results layout (Global Constraints, "Result files"; Task 16a).
+TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation", "corners")
 REGENERATE = (
     "regenerate the tree for each device with `uv run --locked python -m ...`: "
     "moscap1d: `gf180tcad.tcad moscap --device <device> --dim 1 --params start` (and "
@@ -64,7 +65,7 @@ REGENERATE = (
     "results/tcad/meshconv`; "
     "calibration: `gf180tcad.calibrate run --device <device> --out results/tcad/calibration`; "
     "validation (after the calibration is committed): `gf180tcad.calibrate validate --device "
-    "<device> --out results/tcad/validation`; then `make manifest`. A tree whose data are not "
+    "<device> --out results/tcad/validation`; corners: `make -j4 tcad-corners`; then `make manifest`. A tree whose data are not "
     "regenerated is restamped with `uv run --locked python tools/restamp-tcad-provenance "
     "results/tcad/<tree>` and recorded on docs/reproduce/index.md (tcad-provenance)"
 )
@@ -689,8 +690,8 @@ def test_committed_tree_roots_are_known():
     )
 
 
-# The calibration and validation trees are computed with the 1D model (Task 12).
-MODEL_KINDS = {"calibration": ["moscap1d"], "validation": ["moscap1d"]}
+# The calibration, validation and corner trees are computed with the 1D model (Tasks 12, 16a).
+MODEL_KINDS = {"calibration": ["moscap1d"], "validation": ["moscap1d"], "corners": ["moscap1d"]}
 
 
 def _result_kinds(root: Path) -> list[str]:
