@@ -12,14 +12,13 @@ ngspice-vs-Xyce maximum relative difference, is computed with
 The TCAD pages (:func:`generate_tcad`, under ``tcad/``) render the MOS capacitor calibration,
 validation and mesh convergence. Every TCAD-vs-SPICE number and verdict on them is read from
 the committed calibration and validation files, which were computed in the TCAD image; this
-module never compares TCAD with SPICE itself. For the plots it applies the fixed BSIM4
-bookkeeping (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`, the function the
-calibration uses) to the committed 1D C per area. No mesh picture is drawn: the 2D meshes are
-not committed, and the pages say so.
+module never compares TCAD with SPICE itself. No mesh picture is drawn: the 2D meshes are not
+committed, and the pages say so.
 
-Plots are drawn against sign-flipped axes (|Vgs|, |Vds|, |Id|) so the nfet and the pfet
-look alike. Numbers in tables use :func:`fmt` (fixed significant figures, locale independent),
-so the generated text is byte-identical from run to run.
+Every figure of these pages is drawn by :mod:`gf180tcad.results_figures` from the committed
+files and embedded by :func:`figure_pair` as a named light/dark ``{figure}`` pair that the text
+cites with ``{numref}`` (spec §10.3). Numbers in tables use :func:`fmt` (fixed significant
+figures, locale independent), so the generated text is byte-identical from run to run.
 """
 
 from __future__ import annotations
@@ -250,7 +249,7 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
     ]
 
 
-# The figures of a SPICE geometry page, in page order: (sweep, section title, alt text).
+#: The figures of a SPICE geometry page, in page order: (sweep, section title, alt text).
 SPICE_FIGURES = (
     ("idvg_lin", "Id-Vg, linear region (idvg_lin)",
      ("Drain current rising with gate voltage above threshold, on a linear and a log axis: a "
