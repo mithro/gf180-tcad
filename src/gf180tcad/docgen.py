@@ -492,9 +492,10 @@ def _summary_page(root, spec: dict, out: Path):
 def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None = None) -> None:
     """Write the SPICE pages under ``out_dir/results`` (summary, 12 geometry pages, SVGs), the
     TCAD pages under ``out_dir/tcad`` (:func:`generate_tcad`), the explainer figures under
-    ``out_dir/explained`` (:func:`gf180tcad.explain.figures.write_all`) and the image page's
-    figures under ``out_dir/reproduce`` (:func:`gf180tcad.imagefig.write_all`)."""
-    from gf180tcad import imagefig
+    ``out_dir/explained`` (:func:`gf180tcad.explain.figures.write_all`) and the reproduce pages'
+    figures under ``out_dir/reproduce`` (:func:`gf180tcad.imagefig.write_all` and
+    :func:`gf180tcad.reproduce_figures.write_all`)."""
+    from gf180tcad import imagefig, reproduce_figures
     from gf180tcad.explain import figures as explained_figures
 
     out = Path(out_dir)
@@ -511,6 +512,7 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     explained_figures.write_all(out / "explained")
     shutil.rmtree(out / "reproduce", ignore_errors=True)
     imagefig.write_all(out / "reproduce")
+    reproduce_figures.write_all(out / "reproduce")
 
 
 # --- TCAD MOS capacitor pages (Task 13a) ------------------------------------------------------
