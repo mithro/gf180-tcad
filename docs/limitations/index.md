@@ -9,11 +9,10 @@ there.
   {{ wafer_space }} {term}`run 1 or run 2 <wafer.space run>` design. See
   {doc}`silicon-validation`.
 - **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD.** The
-  {term}`SPICE reference <SPICE reference results>` dataset of {term}`Phases 0 and 1` is complete. On the TCAD side the 1D
-  and 2D MOS capacitors exist, with the start values and mesh-converged meshes
-  ({doc}`mesh-convergence`, {doc}`moscap2d`), and the 1D one also with the calibrated values.
-  The generated pages are {doc}`/_generated/tcad/index`; the limits of the model are
-  {ref}`below <limitations-moscap>`.
+  {term}`SPICE reference <SPICE reference results>` dataset of {term}`Phases 0 and 1` is complete. The 1D and 2D MOS capacitors
+  exist with the start values on mesh-converged meshes
+  ({numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-2d-figure>`, {doc}`moscap2d`), the 1D one also
+  with the calibrated values ({doc}`/_generated/tcad/index`, limits {ref}`below <limitations-moscap>`).
 - **The {term}`C–V` calibration is 1D only, and the pfet disagrees.** The 1D MOS capacitor is calibrated
   against the {term}`SPICE` {term}`Cgg`–Vg
   ({repo}`calibration plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
@@ -41,6 +40,8 @@ there.
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
   open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
 
+The 2D cells against SPICE are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-validation-figure>`. The crossing shift and plateau gap of every 2D cell are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-metrics-figure>`.
+
 The design-spec requirements that are not built are listed under {ref}`limitations-spec-deviations`.
 
 ## Reproducing the results
@@ -64,6 +65,8 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
   local machine ([issue #144](https://github.com/mithro/gf180-tcad/issues/144)) and an AMD EPYC 7763 ({{ GitHub_hosted_runner }}) only
   ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
   and that run did not have the {{ numpy }} fix described there.
+
+The resumed sweeps are the dotted curves of {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-ccox-figure>`.
 
 ## Software stacks
 
@@ -93,6 +96,8 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
   URL. A file that disappears from both stops the build; it cannot change it silently. See
   {ref}`tcad-dev-mirror`.
 
+The 2D mesh-convergence study of the stable image is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-2d-figure>`.
+
 ## The SPICE reference and the numerics
 
 - **The SPICE models are a reference, not the truth.** {term}`BSIM4` is empirical,
@@ -108,6 +113,8 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
   selected at the 1 % criterion and carries a discretisation bias of a few 0.1 %. See
   {doc}`mesh-convergence` and {doc}`moscap2d`. The moscap2d page also explains the C/Cox > 1
   artefact of the {{ meshwell }} default mesh, which rounds the oxide to 1 nm.
+
+The engine difference is in {numref}`Figure %s of SPICE engine cross-check (ngspice vs Xyce) <engine-diff-figure>`. The mesh convergence is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-1d-figure>` and {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-2d-figure>`.
 
 (limitations-moscap)=
 
@@ -169,6 +176,8 @@ values are not read as more physical than they are.
   GitHub-hosted runner): its 2023 stack has no guarantee of the same bytes on another computer
   ({doc}`plugin-history`).
 
+The QS curves and the small-signal AC points of the 2D cells are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-ccox-figure>`. The bookkeeping split of the 1D Cgg is in {numref}`Figure %s of Process data for the MOS capacitors <process-data-split-figure>`.
+
 (limitations-spec-deviations)=
 
 ## Deviations from the design spec
@@ -202,6 +211,8 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   mid-capacitance crossings, each ≤ 50 mV (a proposal: no published standard). In the
   transition a relative-C metric measures the slope of the curve, not agreement; the numbers
   are on {doc}`/comparison/cv-agreement`. The depletion error is still reported.
+
+The schematic-default instance of the reference is drawn in {numref}`Figure %s of Definition of agreement <agreement-instance-figure>`.
 
 ```{toctree}
 :maxdepth: 1
