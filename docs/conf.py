@@ -244,6 +244,15 @@ if _clash := sorted(set(_explained) & set(myst_substitutions)):
     raise ValueError(f"explainer substitutions clash with docs/conf.py _TOOLS: {_clash}")
 myst_substitutions.update(_explained)
 
+# The limitations pages print the numbers beside their figures by substitution, {{ lim_<name> }},
+# from the functions the figures draw (gf180tcad.limitations_figures.substitutions).
+from gf180tcad import limitations_figures as _limitations  # after the sys.path line above
+
+_limits = _limitations.substitutions()
+if _clash := sorted(set(_limits) & set(myst_substitutions)):
+    raise ValueError(f"limitations substitutions clash with the others: {_clash}")
+myst_substitutions.update(_limits)
+
 _generated = Path(__file__).parent / "_generated"
 _lock_path = Path(__file__).parent / ".generated.lock"
 _lock_file = None
