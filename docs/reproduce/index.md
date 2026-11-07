@@ -242,28 +242,8 @@ results/spice/<engine>/<corner>/<device>/<geometry_id>/metrics.json
 
 Browse it: {repo}`results/spice`.
 
-Three of the sweep files of one geometry are plotted in {numref}`reproduce-sweeps`.
-
-```{figure} /_generated/explained/spice-sweeps-light.svg
-:name: reproduce-sweeps
-:figclass: only-light
-:alt: Three stacked plots of the nfet: drain current against gate voltage, a family of drain current against drain voltage, and gate capacitance against gate voltage.
-
-Three sweeps of the {term}`nfet_05v0` at `w10p0_l0p60`, each plotted from the CSV file of
-that sweep in the job folders under {repo}`results/spice/ngspice`. Top, the drain current against
-the gate voltage, the typical corner as a line and the other corners as a band. Middle, the
-drain current against the drain voltage at the typical corner. Bottom, the gate capacitance.
-```
-
-```{figure} /_generated/explained/spice-sweeps-dark.svg
-:figclass: only-dark
-:alt: Three stacked plots of the nfet: drain current against gate voltage, a family of drain current against drain voltage, and gate capacitance against gate voltage.
-
-Three sweeps of the {term}`nfet_05v0` at `w10p0_l0p60`, each plotted from the CSV file of
-that sweep in the job folders under {repo}`results/spice/ngspice`. Top, the drain current against
-the gate voltage, the typical corner as a line and the other corners as a band. Middle, the
-drain current against the drain voltage at the typical corner. Bottom, the gate capacitance.
-```
+Three of the sweep files of one geometry are plotted in
+{numref}`Figure %s of Results <results-sweeps-figure>`.
 
 - Each sweep file, such as {repo}`idvg_lin.csv <results/spice/ngspice/typical/nfet_05v0/w10p0_l0p60/idvg_lin.csv>`, holds the simulated columns (`vd vg vb id ig ib`, or `vg cgg`
   for `cv`). Its `# key: value` header holds only engine, corner, device,
