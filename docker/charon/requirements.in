@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# The Python packages the charon image adds to the dev-HEAD TCAD venv (/opt/gf180tcad-tcad):
+# netCDF4 reads the Exodus II output of charon_mp.exe, and cftime is its one dependency that the
+# venv lacks (numpy and certifi come from docker/tcad-dev/requirements.lock at the versions
+# tests/test_charon_image.py checks). Locked with the command in requirements.lock.
+netCDF4
+cftime
