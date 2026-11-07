@@ -25,6 +25,7 @@ from matplotlib.collections import PathCollection
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
+from matplotlib.text import Annotation
 from test_explained import numeric_literals
 
 from gf180tcad import imagefig
@@ -103,30 +104,87 @@ def test_figures_have_dark_twins_and_every_page_embeds_pairs(tmp_path):
 
 
 # --- the expected values, read from the committed files -----------------------------------------
+#
+# Each check asserts the full text of every text the figure draws (box texts, labels, ticks,
+# legend entries, axis labels) and both ends of every arrow, against values read here from the
+# committed files. test_every_text_and_arrow_is_checked changes each in turn and requires the
+# check to fail.
 
-
-def _texts(fig) -> dict[str, str]:
-    return {t.get_gid(): t.get_text() for ax in fig.axes for t in ax.texts if t.get_gid()}
-
-
-def _arrows(fig) -> set[str]:
-    return {
-        a.get_gid().removeprefix("arrow ")
-        for ax in fig.axes
-        for a in ax.texts
-        if (a.get_gid() or "").startswith("arrow ")
-    }
+GITHUB = "https://github.com/"
 
 
 def _flat(text: str) -> str:
     return " ".join(text.split())
 
 
+def _plain_texts(fig) -> list:
+    return [t for ax in fig.axes for t in ax.texts if not isinstance(t, Annotation)]
+
+
+def _annotations(fig) -> list:
+    return [t for ax in fig.axes for t in ax.texts if isinstance(t, Annotation)]
+
+
+def assert_texts(fig, want: dict[str, str]):
+    """The figure's texts, by gid, are exactly ``want`` (whitespace and line breaks aside)."""
+    got = {}
+    for t in _plain_texts(fig):
+        assert t.get_gid(), f"a text without a gid: {t.get_text()!r}"
+        got[t.get_gid()] = _flat(t.get_text())
+    assert got == {k: _flat(v) for k, v in want.items()}
+
+
+def _box(fig, key: str) -> tuple[float, float, float, float]:
+    (p,) = [p for ax in fig.axes for p in ax.patches if p.get_gid() == f"box {key}"]
+    return p.get_x(), p.get_y(), p.get_x() + p.get_width(), p.get_y() + p.get_height()
+
+
+def _on_edge(pt, box, tol=1e-9) -> bool:
+    x, y = pt
+    x0, y0, x1, y1 = box
+    on_side = min(abs(x - x0), abs(x - x1)) < tol and y0 - tol <= y <= y1 + tol
+    on_cap = min(abs(y - y0), abs(y - y1)) < tol and x0 - tol <= x <= x1 + tol
+    return on_side or on_cap
+
+
+def assert_box_texts_inside(fig, keys):
+    """Each box's text sits inside that box."""
+    for key in keys:
+        (t,) = [t for t in _plain_texts(fig) if t.get_gid() == f"text {key}"]
+        x0, y0, x1, y1 = _box(fig, key)
+        x, y = t.get_position()
+        assert x0 <= x <= x1 and y0 <= y <= y1, key
+
+
+def assert_box_arrows(fig, edges: dict[str, tuple[str, str]]):
+    """The arrows are exactly ``edges`` (key -> (from box, to box)); each starts on the edge of
+    its first box and ends on the edge of its second."""
+    arrows = {a.get_gid(): a for a in _annotations(fig)}
+    assert set(arrows) == {f"arrow {k}" for k in edges}
+    for key, (src, dst) in edges.items():
+        a = arrows[f"arrow {key}"]
+        assert a.get_text() == ""
+        assert _on_edge(a.xyann, _box(fig, src)), (key, "start", a.xyann)
+        assert _on_edge(a.xy, _box(fig, dst)), (key, "end", a.xy)
+
+
+def _ticks(axis) -> list[str]:
+    return [t.get_text() for t in axis.get_ticklabels()]
+
+
+def _legend(fig) -> list[str]:
+    legends = [*fig.legends, *[ax.get_legend() for ax in fig.axes if ax.get_legend()]]
+    return [t.get_text() for lg in legends for t in lg.get_texts()]
+
+
+def _chain_edges(keys: list[str]) -> dict[str, tuple[str, str]]:
+    return {f"{a}->{b}": (a, b) for a, b in itertools.pairwise(keys)}
+
+
 def check_reproduce_targets(fig):
     make = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
     recipe = re.search(r"^reproduce:\n((?:\t.*\n)+)", make, re.MULTILINE).group(1).splitlines()
-    texts = _texts(fig)
-    keys = []
+    want, keys = {}, []
     for i, line in enumerate(recipe):
         line = line.strip()
         if line.startswith("$(MAKE) "):
@@ -135,15 +193,14 @@ def check_reproduce_targets(fig):
             body = re.search(rf"^{target}:.*\n((?:\t.*\n)+)", make, re.MULTILINE).group(1)
             outs = list(dict.fromkeys(re.findall(r"--out (\S+)", body.replace("\\\n", " "))))
             assert outs, target
-            want = f"make {' '.join(make_args)} writes " + ", ".join(outs)
-            assert _flat(texts[f"text {target}"]) == want
+            want[f"text {target}"] = f"make {' '.join(make_args)} writes " + ", ".join(outs)
             keys.append(target)
         else:
-            want = line.replace("$(PYTHON) ", "python ")
-            assert _flat(texts[f"text command {i}"]) == want
+            want[f"text command {i}"] = line.replace("$(PYTHON) ", "python ")
             keys.append(f"command {i}")
-    assert len([k for k in texts if k.startswith("text ")]) == len(keys)
-    assert _arrows(fig) == {f"{a}->{b}" for a, b in itertools.pairwise(keys)}
+    assert_texts(fig, want)
+    assert_box_texts_inside(fig, keys)
+    assert_box_arrows(fig, _chain_edges(keys))
 
 
 def check_reference_jobs(fig):
@@ -151,55 +208,71 @@ def check_reference_jobs(fig):
     jobs = sorted(tuple(p.parent.relative_to(root).parts) for p in root.rglob("metrics.json"))
     assert jobs
     rows = sorted({j[:2] for j in jobs})
-    cols = [(d, geometry_id(g)) for d in sorted(DEVICES) for g in DEVICES[d].geometries]
-    cols = [c for c in cols if any(j[2:] == c for j in jobs)]
+    cols = [(d, g) for d in sorted(DEVICES) for g in DEVICES[d].geometries]
+    cols = [(d, g) for d, g in cols if any(j[2:] == (d, geometry_id(g)) for j in jobs)]
+    col_ids = [(d, geometry_id(g)) for d, g in cols]
+    example = rf.EXAMPLE_RUN
     (ax,) = fig.axes
     for gid, keep in (("jobs", False), ("selected", True)):
         want = [
-            (cols.index(j[2:]), rows.index(j[:2]))
+            (col_ids.index(j[2:]), rows.index(j[:2]))
             for j in jobs
-            if (
-                j[0] == rf.EXAMPLE_RUN["engine"]
-                and j[1] == rf.EXAMPLE_RUN["corner"]
-                and j[2] == rf.EXAMPLE_RUN["device"]
-            )
-            == keep
+            if (j[:3] == (example["engine"], example["corner"], example["device"])) == keep
         ]
         (coll,) = [c for c in ax.collections if c.get_gid() == gid]
         assert np.array_equal(coll.get_offsets(), np.array(want, float)), gid
-    assert [t.get_text() for t in ax.get_yticklabels()] == [f"{e} {c}" for e, c in rows]
+    assert _ticks(ax.yaxis) == [f"{e} {c}" for e, c in rows]
+    assert _ticks(ax.xaxis) == [f"{d.split('_')[0]} W{g.w_um:g}/L{g.l_um:g}" for d, g in cols]
+    assert _legend(fig) == [
+        "a job: one folder",
+        f"--engine {example['engine']} --corner {example['corner']} --device {example['device']}",
+    ]
+    assert (ax.get_xlabel(), ax.get_ylabel()) == ("device and geometry", "engine and corner")
+    assert_texts(fig, {})
+    assert not _annotations(fig)
+
+
+def _registry() -> dict:
+    return json.loads((REPO_ROOT / "src" / "gf180tcad" / "generators.json").read_text("utf-8"))
 
 
 def check_tcad_registry(fig):
-    reg = json.loads((REPO_ROOT / "src" / "gf180tcad" / "generators.json").read_text("utf-8"))
-    texts = _texts(fig)
-    for ep, mods in reg["entry_points"].items():
-        assert _flat(texts[f"text {ep}"]) == f"{ep} {len(mods)} modules hashed"
-    for tree in reg["trees"]:
-        assert texts[f"text {tree}"] == f"results/{tree}"
-    assert _arrows(fig) == {f"{w}->{t}" for t, w in reg["trees"].items()}
+    reg = _registry()
+    want = {f"text {ep}": f"{ep} {len(m)} modules hashed" for ep, m in reg["entry_points"].items()}
+    want |= {f"text {tree}": f"results/{tree}" for tree in reg["trees"]}
+    assert_texts(fig, want)
+    assert_box_texts_inside(fig, [*reg["entry_points"], *reg["trees"]])
+    assert_box_arrows(fig, {f"{w}->{t}": (w, t) for t, w in reg["trees"].items()})
 
 
-def _steps(job: str) -> list[str]:
+def _steps(job: str) -> list[tuple[str, bool]]:
+    """Each step of ``job``: its name (an action's name and its artefact for an unnamed step,
+    or its command) and whether it runs only on failure."""
     text = (REPO_ROOT / ".github" / "workflows" / "crosscheck.yml").read_text("utf-8")
     block = text.split(f"\n  {job}:\n", 1)[1].split("\n\n  ", 1)[0]
-    return re.findall(r"^      - (\w+): (.+)$", block, re.MULTILINE)
+    steps = []
+    for item in block.split("\n      - ")[1:]:
+        first, *rest = item.split("\n")
+        kind, value = first.split(": ", 1)
+        if kind == "uses":
+            value = value.split("@")[0]
+            named = [ln.split(": ", 1)[1] for ln in rest if ln.startswith("          name: ")]
+            value = f"{value}: {named[0]}" if named else value
+        steps.append((value.strip(), "        if: failure()" in rest))
+    return steps
 
 
 def _check_steps(job: str):
     def check(fig):
         steps = _steps(job)
-        texts = _texts(fig)
-        assert len([k for k in texts if k.startswith("text ")]) == len(steps)
-        for i, (kind, value) in enumerate(steps):
-            got = _flat(texts[f"text step {i}"])
-            if kind == "name":
-                assert got == value.strip()
-            elif kind == "uses":
-                assert got.startswith(value.split("@")[0]), (got, value)
-            else:
-                assert got == value.strip()
-        assert _arrows(fig) == {f"step {i}->step {i + 1}" for i in range(len(steps) - 1)}
+        assert steps
+        assert_texts(fig, {f"text step {i}": title for i, (title, _) in enumerate(steps)})
+        keys = [f"step {i}" for i in range(len(steps))]
+        assert_box_texts_inside(fig, keys)
+        assert_box_arrows(fig, _chain_edges(keys))
+        for i, (_, failure) in enumerate(steps):
+            (p,) = [p for p in fig.axes[0].patches if p.get_gid() == f"box step {i}"]
+            assert (p.get_linestyle() == "--") == failure, i
 
     return check
 
@@ -209,26 +282,58 @@ def _calibrated_meshes() -> list[str]:
     return sorted({json.loads(p.read_text("utf-8"))["mesh_sha256"] for p in metas})
 
 
+def _cache_config() -> dict:
+    return json.loads((REPO_ROOT / "data" / "output-cache.json").read_text("utf-8"))
+
+
+def _object_name(sha: str, art: dict) -> str:
+    gz = {"gzip": ".gz"}[art["compression"]]
+    return f"{sha[:12]}….{art['ext']}{gz}"
+
+
 def check_cache_flow(fig):
-    config = json.loads((REPO_ROOT / "data" / "output-cache.json").read_text("utf-8"))
-    (art,) = config["artefacts"]
-    texts = _texts(fig)
-    assert texts["text file"].startswith(f"results/{art['pattern']}")
-    assert _flat(texts["text meta"]) == f"{art['meta']} names its {art['hash_key']} (committed)"
+    (art,) = _cache_config()["artefacts"]
     sha = _calibrated_meshes()[0]
-    assert texts["text object"].replace("\n", "").startswith(f"objects/sha256/{sha[:2]}/{sha[:12]}")
-    assert _arrows(fig) == {"push", "pull", "meta->file", "index->object"}
+    assert_texts(fig, {
+        "text file": f"results/{art['pattern']} (git-ignored)",
+        "text meta": f"{art['meta']} names its {art['hash_key']} (committed)",
+        "text object": f"objects/sha256/{sha[:2]}/ {_object_name(sha, art)}",
+        "text index": "index.json each sha256 and its object",
+        "label push": "push",
+        "label pull": "pull",
+        "label meta->file": "pull checks the sha256",
+        "label index->object": "lists",
+    })  # fmt: skip
+    assert_box_texts_inside(fig, ["file", "meta", "object", "index"])
+    assert_box_arrows(fig, {
+        "push": ("file", "object"),
+        "pull": ("object", "file"),
+        "meta->file": ("meta", "file"),
+        "index->object": ("index", "object"),
+    })  # fmt: skip
 
 
 def check_cache_tree(fig):
-    lines = [t for _, t in sorted(
-        (int(g.split()[1]), t) for g, t in _texts(fig).items() if g.startswith("line "))]  # fmt: skip
+    config = _cache_config()
+    (art,) = config["artefacts"]
     shas = _calibrated_meshes()
-    assert len(shas) == len(set(shas)) and shas
-    objects = [ln.split()[-1] for ln in lines[5:]]
-    assert objects == [f"{s[:2]}/{s[:12]}….msh.gz" for s in shas]
-    assert lines[1:5] == ["├── README.md", "├── .gitattributes", "├── index.json",
-                          "└── objects/sha256/"]  # fmt: skip
+    assert shas
+    objects = [
+        f"    {'└──' if i == len(shas) - 1 else '├──'} {s[:2]}/{_object_name(s, art)}"
+        for i, s in enumerate(shas)
+    ]
+    lines = [
+        config["repo_https"].rsplit("/", 1)[1] + "/",
+        "├── README.md",
+        "├── .gitattributes",
+        "├── index.json",
+        "└── objects/sha256/",
+        *objects,
+    ]
+    assert_texts(fig, {f"line {i}": line for i, line in enumerate(lines)})
+    got = [t.get_text() for t in sorted(_plain_texts(fig), key=lambda t: -t.get_position()[1])]
+    assert got == lines  # top to bottom, indentation kept
+    assert not _annotations(fig)
 
 
 def check_exaggeration(fig):
@@ -251,53 +356,102 @@ def check_exaggeration(fig):
             assert bar.get_y() == pytest.approx(bottom, abs=1e-12), (key, name)
             assert bar.get_x() + bar.get_width() / 2 == pytest.approx(col)
             bottom += h
-    assert m["exaggeration"][0] in ax.get_xticklabels()[1].get_text()
+    scaled = [s for s in m["exaggeration"] if s.startswith(geo["t_ox"]["label"])]
+    assert _ticks(ax.xaxis) == ["true scale", "\n".join(["as the render draws it:", *scaled])]
+    assert _legend(fig) == [geo["t_ox"]["label"], geo["poly"]["label"]]
+    assert ax.get_ylabel() == "height above the silicon surface (nm)"
+    assert_texts(fig, {})
+    assert not _annotations(fig)
 
 
 def check_band_offsets(fig):
     with (REPO_ROOT / "data" / "render" / "display.toml").open("rb") as f:
         d = tomllib.load(f)
-    eg = d["silicon"]["band_gap_ev"]
-    want = {
+    eg, ox = d["silicon"]["band_gap_ev"], d["sio2"]
+    edge = {
         "silicon conduction": eg,
         "silicon valence": 0.0,
-        "oxide conduction": eg + d["sio2"]["conduction_offset_ev"],
-        "oxide valence": -d["sio2"]["valence_offset_ev"],
+        "oxide conduction": eg + ox["conduction_offset_ev"],
+        "oxide valence": -ox["valence_offset_ev"],
     }
     (ax,) = fig.axes
     lines = {ln.get_gid(): ln for ln in ax.get_lines()}
-    for gid, y in want.items():
+    for gid, y in edge.items():
         assert np.allclose(lines[gid].get_ydata(), [y, y], rtol=0, atol=1e-12), gid
     assert np.array_equal(lines["interface"].get_xdata(), [1, 1])
-    assert set(lines) == {*want, "interface"}
+    assert set(lines) == {*edge, "interface"}
+    values = {
+        "band gap": eg,
+        "conduction offset": ox["conduction_offset_ev"],
+        "valence offset": ox["valence_offset_ev"],
+    }
+    want = {f"value {k}": f"{k} {v:g} eV" for k, v in values.items()}
+    for part in ("oxide", "silicon"):
+        for band in ("conduction", "valence"):
+            want[f"label {part} {band}"] = f"{part}: {band} band edge"
+    assert_texts(fig, want)
+    for part in ("oxide", "silicon"):  # each edge label sits on its edge
+        for band in ("conduction", "valence"):
+            (t,) = [t for t in _plain_texts(fig) if t.get_gid() == f"label {part} {band}"]
+            assert t.get_position()[1] == pytest.approx(edge[f"{part} {band}"], abs=1e-12)
+    x_si = np.mean(lines["silicon conduction"].get_xdata())
+    x_ox = np.mean(lines["oxide conduction"].get_xdata())
+    spans = {  # each arrow spans the edges its value separates
+        "band gap": ((x_si, 0.0), (x_si, eg)),
+        "conduction offset": ((x_ox, eg), (x_ox, edge["oxide conduction"])),
+        "valence offset": ((x_ox, edge["oxide valence"]), (x_ox, 0.0)),
+    }
+    arrows = {a.get_gid(): a for a in _annotations(fig)}
+    assert set(arrows) == {f"arrow {k}" for k in spans}
+    assert all(a.get_text() == "" for a in arrows.values())
+    for key, (start, end) in spans.items():
+        a = arrows[f"arrow {key}"]
+        assert np.allclose(a.xyann, start, rtol=0, atol=1e-12), (key, a.xyann)
+        assert np.allclose(a.xy, end, rtol=0, atol=1e-12), (key, a.xy)
+        (t,) = [t for t in _plain_texts(fig) if t.get_gid() == f"value {key}"]
+        assert t.get_position()[1] == pytest.approx((start[1] + end[1]) / 2, abs=1e-12)
+    assert ax.get_ylabel() == "energy (eV), silicon's valence band edge at 0"
 
 
 def check_forks(fig):
     inputs = json.loads((REPO_ROOT / "docker" / "tcad-dev" / "upstream.json").read_text("utf-8"))
-    forks = [e for e in inputs.values() if "github.com/mithro/" in e.get("repository", "")]
+    forks = [e for e in inputs.values() if e.get("repository", "").startswith(GITHUB + "mithro/")]
     assert len(forks) >= 2
-    texts = _texts(fig)
-    for e in forks:
-        repo = e["repository"].removeprefix("https://github.com/")
-        assert texts[f"text {repo}"].startswith(f"{repo} at {e['commit'][:7]}")
+    sub = re.search(
+        r"path = (\S+)\n\s*url = https://github.com/(\S+?)(?:\.git)?\n",
+        (REPO_ROOT / ".gitmodules").read_text("utf-8"),
+    )
+    path, plugin = sub.groups()
     prov = json.loads((REPO_ROOT / "results/tcad/moscap1d/provenance.json").read_text("utf-8"))
-    assert texts["text mithro/gplugins"] == f"mithro/gplugins at {prov['gplugins_commit'][:7]}"
-    want = {f"{e['repository'].removeprefix('https://github.com/')}->dev" for e in forks}
-    assert _arrows(fig) == want | {"mithro/gplugins->third_party/gplugins"}
+    want, edges = {}, {}
+    for e in forks:
+        repo = e["repository"].removeprefix(GITHUB)
+        fix = e["role"].split("the mithro fork: ", 1)[1]
+        want[f"text {repo}"] = f"{repo} at {e['commit'][:7]} {fix}"
+        edges[f"{repo}->dev"] = (repo, "dev")
+    want[f"text {plugin}"] = f"{plugin} at {prov['gplugins_commit'][:7]}"
+    edges[f"{plugin}->{path}"] = (plugin, path)
+    want["text dev"] = "dev-HEAD TCAD image"
+    want[f"text {path}"] = "plugin submodule " + path.replace("/", "/ ")
+    assert_texts(fig, want)
+    assert_box_texts_inside(fig, [k.removeprefix("text ") for k in want])
+    assert_box_arrows(fig, edges)
 
 
 def check_results_images(fig):
     from gf180tcad.tcad import RESULTS_IMAGE
 
-    reg = json.loads((REPO_ROOT / "src" / "gf180tcad" / "generators.json").read_text("utf-8"))
-    texts = _texts(fig)
-    for img, entry in reg["images"].items():
-        assert texts[f"text {img}"] == f"{img} image\n{entry['pin']}"
-        assert (REPO_ROOT / entry["pin"]).is_file()
+    images = _registry()["images"]
+    want = {f"text {img}": f"{img} image {e['pin']}" for img, e in images.items()}
     for kind in RESULTS_IMAGE:
         assert (REPO_ROOT / "results" / "tcad" / kind).is_dir()
         assert (REPO_ROOT / "results" / "tcad" / "meshconv" / kind).is_dir()
-    assert _arrows(fig) == {f"{k}->{v}" for k, v in RESULTS_IMAGE.items()}
+        want[f"text {kind}"] = f"results/tcad/{kind} results/tcad/meshconv/{kind}"
+    for e in images.values():
+        assert (REPO_ROOT / e["pin"]).is_file()
+    assert_texts(fig, want)
+    assert_box_texts_inside(fig, [*RESULTS_IMAGE, *images])
+    assert_box_arrows(fig, {f"{k}->{v}": (k, v) for k, v in RESULTS_IMAGE.items()})
 
 
 CHECKS = {
@@ -387,6 +541,92 @@ def test_every_drawn_artist_is_checked(figure):
             pass
         undo()
     check(fig)
+    assert not missed, missed
+
+
+def _fails(check, fig) -> bool:
+    try:
+        check(fig)
+    except (AssertionError, KeyError, ValueError):
+        return True
+    return False
+
+
+def _text_mutations(fig):
+    """(name, apply, undo) for each text the figure draws: every plain text and annotation text,
+    every tick label, legend entry and axis label. Each change appends a word, and doubles the
+    first number in the text when it holds one."""
+
+    def changed(text: str) -> str:
+        m = re.search(r"\d+(\.\d+)?", text)
+        if m:
+            new = 2 * float(m.group()) or 1.0
+            return text[: m.start()] + f"{new:g}" + text[m.end() :]
+        return text + " changed"
+
+    texts = [*fig.texts, *(t for lg in fig.legends for t in lg.get_texts())]
+    for ax in fig.axes:
+        texts += [*ax.texts, ax.xaxis.label, ax.yaxis.label, ax.title]
+        if ax.get_legend():
+            texts += ax.get_legend().get_texts()
+    out = []
+    for t in texts:
+        old = t.get_text()
+        if not old and not isinstance(t, Annotation):
+            continue  # an empty text the figure leaves unused (a title)
+        out.append((f"text {t.get_gid() or old!r}", lambda t=t, old=old: t.set_text(changed(old)),
+                    lambda t=t, old=old: t.set_text(old)))  # fmt: skip
+    for ax in fig.axes:
+        for axis in (ax.xaxis, ax.yaxis):
+            labels = [lb.get_text() for lb in axis.get_ticklabels()]
+            if (
+                not labels
+                or not any(labels)
+                or axis.get_major_formatter().__class__.__name__ != "FixedFormatter"
+            ):
+                continue  # numeric ticks set by matplotlib from the data limits
+            ticks = list(axis.get_ticklocs())
+            for i in range(len(labels)):
+                new = [*labels]
+                new[i] = changed(new[i])
+                out.append((f"tick {labels[i]!r}",
+                            lambda axis=axis, ticks=ticks, new=new: axis.set_ticks(ticks, new),
+                            lambda axis=axis, ticks=ticks, old=labels: axis.set_ticks(ticks, old)))  # fmt: skip
+    return out
+
+
+def _arrow_mutations(fig):
+    """(name, apply, undo) doubling each end of each arrow (0 becomes 1)."""
+
+    def doubled(p):
+        return tuple(2 * v if v else 1.0 for v in p)
+
+    out = []
+    for a in _annotations(fig):
+        for end in ("xy", "xyann"):
+            old = getattr(a, end)
+            out.append((f"{a.get_gid()} {end}",
+                        lambda a=a, end=end, old=old: setattr(a, end, doubled(old)),
+                        lambda a=a, end=end, old=old: setattr(a, end, old)))  # fmt: skip
+    return out
+
+
+@pytest.mark.parametrize("figure", FIGURES)
+def test_every_text_and_arrow_is_checked(figure):
+    """Changing any one text, tick label, legend entry or axis label, or moving either end of
+    any arrow, makes the figure's check fail."""
+    fig = rf.DRAW[figure]("light")
+    check = CHECKS[figure]
+    check(fig)
+    mutations = _text_mutations(fig) + _arrow_mutations(fig)
+    assert mutations
+    missed = []
+    for name, apply, undo in mutations:
+        apply()
+        if not _fails(check, fig):
+            missed.append(name)
+        undo()
+        check(fig)
     assert not missed, missed
 
 

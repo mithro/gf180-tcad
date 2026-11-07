@@ -45,18 +45,22 @@ STYLE = {
     # The box diagrams: the height of one row of boxes, and the room above and below them (in).
     "row_in": 0.72,
     # The workflow figures: one row per step, most of one line.
-    "step_row_in": 0.5,
+    "step_row_in": 0.56,
     # A row's centre lies this share of the row below its top.
     "mid": 0.5,
     # The push and pull arrows sit one of this many parts of a box's height inside its edges.
     "arrow_parts": 3,
     # The forks figure: a row tall enough for a fork's commit and three lines of its fix.
     "fork_row_in": 1.15,
+    # The forks figure's columns: a wide one for each fork and its fix, a narrow one for where
+    # it enters.
+    "fork_left": (0.33, 0.62),
+    "fork_right": (0.82, 0.29),
     "pad_in": 0.25,
     # A box fills this share of its row's height; the rest is the gap the arrow crosses.
     "box_share": 0.78,
     # Box text wraps at this many characters for a full-width box (12 pt on 6.4 in).
-    "wrap_chars": 60,
+    "wrap_chars": 52,
     # Centre and width of a full-width box, and of the left and right columns, as fractions.
     "full": (0.5, 0.92),
     "left": (0.25, 0.46),
@@ -154,7 +158,7 @@ def _box(ax, key: str, lines: list[str], at: tuple[float, float, float], role: s
     )  # fmt: skip
     ax.add_patch(patch)
     ax.text(x, y, "\n".join(lines), ha="center", va="center", gid=f"text {key}",
-            color=pal["text"])  # fmt: skip
+            color=pal["text"], fontsize=imagefig.STYLE["text_pt"])  # fmt: skip
     return (x - w / 2, y - h / 2, x + w / 2, y + h / 2)
 
 
@@ -182,7 +186,7 @@ def _arrow(ax, key: str, start: tuple[float, float], end: tuple[float, float], p
     if label:
         mx, my = (start[0] + end[0]) / 2, (start[1] + end[1]) / 2
         ax.text(mx + STYLE["label_dx"], my, label, ha="left", va="center",
-                color=imagefig.PALETTES[palette]["text"], gid=f"label {key}")  # fmt: skip
+                color=imagefig.PALETTES[palette]["text"], fontsize=imagefig.STYLE["text_pt"], gid=f"label {key}")  # fmt: skip
 
 
 def _chain(rows: list[tuple[str, list[str], str, bool]], palette: str,
@@ -200,13 +204,14 @@ def _chain(rows: list[tuple[str, list[str], str, bool]], palette: str,
 
 def _two_columns(left: list[tuple[str, list[str], str]], right: list[tuple[str, list[str], str]],
                  edges: list[tuple[str, str]], palette: str,
-                 row_in: float | None = None):  # fmt: skip
+                 row_in: float | None = None,
+                 columns: tuple[str, str] = ("left", "right")):  # fmt: skip
     """Two columns of boxes, each column spread over the taller one's rows, with an arrow from
     the right edge of each left box to the left edge of the right box it names."""
     rows = max(len(left), len(right))
     fig, ax = _diagram(rows, palette, row_in)
     boxes = {}
-    for column, side in ((left, "left"), (right, "right")):
+    for column, side in ((left, columns[0]), (right, columns[1])):
         x, w = STYLE[side]
         step = rows / len(column)
         for i, (key, lines, role) in enumerate(column):
@@ -438,7 +443,7 @@ def cache_flow_figure(palette: str):
     _arrow(ax, "pull", (ox0, fy0 + third), (fx1, fy0 + third), palette)
     for key, y in (("push", fy1), ("pull", fy0)):
         ax.text((fx1 + ox0) / 2, y, key, ha="center", va="bottom" if key == "push" else "top",
-                color=imagefig.PALETTES[palette]["text"], gid=f"label {key}")  # fmt: skip
+                color=imagefig.PALETTES[palette]["text"], fontsize=imagefig.STYLE["text_pt"], gid=f"label {key}")  # fmt: skip
     mx = _centre_x(boxes["meta"])
     _arrow(
         ax, "meta->file", (mx, _top(boxes["meta"])), (mx, fy0), palette, "pull checks the sha256"
@@ -485,7 +490,8 @@ def cache_tree_figure(palette: str):
         for i, line in enumerate(lines):
             y = height - STYLE["pad_in"] - STYLE["tree_line_in"] * (i + STYLE["mid"])
             ax.text(STYLE["full"][0] - STYLE["full"][1] / 2, y, line, ha="left", va="center",
-                    family="monospace", color=pal["text"], gid=f"line {i}")  # fmt: skip
+                    family="monospace", color=pal["text"], gid=f"line {i}",
+                    fontsize=imagefig.STYLE["text_pt"])  # fmt: skip
     return fig
 
 
@@ -566,8 +572,9 @@ def band_offset_figure(palette: str):
             ax.plot(span, [ev, ev], color=pal["hole"], lw=STYLE["line_width"],
                     gid=f"{part} valence")  # fmt: skip
             ax.text(sum(span) / 2, ec, f"{part}: conduction band edge", ha="center",
-                    va="bottom")  # fmt: skip
-            ax.text(sum(span) / 2, ev, f"{part}: valence band edge", ha="center", va="top")
+                    va="bottom", gid=f"label {part} conduction")  # fmt: skip
+            ax.text(sum(span) / 2, ev, f"{part}: valence band edge", ha="center", va="top",
+                    gid=f"label {part} valence")  # fmt: skip
         si_ec, si_ev = edges["silicon"]
         ox_ec, ox_ev = edges["oxide"]
         x_si = STYLE["silicon_x"][0] + STYLE["arrow_at"] * (
@@ -575,14 +582,16 @@ def band_offset_figure(palette: str):
         )
         x_ox = STYLE["oxide_x"][0] + STYLE["arrow_at"] * (STYLE["oxide_x"][1] - STYLE["oxide_x"][0])
         marks = (
-            (x_si, si_ev, si_ec, f"band gap {d['silicon']['band_gap_ev']:g} eV"),
-            (x_ox, si_ec, ox_ec, f"offset {d['sio2']['conduction_offset_ev']:g} eV"),
-            (x_ox, ox_ev, si_ev, f"offset {d['sio2']['valence_offset_ev']:g} eV"),
+            ("band gap", x_si, si_ev, si_ec, d["silicon"]["band_gap_ev"]),
+            ("conduction offset", x_ox, si_ec, ox_ec, d["sio2"]["conduction_offset_ev"]),
+            ("valence offset", x_ox, ox_ev, si_ev, d["sio2"]["valence_offset_ev"]),
         )
-        for x, y0, y1, label in marks:
-            ax.annotate("", xy=(x, y1), xytext=(x, y0),
-                        arrowprops={"arrowstyle": "<|-|>", "color": pal["text"]})  # fmt: skip
-            ax.text(x + STYLE["label_lift"], (y0 + y1) / 2, label, ha="left", va="center")
+        for key, x, y0, y1, value in marks:
+            a = ax.annotate("", xy=(x, y1), xytext=(x, y0),
+                            arrowprops={"arrowstyle": "<|-|>", "color": pal["text"]})  # fmt: skip
+            a.set_gid(f"arrow {key}")
+            ax.text(x + STYLE["label_lift"], (y0 + y1) / 2, f"{key} {value:g} eV", ha="left",
+                    va="center", gid=f"value {key}")  # fmt: skip
         ax.axvline(STYLE["silicon_x"][0], color=pal["muted"], gid="interface")
         ax.set_xticks([])
         ax.set_ylabel(f"energy (eV), silicon's valence band edge at {si_ev:g}")
@@ -590,6 +599,10 @@ def band_offset_figure(palette: str):
 
 
 # --- the dev-HEAD image: forks and which image makes which results ---------------------------------
+
+
+#: The words for where a fork of ``upstream.json`` enters: the image those inputs build.
+FORK_DESTINATIONS = {"dev": ["dev-HEAD", "TCAD image"]}
 
 
 def forks() -> list[dict]:
@@ -617,19 +630,18 @@ def forks_figure(palette: str):
     left = []
     for f in fs:
         head = f"{f['repo']} at {f['commit'][: STYLE['short_sha']]}"
-        fix = _wrap(f["fix"], STYLE["left"][1]) if f["fix"] else []
+        fix = _wrap(f["fix"], STYLE["fork_left"][1]) if f["fix"] else []
         left.append((f["repo"], [head, *fix], "inputs"))
     dests = []
     for f in fs:
         if f["into"] not in dests:
             dests.append(f["into"])
-    name = {
-        "dev": ["dev-HEAD TCAD image,", "built from", DEV_INPUTS.relative_to(REPO_ROOT).as_posix()]
-    }
-    right = [(d, name.get(d, [f"submodule {d},", "mounted into the sandbox"]), "image")
-             for d in dests]  # fmt: skip
+    right = [(d, FORK_DESTINATIONS[d] if d in FORK_DESTINATIONS else
+              ["plugin submodule", *(part + "/" for part in d.split("/")[:-1]), d.split("/")[-1]],
+              "image") for d in dests]  # fmt: skip
     edges = [(f["repo"], f["into"]) for f in fs]
-    return _two_columns(left, right, edges, palette, STYLE["fork_row_in"])
+    return _two_columns(left, right, edges, palette, STYLE["fork_row_in"],
+                        ("fork_left", "fork_right"))  # fmt: skip
 
 
 def results_images_figure(palette: str):
