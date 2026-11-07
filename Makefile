@@ -183,8 +183,8 @@ lint:
 
 # What the pre-push hook (tools/git-hooks/pre-push, installed by tools/install-hooks) runs before
 # every push: make lint, then the CI tests except the docs build, the generated pages and the
-# calibration fits (PRE_PUSH_SLOW; pre-push-docs runs the first two, CI all three). -rs lists the
-# skips. The tests' scratch files go
+# calibration fits (PRE_PUSH_SLOW; pre-push-docs runs the first two, CI all three, so no file
+# runs twice in one push; tests/test_makefile.py checks both lists). -rs lists the skips. The tests' scratch files go
 # to PRE_PUSH_TMP, not the system temporary directory; it must be outside the repository (the
 # sandbox and scratch-directory checks refuse workdirs inside it, so not tmp/), and one per
 # checkout, since pytest empties its --basetemp when it starts and worktrees may push at once.
@@ -195,7 +195,7 @@ pre-push: lint
 	uv run --locked pytest -m "not sandbox" -q -rs -p no:cacheprovider \
 		--basetemp=$(PRE_PUSH_TMP)/pytest-pre-push tests $(addprefix --ignore=,$(PRE_PUSH_SLOW))
 
-# The docs-links rule (tests/test_doc_links.py: it builds the docs) and the generated pages
+# The docs build (tests/test_doc_links.py: it builds the docs and checks their links) and the generated pages
 # (tests/test_docgen.py: it runs docgen.generate on the committed and on synthetic result trees,
 # issue #165). The hook runs them as well when a pushed commit changes docs/, src/, results/,
 # README.md or CONTRIBUTING.md.

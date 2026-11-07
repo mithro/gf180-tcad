@@ -3,7 +3,8 @@
 # pre-push hook (installed by tools/install-hooks): refuses a push that would fail CI's lint-test
 # job in the ways it failed most often, before anything leaves the machine. Runs `make pre-push`
 # (make lint, then the tests except the docs build, the generated pages and the calibration fits),
-# and `make pre-push-docs` (the docs-links rule and the generated pages) when a pushed commit
+# and `make pre-push-docs` (the docs build of tests/test_doc_links.py and the generated pages of
+# tests/test_docgen.py) when a pushed commit
 # changes docs/, src/, results/, README.md or CONTRIBUTING.md. See CONTRIBUTING.md.
 set -euo pipefail
 
