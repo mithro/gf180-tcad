@@ -36,6 +36,8 @@ FORMAT = 1
 REQUIRED = ("exaggeration", "format", "inputs", "quantities", "render")
 # The one file a committed manifest may read display-only values (role "display") from.
 DISPLAY_SOURCE = "data/render/display.toml"
+#: The key of :data:`DISPLAY_SOURCE` that no render reads: the separately cited oxide gap.
+UNDRAWN_DISPLAY_KEY = ["sio2", "band_gap_ev"]
 OPTIONAL = ("cycles", "device", "frames", "generator", "image", "outputs", "params", "scene")
 
 NOT_TO_SCALE = "not to scale"
@@ -151,14 +153,18 @@ class Manifest:
 
     def display_problems(self) -> list[str]:
         """Entries that break the display rule of committed manifests: a ``display`` entry read
-        from a file other than :data:`DISPLAY_SOURCE`, or an entry read from that file with
-        another role. :meth:`verify` leaves this out so that a fixture may use its own file."""
+        from a file other than :data:`DISPLAY_SOURCE`, an entry read from that file with another
+        role, or an entry that reads :data:`UNDRAWN_DISPLAY_KEY` (the file's ``drawing`` entry:
+        a band diagram draws the oxide gap as silicon's gap plus the two offsets). :meth:`verify`
+        leaves this out so that a fixture may use its own file."""
         out = []
         for name, q in self.quantities.items():
             if q.role == "display" and q.source != DISPLAY_SOURCE:
                 out.append(f"{name}: role display read from {q.source}, not {DISPLAY_SOURCE}")
             elif q.source == DISPLAY_SOURCE and q.role != "display":
                 out.append(f"{name}: read from {DISPLAY_SOURCE} with role {q.role}")
+            if q.source == DISPLAY_SOURCE and q.selector.to_dict() == {"toml": UNDRAWN_DISPLAY_KEY}:
+                out.append(f"{name}: a drawing never uses {'.'.join(UNDRAWN_DISPLAY_KEY)}")
         return out
 
     def values(self, root: Path) -> tuple[dict, list[str]]:

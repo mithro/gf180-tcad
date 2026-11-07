@@ -77,6 +77,17 @@ def test_display_entries_come_from_the_display_file():
     assert m.display_problems() == ["e_g: read from data/render/display.toml with role value"]
 
 
+def test_no_render_reads_the_separately_cited_oxide_gap():
+    """Review of #170: the drawing statement says a band diagram never uses sio2.band_gap_ev,
+    so display_problems refuses an entry that reads it."""
+    m = rm.Manifest.load(ROOT / FIXTURE_MANIFEST)
+    q = m.quantities["e_g"]
+    q.source = rm.DISPLAY_SOURCE
+    assert m.display_problems() == []
+    q.selector = rm.Selector.from_dict({"toml": ["sio2", "band_gap_ev"]})
+    assert m.display_problems() == ["e_g: a drawing never uses sio2.band_gap_ev"]
+
+
 def test_exaggeration_strings_match_scales():
     """Every entry with scale != 1 has its exaggeration string, in the committed manifests and
     in the fixture; a manifest without it fails."""
@@ -258,11 +269,11 @@ def test_display_constants_have_sources_and_note():
 
 
 def test_display_offsets_add_up_to_the_oxide_gap():
-    """E_g(SiO2) = E_g(Si) + both offsets, to the 0.1 eV the cited values carry."""
+    """E_g(SiO2) = E_g(Si) + both offsets, to half the 0.1 eV step the cited values carry."""
     d = tomllib.loads(DISPLAY.read_text(encoding="utf-8"))
     si, ox = d["silicon"], d["sio2"]
     total = si["band_gap_ev"] + ox["conduction_offset_ev"] + ox["valence_offset_ev"]
-    assert total == pytest.approx(ox["band_gap_ev"], abs=0.1)
+    assert total == pytest.approx(ox["band_gap_ev"], abs=0.05)
 
 
 def test_display_drawing_statement_derives_the_oxide_gap():
@@ -273,8 +284,10 @@ def test_display_drawing_statement_derives_the_oxide_gap():
     total = si["band_gap_ev"] + ox["conduction_offset_ev"] + ox["valence_offset_ev"]
     for key in ("silicon.band_gap_ev", "conduction_offset_ev", "valence_offset_ev"):
         assert key in d["drawing"]
-    assert f"their sum, {total:.2f} eV" in d["drawing"]
-    assert f"sio2.band_gap_ev, {ox['band_gap_ev']:.1f} eV" in d["drawing"]
+    drawn = re.search(r"their sum, (\d+\.\d+) eV", d["drawing"])
+    cited = re.search(r"sio2\.band_gap_ev, (\d+\.\d+) eV", d["drawing"])
+    assert drawn and float(drawn[1]) == pytest.approx(total, abs=1e-12)
+    assert cited and float(cited[1]) == ox["band_gap_ev"]
     assert "never uses sio2.band_gap_ev" in d["drawing"]
 
 
@@ -333,3 +346,17 @@ def test_stale_exaggeration_statement_fails():
     problems = m.verify(ROOT)
     assert "t_ox: no exaggeration string 'oxide thickness ×20, not to scale'" in problems
     assert "stale exaggeration string 'oxide thickness ×40, not to scale'" in problems
+
+
+def test_band_offset_caption_states_the_files_oxide_gaps():
+    """Review of #170: both twin captions give the drawn oxide gap (computed from the file) and
+    the separately cited one (read from it)."""
+    d = tomllib.loads(DISPLAY.read_text(encoding="utf-8"))
+    si, ox = d["silicon"], d["sio2"]
+    total = si["band_gap_ev"] + ox["conduction_offset_ev"] + ox["valence_offset_ev"]
+    page = (ROOT / "docs" / "reproduce" / "render-manifest.md").read_text(encoding="utf-8")
+    drawn = re.findall(r"The oxide gap drawn, (\d+\.\d+) eV,", page)
+    cited = re.findall(r"cites the\s+oxide gap separately as (\d+\.\d+) eV", page)
+    assert len(drawn) == len(cited) == 2
+    assert all(float(v) == pytest.approx(total, abs=1e-12) for v in drawn)
+    assert all(float(v) == ox["band_gap_ev"] for v in cited)
