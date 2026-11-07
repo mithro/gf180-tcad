@@ -317,7 +317,8 @@ Scalars carry `value`; arrays carry `value_sha256` over a canonical JSON encodin
   manifest reads `display` entries only from `data/render/display.toml`
   (`Manifest.display_problems`, checked by `test_every_entry_rereads_its_source`; the fixture
   keeps its own display file as the negative control); `verify` also reports an unreadable source
-  and a stale "×N, not to scale" statement. The six display values wait on issue #88.
+  and a stale "×N, not to scale" statement. Since #167, `display_problems` also refuses an entry
+  that reads `sio2.band_gap_ev`, which no drawing uses. The six display values wait on issue #88.
 
 **Provenance impact.** None (no tree, no entry point yet; the render closure starts in R2b). **Host:** host only, minutes. **Calendar:** 0.5–1 day. **Reviewer's checklist:** selectors closed and unambiguous; arrays hashed canonically; every display constant cited and marked display-only; derivations pure and hand-checked; the negative controls fail for the right reason.
 
