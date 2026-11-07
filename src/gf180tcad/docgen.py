@@ -38,7 +38,8 @@ from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.spice.xyce import ENGINE_DIFF_FLOOR, ENGINE_DIFF_THRESHOLD
 
 RESULTS = REPO_ROOT / "results" / "spice"
-PICO = 1e-12  # A per pA
+#: Amperes per picoampere, for the current floor the summary page prints in pA.
+PICO = 1e-12
 TT = "typical"
 DIFF_SWEEPS = rf.DIFF_SWEEPS
 # Cases explained on the engine cross-check page (nfet BSIM4 version 4.5 vs Xyce 4.6.1).
@@ -881,7 +882,7 @@ def _tcad_geometry_page(roots: rf.Roots, d: _Device, g: Geometry, out: Path) -> 
             "Two plots: gate capacitance curves against u almost on top of each other in a grey "
             "band, and below them the plateau errors between dashed tolerance lines.",
             f"Top: the TCAD and ngspice Cgg of {name} `{gid}` against u. Bottom: the TCAD error "
-            "at each plateau bias, with the tolerance.",
+            "at each plateau bias, with the {term}`tolerance`.",
             roots,
         ),
         "## Verdicts",
@@ -1227,7 +1228,7 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
         ),
         "",
         (
-            f"{numref(stack)} draws the calibrated 1D stack: the gate, the gate oxide and the "
+            f"{numref(stack)} draws the calibrated 1D stack: the gate, the {{term}}`gate oxide` and the "
             "body, with the two layers the fit sets highlighted."
         ),
         "",
