@@ -2,7 +2,8 @@
 
 # The render manifest
 
-Each 3D render has a {term}`render manifest` beside its image, `<render>.render.json`. For every number
+Each 3D render has a {term}`render manifest` beside its image, named after the render, as
+{repo}`r-test.render.json <tests/fixtures/renders/r-test.render.json>` is for the synthetic render `r-test`. For every number
 the render draws, it names the source file, the place inside it, the unit, the value and the scale.
 The {repo}`design spec, section 10.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#101-3d-renders-of-the-simulated-processes>`
 sets this rule.
@@ -10,7 +11,7 @@ sets this rule.
 This page lists the file's keys, the selector kinds and what the check rejects.
 The module {py:mod}`gf180tcad.render.manifest` reads and checks the file. The test {test}`tests/test_renders.py::test_every_entry_rereads_its_source`
 re-reads every entry of every committed render manifest from its source.
-The synthetic example {repo}`tests/fixtures/renders/r-test.render.json` shows each kind of entry.
+The synthetic example shows each kind of entry.
 
 ## Top-level keys
 
@@ -42,8 +43,28 @@ Its keys, read entries first:
 
 An entry with the role `geometry` or `axis` always has a `scale`. An entry whose scale is not 1
 always has a `label`. Its exaggeration statement, such as "oxide thickness ×40, not to scale", is
-in the file's `exaggeration` list. The canonical JSON is compact, with sorted keys and
+in the file's `exaggeration` list. The two geometry entries of the synthetic example are drawn
+in {numref}`render-exaggeration`, at true scale and at their scales. The canonical JSON is compact, with sorted keys and
 shortest round-trip floats ({py:func}`gf180tcad.quantity.canonical_json`).
+
+```{figure} /_generated/reproduce/render-exaggeration-light.svg
+:name: render-exaggeration
+:figclass: only-light
+:alt: Two stacked bars of height in nanometres. Left, at true scale, a thin oxide layer under a much thicker poly layer. Right, as the render draws it, the oxide layer is taller than the poly layer.
+
+The geometry entries of {repo}`r-test.render.json <tests/fixtures/renders/r-test.render.json>`,
+the oxide at the bottom. Left, each thickness as the entry's value gives it. Right, each
+thickness times the entry's scale, with the exaggeration statement of the scaled entry below.
+```
+
+```{figure} /_generated/reproduce/render-exaggeration-dark.svg
+:figclass: only-dark
+:alt: Two stacked bars of height in nanometres. Left, at true scale, a thin oxide layer under a much thicker poly layer. Right, as the render draws it, the oxide layer is taller than the poly layer.
+
+The geometry entries of {repo}`r-test.render.json <tests/fixtures/renders/r-test.render.json>`,
+the oxide at the bottom. Left, each thickness as the entry's value gives it. Right, each
+thickness times the entry's scale, with the exaggeration statement of the scaled entry below.
+```
 
 ## Selector kinds
 
@@ -68,10 +89,29 @@ render never recomputes what a simulation computed.
 ## Display-only values
 
 The file {repo}`data/render/display.toml` holds the {term}`band gaps <band gap>` and the Si–SiO₂ band offsets that a band
-diagram is drawn with. No simulation reads the file. Each value has a unit and a source in the
+diagram is drawn with, as {numref}`render-band-offsets` shows. No simulation reads the file. Each value has a unit and a source in the
 {ref}`literature list <lit-sze>`. The file's `mismatch` text compares the band gap the simulation
 implies with the band gap the drawing uses. A committed render manifest reads every `display`
 entry from this file and no other ({py:meth}`gf180tcad.render.manifest.Manifest.display_problems`).
+
+```{figure} /_generated/reproduce/render-band-offsets-light.svg
+:name: render-band-offsets
+:figclass: only-light
+:alt: Band edges against energy. On the left, the oxide's conduction band edge high above and its valence band edge far below. On the right, silicon's two band edges close together. Arrows mark the silicon band gap and the two offsets.
+
+The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
+silicon's valence band edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
+the conduction and valence band offsets above and below silicon's.
+```
+
+```{figure} /_generated/reproduce/render-band-offsets-dark.svg
+:figclass: only-dark
+:alt: Band edges against energy. On the left, the oxide's conduction band edge high above and its valence band edge far below. On the right, silicon's two band edges close together. Arrows mark the silicon band gap and the two offsets.
+
+The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
+silicon's valence band edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
+the conduction and valence band offsets above and below silicon's.
+```
 
 ## What the check rejects
 
