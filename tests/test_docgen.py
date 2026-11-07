@@ -978,21 +978,40 @@ def _symlink_tree(src: Path, dst: Path) -> Path:
     return dst
 
 
-def test_repo_path_maps_a_tree_of_any_name_to_the_committed_layout(tmp_path):
-    """Issue #173: a file in the repository is linked by its own path; a file of a tree given
-    from elsewhere by the same place in the committed tree, whatever the tree's folder name."""
-    inside = docgen.RESULTS / "ngspice" / "typical" / "a.csv"
-    assert docgen.repo_path(inside, docgen.RESULTS, docgen.RESULTS) == (
-        "results/spice/ngspice/typical/a.csv"
+def test_repo_path_maps_a_tree_of_any_name_to_the_committed_layout(tmp_path, monkeypatch):
+    """Issue #173 and the review of #174: a tree in the repository's results/ folder is linked
+    where it lies; any other tree, inside the checkout or not, at the same place in the
+    committed tree; a path outside its tree is an error."""
+    rel = Path("ngspice") / "typical" / "a.csv"
+    committed = "results/spice/ngspice/typical/a.csv"
+    # the committed tree, and another tree under results/, are linked where they lie
+    assert docgen.repo_path(docgen.RESULTS / rel, docgen.RESULTS, docgen.RESULTS) == committed
+    other = REPO_ROOT / "results" / "spice-pdk-x"
+    assert docgen.repo_path(other / rel, other, docgen.RESULTS) == (
+        "results/spice-pdk-x/ngspice/typical/a.csv"
     )
-    outside = tmp_path / "other_name" / "ngspice" / "typical" / "a.csv"
-    assert docgen.repo_path(outside, tmp_path / "other_name", docgen.RESULTS) == (
-        "results/spice/ngspice/typical/a.csv"
-    )
+    # a tree outside the repository, and a scratch tree inside the checkout, map to committed
+    assert docgen.repo_path(tmp_path / "x" / rel, tmp_path / "x", docgen.RESULTS) == committed
+    scratch = REPO_ROOT / "tmp" / "spice_in"
+    assert docgen.repo_path(scratch / rel, scratch, docgen.RESULTS) == committed
     mesh = tmp_path / "tcad_in" / "meshes" / "x"
     assert docgen.repo_path(mesh, tmp_path / "tcad_in", docgen.TCAD_RESULTS) == (
         "results/tcad/meshes/x"
     )
+    # relative paths are taken from the working directory
+    monkeypatch.chdir(REPO_ROOT)
+    assert (
+        docgen.repo_path(Path("results/spice-pdk-x") / rel, "results/spice-pdk-x", docgen.RESULTS)
+        == "results/spice-pdk-x/ngspice/typical/a.csv"
+    )
+    # a path that is not under its tree is an error, inside the repository or not
+    for path in (
+        REPO_ROOT / "README.md",
+        tmp_path / "elsewhere.csv",
+        docgen.RESULTS / ".." / "tcad" / "x.csv",
+    ):
+        with pytest.raises(ValueError, match="is not under the results tree"):
+            docgen.repo_path(path, docgen.RESULTS, docgen.RESULTS)
 
 
 def test_csv_links_of_a_spice_tree_of_another_name_exist(tmp_path):
@@ -1013,12 +1032,18 @@ def test_csv_links_of_a_spice_tree_of_another_name_exist(tmp_path):
 
 def test_mesh_links_of_a_tcad_tree_of_another_name_exist(tmp_path):
     """Issue #173: the mesh captions of a TCAD tree under another folder name link the mesh
-    artefact folders at their committed paths, and those folders exist."""
+    artefact folders at their committed paths, and those folders exist. The mesh section of
+    each geometry with a committed mesh artefact is made directly, not the whole TCAD pages."""
     tree = _link_tcad_tree(tmp_path / "tcad_in")
-    docgen.generate_tcad(tmp_path / "out", tcad_root=tree)
+    metas = sorted((TCAD / "meshes").glob("*/*/*/*/mesh-window.meta.json"))
+    assert metas
     links = []
-    for page in (tmp_path / "out" / "tcad").rglob("*.md"):
-        links += re.findall(r"\{repo\}`(results/[^`]*meshes/[^`]*)`", page.read_text("utf-8"))
-    assert links
+    for name, gid in sorted({(m.parts[-4], m.parts[-2]) for m in metas}):
+        d = docgen._Device(tree, DEVICES[name])
+        out = tmp_path / "out" / name
+        out.mkdir(parents=True, exist_ok=True)
+        text = "\n".join(docgen._mesh_section(d, gid, out))
+        links += re.findall(r"\{repo\}`(results/[^`]*meshes/[^`]*)`", text)
+    assert len(links) >= len(metas)
     for link in links:
         assert (REPO_ROOT / link).is_dir(), link
