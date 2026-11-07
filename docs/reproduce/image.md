@@ -706,8 +706,8 @@ builder, with other jobs sharing its 8 CPUs. Both gave the same digests. The rec
 | Wall time of `make` (min) | 65 | 209 |
 
 On the project's host the builder's memory peaked at 6.35 GB. In the pinned image, the files in
-`/opt/charon` add up to 353 MB (`du -sb`). The layer it adds to the base image is 91.7 MB
-compressed.
+`/opt/charon` add up to 353 MB (`du -sb`). The manifest of the pin in {repo}`docker/CHARON_LIBS_IMAGE`
+gives the layer it adds to the base image as 91.7 MB compressed.
 
 ### Checks on GitHub
 
@@ -811,18 +811,23 @@ builder. Its build inputs are the files in {repo}`docker/charon/`, the two pin f
 The pinned image was built twice from the same commit, once on a GitHub runner and once on the
 project's host. Both gave the same digests, as [pull request #164](https://github.com/mithro/gf180-tcad/pull/164)
 records. The runner's time includes the push of the image, and the host's its load into the
-local image store.
+local image store. The table gives the two build logs that the pull request records.
 
 | Quantity | GitHub runner | Project's host |
 |---|---|---|
 | Wall time of the whole build (s) | 295 | 335 |
-| Builder memory peak (GB) | none recorded | 5.10 |
+| Builder memory peak (GB) | — | 5.10 |
 
-The two layers add 91.7 MB and 12.5 MB, compressed, to the dev-HEAD TCAD image.
+Workflow [run 42349097853](https://github.com/mithro/gf180-tcad/actions/runs/42349097853)
+rebuilt both Charon images from scratch on a GitHub runner. Each rebuilt digest equals its pin, in
+{repo}`docker/CHARON_IMAGE` and {repo}`docker/CHARON_LIBS_IMAGE`.
+
+The manifest of the pin in {repo}`docker/CHARON_IMAGE` gives the two layers as 91.7 MB and
+12.5 MB, compressed. They sit on top of the dev-HEAD TCAD image.
 
 {repo}`.github/workflows/image.yml` builds the charon image whenever a pull request or a push
-changes a file under {repo}`docker/`. The entry has no gate: in {numref}`charon-ci` the trigger
-leads straight to the build, then to the same three checks and published tags. Its rebuild from
+changes a file under {repo}`docker/`. The entry has no gate. It is {numref}`charon-ci` without
+the gate box: the trigger leads to the build, then to the same three checks and published tags. Its rebuild from
 scratch runs on every such change as well. The sandbox tests of
 {repo}`tests/test_charon_image.py` also check the ENV above and read the `pmoscap.nlp` output
 with `netCDF4`.
