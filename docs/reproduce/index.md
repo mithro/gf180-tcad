@@ -175,7 +175,7 @@ uv run --locked python -m gf180tcad spice-reference --engine ngspice \
     --corner typical --device nfet_05v0 --out /tmp/nfet-typical
 ```
 
-Its jobs are the highlighted row of {numref}`reference-jobs`.
+Its jobs are the highlighted squares of {numref}`reference-jobs`.
 
 ```{figure} /_generated/reproduce/reference-jobs-light.svg
 :name: reference-jobs

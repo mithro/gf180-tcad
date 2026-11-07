@@ -18,6 +18,7 @@ The output cache beside this repository. `push` copies a job's git-ignored {repo
 cache repository as a compressed object named by its sha256, and the index lists it. `pull`
 copies the object back and checks its sha256 against the `mesh_sha256` of the job's committed
 {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`.
+The object drawn is the first that the committed calibrated 2D jobs name.
 ```
 
 ```{figure} /_generated/reproduce/output-cache-flow-dark.svg
@@ -28,6 +29,7 @@ The output cache beside this repository. `push` copies a job's git-ignored {repo
 cache repository as a compressed object named by its sha256, and the index lists it. `pull`
 copies the object back and checks its sha256 against the `mesh_sha256` of the job's committed
 {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`.
+The object drawn is the first that the committed calibrated 2D jobs name.
 ```
 
 The cache holds eight objects, the {repo}`mesh.msh <.gitignore#L15>` of ten calibrated cells of
@@ -85,16 +87,16 @@ The cacheable files, the repository URLs and the size cap are in {repo}`data/out
 :figclass: only-light
 :alt: A file tree: the cache repository holds a README, a git attributes file, the index, and under objects/sha256 one compressed mesh file per distinct mesh, each in a folder named by the first two hex digits of its hash.
 
-The files of the cache repository, with one object per distinct `mesh_sha256` of the committed
-calibrated 2D jobs ({repo}`results/tcad/moscap2d`), each name cut after its first hex digits.
+The files of the cache repository. The objects are drawn from the committed calibrated 2D jobs
+({repo}`results/tcad/moscap2d`), one per distinct `mesh_sha256`. Each name is cut short.
 ```
 
 ```{figure} /_generated/reproduce/output-cache-tree-dark.svg
 :figclass: only-dark
 :alt: A file tree: the cache repository holds a README, a git attributes file, the index, and under objects/sha256 one compressed mesh file per distinct mesh, each in a folder named by the first two hex digits of its hash.
 
-The files of the cache repository, with one object per distinct `mesh_sha256` of the committed
-calibrated 2D jobs ({repo}`results/tcad/moscap2d`), each name cut after its first hex digits.
+The files of the cache repository. The objects are drawn from the committed calibrated 2D jobs
+({repo}`results/tcad/moscap2d`), one per distinct `mesh_sha256`. Each name is cut short.
 ```
 A {{ gmsh }} mesh compresses from 27.5 MB to 9.5 MB (measured, 10 s).
 

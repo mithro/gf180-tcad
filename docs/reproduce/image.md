@@ -418,18 +418,16 @@ The same mapping, read from the code, is drawn in {numref}`results-images`.
 :figclass: only-light
 :alt: Boxes in two columns. Left, the 1D and the 2D result kinds, each naming its results folder and its mesh-convergence folder. Right, the dev and the stable image, each naming its pin file. An arrow joins each kind to its image.
 
-Each result kind of {py:data}`gf180tcad.tcad.RESULTS_IMAGE` with its results folders (left), and
-the image that makes it, by the pin file the generator registry
-({repo}`src/gf180tcad/generators.json`) names (right).
+Each result kind of {py:data}`gf180tcad.tcad.RESULTS_IMAGE` with its results folders (left).
+Right, the image that makes it, by its pin file in {repo}`src/gf180tcad/generators.json`.
 ```
 
 ```{figure} /_generated/reproduce/results-images-dark.svg
 :figclass: only-dark
 :alt: Boxes in two columns. Left, the 1D and the 2D result kinds, each naming its results folder and its mesh-convergence folder. Right, the dev and the stable image, each naming its pin file. An arrow joins each kind to its image.
 
-Each result kind of {py:data}`gf180tcad.tcad.RESULTS_IMAGE` with its results folders (left), and
-the image that makes it, by the pin file the generator registry
-({repo}`src/gf180tcad/generators.json`) names (right).
+Each result kind of {py:data}`gf180tcad.tcad.RESULTS_IMAGE` with its results folders (left).
+Right, the image that makes it, by its pin file in {repo}`src/gf180tcad/generators.json`.
 ```
 
 The top folder of each set of results holds a provenance file, such as
