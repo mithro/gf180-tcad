@@ -51,10 +51,19 @@ WRITERS = {
     "tcad/calibration": CALIBRATE_MAIN,
     "tcad/validation": CALIBRATE_MAIN,
     "tcad/meshes/stable": MESHCUT_MAIN,
+    "tcad/corners": CORNERS_MAIN,
 }
-# The tree roots of the plan's results layout (Global Constraints, "Result files"), and the
-# per-image tree of reduced mesh artefacts (renders plan, Task R0).
-TREE_ROOTS = ("moscap1d", "moscap2d", "meshconv", "calibration", "validation", "meshes/stable")
+# The tree roots of the plan's results layout (Global Constraints, "Result files"; Task 16a),
+# and the per-image tree of reduced mesh artefacts (renders plan, Task R0).
+TREE_ROOTS = (
+    "moscap1d",
+    "moscap2d",
+    "meshconv",
+    "calibration",
+    "validation",
+    "meshes/stable",
+    "corners",
+)
 REGENERATE = (
     "regenerate the tree for each device with `uv run --locked python -m ...`: "
     "moscap1d: `gf180tcad.tcad moscap --device <device> --dim 1 --params start` (and "
@@ -68,7 +77,8 @@ REGENERATE = (
     "validation (after the calibration is committed): `gf180tcad.calibrate validate --device "
     "<device> --out results/tcad/validation`; "
     "meshes/stable: `gf180tcad.meshcut cut --job results/tcad/moscap2d/<device>/calibrated/<gid> "
-    "--out results/tcad/meshes/stable` per committed artefact; then `make manifest`. A tree whose data are not "
+    "--out results/tcad/meshes/stable` per committed artefact; corners: `make -j4 tcad-corners`; "
+    "then `make manifest`. A tree whose data are not "
     "regenerated is restamped with `uv run --locked python tools/restamp-tcad-provenance "
     "results/tcad/<tree>` and recorded on docs/reproduce/index.md (tcad-provenance)"
 )
@@ -693,8 +703,8 @@ def test_committed_tree_roots_are_known():
     )
 
 
-# The calibration and validation trees are computed with the 1D model (Task 12).
-MODEL_KINDS = {"calibration": ["moscap1d"], "validation": ["moscap1d"]}
+# The calibration, validation and corner trees are computed with the 1D model (Tasks 12, 16a).
+MODEL_KINDS = {"calibration": ["moscap1d"], "validation": ["moscap1d"], "corners": ["moscap1d"]}
 
 
 def _result_kinds(root: Path) -> list[str]:

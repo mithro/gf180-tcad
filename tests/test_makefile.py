@@ -107,8 +107,12 @@ def test_reproduce_runs_in_dependency_order(reproduce):
         reproduce, lambda m, a: m == "gf180tcad.calibrate" and a.command == "validate"
     )
     meshes = _index(reproduce, lambda m, a: m == "gf180tcad.meshcut")
+    fits = _index(reproduce, lambda m, a: m == "gf180tcad.calibrate.corners" and a.command == "run")
+    summaries = _index(
+        reproduce, lambda m, a: m == "gf180tcad.calibrate.corners" and a.command == "summary"
+    )
     verify = _index(reproduce, lambda m, a: m == "gf180tcad.manifest")
-    groups = [spice, meshconv, start, cal, calibrated, validate, meshes, verify]
+    groups = [spice, meshconv, start, cal, calibrated, validate, meshes, fits, summaries, verify]
     assert all(groups), groups
     assert sorted(i for g in groups for i in g) == list(range(len(reproduce)))
     for a, b in itertools.pairwise(groups):
