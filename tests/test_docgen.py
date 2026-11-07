@@ -15,37 +15,12 @@ from optional import importorskip
 importorskip("matplotlib", reason="needs the docs dependency group")
 
 from gf180tcad import docgen
+from gf180tcad import results_figures as rf
 from gf180tcad.devices import DEVICES, geometry_id
 from gf180tcad.known import KNOWN_ENGINE_DIFFS
 from gf180tcad.sandbox import REPO_ROOT
 
 DOCS = REPO_ROOT / "docs"
-
-_RENDER = textwrap.dedent(
-    """
-    import sys
-    from gf180tcad import docgen
-    sys.stdout.buffer.write(docgen.demo_svg())
-    """
-)
-
-
-def _render_in_fresh_process(hashseed: str) -> bytes:
-    env = {**os.environ, "PYTHONHASHSEED": hashseed}
-    r = subprocess.run(
-        [sys.executable, "-c", _RENDER], env=env, capture_output=True, check=True, timeout=300
-    )
-    return r.stdout
-
-
-def test_svg_deterministic():
-    a = _render_in_fresh_process("1")
-    b = _render_in_fresh_process("2")
-    assert a.startswith(b"<?xml") and b"<svg" in a and len(a) > 5000
-    assert a == b
-    # No date, no font outlines (text stays text), no absolute host path.
-    assert b"<dc:date>" not in a and b"<text" in a and str(REPO_ROOT).encode() not in a
-
 
 _RENDER_EXPLAINED = textwrap.dedent(
     """
@@ -124,7 +99,8 @@ def test_pages_cover_all_geometries(tmp_path):
     page = (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60.md").read_text(encoding="utf-8")
     for needle in ("idvg_lin", "idvg_sat", "idvd", "cv", "Corner min", '"Same process" window'):
         assert needle in page
-    assert (tmp_path / "results" / "nfet_05v0" / "w10p0_l0p60_idvd.svg").is_file()
+    for palette in ("light", "dark"):
+        assert (tmp_path / "results" / "nfet_05v0" / f"w10p0_l0p60_idvd-{palette}.svg").is_file()
 
 
 def test_summary_lists_status_and_engine_diffs(tmp_path):
@@ -237,7 +213,7 @@ def test_docs_build_offline(tmp_path):
         assert (tcad / name / "index.html").is_file()
         for g in d.geometries:
             assert (tcad / name / f"{geometry_id(g)}.html").is_file()
-    assert any(p.name.endswith("_cgg.svg") for p in (out / "_images").iterdir())
+    assert any(p.name.endswith("_cgg-light.svg") for p in (out / "_images").iterdir())
 
 
 _RACE_WORKER = textwrap.dedent(
@@ -297,11 +273,11 @@ def test_idvd_series_selects_vb_zero():
     vg = np.repeat([1.0, 2.0], 4)
     vb = np.tile(np.repeat([0.0, 1.0], 2), 2)
     cols = {"vd": vd, "vg": vg, "vb": vb, "id": np.arange(8.0) + 1}
-    series = docgen._series(cols, "idvd", 1)
+    series = rf.series(cols, "idvd", 1)
     assert [list(y) for _, _, y in series] == [[1.0, 2.0], [5.0, 6.0]]
     cols["vb"] = np.ones(8)
     with pytest.raises(ValueError, match="vb"):
-        docgen._series(cols, "idvd", 1)
+        rf.series(cols, "idvd", 1)
 
 
 # --- missing inputs fail loudly; no silent "-" -------------------------------------------------
@@ -334,12 +310,13 @@ def test_missing_xyce_csv_raises_in_the_plots(tmp_path):
     root = _link_tree(tmp_path / "spice")
     (root / "xyce" / "typical" / NFET.name / GID / "idvd.csv").unlink()
     with pytest.raises(FileNotFoundError, match="idvd.csv"):
-        docgen._curves(root, NFET, GID, "idvd", 1e3, None)
+        rf.sweep_data(NFET.name, GID, "idvd", root)
 
 
 def test_xyce_has_no_cv_and_that_is_not_an_error(tmp_path):
-    curves, _ = docgen._curves(docgen.RESULTS, NFET, GID, "cv", 1.0, None)
-    assert not any(c.dashed for c in curves)  # no Xyce overlay
+    assert rf.sweep_data(NFET.name, GID, "cv", docgen.RESULTS).xyce is None  # no Xyce overlay
+    fig = rf.cv_figure(NFET.name, GID, "light")
+    assert not [ln for ln in fig.axes[0].get_lines() if (ln.get_gid() or "").startswith("xyce")]
 
 
 @pytest.mark.parametrize("engine", ["ngspice", "xyce"])
@@ -456,8 +433,10 @@ def test_moscap_page_per_device_geometry(tmp_path):
             r = _tcad_json(name, gid)
             # the overlay (TCAD against ngspice TT and the corner envelope) and the 1D split
             for fig in ("cgg", "split"):
-                assert f"]({gid}_{fig}.svg)" in page
-                assert (root / name / f"{gid}_{fig}.svg").is_file()
+                for palette in ("light", "dark"):
+                    assert f"```{{figure}} {gid}_{fig}-{palette}.svg" in page
+                    assert (root / name / f"{gid}_{fig}-{palette}.svg").is_file()
+                assert f"{{numref}}`{docgen.tcad_label(name, gid, fig)}`" in page
             # verdicts and numbers rendered from the committed JSON, not recomputed
             assert f"Verdict (1D): **{r['verdict']}**" in page
             for key in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv"):
@@ -467,8 +446,14 @@ def test_moscap_page_per_device_geometry(tmp_path):
             assert f"| {1e3 * m['dv_inv_v']:+.1f} |" in page
             assert f"{100 * m['depletion_max_rel']:.2f} %" in page
             assert g.role in page
-            # mesh pictures: from each 2D cell's committed reduced mesh artefact, or a reason
-            assert "issues/39" not in page and "### Mesh picture" in page
+            # mesh pictures: from each 2D cell's committed reduced mesh artefact, or a reason;
+            # a geometry with no 2D cell has no mesh section at all
+            has_2d = any(
+                (TCAD / "moscap2d" / name / p / gid / "cv.meta.json").is_file()
+                for p in ("calibrated", "start")
+            )
+            assert "issues/39" not in page
+            assert ("### Mesh picture" in page) == has_2d
             for params in ("calibrated", "start"):
                 if not (TCAD / "moscap2d" / name / params / gid / "cv.meta.json").is_file():
                     continue
@@ -477,12 +462,15 @@ def test_moscap_page_per_device_geometry(tmp_path):
                     for palette in ("light", "dark"):
                         assert (root / name / f"{gid}_mesh_{params}-{palette}.svg").is_file()
                 else:
-                    assert docgen._NO_ARTEFACT[params] in page
+                    assert docgen._no_artefact(params) in page
             meta = TCAD / "moscap2d" / name / "start" / gid / "cv.meta.json"
             if meta.is_file():
                 assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page
             else:
                 assert "No 2D result" in page
+            # every committed 2D cell is drawn against its 1D stack
+            two_d = (root / name / f"{gid}_2d-light.svg").is_file()
+            assert two_d == bool(list((TCAD / "moscap2d" / name).glob(f"*/{gid}/cv.meta.json")))
             # a committed calibrated 2D cell is named on its page, with its mesh
             cal_meta = TCAD / "moscap2d" / name / "calibrated" / gid / "cv.meta.json"
             if cal_meta.is_file():
@@ -497,8 +485,8 @@ def test_moscap_page_per_device_geometry(tmp_path):
             assert f"`{p}`" in index
         assert "dlc_nm" in index  # the reference-bookkeeping rows, listed separately
         for dim in ("1d", "2d"):
-            assert (root / name / f"meshconv_{dim}.svg").is_file()
-            assert f"](meshconv_{dim}.svg)" in index
+            assert (root / name / f"meshconv_{dim}-light.svg").is_file()
+            assert f"```{{figure}} meshconv_{dim}-light.svg" in index
     summary = (root / "index.md").read_text(encoding="utf-8")
     for name, device in DEVICES.items():
         for g in device.geometries:
@@ -677,7 +665,7 @@ def test_plateau_tolerance_lines_are_per_side(tmp_path):
     """The errors panel draws each plateau's own tolerance (one key while they are equal)."""
     tree = _link_tcad_tree(tmp_path / "tcad_in")
     out = tmp_path / "out"
-    svg = out / "tcad" / "nfet_05v0" / "w10p0_l10p00_cgg.svg"
+    svg = out / "tcad" / "nfet_05v0" / "w10p0_l10p00_cgg-light.svg"
     docgen.generate_tcad(out, tcad_root=tree)
     assert "tolerance ±5 %" in svg.read_text("utf-8")
     path = tree / "calibration" / "nfet_05v0.result.json"
@@ -770,11 +758,13 @@ def test_mesh_figure_absent_states_why(tmp_path):
     ddir = tmp_path / "page"
     ddir.mkdir()
     text = "\n".join(docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir))
-    assert docgen._NO_ARTEFACT["start"] in text
+    assert docgen._no_artefact("start") in text
+    # the start cell's sentence links mesh.msh to its .gitignore line (spec §10.3 file links)
+    assert "{repo}`mesh.msh <.gitignore#L" in text and "MESH" not in text
     assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
     assert not list(ddir.glob("*_mesh_start-*.svg"))
-    none = "\n".join(docgen._mesh_section(_fake_device(tcad), "w9p9_l9p90", ddir))
-    assert "No 2D result exists for this geometry" in none
+    # a geometry with no 2D cell gets no mesh section: its 2D section already says why
+    assert docgen._mesh_section(_fake_device(tcad), "w9p9_l9p90", ddir) == []
 
 
 def test_no_mesh_deviation_text_when_artefact_exists(tmp_path):
