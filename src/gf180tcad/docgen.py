@@ -12,8 +12,12 @@ ngspice-vs-Xyce maximum relative difference, is computed with
 The TCAD pages (:func:`generate_tcad`, under ``tcad/``) render the MOS capacitor calibration,
 validation and mesh convergence. Every TCAD-vs-SPICE number and verdict on them is read from
 the committed calibration and validation files, which were computed in the TCAD image; this
-module never compares TCAD with SPICE itself. No mesh picture is drawn: the 2D meshes are not
-committed, and the pages say so.
+module never compares TCAD with SPICE itself. For the plots it applies the fixed BSIM4
+bookkeeping (:meth:`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`, the function the
+calibration uses) to the committed 1D C per area. A geometry page draws the mesh of each 2D
+cell from its committed reduced mesh artefact (``results/tcad/meshes/<image>/...``,
+:mod:`gf180tcad.meshcut`), never from a full mesh, which is not committed; a 2D cell without an
+artefact gets a sentence that says why.
 
 Every figure of these pages is drawn by :mod:`gf180tcad.results_figures` from the committed
 files and embedded by :func:`figure_pair` as a named light/dark ``{figure}`` pair that the text
@@ -594,18 +598,29 @@ def gitignore_line(pattern: str) -> int:
     raise ValueError(f".gitignore has no line {pattern!r}")
 
 
-def _no_mesh(meta_rel: str) -> str:
-    """Why a page has no mesh picture; ``meta_rel`` is the repo path of one committed 2D job's
-    ``cv.meta.json``, the example the text links."""
-    mesh = f"{{repo}}`mesh.msh <.gitignore#L{gitignore_line(MESH_IGNORE)}>`"
-    return (
-        f"No mesh picture: the 2D meshes ({mesh}) are not committed (git-ignored, "
-        "{ref}`for their size <moscap2d-meshes>`), and this page renders only committed files. "
-        "A {term}`job`'s metadata file records the sha256 of its mesh, from which the mesh "
-        f"regenerates byte for byte; one is {{repo}}`{meta_rel}`. The design spec asks for mesh "
-        "pictures here: a recorded {ref}`deviation <limitations-spec-deviations>`, "
-        "[issue #39](https://github.com/mithro/gf180-tcad/issues/39)."
-    )
+def _mesh_link() -> str:
+    """The ``mesh.msh`` file link: the .gitignore line that keeps the 2D meshes out of git."""
+    return f"{{repo}}`mesh.msh <.gitignore#L{gitignore_line(MESH_IGNORE)}>`"
+
+
+# Why a committed 2D cell has no reduced mesh artefact, by its parameter set; MESH stands for
+# the mesh file link of _mesh_link().
+_NO_ARTEFACT = {
+    "start": (
+        "The 2D cell at the start values has no mesh picture. Its full mesh (MESH) is not "
+        "committed and is in no cache, so no reduced mesh artefact is cut from it "
+        "({ref}`moscap2d-mesh-artefact`)."
+    ),
+    "calibrated": (
+        "The 2D cell at the calibrated values has no mesh picture: no reduced mesh artefact is "
+        "committed for it ({ref}`moscap2d-mesh-artefact`)."
+    ),
+}
+_MESH_ALT = (
+    "The mesh around the gate of the 2D cell: thousands of small triangles, densest in a thin "
+    "band at the silicon surface under the gate, coloured by region: the gate on top, the gate "
+    "oxide under it, the insulator beside the gate and the silicon body below."
+)
 
 
 _VERDICT_TERMS = (
@@ -818,18 +833,6 @@ def tcad_label(name: str, gid: str, figure: str) -> str:
     return figure_label("tcad", name, gid, figure)
 
 
-def _example_meta(d: _Device, gid: str | None = None) -> str:
-    """The repo path of one committed 2D job's ``cv.meta.json``: of ``gid`` when it has a 2D
-    cell, else of the device's first geometry that has one."""
-    gids = [gid] if gid is not None else []
-    gids += [geometry_id(g) for g in d.device.geometries]
-    for x in gids:
-        for params in rf.TWO_D_PARAMS:
-            if d.two_d(x, params) is not None:
-                return f"results/tcad/moscap2d/{d.device.name}/{params}/{x}/cv.meta.json"
-    raise ValueError(f"{d.device.name}: no committed 2D job")
-
-
 def _tcad_geometry_page(roots: rf.Roots, d: _Device, g: Geometry, out: Path) -> None:
     name, gid = d.device.name, geometry_id(g)
     ddir = out / "tcad" / name
@@ -981,10 +984,55 @@ def _tcad_geometry_page(roots: rf.Roots, d: _Device, g: Geometry, out: Path) -> 
                 roots,
             ),
         ]
-    lines += ["### Mesh picture", "", _no_mesh(_example_meta(d, gid)), ""]
-    if not cells:
-        lines += ["No 2D result exists for this geometry, so there is no mesh either.", ""]
+    lines += _mesh_section(d, gid, ddir)
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
+
+
+# The mesh figures drawn in this process, by the artefact's npz sha256 and the palette.
+_MESH_SVG: dict[tuple[str, str], bytes] = {}
+
+
+def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
+    """The geometry page's mesh pictures: for each committed 2D cell, the figure of its reduced
+    mesh artefact in a light and a dark twin (written into ``ddir``), or why it has none."""
+    from gf180tcad import meshcut
+    from gf180tcad.explain import figures
+
+    name = d.device.name
+    cells = [p for p in ("calibrated", "start") if d.two_d(gid, p) is not None]
+    if not cells:
+        # the 2D section above already says no 2D result is committed: no mesh to show
+        return []
+    lines = ["### Mesh picture", ""]
+    for params in cells:
+        found = sorted((d.root / "meshes").glob(f"*/{name}/{params}/{gid}/{meshcut.META}"))
+        if not found:
+            lines += [_NO_ARTEFACT[params].replace("MESH", _mesh_link()), ""]
+            continue
+        adir = found[0].parent
+        meta = _read_json(adir / meshcut.META)
+        rel = adir.relative_to(d.root.parent).as_posix()
+        caption = (
+            f"The mesh of the 2D cell at the {params} values, around the gate: "
+            f"{meta['triangle_count']} of the full mesh's {meta['full_mesh_triangle_count']} "
+            "triangles, kept by the window rule ({ref}`mesh-artefact`). Drawn to scale from "
+            f"{{repo}}`results/{rel}`; full mesh sha256 `{meta['full_mesh_sha256']}`."
+        )
+        target = f"mesh-{name}-{gid}-{params}"
+        lines += [f"{{numref}}`{target}` shows the mesh of the 2D cell at the {params} values.", ""]
+        for palette in figures.PALETTES:
+            svg = f"{gid}_mesh_{params}-{palette}.svg"
+            # cells that share a mesh (W1.6/L0.7 and W10/L0.7) have the same npz: drawn once
+            key = (meta["npz_sha256"], palette)
+            if key not in _MESH_SVG:
+                _MESH_SVG[key] = figures.mesh_artefact(adir, palette)
+            (ddir / svg).write_bytes(_MESH_SVG[key])
+            head = [f"```{{figure}} {svg}"]
+            if palette == "light":
+                head.append(f":name: {target}")
+            lines += [*head, f":figclass: only-{palette}", f":alt: {_MESH_ALT}", "", caption,
+                      "```", ""]  # fmt: skip
+    return lines
 
 
 def _param_rows(d: _Device) -> list[str]:
@@ -1384,10 +1432,10 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
                 (
                     f"The 2D study runs at the geometry {{doc}}`{study} <{study}>`. There the 2D "
                     "C per area exceeds {term}`Cox` by the fringe and the source/drain overlap at "
-                    "the gate edges ({doc}`/limitations/moscap2d`)."
+                    "the gate edges ({doc}`/limitations/moscap2d`). The 2D cells use the selected "
+                    "level's mesh. Each geometry page draws the mesh of its cells from their "
+                    "reduced mesh artefacts."
                 ),
-                "",
-                _no_mesh(_example_meta(d, study)),
                 "",
             ]
     lines += ["```{toctree}", ":maxdepth: 1", "", *(geometry_id(g) for g in d.device.geometries)]

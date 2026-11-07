@@ -15,7 +15,8 @@ The junctions are the bold lines of {numref}`fig-junction-cell`.
 The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`, with the junctions
 of the source and the drain drawn bold. The oxide thickness and the body doping are fitted to
 the {term}`SPICE` model, and the junction depth is the {term}`model card`'s value. The gate and
-body depths and the source and drain width are project choices. {{ x_fig_junction_cell_scale }}
+body depths are project choices. The source and drain widths come from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_junction_cell_scale }}
 ```
 
 ```{figure} /_generated/explained/junction-cell-dark.svg
@@ -25,7 +26,8 @@ body depths and the source and drain width are project choices. {{ x_fig_junctio
 The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`, with the junctions
 of the source and the drain drawn bold. The oxide thickness and the body doping are fitted to
 the {term}`SPICE` model, and the junction depth is the {term}`model card`'s value. The gate and
-body depths and the source and drain width are project choices. {{ x_fig_junction_cell_scale }}
+body depths are project choices. The source and drain widths come from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_junction_cell_scale }}
 ```
 
 (explained-junction-meet)=

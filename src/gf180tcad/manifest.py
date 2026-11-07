@@ -109,25 +109,42 @@ def all_jobs() -> tuple[str, ...]:
     return tuple(j.relpath.as_posix() for j in plan)
 
 
+MESHES_TREES = "tcad/meshes/"
+"""Registry trees under this prefix are per-image job trees of reduced mesh artefacts,
+``meshes/<image>/<device>/<params>/<gid>`` (:mod:`gf180tcad.meshcut`)."""
+
+
+def tcad_moscap_trees() -> tuple[str, ...]:
+    """The MOS capacitor job trees (``moscap1d``, ``moscap2d``), sorted."""
+    from gf180tcad.tcad import RESULTS_IMAGE
+
+    return tuple(sorted(RESULTS_IMAGE))
+
+
 def tcad_axes() -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
-    """The :term:`TCAD` job axes: trees (``moscap1d``, ``moscap2d``), devices and params
-    (``start``, ``calibrated``), as the TCAD command line defines them."""
+    """The :term:`TCAD` job axes: trees, devices and params (``start``, ``calibrated``), as the
+    TCAD command line defines them.
+
+    The trees are the MOS capacitor trees (:func:`tcad_moscap_trees`) and, after them, the
+    per-image trees of reduced mesh artefacts that the registry (``generators.json``, its
+    ``trees`` rows under :data:`MESHES_TREES`) names, such as ``meshes/stable``."""
     # imported here so that `manifest update` / `verify` do not load the TCAD code
-    from gf180tcad.tcad import RESULTS_IMAGE, process
+    from gf180tcad.tcad import TREE_GENERATORS, process
     from gf180tcad.tcad.__main__ import PARAMS
 
-    return tuple(sorted(RESULTS_IMAGE)), tuple(process.DEVICES), tuple(PARAMS)
+    meshes = sorted(t.removeprefix("tcad/") for t in TREE_GENERATORS if t.startswith(MESHES_TREES))
+    return (*tcad_moscap_trees(), *meshes), tuple(process.DEVICES), tuple(PARAMS)
 
 
 def tcad_all_jobs() -> tuple[str, ...]:
     """Relpaths ``<tree>/<device>/<params>`` of every TCAD MOS capacitor job: every combination
-    of :func:`tcad_axes`, in that order.
+    of the MOS capacitor trees, the devices and the params of :func:`tcad_axes`, in that order.
 
-    This covers the ``moscap1d`` and ``moscap2d`` trees only. The 2D ``calibrated`` jobs are not
-    committed (issue #35), so a TCAD subset of ``all`` reports ``moscap2d/*/calibrated`` as
-    ``unknown job`` until they are."""
-    trees, devices, params = tcad_axes()
-    return tuple(f"{t}/{d}/{p}" for t in trees for d in devices for p in params)
+    A subset of ``all`` covers the ``moscap1d`` and ``moscap2d`` trees only. A reduced mesh
+    artefact job (``meshes/<image>/...``) is listed on its own line: it exists only for the
+    cells whose full mesh is in the output cache."""
+    _, devices, params = tcad_axes()
+    return tuple(f"{t}/{d}/{p}" for t in tcad_moscap_trees() for d in devices for p in params)
 
 
 def full_jobs(kind: str) -> tuple[str, ...]:
@@ -148,11 +165,13 @@ def _check_job(path: Path, n: int, line: str, kind: str) -> None:
             )
         return
     trees, devices, params = tcad_axes()
+    # the last two parts are the device and the params; the rest is the tree (``moscap1d``,
+    # ``meshes/stable``)
     if (
-        len(parts) != 3
-        or parts[0] not in trees
-        or parts[1] not in devices
-        or parts[2] not in params
+        len(parts) < 3
+        or "/".join(parts[:-2]) not in trees
+        or parts[-2] not in devices
+        or parts[-1] not in params
     ):
         raise ValueError(
             f"{path}:{n}: expected <tree>/<device>/<params> with <tree> in {trees}, <device> in "
@@ -190,9 +209,16 @@ def load_subset(path: Path, kind: str = "spice") -> tuple[str, ...]:
     return full_jobs(kind) if jobs == [ALL] else tuple(jobs)
 
 
+def tcad_tree(job: str) -> str:
+    """The tree root of the TCAD job ``job`` (``<tree>/<device>/<params>``): all but the last
+    two parts, so ``moscap1d`` or ``meshes/stable``."""
+    return "/".join(job.split("/")[:-2])
+
+
 def tcad_trees(jobs: Iterable[str]) -> tuple[str, ...]:
-    """The tree roots (``moscap1d``, ``moscap2d``) that the TCAD ``jobs`` name, sorted."""
-    return tuple(sorted({j.split("/")[0] for j in jobs}))
+    """The tree roots (``moscap1d``, ``moscap2d``, ``meshes/stable``) that the TCAD ``jobs``
+    name, sorted."""
+    return tuple(sorted({tcad_tree(j) for j in jobs}))
 
 
 def verify_subset(

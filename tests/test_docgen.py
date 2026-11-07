@@ -446,8 +446,23 @@ def test_moscap_page_per_device_geometry(tmp_path):
             assert f"| {1e3 * m['dv_inv_v']:+.1f} |" in page
             assert f"{100 * m['depletion_max_rel']:.2f} %" in page
             assert g.role in page
-            # mesh pictures: no mesh file is committed, and the page says so
-            assert "mesh.msh" in page and "not committed" in page and "issues/39" in page
+            # mesh pictures: from each 2D cell's committed reduced mesh artefact, or a reason;
+            # a geometry with no 2D cell has no mesh section at all
+            has_2d = any(
+                (TCAD / "moscap2d" / name / p / gid / "cv.meta.json").is_file()
+                for p in ("calibrated", "start")
+            )
+            assert "issues/39" not in page
+            assert ("### Mesh picture" in page) == has_2d
+            for params in ("calibrated", "start"):
+                if not (TCAD / "moscap2d" / name / params / gid / "cv.meta.json").is_file():
+                    continue
+                if list((TCAD / "meshes").glob(f"*/{name}/{params}/{gid}/mesh-window.meta.json")):
+                    assert f":name: mesh-{name}-{gid}-{params}" in page
+                    for palette in ("light", "dark"):
+                        assert (root / name / f"{gid}_mesh_{params}-{palette}.svg").is_file()
+                else:
+                    assert docgen._NO_ARTEFACT[params] in page
             meta = TCAD / "moscap2d" / name / "start" / gid / "cv.meta.json"
             if meta.is_file():
                 assert json.loads(meta.read_text("utf-8"))["mesh_sha256"] in page
@@ -668,6 +683,124 @@ def test_moscap_missing_result_raises(tmp_path):
     (tcad / "validation" / "pfet_05v0.json").unlink()
     with pytest.raises(FileNotFoundError, match="pfet_05v0.json"):
         docgen.generate(tmp_path / "out", tcad_root=tcad)
+
+
+# --- the mesh picture of a 2D cell (renders plan, Task R0) ------------------------------------
+
+
+def _fake_device(tcad, name="nfet_05v0"):
+    from types import SimpleNamespace
+
+    def two_d(gid, params="start"):
+        job = tcad / "moscap2d" / name / params / gid
+        return job if (job / "cv.meta.json").is_file() else None
+
+    return SimpleNamespace(root=tcad, device=SimpleNamespace(name=name), two_d=two_d)
+
+
+def _synthetic_artefact(tcad, name, params, gid):
+    """A 2D job and a reduced mesh artefact of it cut from the meshcut test fixture."""
+    import numpy as np
+
+    from gf180tcad.meshcut import artefact, msh, window
+
+    job = tcad / "moscap2d" / name / params / gid
+    job.mkdir(parents=True)
+    (job / "cv.meta.json").write_text("{}\n", encoding="utf-8")
+    fixture = REPO_ROOT / "tests" / "fixtures" / "meshcut" / "grid30.msh"
+    mesh = msh.read(fixture)
+    win = window.cut(mesh, x_um=(0.0, 0.5), y_um=(-0.15, 0.2))
+    win = win.with_net_doping(np.zeros(len(win.node_id)))
+    out = tcad / "meshes" / "stable" / name / params / gid
+    out.mkdir(parents=True)
+    rule = {"depth_um": 0.15, "gate_x_um": [0.0, 0.5], "kx": 0.0, "poly_top_um": 0.2,
+            "surface_um": 0.0}  # fmt: skip
+    job_rec = {"cv_meta_sha256": "0" * 64, "device": name, "geometry_id": gid, "params": params,
+               "tree": "tcad/moscap2d"}  # fmt: skip
+    from gf180tcad.meshcut import job as cut_job
+
+    return out, artefact.write(
+        out, win, job=job_rec, full_mesh_sha256="a" * 64, full_mesh_node_count=30,
+        full_mesh_triangle_count=40, rule=rule, source="cache",
+        region_bounds_um=cut_job.region_bounds(mesh),
+    )  # fmt: skip
+
+
+def test_mesh_figure_from_committed_artefact(tmp_path):
+    tcad = tmp_path / "results" / "tcad"
+    _, meta = _synthetic_artefact(tcad, "nfet_05v0", "calibrated", "w1p0_l0p50")
+    ddir = tmp_path / "page"
+    ddir.mkdir()
+    lines = docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir)
+    text = "\n".join(lines)
+    assert text.count("```{figure}") == 2  # a light and a dark twin
+    assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
+    assert "{numref}`mesh-nfet_05v0-w1p0_l0p50-calibrated` shows the mesh" in text
+    assert ":figclass: only-light" in text and ":figclass: only-dark" in text
+    assert f"{meta['triangle_count']} of the full mesh's 40 triangles" in text
+    assert "results/tcad/meshes/stable/nfet_05v0/calibrated/w1p0_l0p50" in text
+    assert "a" * 64 in text
+    light = (ddir / "w1p0_l0p50_mesh_calibrated-light.svg").read_bytes()
+    dark = (ddir / "w1p0_l0p50_mesh_calibrated-dark.svg").read_bytes()
+    assert light.startswith(b"<?xml") and light != dark
+    again = tmp_path / "again"
+    again.mkdir()
+    docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", again)
+    assert (again / "w1p0_l0p50_mesh_calibrated-light.svg").read_bytes() == light
+
+
+def test_mesh_figure_absent_states_why(tmp_path):
+    tcad = tmp_path / "results" / "tcad"
+    _synthetic_artefact(tcad, "nfet_05v0", "calibrated", "w1p0_l0p50")
+    start = tcad / "moscap2d" / "nfet_05v0" / "start" / "w1p0_l0p50"
+    start.mkdir(parents=True)
+    (start / "cv.meta.json").write_text("{}\n", encoding="utf-8")
+    ddir = tmp_path / "page"
+    ddir.mkdir()
+    text = "\n".join(docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir))
+    assert docgen._NO_ARTEFACT["start"] in text
+    assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
+    assert not list(ddir.glob("*_mesh_start-*.svg"))
+    none = "\n".join(docgen._mesh_section(_fake_device(tcad), "w9p9_l9p90", ddir))
+    assert "No 2D result exists for this geometry" in none
+
+
+def test_no_mesh_deviation_text_when_artefact_exists(tmp_path):
+    tcad = tmp_path / "results" / "tcad"
+    _synthetic_artefact(tcad, "nfet_05v0", "calibrated", "w1p0_l0p50")
+    ddir = tmp_path / "page"
+    ddir.mkdir()
+    text = "\n".join(docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir))
+    for old in ("issues/39", "deviation", "not committed (git-ignored", "No mesh picture"):
+        assert old not in text
+    assert not hasattr(docgen, "_NO_MESH")
+
+
+_RENDER_MESH = textwrap.dedent(
+    """
+    import sys
+    from pathlib import Path
+    from gf180tcad.explain import figures
+    sys.stdout.buffer.write(figures.mesh_artefact(Path(sys.argv[1]), sys.argv[2]))
+    """
+)
+
+
+@pytest.mark.parametrize("palette", ["light", "dark"])
+def test_mesh_figure_svg_deterministic(tmp_path, palette):
+    """The mesh figure (its triangles embedded as an image): two fresh processes, same bytes."""
+    out, _ = _synthetic_artefact(tmp_path / "tcad", "nfet_05v0", "calibrated", "w1p0_l0p50")
+    runs = []
+    for seed in ("1", "2"):
+        env = {**os.environ, "PYTHONHASHSEED": seed}
+        r = subprocess.run(
+            [sys.executable, "-c", _RENDER_MESH, str(out), palette],
+            env=env, capture_output=True, check=True, timeout=300,
+        )  # fmt: skip
+        runs.append(r.stdout)
+    a, b = runs
+    assert a.startswith(b"<?xml") and b"<text" in a and b"data:image/png;base64" in a and a == b
+    assert b"<dc:date>" not in a and str(tmp_path).encode() not in a
 
 
 def _corner_summary() -> dict:

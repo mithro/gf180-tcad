@@ -23,9 +23,11 @@ from typing import NamedTuple
 import matplotlib
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.collections import PolyCollection
+from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
-from matplotlib.patches import Circle
+from matplotlib.patches import Circle, Patch
 from matplotlib.ticker import FixedFormatter, FixedLocator, NullFormatter
 
 from gf180tcad import meshcut, plots
@@ -64,8 +66,6 @@ STYLE = {
     "level_label_lift": 0.02,
     "level_label_x": 0.04,
     "fill_alpha": 0.22,
-    # The 2D cross-section: extents with no committed source, drawn at a chosen size (µm).
-    "drawn_um": {"source and drain width": 0.6},
     # Contacts are bars this fraction of the drawing's height thick, the source and drain ones
     # this fraction of their region's width wide.
     "contact_frac": 0.025,
@@ -79,6 +79,24 @@ STYLE = {
     # The reduced mesh artefact's window, outlined on the cross-section: dashed, this wide.
     "window_width": 2.4,
     "window_dash": (0, (4, 2)),
+    # The mesh figure of a reduced mesh artefact: each region filled in its Okabe-Ito colour at
+    # this opacity, every mesh edge this thin (pt), the region boundaries at "edge_width". The
+    # triangles are embedded as an image at this resolution (dots per inch), the rest as
+    # vectors. The figure's height follows the window's aspect (to scale), within these bounds
+    # (in), plus room for the axis labels and the legend.
+    "mesh_regions": {
+        "body": ("#E69F00", "body (silicon)"),
+        "gate_poly": ("#56B4E9", "gate (polysilicon)"),
+        "ild": ("#F0E442", "insulator around the gate"),
+        "oxide": ("#CC79A7", "gate oxide"),
+    },
+    "mesh_alpha": 0.55,
+    "mesh_edge_pt": 0.2,
+    "mesh_dpi": 150,
+    "mesh_height_in": (1.2, 3.6),
+    "mesh_room_in": 1.3,
+    # The axes' margins (in): fixed, so the figure is drawn once (no layout pass over the mesh).
+    "mesh_margin_in": {"left": 0.9, "right": 0.2, "bottom": 1.05, "top": 0.15},
     # The junction panels: positions from (1 + pad) widths into the body to pad widths into the
     # source, on this many points; the charge axis spans the dopings with headroom.
     "junction_pad": 0.25,
@@ -491,16 +509,15 @@ class Box(NamedTuple):
 def cell_extents(c: model.Cell) -> dict[str, Box]:
     """The drawn extent ``(x0, x1, y0, y1)`` of each part of the 2D cell (µm), the silicon surface
     at y = 0 and depth growing downwards, the gate centred on x = 0. The oxide is drawn at its
-    scale factor; the source and drain width is the drawn extent ``c.drawn``."""
+    scale factor; the source and drain widths are the cell's, from its reduced mesh artefact."""
     half = c.l_um / 2
-    sd = c.drawn["source and drain width"]
     t_ox = c.t_ox_um * c.scales.get("oxide", 1)
     return {
         "gate": Box(-half, half, -(t_ox + c.poly_um), -t_ox),
         "oxide": Box(-half, half, -t_ox, 0.0),
-        "source": Box(-half - sd, -half, 0.0, c.xj_um),
-        "drain": Box(half, half + sd, 0.0, c.xj_um),
-        "body": Box(-half - sd, half + sd, 0.0, c.body_um),
+        "source": Box(-half - c.source_um, -half, 0.0, c.xj_um),
+        "drain": Box(half, half + c.drain_um, 0.0, c.xj_um),
+        "body": Box(-half - c.source_um, half + c.drain_um, 0.0, c.body_um),
     }
 
 
@@ -743,24 +760,71 @@ def junction_panels(palette: str) -> bytes:
         return _svg(fig)
 
 
+def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
+    """The mesh figure of the committed reduced mesh artefact in ``artefact_dir``
+    (:func:`gf180tcad.meshcut.read`): every kept triangle filled in its region's colour, every
+    mesh edge drawn, the mesh's region boundaries on top, in µm and to scale."""
+    win = meshcut.read(artefact_dir)
+    pal = PALETTES[palette]
+    xy = win.nodes_cm * meshcut.UM_PER_MSH_UNIT
+    (x0, x1), (y0, y1) = win.x_um, win.y_um
+    width = STYLE["size_in"][0]
+    low, high = STYLE["mesh_height_in"]
+    height = min(max(width * (y1 - y0) / (x1 - x0), low), high) + STYLE["mesh_room_in"]
+    colours = {name: STYLE["mesh_regions"].get(name, (pal["muted"], name)) for name in win.regions}
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=(width, height))
+        FigureCanvasAgg(fig)
+        m = STYLE["mesh_margin_in"]
+        fig.subplots_adjust(left=m["left"] / width, right=1 - m["right"] / width,
+                            bottom=m["bottom"] / height, top=1 - m["top"] / height)  # fmt: skip
+        ax = fig.add_subplot()
+        # one RGBA row per region, the opacity in it, indexed by each triangle's region
+        rgba = np.array([to_rgba(colours[n][0], STYLE["mesh_alpha"]) for n in win.regions])
+        ax.add_collection(PolyCollection(
+            xy[win.triangles], facecolors=rgba[win.region], edgecolors=to_rgba(pal["text"], STYLE["mesh_alpha"]),
+            linewidths=STYLE["mesh_edge_pt"], rasterized=True,
+        ), autolim=False)  # fmt: skip
+        # the gate oxide is a few nm thick, so at page width its edges merge into a dark band;
+        # its fill is drawn once more above the edges so the band shows the legend's colour
+        if "oxide" in win.regions:
+            thin = win.region == win.regions.index("oxide")
+            ax.add_collection(PolyCollection(
+                xy[win.triangles[thin]], facecolors=rgba[win.region[thin]], edgecolors="none",
+                rasterized=True,
+            ), autolim=False)  # fmt: skip
+        # the boundary lines as one path, NaN between segments, so the SVG holds one element
+        seg = xy[win.boundary_lines]
+        gaps = np.full((len(seg), 1, 2), np.nan)
+        path = np.concatenate([seg, gaps], axis=1).reshape(-1, 2)
+        ax.plot(path[:, 0], path[:, 1], color=pal["text"], lw=STYLE["edge_width"])
+        ax.set_xlim(x0, x1)
+        ax.set_ylim(y0, y1)
+        ax.set_aspect("equal")
+        ax.grid(False)
+        ax.set_xlabel("position across the cell (µm)")
+        ax.set_ylabel("height (µm)")
+        present = sorted({win.regions[r] for r in np.unique(win.region)})
+        keys = [Patch(facecolor=colours[n][0], alpha=STYLE["mesh_alpha"], label=colours[n][1])
+                for n in present]  # fmt: skip
+        fig.legend(handles=keys, loc="lower center", ncols=2, frameon=False)
+        buf = BytesIO()
+        fig.savefig(buf, format="svg", metadata=plots.METADATA, dpi=STYLE["mesh_dpi"])
+        return buf.getvalue()
+
+
 def _parts_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, (), palette)
 
 
 def _mesh_window(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=STYLE["scales"])
     return cross_section(c, (), palette, window=window_box(c))
 
 
 def _junction_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, ("junction",), palette)
 
 
@@ -828,16 +892,14 @@ def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
 
 
 def _moscap_cell(palette: str) -> bytes:
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, ("gate", "oxide", "body"), palette)
 
 
 def _ldd_cell(palette: str) -> bytes:
     c = model.cell(
         "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"],
-        drawn={**STYLE["drawn_um"], **STYLE["ldd_drawn_um"]},
+        drawn=STYLE["ldd_drawn_um"],
     )  # fmt: skip
     return cross_section(c, ("ldd", "spacer"), palette, ldd=True)
 
@@ -1519,9 +1581,7 @@ def junction_profile_figure(palette: str):
     """The matplotlib figure of :func:`junction_profile`, for the tests to read its lines."""
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
-    c = model.cell(
-        "nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"], drawn=STYLE["drawn_um"]
-    )
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     y = np.linspace(0, (1 + STYLE["profile_pad"]) * c.xj_um, STYLE["regime_points"])
     span = STYLE["profile_span"] * c.sd_straggle_um * model.lateral_straggle_ratio()
     x = np.linspace(-span, span, STYLE["regime_points"])
@@ -2026,11 +2086,10 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
 }
 
 
-# The figures drawn from the 2D cell, whose statement also names the drawn extents (the LDD cell
-# names its own as well); the plots of computed curves and the drawings of the crystal (not
-# drawings of the device) carry no statement.
-_CELL_FIGURES = ("parts-cell", "junction-cell", "moscap-cell", "mesh-window", "ldd-cell")
-_DRAWN = {"ldd-cell": {**STYLE["drawn_um"], **STYLE["ldd_drawn_um"]}}
+# The LDD cell's statement also names the sizes chosen for its drawing (the source and drain
+# widths of every cell come from its artefact, so no other cell names any); the plots of computed
+# curves and the drawings of the crystal (not drawings of the device) carry no statement.
+_DRAWN = {"ldd-cell": STYLE["ldd_drawn_um"]}
 _PLOTS = (
     "bands-flat",
     "junction-panels",
@@ -2059,13 +2118,12 @@ def _statement(name: str) -> str:
     and chooses its sizes for the drawing; the others use the layer scale factors."""
     if name == "corner-area":
         return model.exaggeration({}, STYLE["area_drawn"])
-    drawn = _DRAWN.get(name, STYLE["drawn_um"]) if name in _CELL_FIGURES else None
-    return model.exaggeration(STYLE["scales"], drawn)
+    return model.exaggeration(STYLE["scales"], _DRAWN.get(name))
 
 
 def substitutions() -> dict[str, str]:
     """``{"x_fig_<name>_scale": statement}``: the exaggeration statement of each drawing of the
-    device, for its caption, from the same scale factors (and drawn extents) the drawing uses."""
+    device, for its caption, from the same scale factors (and drawn sizes) the drawing uses."""
     return {
         f"x_fig_{name.replace('-', '_')}_scale": _statement(name)
         for name in FIGURES

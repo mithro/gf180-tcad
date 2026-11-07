@@ -21,8 +21,8 @@ the issue says what is open and what settles it. The phases are those of the
 - **The Monte Carlo spread** of the {term}`TCAD` physical inputs, beside the {term}`corner`
   bounds. It gives the mean, standard deviation and percentiles of the global variation
   ([issue #57](https://github.com/mithro/gf180-tcad/issues/57)).
-- **Mesh pictures** on the TCAD results pages
-  ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
+- **Mesh pictures of the 2D start cells**, after their meshes are regenerated
+  ([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
 
 ```{figure} /_generated/explained/moscap-cell-light.svg
 :figclass: only-light

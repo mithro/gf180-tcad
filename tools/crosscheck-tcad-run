@@ -7,31 +7,72 @@
 
 The subset lists ``<tree>/<device>/<params>`` jobs (``python -m gf180tcad.manifest``,
 ``kind="tcad"``). Each job runs, one at a time, as the host command that made the committed
-result, ``python -m gf180tcad.tcad moscap --device D --dim 1 --params P --out OUT/<tree>``, which
-runs the simulation in the TCAD image through tools/sandbox-run and writes the job directory and
-``OUT/<tree>/provenance.json``. Nothing is changed: the mesh, gate biases and calibrated values
-are the committed ones. Afterwards ``python -m gf180tcad.manifest verify-subset OUT --kind tcad
---prefix tcad/ --against results/MANIFEST.sha256 --subset SUBSET`` compares the files.
+result, and writes the job directory and ``OUT/<tree>/provenance.json``:
+
+- a MOS capacitor job, ``moscap1d/<device>/<params>``, runs ``python -m gf180tcad.tcad moscap
+  --device D --dim 1 --params P --out OUT/moscap1d``, which runs the simulation in the TCAD
+  image through tools/sandbox-run. Nothing is changed: the mesh, gate biases and calibrated
+  values are the committed ones.
+- a reduced mesh artefact job, ``meshes/<image>/<device>/<params>``, runs ``python -m
+  gf180tcad.meshcut cut --job results/tcad/moscap2d/<device>/<params>/<gid> --out
+  OUT/meshes/<image>`` for each ``<gid>`` with a committed artefact. ``cut`` pulls the job's
+  full mesh from the output cache (a ``tools/output-cache pull`` subprocess, over the network)
+  and cuts it in the sandbox with no network, in the image the tree's committed
+  ``provenance.json`` records.
+
+Afterwards ``python -m gf180tcad.manifest verify-subset OUT --kind tcad --prefix tcad/ --against
+results/MANIFEST.sha256 --subset SUBSET`` compares the files.
 
 ``--out`` must be outside ``results/``, outside the repository or under its ``tmp/``, and absent
 or empty (``--clean`` deletes it first).
-Only 1D jobs are supported: a 2D job takes hours and 16 GiB (docs/reproduce/index.md), so it is
-never part of a cross-check. ``--images`` prints the pinned reference of each TCAD image the
-jobs run in, one per line, for ``docker pull``.
+Of the MOS capacitor jobs only the 1D ones are supported: a 2D job takes hours and 16 GiB
+(docs/reproduce/index.md), so it is never part of a cross-check; cutting the artefact of a
+committed 2D job takes a 4 GiB sandbox and about a minute. ``--images`` prints the pinned
+reference of each TCAD image the jobs run in, one per line, for ``docker pull``.
 """
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from gf180tcad import manifest
+from gf180tcad import manifest, meshcut
+from gf180tcad.layout import PROVENANCE_NAME
+from gf180tcad.meshcut.__main__ import IMAGE_KIND
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import image_ref
 from gf180tcad.tcad.__main__ import job_image
 
 RESULTS = REPO_ROOT / "results"
+
+
+MESHES = "meshes/"
+
+
+def _meshes_job(job: str) -> tuple[str, str, str]:
+    """``(tree, device, params)`` of a reduced mesh artefact job ``meshes/<image>/<d>/<p>``."""
+    *tree, device, params = job.split("/")
+    return "/".join(tree), device, params
+
+
+def artefact_gids(job: str) -> list[str]:
+    """The geometry ids of the committed artefacts of the meshes job ``job``, sorted; ValueError
+    if there are none."""
+    tree, device, params = _meshes_job(job)
+    d = RESULTS / "tcad" / tree / device / params
+    gids = sorted(p.parent.name for p in d.glob(f"*/{meshcut.META}"))
+    if not gids:
+        raise ValueError(f"{job}: no committed reduced mesh artefact under {d}")
+    return gids
+
+
+def recorded_image(tree: str) -> str:
+    """The image name that the committed ``results/tcad/<tree>/provenance.json`` records for its
+    reduced mesh artefacts (a tree that is not in ``RESULTS_IMAGE``)."""
+    path = RESULTS / "tcad" / tree / PROVENANCE_NAME
+    return json.loads(path.read_bytes())["images"][IMAGE_KIND]["name"]
 
 
 def _job(job: str) -> tuple[str, str, str, int]:
@@ -45,9 +86,18 @@ def _job(job: str) -> tuple[str, str, str, int]:
 
 
 def commands(jobs: tuple[str, ...], out: Path) -> list[list[str]]:
-    """The ``python -m gf180tcad.tcad moscap`` command line of each job, in order."""
+    """The command lines of the jobs, in order: ``python -m gf180tcad.tcad moscap`` per MOS
+    capacitor job, ``python -m gf180tcad.meshcut cut`` per committed artefact of a meshes job."""
     cmds = []
     for j in jobs:
+        if j.startswith(MESHES):
+            tree, device, params = _meshes_job(j)
+            for gid in artefact_gids(j):
+                cmds.append([
+                    sys.executable, "-m", "gf180tcad.meshcut", "cut", "--job",
+                    f"results/tcad/moscap2d/{device}/{params}/{gid}", "--out", str(Path(out) / tree),
+                ])  # fmt: skip
+            continue
         tree, device, params, dim = _job(j)
         cmds.append([
             sys.executable, "-m", "gf180tcad.tcad", "moscap", "--device", device,
@@ -57,8 +107,14 @@ def commands(jobs: tuple[str, ...], out: Path) -> list[list[str]]:
 
 
 def images(jobs: tuple[str, ...]) -> list[str]:
-    """The pinned references of the TCAD images the ``jobs`` run in, sorted, without repeats."""
-    return sorted({image_ref(job_image(_job(j)[3], None)) for j in jobs})
+    """The pinned references of the TCAD images the ``jobs`` run in, sorted, without repeats: a
+    meshes job's from its tree's recorded provenance, a MOS capacitor job's from
+    ``RESULTS_IMAGE``."""
+    return sorted({
+        image_ref(recorded_image(_meshes_job(j)[0])) if j.startswith(MESHES)
+        else image_ref(job_image(_job(j)[3], None))
+        for j in jobs
+    })  # fmt: skip
 
 
 def check_out(out: Path, clean: bool) -> None:
