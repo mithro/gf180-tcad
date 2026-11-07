@@ -520,10 +520,12 @@ TCAD_SUBSET = REPO / "tests" / "crosscheck_tcad_subset.txt"
 TCAD = REPO / "results" / "tcad"
 
 
-def test_crosscheck_tcad_subset_is_the_calibrated_1d_jobs():
+def test_crosscheck_tcad_subset_is_the_calibrated_1d_jobs_and_artefacts():
     assert manifest.load_subset(TCAD_SUBSET, kind="tcad") == (
         "moscap1d/nfet_05v0/calibrated",
         "moscap1d/pfet_05v0/calibrated",
+        "meshes/stable/nfet_05v0/calibrated",
+        "meshes/stable/pfet_05v0/calibrated",
     )
 
 
@@ -542,5 +544,76 @@ def test_committed_tcad_subset_verifies(tmp_path):
         TCAD_SUBSET,
     )  # fmt: skip
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "identical: 5 files of 2 jobs" in r.stdout
-    assert "partial subset; provenance moscap1d/provenance.json" in r.stdout
+    assert "identical: 26 files of 4 jobs" in r.stdout
+    assert (
+        "partial subset; provenance meshes/stable/provenance.json, moscap1d/provenance.json"
+        in r.stdout
+    )
+
+
+# --- per-image trees of reduced mesh artefacts (renders plan, Task R0) -----------------------
+
+M_N = "meshes/stable/nfet_05v0/calibrated"
+M_P = "meshes/stable/pfet_05v0/calibrated"
+
+
+@pytest.fixture
+def meshes_row(monkeypatch):
+    """The registry with a ``tcad/meshes/stable`` tree row, as the committed artefacts add it."""
+    from gf180tcad import tcad
+
+    rows = {**tcad.TREE_GENERATORS, "tcad/meshes/stable": "gf180tcad.meshcut.__main__"}
+    monkeypatch.setattr(tcad, "TREE_GENERATORS", rows)
+
+
+def test_per_image_tree_job_lines(tmp_path, meshes_row):
+    """A subset line's last two parts are the device and the params, the rest the tree; the
+    existing three-part lines parse unchanged."""
+    trees, _, _ = manifest.tcad_axes()
+    assert trees == ("moscap1d", "moscap2d", "meshes/stable")
+    assert manifest.tcad_tree(M_N) == "meshes/stable" and manifest.tcad_tree(T1N) == "moscap1d"
+    assert manifest.tcad_trees((M_N, T1N, M_P)) == ("meshes/stable", "moscap1d")
+    p = tmp_path / "s.txt"
+    p.write_text(f"{T1N}\n{M_N}\n{T2N}\n")
+    assert manifest.load_subset(p, kind="tcad") == (T1N, M_N, T2N)
+    # `all` stays the MOS capacitor jobs: an artefact job exists only for a cached mesh
+    assert manifest.tcad_all_jobs() == TCAD_ALL
+
+
+def test_meshes_subset_parse(tmp_path, meshes_row):
+    p = tmp_path / "s.txt"
+    p.write_text(f"# artefacts\n{M_N}\n{M_P}\n")
+    assert manifest.load_subset(p, kind="tcad") == (M_N, M_P)
+    for text in (
+        "meshes/dev/nfet_05v0/calibrated\n",  # no registry row for the dev image
+        "meshes/nfet_05v0/calibrated\n",  # no image
+        "meshes/stable/nfet_05v0\n",  # no params
+        "meshes/stable/nfet_05v0/calibrated/w10p0_l0p60\n",  # a geometry, not a job
+        "stable/nfet_05v0/calibrated\n",
+        "tcad/meshes/stable/nfet_05v0/calibrated\n",  # the manifest prefix belongs to --prefix
+    ):
+        p.write_text(text)
+        with pytest.raises(ValueError):
+            manifest.load_subset(p, kind="tcad")
+
+
+def test_meshes_job_verifies_with_its_tree_provenance(tmp_path, meshes_row):
+    """A meshes job is compared file by file, with meshes/stable/provenance.json required."""
+    results = tmp_path / "results"
+    root = results / "tcad" / "meshes" / "stable"
+    for job in (M_N, M_P):
+        d = results / "tcad" / job / "w10p0_l0p70"
+        d.mkdir(parents=True)
+        (d / "mesh-window.npz").write_bytes(job.encode())
+        (d / "mesh-window.meta.json").write_bytes(b"{}\n")
+    (root / "provenance.json").write_bytes(b'{"tree": "meshes/stable"}\n')
+    m = results / "MANIFEST.sha256"
+    manifest.update(results, m)
+    tree = tmp_path / "out"
+    shutil.copytree(results / "tcad", tree)
+    full = manifest.tcad_all_jobs()
+    assert manifest.verify_subset(tree, m, "tcad/", (M_N, M_P), kind="tcad", full=full) == []
+    (tree / "meshes" / "stable" / "provenance.json").unlink()
+    assert manifest.verify_subset(tree, m, "tcad/", (M_N, M_P), kind="tcad", full=full) == [
+        ("tcad/meshes/stable/provenance.json", "missing")
+    ]

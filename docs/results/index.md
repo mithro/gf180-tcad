@@ -108,9 +108,12 @@ values (blue), with no parasitics added outside the cell.
 
 Every verdict and error on the TCAD pages comes from the calibration and validation files.
 Those files were computed in the {term}`dev-HEAD TCAD image`, and {py:mod}`gf180tcad.docgen`
-only renders them. No 2D mesh is committed ({ref}`moscap2d-meshes`), so the pages show no mesh
-picture and say so. That is a {ref}`recorded deviation <limitations-spec-deviations>` from the
-design spec ([issue #39](https://github.com/mithro/gf180-tcad/issues/39)).
+only renders them.
+
+A geometry page draws the mesh of each
+calibrated 2D cell from its committed {ref}`reduced mesh artefact <moscap2d-mesh-artefact>`.
+The 2D start cells have no artefact, and their pages say why
+([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
 
 ```{toctree}
 :maxdepth: 2

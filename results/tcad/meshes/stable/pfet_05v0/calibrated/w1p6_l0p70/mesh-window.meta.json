@@ -1,0 +1,157 @@
+{
+  "boundaries": [
+    "body___body_contact",
+    "body___drain_contact",
+    "body___oxide",
+    "body___source_contact",
+    "body___ild",
+    "drain_contact___ild",
+    "gate_contact___gate_poly",
+    "gate_contact___ild",
+    "gate_poly___oxide",
+    "gate_poly___ild",
+    "oxide___ild",
+    "source_contact___ild",
+    "body___None",
+    "body_contact___None",
+    "gate_contact___None",
+    "ild___None"
+  ],
+  "boundary_line_count": 8073,
+  "format": 1,
+  "full_mesh_node_count": 244880,
+  "full_mesh_sha256": "c3d2585f18a283883dc325b4c8039e13a5f83f5ff694d2bb931f885cbc66ae51",
+  "full_mesh_triangle_count": 489146,
+  "job": {
+    "cv_meta_sha256": "a3fca0a8f259ca9466616c8202421e6e9654715ae44e0405d7ac140392437b04",
+    "device": "pfet_05v0",
+    "geometry_id": "w1p6_l0p70",
+    "params": "calibrated",
+    "tree": "tcad/moscap2d"
+  },
+  "net_doping": "Donors - Acceptors of the 2D job's own profiles (gplugins.devsim.doping, numpy form) at each node of a silicon region, in that region's frame and bound to that region's bounds in the full mesh, as assign_doping does; 0 at a node of no silicon region",
+  "node_count": 123351,
+  "npz_sha256": "e14c86513d096edc4b317544329bbd90ac32fc2c6eb9cf52529e6126499095ab",
+  "region_bounds_um": {
+    "body": {
+      "x_um": [
+        0.0,
+        1.5799999999999998
+      ],
+      "y_um": [
+        -1.0,
+        0.0
+      ]
+    },
+    "body_contact": {
+      "x_um": [
+        0.0,
+        1.5799999999999998
+      ],
+      "y_um": [
+        -1.05,
+        -1.0
+      ]
+    },
+    "drain_contact": {
+      "x_um": [
+        1.2899999999999998,
+        1.51
+      ],
+      "y_um": [
+        0.0,
+        0.05
+      ]
+    },
+    "gate_contact": {
+      "x_um": [
+        0.4400000000000001,
+        1.1400000000000001
+      ],
+      "y_um": [
+        0.215721,
+        0.265721
+      ]
+    },
+    "gate_poly": {
+      "x_um": [
+        0.4400000000000001,
+        1.1400000000000001
+      ],
+      "y_um": [
+        0.015721,
+        0.215721
+      ]
+    },
+    "ild": {
+      "x_um": [
+        0.0,
+        1.5799999999999998
+      ],
+      "y_um": [
+        0.0,
+        0.265721
+      ]
+    },
+    "oxide": {
+      "x_um": [
+        0.4400000000000001,
+        1.1400000000000001
+      ],
+      "y_um": [
+        0.0,
+        0.015721
+      ]
+    },
+    "source_contact": {
+      "x_um": [
+        0.07,
+        0.29
+      ],
+      "y_um": [
+        0.0,
+        0.05
+      ]
+    }
+  },
+  "regions": [
+    "body",
+    "body_contact",
+    "drain_contact",
+    "gate_contact",
+    "gate_poly",
+    "oxide",
+    "source_contact",
+    "ild"
+  ],
+  "size_bytes": 3913892,
+  "source": "cache",
+  "triangle_count": 244427,
+  "units": {
+    "net_doping_cm3": "cm^-3",
+    "nodes_cm": "cm",
+    "region_bounds_um": "um",
+    "um_per_mesh_unit": 10000.0,
+    "window": "um"
+  },
+  "window": {
+    "rule": {
+      "depth_um": 0.1,
+      "gate_x_um": [
+        0.44,
+        1.1400000000000001
+      ],
+      "kx": 0.25,
+      "poly_top_um": 0.21572066494909167,
+      "surface_um": 0.0
+    },
+    "x_um": [
+      0.26499999999999996,
+      1.3150000000000002
+    ],
+    "y_um": [
+      -0.1,
+      0.21572066494909167
+    ]
+  }
+}
