@@ -748,7 +748,7 @@ builder, with other jobs sharing its 8 CPUs. Both gave the same digests. The rec
 | Wall time of `make` (min) | 65 | 209 |
 
 On the project's host the builder's memory peaked at 6.35 GB. In the pinned image, the files in
-`/opt/charon` add up to 353 MB (`du -sb`). The manifest of the pin in {repo}`docker/CHARON_LIBS_IMAGE`
+`/opt/charon` add up to 353 MB (`du -sb`). The {term}`manifest` of the pin in {repo}`docker/CHARON_LIBS_IMAGE`
 gives the layer it adds to the base image as 91.7 MB compressed.
 
 ### Checks on GitHub

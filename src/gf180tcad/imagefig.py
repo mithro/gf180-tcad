@@ -408,8 +408,8 @@ LAYER_BOXES = {
 LAYER_ARROWS = (("libs", "opt"), ("wheels", "venv"))
 
 
-def charon_layers_figure(palette: str = "light") -> Figure:
-    """The layer figure as a Figure; each box text has the gid ``layers-text-<box>`` and each
+def charon_layers_figure(palette: str = "light"):
+    """The layer figure as a matplotlib figure; each box text has the gid ``layers-text-<box>`` and each
     arrow ``layers-arrow-<source>-<target>``, so a test can read what is drawn."""
     pal = PALETTES[palette]
     fill, arrow, b = pal["fill"], pal["arrow"], STYLE["layers"]
