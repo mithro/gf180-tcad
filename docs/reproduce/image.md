@@ -444,8 +444,8 @@ result kind in it: the image's name, its reference and its probe record. That re
   runs both 1D CLIs on both images and requires the same bytes. That last test is the drift
   guard between the two stacks.
 - **2D on stable.** The selected 2D mesh comes from the 2D mesh convergence on the stable
-  image, which has {{ gmsh }} 4.15.2. The dev image has gmsh 5 and no 2D mesh convergence of its
-  own (next item), so a 2D result on dev would need one first. The 2D results of
+  image, which has {{ gmsh }} 4.15.2. The dev image has gmsh 5 and no 2D mesh convergence (next
+  item). The 2D results of
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
   are therefore made on the stable image, explicitly, as {numref}`results-images` shows.
 - **No 2D mesh convergence on dev.** The 2D mesh convergence has not been rerun on the dev
