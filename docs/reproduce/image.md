@@ -285,6 +285,29 @@ made there. Each fork keeps its upstream licence, says at the top of its README 
 fork and why, and runs CI on {{ GitHub_hosted_runner }}s with no secrets and no publishing
 workflows.
 
+Each fork, at its commit, and where it enters the flow are drawn in {numref}`image-forks`.
+
+```{figure} /_generated/reproduce/image-forks-light.svg
+:name: image-forks
+:figclass: only-light
+:alt: Boxes in two columns. Left, the three forks, each with its commit and, for two of them, the fix it carries. Right, the dev-HEAD TCAD image, which two forks enter, and the plugin submodule, which the third enters.
+
+The forks at their commits (left) and where each enters the flow (right). The two that the
+dev-HEAD image builds, with their fixes, come from {repo}`docker/tcad-dev/upstream.json`. The
+plugin fork is the submodule of {repo}`.gitmodules`, at the commit that
+{repo}`results/tcad/moscap1d/provenance.json` records.
+```
+
+```{figure} /_generated/reproduce/image-forks-dark.svg
+:figclass: only-dark
+:alt: Boxes in two columns. Left, the three forks, each with its commit and, for two of them, the fix it carries. Right, the dev-HEAD TCAD image, which two forks enter, and the plugin submodule, which the third enters.
+
+The forks at their commits (left) and where each enters the flow (right). The two that the
+dev-HEAD image builds, with their fixes, come from {repo}`docker/tcad-dev/upstream.json`. The
+plugin fork is the submodule of {repo}`.gitmodules`, at the commit that
+{repo}`results/tcad/moscap1d/provenance.json` records.
+```
+
 - **{{ gf180mcu_fork }}** (Apache-2.0), main
   [`9342e3e`](https://github.com/mithro/gf180mcu/commit/9342e3e1804e419ba4d3a252746fe688657a9b74)
   = upstream [`96b7324`](https://github.com/gdsfactory/gf180mcu/commit/96b7324d85df05704f68c1370c175627d0a88034)
@@ -388,6 +411,25 @@ kind is generated with, and it is the default of `python -m gf180tcad.tcad mosca
 | 1D {term}`mesh convergence`, {repo}`results/tcad/meshconv` (`moscap1d/`) | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the same |
 | 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | see below |
 
+The same mapping, read from the code, is drawn in {numref}`results-images`.
+
+```{figure} /_generated/reproduce/results-images-light.svg
+:name: results-images
+:figclass: only-light
+:alt: Boxes in two columns. Left, the 1D and the 2D result kinds, each naming its results folder and its mesh-convergence folder. Right, the dev and the stable image, each naming its pin file. An arrow joins each kind to its image.
+
+Each result kind of {py:data}`gf180tcad.tcad.RESULTS_IMAGE` with its results folders (left).
+Right, the image that makes it, by its pin file in {repo}`src/gf180tcad/generators.json`.
+```
+
+```{figure} /_generated/reproduce/results-images-dark.svg
+:figclass: only-dark
+:alt: Boxes in two columns. Left, the 1D and the 2D result kinds, each naming its results folder and its mesh-convergence folder. Right, the dev and the stable image, each naming its pin file. An arrow joins each kind to its image.
+
+Each result kind of {py:data}`gf180tcad.tcad.RESULTS_IMAGE` with its results folders (left).
+Right, the image that makes it, by its pin file in {repo}`src/gf180tcad/generators.json`.
+```
+
 The top folder of each set of results holds a provenance file, such as
 {repo}`results/tcad/moscap2d/provenance.json`. Under `images`, it records which image made each
 result kind in it: the image's name, its reference and its probe record. That record is
@@ -401,11 +443,11 @@ result kind in it: the image's name, its reference and its probe record. That re
   the dev image, and {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree`
   runs both 1D CLIs on both images and requires the same bytes. That last test is the drift
   guard between the two stacks.
-- **2D on stable.** {{ gmsh }} 5 (the dev image) meshes the 2D cells differently
-  from gmsh 4.15.2 (the stable image). A 2D result on dev therefore needs its own mesh
-  convergence on dev; the stable image's selected 2D mesh does not carry over. The 2D results of
+- **2D on stable.** The selected 2D mesh comes from the 2D mesh convergence on the stable
+  image, which has {{ gmsh }} 4.15.2. The dev image has gmsh 5 and no 2D mesh convergence (next
+  item). The 2D results of
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
-  are therefore made on the stable image, explicitly.
+  are therefore made on the stable image, explicitly, as {numref}`results-images` shows.
 - **No 2D mesh convergence on dev.** The 2D mesh convergence has not been rerun on the dev
   image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
 - **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, has the laxer
