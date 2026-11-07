@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import shutil
 from pathlib import Path
 
@@ -614,13 +615,18 @@ def gitignore_line(pattern: str) -> int:
 
 def repo_path(path: Path, root: Path, committed: Path) -> str:
     """The repository path a page links ``path``, a file or folder under the results tree
-    ``root``, by: its own path when it lies in the repository, otherwise the same place in the
-    committed tree ``committed``. A tree given to :func:`generate` from elsewhere has the
-    committed layout, whatever its folder is named (issue #173)."""
-    path, root = Path(path), Path(root)
-    if path.is_relative_to(REPO_ROOT):
-        return path.relative_to(REPO_ROOT).as_posix()
-    return (Path(committed) / path.relative_to(root)).relative_to(REPO_ROOT).as_posix()
+    ``root``, by. A tree in the repository's ``results/`` folder is linked where it lies. Any
+    other tree, a copy elsewhere or a scratch tree inside the checkout, has the layout of the
+    committed tree ``committed`` and is linked at the same place in it, whatever its folder is
+    named (issue #173). Relative paths are taken from the working directory, as the files are
+    read. ValueError if ``path`` is not under ``root``."""
+    path, root = (Path(os.path.normpath(Path(p).absolute())) for p in (path, root))
+    if not path.is_relative_to(root):
+        raise ValueError(f"{path} is not under the results tree {root}")
+    rel = path.relative_to(root)
+    if root.is_relative_to(REPO_ROOT / "results"):
+        return (root.relative_to(REPO_ROOT) / rel).as_posix()
+    return (Path(committed) / rel).relative_to(REPO_ROOT).as_posix()
 
 
 def _mesh_link() -> str:
