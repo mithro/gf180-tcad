@@ -89,7 +89,9 @@ render never recomputes what a simulation computed.
 ## Display-only values
 
 The file {repo}`data/render/display.toml` holds the {term}`band gaps <band gap>` and the Si–SiO₂ band offsets that a band
-diagram is drawn with, as {numref}`render-band-offsets` shows. No simulation reads the file. Each value has a unit and a source in the
+diagram is drawn with. Silicon's band gap and the two offsets are drawn in {numref}`render-band-offsets`.
+
+No simulation reads the file. Each value has a unit and a source in the
 {ref}`literature list <lit-sze>`. The file's `mismatch` text compares the band gap the simulation
 implies with the band gap the drawing uses. A committed render manifest reads every `display`
 entry from this file and no other ({py:meth}`gf180tcad.render.manifest.Manifest.display_problems`).
@@ -101,7 +103,9 @@ entry from this file and no other ({py:meth}`gf180tcad.render.manifest.Manifest.
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
 silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
-the conduction and valence band offsets above and below silicon's.
+the conduction and valence band offsets above and below silicon's. The file's oxide band gap
+is not drawn: it differs from silicon's gap plus the two offsets
+([issue #167](https://github.com/mithro/gf180-tcad/issues/167)).
 ```
 
 ```{figure} /_generated/reproduce/render-band-offsets-dark.svg
@@ -110,7 +114,9 @@ the conduction and valence band offsets above and below silicon's.
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
 silicon's valence band edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
-the conduction and valence band offsets above and below silicon's.
+the conduction and valence band offsets above and below silicon's. The file's oxide band gap
+is not drawn: it differs from silicon's gap plus the two offsets
+([issue #167](https://github.com/mithro/gf180-tcad/issues/167)).
 ```
 
 ## What the check rejects
