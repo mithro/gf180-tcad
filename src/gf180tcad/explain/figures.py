@@ -334,7 +334,7 @@ def _thickness(layer: model.Layer) -> str:
 _STACK_NAME = {"gate": "gate", "oxide": "gate oxide", "body": "body"}
 
 
-def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
+def stack_1d_figure(dev: model.Device, highlight: tuple[str, ...], palette: str):
     """The 1D stack as layers, gate on top, each labelled with its material, its thickness and
     its doping from the model. The parts in ``highlight`` are shaded (a silicon layer in its
     majority carrier's colour), the rest muted. Drawn at
@@ -382,7 +382,13 @@ def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> byt
                 fontweight="bold" if layer.part in highlight else "normal",
             )
         ax.set_title(model.exaggeration(dev.scales), fontsize=STYLE["text_pt"])
-        return _svg(fig)
+        return fig
+
+
+def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
+    """:func:`stack_1d_figure` as SVG bytes."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _svg(stack_1d_figure(dev, highlight, palette))
 
 
 def band_levels(dev: model.Device, part: str) -> dict[str, float]:

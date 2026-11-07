@@ -29,25 +29,23 @@ import math
 import shutil
 from pathlib import Path
 
-import numpy as np
-
-from gf180tcad import io, metrics, plots, specwindow
-from gf180tcad.devices import CORNERS, DEVICES, Device, Geometry, geometry_id
-from gf180tcad.explain.data import spice_columns, spice_cv, tcad_cgg, u_sorted
+from gf180tcad import metrics, specwindow
+from gf180tcad import results_figures as rf
+from gf180tcad.devices import DEVICES, Device, Geometry, geometry_id
+from gf180tcad.explain.figures import PALETTES
 from gf180tcad.known import KNOWN_ENGINE_DIFFS
 from gf180tcad.layout import METRICS_NAME
-from gf180tcad.reference import engine_sweeps
 from gf180tcad.sandbox import REPO_ROOT
-from gf180tcad.spice.xyce import ENGINE_DIFF_THRESHOLD, engine_diff
+from gf180tcad.spice.xyce import ENGINE_DIFF_FLOOR, ENGINE_DIFF_THRESHOLD
 
 RESULTS = REPO_ROOT / "results" / "spice"
+PICO = 1e-12  # A per pA
 TT = "typical"
-DIFF_SWEEPS = ("idvg_lin", "idvg_sat", "idvd", "ioff")
+DIFF_SWEEPS = rf.DIFF_SWEEPS
 # Cases explained on the engine cross-check page (nfet BSIM4 version 4.5 vs Xyce 4.6.1).
 KNOWN_DIFFS = KNOWN_ENGINE_DIFFS
 ENGINE_DOC = "/limitations/engine-cross-check"
 SPEC_DOC = "/comparison/pdk-spec-check"
-ID_FLOOR = 1e-15  # A, lower edge of the log-scale panels
 
 _UNITS = {
     "_ua_per_um": "µA/µm",
@@ -109,11 +107,6 @@ def _unit(metric: str) -> str:
     return ""
 
 
-def _has_sweep(engine: str, sweep: str) -> bool:
-    """Does ``engine`` run ``sweep`` at all (Xyce has no cv)? Absent by design, not missing."""
-    return sweep in engine_sweeps(engine)
-
-
 def _metrics(root: Path, engine: str, corner: str, device: str, gid: str) -> dict:
     """The metrics of one committed ``metrics.json``; FileNotFoundError if it is missing."""
     path = Path(root) / engine / corner / device / gid / METRICS_NAME
@@ -122,101 +115,47 @@ def _metrics(root: Path, engine: str, corner: str, device: str, gid: str) -> dic
     return json.loads(path.read_text(encoding="utf-8"))["metrics"]
 
 
-# --- plot data ----------------------------------------------------------------------------
+# --- figures -------------------------------------------------------------------------------
 
 
-def _series(cols: dict, sweep: str, pol: int) -> list[tuple[str | None, np.ndarray, np.ndarray]]:
-    """Polarity-stripped ``(group label, x, y)``: |Id| in A against |Vgs| or |Vds|; cv in fF."""
-    if sweep == "cv":
-        return [(None, *spice_cv(cols, pol))]
-    if sweep in ("idvg_lin", "idvg_sat"):
-        m = cols["vb"] == 0.0
-        return [(None, pol * cols["vg"][m], np.abs(cols["id"][m]))]
-    zero_vb = cols["vb"] == 0.0
-    if not np.any(zero_vb):
-        raise ValueError("idvd: no vb = 0 rows to plot")
-    out = []
-    for v in sorted(set(np.abs(cols["vg"][zero_vb]).tolist())):
-        m = zero_vb & (np.abs(cols["vg"]) == v)
-        out.append((f"|Vgs| = {fmt(v)} V", pol * cols["vd"][m], np.abs(cols["id"][m])))
-    return out
+def figure_pair(ddir: Path, stem: str, draw, args: tuple, label: str, alt: str, caption: str,
+                roots: rf.Roots = rf.DEFAULT_ROOTS) -> list[str]:  # fmt: skip
+    """Write ``draw(*args, palette, roots)`` (a :mod:`gf180tcad.results_figures` function) as
+    ``<stem>-light.svg`` and ``<stem>-dark.svg`` in ``ddir``, and return the page's two
+    ``{figure}`` directives: adjacent, the same caption, the light one named ``label`` (the
+    house form of spec §10.3, merged into one numbered figure by ``docs/_ext/theme_figures.py``)."""
+    lines = []
+    for palette in PALETTES:
+        name = f"{stem}-{palette}.svg"
+        (ddir / name).write_bytes(rf.svg(draw, *args, palette=palette, roots=roots))
+        head = [f"```{{figure}} {name}", f":figclass: only-{palette}"]
+        if palette == "light":
+            head.append(f":name: {label}")
+        lines += [*head, f":alt: {alt}", "", caption, "```", ""]
+    return lines
 
 
-def _curves(root: Path, device: Device, gid: str, sweep: str, scale: float, floor: float | None):
-    """Band, TT line and Xyce dashed overlay curves for one sweep, as ``plots.Curve`` objects."""
-    pol = device.polarity
-    per_corner = []
-    for corner in CORNERS:
-        cols = spice_columns(root, "ngspice", corner, device.name, gid, sweep)
-        per_corner.append(_series(cols, sweep, pol))
-    tt = per_corner[CORNERS.index(TT)]
-    xs = None
-    if _has_sweep("xyce", sweep):
-        xs = _series(spice_columns(root, "xyce", TT, device.name, gid, sweep), sweep, pol)
-
-    def y(a):
-        a = a * scale
-        return a if floor is None else np.maximum(a, floor)
-
-    multi = len(tt) > 1
-    curves, legend = [], {}
-    for i, (label, x, ytt) in enumerate(tt):
-        color = plots.FAMILY[i % len(plots.FAMILY)] if multi else plots.NGSPICE_COLOR
-        xcolor = color if multi else plots.XYCE_COLOR
-        stack = []
-        for series in per_corner:
-            if not np.array_equal(series[i][1], x):
-                raise ValueError(f"{device.name} {gid} {sweep}: corner grids differ")
-            stack.append(y(series[i][2]))
-        curves.append(plots.Curve(x, np.min(stack, axis=0), color, y2=np.max(stack, axis=0)))
-        curves.append(plots.Curve(x, y(ytt), color))
-        if xs is not None:
-            if not np.array_equal(xs[i][1], x):
-                raise ValueError(f"{device.name} {gid} {sweep}: Xyce grid differs")
-            curves.append(plots.Curve(x, y(xs[i][2]), xcolor, dashed=True))
-        if label:
-            legend[label] = color
-    return curves, legend
+def figure_label(*parts: str) -> str:
+    """A figure's ``:name:``, unique on the site: ``fig-`` and ``parts`` joined by hyphens."""
+    return "-".join(("fig", *parts)).replace("_", "-")
 
 
-def _figures(root: Path, device: Device, gid: str) -> list[tuple[str, str, bytes]]:
-    """``(suffix, alt text, svg bytes)`` for the four figures of a geometry page."""
-    out = []
-    for sweep, vds in (("idvg_lin", "0.1"), ("idvg_sat", "5")):
-        lin, _ = _curves(root, device, gid, sweep, 1e3, None)
-        log, _ = _curves(root, device, gid, sweep, 1.0, ID_FLOOR)
-        panels = [
-            plots.Panel(f"Id-Vg, |Vds| = {vds} V, |Vbs| = 0", "|Vgs| (V)", "|Id| (mA)", lin),
-            plots.Panel(
-                f"Id-Vg, |Vds| = {vds} V, |Vbs| = 0 (log)", "|Vgs| (V)", "|Id| (A)", log, "log",
-                (ID_FLOOR, None),
-            ),
-        ]  # fmt: skip
-        out.append(
-            (
-                sweep,
-                f"|Id| against |Vgs| at |Vds| = {vds} V, linear and log",
-                plots.figure_svg(panels),
-            )
-        )
-    curves, legend = _curves(root, device, gid, "idvd", 1e3, None)
-    panel = plots.Panel("Id-Vd, |Vbs| = 0", "|Vds| (V)", "|Id| (mA)", curves)
-    out.append(
-        ("idvd", "|Id| against |Vds| for |Vgs| = 1 to 5 V", plots.figure_svg([panel], legend))
-    )
-    curves, _ = _curves(root, device, gid, "cv", 1.0, None)
-    panel = plots.Panel("Cgg-Vg, 1 MHz, ngspice only", "Vgs x polarity (V)", "Cgg (fF)", curves)
-    out.append(("cv", "Gate capacitance against sign-flipped Vgs", plots.figure_svg([panel])))
-    return out
+def numref(label: str, page_title: str | None = None) -> str:
+    """A ``{numref}`` citation of figure ``label``: "Figure N" on its own page, "Figure N of
+    <title>" from another page (``page_title``), as tests/test_doc_links.py requires."""
+    if page_title is None:
+        return f"{{numref}}`{label}`"
+    return f"{{numref}}`Figure %s of {page_title} <{label}>`"
 
 
-def demo_svg() -> bytes:
-    """One real figure (nfet_05v0 10/0.6 Id-Vd), for the byte-determinism test."""
-    device = DEVICES["nfet_05v0"]
-    gid = geometry_id(device.geometries[0])
-    curves, legend = _curves(RESULTS, device, gid, "idvd", 1e3, None)
-    panel = plots.Panel("Id-Vd, |Vbs| = 0", "|Vds| (V)", "|Id| (mA)", curves)
-    return plots.figure_svg([panel], legend)
+def spice_title(device: Device, g: Geometry) -> str:
+    """The title of the SPICE page of one geometry."""
+    return f"{device.name}, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} µm"
+
+
+def spice_label(device: str, gid: str, sweep: str) -> str:
+    """The figure label of one sweep on the SPICE page of a geometry."""
+    return figure_label("spice", device, gid, sweep)
 
 
 # --- tables --------------------------------------------------------------------------------
@@ -268,7 +207,7 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
             windows.append([key, num(lo), num(hi), _WINDOW_SOURCE["envelope"]])
         if name in xy:
             x = num(xy[name])
-        elif name in metrics.CV_METRICS and not _has_sweep("xyce", "cv"):
+        elif name in metrics.CV_METRICS and not rf.has_sweep("xyce", "cv"):
             x = "not applicable"
         else:
             raise KeyError(f"xyce {TT} {device.name} {gid} metrics.json has no {name}")
@@ -279,7 +218,8 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
         "",
         (
             "The {term}`TT` value of each metric from both engines. Xyce has no C-V sweep, so "
-            "its {term}`Cgg` cells are not applicable."
+            f"its {{term}}`Cgg` cells are not applicable ({numref(spice_label(device.name, gid, 'cv'))} "
+            "draws ngspice alone)."
         ),
         "",
         *_table(["Metric", "Unit", "TT ngspice", "TT Xyce"], values),
@@ -310,37 +250,91 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
     ]
 
 
-def _geometry_page(root, device: Device, g: Geometry, spec: dict, envelope: dict, out: Path):
+# The figures of a SPICE geometry page, in page order: (sweep, section title, alt text).
+SPICE_FIGURES = (
+    ("idvg_lin", "Id-Vg, linear region (idvg_lin)",
+     ("Drain current rising with gate voltage above threshold, on a linear and a log axis: a "
+     "grey band round a solid line, with a dashed line on it.")),
+    ("idvg_sat", "Id-Vg, saturation (idvg_sat)",
+     ("Drain current rising with gate voltage above threshold, on a linear and a log axis: a "
+     "grey band round a solid line, with a dashed line on it.")),
+    ("idvd", "Id-Vd (idvd)",
+     ("Drain current rising with drain voltage and levelling off, one coloured curve and band "
+     "per gate voltage.")),
+    ("cv", "Cgg-Vg (cv)",
+     ("Gate capacitance high at both ends of the gate voltage and lower in between: a grey band "
+     "round a solid line.")),
+)  # fmt: skip
+
+
+def _sweep_text(device: Device, gid: str, sweep: str, roots: rf.Roots) -> tuple[str, str]:
+    """``(sentence, caption)`` of one sweep's figure; its bias values are read from the data."""
+    label = numref(spice_label(device.name, gid, sweep))
+    where = f"{device.name} `{gid}`"
+    if sweep in ("idvg_lin", "idvg_sat"):
+        vds = fmt(rf.bias(device.name, gid, sweep, "vd", roots.spice))
+        return (
+            f"{label} shows |Id| against |Vgs| at |Vds| = {vds} V, on a linear and a log axis.",
+            (
+                f"|Id| against |Vgs| of {where} at |Vds| = {vds} V and |Vbs| = 0: a linear axis "
+                "(top) and a log axis (bottom)."
+            ),
+        )
+    if sweep == "idvd":
+        return (
+            (
+                f"{label} shows |Id| against |Vds| at |Vbs| = 0, one colour for each |Vgs| of "
+                "the sweep."
+            ),
+            f"|Id| against |Vds| of {where} at |Vbs| = 0, each |Vgs| with its own corner band.",
+        )
+    return (
+        (
+            f"{label} shows the gate capacitance {{term}}`Cgg` against the sign-flipped Vgs, from "
+            "{{ ngspice }} alone."
+        ),
+        f"Cgg against polarity × Vgs of {where} at 1 MHz: the ngspice corner band and TT line.",
+    )
+
+
+def _geometry_page(roots: rf.Roots, device: Device, g: Geometry, spec: dict, envelope: dict,
+                   out: Path):  # fmt: skip
     gid = geometry_id(g)
     ddir = out / "results" / device.name
     ddir.mkdir(parents=True, exist_ok=True)
+    first, last = (spice_label(device.name, gid, s) for s in (SPICE_FIGURES[0][0], "cv"))
     lines = [
-        f"# {device.name}, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} µm",
+        f"# {spice_title(device, g)}",
         "",
         (
             f"{{term}}`{device.name}`, {{term}}`geometry <geometry id>` `{gid}` "
-            f"({{ref}}`{g.role} <calibration-validation>`). {{term}}`SPICE reference <SPICE reference results>` at 25 C "
-            "from {repo}`results/spice`. Axes are {term}`sign-flipped` (|Vgs|, |Vds|, |Id|), "
-            "so the nfet and the pfet look alike. The shaded band is the {term}`corner envelope`, "
-            "the min-max over the {term}`TT`, {term}`FF`, {term}`SS <SS corner>`, {term}`FS` and "
-            "{term}`SF` {term}`corners <corner>` ({{ ngspice }}); the solid line is ngspice TT "
-            "and the dashed line is {{ Xyce }} TT. Xyce has no C-V {term}`sweep` "
-            "({ref}`results-layout`). Summary and engine differences: {doc}`../index`."
+            f"({{ref}}`{g.role} <calibration-validation>`). The "
+            "{term}`SPICE reference <SPICE reference results>` at 25 C is in "
+            "{repo}`results/spice`. Axes are {term}`sign-flipped` (|Vgs|, |Vds|, |Id|), so the "
+            "nfet and the pfet look alike. Summary and engine differences: {doc}`../index`."
+        ),
+        "",
+        (
+            f"In {numref(first)} to {numref(last)}, the shaded band is the "
+            "{term}`corner envelope` of {{ ngspice }}. It is the min-max over the {term}`TT`, "
+            "{term}`FF`, {term}`SS <SS corner>`, {term}`FS` and {term}`SF` "
+            "{term}`corners <corner>`. The solid line is ngspice TT and the dashed line is "
+            "{{ Xyce }} TT. Xyce has no C-V {term}`sweep` ({ref}`results-layout`)."
         ),
         "",
     ]
-    titles = {
-        "idvg_lin": "Id-Vg, linear region (idvg_lin)",
-        "idvg_sat": "Id-Vg, saturation (idvg_sat)",
-        "idvd": "Id-Vd (idvd)",
-        "cv": "Cgg-Vg (cv)",
-    }
-    for suffix, alt, svg in _figures(root, device, gid):
-        name = f"{gid}_{suffix}.svg"
-        (ddir / name).write_bytes(svg)
-        lines += [f"## {titles[suffix]}", "", f"![{alt}]({name})", ""]
+    for sweep, title, alt in SPICE_FIGURES:
+        sentence, caption = _sweep_text(device, gid, sweep, roots)
+        draw, args = (
+            (rf.idvg_figure, (device.name, gid, sweep))
+            if sweep in ("idvg_lin", "idvg_sat")
+            else ({"idvd": rf.idvd_figure, "cv": rf.cv_figure}[sweep], (device.name, gid))
+        )
+        lines += [f"## {title}", "", sentence, ""]
+        lines += figure_pair(ddir, f"{gid}_{sweep}", draw, args,
+                             spice_label(device.name, gid, sweep), alt, caption, roots)  # fmt: skip
     lines += ["## Metrics", ""]
-    lines += _metrics_table(root, device, gid, spec, envelope)
+    lines += _metrics_table(roots.spice, device, gid, spec, envelope)
     lines += [""]
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
 
@@ -397,17 +391,17 @@ def _tcad_only_rows(spec: dict) -> list[str]:
 
 
 def _engine_table(root) -> list[str]:
-    """One engine_diff table per device, keyed by the geometry id."""
+    """One engine_diff table per device, keyed by the geometry id: the values
+    :func:`gf180tcad.results_figures.engine_diffs` gives, which the summary's figure draws."""
     lines = []
     for device in DEVICES.values():
+        diffs = rf.engine_diffs(device.name, root)
         rows = []
-        for g in device.geometries:
+        for k, g in enumerate(device.geometries):
             gid = geometry_id(g)
             cells = [f"{{doc}}`{gid} <{device.name}/{gid}>`"]
             for sweep in DIFF_SWEEPS:
-                a = spice_columns(root, "ngspice", TT, device.name, gid, sweep)
-                b = spice_columns(root, "xyce", TT, device.name, gid, sweep)
-                d = engine_diff(a, b)
+                d = diffs[sweep][k]
                 cell = num(100 * d, 3)
                 if d > ENGINE_DIFF_THRESHOLD:
                     if (device.name, sweep) in KNOWN_DIFFS:
@@ -425,17 +419,27 @@ def _engine_table(root) -> list[str]:
     return lines[1:]
 
 
-def _summary_page(root, spec: dict, out: Path):
+#: The figure of the summary page: the engine difference of every sweep and geometry.
+ENGINE_LABEL = figure_label("spice", "engine-diff")
+
+
+def _summary_page(roots: rf.Roots, spec: dict, out: Path):
+    first = next(iter(DEVICES.values()))
+    g0 = first.geometries[0]
+    cv_ref = numref(spice_label(first.name, geometry_id(g0), "cv"), spice_title(first, g0))
+    threshold = fmt(100 * ENGINE_DIFF_THRESHOLD)
+    floor_pa = fmt(ENGINE_DIFF_FLOOR / PICO)
     lines = [
         "# SPICE reference results",
         "",
         (
             "Pages generated at documentation build time from the committed {term}`SPICE` "
-            "reference dataset ({repo}`results/spice`): the {term}`SPICE reference <SPICE reference results>` that "
-            "{term}`TCAD` is compared against ({doc}`/comparison/agreement`). The TCAD results so "
-            "far, the {term}`C–V` calibration of the {term}`MOS capacitors <MOSCAP>` against these "
-            "{term}`Cgg`-Vg curves, are on {doc}`/_generated/tcad/index` "
-            "({doc}`/comparison/cv-agreement`)."
+            "reference dataset ({repo}`results/spice`). It is the "
+            "{term}`SPICE reference <SPICE reference results>` that {term}`TCAD` is compared "
+            "against ({doc}`/comparison/agreement`). The TCAD results are on "
+            "{doc}`/_generated/tcad/index`. They are the {term}`C–V` calibration of the "
+            "{term}`MOS capacitors <MOSCAP>` against these {term}`Cgg`-Vg curves "
+            f"({{doc}}`/comparison/cv-agreement`). {cv_ref} shows one of the curves."
         ),
         "",
         "## TT against the PDK spec",
@@ -448,7 +452,7 @@ def _summary_page(root, spec: dict, out: Path):
         "",
         _GEOMETRY_ID_TEXT,
         "",
-        *_spec_status(root, spec),
+        *_spec_status(roots.spice, spec),
         "",
         "### TCAD only",
         "",
@@ -465,16 +469,45 @@ def _summary_page(root, spec: dict, out: Path):
         "## ngspice against Xyce",
         "",
         (
-            "{term}`engine_diff` between ngspice and {{ Xyce }}: the maximum relative difference "
-            "|Id,ngspice - Id,Xyce| / max(|Id,ngspice|, |Id,Xyce|) over the bias points where "
-            "either engine gives |Id| > 1 pA, at the typical corner and 25 C, for each "
-            "{term}`sweep` ({py:func}`gf180tcad.spice.xyce.engine_diff`). The threshold is 0.5 % "
-            "({ref}`comparison-space`). Cases above it "
-            f"that are explained are marked known, see {{doc}}`{ENGINE_DOC}`. Anything else "
-            "above the threshold is flagged unexplained in bold."
+            "{term}`engine_diff` {math:numref}`eq-engine-diff` is the largest relative "
+            "difference in drain current between {{ ngspice }} and {{ Xyce }} over one "
+            "{term}`sweep` ({py:func}`gf180tcad.spice.xyce.engine_diff`):"
         ),
         "",
-        *_engine_table(root),
+        "$$",
+        r"d = \max_{k} \frac{|I_{n,k} - I_{x,k}|}{\max(|I_{n,k}|, |I_{x,k}|)}",
+        "$$ (eq-engine-diff)",
+        "",
+        "where",
+        "",
+        "- $d$ is the engine difference of the sweep, dimensionless;",
+        "- $I_{n,k}$ is the drain current ngspice gives at bias point $k$, in A;",
+        "- $I_{x,k}$ is the drain current Xyce gives at the same bias point, in A;",
+        (
+            f"- $k$ counts the bias points where either engine gives |Id| > {floor_pa} pA, "
+            "dimensionless."
+        ),
+        "",
+        (
+            "Both engines run the typical corner at 25 C. The threshold is "
+            f"{threshold} % ({{ref}}`comparison-space`). Cases above it that are explained are "
+            f"marked known, see {{doc}}`{ENGINE_DOC}`. Anything else above the threshold is "
+            f"flagged unexplained in bold. {numref(ENGINE_LABEL)} draws every value of the tables."
+        ),
+        "",
+        *figure_pair(
+            out / "results",
+            "engine_diff",
+            rf.engine_diff_figure,
+            (),
+            ENGINE_LABEL,
+            "Two panels of markers on a log axis, one shape per sweep for each geometry, under "
+            "or near a dashed threshold line.",
+            f"The engine difference of each sweep at each geometry; the dashed line is the "
+            f"{threshold} % threshold.",
+            roots,
+        ),
+        *_engine_table(roots.spice),
         "",
         "## Pages by device and geometry",
         "",
@@ -502,10 +535,12 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     (out / "results").mkdir(parents=True)
     spec = specwindow.load_spec()
     envelope = json.loads((Path(results_root) / specwindow.ENVELOPE_NAME).read_text("utf-8"))
+    roots = rf.Roots(spice=Path(results_root), tcad=Path(TCAD_RESULTS if tcad_root is None
+                                                          else tcad_root))  # fmt: skip
     for device in DEVICES.values():
         for g in device.geometries:
-            _geometry_page(results_root, device, g, spec, envelope, out)
-    _summary_page(results_root, spec, out)
+            _geometry_page(roots, device, g, spec, envelope, out)
+    _summary_page(roots, spec, out)
     generate_tcad(out, TCAD_RESULTS if tcad_root is None else tcad_root, results_root)
     shutil.rmtree(out / "explained", ignore_errors=True)
     explained_figures.write_all(out / "explained")
@@ -522,11 +557,6 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
 
 TCAD_RESULTS = REPO_ROOT / "results" / "tcad"
 CV_DOC = "/comparison/cv-agreement"
-TCAD_COLOR = "#009E73"  # calibrated TCAD
-START_COLOR = "#E69F00"  # TCAD at the start values
-INTRINSIC_COLOR = "#56B4E9"
-PARASITIC_COLOR = "#CC79A7"
-TOL_COLOR = "#555555"
 # The four checks of a geometry, in page order (gf180tcad.calibrate.cv.verdicts).
 CHECKS = (
     ("plateau_acc", "{term}`Accumulation <accumulation>` plateau"),
@@ -541,14 +571,31 @@ _URL_ALIASES = {
         "https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip"
     ),
 }
-_NO_MESH = (
-    "No mesh picture: the 2D meshes (`mesh.msh`) are not committed (git-ignored, "
-    "{ref}`for their size <moscap2d-meshes>`), and this page renders only committed files. A "
-    "{term}`job`'s `cv.meta.json` records the sha256 of its mesh, from which it regenerates "
-    "byte for byte. The design spec asks for mesh pictures here: a recorded "
-    "{ref}`deviation <limitations-spec-deviations>`, "
-    "[issue #39](https://github.com/mithro/gf180-tcad/issues/39)."
-)
+#: The .gitignore pattern that keeps the 2D meshes out of git.
+MESH_IGNORE = "results/**/mesh.msh"
+
+
+def gitignore_line(pattern: str) -> int:
+    """The line number of ``pattern`` in the repository's .gitignore; ValueError if absent."""
+    lines = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+    for n, line in enumerate(lines, start=1):
+        if line.strip() == pattern:
+            return n
+    raise ValueError(f".gitignore has no line {pattern!r}")
+
+
+def _no_mesh(meta_rel: str) -> str:
+    """Why a page has no mesh picture; ``meta_rel`` is the repo path of one committed 2D job's
+    ``cv.meta.json``, the example the text links."""
+    mesh = f"{{repo}}`mesh.msh <.gitignore#L{gitignore_line(MESH_IGNORE)}>`"
+    return (
+        f"No mesh picture: the 2D meshes ({mesh}) are not committed (git-ignored, "
+        "{ref}`for their size <moscap2d-meshes>`), and this page renders only committed files. "
+        "A {term}`job`'s metadata file records the sha256 of its mesh, from which the mesh "
+        f"regenerates byte for byte; one is {{repo}}`{meta_rel}`. The design spec asks for mesh "
+        "pictures here: a recorded {ref}`deviation <limitations-spec-deviations>`, "
+        "[issue #39](https://github.com/mithro/gf180-tcad/issues/39)."
+    )
 
 
 _VERDICT_TERMS = (
@@ -620,152 +667,12 @@ class _Device:
         return job if (job / "cv.meta.json").is_file() else None
 
 
-def _spice_cv(spice_root: Path, device: Device, gid: str) -> list[plots.Curve]:
-    """ngspice corner envelope (band) and TT (line) of the cv sweep, against u."""
-    curves, _ = _curves(spice_root, device, gid, "cv", 1.0, None)
-    return curves
-
-
-def _tcad_total(d: _Device, g: Geometry, which: str):
-    m = d.calibrated if which == "calibrated" else d.start
-    return tcad_cgg(m, g, d.proc, d.device.polarity)
-
-
-_U_LABEL = "u = polarity x Vg (V)"
-_SPICE_KEYS = (
-    plots.Key("ngspice TT", plots.NGSPICE_COLOR),
-    plots.Key("ngspice corner envelope", plots.NGSPICE_COLOR, "band"),
-)
-
-
-def _cgg_svg(spice_root: Path, d: _Device, g: Geometry, rec: dict) -> bytes:
-    gid = geometry_id(g)
-    u, _, _, cal = _tcad_total(d, g, "calibrated")
-    us, _, _, start = _tcad_total(d, g, "start")
-    overlay = plots.Panel(
-        "Cgg-Vg: 1D TCAD against ngspice",
-        _U_LABEL,
-        "Cgg (fF)",
-        [
-            *_spice_cv(spice_root, d.device, gid),
-            plots.Curve(us, start, START_COLOR, dashed=True),
-            plots.Curve(u, cal, TCAD_COLOR),
-        ],
-        keys=[
-            *_SPICE_KEYS,
-            plots.Key("TCAD calibrated", TCAD_COLOR),
-            plots.Key("TCAD start values", START_COLOR, "dashed"),
-        ],
-    )
-    res = rec["residuals"]
-    # each plateau's points, and its own tolerance drawn over its own span
-    curves, tols = [], {}
-    for side in ("acc", "inv"):
-        u = np.array(res[f"plateau_{side}_u"])
-        tol = 100 * rec["verdicts"][f"plateau_{side}"]["tolerance"]
-        tols[side] = tol
-        span = np.array([u.min(), u.max()])
-        curves += [
-            plots.Curve(u, 100 * np.array(res[f"plateau_{side}_rel"]), TCAD_COLOR),
-            plots.Curve(span, np.array([tol, tol]), TOL_COLOR, dashed=True),
-            plots.Curve(span, np.array([-tol, -tol]), TOL_COLOR, dashed=True),
-        ]
-    if tols["acc"] == tols["inv"]:
-        tol_keys = [plots.Key(f"tolerance ±{fmt(tols['acc'])} %", TOL_COLOR, "dashed")]
-    else:
-        tol_keys = [
-            plots.Key(f"tolerance ({side}) ±{fmt(t)} %", TOL_COLOR, "dashed")
-            for side, t in tols.items()
-        ]
-    errors = plots.Panel(
-        "Plateau errors (from the result file)",
-        _U_LABEL,
-        "(TCAD - SPICE) / SPICE (%)",
-        curves,
-        keys=[plots.Key("TCAD calibrated, plateau points", TCAD_COLOR), *tol_keys],
-    )
-    return plots.figure_svg([overlay, errors])
-
-
-def _split_svg(spice_root: Path, d: _Device, g: Geometry) -> bytes:
-    gid = geometry_id(g)
-    u, intrinsic, parasitic, total = _tcad_total(d, g, "calibrated")
-    spice = [c for c in _spice_cv(spice_root, d.device, gid) if c.y2 is None]
-    panel = plots.Panel(
-        "Calibrated 1D TCAD Cgg: intrinsic and parasitic parts",
-        _U_LABEL,
-        "Cgg (fF)",
-        [
-            *spice,
-            plots.Curve(u, total, TCAD_COLOR),
-            plots.Curve(u, intrinsic, INTRINSIC_COLOR),
-            plots.Curve(u, parasitic, PARASITIC_COLOR),
-        ],
-        keys=[
-            plots.Key("ngspice TT", plots.NGSPICE_COLOR),
-            plots.Key("TCAD total", TCAD_COLOR),
-            plots.Key("intrinsic: C per area x LeffCV x WeffCV", INTRINSIC_COLOR),
-            plots.Key("parasitic: overlap, fringe, gate-bulk", PARASITIC_COLOR),
-        ],
-    )
-    return plots.figure_svg([panel])
-
-
-def _two_d_svg(d: _Device, job: Path) -> bytes:
-    cols, _ = io.read_csv(job / "cv.csv")
-    pol = d.device.polarity
-    u2, c2 = u_sorted(cols["vg"], pol, cols["c_per_area"])
-    u1, c1 = u_sorted(d.start.vg, pol, d.start.c_per_area_ff_um2)
-    panel = plots.Panel(
-        "C per area at the start values: 2D cell against the 1D stack",
-        _U_LABEL,
-        "C per area (fF/µm²)",
-        [plots.Curve(u1, c1, START_COLOR, dashed=True), plots.Curve(u2, c2, "#000000")],
-        keys=[
-            plots.Key("2D, with source and drain (start values)", "#000000"),
-            plots.Key("1D stack (start values)", START_COLOR, "dashed"),
-        ],
-    )
-    return plots.figure_svg([panel])
-
-
-def _meshconv_svg(d: _Device, report: dict) -> bytes:
-    pol = d.device.polarity
-    sel = report["selected"]["level"]
-    vals, changes, keys = [], [], []
-    for i, lv in enumerate(report["levels"]):
-        color = plots.FAMILY[i % len(plots.FAMILY)]
-        u, c = u_sorted(report["vg"], pol, lv["c_per_area_ff_um2"])
-        vals.append(plots.Curve(u, c, color, dashed=i != sel))
-        if lv["rel_change"] is not None:
-            u, r = u_sorted(report["vg"], pol, lv["rel_change"])
-            changes.append(plots.Curve(u, np.maximum(np.abs(r), 1e-12), color, dashed=i != sel))
-        mark = ", selected" if i == sel else ""
-        keys.append(
-            plots.Key(f"level {i}: {lv['node_count']} nodes{mark}", color,
-                      "line" if i == sel else "dashed")
-        )  # fmt: skip
-    crit = report["criterion"]
-    span = np.array([-5.0, 5.0])
-    changes.append(plots.Curve(span, np.array([crit, crit]), TOL_COLOR))
-    dim = report["dim"]
-    panels = [
-        plots.Panel(f"{dim}D C per area by mesh level", _U_LABEL, "C per area (fF/µm²)", vals,
-                    keys=keys),
-        plots.Panel(
-            f"{dim}D change against the next finer level", _U_LABEL, "|C / C_finer - 1|",
-            changes, "log",
-            keys=[plots.Key(f"criterion {fmt(crit)}", TOL_COLOR)],
-        ),
-    ]  # fmt: skip
-    return plots.figure_svg(panels)
-
-
 # --- TCAD tables ------------------------------------------------------------------------------
 
 
-def _check_rows(rec: dict) -> list[str]:
-    """The plateau checks and the crossing checks, as two tables of bare values."""
+def _check_rows(rec: dict, overlay: str) -> list[str]:
+    """The plateau checks and the crossing checks, as two tables of bare values; ``overlay`` is
+    the label of the page's C-V figure, whose curves the crossings are on."""
     m, reg, tc = rec["metrics"], rec["spice_regions"], rec["tcad_crossings"]
     if set(rec["verdicts"]) != {key for key, _ in CHECKS}:
         raise ValueError(f"checks {sorted(rec['verdicts'])} are not docgen.CHECKS")
@@ -835,7 +742,10 @@ def _check_rows(rec: dict) -> list[str]:
         "",
         *_table(["Crossing", "ΔV (mV)", f"{tol} (mV)", "Window set by", "Verdict"], crossing),
         "",
-        "The crossing biases of the TCAD and the SPICE curves, and the window of the crossing:",
+        (
+            f"The crossing biases of the TCAD and the SPICE curves of {numref(overlay)}, and the "
+            "window of the crossing:"
+        ),
         "",
         *_table(
             ["Crossing", "TCAD u (V)", "SPICE u (V)", "Window min (V)", "Window max (V)"],
@@ -850,13 +760,23 @@ def _check_rows(rec: dict) -> list[str]:
     ]
 
 
-def _regions_line(rec: dict) -> str:
+def _regions_rows(rec: dict) -> list[str]:
+    """The SPICE regions of one geometry, as the comparison record holds them."""
     r = rec["spice_regions"]
-    return (
-        f"SPICE regions of this geometry (from the result file): u_fb = {fmt(r['u_fb'])} V, "
-        f"u_t = {fmt(r['u_t'])} V, C_acc = {fmt(r['c_acc'])} fF, C_min = {fmt(r['c_min'])} fF "
-        f"at u = {fmt(r['u_min'])} V, C_inv = {fmt(r['c_inv'])} fF, C_mid = {fmt(r['c_mid'])} fF."
-    )
+    rows = [
+        ["u_fb (V)", fmt(r["u_fb"])],
+        ["u_t (V)", fmt(r["u_t"])],
+        ["C_acc (fF)", fmt(r["c_acc"])],
+        ["C_min (fF)", fmt(r["c_min"])],
+        ["u at C_min (V)", fmt(r["u_min"])],
+        ["C_inv (fF)", fmt(r["c_inv"])],
+        ["C_mid (fF)", fmt(r["c_mid"])],
+    ]
+    return [
+        "The SPICE regions of this geometry, from the result file:",
+        "",
+        *_table(["Quantity", "Value"], rows),
+    ]
 
 
 # The 2D status of a geometry whose calibrated 2D cell is committed but which the validation
@@ -878,7 +798,29 @@ def _two_d_status(d: _Device, gid: str) -> str:
     return entry["status"]
 
 
-def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) -> None:
+def tcad_title(name: str, g: Geometry) -> str:
+    """The title of the TCAD page of one geometry."""
+    return f"{name} MOS capacitor, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} µm"
+
+
+def tcad_label(name: str, gid: str, figure: str) -> str:
+    """The figure label of one figure on the TCAD page of a geometry."""
+    return figure_label("tcad", name, gid, figure)
+
+
+def _example_meta(d: _Device, gid: str | None = None) -> str:
+    """The repo path of one committed 2D job's ``cv.meta.json``: of ``gid`` when it has a 2D
+    cell, else of the device's first geometry that has one."""
+    gids = [gid] if gid is not None else []
+    gids += [geometry_id(g) for g in d.device.geometries]
+    for x in gids:
+        for params in rf.TWO_D_PARAMS:
+            if d.two_d(x, params) is not None:
+                return f"results/tcad/moscap2d/{d.device.name}/{params}/{x}/cv.meta.json"
+    raise ValueError(f"{d.device.name}: no committed 2D job")
+
+
+def _tcad_geometry_page(roots: rf.Roots, d: _Device, g: Geometry, out: Path) -> None:
     name, gid = d.device.name, geometry_id(g)
     ddir = out / "tcad" / name
     rec, src = d.comparison(gid)
@@ -889,8 +831,9 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
         if causes
         else ""
     )
+    cgg, split = tcad_label(name, gid, "cgg"), tcad_label(name, gid, "split")
     lines = [
-        f"# {name} MOS capacitor, W/L = {fmt(g.w_um)}/{fmt(g.l_um)} µm",
+        f"# {tcad_title(name, g)}",
         "",
         (
             f"{{term}}`{name}`, {{term}}`geometry <geometry id>` `{gid}`, a {g.role} geometry "
@@ -906,42 +849,64 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
         "## Cgg-Vg overlay",
         "",
         (
-            "Left: the TCAD Cgg of this geometry, the committed 1D C per area "
+            f"The top of {numref(cgg)} draws the TCAD Cgg of this geometry at the calibrated "
+            "and at the start values. It is the committed 1D C per area "
             f"({{repo}}`results/tcad/moscap1d/{name}`) through the fixed {{term}}`BSIM4` "
-            "bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`), at the "
-            "calibrated and at the start values, over the ngspice TT curve and the "
-            "{term}`corner envelope` (min-max over the five {term}`corners <corner>`, at each "
-            "bias), against u = polarity × Vg ({term}`sign-flipped`). Right: the relative "
-            "error at each plateau bias, as recorded in the result file. The plateaus, crossings "
-            "and regions are defined in {ref}`the agreement metric <cv-agreement-metric>`."
+            "bookkeeping ({py:meth}`gf180tcad.tcad.moscap1d.MoscapCV.area_scaled`). Under it are "
+            "the ngspice TT curve and the {term}`corner envelope`, the min-max over the five "
+            "{term}`corners <corner>` at each bias. The axis is u = polarity × Vg "
+            "({term}`sign-flipped`)."
         ),
         "",
-        f"![TCAD and ngspice Cgg against u, and the plateau errors]({gid}_cgg.svg)",
+        (
+            "The bottom draws the relative error at each plateau bias, as recorded in the result "
+            "file. The plateaus, crossings and regions are defined in "
+            "{ref}`the agreement metric <cv-agreement-metric>`."
+        ),
         "",
+        *figure_pair(
+            ddir,
+            f"{gid}_cgg",
+            rf.cgg_figure,
+            (name, gid),
+            cgg,
+            "Two plots: gate capacitance curves against u almost on top of each other in a grey "
+            "band, and below them the plateau errors between dashed tolerance lines.",
+            f"Top: the TCAD and ngspice Cgg of {name} `{gid}` against u. Bottom: the TCAD error "
+            "at each plateau bias, with the tolerance.",
+            roots,
+        ),
         "## Verdicts",
         "",
-        *_check_rows(rec),
+        *_check_rows(rec, cgg),
         "",
-        _regions_line(rec),
+        *_regions_rows(rec),
         "",
         "## Intrinsic and parasitic parts (1D)",
         "",
         (
-            "The calibrated TCAD Cgg split into its intrinsic part, the C per area times the "
-            "BSIM4 capacitance area LeffCV x WeffCV ({term}`DLC`, {term}`DWC`), and its "
-            "parasitic part, the BSIM4 overlap, fringe and {term}`CGBO` terms "
-            "({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`). The parasitic part is fixed "
-            "reference-model bookkeeping, not part of the {term}`parameter budget`."
+            f"{numref(split)} splits the calibrated TCAD Cgg into two parts. The intrinsic part "
+            "is the C per area times the BSIM4 capacitance area LeffCV × WeffCV ({term}`DLC`, "
+            "{term}`DWC`). The parasitic part is the BSIM4 overlap, fringe and {term}`CGBO` "
+            "terms ({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`). The parasitic part is "
+            "fixed reference-model bookkeeping, not part of the {term}`parameter budget`."
         ),
         "",
-        f"![Intrinsic, parasitic and total TCAD Cgg]({gid}_split.svg)",
-        "",
+        *figure_pair(
+            ddir,
+            f"{gid}_split",
+            rf.split_figure,
+            (name, gid),
+            split,
+            "Gate capacitance against u: the TCAD total on the SPICE curve, a dashed intrinsic "
+            "part under it and a low dotted parasitic part.",
+            f"The calibrated TCAD Cgg of {name} `{gid}`, its intrinsic and parasitic parts, and "
+            "the ngspice TT Cgg.",
+            roots,
+        ),
         "## 2D",
         "",
     ]
-    (ddir / f"{gid}_cgg.svg").write_bytes(_cgg_svg(spice_root, d, g, rec))
-    (ddir / f"{gid}_split.svg").write_bytes(_split_svg(spice_root, d, g))
-    job = d.two_d(gid)
     status = _two_d_status(d, gid)
     if status == _TWO_D_PENDING:
         lines += [
@@ -957,18 +922,27 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
     else:
         lines.append(f"Calibrated 2D validation: {status} ({{doc}}`{CV_DOC}`, {_ISSUE_35}).")
     lines.append("")
-    cal_job = d.two_d(gid, "calibrated")
-    if cal_job is not None:
-        cal_meta = _read_json(cal_job / "cv.meta.json")
-        rel = f"results/tcad/moscap2d/{name}/calibrated/{gid}"
+    cells = rf.two_d_cells(roots.tcad, name, gid)
+    two_d = tcad_label(name, gid, "2d")
+    for params in cells:
+        meta = _read_json(d.two_d(gid, params) / "cv.meta.json")
+        rel = f"results/tcad/moscap2d/{name}/{params}/{gid}"
         lines += [
             (
-                f"The committed 2D cell at the calibrated values ({{repo}}`{rel}`): "
-                f"{cal_meta['node_count']} nodes, mesh sha256 `{cal_meta['mesh_sha256']}`."
+                f"The committed 2D cell at the {params} values is {{repo}}`{rel}`: "
+                f"{meta['node_count']} nodes, mesh sha256 `{meta['mesh_sha256']}`."
             ),
             "",
         ]
-    if job is None:
+        if "with_sd" in meta and "mesh_source" in meta:
+            lines += [
+                (
+                    f"Its source and drain are {'included' if meta['with_sd'] else 'left out'}, "
+                    f"and its mesh comes from {{repo}}`{meta['mesh_source']}`."
+                ),
+                "",
+            ]
+    if "start" not in cells:
         lines += [
             (
                 "No 2D result at the start values is committed for this geometry "
@@ -976,25 +950,29 @@ def _tcad_geometry_page(spice_root: Path, d: _Device, g: Geometry, out: Path) ->
             ),
             "",
         ]
-    else:
-        meta = _read_json(job / "cv.meta.json")
-        rel = f"results/tcad/moscap2d/{name}/start/{gid}"
+    if cells:
         lines += [
             (
-                f"The committed 2D cell at the start values ({{repo}}`{rel}`): "
-                f"{meta['node_count']} nodes, source and drain "
-                f"{'included' if meta['with_sd'] else 'left out'}, mesh from "
-                f"{{repo}}`{meta['mesh_source']}`, mesh sha256 `{meta['mesh_sha256']}`. Its C "
-                "per area against the 1D stack at the same start values (both TCAD; the 2D "
-                "C per area divides the per-width Cgg by the drawn L, with no bookkeeping):"
+                f"{numref(two_d)} draws the C per area of each 2D cell against the 1D stack at the "
+                "same values. Both are TCAD; the 2D C per area divides the per-width Cgg by the "
+                "drawn L, with no bookkeeping."
             ),
             "",
-            f"![2D and 1D C per area at the start values]({gid}_2d.svg)",
-            "",
+            *figure_pair(
+                ddir,
+                f"{gid}_2d",
+                rf.two_d_figure,
+                (name, gid),
+                two_d,
+                "C per area against u of the 2D cell and of the 1D stack, close together, with "
+                "the cell's curve a little higher.",
+                f"The C per area of each committed 2D cell of {name} `{gid}`, against the 1D "
+                "stack at the same values.",
+                roots,
+            ),
         ]
-        (ddir / f"{gid}_2d.svg").write_bytes(_two_d_svg(d, job))
-    lines += ["### Mesh picture", "", _NO_MESH, ""]
-    if job is None and cal_job is None:
+    lines += ["### Mesh picture", "", _no_mesh(_example_meta(d, gid)), ""]
+    if not cells:
         lines += ["No 2D result exists for this geometry, so there is no mesh either.", ""]
     (ddir / f"{gid}.md").write_bytes("\n".join(lines).encode("utf-8"))
 
@@ -1027,16 +1005,21 @@ def _param_rows(d: _Device) -> list[str]:
 
 
 def _bookkeeping_rows(d: _Device) -> list[str]:
-    """The bookkeeping values as a table, then their sources as a list below it (a parameter
-    can have several sources, and a cell holds one value)."""
-    rows = []
-    sources = ["", "Sources:", ""]
+    """The bookkeeping values as a table, then where each comes from as a second table, one row
+    per source (a parameter can have several, and a cell holds one value)."""
+    rows, sources = [], []
     for n, p in d.proc.params.items():
         if p.role != "reference-bookkeeping":
             continue
         rows.append([f"`{n}`", num(p.value, 6), unit_text(p.unit), f"`{p.provenance}`"])
-        sources.append(f"- `{n}`: " + "; ".join(_source_text(s) for s in p.source))
-    return _table(["Parameter", "Value", "Unit", "Tag"], rows) + sources
+        sources += [[f"`{n}`", _source_text(s)] for s in p.source]
+    return [
+        *_table(["Parameter", "Value", "Unit", "Tag"], rows),
+        "",
+        "The card line or document each value comes from:",
+        "",
+        *_table(["Parameter", "Source"], sources),
+    ]
 
 
 def _meshconv_rows(report: dict) -> list[str]:
@@ -1169,8 +1152,8 @@ def corner_tables(name: str, summary: dict) -> list[str]:
         ]  # fmt: skip
         lines += [
             (
-                f"Card cross-check of `{n}`: the {{term}}`model card`'s shift of the same quantity at each "
-                "corner, the fit's shift from the typical value, and the fit's minus the card's:"
+                f"Card cross-check of `{n}`. The table gives the {{term}}`model card`'s shift of "
+                "it at each corner, the fit's shift from the typical value, and their difference:"
             ),
             "",
             *_with_note(
@@ -1197,7 +1180,11 @@ def corner_tables(name: str, summary: dict) -> list[str]:
     return lines
 
 
-def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
+#: The page that shades the three regions of the C-V curve, its title and its figure.
+REGIONS_PAGE = ("Accumulation, depletion and inversion", "fig-regions-cv")
+
+
+def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
     from gf180tcad.calibrate.cv import BOUND_HIT_REL
 
     bound_rel = f"{BOUND_HIT_REL:.0e}".replace("e-0", "e-")  # 1e-3, as the prose pages write it
@@ -1206,13 +1193,18 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
     ddir.mkdir(parents=True, exist_ok=True)
     opt = cal["optimiser"]
     cox = cal["cox_check"]
+    g0 = d.device.geometries[0]
+    split = numref(tcad_label(name, geometry_id(g0), "split"), tcad_title(name, g0))
+    meshconv = {dim: figure_label("tcad", name, "meshconv", dim) for dim in ("1d", "2d")}
+    stack = figure_label("tcad", name, "stack")
     lines = [
         f"# {name} MOS capacitor (TCAD)",
         "",
         (
-            f"The {{term}}`TCAD` {{term}}`MOS capacitor <MOSCAP>` of {{term}}`{name}`: the "
-            "{term}`C–V` calibration of its 1D stack against the {term}`SPICE` {term}`Cgg`-Vg, its "
-            "validation at the {term}`held-out geometries <held-out geometry>`, and the "
+            f"The {{term}}`TCAD` {{term}}`MOS capacitor <MOSCAP>` of {{term}}`{name}`. This "
+            "page gives the {term}`C–V` calibration of its 1D stack against the {term}`SPICE` "
+            "{term}`Cgg`-Vg, and its validation at the "
+            "{term}`held-out geometries <held-out geometry>`. It also gives the "
             "{term}`mesh convergence` of the 1D and 2D structures. Generated from "
             f"{{repo}}`results/tcad/calibration/{name}.result.json`, "
             f"{{repo}}`results/tcad/validation/{name}.json`, {{repo}}`results/tcad/meshconv` "
@@ -1226,6 +1218,23 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
             f"geometries (1D): **{val['verdict_1d']}**."
         ),
         "",
+        (
+            f"{numref(stack)} draws the calibrated 1D stack: the gate, the gate oxide and the "
+            "body, with the two layers the fit sets highlighted."
+        ),
+        "",
+        *figure_pair(
+            ddir,
+            "stack",
+            rf.stack_figure,
+            (name,),
+            stack,
+            "Three stacked boxes, gate on top, thin gate oxide, body below, each labelled with "
+            "its material, thickness and doping; the oxide and body shaded.",
+            f"The calibrated 1D stack of {name}; the oxide and the body are the layers the fit "
+            "sets.",
+            roots,
+        ),
         "## Calibrated parameters",
         "",
         (
@@ -1236,29 +1245,31 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
             f"{opt['njev']} Jacobians, final cost {fmt(opt['cost'])}. A value within "
             f"{bound_rel} of a bound, relative to the bound width, is a bound hit "
             "({py:data}`~gf180tcad.calibrate.cv.BOUND_HIT_REL`). The tag is the "
-            "{term}`provenance tag`; the kinds say where the start value and each bound come "
-            "from: the {term}`model card` (card), computed from card values (derived), or a "
-            "project choice, as set out on {ref}`process-data-tunables`."
+            "{term}`provenance tag`. The kinds say where the start value and each bound come "
+            "from ({ref}`process-data-tunables`). A kind is the {term}`model card` (card), "
+            "computed from card values (derived), or a project choice."
         ),
         "",
         *_param_rows(d),
         "",
         (
             f"{{term}}`Cox` check: the oxide's own Cox is {fmt(cox['c_ox_ff_per_um2'])} "
-            f"fF/µm² and the 1D C per area is {fmt(cox['c_per_area_acc_ff_per_um2'])} "
-            f"({{term}}`accumulation`) and {fmt(cox['c_per_area_inv_ff_per_um2'])} fF/µm² ({{term}}`inversion`), "
-            f"against the public spec {_interval(cox['spec']['min'], cox['spec']['max'])} "
-            f"fF/µm² ([{cox['spec']['section']}]({cox['spec']['source_url']})): "
+            f"fF/µm² ({numref(stack)} draws the oxide). The 1D C per area is "
+            f"{fmt(cox['c_per_area_acc_ff_per_um2'])} fF/µm² ({{term}}`accumulation`) and "
+            f"{fmt(cox['c_per_area_inv_ff_per_um2'])} fF/µm² ({{term}}`inversion`). Against the "
+            f"public spec {_interval(cox['spec']['min'], cox['spec']['max'])} fF/µm² "
+            f"([{cox['spec']['section']}]({cox['spec']['source_url']})), the check gives: "
             f"{'inside' if cox['inside'] else 'OUTSIDE'}."
         ),
         "",
         "### Fixed reference bookkeeping",
         "",
         (
-            "Not fitted and not part of the budget: the {term}`BSIM4` values that turn the C per area "
-            "into a Cgg of one geometry ({term}`DLC`, {term}`DWC`, {term}`XL`, {term}`XW`) and "
-            "its parasitic part (overlaps, fringe, {term}`CGBO`). Card lines are in the card "
-            "the process file names; they are linked line by line on {ref}`process-data-card`."
+            "These {term}`BSIM4` values are not fitted and not part of the budget. They turn the "
+            "C per area into a Cgg of one geometry ({term}`DLC`, {term}`DWC`, {term}`XL`, "
+            "{term}`XW`). They also give its parasitic part (overlaps, fringe, {term}`CGBO`). "
+            f"{split} draws the two parts. Card lines are in the card the process file names; "
+            "they are linked line by line on {ref}`process-data-card`."
         ),
         "",
         *_bookkeeping_rows(d),
@@ -1290,7 +1301,10 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         f"Validation reasons for the 2D column are in {{repo}}`results/tcad/validation/{name}.json`.",
         "",
-        "The largest relative error max |ΔCgg|/Cgg in each region:",
+        (
+            "The largest relative error max |ΔCgg|/Cgg in each region; "
+            f"{numref(REGIONS_PAGE[1], REGIONS_PAGE[0])} shades the three regions:"
+        ),
         "",
         *_table(
             ["Geometry", "Accumulation (%)", "Inversion (%)", "{term}`Depletion <depletion>` (%)"],
@@ -1308,20 +1322,34 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
         "",
         (
             "From {repo}`results/tcad/meshconv` ({doc}`/limitations/mesh-convergence`). Each "
-            "level refines every mesh spacing of the previous one ({term}`uniform refinement`); "
-            "the dashed curves are the "
-            "levels not selected."
+            "level refines every mesh spacing of the previous one ({term}`uniform refinement`). "
+            f"In {numref(meshconv['1d'])} and {numref(meshconv['2d'])}, the dashed curves are "
+            "the levels not selected."
         ),
         "",
     ]
     for dim in ("1d", "2d"):
         report = d.meshconv[dim]
-        (ddir / f"meshconv_{dim}.svg").write_bytes(_meshconv_svg(d, report))
         lines += [
             f"### {dim.upper()}",
             "",
-            f"![{dim.upper()} mesh convergence of the C per area](meshconv_{dim}.svg)",
+            (
+                f"{numref(meshconv[dim])} draws the {dim.upper()} C per area at each mesh level, "
+                "and its change against the next finer level."
+            ),
             "",
+            *figure_pair(
+                ddir,
+                f"meshconv_{dim}",
+                rf.meshconv_figure,
+                (name, f"moscap{dim}"),
+                meshconv[dim],
+                "C per area against u at each mesh level, the curves on top of each other, and "
+                "below them each level's change on a log axis under the criterion line.",
+                f"The {dim.upper()} mesh convergence of {name}: the C per area by mesh level "
+                "(top) and the change against the next finer level (bottom).",
+                roots,
+            ),
             *_meshconv_rows(report),
             "",
         ]
@@ -1344,17 +1372,19 @@ def _tcad_device_page(spice_root: Path, d: _Device, out: Path) -> None:
             study = report["settings"]["geometry"]
             lines += [
                 (
-                    f"The 2D study runs at the geometry {{doc}}`{study} <{study}>`, "
-                    "where the 2D C per area exceeds {term}`Cox` by the fringe and the source/drain "
-                    "overlap at the gate edges ({doc}`/limitations/moscap2d`). " + _NO_MESH
+                    f"The 2D study runs at the geometry {{doc}}`{study} <{study}>`. There the 2D "
+                    "C per area exceeds {term}`Cox` by the fringe and the source/drain overlap at "
+                    "the gate edges ({doc}`/limitations/moscap2d`)."
                 ),
+                "",
+                _no_mesh(_example_meta(d, study)),
                 "",
             ]
     lines += ["```{toctree}", ":maxdepth: 1", "", *(geometry_id(g) for g in d.device.geometries)]
     lines += ["```", ""]
     (ddir / "index.md").write_bytes("\n".join(lines).encode("utf-8"))
     for g in d.device.geometries:
-        _tcad_geometry_page(spice_root, d, g, out)
+        _tcad_geometry_page(roots, d, g, out)
 
 
 def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
@@ -1363,8 +1393,8 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
         "",
         (
             "Pages generated at documentation build time from the committed {term}`TCAD` "
-            "results ({repo}`results/tcad`): the {term}`C–V` calibration of the 1D "
-            "{term}`MOS capacitor <MOSCAP>` against the {term}`SPICE` {term}`Cgg`-Vg and its "
+            "results ({repo}`results/tcad`). They give the {term}`C–V` calibration of the 1D "
+            "{term}`MOS capacitor <MOSCAP>` against the {term}`SPICE` {term}`Cgg`-Vg, and its "
             "validation at the {term}`held-out geometries <held-out geometry>` "
             f"({{doc}}`{CV_DOC}`). Every verdict is read from "
             "{repo}`results/tcad/calibration` and {repo}`results/tcad/validation`, which were "
@@ -1431,9 +1461,10 @@ def generate_tcad(out_dir: Path, tcad_root: Path = TCAD_RESULTS, spice_root: Pat
     out = Path(out_dir)
     shutil.rmtree(out / "tcad", ignore_errors=True)
     (out / "tcad").mkdir(parents=True)
+    roots = rf.Roots(spice=Path(spice_root), tcad=Path(tcad_root))
     devices = [_Device(tcad_root, device) for device in DEVICES.values()]
     for d in devices:
-        _tcad_device_page(spice_root, d, out)
+        _tcad_device_page(roots, d, out)
     _tcad_summary_page(devices, out)
 
 
