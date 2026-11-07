@@ -5,7 +5,7 @@
 # (make lint, then the tests except the docs build, the generated pages and the calibration fits),
 # and `make pre-push-docs` (the docs build of tests/test_doc_links.py and the generated pages of
 # tests/test_docgen.py) when a pushed commit
-# changes docs/, src/, results/, README.md or CONTRIBUTING.md. See CONTRIBUTING.md.
+# changes docs/, src/, results/, README.md, CONTRIBUTING.md or one of those tests' own files. See CONTRIBUTING.md.
 set -euo pipefail
 
 zero=0000000000000000000000000000000000000000
@@ -34,6 +34,7 @@ while read -r local_ref local_sha _remote_ref remote_sha; do
   fi
   if [ -z "$base" ] \
     || git diff --name-only "$base" "$local_sha" -- docs src results README.md CONTRIBUTING.md \
+      tests/conftest.py tests/offline_build.py tests/test_docgen.py tests/test_doc_links.py \
       | grep -q .; then
     docs=1
   fi

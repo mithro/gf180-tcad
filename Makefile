@@ -199,7 +199,8 @@ pre-push: lint
 # The docs build (tests/test_doc_links.py: it builds the docs and checks their links) and the
 # generated pages (tests/test_docgen.py: it runs docgen.generate on the committed and on synthetic
 # result trees, issue #165). The hook runs them as well when a pushed commit changes docs/, src/,
-# results/, README.md or CONTRIBUTING.md.
+# results/, README.md, CONTRIBUTING.md or one of the files these tests are made of
+# (tools/git-hooks/pre-push lists them).
 pre-push-docs:
 	mkdir -p $(PRE_PUSH_TMP)
 	uv run --locked pytest -m "not sandbox" -q -rs -p no:cacheprovider \
