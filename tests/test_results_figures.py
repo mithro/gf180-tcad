@@ -381,10 +381,9 @@ def test_drawn_labels_type_no_numbers():
 
 
 @pytest.fixture(scope="module")
-def generated(tmp_path_factory):
-    out = tmp_path_factory.mktemp("generated")
-    docgen.generate(out)
-    return out
+def generated(generated_pages):
+    """The session's generated pages (tests/conftest.py)."""
+    return generated_pages
 
 
 def test_every_generated_svg_is_a_cited_named_twin(generated):

@@ -26,7 +26,6 @@ from doc_style import (
     tables,
     words,
 )
-from optional import importorskip
 
 GLOSSARY = ROOT / "docs" / "glossary.md"
 DOCGEN = ROOT / "src" / "gf180tcad" / "docgen.py"
@@ -48,13 +47,9 @@ def _table_problems(text: str, rel: str) -> list[str]:
 
 
 @pytest.fixture(scope="module")
-def generated(tmp_path_factory) -> Path:
-    importorskip("matplotlib", reason="needs the docs dependency group")
-    from gf180tcad import docgen
-
-    out = tmp_path_factory.mktemp("generated")
-    docgen.generate(out)
-    return out
+def generated(generated_pages) -> Path:
+    """The session's generated pages (tests/conftest.py)."""
+    return generated_pages
 
 
 def test_table_cells():
