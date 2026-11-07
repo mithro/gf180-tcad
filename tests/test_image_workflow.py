@@ -85,8 +85,9 @@ def test_image_docs_name_the_sandbox_environment():
 
 
 def test_every_image_is_built_and_rebuilt():
-    """base, tcad (stable, PyPI releases), tcad-dev (upstream dev HEAD) and charon-libs (Charon
-    and Trilinos from source), in both jobs."""
+    """base, tcad (stable, PyPI releases), tcad-dev (upstream dev HEAD), charon-libs (Charon
+    and Trilinos from source) and charon (tcad-dev plus charon-libs' /opt/charon), in both
+    jobs. Only charon-libs is gated."""
     want = [
         {"image": "base", "name": "ghcr.io/mithro/gf180-tcad-base", "pin": "docker/IMAGE"},
         {"image": "tcad", "name": "ghcr.io/mithro/gf180-tcad-tcad", "pin": "docker/TCAD_IMAGE"},
@@ -101,6 +102,11 @@ def test_every_image_is_built_and_rebuilt():
             "pin": "docker/CHARON_LIBS_IMAGE",
             "timeout": 350,
             "gated": True,
+        },
+        {
+            "image": "charon",
+            "name": "ghcr.io/mithro/gf180-tcad-charon",
+            "pin": "docker/CHARON_IMAGE",
         },
     ]
     jobs = _jobs()

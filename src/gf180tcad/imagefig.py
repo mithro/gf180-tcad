@@ -6,7 +6,9 @@
 joined by arrows. :func:`charon_mpi` draws ``charon_mp.exe`` as one MPI process with its two
 threads inside the container of ``tools/sandbox-run``. :func:`charon_ci` draws the gate, the
 build, the three checks and the published tags of the charon-libs entry of
-``.github/workflows/image.yml``. :func:`write_all` writes every figure of :data:`FIGURES` as
+``.github/workflows/image.yml``. :func:`charon_layers` draws the thin charon image
+(``docker/charon/Dockerfile``): the dev-HEAD TCAD image with its two added layers and its ENV,
+and the charon-libs image and the ``wheels`` stage they come from. :func:`write_all` writes every figure of :data:`FIGURES` as
 ``<name>-light.svg`` and ``<name>-dark.svg`` into ``docs/_generated/reproduce/`` at docs build
 time (:func:`gf180tcad.docgen.generate`). A page embeds both twins, and the theme shows one
 (``docs/_ext/theme_figures.py`` merges them into one numbered figure).
@@ -81,6 +83,19 @@ STYLE = {
         "publish": (0.5, 0.11, 0.88),
     },
     "ci_label_dx": 0.03,
+    # The layer figure: (x0, y0, x1, y1) of each box, as fractions of the drawing. The image's
+    # layers are stacked bottom-up in the container on the right; each source is on the left,
+    # level with the layer it feeds.
+    "layers_size_in": (6.4, 6.4),
+    "layers": {
+        "container": (0.40, 0.02, 0.98, 0.98),
+        "dev": (0.43, 0.05, 0.95, 0.24),
+        "opt": (0.43, 0.29, 0.95, 0.43),
+        "venv": (0.43, 0.48, 0.95, 0.66),
+        "env": (0.43, 0.71, 0.95, 0.85),
+        "libs": (0.02, 0.28, 0.36, 0.44),
+        "wheels": (0.02, 0.50, 0.36, 0.64),
+    },
 }
 
 #: The colours of each twin. Okabe-Ito blue, reddish purple, vermilion, bluish green and yellow
@@ -232,13 +247,17 @@ def _box(ax, key: str, x: float, y: float, w: float, fill: str) -> None:
     ax.text(x, y, "\n".join(BOXES[key]), ha="center", va="center")
 
 
-def _arrow(ax, start: tuple[float, float], end: tuple[float, float], colour: str) -> None:
-    ax.annotate(
+def _arrow(
+    ax, start: tuple[float, float], end: tuple[float, float], colour: str, gid: str | None = None
+) -> None:
+    ann = ax.annotate(
         "",
         xy=end,
         xytext=start,
         arrowprops={"arrowstyle": "-|>", "color": colour, "lw": STYLE["arrow_width"]},
     )
+    if gid is not None:
+        ann.set_gid(gid)
 
 
 def charon_stages(palette: str = "light", fmt: str = "svg") -> bytes:
@@ -362,11 +381,72 @@ def charon_ci(palette: str = "light", fmt: str = "svg") -> bytes:
         return _save(fig, fmt)
 
 
+#: The stages of ``docker/charon/Dockerfile`` that the layer figure names (``FROM ... AS <name>``).
+LAYER_STAGES = ("charon-libs", "wheels")
+
+#: The text of each box of the layer figure (lines).
+LAYER_BOXES = {
+    "container": ("charon image,", "pinned by docker/CHARON_IMAGE"),
+    "dev": ("Dev-HEAD TCAD image,", "docker/TCAD_DEV_IMAGE:", "base + Python 3.13 venv"),
+    "opt": ("Layer 1: /opt/charon,", "copied unchanged"),
+    "venv": (
+        "Layer 2: netCDF4 and cftime",
+        "into the venv, no network;",
+        "every library found (ldd)",
+    ),
+    "env": (
+        "ENV: CHARON_EXECUTABLE_PATH,",
+        "CHARON_EXECUTABLE, PATH,",
+        "OpenMPI singleton setting",
+    ),
+    "libs": ("charon-libs image,", "pinned by", "CHARON_LIBS_IMAGE"),
+    "wheels": ("Stage wheels:", "requirements.lock,", "sha256 checked"),
+}
+
+
+#: The arrows of the layer figure: each side box (source) feeds the layer beside it (target).
+LAYER_ARROWS = (("libs", "opt"), ("wheels", "venv"))
+
+
+def charon_layers_figure(palette: str = "light"):
+    """The layer figure as a matplotlib figure; each box text has the gid ``layers-text-<box>`` and each
+    arrow ``layers-arrow-<source>-<target>``, so a test can read what is drawn."""
+    pal = PALETTES[palette]
+    fill, arrow, b = pal["fill"], pal["arrow"], STYLE["layers"]
+    pad = STYLE["pad"]
+    with matplotlib.rc_context(_rc(palette)):
+        fig = Figure(figsize=STYLE["layers_size_in"])
+        ax = _axes(fig)
+        _rect(ax, b["container"], fill["container"], edge=arrow)
+        x0, _, x1, y1 = b["container"]
+        ax.text((x0 + x1) / 2, y1 - 0.025, "\n".join(LAYER_BOXES["container"]), ha="center",
+                va="top", gid="layers-text-container")  # fmt: skip
+        roles = {"dev": "base", "opt": "stage", "venv": "inputs", "env": "check",
+                 "libs": "stage", "wheels": "inputs"}  # fmt: skip
+        for key, role in roles.items():
+            _rect(ax, b[key], fill[role])
+            x0, y0, x1, y1 = b[key]
+            ax.text((x0 + x1) / 2, (y0 + y1) / 2, "\n".join(LAYER_BOXES[key]), ha="center",
+                    va="center", gid=f"layers-text-{key}")  # fmt: skip
+        for src, dst in LAYER_ARROWS:
+            sy = (b[src][1] + b[src][3]) / 2
+            _arrow(ax, (b[src][2] + pad, sy), (b[dst][0] - pad, sy), arrow,
+                   gid=f"layers-arrow-{src}-{dst}")  # fmt: skip
+    return fig
+
+
+def charon_layers(palette: str = "light", fmt: str = "svg") -> bytes:
+    """The thin charon image: the dev image with two layers and its ENV, and where each comes from."""
+    with matplotlib.rc_context(_rc(palette)):
+        return _save(charon_layers_figure(palette), fmt)
+
+
 #: Every figure of the image page, by file name stem; each is drawn once per palette.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "charon-stages": charon_stages,
     "charon-mpi": charon_mpi,
     "charon-ci": charon_ci,
+    "charon-layers": charon_layers,
 }
 
 
