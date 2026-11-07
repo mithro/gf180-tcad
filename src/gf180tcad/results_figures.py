@@ -366,7 +366,7 @@ def tcad_cgg(tcad_root: pathlib.Path, device: str, gid: str, params: str) -> lis
     return data.tcad_cgg(m, geometry(device, gid), proc, DEVICES[device].polarity)
 
 
-def spice_cv(spice_root: pathlib.Path, device: str, gid: str) -> Sweep:
+def spice_cv_sweep(spice_root: pathlib.Path, device: str, gid: str) -> Sweep:
     """The ngspice ``cv`` sweep of one geometry (:func:`sweep_data`)."""
     return sweep_data(device, gid, "cv", spice_root)
 
@@ -386,7 +386,7 @@ def cgg_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROOTS
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(STYLE["two_in"])
         top, bottom = fig.subplots(2, 1)
-        _draw_sweep(top, spice_cv(roots.spice, device, gid), [pal["text"]], [pal["band"]], 1,
+        _draw_sweep(top, spice_cv_sweep(roots.spice, device, gid), [pal["text"]], [pal["band"]], 1,
                     None, pal)  # fmt: skip
         top.plot(us, start, color=pal["hole"], lw=lw, ls="--", gid="tcad start")
         top.plot(u, cal, color=pal["highlight"], lw=lw, gid="tcad calibrated")
@@ -434,7 +434,7 @@ def split_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROO
     pal = ef.PALETTES[palette]
     lw = STYLE["line_width"]
     u, intrinsic, parasitic, total = tcad_cgg(roots.tcad, device, gid, "calibrated")
-    s = spice_cv(roots.spice, device, gid)
+    s = spice_cv_sweep(roots.spice, device, gid)
     with matplotlib.rc_context(ef._rc(palette)):
         fig = _figure(STYLE["one_in"])
         ax = fig.subplots()
