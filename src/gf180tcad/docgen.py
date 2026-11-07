@@ -418,14 +418,14 @@ def _engine_table(root) -> list[str]:
     return lines[1:]
 
 
+#: The Results page (docs/results/index.md), its title and its C-V figure of both transistors.
+RESULTS_CV = ("Results", "results-cv-figure")
 #: The figure of the summary page: the engine difference of every sweep and geometry.
 ENGINE_LABEL = figure_label("spice", "engine-diff")
 
 
 def _summary_page(roots: rf.Roots, spec: dict, out: Path):
-    first = next(iter(DEVICES.values()))
-    g0 = first.geometries[0]
-    cv_ref = numref(spice_label(first.name, geometry_id(g0), "cv"), spice_title(first, g0))
+    cv_ref = numref(RESULTS_CV[1], RESULTS_CV[0])
     threshold = fmt(100 * ENGINE_DIFF_THRESHOLD)
     floor_pa = fmt(ENGINE_DIFF_FLOOR / PICO)
     lines = [
@@ -438,7 +438,7 @@ def _summary_page(roots: rf.Roots, spec: dict, out: Path):
             "against ({doc}`/comparison/agreement`). The TCAD results are on "
             "{doc}`/_generated/tcad/index`. They are the {term}`C–V` calibration of the "
             "{term}`MOS capacitors <MOSCAP>` against these {term}`Cgg`-Vg curves "
-            f"({{doc}}`/comparison/cv-agreement`). {cv_ref} shows one of the curves."
+            f"({{doc}}`/comparison/cv-agreement`). {cv_ref} shows them."
         ),
         "",
         "## TT against the PDK spec",

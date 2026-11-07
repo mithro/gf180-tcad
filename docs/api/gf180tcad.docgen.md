@@ -28,6 +28,8 @@ Source: {repo}`src/gf180tcad/docgen.py`.
 .. autodata:: gf180tcad.docgen.SPICE_FIGURES
    :no-value:
 
+.. autodata:: gf180tcad.docgen.RESULTS_CV
+
 .. autodata:: gf180tcad.docgen.ENGINE_LABEL
 
 .. autodata:: gf180tcad.docgen.MESH_IGNORE
