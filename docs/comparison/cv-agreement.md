@@ -13,6 +13,28 @@ checked at the {term}`held-out geometries <held-out geometry>`
 ({repo}`plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`).
 The code is {py:mod}`gf180tcad.calibrate.cv`; the results are
 {repo}`results/tcad/calibration` and {repo}`results/tcad/validation`.
+{numref}`cv-fit-figure` shows the fitted curves at the calibration geometries.
+
+```{figure} /_generated/comparison/cv-fit-light.svg
+:name: cv-fit-figure
+:figclass: only-light
+:alt: Six panels of gate capacitance against voltage, nfet left and pfet right; a dashed line on a solid line inside a grey band, closest on the nfet side.
+
+The gate capacitance {term}`Cgg` against u = polarity × Vg at the three calibration geometries.
+The nfet is on the left and the pfet on the right. The solid line is the {term}`SPICE` model at the
+{term}`typical corner <TT>`, inside the grey band of its five {term}`corners <corner>`. The dashed line is the fitted
+1D stack.
+```
+
+```{figure} /_generated/comparison/cv-fit-dark.svg
+:figclass: only-dark
+:alt: Six panels of gate capacitance against voltage, nfet left and pfet right; a dashed line on a solid line inside a grey band, closest on the nfet side.
+
+The gate capacitance {term}`Cgg` against u = polarity × Vg at the three calibration geometries.
+The nfet is on the left and the pfet on the right. The solid line is the {term}`SPICE` model at the
+{term}`typical corner <TT>`, inside the grey band of its five {term}`corners <corner>`. The dashed line is the fitted
+1D stack.
+```
 
 ## In plain language
 
@@ -21,7 +43,8 @@ heavily the silicon under it is doped, and a small offset of the voltage at whic
 turns from {term}`accumulation` to {term}`depletion`. They are adjusted, within limits fixed beforehand, until
 the TCAD gate capacitance matches the {term}`PDK`'s SPICE model at three long, wide-to-short
 gate lengths. Then they are fixed, and the TCAD is compared with SPICE at gate lengths it never
-saw.
+saw. The fitted gate lengths are in {numref}`cv-fit-figure` and the unseen ones in
+{numref}`cv-validation-figure`.
 
 For the nfet the result is good. In 1D the fixed stack agrees with SPICE at every
 geometry, the three it was fitted to and the three it never saw. The 2D check is
@@ -47,6 +70,9 @@ process files.
 - `dv_fb_v`, a lumped flat-band offset of ±0.2 V, applied as a rigid gate-bias shift. It
   absorbs the {term}`Boltzmann statistics` of the degenerate gate, SPICE's empirical {term}`flat band`
   and any interface charge.
+
+The fitted stack of the nfet is
+{numref}`Figure %s of What the calibration changes <fig-calibration-stack>`.
 
 The model is the 1D MOS capacitor ({py:func}`gf180tcad.tcad.moscap1d.simulate`) on its selected
 mesh ({ref}`mesh-convergence`), with {term}`poly depletion` simulated in the poly-gate region at the
@@ -86,6 +112,27 @@ within 1e-3 of a bound, relative to the bound width, is reported as a bound hit.
 
 ## The agreement metric
 
+{numref}`cv-metric-figure` marks the regions on one SPICE curve.
+
+```{figure} /_generated/comparison/cv-metric-light.svg
+:name: cv-metric-figure
+:figclass: only-light
+:alt: Gate capacitance against voltage: shaded plateaus at both ends, dotted lines at u_fb and u_t, a dashed level C_mid crossed by the curve at two marked points.
+
+The {term}`SPICE` Cgg of the nfet W10/L10 at the {term}`typical corner <TT>`, with what the metric reads.
+The shaded spans are the two plateaus, 1 V beyond u_fb and u_t. The dots are the two crossings of
+C_mid, u_dep and u_inv.
+```
+
+```{figure} /_generated/comparison/cv-metric-dark.svg
+:figclass: only-dark
+:alt: Gate capacitance against voltage: shaded plateaus at both ends, dotted lines at u_fb and u_t, a dashed level C_mid crossed by the curve at two marked points.
+
+The {term}`SPICE` Cgg of the nfet W10/L10 at the {term}`typical corner <TT>`, with what the metric reads.
+The shaded spans are the two plateaus, 1 V beyond u_fb and u_t. The dots are the two crossings of
+C_mid, u_dep and u_inv.
+```
+
 All regions are in u = polarity × Vg (u = Vg for the nfet, −Vg for the pfet) and are set by the
 SPICE TT curve of each geometry ({py:func}`~gf180tcad.calibrate.cv.regions`):
 
@@ -114,7 +161,8 @@ SPICE TT curve of each geometry ({py:func}`~gf180tcad.calibrate.cv.regions`):
 The {repo}`design spec, section 5.2 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#52-technical-definition>`
 sets Cgg ≤ 5 % in accumulation, depletion and inversion. Here the depletion-region 5 % is
 replaced by the two ΔV crossings, deliberately. In the transition a relative-C metric measures
-the slope of the curve, not whether TCAD and SPICE agree.
+the slope of the curve, not whether TCAD and SPICE agree. The transition is the steep part
+between u_fb and u_t in {numref}`cv-metric-figure`.
 
 For the nfet W10/L10 at TT,
 SPICE Cgg rises from 81.84 fF at u = 0.5 V to 143.75 fF at 0.7 V, and its slope reaches
@@ -137,7 +185,8 @@ verdict is the worst of its four ({py:func}`~gf180tcad.calibrate.cv.verdicts`).
 
 - A **plateau**'s window, at each plateau bias, is the {term}`combined range` of two intervals.
   One is the five-corner {term}`corner envelope` of Cgg
-  ({py:func}`~gf180tcad.calibrate.cv.envelope_cv`, pure min/max of the committed cv.csv files).
+  ({py:func}`~gf180tcad.calibrate.cv.envelope_cv`, pure min/max of the committed
+  {repo}`cv.csv <results/spice/ngspice/typical/nfet_05v0/w10p0_l10p00/cv.csv>` files).
   The other is the public 6 V {term}`Cox` spec, 1.8 / 2.3 / 2.8 fF/µm². Its source is the
   [GF180MCU PDK electrical specs, 5.3 Gate oxide capacitance](https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_3.html),
   rows "COX (Poly) 6V", entered in {repo}`data/pdk_elec_spec.json`. The spec is mapped to Cgg
@@ -147,6 +196,8 @@ verdict is the worst of its four ({py:func}`~gf180tcad.calibrate.cv.verdicts`).
   The plateau is "Same process" when the TCAD Cgg is inside the window at every plateau bias.
 - A **crossing**'s window is the min–max of that crossing voltage over the five corners at the
   same geometry ({py:func}`~gf180tcad.calibrate.cv.crossing_window`); no spec publishes one.
+
+The corner envelope of Cgg is the grey band of {numref}`cv-fit-figure`.
 
 The Cox spec is per area and has no geometry, so the SPICE {doc}`pdk-spec-check` lists it as
 "TCAD only". The TCAD compares it with the 1D C per area on both plateaus and with the oxide's
@@ -160,7 +211,8 @@ Fitted values, from {repo}`results/tcad/calibration/nfet_05v0.json` and
 {repo}`results/tcad/calibration/pfet_05v0.json`; the full results (residuals, regions,
 windows) are beside them in {repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`
 and {repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json>`. Budget used:
-3 of 8 per device type. No value is within 1e-3 of a bound. The pfet `dv_fb_v`, +187.2 mV,
+3 of 8 per device type. The curves behind the rows below are in {numref}`cv-fit-figure` and
+{numref}`cv-validation-figure`. No value is within 1e-3 of a bound. The pfet `dv_fb_v`, +187.2 mV,
 is the nearest: 13 mV inside the +200 mV bound (93.6 % of the way from 0 to it), not a bound hit by the
 1e-3 rule but close to one.
 
@@ -190,7 +242,8 @@ How the optimiser stopped:
 "Evaluations" is scipy's `nfev`, the residual evaluations of the optimiser's steps. It leaves
 out the finite-difference Jacobians (`njev`: 8 for the nfet and 11 for the pfet, each 3
 evaluations). So the 1D {{ DEVSIM }} sweeps number `nfev` + 3 × `njev`: 15 + 3 × 8 = 39 (nfet)
-and 11 + 3 × 11 = 44 (pfet). The {term}`job`'s `progress.log` counts every one.
+and 11 + 3 × 11 = 44 (pfet). The {term}`job`'s progress log counts every one; the
+command line {py:mod}`gf180tcad.calibrate.__main__` writes it.
 
 The `t_ox_eff_nm` upper bounds are TOXP plus the charge-centroid allowance Δ: 0.95 nm for the
 nfet and 0.79 nm for the pfet, the maximum over both plateaus of the BSIM4 charge-thickness
@@ -293,6 +346,26 @@ as ΔV/50 mV): Lmin (+309 mV) and L = 10 µm (−218 mV), pulling in opposite di
 ## Mismatch analysis (pfet)
 
 {ref}`Mismatch taxonomy <mismatch-taxonomy>` tags: `spice-fit` and `doping`.
+{numref}`cv-pfet-edge-figure` shows the edge moving with gate length.
+
+```{figure} /_generated/comparison/pfet-edge-light.svg
+:name: cv-pfet-edge-figure
+:figclass: only-light
+:alt: Normalised capacitance against voltage for five gate lengths: solid lines fall at voltages that spread with length, dashed lines bunch together.
+
+The pfet's depletion edge at the five W = 10 µm gate lengths, each curve divided by its own value at
+u = −5 V. Solid lines are {term}`SPICE` at the {term}`typical corner <TT>`, with u_dep marked. Dashed lines are the
+fitted 1D stack.
+```
+
+```{figure} /_generated/comparison/pfet-edge-dark.svg
+:figclass: only-dark
+:alt: Normalised capacitance against voltage for five gate lengths: solid lines fall at voltages that spread with length, dashed lines bunch together.
+
+The pfet's depletion edge at the five W = 10 µm gate lengths, each curve divided by its own value at
+u = −5 V. Solid lines are {term}`SPICE` at the {term}`typical corner <TT>`, with u_dep marked. Dashed lines are the
+fitted 1D stack.
+```
 
 - *Plain language.* In the SPICE model the pfet's accumulation-to-depletion edge moves with
   gate length: on the TT curves it is at u_dep = −0.590 V for L = 10 µm, −0.688 V for 2 µm,
@@ -323,7 +396,25 @@ The validation ({py:func}`~gf180tcad.calibrate.cv.validate_cv`) ran after the ca
 committed, on the committed file. It records that file's sha256 and `param_sha256`. This order
 is the evidence that the held-out geometries were not in the fit.
 Results at 1.6/0.7 are tagged in advance with the causes `geometry-2d` and `spice-fit`, and at
-Lmin with `spice-fit`.
+Lmin with `spice-fit`. The 1D curves at the held-out geometries are in
+{numref}`cv-validation-figure`.
+
+```{figure} /_generated/comparison/cv-validation-light.svg
+:name: cv-validation-figure
+:figclass: only-light
+:alt: Six panels of gate capacitance against voltage at the held-out geometries; a dashed line on a solid line inside a grey band in each.
+
+The same curves as {numref}`cv-fit-figure` at the three {term}`held-out geometries <held-out geometry>`, with the
+fitted values of the calibration. None of these geometries was in the fit.
+```
+
+```{figure} /_generated/comparison/cv-validation-dark.svg
+:figclass: only-dark
+:alt: Six panels of gate capacitance against voltage at the held-out geometries; a dashed line on a solid line inside a grey band in each.
+
+The same curves as {numref}`cv-fit-figure` at the three {term}`held-out geometries <held-out geometry>`, with the
+fitted values of the calibration. None of these geometries was in the fit.
+```
 
 - **1D, held-out geometries** (W10/L0.7, W10/L1, W1.6/L0.7): the rows marked "validation" above.
   nfet: {term}`Agree` at all three. pfet: {term}`Agree` at L = 1 µm and {term}`Same process` at
@@ -517,6 +608,10 @@ uv run --locked python -m gf180tcad.calibrate validate --device nfet_05v0 --out 
 
 and the same for `pfet_05v0`. Each `run` is one {term}`sandbox` job of 1 CPU and 2 GiB. A second
 run gives byte-identical files
-({test}`tests/test_calibrate_cv.py::test_calibration_reproduces_the_committed_files`). The result-file schema: `<device>.json` is the
-calibration file of {py:mod}`gf180tcad.tcad.calibration`, unchanged, so that `--params calibrated`
-reads it; everything else is in `<device>.result.json`, which records the first file's sha256.
+({test}`tests/test_calibrate_cv.py::test_calibration_reproduces_the_committed_files`).
+
+Each device has two result files. The calibration file of {py:mod}`gf180tcad.tcad.calibration`,
+such as {repo}`nfet_05v0.json <results/tcad/calibration/nfet_05v0.json>`, is unchanged, so that
+`--params calibrated` reads it. Everything else is in the second file, such as
+{repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`, which records the
+first file's sha256.
