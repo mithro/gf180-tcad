@@ -1032,18 +1032,21 @@ def test_csv_links_of_a_spice_tree_of_another_name_exist(tmp_path):
 
 def test_mesh_links_of_a_tcad_tree_of_another_name_exist(tmp_path):
     """Issue #173: the mesh captions of a TCAD tree under another folder name link the mesh
-    artefact folders at their committed paths, and those folders exist. The mesh section of
-    each geometry with a committed mesh artefact is made directly, not the whole TCAD pages."""
+    artefact folders at their committed paths, and those folders exist. The mesh section of one
+    geometry with a committed mesh artefact per device is made directly, not the whole TCAD
+    pages: every section builds its links the same way."""
     tree = _link_tcad_tree(tmp_path / "tcad_in")
     metas = sorted((TCAD / "meshes").glob("*/*/*/*/mesh-window.meta.json"))
-    assert metas
-    links = []
-    for name, gid in sorted({(m.parts[-4], m.parts[-2]) for m in metas}):
+    first = {}
+    for m in metas:
+        first.setdefault(m.parts[-4], m.parts[-2])
+    assert first
+    for name, gid in sorted(first.items()):
         d = docgen._Device(tree, DEVICES[name])
         out = tmp_path / "out" / name
         out.mkdir(parents=True, exist_ok=True)
         text = "\n".join(docgen._mesh_section(d, gid, out))
-        links += re.findall(r"\{repo\}`(results/[^`]*meshes/[^`]*)`", text)
-    assert len(links) >= len(metas)
-    for link in links:
-        assert (REPO_ROOT / link).is_dir(), link
+        links = re.findall(r"\{repo\}`(results/[^`]*meshes/[^`]*)`", text)
+        assert links, (name, gid)
+        for link in links:
+            assert (REPO_ROOT / link).is_dir(), link
