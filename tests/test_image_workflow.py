@@ -50,7 +50,7 @@ def test_published_tags_are_applied_after_the_checks():
     ):
         assert _step_index(steps, check) < tag, check
     run = steps[tag]["run"]
-    assert steps[tag]["if"] == "env.PUSH == 'true'"
+    assert steps[tag]["if"] == "env.PUSH == 'true' && steps.gate.outputs.run == 'true'"
     for published in ("pr-${{ github.event.pull_request.number }}", ":latest", ":sha-"):
         assert published in run, published
     # retag by digest (the pin), keeping the manifest digest, then verify it
@@ -85,7 +85,8 @@ def test_image_docs_name_the_sandbox_environment():
 
 
 def test_every_image_is_built_and_rebuilt():
-    """base, tcad (stable, PyPI releases) and tcad-dev (upstream dev HEAD), in both jobs."""
+    """base, tcad (stable, PyPI releases), tcad-dev (upstream dev HEAD) and charon-libs (Charon
+    and Trilinos from source), in both jobs."""
     want = [
         {"image": "base", "name": "ghcr.io/mithro/gf180-tcad-base", "pin": "docker/IMAGE"},
         {"image": "tcad", "name": "ghcr.io/mithro/gf180-tcad-tcad", "pin": "docker/TCAD_IMAGE"},
@@ -93,6 +94,13 @@ def test_every_image_is_built_and_rebuilt():
             "image": "tcad-dev",
             "name": "ghcr.io/mithro/gf180-tcad-tcad-dev",
             "pin": "docker/TCAD_DEV_IMAGE",
+        },
+        {
+            "image": "charon-libs",
+            "name": "ghcr.io/mithro/gf180-tcad-charon-libs",
+            "pin": "docker/CHARON_LIBS_IMAGE",
+            "timeout": 350,
+            "gated": True,
         },
     ]
     jobs = _jobs()
@@ -104,3 +112,45 @@ def test_every_image_is_built_and_rebuilt():
         image_dir = REPO_ROOT / "docker" / entry["image"]
         for f in ("build", "Dockerfile", "IMAGE_ID", "probe_versions.py", "versions.json"):
             assert (image_dir / f).is_file(), image_dir / f
+
+
+# --- charon-libs: hours to build, so built only when its inputs change ---------------------------
+
+GATED_INPUTS = "docker/charon-libs docker/IMAGE docker/CHARON_LIBS_IMAGE"
+
+
+def _gate(job: str) -> dict:
+    steps = _jobs()[job]["steps"]
+    return steps[_step_index(steps, "Decide whether this entry runs")]
+
+
+def test_charon_libs_entries_have_the_long_timeout():
+    for job in ("build", "rebuild"):
+        assert _jobs()[job]["timeout-minutes"] == "${{ matrix.timeout || 120 }}", job
+
+
+def test_every_step_after_the_gate_is_gated():
+    """A gated entry that does not run skips every step after the gate (and passes)."""
+    for job in ("build", "rebuild"):
+        steps = _jobs()[job]["steps"]
+        gate = _step_index(steps, "Decide whether this entry runs")
+        assert steps[gate]["id"] == "gate"
+        for s in steps[gate + 1 :]:
+            assert "steps.gate.outputs.run == 'true'" in s.get("if", ""), (job, s.get("name"))
+        # the gate needs the history (diff against the base) and runs after the checkout
+        assert any("actions/checkout" in s.get("uses", "") for s in steps[:gate]), job
+
+
+def test_charon_libs_build_runs_only_when_its_inputs_change():
+    run = _gate("build")["run"]
+    assert GATED_INPUTS in run
+    assert "workflow_dispatch" in run  # a manual dispatch always builds and verifies it
+    assert "schedule" in run  # the weekly schedule leaves it to the rebuild job
+    assert "github.event.pull_request.base.sha" in str(_gate("build").get("env", {}))
+    assert "github.event.before" in str(_gate("build").get("env", {}))
+
+
+def test_charon_libs_rebuild_is_scheduled_only():
+    run = _gate("rebuild")["run"]
+    assert "schedule|workflow_dispatch) run=true" in run
+    assert "matrix.gated" in str(_gate("rebuild").get("env", {}))

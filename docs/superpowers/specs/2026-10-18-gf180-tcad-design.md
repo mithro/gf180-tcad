@@ -662,9 +662,10 @@ command. Such a section carries `<!-- figure-ok: reason -->` instead, with a rea
 or more. `docs_lint.py --rules` prints each one as a NOTE line. The baseline counts them per
 page, so each added opt-out shows in the PR's diff.
 
-Issues #129 to #134 are the work orders for the pages that broke these rules when they came in.
-They cover the explainer pages (#129), comparison (#130), limitations (#131) and reproduce
-(#132). The other two are README with the index pages (#133) and the `docgen` pages (#134).
+The explainer pages meet these rules, with no finding and no opt-out (#129). Issues #130 to
+#134 are the work orders for the other pages that broke them when the rules came in. They cover
+comparison (#130), limitations (#131) and reproduce (#132), README with the index pages (#133)
+and the `docgen` pages (#134).
 They also list the figures that break the form: no `:name:`, no caption, or no `{numref}`.
 
 **What enforces it.** The docs style pass that follows this amendment adds:

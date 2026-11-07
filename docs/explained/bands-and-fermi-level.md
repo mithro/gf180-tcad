@@ -4,10 +4,12 @@
 
 How does a band diagram show where the carriers are? This page answers that for a reader who knows
 basic circuits and has read {doc}`silicon-and-carriers`. It draws the gate and the body each on
-its own, and leaves out what happens where they meet.
+its own, and leaves out what happens where they meet. The gate and the body are the shaded
+layers of {numref}`fig-bands-stack`.
 
 ```{figure} /_generated/explained/bands-stack-light.svg
 :figclass: only-light
+:name: fig-bands-stack
 :alt: Three stacked layers: a shaded gate on top, a thin muted oxide below it and a tall shaded body at the bottom, each labelled with its material, thickness and doping.
 
 The layers of the {term}`nfet_05v0`: the gate and the body shaded, the {term}`gate oxide`
@@ -30,10 +32,11 @@ doping is the {term}`model card`'s value, and the gate and body depths are proje
 
 ## Two bands of energy
 
-An {term}`electron` in a crystal can only have certain energies. The energies that matter here
-fall into two ranges, called bands ({ref}`Sze and Ng, ch. 1 <lit-sze>`). The electrons held in the bonds between atoms
-fill the lower range, the {term}`valence band`. The free electrons that move and carry current
-have energies in the upper range, the {term}`conduction band`.
+An {term}`electron` in a crystal can only have certain energies. The energies that matter here fall
+into two ranges, called bands ({ref}`Sze and Ng, ch. 1 <lit-sze>`). The electrons held in the bonds
+between atoms fill the lower range, the {term}`valence band`. The free electrons that move and carry
+current have energies in the upper range, the {term}`conduction band`. The shaded ranges of
+{numref}`fig-bands-flat` are the two bands.
 
 Between the two lies the {term}`band gap`, where no electron of a perfect crystal can be. Breaking
 a bond lifts an electron across it. The empty place left in the valence band is a {term}`hole`
@@ -50,10 +53,12 @@ zero.
 
 A band diagram draws energy upwards. The lower edge of the conduction band and the upper edge of
 the valence band are two lines, with the gap between them. Free electrons sit above the
-upper line, and holes below the lower one.
+upper line, and holes below the lower one. The diagrams of {numref}`fig-bands-flat` draw the
+bands of the gate and the body this way.
 
 ```{figure} /_generated/explained/bands-flat-light.svg
 :figclass: only-light
+:name: fig-bands-flat
 :alt: Two band diagrams side by side, the n-type gate and the p-type body, each with a shaded band on top and at the bottom; the dashed level is high in the gate and low in the body.
 
 The bands of the nfet's gate and body, each on its own. The band edges come from the band gap, a
@@ -80,22 +85,31 @@ close to that middle, the intrinsic level $E_i$ ({ref}`Sze and Ng, ch. 1 <lit-sz
 ## The Fermi level
 
 The Fermi level is the energy at which a place for an electron is filled half of the time
-({ref}`Sze and Ng, ch. 1 <lit-sze>`). Its height in the diagram shows which carrier dominates.
+({ref}`Sze and Ng, ch. 1 <lit-sze>`). Its height in {numref}`fig-bands-flat`, the dashed line,
+shows which carrier dominates.
 The nearer it lies to the conduction band, the more free electrons there are. The nearer it lies
 to the valence band, the more holes there are.
 
 {term}`Donors <donor>` raise it, and {term}`acceptors <acceptor>` lower it. The simulations
 link it to the carrier densities with {term}`Boltzmann statistics`. That approximation holds while
 the Fermi level stays several times a carrier's heat energy away from the band edges
-({ref}`Sze and Ng, ch. 1 <lit-sze>`). Under it, the electron density $n$ sets the Fermi level's
-height above the middle of the gap.
+({ref}`Sze and Ng, ch. 1 <lit-sze>`). Under it, the electron density sets the Fermi level's
+height above the middle of the gap, as {math:numref}`eq-bands-fermi` gives.
 
 $$
 E_F - E_i = q \, V_t \, \ln \frac{n}{n_i}
-$$
+$$ (eq-bands-fermi)
 
-Here $n_i$ is the {term}`intrinsic carrier density` and $q$ the elementary charge, the size of one electron's charge. With the
-thermal voltage $V_t$, the product $q V_t$ is the heat energy each carrier has. In eV, $q V_t$ is the same
+where
+
+- $E_F$ is the Fermi level, in J;
+- $E_i$ is the intrinsic level, the middle of the gap, in J;
+- $q$ is the elementary charge, the size of one electron's charge, in C;
+- $V_t$ is the thermal voltage, in V;
+- $n$ is the electron density, in cm⁻³;
+- $n_i$ is the {term}`intrinsic carrier density`, in cm⁻³.
+
+The product $q V_t$ is the heat energy each carrier has. In eV, $q V_t$ is the same
 number as $V_t$ in volts. The simulations of this repo use $V_t$ = {{ x_vt_tcad }}
 ({repo}`per_area.meta.json <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`).
 
@@ -110,8 +124,8 @@ an idealised example from the calibrated body doping.
 ## Where this repo's results differ
 
 The conduction band edge lies half the band gap above the middle. In the gate the formula puts the
-Fermi level above that edge, as the diagram shows. There the Fermi level lies past the band
-edge, where Boltzmann statistics fail ({ref}`Sze and Ng, ch. 1 <lit-sze>`).
+Fermi level above that edge, as {numref}`fig-bands-flat` shows. There the Fermi level lies past the
+band edge, where Boltzmann statistics fail ({ref}`Sze and Ng, ch. 1 <lit-sze>`).
 
 The {term}`TCAD` still counts the gate's carriers with Boltzmann statistics. The size of that
 error, and the calibration parameter that absorbs it, are on {doc}`/limitations/index`, in its
@@ -121,6 +135,7 @@ The band gap of the diagrams is the reference value at 300 K<!-- number-ok: cite
 The simulations run at {{ x_t_tcad }} and read the intrinsic carrier density, not a band gap
 ({py:class}`gf180tcad.tcad.process.Constants`).
 
-The diagrams show each layer alone. Where the gate, the oxide and the body meet, the bands bend
+The diagrams of {numref}`fig-bands-flat` show each layer alone. Where the gate, the oxide and the
+body meet, the bands bend
 ({ref}`Sze and Ng, ch. 4 <lit-sze>`). This repo's {term}`MOS capacitor <MOSCAP>` simulations
 compute that bending as the gate voltage changes ({py:mod}`gf180tcad.tcad.moscap1d`).

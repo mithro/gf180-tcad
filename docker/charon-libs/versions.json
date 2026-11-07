@@ -1,0 +1,130 @@
+{
+  "base": {
+    "base_image": "hpretl/iic-osic-tools@sha256:306585de35d198e70ea58950f77147c86f56c698726a19afea9f1c83009557be",
+    "design_ngspice_sha256": "7e222f050318388f37543a64fbd0be55cc15e4b93f57501a09f7c159c4c9e561",
+    "devsim": "2.11.0",
+    "gdsfactory": "9.51.0",
+    "gf180mcu_variant": "gf180mcuD",
+    "klayout": "0.30.12",
+    "klayout_python": "0.30.12",
+    "ngspice": "47",
+    "open_pdks_commit": "1689ac3f2dc763876eaf967227c7dfe831b031ae",
+    "pdk_root": "/foss/pdks",
+    "python": "3.12.3",
+    "sm141064_ngspice_sha256": "69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8",
+    "sm141064_xyce_sha256": "d3fba5094b1d5e841938b7eeb15645990caa166a47014dbac765639ad45821bb",
+    "xyce": "7.10-opensource",
+    "xyce_parallel": "mpi-capable, run single-process"
+  },
+  "base_image_ref": "ghcr.io/mithro/gf180-tcad-base@sha256:aedc07956fa71f33094decf80828a13e75ace36cb2426f720b0817aa9aca99b6",
+  "charon_build": {
+    "build_type": "RELEASE",
+    "charon": {
+      "sha256": "2743f39fb14166091f1e38581f9d85379a7db178b4b2d4ce5c8411fdec727073",
+      "version": "2.2.0"
+    },
+    "opts": {
+      "opts/gf180.opts": "43c6e981b868df60d69e326a782b68b86c53dac81eb544969bb658dbaaf7eb27",
+      "scripts/build/all/General.opts": "db8065236c7c8e63c00b1b93f713b3700c97576083b237dd1dd740363d4c7a69",
+      "scripts/build/all/Linux.opts": "03255ebb2562e907a5e409a2d98e8b5177287cfd4be2edd2484428af26a466be"
+    },
+    "patches": {
+      "0001-codata2018-constants.patch": "4db08335b29b6579c63e6e0911b9c719baff7cd8cc2934fb5307cbe9a55a2c49",
+      "0002-kokkos-include-cstdint.patch": "e1a43dead24a7a3bd5bba95158b26720dd6504a9556cb8a3136e46a55927ecb5",
+      "0003-exodus-netcdf-szip-macro.patch": "260524b91fd5fef839cfe0d73484379af583b3fd40c2e370f9a0a1bfb24ef064",
+      "0004-teuchos-include-cstdint.patch": "44eca7dacb11c525ef6ef6cbd6208e8cdad7a09c986562439eb632c83f009293",
+      "0005-interpreter-copy-without-rsync.patch": "65d56a8beef6d36973d39cf2031bc83e8ddad9cef2c537bc0d22b4a481135476",
+      "0006-interpreter-sorted-listings.patch": "284cec017822fe0e898017531ff3d4ec6d0cdb061870602881e9d7a5023fc268"
+    },
+    "probe": {
+      "result": "passed",
+      "tests": [
+        "Charon_charon_mp.hb.loca-moscap-cv.ox",
+        "Charon_charon_mp.hb.loca-moscap-cv.sub",
+        "Charon_charon_mp_pmoscap.nlp",
+        "Charon_charon_mp_pndiode.nlp"
+      ]
+    },
+    "tribits": {
+      "commit": "769f615fafbaac66be8caa47d2916b1e9b078f5d",
+      "sha256": "9b9280adc1f44d1e33860a05a85c60fea2ebf4fed0ab93d5ac89d7bb08328941"
+    },
+    "trilinos": {
+      "commit": "81e9581a3c5f701d41e6828d0f0e5affcef5373a",
+      "sha256": "0f14d8a88ff8720b685f616d4bb54cb35f52d1089eb883ff2462633d95db44f1"
+    }
+  },
+  "charon_mp_sha256": "5bb55200c9bc83e4f125be73d5a3f7773a996ac2a483c087019d2ec237465149",
+  "compilers": [
+    "GCC: (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+  ],
+  "kokkos_backends": [
+    "Serial"
+  ],
+  "runtime_packages": {
+    "libboost-program-options1.83.0": "1.83.0-2.1ubuntu3.2",
+    "libboost-system1.83.0": "1.83.0-2.1ubuntu3.2",
+    "libhdf5-103-1t64": "1.10.10+repack-3.1ubuntu4",
+    "liblapack3": "3.12.0-3build1.1",
+    "libnetcdf19t64": "1:4.9.2-5ubuntu4",
+    "libopenblas0-pthread": "0.3.26+ds-1ubuntu0.1",
+    "libopenmpi3t64": "4.1.6-7ubuntu2",
+    "openmpi-bin": "4.1.6-7ubuntu2"
+  },
+  "sources": {
+    "Dockerfile": {
+      "sha256": "ea200fdb86139b76481f8e1ea1afe1855a288ad422129416573a77f68e673fd9"
+    },
+    "TriBITS-769f615fafbaac66be8caa47d2916b1e9b078f5d.tar.gz": {
+      "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/charon-20261102/TriBITS-769f615fafbaac66be8caa47d2916b1e9b078f5d.tar.gz",
+      "sha256": "9b9280adc1f44d1e33860a05a85c60fea2ebf4fed0ab93d5ac89d7bb08328941",
+      "url": "https://codeload.github.com/TriBITSPub/TriBITS/tar.gz/769f615fafbaac66be8caa47d2916b1e9b078f5d"
+    },
+    "Trilinos-81e9581a3c5f701d41e6828d0f0e5affcef5373a.tar.gz": {
+      "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/charon-20261102/Trilinos-81e9581a3c5f701d41e6828d0f0e5affcef5373a.tar.gz",
+      "sha256": "0f14d8a88ff8720b685f616d4bb54cb35f52d1089eb883ff2462633d95db44f1",
+      "url": "https://codeload.github.com/trilinos/Trilinos/tar.gz/81e9581a3c5f701d41e6828d0f0e5affcef5373a"
+    },
+    "build": {
+      "sha256": "9e5490196aa87e11e84bb1652364cc5e0577d79b3b63feff9606cff84a2be04a"
+    },
+    "build-charon.sh": {
+      "sha256": "8584e83ee29c8ccf2097b0b5f76cf57ac89a3c7f66f6dbd63b96c0ebb59ce207"
+    },
+    "charon-distrib-v2_2.tar.gz": {
+      "mirror_url": "https://github.com/mithro/gf180-tcad/releases/download/gf180-tcad/inputs/charon-20261102/charon-distrib-v2_2.tar.gz",
+      "sha256": "2743f39fb14166091f1e38581f9d85379a7db178b4b2d4ce5c8411fdec727073",
+      "url": "https://www.sandia.gov/app/uploads/sites/106/2022/06/charon-distrib-v2_2.tar.gz"
+    },
+    "fetch_sources.py": {
+      "sha256": "62d243059cc2ccba248e128f43a322f212b1e7631d693a6b6bd403e1154a5fa7"
+    },
+    "inputs.py": {
+      "sha256": "38833efe8da36fcabd3026020feaedb26ce9ee0743f824345f00e6992e7f4ea6"
+    },
+    "opts/gf180.opts": {
+      "sha256": "43c6e981b868df60d69e326a782b68b86c53dac81eb544969bb658dbaaf7eb27"
+    },
+    "patches/0001-codata2018-constants.patch": {
+      "sha256": "4db08335b29b6579c63e6e0911b9c719baff7cd8cc2934fb5307cbe9a55a2c49"
+    },
+    "patches/0002-kokkos-include-cstdint.patch": {
+      "sha256": "e1a43dead24a7a3bd5bba95158b26720dd6504a9556cb8a3136e46a55927ecb5"
+    },
+    "patches/0003-exodus-netcdf-szip-macro.patch": {
+      "sha256": "260524b91fd5fef839cfe0d73484379af583b3fd40c2e370f9a0a1bfb24ef064"
+    },
+    "patches/0004-teuchos-include-cstdint.patch": {
+      "sha256": "44eca7dacb11c525ef6ef6cbd6208e8cdad7a09c986562439eb632c83f009293"
+    },
+    "patches/0005-interpreter-copy-without-rsync.patch": {
+      "sha256": "65d56a8beef6d36973d39cf2031bc83e8ddad9cef2c537bc0d22b4a481135476"
+    },
+    "patches/0006-interpreter-sorted-listings.patch": {
+      "sha256": "284cec017822fe0e898017531ff3d4ec6d0cdb061870602881e9d7a5023fc268"
+    },
+    "upstream.json": {
+      "sha256": "2db01762a0cee00e8347fa6d803d49e04c230dc68ecaf5582758425a221fb5eb"
+    }
+  }
+}
