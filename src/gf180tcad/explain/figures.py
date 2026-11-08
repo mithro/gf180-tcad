@@ -259,8 +259,8 @@ def palette_rc(palette: str) -> dict:
 
 
 def svg_bytes(fig) -> bytes:
-    """``fig``, a matplotlib figure, as SVG bytes, saved with the fixed metadata of :data:`gf180tcad.plots.METADATA`
-    so the same figure always gives the same bytes."""
+    """``fig``, a matplotlib figure, as SVG bytes, saved with the fixed metadata of
+    :data:`gf180tcad.plots.METADATA` so the same figure always gives the same bytes."""
     buf = BytesIO()
     fig.savefig(buf, format="svg", metadata=plots.METADATA)
     return buf.getvalue()
