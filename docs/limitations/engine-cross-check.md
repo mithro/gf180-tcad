@@ -25,20 +25,24 @@ threshold in {numref}`engine-diff-figure`.
 ```{figure} /_generated/limitations/engine-diff-light.svg
 :name: engine-diff-figure
 :figclass: only-light
-:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the circles and squares sit above a dashed threshold line; every pfet marker sits below it.
+:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the filled circles and squares sit above a dashed threshold line, and hollow markers for the same sweeps sit below it; every pfet marker sits below it.
 
 The {term}`engine_diff` of each {term}`typical corner` sweep, nfet above and pfet below, from the
 committed {{ ngspice }} and {{ Xyce }} files ({repo}`results/spice`). The dashed line is the 0.5 %
-threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry.
+threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry. The hollow
+nfet markers are the same sweeps with the card's `version` forced to 4.6, from
+{repo}`data/spice/engine-forced-bsim46.json`; all of them lie below it.
 ```
 
 ```{figure} /_generated/limitations/engine-diff-dark.svg
 :figclass: only-dark
-:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the circles and squares sit above a dashed threshold line; every pfet marker sits below it.
+:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the filled circles and squares sit above a dashed threshold line, and hollow markers for the same sweeps sit below it; every pfet marker sits below it.
 
 The {term}`engine_diff` of each {term}`typical corner` sweep, nfet above and pfet below, from the
 committed {{ ngspice }} and {{ Xyce }} files ({repo}`results/spice`). The dashed line is the 0.5 %
-threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry.
+threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry. The hollow
+nfet markers are the same sweeps with the card's `version` forced to 4.6, from
+{repo}`data/spice/engine-forced-bsim46.json`; all of them lie below it.
 ```
 
 (engine-cause)=
@@ -129,9 +133,10 @@ With ngspice forced to 4.6, every nfet geometry agrees: `idvg_lin` 3.9e-5 to
 
 The {term}`sandbox` test
 {test}`tests/spice/test_xyce.py::test_engines_agree_with_ngspice_forced_to_bsim4_4p6` guards
-this explanation against regressions. It runs each of the twelve expected-failure cases on a
-patched scratch copy of the {doc}`image's </reproduce/image>` ngspice library. The copy is written inside the sandbox, so the
-repository stays read-only. It differs from the PDK library in two ways:
+this explanation against regressions. It runs every nfet geometry and sweep on a patched
+scratch copy of the {doc}`image's </reproduce/image>` ngspice library, using
+{py:mod}`gf180tcad.engine46`. The copy is written inside the sandbox, so the repository stays
+read-only. It differs from the PDK library in two ways:
 
 - The nfet card's `version=4.5` becomes `4.6`.
 - The library's nested `.lib 'sm141064.spice'` lines
@@ -139,14 +144,17 @@ repository stays read-only. It differs from the PDK library in two ways:
   in the {{ gf180mcu_models }}) point at the copy itself.
 
 The test passes the copy to the runner as an explicit input in a
-subdirectory of the working directory. It asserts three things:
+subdirectory of the working directory. For each case it asserts these things:
 
-- Stock ngspice against Xyce exceeds 0.005, which is the expected failure.
-- Stock against patched ngspice exceeds 0.005, so the patch took effect.
+- Its three engine differences equal those of the record
+  {repo}`data/spice/engine-forced-bsim46.json`, made in the pinned image.
+- For an expected-failure case, stock ngspice against Xyce exceeds 0.005, and stock against
+  patched ngspice exceeds 0.005, so the patch took effect.
 - Patched ngspice against Xyce stays below 0.005.
 
-The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6.
-The stock values are the nfet markers of {numref}`engine-diff-figure`.
+The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6,
+from the record. The stock values are the filled nfet markers of {numref}`engine-diff-figure`,
+and the values at 4.6 its hollow ones.
 
 The `idvg_lin` sweep:
 
