@@ -126,7 +126,7 @@ def _diagram(rows: float, palette: str, row_in: float | None = None):
     pal = imagefig.PALETTES[palette]
     row_in = row_in or STYLE["row_in"]
     height = row_in * rows + 2 * STYLE["pad_in"]
-    with matplotlib.rc_context(imagefig._rc(palette)):
+    with matplotlib.rc_context(imagefig.palette_rc(palette)):
         fig = Figure(figsize=(STYLE["width_in"], height))
         FigureCanvasAgg(fig)
         fig.set_facecolor(pal["background"])
@@ -480,7 +480,7 @@ def cache_tree_figure(palette: str):
     lines = cache_tree()
     pal = imagefig.PALETTES[palette]
     height = STYLE["tree_line_in"] * len(lines) + 2 * STYLE["pad_in"]
-    with matplotlib.rc_context(imagefig._rc(palette)):
+    with matplotlib.rc_context(imagefig.palette_rc(palette)):
         fig = Figure(figsize=(STYLE["width_in"], height))
         FigureCanvasAgg(fig)
         ax = fig.add_axes((0, 0, 1, 1))

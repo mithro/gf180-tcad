@@ -206,7 +206,10 @@ def text_pairs(palette: str) -> list[tuple[str, str]]:
     return [(pal["text"], f) for f in (*pal["fill"].values(), pal["background"])]
 
 
-def _rc(palette: str) -> dict:
+def palette_rc(palette: str) -> dict:
+    """The matplotlib rc settings of one palette of ``PALETTES``: the shared SVG settings
+    of :data:`gf180tcad.plots.RC` with this module's text size and that palette's background
+    and text colours. The image page's figures and the reproduce figures draw with them."""
     pal = PALETTES[palette]
     return {
         **plots.RC,
@@ -264,7 +267,7 @@ def charon_stages(palette: str = "light", fmt: str = "svg") -> bytes:
     """The stage diagram in ``palette`` as SVG bytes (``fmt="png"`` for a raster preview)."""
     pal = PALETTES[palette]
     fill, arrow = pal["fill"], pal["arrow"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"])
         ax = _axes(fig)
         mx, mw, sx, sw = STYLE["main_x"], STYLE["main_w"], STYLE["side_x"], STYLE["side_w"]
@@ -305,7 +308,7 @@ def charon_mpi(palette: str = "light", fmt: str = "svg") -> bytes:
     """``charon_mp.exe`` in the sandbox: one process, two threads, its files under ``/tmp``."""
     pal = PALETTES[palette]
     fill, arrow, b = pal["fill"], pal["arrow"], STYLE["mpi"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["mpi_size_in"])
         ax = _axes(fig)
         _rect(ax, b["container"], fill["container"], edge=arrow)
@@ -355,7 +358,7 @@ def charon_ci(palette: str = "light", fmt: str = "svg") -> bytes:
     """The charon-libs entry of build-push: the gate, the build, three checks in turn, the tags."""
     pal = PALETTES[palette]
     arrow = pal["arrow"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["ci_size_in"])
         ax = _axes(fig)
         _ci_box(ax, "trigger", CI_BOXES["trigger"], "inputs", pal)
@@ -414,7 +417,7 @@ def charon_layers_figure(palette: str = "light"):
     pal = PALETTES[palette]
     fill, arrow, b = pal["fill"], pal["arrow"], STYLE["layers"]
     pad = STYLE["pad"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["layers_size_in"])
         ax = _axes(fig)
         _rect(ax, b["container"], fill["container"], edge=arrow)
@@ -437,7 +440,7 @@ def charon_layers_figure(palette: str = "light"):
 
 def charon_layers(palette: str = "light", fmt: str = "svg") -> bytes:
     """The thin charon image: the dev image with two layers and its ENV, and where each comes from."""
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         return _save(charon_layers_figure(palette), fmt)
 
 
