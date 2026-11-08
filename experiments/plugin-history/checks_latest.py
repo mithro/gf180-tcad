@@ -32,6 +32,8 @@ def solve(mesh_scale: float, workdir: Path) -> dict:
     each step, equilibrium (0) first, then the fork's ramp."""
     from gplugins.devsim.tests import test_mesh
 
+    if not Path(test_mesh.__file__).is_relative_to(GPLUGINS_ROOT):
+        raise RuntimeError(f"gplugins is not the submodule: {test_mesh.__file__}")
     out = test_mesh._solve(workdir, mesh_scale, v080_topology=False)
     out["bias_v"] = [0.0, *test_mesh.PN_VOLTAGES]
     return out

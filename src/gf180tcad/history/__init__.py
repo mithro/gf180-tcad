@@ -224,20 +224,6 @@ def run(version: str, out_dir: Path, mesh_scale: float = 1.0, workdir: Path | No
     return path
 
 
-def pinned_commit() -> str:
-    """The gplugins commit the superproject pins (its gitlink), which must be the submodule's
-    checked-out HEAD: the latest-stack record runs the submodule's source."""
-    res = subprocess.run(
-        ["git", "-C", str(sandbox.REPO_ROOT), "ls-tree", "HEAD", "third_party/gplugins"],
-        capture_output=True, check=True, text=True,
-    )  # fmt: skip
-    pin = res.stdout.split()[2]
-    head = _git("rev-parse", "HEAD").stdout.decode().strip()
-    if head != pin:
-        raise RuntimeError(f"third_party/gplugins is at {head}, the pin is {pin}")
-    return pin
-
-
 def latest_command(mesh_scale: float) -> list[str]:
     """The latest-stack driver in the stable TCAD image's venv (network off)."""
     script = (
@@ -259,8 +245,11 @@ def latest_command(mesh_scale: float) -> list[str]:
 
 def run_latest(out_dir: Path, mesh_scale: float = 1.0, workdir: Path | None = None) -> Path:
     """Write the latest-stack record into ``out_dir``; returns its path. See the module
-    docstring."""
-    commit = pinned_commit()
+    docstring. The submodule must be clean and at the superproject's pin
+    (:func:`gf180tcad.tcad.gplugins_commit`), because the sandbox runs its working tree."""
+    from gf180tcad.tcad import gplugins_commit
+
+    commit = gplugins_commit()
     image = _TCAD_IMAGE_FILE.read_text(encoding="utf-8").splitlines()[0].strip()
     own = workdir is None
     wd = Path(tempfile.mkdtemp(prefix="gf180tcad-history-")) if own else Path(workdir)

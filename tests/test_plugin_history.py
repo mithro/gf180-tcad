@@ -392,7 +392,9 @@ def test_committed_latest_pn_slab(scale, name):
     falls by exactly each applied bias step, and the anode - cathode potential with it."""
     data = _load(name)
     assert data["gplugins_tag"] == history.LATEST and data["mesh_scale"] == scale
-    assert data["gplugins_commit"] == history.pinned_commit()
+    from gf180tcad.tcad import gplugins_commit
+
+    assert data["gplugins_commit"] == gplugins_commit()
     assert data["image"] == (REPO / "docker" / "TCAD_IMAGE").read_text("utf-8").splitlines()[0]
     assert data["network"] == "none"
     slab = data["pn_slab"]
@@ -444,3 +446,19 @@ def test_doc_as_ported_rows_are_the_latest_record():
                 assert abs(value) < float(text.split()[-1]), (v, text, value)
             else:
                 assert text == f"{value:.4g}", (v, text, value)
+
+
+def test_latest_refuses_an_unpinned_or_dirty_submodule(monkeypatch, tmp_path):
+    """Review of #180: run_latest takes the commit from gf180tcad.tcad.gplugins_commit, which
+    refuses a dirty submodule or one off the pin, before anything runs in the sandbox."""
+    from gf180tcad import tcad
+
+    def refuse(*a, **k):
+        raise tcad.ProvenanceError("third_party/gplugins has local changes")
+
+    ran = []
+    monkeypatch.setattr(tcad, "gplugins_commit", refuse)
+    monkeypatch.setattr(history, "_sandbox", lambda *a, **k: ran.append(a))
+    with pytest.raises(tcad.ProvenanceError, match="local changes"):
+        history.run_latest(tmp_path / "out", workdir=tmp_path / "wd")
+    assert not ran
