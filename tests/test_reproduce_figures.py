@@ -40,6 +40,7 @@ SRC = REPO_ROOT / "src" / "gf180tcad" / "reproduce_figures.py"
 # Every figure (test_figures_listed_here_are_all_the_figures holds the list complete).
 FIGURES = [
     "image-forks",
+    "meshwell-square",
     "results-images",
     "reproduce-targets",
     "reference-jobs",
@@ -438,6 +439,46 @@ def check_forks(fig):
     assert_box_arrows(fig, edges)
 
 
+def check_meshwell_square(fig):
+    """Each panel draws its image's mesh from data/images/meshwell-square.json: every triangle's
+    edges, every point at its place with its number, and the image's gmsh version. The two
+    images mesh the same square: the same points and triangles, numbered differently."""
+    record = json.loads((REPO_ROOT / "data" / "images" / "meshwell-square.json").read_text("utf-8"))
+    names = {"stable": "stable image", "dev": "dev-HEAD image"}
+    assert set(record) == set(names)
+    assert len(fig.axes) == len(names)
+    want = {}
+    for ax, (key, name) in zip(fig.axes, names.items(), strict=True):
+        mesh = record[key]
+        pts = mesh["points"]
+        assert (
+            record[key]["image"]
+            == (REPO_ROOT / "docker" / ("TCAD_IMAGE" if key == "stable" else "TCAD_DEV_IMAGE"))
+            .read_text("utf-8")
+            .strip()
+        )
+        assert ax.get_title() == f"{name}, gmsh {mesh['gmsh']}"
+        lines = {ln.get_gid(): ln for ln in ax.get_lines()}
+        assert set(lines) == {f"{key} triangle {i}" for i in range(len(mesh["triangles"]))}
+        for i, tri in enumerate(mesh["triangles"]):
+            loop = [*tri, tri[0]]
+            ln = lines[f"{key} triangle {i}"]
+            assert np.array_equal(ln.get_xdata(), [pts[j][0] for j in loop]), (key, i)
+            assert np.array_equal(ln.get_ydata(), [pts[j][1] for j in loop]), (key, i)
+        for t in ax.texts:
+            i = int(t.get_gid().removeprefix(f"{key} point "))
+            assert tuple(t.get_position()) == tuple(pts[i]), (key, i)
+        want |= {f"{key} point {i}": f"{i}" for i in range(len(pts))}
+    assert_texts(fig, want)
+
+    def triangles(mesh):
+        p = mesh["points"]
+        return sorted(sorted(tuple(p[j]) for j in tri) for tri in mesh["triangles"])
+
+    assert triangles(record["stable"]) == triangles(record["dev"])
+    assert record["stable"]["triangles"] != record["dev"]["triangles"]
+
+
 def check_results_images(fig):
     from gf180tcad.tcad import RESULTS_IMAGE
 
@@ -456,6 +497,7 @@ def check_results_images(fig):
 
 CHECKS = {
     "image-forks": check_forks,
+    "meshwell-square": check_meshwell_square,
     "results-images": check_results_images,
     "reproduce-targets": check_reproduce_targets,
     "reference-jobs": check_reference_jobs,
@@ -648,7 +690,7 @@ def test_the_data_figures_have_data_artists():
 
 # --- colours ------------------------------------------------------------------------------------
 
-_PLOTS = ("reference-jobs", "render-exaggeration", "render-band-offsets")
+_PLOTS = ("reference-jobs", "render-exaggeration", "render-band-offsets", "meshwell-square")
 _DIAGRAMS = [n for n in FIGURES if n not in _PLOTS]
 
 
