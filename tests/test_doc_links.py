@@ -1264,9 +1264,10 @@ def numref_findings(pages: dict[str, str]) -> list[str]:
 
 
 def test_site_figures_are_numbered_as_figure_n(built_html):
-    """numfig is on and numfig_format is "Figure %s" in docs/conf.py: every numbered figure of
-    the built site reads "Figure N", and every {numref} citation names it the same way, with the
-    other page's title when it cites a figure on another page."""
+    """numfig is on and numfig_format is "Figure %s" and "Table %s" in docs/conf.py: every
+    numbered figure of the built site reads "Figure N" and every numbered table "Table N", and
+    every {numref} citation names a figure the same way, with the other page's title when it
+    cites a figure on another page."""
     captions, pages = [], {}
     for page in _html_pages(built_html):
         html = page.read_text(encoding="utf-8")
@@ -1274,8 +1275,8 @@ def test_site_figures_are_numbered_as_figure_n(built_html):
         pages[page.relative_to(built_html).as_posix()] = html
     assert captions, "no numbered figure in the built site: is numfig on in docs/conf.py?"
     assert any(_NUMREF.search(html) for html in pages.values()), "no {numref} in the built site"
-    bad = [c for c in captions if not re.fullmatch(r"Figure \d+\s*", c)]
-    assert not bad, f"figure numbers not in the form 'Figure N': {sorted(set(bad))}"
+    bad = [c for c in captions if not re.fullmatch(r"(Figure|Table) \d+\s*", c)]
+    assert not bad, f"numbers not in the form 'Figure N' or 'Table N': {sorted(set(bad))}"
     bad = numref_findings(pages)
     assert not bad, "\n".join(bad)
 
@@ -1316,3 +1317,88 @@ def test_positive_control_numref_titles():
     ):
         bad = {**ok, "explained/x.html": head.format("X", _numref_html(href, text))}
         assert numref_findings(bad), (href, text)
+
+
+def test_every_id_is_on_one_element(built_html):
+    """Issue #150: no built page carries an id twice. Furo copies a labelled equation's or a
+    named table's ids onto its scroll wrapper; docs/_ext/wrapper_ids.py removes them from the
+    wrapper."""
+    dupes = {}
+    for page in _html_pages(built_html):
+        ids = re.findall(r'\sid="([^"]+)"', page.read_text(encoding="utf-8"))
+        twice = sorted({i for i in ids if ids.count(i) > 1})
+        if twice:
+            dupes[str(page.relative_to(built_html))] = twice
+    assert not dupes, dupes
+    # each equation keeps its own id, so an equation link lands on the equation; its wrapper
+    # is still there, without the id
+    calibration = (built_html / "explained" / "calibration.html").read_text(encoding="utf-8")
+    assert re.search(
+        r'class="math notranslate nohighlight" id="equation-eq-calibration-', calibration
+    )
+    assert re.search(r'<div class="math-wrapper[^"]*">', calibration)
+
+
+_WRAPPED = """# t
+
+```{table} A named table
+:name: tbl-named
+
+| a | b |
+|---|---|
+| 1 | 2 |
+```
+
+$$
+x = 1
+$$ (eq-named)
+
+See {numref}`tbl-named` and {eq}`eq-named`.
+"""
+
+
+def _wrapped_ids(tmp_path: Path, extensions: list[str]) -> list[str]:
+    """The ids of a one-page Furo build with a named table and a labelled equation."""
+    importorskip("sphinx")
+    importorskip("furo")
+    src = tmp_path / "src"
+    src.mkdir(parents=True)
+    (src / "conf.py").write_text(
+        f"import sys\nsys.path.insert(0, {str(DOCS / '_ext')!r})\n"
+        f"extensions = {['myst_parser', *extensions]!r}\n"
+        "myst_enable_extensions = ['dollarmath', 'amsmath']\nnumfig = True\n"
+        "html_theme = 'furo'\n",
+        encoding="utf-8",
+    )
+    (src / "index.md").write_text(_WRAPPED, "utf-8")
+    out = tmp_path / "o"
+    r = subprocess.run(
+        [sys.executable, "-m", "sphinx", "-W", "-q", "-b", "html", str(src), str(out)],
+        capture_output=True, text=True, check=False, timeout=300,
+    )  # fmt: skip
+    assert r.returncode == 0, r.stdout + r.stderr
+    return re.findall(r'\sid="([^"]+)"', (out / "index.html").read_text(encoding="utf-8"))
+
+
+def test_wrapper_ids_on_a_table_and_an_equation(tmp_path):
+    """Review of #183: with docs/_ext/wrapper_ids.py a named table's and a labelled equation's
+    ids are each on one element; without it Furo puts both on two (the positive control)."""
+    with_ext = _wrapped_ids(tmp_path / "with", ["wrapper_ids"])
+    without = _wrapped_ids(tmp_path / "without", [])
+    for target in ("tbl-named", "equation-eq-named"):
+        assert without.count(target) == 2, (target, without)
+        assert with_ext.count(target) == 1, (target, with_ext)
+
+
+def test_no_backtick_fence_title_holds_a_backtick():
+    """Issue #184: a directive fenced with backticks cannot hold a backtick in its title (the
+    info string), or MyST does not read the directive. Such a directive is fenced with tildes."""
+    bad = []
+    for page in sorted(DOCS.rglob("*.md")):
+        if {"_generated", "superpowers"} & set(page.relative_to(DOCS).parts):
+            continue
+        for n, line in enumerate(page.read_text(encoding="utf-8").splitlines(), start=1):
+            m = re.match(r"^(`{3,})\{[\w-]+\}(.*)$", line)
+            if m and "`" in m.group(2):
+                bad.append(f"{page.relative_to(DOCS)}:{n}")
+    assert not bad, bad
