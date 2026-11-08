@@ -36,9 +36,10 @@ make manifest
 fresh workdir, install included, the runs take about:
 - 76 s for v0.8.0;
 - 85 s for v0.8.0 at mesh × 0.5;
-- 34 s for v1.4.2;
-- 69 s for the two latest-stack records together, measured as the sandbox test
-  `test_latest_reproduces` rebuilds them.
+- 34 s for v1.4.2.
+
+The two latest-stack records take 69 s together, measured as the sandbox test
+`test_latest_reproduces` rebuilds them.
 
 `--workdir DIR` keeps the scratch directory and its download caches. The default is a new
 temporary directory, which is removed on success. The sandbox refuses a workdir inside the repo,
