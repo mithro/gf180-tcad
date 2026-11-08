@@ -4,18 +4,20 @@
 ``docs/limitations/engine-cross-check.md`` explains why ngspice and Xyce differ for the nfet:
 the PDK's nfet card declares BSIM4 ``version=4.5``, which ngspice evaluates as BSIM4 4.5 and
 Xyce, whose oldest BSIM4 is 4.6.1, as 4.6.1. This module reruns each nfet geometry and sweep
-with a patched copy of the image's ngspice library whose nfet card says ``version=4.6``, and
-records the :func:`gf180tcad.spice.xyce.engine_diff` of stock ngspice, of the patched ngspice
-and of the two ngspice runs, each against the other engine, in :data:`RECORD`.
+with a patched copy of the image's ngspice library whose nfet card says ``version=4.6``. It
+records three :func:`gf180tcad.spice.xyce.engine_diff` values per case in
+:data:`~gf180tcad.engine46.RECORD`: stock ngspice against Xyce, patched ngspice against Xyce,
+and stock against patched ngspice.
 
-:data:`PATCH_SCRIPT` writes the patched copy inside the sandbox, so the repository stays
-read-only. The copy differs from the PDK library in two ways: the nfet card's ``version=4.5``
-becomes ``4.6``, and the library's nested ``.lib 'sm141064.spice'`` lines point at the copy.
+:data:`~gf180tcad.engine46.PATCH_SCRIPT` writes the patched copy inside the sandbox, so the
+repository stays read-only. The copy differs from the PDK library in two ways: the nfet card's
+``version=4.5`` becomes ``4.6``, and the library's nested ``.lib 'sm141064.spice'`` lines point
+at the copy.
 
-``python -m gf180tcad.engine46 record`` writes :data:`RECORD`; it runs 54 small simulations
-in the sandbox, one at a time. ``tests/spice/test_xyce.py`` re-derives every case in the
-image and compares it with the record. No generator imports this module, so it is outside
-every hashed closure.
+``python -m gf180tcad.engine46 record`` writes :data:`~gf180tcad.engine46.RECORD`; it runs three
+small simulations per case in the sandbox, one at a time. ``tests/spice/test_xyce.py``
+re-derives every case in the image and compares it with the record. No generator imports this
+module, so it is outside every hashed closure.
 """
 
 from __future__ import annotations
@@ -35,7 +37,7 @@ from gf180tcad.spice.netlist import bias_plan, ngspice_netlist
 from gf180tcad.spice.ngspice import run_ngspice, simulate
 from gf180tcad.spice.xyce import engine_diff, simulate_xyce
 
-#: The record :func:`record` writes and ``tests/spice/test_xyce.py`` checks.
+#: The record :func:`~gf180tcad.engine46.record` writes and ``tests/spice/test_xyce.py`` checks.
 RECORD = REPO_ROOT / "data" / "spice" / "engine-forced-bsim46.json"
 #: The device whose card declares ``version=4.5`` (the pfet card declares 4.6).
 DEVICE = DEVICES["nfet_05v0"]
@@ -93,10 +95,10 @@ def image_pdk(scratch: Path) -> PdkInfo:
 
 
 def check_patch(info: dict) -> None:
-    """ValueError unless :data:`PATCH_SCRIPT` changed what it should: both nfet_06v0 bins'
-    ``version`` lines, every nested path, and no path back to the PDK's file; and unless each
-    nested target is byte-identical to the file the netlist names, so the stock run evaluates
-    the same text whichever copy ngspice resolves."""
+    """ValueError unless :data:`~gf180tcad.engine46.PATCH_SCRIPT` changed what it should: both
+    nfet_06v0 bins' ``version`` lines, every nested path, and no path back to the PDK's file;
+    and unless each nested target is byte-identical to the file the netlist names, so the stock
+    run evaluates the same text whichever copy ngspice resolves."""
     problems = []
     if info["version"] != 2:  # the two nfet_06v0 bins: L 0.6-0.7 and 0.7-50 um
         problems.append(f"version lines changed: {info['version']}")
@@ -114,7 +116,7 @@ def check_patch(info: dict) -> None:
 
 def patch_lib(scratch: Path) -> tuple[Path, dict]:
     """``(path of the patched copy, what the patch changed)``, written in the sandbox under
-    ``scratch`` and checked (:func:`check_patch`)."""
+    ``scratch`` and checked (:func:`~gf180tcad.engine46.check_patch`)."""
     res = sandbox.run(["python3", "-c", PATCH_SCRIPT], out_dir=scratch)
     info = json.loads(res.stdout.splitlines()[-1])
     check_patch(info)
@@ -143,7 +145,8 @@ def case(g: Geometry, sweep_name: str, pdk: PdkInfo, lib: Path, scratch: Path) -
 
 
 def record(path: Path = RECORD) -> dict:
-    """Run every geometry and sweep of :data:`DEVICE` and write the record to ``path``."""
+    """Run every geometry and sweep of :data:`~gf180tcad.engine46.DEVICE` and write the record
+    to ``path``."""
     root = Path.home() / ".cache" / "gf180-tcad"
     root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=root) as tmp:
