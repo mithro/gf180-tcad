@@ -14,8 +14,9 @@ fetch-state  Download that file from the latest completed scheduled run (none is
 numbers Check through the GitHub API that each issue and pull request number the docs link to
         exists (Sphinx ignores those links because github.com answers them with HTTP 429, #87).
 urls    Fetch each https link of the Markdown files given, README.md and CONTRIBUTING.md in the
-        workflow, which Sphinx does not build (issue #136). Links into the published docs are checked offline against docs/ by
-        tests/test_doc_links.py, and links matching docs/conf.py's ``linkcheck_ignore`` are skipped.
+        workflow, which Sphinx does not build (issue #136). Links into the published docs are
+        checked offline against docs/ by tests/test_doc_links.py, and links matching
+        docs/conf.py's ``linkcheck_ignore`` are skipped.
         A broken link fails; a timeout is a ``::warning::`` and, on a scheduled run, counts in the
         same state file as ``report``'s, so a link that times out in ``--threshold`` runs in a row
         fails.
