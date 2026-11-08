@@ -1316,3 +1316,23 @@ def test_positive_control_numref_titles():
     ):
         bad = {**ok, "explained/x.html": head.format("X", _numref_html(href, text))}
         assert numref_findings(bad), (href, text)
+
+
+def test_every_id_is_on_one_element(built_html):
+    """Issue #150: no built page carries an id twice. Furo copies a labelled equation's or a
+    named table's ids onto its scroll wrapper; docs/_ext/wrapper_ids.py removes them from the
+    wrapper."""
+    dupes = {}
+    for page in _html_pages(built_html):
+        ids = re.findall(r'\sid="([^"]+)"', page.read_text(encoding="utf-8"))
+        twice = sorted({i for i in ids if ids.count(i) > 1})
+        if twice:
+            dupes[str(page.relative_to(built_html))] = twice
+    assert not dupes, dupes
+    # each equation keeps its own id, so an equation link lands on the equation; its wrapper
+    # is still there, without the id
+    calibration = (built_html / "explained" / "calibration.html").read_text(encoding="utf-8")
+    assert re.search(
+        r'class="math notranslate nohighlight" id="equation-eq-calibration-', calibration
+    )
+    assert re.search(r'<div class="math-wrapper[^"]*">', calibration)
