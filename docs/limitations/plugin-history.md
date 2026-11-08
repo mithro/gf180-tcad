@@ -331,8 +331,8 @@ records. Every record is listed in the {term}`manifest`.
 **No record is part of the check on another computer (a {{ GitHub_hosted_runner }})**
 ({ref}`cross-host-determinism`). The 2023 stack has {{ numpy }} 1.26 with its own
 {term}`SIMD dispatch` and no guarantee of the same bytes on another computer. The latest-stack
-records use the stable TCAD image, but the TCAD cross-check, {repo}`tools/crosscheck-tcad-run`,
-runs only the jobs of {repo}`results/tcad`
+records use the {term}`stable TCAD image`, but the TCAD cross-check, {repo}`tools/crosscheck-tcad-run`,
+runs only the {term}`jobs <job>` of {repo}`results/tcad`
 ([issue #181](https://github.com/mithro/gf180-tcad/issues/181)).
 
 (plugin-history-latest)=
