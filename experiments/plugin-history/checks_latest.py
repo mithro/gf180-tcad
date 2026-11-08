@@ -8,8 +8,8 @@ solve, ``_solve`` of ``gplugins/devsim/tests/test_mesh.py``, with the ported top
 meshwell interface, the rib-slab one included, is a DEVSIM interface. That solve builds the same
 PN slab as the v0.8.0 record (``straight_pn(length=10)`` trimmed, the same contacts,
 ``resolutions`` times ``--mesh-scale``), solves it at equilibrium and ramps the cathode to 0.1
-and 0.2 V. It records the anode − cathode contact potential, the contact currents and the
-junction probe at each step.
+and 0.2 V. It records the cathode voltage, the anode − cathode contact potential, the
+contact currents and the junction probe at each step.
 
 Usage: ``python checks_latest.py --mesh-scale R --out RAW.json``.
 """
@@ -28,10 +28,13 @@ GPLUGINS_ROOT = Path("/work/src/third_party/gplugins")
 
 
 def solve(mesh_scale: float, workdir: Path) -> dict:
-    """The fork's PN-slab solve with the ported topology."""
+    """The fork's PN-slab solve with the ported topology, and ``bias_v``: the cathode voltage of
+    each step, equilibrium (0) first, then the fork's ramp."""
     from gplugins.devsim.tests import test_mesh
 
-    return test_mesh._solve(workdir, mesh_scale, v080_topology=False)
+    out = test_mesh._solve(workdir, mesh_scale, v080_topology=False)
+    out["bias_v"] = [0.0, *test_mesh.PN_VOLTAGES]
+    return out
 
 
 def main(argv=None) -> int:

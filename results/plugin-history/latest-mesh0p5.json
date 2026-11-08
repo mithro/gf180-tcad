@@ -45,6 +45,11 @@
         }
       }
     ],
+    "bias_v": [
+      0.0,
+      0.1,
+      0.2
+    ],
     "bottom_spacing_um": 0.010000000000001119,
     "contacts": [
       "anode",

@@ -400,7 +400,8 @@ def test_committed_latest_pn_slab(scale, name):
     eq, *ramp = [slab["equilibrium"], *slab["bias"]]
     from checks_v080 import PN_VOLTAGES  # the same cathode ramp as the v0.8.0 record
 
-    biases = [0.0, *PN_VOLTAGES]
+    biases = slab["bias_v"]
+    assert biases == [0.0, *PN_VOLTAGES]
     assert len(ramp) == len(biases) - 1
     for v, step in zip(biases, [eq, *ramp], strict=True):
         assert step["junction"]["drop_v"] == pytest.approx(eq["junction"]["drop_v"] - v, abs=1e-6)
