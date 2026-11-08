@@ -36,17 +36,22 @@ make manifest
 fresh workdir, install included, the runs take about:
 - 76 s for v0.8.0;
 - 85 s for v0.8.0 at mesh × 0.5;
-- 34 s for v1.4.2.
+- 34 s for v1.4.2;
+- 69 s for the two latest-stack records together, measured as the sandbox test
+  `test_latest_reproduces` rebuilds them.
 
 `--workdir DIR` keeps the scratch directory and its download caches. The default is a new
 temporary directory, which is removed on success. The sandbox refuses a workdir inside the repo,
 its git directories or `$HOME`.
 
-The steps are in the docstring of
-[`src/gf180tcad/history/__init__.py`](../../src/gf180tcad/history/__init__.py):
+The v0.8.0 and v1.4.2 records take three steps, which the docstring of
+[`src/gf180tcad/history/__init__.py`](../../src/gf180tcad/history/__init__.py) describes:
 1. sources from [`git archive`](https://git-scm.com/docs/git-archive) of the tag;
 2. an install step with network;
 3. a check run with no network and the `PDK` environment variable unset.
+
+The latest-stack record takes only the check run: the image's venv already holds the stack, and
+gplugins comes from the submodule.
 
 The v0.8.0 and v1.4.2 records run in the base image ([`docker/IMAGE`](../../docker/IMAGE)).
 The latest-stack record runs in the stable TCAD image
