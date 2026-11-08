@@ -170,23 +170,27 @@ DEVSIM's own mesh, so the two lines lie on each other.
 ```{figure} /_generated/limitations/pn-slab-light.svg
 :name: plugin-history-pn-figure
 :figclass: only-light
-:alt: Top: a falling line of contact potential and a flat line of junction drop against cathode bias, with a dotted falling line below the flat one. Bottom: bars of each region's potential range at three biases; the slab bars move up with the bias, the rib bars stay put.
+:alt: Top: a falling line of contact potential and a flat line of junction drop against cathode bias, with a grey falling line of the latest stack's drop below the flat one. Bottom: bars of each region's potential range at three biases; the slab bars move up with the bias, the rib bars stay put.
 
 The PN slab of the two v0.8.0 records ({repo}`results/plugin-history`) against the cathode bias.
 Top: the anode − cathode contact potential (circles) and the junction drop (squares), solid at full
-mesh and dashed at half mesh, which lie on each other. The dotted line is the drop if the bias
-reached the junction. Bottom: the Potential range of the rib and of the slab at each step, hatched
+mesh and dashed at half mesh, which lie on each other. The grey triangles are the junction drop
+of the latest-stack records, whose rib is connected ({repo}`results/plugin-history/latest.json`,
+{repo}`results/plugin-history/latest-mesh0p5.json`): dotted at full mesh, dash-dotted at half mesh,
+on each other. Bottom: the Potential range of the rib and of the slab at each step, hatched
 at half mesh.
 ```
 
 ```{figure} /_generated/limitations/pn-slab-dark.svg
 :figclass: only-dark
-:alt: Top: a falling line of contact potential and a flat line of junction drop against cathode bias, with a dotted falling line below the flat one. Bottom: bars of each region's potential range at three biases; the slab bars move up with the bias, the rib bars stay put.
+:alt: Top: a falling line of contact potential and a flat line of junction drop against cathode bias, with a grey falling line of the latest stack's drop below the flat one. Bottom: bars of each region's potential range at three biases; the slab bars move up with the bias, the rib bars stay put.
 
 The PN slab of the two v0.8.0 records ({repo}`results/plugin-history`) against the cathode bias.
 Top: the anode − cathode contact potential (circles) and the junction drop (squares), solid at full
-mesh and dashed at half mesh, which lie on each other. The dotted line is the drop if the bias
-reached the junction. Bottom: the Potential range of the rib and of the slab at each step, hatched
+mesh and dashed at half mesh, which lie on each other. The grey triangles are the junction drop
+of the latest-stack records, whose rib is connected ({repo}`results/plugin-history/latest.json`,
+{repo}`results/plugin-history/latest-mesh0p5.json`): dotted at full mesh, dash-dotted at half mesh,
+on each other. Bottom: the Potential range of the rib and of the slab at each step, hatched
 at half mesh.
 ```
 
@@ -354,13 +358,17 @@ The file links in this section stay at the commits they name.
 
 **Where the numbers come from.** Every latest-stack value in this section is one that the
 linked fork tests assert or record. They ran in the fork's own continuous integration (CI), in the TCAD image, at the
-pinned `400f842`. Their values are quoted here from those runs. This repository does not
-measure them:
-- its own tests check only that the submodule is pinned on the fork's main and that
+pinned `400f842`. Their values are quoted here from those runs. This repository measures
+only the PN slab's "as ported" values itself:
+- Its own tests check that the submodule is pinned on the fork's main
+  ({test}`tests/test_submodule.py::test_submodule_pinned_on_fork_main`). They also check that
   `import gplugins` resolves to the submodule in the TCAD image
-  ({test}`tests/test_submodule.py::test_submodule_pinned_on_fork_main`,
-  {test}`tests/test_submodule.py::test_plugin_imports_from_submodule`);
-- its sandbox rebuild ({ref}`plugin-history-reproducibility`) recomputes only the v0.8.0 side,
+  ({test}`tests/test_submodule.py::test_plugin_imports_from_submodule`).
+- `python -m gf180tcad.history --version latest` solves the PN slab with the fork at the
+  submodule pin, in the {term}`stable TCAD image`, at full and half mesh. It writes
+  {repo}`results/plugin-history/latest.json` and {repo}`results/plugin-history/latest-mesh0p5.json`,
+  which {test}`tests/test_plugin_history.py::test_latest_reproduces` reruns in the sandbox.
+- Its sandbox rebuild ({ref}`plugin-history-reproducibility`) recomputes the v0.8.0 side,
   {repo}`results/plugin-history/v0.8.0.json` and {repo}`results/plugin-history/v0.8.0-mesh0p5.json`.
 
 | Fork PR | Merge commit |
@@ -524,7 +532,8 @@ the same mesh both ways on the latest stack (mesh × 1):
 
 The cathode voltage steps through 0, 0.1 and 0.2 V; with `core___slab90` left out, the values
 are the same at every step. "v0.8.0 topology" leaves `core___slab90` out of DEVSIM; "as ported"
-uses every interface. The potentials:
+uses every interface. The "as ported" rows are also those of
+{repo}`results/plugin-history/latest.json`, solved at the submodule pin. The potentials:
 
 | Device | V_cathode (V) | Junction drop (V) | Rib/slab jump (V) |
 |---|---|---|---|
