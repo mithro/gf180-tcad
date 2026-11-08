@@ -2772,7 +2772,7 @@ def _drawn_figures(monkeypatch) -> dict[str, object]:
     caught = {}
     for name, draw in figures.FIGURES.items():
         monkeypatch.setattr(
-            figures, "_svg", lambda fig, name=name: caught.setdefault(name, fig) and b""
+            figures, "svg_bytes", lambda fig, name=name: caught.setdefault(name, fig) and b""
         )
         draw("light")
     return caught

@@ -35,7 +35,7 @@ NO_NETWORK = textwrap.dedent(
 def build(out: Path) -> Path:
     """``sphinx-build -W -b html`` of docs/ into ``out/html`` with the network blocked; the
     build's output goes to ``out/build.log``. Returns the HTML folder; AssertionError with the
-    log's tail if the build fails."""
+    build's warning and error lines and the log's tail if the build fails."""
     (out / "sitecustomize.py").write_text(NO_NETWORK, encoding="utf-8")
     env = {**os.environ, "PYTHONPATH": str(out)}
     html = out / "html"
@@ -46,5 +46,7 @@ def build(out: Path) -> Path:
              str(DOCS), str(html)],
             check=False, env=env, stdout=f, stderr=subprocess.STDOUT, timeout=900,
         )  # fmt: skip
-    assert r.returncode == 0, log.read_text(encoding="utf-8")[-3000:]
+    text = log.read_text(encoding="utf-8")
+    warnings = [line for line in text.splitlines() if "WARNING" in line or "ERROR" in line]
+    assert r.returncode == 0, "\n".join(warnings[:20]) + "\n" + text[-1500:]
     return html

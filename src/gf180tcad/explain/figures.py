@@ -236,7 +236,10 @@ _MINORITY = {"donor": "hole", "acceptor": "electron"}
 _PART_LABEL = {"gate": "gate", "oxide": "oxide", "body": "body"}
 
 
-def _rc(palette: str) -> dict:
+def palette_rc(palette: str) -> dict:
+    """The matplotlib rc settings of one palette of :data:`PALETTES` (``"light"`` or
+    ``"dark"``): the shared SVG settings of :data:`gf180tcad.plots.RC` with that palette's
+    background, text and grid colours. Every figure module of the docs draws with them."""
     pal = PALETTES[palette]
     return {
         **plots.RC,
@@ -255,7 +258,9 @@ def _rc(palette: str) -> dict:
     }
 
 
-def _svg(fig: Figure) -> bytes:
+def svg_bytes(fig) -> bytes:
+    """``fig``, a matplotlib figure, as SVG bytes, saved with the fixed metadata of
+    :data:`gf180tcad.plots.METADATA` so the same figure always gives the same bytes."""
     buf = BytesIO()
     fig.savefig(buf, format="svg", metadata=plots.METADATA)
     return buf.getvalue()
@@ -292,7 +297,7 @@ def doping_profile(dev: model.Device, highlight: str, palette: str) -> bytes:
         lines.append((a, b, minority, _MINORITY[layer.dopant], True))
     lo = min(d for *_, d, _c, _s in lines) / STYLE["headroom"]
     hi = max(d for *_, d, _c, _s in lines) * STYLE["headroom"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -333,7 +338,7 @@ def doping_profile(dev: model.Device, highlight: str, palette: str) -> bytes:
             Line2D([], [], color=pal["text"], lw=lw, ls="--", label="minority (dashed)"),
         ]
         fig.legend(handles=handles, loc="outside lower center", ncols=2, frameon=False)
-        return _svg(fig)
+        return svg_bytes(fig)
 
 
 def _short(v: float, unit: str, most: int) -> str:
@@ -361,7 +366,7 @@ def stack_1d_figure(dev: model.Device, highlight: tuple[str, ...], palette: str)
     pal = PALETTES[palette]
     edges = stack_extents(dev)
     width = STYLE["stack_width"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -405,8 +410,8 @@ def stack_1d_figure(dev: model.Device, highlight: tuple[str, ...], palette: str)
 
 def stack_1d(dev: model.Device, highlight: tuple[str, ...], palette: str) -> bytes:
     """:func:`stack_1d_figure` as SVG bytes."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(stack_1d_figure(dev, highlight, palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(stack_1d_figure(dev, highlight, palette))
 
 
 def band_levels(dev: model.Device, part: str) -> dict[str, float]:
@@ -437,7 +442,7 @@ def band_flat(dev: model.Device, parts: tuple[str, ...], palette: str) -> bytes:
     lw = STYLE["line_width"]
     gap = numbers.value("band_gap_si")
     room = gap * STYLE["band_room"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(1, len(parts), sharey=True)
@@ -468,7 +473,7 @@ def band_flat(dev: model.Device, parts: tuple[str, ...], palette: str) -> bytes:
             layer = dev.layer(part)
             ax.set_title(f"{_DOPED[layer.dopant]} {_PART_LABEL[part]}", fontsize=STYLE["text_pt"])
         axes[0].set_ylabel("energy from the middle of the gap (eV)")
-        return _svg(fig)
+        return svg_bytes(fig)
 
 
 def _silicon_doping(palette: str) -> bytes:
@@ -597,7 +602,7 @@ def cross_section_figure(
     height = bottom - top
     bar = height * STYLE["contact_frac"]
     gap = height * STYLE["cell_label_gap"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -701,8 +706,8 @@ def cross_section(
     ldd: bool = False,
 ) -> bytes:
     """:func:`cross_section_figure` as SVG bytes."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(cross_section_figure(c, highlight, palette, window, ldd))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(cross_section_figure(c, highlight, palette, window, ldd))
 
 
 _JUNCTION_PANELS = ("charge", "field", "potential")
@@ -725,7 +730,7 @@ def junction_panels(palette: str) -> bytes:
     prof = idealised.abrupt_junction(x, n_a, n_d, vbi, *consts)
     x_um = x * UNITS["um_per_cm"]
     x_p = w * n_d / (n_a + n_d) * UNITS["um_per_cm"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax_q, ax_e, ax_v = fig.subplots(len(_JUNCTION_PANELS), 1, sharex=True)
@@ -757,7 +762,7 @@ def junction_panels(palette: str) -> bytes:
             )
             ax.axvline(x_p, color=pal["intrinsic"], lw=STYLE["edge_width"], ls=":")
         ax_v.text(x_p, vbi, "depletion edge ", ha="right", va="top", color=pal["intrinsic"])
-        return _svg(fig)
+        return svg_bytes(fig)
 
 
 def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
@@ -772,7 +777,7 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
     low, high = STYLE["mesh_height_in"]
     height = min(max(width * (y1 - y0) / (x1 - x0), low), high) + STYLE["mesh_room_in"]
     colours = {name: STYLE["mesh_regions"].get(name, (pal["muted"], name)) for name in win.regions}
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=(width, height))
         FigureCanvasAgg(fig)
         m = STYLE["mesh_margin_in"]
@@ -874,7 +879,7 @@ def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     c = cv_curves(device, params, gid)
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -888,7 +893,7 @@ def cv_against_spice(device: str, params: str, gid: str, palette: str) -> bytes:
         ax.set_xlabel("gate voltage (V)")
         ax.set_ylabel("gate capacitance (fF)")
         fig.legend(loc="outside lower center", ncols=2, frameon=False)
-        return _svg(fig)
+        return svg_bytes(fig)
 
 
 def _moscap_cell(palette: str) -> bytes:
@@ -935,7 +940,7 @@ def cv_overview(palette: str) -> bytes:
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     tcad_root = numbers.ROOT / "results" / "tcad"
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["overview_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(len(OVERVIEW), 1)
@@ -965,7 +970,7 @@ def cv_overview(palette: str) -> bytes:
         handles, labels = axes[0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["overview_ncols"],
                    frameon=False)  # fmt: skip
-        return _svg(fig)
+        return svg_bytes(fig)
 
 
 def _corner_sweeps(device: str, gid: str, sweep: str) -> list[dict]:
@@ -989,7 +994,7 @@ def spice_sweeps(palette: str) -> bytes:
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     ma = UNITS["ma_per_a"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["sweeps_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax_g, ax_d, ax_c = fig.subplots(len(SWEEPS), 1)
@@ -1036,7 +1041,7 @@ def spice_sweeps(palette: str) -> bytes:
         ax_c.set_ylabel("gate capacitance (fF)")
         for ax in (ax_g, ax_d, ax_c):
             ax.grid(True)
-        return _svg(fig)
+        return svg_bytes(fig)
 
 
 # The regions page (accumulation-depletion-inversion.md): the calibrated nfet at the longest
@@ -1068,7 +1073,7 @@ def cv_regions_figure(palette: str):
     lo, hi = region_edges()
     u = c["u_spice"]
     spans = dict(zip(REGIONS, ((u[0], lo), (lo, hi), (hi, u[-1])), strict=True))
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -1095,8 +1100,8 @@ def cv_regions(palette: str) -> bytes:
     :term:`SPICE` curve at the :term:`typical corner` (solid) and the fitted simulation (dashed),
     with the three regions shaded between the calibration's marks (:func:`region_edges`)."""
     # Saved inside the palette's rc context: the SVG settings (text as text, hash salt) apply.
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(cv_regions_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(cv_regions_figure(palette))
 
 
 #: The four states of the band panels, by rising gate voltage, and the surface bending of each
@@ -1122,7 +1127,7 @@ def band_regimes_figure(palette: str):
     w_max = idealised.depletion_depth(deepest, n_a, *consts)
     x = np.linspace(0, (1 + STYLE["regime_pad"]) * w_max, STYLE["regime_points"])
     x_um = x * UNITS["um_per_cm"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["regimes_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(2, 2, sharex=True, sharey=True).ravel()
@@ -1168,8 +1173,8 @@ def band_regimes(palette: str) -> bytes:
     (:func:`gf180tcad.explain.idealised.surface_bending`): the band edges, the middle of the gap
     and the :term:`Fermi level` (the zero of energy), from the calibrated body doping, the
     simulations' constants and the textbook band gap."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(band_regimes_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(band_regimes_figure(palette))
 
 
 # The C-V curve page (cv-curve.md): the same nfet geometry as the regions page.
@@ -1204,7 +1209,7 @@ def cv_parts_figure(palette: str):
     lo, hi = region_edges()
     u_min, c_min = numbers.value("u_min_l10"), numbers.value("c_min_l10")
     u_dep = numbers.value("u_dep_spice_l10")
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -1250,8 +1255,8 @@ def cv_parts(palette: str) -> bytes:
     :term:`SPICE` curve at the :term:`typical corner` and the simulated stack at the
     calibration's start and fitted values, each part of the curve labelled with the parameter
     that sets it (:data:`CV_PARTS`)."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(cv_parts_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(cv_parts_figure(palette))
 
 
 # The calibration page (calibration.md): the fitted numbers of both transistors within their limits.
@@ -1264,7 +1269,7 @@ def calibration_limits_figure(palette: str):
     pal = PALETTES[palette]
     devices = list(numbers.FITS)
     fits = {d: numbers.fits(d) for d in devices}
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(len(numbers.TUNABLES), 1)
@@ -1299,8 +1304,8 @@ def calibration_limits(palette: str) -> bytes:
     on its own axis: a bar from its lower to its upper limit, its start (open circle) and its
     fitted value (filled diamond), read from the calibration result files
     (:func:`gf180tcad.explain.numbers.fits`)."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(calibration_limits_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(calibration_limits_figure(palette))
 
 
 #: The legend words of the crossing marks of :func:`calibration_compare`, by curve.
@@ -1319,7 +1324,7 @@ def calibration_compare_figure(palette: str):
     rec = numbers.fit_record(REGIONS_DEVICE, REGIONS_GEOMETRY)
     res, sp, tc = rec["residuals"], rec["spice_regions"], rec["tcad_crossings"]
     u = c["u_spice"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -1357,8 +1362,8 @@ def calibration_compare(palette: str) -> bytes:
     fitted simulated curve, the flat parts the fit compares shaded (the voltages of the result
     file's residuals) and each curve's halfway-level crossings marked (``spice_regions`` and
     ``tcad_crossings``)."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(calibration_compare_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(calibration_compare_figure(palette))
 
 
 #: The transistor of :func:`calibration_pfet`.
@@ -1395,7 +1400,7 @@ def calibration_pfet_figure(palette: str):
     lw = STYLE["line_width"]
     gids = pfet_geometries()
     edges = numbers.spice_edges(PFET)
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(len(gids), 1)
@@ -1425,8 +1430,8 @@ def calibration_pfet(palette: str) -> bytes:
     """The pfet's gate capacitance at the shortest and the longest gate of its fit
     (:func:`pfet_geometries`), on the true gate voltage: the :term:`SPICE` band of all
     :term:`corners <corner>`, the typical curve and the fitted simulated curve."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(calibration_pfet_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(calibration_pfet_figure(palette))
 
 
 # The silicon page (silicon-and-carriers.md): the bonds of the crystal, drawn flat.
@@ -1479,7 +1484,7 @@ def lattice_figure(panels: tuple[str, ...], palette: str):
     free_at = (mid + 1 / 2, mid + 1 / 2)
     dot = {"ls": "none", "marker": "o"}
     z = STYLE["lattice_zorder"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["lattice_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(1, len(panels), squeeze=False).ravel()
@@ -1556,8 +1561,8 @@ def lattice(panels: tuple[str, ...], palette: str) -> bytes:
     """The bonds of silicon drawn flat, one panel per name of :data:`LATTICE_PANELS`: a grid of
     atoms, each bond a line with its two electrons, the free electrons and the holes. A drawing of
     the bond picture of Sze and Ng 2006 (lit-sze), ch. 1, with no data and not to scale."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(lattice_figure(panels, palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(lattice_figure(panels, palette))
 
 
 def _silicon_bonds(palette: str) -> bytes:
@@ -1587,7 +1592,7 @@ def junction_profile_figure(palette: str):
     x = np.linspace(-span, span, STYLE["regime_points"])
     lo, hi = c.n_body_cm3 / STYLE["headroom"], c.n_sd_cm3 * STYLE["headroom"]
     label_y = hi / (hi / lo) ** STYLE["label_drop"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["profile_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax, ax_lat = fig.subplots(2, 1, sharey=True)
@@ -1625,8 +1630,8 @@ def junction_profile(palette: str) -> bytes:
     (:meth:`gf180tcad.explain.model.Cell.sd_doping`) beside the abrupt step of the junction panels
     and the uniform body, with the junction depth marked; below, along the surface across the
     gate edge, where the Gaussian spreads under the gate."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(junction_profile_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(junction_profile_figure(palette))
 
 
 # The corner-fit figure of docs/reproduce/index.md (Task 16a): the nfet at the longest
@@ -1658,7 +1663,7 @@ def corner_cv(palette: str) -> bytes:
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     curves = corner_cv_curves(CORNER_DEVICE, CORNER_GEOMETRY)
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -1676,7 +1681,7 @@ def corner_cv(palette: str) -> bytes:
         ax.set_xlabel("gate voltage (V)")
         ax.set_ylabel("gate capacitance (fF)")
         fig.legend(loc="outside lower center", ncols=len(curves), frameon=False)
-        return _svg(fig)
+        return svg_bytes(fig)
 
 
 # The gate-area figure of the corner-fit section of docs/reproduce/index.md (eq-corner-area and
@@ -1743,7 +1748,7 @@ def corner_area(palette: str) -> bytes:
     gap = STYLE["dim_gap"]
     fills = {"area": pal["highlight"], "source overlap": pal["electron"],
              "drain overlap": pal["electron"]}  # fmt: skip
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.subplots()
@@ -1794,7 +1799,7 @@ def corner_area(palette: str) -> bytes:
                         arrowprops={"arrowstyle": "-", "color": pal["text"],
                                     "lw": STYLE["edge_width"]})  # fmt: skip
         ax.set_title(_statement("corner-area").replace(". ", ".\n"), fontsize=STYLE["text_pt"])
-        return _svg(fig)
+        return svg_bytes(fig)
 
 
 # The corner bounds of the calibration page (calibration.md, Task 16a): each fitted number's
@@ -1845,7 +1850,7 @@ def corner_bounds_figure(palette: str):
     marks = STYLE["corner_markers"]
     hits = False
     colour = {c: pal[CORNER_HIGHLIGHT[c]] if c in CORNER_HIGHLIGHT else pal["muted"] for c in marks}
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(len(numbers.TUNABLES), 1)
@@ -1888,8 +1893,8 @@ def corner_bounds(palette: str) -> bytes:
     """Each fitted number of the nfet and the pfet on its own axis: a bar from its lowest to its
     highest value over the corners, a marker at each corner's fit and a diamond at the typical
     fit, read from the corner summaries (:func:`gf180tcad.explain.numbers.corner_bounds`)."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(corner_bounds_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(corner_bounds_figure(palette))
 
 
 #: The fitted numbers of the card cross-check, each with its axis words, unit and the factor
@@ -1906,7 +1911,7 @@ def corner_crosscheck_figure(palette: str):
     marks = STYLE["corner_markers"]
     colour = {c: pal[CORNER_HIGHLIGHT[c]] if c in CORNER_HIGHLIGHT else pal["muted"] for c in marks}
     shapes = STYLE["device_markers"]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(1, len(CROSSCHECK))
@@ -1956,15 +1961,15 @@ def corner_crosscheck(palette: str) -> bytes:
     fit's shift from the typical fit against the model card's shift of the same quantity at
     that corner, one marker per transistor and corner, and the line where the two are equal;
     read from the corner summaries (``card_shift``, ``tcad_shift``)."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(corner_crosscheck_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(corner_crosscheck_figure(palette))
 
 
 def corner_crossing_figure(palette: str):
     """The matplotlib figure of :func:`corner_crossing`, for the tests to read its lines."""
     pal = PALETTES[palette]
     devices = list(numbers.FITS)
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(len(devices), 1, sharex=True)
@@ -1996,8 +2001,8 @@ def corner_crossing(palette: str) -> bytes:
     against the gate length, at every W = 10 µm gate, one panel per transistor: a 1D stack with one flat band
     for every length leaves a gap that moves with the length, at every corner
     (:func:`gf180tcad.explain.numbers.corner_crossing_gaps`)."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(corner_crossing_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(corner_crossing_figure(palette))
 
 
 def corner_limits_figure(palette: str):
@@ -2008,7 +2013,7 @@ def corner_limits_figure(palette: str):
     devices = list(numbers.FITS)
     fits = {(f.device, f.corner, f.name): f for d in devices for f in numbers.corner_fit_limits(d)}
     rows = [(d, c) for d in devices for c in CORNERS]
-    with matplotlib.rc_context(_rc(palette)):
+    with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=STYLE["corner_limits_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(1, len(numbers.TUNABLES), sharey=True)
@@ -2048,8 +2053,8 @@ def corner_limits(palette: str) -> bytes:
     """Each fitted number of every fit, typical and the four corners of both transistors, one
     row per fit: a bar between the fit's limits and a diamond at the fitted value, in the hole
     colour when it sits on a limit (:func:`gf180tcad.explain.numbers.corner_fit_limits`)."""
-    with matplotlib.rc_context(_rc(palette)):
-        return _svg(corner_limits_figure(palette))
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(corner_limits_figure(palette))
 
 
 # name -> function of the palette name; each is written in both palettes by write_all.
