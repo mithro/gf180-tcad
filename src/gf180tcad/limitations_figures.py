@@ -31,7 +31,7 @@ import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
-from gf180tcad import io
+from gf180tcad import engine46, io
 from gf180tcad.calibrate import cv as calcv
 from gf180tcad.comparison_figures import DEFAULT_ROOTS, Roots
 from gf180tcad.devices import DEVICES, Geometry, geometry_id
@@ -53,6 +53,9 @@ STYLE = {
     "label_lift": 0.03,
     # The engine plot: markers of the three sweeps side by side, this far apart (category units).
     "sweep_offset": 0.22,
+    # A hollow marker (the card forced to 4.6) sits this far right of its filled one, so the two
+    # stay apart where their values are close.
+    "forced_offset": 0.1,
     # The engine plot's y axis spans these decades of relative difference.
     "engine_decades": (-8.0, -1.0),
     "decade": 10,
@@ -134,6 +137,21 @@ _CARRIER = {"nfet_05v0": "electron", "pfet_05v0": "hole"}
 _SWEEPS = ("idvg_lin", "idvg_sat", "idvd")
 _SWEEP_COLOUR = {"idvg_lin": "electron", "idvg_sat": "hole", "idvd": "highlight"}
 _SWEEP_MARKER = {"idvg_lin": "o", "idvg_sat": "s", "idvd": "^"}
+#: The nfet engine differences with the card forced to BSIM4 4.6, recorded by
+#: :mod:`gf180tcad.engine46`.
+FORCED_RECORD = engine46.RECORD
+
+
+def forced_diffs(path: Path = FORCED_RECORD) -> tuple[str, dict[tuple[str, str], float]]:
+    """``(device, {(geometry id, sweep): engine_diff})`` of the record: each nfet geometry and
+    sweep with the card's ``version`` forced to 4.6."""
+    record = json.loads(path.read_text(encoding="utf-8"))
+    cases = record["cases"]
+    return record["device"], {
+        (g, s): v["forced_4p6"] for g, d in cases.items() for s, v in d.items()
+    }
+
+
 TYPICAL = "typical"
 
 
@@ -176,9 +194,12 @@ def engine_diffs(roots: Roots = DEFAULT_ROOTS) -> dict[tuple[str, str, str], flo
 
 def engine_diff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The engine difference of every geometry and sweep, one panel per device, on a log axis
-    with the 0.5 % threshold of :data:`gf180tcad.spice.xyce.ENGINE_DIFF_THRESHOLD`."""
+    with the 0.5 % threshold of :data:`gf180tcad.spice.xyce.ENGINE_DIFF_THRESHOLD`. The
+    device of :data:`FORCED_RECORD` also shows each sweep with its card forced to BSIM4 4.6,
+    as hollow markers."""
     pal = ef.PALETTES[palette]
     diffs = engine_diffs(roots)
+    forced_device, forced = forced_diffs()
     thr = xyce.ENGINE_DIFF_THRESHOLD
     lo, hi = STYLE["engine_decades"]
     with matplotlib.rc_context(ef.palette_rc(palette)):
@@ -195,6 +216,12 @@ def engine_diff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                 ax.plot(x + dx, y, ls="none", marker=_SWEEP_MARKER[sweep],
                         ms=STYLE["marker_pt"], color=pal[_SWEEP_COLOUR[sweep]], label=sweep,
                         gid=f"{device} {sweep}")  # fmt: skip
+                if device == forced_device:
+                    y = [forced[(geometry_id(g), sweep)] for g in gs]
+                    ax.plot(x + dx + STYLE["forced_offset"], y, ls="none",
+                            marker=_SWEEP_MARKER[sweep], ms=STYLE["marker_pt"], mfc="none", color=pal[_SWEEP_COLOUR[sweep]],
+                            label=f"{sweep}, card at {engine46.FORCED_VERSION}",
+                            gid=f"{device} {sweep} at {engine46.FORCED_VERSION}")  # fmt: skip
             ax.axhline(thr, color=pal["text"], lw=ef.STYLE["edge_width"], ls="--",
                        label=f"threshold {thr * UNITS['percent']:g} %",
                        gid="threshold")  # fmt: skip
@@ -204,7 +231,7 @@ def engine_diff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             ax.set_ylabel(f"{_SHORT[device]}: engine_diff")
             ax.grid(True)
         handles, labels = axes[0].get_legend_handles_labels()
-        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels),
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
                    frameon=False)  # fmt: skip
         return fig
 
