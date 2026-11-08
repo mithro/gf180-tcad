@@ -845,24 +845,34 @@ Those are the stamps the folder already had, so the jobs left
 **The spec file in the calibration hash ([issue #145](https://github.com/mithro/gf180-tcad/issues/145)).**
 Both calibration entry points copy its Cox spec into their results.
 Their hashes cover {repo}`data/pdk_elec_spec.json`. The change edits {py:mod}`gf180tcad.tcad`, which every
-entry point imports, so every results folder's hash moved.
+entry point imports, so every results folder's hash moved. The edits are bookkeeping: the list of
+hashed files and the module docstring, nothing that computes a result.
 
 The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
 `generator_sha256`.
 
 | results folder | writer | before | after |
 |---|---|---|---|
-| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc…` | `6397dc19…` |
-| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc…` | `6397dc19…` |
-| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc…` | `6397dc19…` |
-| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `c8cf20b5…` | `6d49207d…` |
-| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `c8cf20b5…` | `6d49207d…` |
-| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `115cd158…` | `5ea0a6b7…` |
-| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `cade71ac…` | `9629146a…` |
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `c8cf20b562088612489bf71c2f0ea2270c2489c337da4cb0bda3aaad4595daea` | `54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `c8cf20b562088612489bf71c2f0ea2270c2489c337da4cb0bda3aaad4595daea` | `54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `115cd158dc2676db3d94d30a8f896a4b84846e9416a7a3ecec8f2190bbfaaaa4` | `b3f9f92c1462a3f8e6cc5b75f4261284f408829ab89e5acec7eda7e6dbc6f483` |
+| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `cade71acad8a433171828cf0f286cfc06be278bdf03cc51f52a1f6d034633ec7` | `c817a025c70d65accc3df9c8b98b195855cdfbd32113c85d9f97a7a9353c8305` |
 
-No data changed. Every Cox spec that a committed result records equals the spec the code reads
-from the file. The `crosscheck-tcad` subset, rerun on the project's host at the updated hashes,
-gives the committed bytes: 26 files of 4 jobs, both provenance files included.
+No data changed. The evidence differs by folder:
+
+- The jobs of the `crosscheck-tcad` subset were rerun at the updated hashes, on the project's host
+  and by the `crosscheck-tcad` job of [pull request #187](https://github.com/mithro/gf180-tcad/pull/187).
+  They are the two calibrated 1D jobs and the reduced mesh artefacts of the calibrated 2D cells.
+  Their 26 files are byte-identical to the committed ones, including
+  {repo}`results/tcad/moscap1d/provenance.json` and {repo}`results/tcad/meshes/stable/provenance.json`.
+- {repo}`results/tcad/calibration`, {repo}`results/tcad/validation` and {repo}`results/tcad/corners`
+  were not rerun. The spec file is the only input their hash gained. Every Cox spec they record, ten in
+  all, equals the spec the code reads from the file.
+- {repo}`results/tcad/moscap2d` and {repo}`results/tcad/meshconv` were not rerun. Their writer's
+  hash moved only through the bookkeeping edits.
 
 (cross-host-determinism)=
 
