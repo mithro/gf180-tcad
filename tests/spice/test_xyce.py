@@ -11,14 +11,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from gf180tcad import io, sandbox
+from gf180tcad import engine46, io, sandbox
 from gf180tcad.devices import DEVICES, SWEEPS, Device, Geometry, geometry_id
 from gf180tcad.known import KNOWN_ENGINE_DIFFS
 from gf180tcad.pdk import PdkInfo
+from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.spice import xyce
 from gf180tcad.spice.common import SpiceError
 from gf180tcad.spice.netlist import bias_plan, instance_params, ngspice_netlist
-from gf180tcad.spice.ngspice import run_ngspice, simulate
+from gf180tcad.spice.ngspice import simulate
 from gf180tcad.spice.xyce import (
     ENGINE_DIFF_THRESHOLD,
     XYCE_VECTORS,
@@ -507,49 +508,18 @@ def test_engines_agree(image_pdk, tmp_path, device, g, sweep_name):
 
 # --- diagnostic: the nfet idvg_sat xfails are the BSIM4 4.5 vs 4.6.1 code difference --------
 
-# Patched scratch copy of the image's ngspice lib: the nfet_06v0 card's "version=4.5" becomes
-# "version=4.6" (ngspice then runs BSIM4v6 instead of BSIM4v5), and the lib's nested relative
-# ".lib 'sm141064.spice' ..." lines point at the copy itself, so ngspice cannot resolve them to
-# the PDK's unpatched file. Written inside the sandbox (the repo stays read-only).
-PATCHED_LIB_DIR = "lib"  # out_dir subdirectory, passed to run_ngspice as an explicit input
-PATCHED_LIB = f"/work/out/{PATCHED_LIB_DIR}/sm141064.ngspice"
-_PATCH_LIB = r"""
-import hashlib, json, re
-from gf180tcad import pdk
-lib = pdk.locate().ngspice_lib
-text = open(lib).read()
-# every nested .lib target, in any form (indented, quoted or not), with its byte identity
-targets = sorted(set(re.findall(r"(?im)^[ \t]*\.lib[ \t]+'?([^'\s]+)'?[ \t]+\S+", text)))
-sha = lambda p: hashlib.sha256(open(p, "rb").read()).hexdigest()
-nested = {t: sha(lib.parent / t) for t in targets}
-start = text.index("\n.lib nfet_06v0_t\n")
-end = text.index("\n.endl nfet_06v0_t\n", start)
-section, n_version = re.subn(r"(?m)^\+ version=4\.5$", "+ version=4.6", text[start:end])
-text = text[:start] + section + text[end:]
-n_nested = len(re.findall(r"(?i)sm141064\.spice", text))
-text = re.sub(r"(?i)sm141064\.spice", "@PATCHED_LIB@", text)
-open("/work/out/sm141064.ngspice", "w").write(text)
-print(json.dumps({
-    "version": n_version, "nested": n_nested, "left": text.lower().count("sm141064.spice"),
-    "lib_sha": sha(lib), "nested_sha": nested, "mim_ngspice_sha": sha(lib.parent / "sm141064_mim.ngspice"),
-}))
-""".replace("@PATCHED_LIB@", PATCHED_LIB)
+# The patched scratch copy of the image's ngspice lib (gf180tcad.engine46.PATCH_SCRIPT): the
+# nfet_06v0 card's "version=4.5" becomes "version=4.6" (ngspice then runs BSIM4v6 instead of
+# BSIM4v5), and the lib's nested ".lib 'sm141064.spice' ..." lines point at the copy itself.
+PATCHED_LIB_DIR = engine46.PATCHED_LIB_DIR
+PATCHED_LIB = engine46.PATCHED_LIB
 
 
 @pytest.fixture(scope="session")
 def nfet_v46_lib(tmp_path_factory) -> Path:
-    d = tmp_path_factory.mktemp("nfet_v46_lib")
-    res = sandbox.run(["python3", "-c", _PATCH_LIB], out_dir=d)
-    info = json.loads(res.stdout.splitlines()[-1])
-    assert info["version"] == 2, info  # both nfet_06v0 bins (0.6-0.7 and 0.7-50 um)
-    assert info["nested"] > 0 and info["left"] == 0, info  # no path back to the PDK's file
-    # The lib's nested targets are sm141064.spice (MOS, diodes, ...) and sm141064_mim.spice (MIM
-    # caps, unused here). Each must be byte-identical to the file the netlist names, so the
-    # stock run evaluates the same text whichever copy ngspice resolves.
-    assert set(info["nested_sha"]) == {"sm141064.spice", "sm141064_mim.spice"}, info
-    assert info["nested_sha"]["sm141064.spice"] == info["lib_sha"], info
-    assert info["nested_sha"]["sm141064_mim.spice"] == info["mim_ngspice_sha"], info
-    return d / "sm141064.ngspice"
+    """The patched copy, written and checked in the sandbox (engine46.patch_lib)."""
+    lib, _ = engine46.patch_lib(tmp_path_factory.mktemp("nfet_v46_lib"))
+    return lib
 
 
 def _bsim4_code(tmp_path: Path, pdk: PdkInfo, g: Geometry, lib_copy: Path | None) -> str:
@@ -592,9 +562,27 @@ def test_patched_lib_switches_bsim4_code_version(image_pdk, nfet_v46_lib, tmp_pa
 
 _DIAG_CASES = [
     pytest.param(g, s, id=f"nfet_05v0-{geometry_id(g)}-{s}")
-    for s in ("idvg_lin", "idvg_sat")
+    for s in engine46.SWEEP_NAMES
     for g in NFET.geometries
 ]
+
+
+def test_forced_4p6_record_covers_every_case():
+    """The record (data/spice/engine-forced-bsim46.json) holds every nfet geometry and sweep
+    that the sandbox test below re-derives, made in the pinned image."""
+    record = json.loads(engine46.RECORD.read_text(encoding="utf-8"))
+    assert record["image"] == (REPO_ROOT / "docker" / "IMAGE").read_text("utf-8").strip()
+    assert record["device"] == NFET.name
+    assert record["cases"].keys() == {geometry_id(g) for g in NFET.geometries}
+    for gid, sweeps in record["cases"].items():
+        assert tuple(sweeps) == tuple(sorted(engine46.SWEEP_NAMES)), gid
+        for name, d in sweeps.items():
+            assert set(d) == {"stock", "forced_4p6", "stock_vs_forced"}, (gid, name)
+            # the patch takes effect, and forced to 4.6 the engines agree
+            assert d["stock_vs_forced"] > 0 and d["forced_4p6"] < TOL, (gid, name, d)
+            # the xfailed comparisons are exactly the cases the stock card fails
+            failing = (NFET.name, name) in KNOWN_ENGINE_DIFFS
+            assert (d["stock"] > TOL) == failing, (gid, name, d)
 
 
 @pytest.mark.sandbox
@@ -602,20 +590,23 @@ _DIAG_CASES = [
 def test_engines_agree_with_ngspice_forced_to_bsim4_4p6(
     image_pdk, nfet_v46_lib, tmp_path, g, sweep_name
 ):
-    """Proves the cause in docs/limitations/engine-cross-check.md for each xfailed case."""
-    sweep = SW[sweep_name]
-    plan = bias_plan(NFET, sweep)
-    for d in ("ng", "ng46", "xy"):
-        (tmp_path / d).mkdir()
-    (tmp_path / "ng46" / PATCHED_LIB_DIR).mkdir()
-    shutil.copy(nfet_v46_lib, tmp_path / "ng46" / PATCHED_LIB_DIR / "sm141064.ngspice")
-    stock = simulate(NFET, g, sweep, "typical", 25.0, image_pdk, tmp_path / "ng")
-    pdk46 = dataclasses.replace(image_pdk, ngspice_lib=Path(PATCHED_LIB))
-    text = ngspice_netlist(NFET, g, sweep, "typical", 25.0, pdk46)
-    ng46 = run_ngspice(text, tmp_path / "ng46", plan=plan, inputs=(PATCHED_LIB_DIR,))
-    xy = simulate_xyce(NFET, g, sweep, "typical", 25.0, image_pdk, tmp_path / "xy")
-    d_stock, d_46 = engine_diff(stock, xy), engine_diff(ng46, xy)
-    print(f"diag {geometry_id(g)} {sweep_name} stock={d_stock!r} forced_4.6={d_46!r}")
-    assert d_stock > TOL  # the xfailed comparison, as published
-    assert engine_diff(stock, ng46) > TOL  # the patch took effect in ngspice
-    assert d_46 < TOL
+    """Proves the cause in docs/limitations/engine-cross-check.md for each nfet case, and
+    re-derives its committed record."""
+    got = engine46.case(g, sweep_name, image_pdk, nfet_v46_lib, tmp_path)
+    print(f"diag {geometry_id(g)} {sweep_name} {got!r}")
+    record = json.loads(engine46.RECORD.read_text(encoding="utf-8"))
+    assert got == record["cases"][geometry_id(g)][sweep_name]
+    if (NFET.name, sweep_name) in KNOWN_ENGINE_DIFFS:
+        assert got["stock"] > TOL  # the xfailed comparison, as published
+        assert got["stock_vs_forced"] > TOL  # the patch took effect in ngspice
+    assert got["forced_4p6"] < TOL
+
+
+def test_engine46_is_outside_every_hashed_closure():
+    """No generator's hashed module list names gf180tcad.engine46, so its edits move no hash."""
+    reg = json.loads((REPO_ROOT / "src" / "gf180tcad" / "generators.json").read_text("utf-8"))
+    for ep, mods in reg["entry_points"].items():
+        assert "gf180tcad.engine46" not in mods, ep
+    from gf180tcad.reference import GENERATOR_MODULES
+
+    assert not any("engine46" in str(m) for m in GENERATOR_MODULES)
