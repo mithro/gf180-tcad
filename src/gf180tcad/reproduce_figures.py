@@ -90,7 +90,7 @@ STYLE = {
     "line_width": 2.4,
     # The meshwell-square figure: its size, the width of a triangle's edges (pt), and the
     # margin round the unit square, as a fraction of its side.
-    "square_in": (6.4, 3.6),
+    "square_in": (6.4, 3.7),
     "edge_width": 1.2,
     "square_margin": 0.08,
 }
