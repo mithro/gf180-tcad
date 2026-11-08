@@ -553,14 +553,48 @@ def test_every_entry_point_that_reads_the_spec_hashes_it():
     for entry, modules in tcad.TCAD_GENERATORS.items():
         reads = "gf180tcad.specwindow" in modules
         assert (spec in tcad.EXTRA_FILES.get(entry, ())) == reads, entry
-    # specwindow is the only module that names the file as a string, so every reader goes
-    # through it (docstrings mention the file with double backquotes, never as a literal)
-    readers = sorted(
-        p.relative_to(REPO).as_posix()
-        for p in (REPO / "src").rglob("*.py")
-        if '"pdk_elec_spec.json"' in p.read_text(encoding="utf-8")
+    # specwindow is the only module whose code names the file, so every reader goes through it:
+    # every string constant of every module, docstrings left out, is scanned, whatever the
+    # spelling ("pdk_elec_spec.json", "data/pdk_elec_spec.json", ...)
+    assert _modules_naming("pdk_elec_spec.json") == ["src/gf180tcad/specwindow.py"]
+
+
+def _modules_naming(name: str) -> list[str]:
+    """The repo-relative modules under src/ with a string constant, not a docstring, that ends
+    in ``name``."""
+    import ast
+
+    found = []
+    for path in sorted((REPO / "src").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        docstrings = {
+            id(node.body[0].value)
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+        }
+        if any(
+            isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in docstrings
+            and n.value.endswith(name)
+            for n in ast.walk(tree)
+        ):  # fmt: skip
+            found.append(path.relative_to(REPO).as_posix())
+    return found
+
+
+def test_the_spec_scan_finds_every_spelling(tmp_path, monkeypatch):
+    """Positive control for _modules_naming: a module spelling the path whole is found, and a
+    docstring that names it is not."""
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "a.py").write_text(
+        '"""Reads ``data/pdk_elec_spec.json``."""\nX = "data/pdk_elec_spec.json"\n'
     )
-    assert readers == ["src/gf180tcad/specwindow.py"], readers
+    (src / "b.py").write_text('"""Mentions data/pdk_elec_spec.json in a docstring only."""\n')
+    monkeypatch.setattr(sys.modules[__name__], "REPO", tmp_path)
+    assert _modules_naming("pdk_elec_spec.json") == ["src/a.py"]
 
 
 @pytest.mark.parametrize("entry", ENTRY_POINTS)
