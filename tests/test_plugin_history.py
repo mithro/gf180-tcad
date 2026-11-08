@@ -23,6 +23,8 @@ REPO = Path(__file__).resolve().parents[1]
 RESULTS = REPO / "results" / "plugin-history"
 EXPERIMENT = REPO / "experiments" / "plugin-history"
 COMMITTED = ("v0.8.0.json", "v0.8.0-mesh0p5.json", "v1.4.2.json")
+#: The latest-stack records (issue #162), by mesh scale.
+LATEST = {1.0: "latest.json", 0.5: "latest-mesh0p5.json"}
 CHECKS = ("import", "pin_test", "ddcomponent_mesh", "ddsolver", "ramp", "refine", "refined_solve")
 
 sys.path.insert(0, str(EXPERIMENT))
@@ -57,7 +59,7 @@ def _walk(obj, where=""):
         yield where, None, obj
 
 
-@pytest.mark.parametrize("name", COMMITTED)
+@pytest.mark.parametrize("name", [*COMMITTED, *LATEST.values()])
 def test_history_json_has_no_timings_or_paths(name):
     raw = (RESULTS / name).read_bytes()
     data = json.loads(raw)
@@ -107,6 +109,7 @@ def test_committed_v142_import_broken():
 
 
 def test_result_names():
+    assert history.result_name("latest", 0.5) == "latest-mesh0p5.json"
     assert history.result_name("v0.8.0", 1.0) == "v0.8.0.json"
     assert history.result_name("v0.8.0", 0.5) == "v0.8.0-mesh0p5.json"
     assert history.result_name("v1.4.2", 1.0) == "v1.4.2.json"
@@ -117,6 +120,8 @@ def test_cli_parsing():
     assert a.version == "v0.8.0" and a.mesh_scale == 1.0 and a.out == Path("x")
     a = history.parse_args(["--version", "v0.8.0", "--mesh-scale", "0.5", "--out", "x"])
     assert a.mesh_scale == 0.5
+    a = history.parse_args(["--version", "latest", "--mesh-scale", "0.5", "--out", "x"])
+    assert a.version == "latest" and a.mesh_scale == 0.5
     with pytest.raises(SystemExit):
         history.parse_args(["--version", "v0.9.0", "--out", "x"])
     with pytest.raises(SystemExit):  # v1.4.2 runs only the import check, which has no mesh
@@ -378,3 +383,35 @@ def test_doc_quotes_the_record():
         assert {f"{s['potential_span_v']:.4f}" for s in steps} <= column(ramp, 1)
         assert {f"{s['anode_minus_cathode_v']:.4f}" for s in steps} <= column(ramp, 2)
         assert {f"{s['junction']['drop_v']:.5f}" for s in steps} <= column(ramp, 3)
+
+
+@pytest.mark.parametrize(("scale", "name"), LATEST.items())
+def test_committed_latest_pn_slab(scale, name):
+    """Issue #162: the latest-stack record is the fork at the submodule pin in the stable TCAD
+    image, and with the ported (connected) rib the bias reaches the junction: the junction drop
+    falls by exactly each applied bias step, and the anode - cathode potential with it."""
+    data = _load(name)
+    assert data["gplugins_tag"] == history.LATEST and data["mesh_scale"] == scale
+    assert data["gplugins_commit"] == history.pinned_commit()
+    assert data["image"] == (REPO / "docker" / "TCAD_IMAGE").read_text("utf-8").splitlines()[0]
+    assert data["network"] == "none"
+    slab = data["pn_slab"]
+    assert "core___slab90" in slab["interfaces"]  # the rib-slab interface v0.8.0 lacked
+    eq, *ramp = [slab["equilibrium"], *slab["bias"]]
+    from checks_v080 import PN_VOLTAGES  # the same cathode ramp as the v0.8.0 record
+
+    biases = [0.0, *PN_VOLTAGES]
+    assert len(ramp) == len(biases) - 1
+    for v, step in zip(biases, [eq, *ramp], strict=True):
+        assert step["junction"]["drop_v"] == pytest.approx(eq["junction"]["drop_v"] - v, abs=1e-6)
+        assert step["dv"] == pytest.approx(eq["dv"] - v, abs=1e-6)
+
+
+@pytest.mark.sandbox
+@pytest.mark.parametrize(("scale", "name"), LATEST.items())
+def test_latest_reproduces(tmp_path, scale, name):
+    """A local rerun of the latest-stack record reproduces the committed one byte for byte."""
+    out = tmp_path / "out"
+    history.main(["--version", "latest", "--mesh-scale", repr(scale), "--out", str(out),
+                  "--workdir", str(tmp_path / "wd")])  # fmt: skip
+    assert (out / name).read_bytes() == (RESULTS / name).read_bytes()
