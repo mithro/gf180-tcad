@@ -14,7 +14,8 @@ gplugins sources come from the tags of [our fork](https://github.com/mithro/gplu
 |---|---|
 | [`checks_v080.py`](checks_v080.py) | The check driver for v0.8.0. It runs in the v0.8.0 venv inside the sandbox. |
 | [`checks_v142.py`](checks_v142.py) | The check driver for v1.4.2. It runs only the `import` check. |
-| [`harness.py`](harness.py) | Helpers shared by both drivers (standard library only): check recording, versions, currents, contact potentials, depletion width, the MSH 2.2 physical names and the junction probe. |
+| [`checks_latest.py`](checks_latest.py) | The check driver for the latest stack: the fork's PN-slab solve at the submodule pin, in the stable TCAD image. |
+| [`harness.py`](harness.py) | Helpers shared by the drivers (standard library only): check recording, versions, currents, contact potentials, depletion width, the MSH 2.2 physical names and the junction probe. |
 | [`v080.in`](v080.in) | The input of `v080.lock`. |
 | [`v080.lock`](v080.lock) | The resolved, hashed v0.8.0 package set. It keeps the record re-runnable after PyPI yanks. |
 
@@ -26,6 +27,8 @@ The tests are [`tests/test_plugin_history.py`](../../tests/test_plugin_history.p
 uv run --locked python -m gf180tcad.history --version v0.8.0 --out results/plugin-history
 uv run --locked python -m gf180tcad.history --version v0.8.0 --mesh-scale 0.5 --out results/plugin-history
 uv run --locked python -m gf180tcad.history --version v1.4.2 --out results/plugin-history
+uv run --locked python -m gf180tcad.history --version latest --out results/plugin-history
+uv run --locked python -m gf180tcad.history --version latest --mesh-scale 0.5 --out results/plugin-history
 make manifest
 ```
 
@@ -45,7 +48,10 @@ The steps are in the docstring of
 2. an install step with network;
 3. a check run with no network and the `PDK` environment variable unset.
 
-Everything runs in the base image ([`docker/IMAGE`](../../docker/IMAGE)).
+The v0.8.0 and v1.4.2 records run in the base image ([`docker/IMAGE`](../../docker/IMAGE)).
+The latest-stack record runs in the stable TCAD image
+([`docker/TCAD_IMAGE`](../../docker/TCAD_IMAGE)), in its own venv, with no install step. It uses
+the submodule's working tree, which must be clean and at the pin.
 
 To rebuild the records and compare them with the committed ones, run the sandbox tests with
 [pytest](https://docs.pytest.org/):

@@ -171,10 +171,11 @@ values are not read as more physical than they are.
   {term}`engine cross-check` cannot apply to it ({ref}`results-layout`).
 - **The ΔV ≤ 50 mV crossing {term}`tolerance` is a proposal.** No published standard exists for
   it ({ref}`cv-agreement-metric`).
-- **{repo}`results/plugin-history` is not cross-checked.** The {term}`manifest` lists it and two
-  local runs give identical files, but it is not part of the check on another computer (a
-  GitHub-hosted runner): its 2023 stack has no guarantee of the same bytes on another computer
-  ({doc}`plugin-history`).
+- **{repo}`results/plugin-history` is not cross-checked.** The {term}`manifest` lists it, and two
+  local runs give identical files. No record is part of the check on another computer (a
+  GitHub-hosted runner). The 2023 stack has no guarantee of the same bytes on another computer.
+  The latest-stack records use the stable TCAD image, but the TCAD cross-check runs only
+  {repo}`results/tcad` ({doc}`plugin-history`).
 
 The QS curves and the small-signal AC points of the 2D cells are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-ccox-figure>`. The bookkeeping split of the 1D Cgg is in {numref}`Figure %s of Process data for the MOS capacitors <process-data-split-figure>`.
 

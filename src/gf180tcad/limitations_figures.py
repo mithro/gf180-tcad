@@ -875,6 +875,10 @@ def meshconv_2d_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 # The committed records of the plugin-history page: the release at its own mesh, then at half it.
 PLUGIN_FILES = ("v0.8.0.json", "v0.8.0-mesh0p5.json")
+#: The latest-stack records (issue #162): the same PN slab, solved by the fork at the submodule
+#: pin with the connected rib, in the stable TCAD image (``python -m gf180tcad.history --version
+#: latest``).
+LATEST_FILES = ("latest.json", "latest-mesh0p5.json")
 PLUGIN_ROOT = REPO_ROOT / "results" / "plugin-history"
 
 
@@ -902,6 +906,19 @@ def plugin_record(name: str, root: Path = PLUGIN_ROOT) -> dict:
     return plugin_records(root)[name]
 
 
+def latest_drops(root: Path = PLUGIN_ROOT) -> dict[str, tuple[list[float], list[float]]]:
+    """``{name: (cathode biases V, junction drops V)}`` of :data:`LATEST_FILES` under ``root``,
+    named as :func:`plugin_records` names the v0.8.0 records ("latest", "latest × 0.5")."""
+    out = {}
+    for file in LATEST_FILES:
+        rec = json.loads((Path(root) / file).read_text("utf-8"))
+        slab = rec["pn_slab"]
+        scale = rec["mesh_scale"]
+        drops = [s["junction"]["drop_v"] for s in (slab["equilibrium"], *slab["bias"])]
+        out[rec["gplugins_tag"] + ("" if scale == 1 else f" × {scale:g}")] = (slab["bias_v"], drops)
+    return out
+
+
 def pn_slab_steps(name: str, root: Path = PLUGIN_ROOT) -> list[dict]:
     """The PN-slab solves of one record, equilibrium first then the ramp: ``bias`` (the cathode
     voltage, V), ``anode_minus_cathode`` and ``drop`` (V) and the Potential range of each silicon
@@ -920,9 +937,10 @@ def pn_slab_steps(name: str, root: Path = PLUGIN_ROOT) -> list[dict]:
 
 def pn_slab_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """The PN slab of the v0.8.0 records against the cathode bias: the anode − cathode contact
-    potential and the junction drop (top), with the drop a connected rib would have (its
-    equilibrium value minus the bias); and the Potential range of the rib (``core``) and the slab
-    (``slab90``) at each step of both meshes (bottom), the half-size mesh hatched."""
+    potential and the junction drop (top), with the junction drop of the latest-stack records,
+    whose rib is connected (:func:`latest_drops`); and the Potential range of the rib (``core``)
+    and the slab (``slab90``) at each step of both v0.8.0 meshes (bottom), the half-size mesh
+    hatched."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     w = STYLE["bar_width"]
@@ -953,10 +971,12 @@ def pn_slab_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                 handles.append(matplotlib.patches.Patch(
                     facecolor=pal[colour], hatch=hatch, edgecolor=pal["background"],
                     label=f"{label} ({region}), {name}"))  # fmt: skip
-        eq = pn_slab_steps(names[0], root)
-        b = np.array([s["bias"] for s in eq])
-        top.plot(b, eq[0]["drop"] - b, color=pal["muted"], lw=lw, ls=":",
-                 label="drop if the bias reached the junction", gid="connected")  # fmt: skip
+        for (name, (bias, drops)), ls in zip(latest_drops(root).items(), (":", "-."),
+                                              strict=True):  # fmt: skip
+            top.plot(bias, drops, color=pal["muted"], lw=lw, ls=ls, marker="^",
+                     label=f"junction drop, {name} (connected rib)",
+                     gid=f"{name} drop")  # fmt: skip
+        b = np.array([s["bias"] for s in pn_slab_steps(names[0], root)])
         top.set_ylabel("potential (V)")
         top.grid(True)
         top.legend(loc="lower left", frameon=False,

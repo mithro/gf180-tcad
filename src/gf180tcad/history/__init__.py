@@ -22,6 +22,12 @@ its commit, the image and the network mode of the run. The record holds no timin
 paths. It is reproducible byte for byte on one host; it is not part of the GitHub-hosted
 cross-check (the 2023 stack has no cross-host bit-identity guarantee).
 
+``python -m gf180tcad.history --version latest [--mesh-scale R] --out DIR`` writes the
+latest-stack record instead (issue #162): the PN slab of the v0.8.0 record, solved by the gplugins
+fork at the submodule pin with the ported topology, in the stable TCAD image
+(``docker/TCAD_IMAGE``) and its own venv, with no install step and no network
+(``experiments/plugin-history/checks_latest.py``, :func:`run_latest`).
+
 The CLI is not ``python -m gf180tcad``: ``gf180tcad.__main__`` is a SPICE generator module.
 """
 
@@ -44,6 +50,7 @@ from gf180tcad.io import write_json
 
 _SUBMODULE = sandbox.REPO_ROOT / "third_party" / "gplugins"
 _IMAGE_FILE = sandbox.REPO_ROOT / "docker" / "IMAGE"
+_TCAD_IMAGE_FILE = sandbox.REPO_ROOT / "docker" / "TCAD_IMAGE"
 _BUILD_LOCK = "docker/tcad/build-requirements.lock"  # relative to the repo (/work/src)
 
 #: The CPython of the v0.8.0 venv (uv-managed; v0.8.0 predates Python 3.12 support).
@@ -66,6 +73,11 @@ VERSIONS = {
     "v0.8.0": Version("v0.8.0", "checks_v080.py", meshed=True),
     "v1.4.2": Version("v1.4.2", "checks_v142.py", meshed=False),
 }
+
+#: The name of the latest-stack record (``--version latest``), which :func:`run_latest` writes.
+LATEST = "latest"
+#: Its check driver in experiments/plugin-history.
+LATEST_DRIVER = "checks_latest.py"
 
 _ENV = (
     "export HOME=/tmp/home UV_CACHE_DIR=/work/out/uvcache UV_PYTHON_INSTALL_DIR=/work/out/uvpython"
@@ -212,6 +224,57 @@ def run(version: str, out_dir: Path, mesh_scale: float = 1.0, workdir: Path | No
     return path
 
 
+def latest_command(mesh_scale: float) -> list[str]:
+    """The latest-stack driver in the stable TCAD image's venv (network off)."""
+    script = (
+        "set -eu\nrm -rf /work/out/run /work/out/raw.json\nmkdir /work/out/run\ncd /work/out/run\n"
+        "exec env -u PDK PYTHONHASHSEED=0 python3 -s"
+        f' /work/src/experiments/plugin-history/{LATEST_DRIVER} "$@"\n'
+    )
+    return [
+        "sh",
+        "-c",
+        script,
+        "sh",
+        "--mesh-scale",
+        repr(mesh_scale),
+        "--out",
+        "/work/out/raw.json",
+    ]
+
+
+def run_latest(out_dir: Path, mesh_scale: float = 1.0, workdir: Path | None = None) -> Path:
+    """Write the latest-stack record into ``out_dir``; returns its path. See the module
+    docstring. The submodule must be clean and at the superproject's pin
+    (:func:`gf180tcad.tcad.gplugins_commit`), because the sandbox runs its working tree."""
+    from gf180tcad.tcad import gplugins_commit
+
+    commit = gplugins_commit()
+    image = _TCAD_IMAGE_FILE.read_text(encoding="utf-8").splitlines()[0].strip()
+    own = workdir is None
+    wd = Path(tempfile.mkdtemp(prefix="gf180tcad-history-")) if own else Path(workdir)
+    wd.mkdir(parents=True, exist_ok=True)
+    wd = wd.resolve()
+    sandbox.check_workdir(wd)
+    try:
+        print(f"[history] {LATEST} ({commit}): checks (network off) in {wd}", flush=True)
+        _sandbox(latest_command(mesh_scale), wd, wd / "run.log", cpus=1, image=image)
+        raw = json.loads((wd / "raw.json").read_bytes())
+    except BaseException:
+        print(f"[history] failed; logs kept in {wd}", file=sys.stderr, flush=True)
+        raise
+    out = dict(raw)
+    out.update(gplugins_tag=LATEST, gplugins_commit=commit, image=image, network="none",
+               mesh_scale=float(mesh_scale))  # fmt: skip
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / result_name(LATEST, mesh_scale)
+    write_json(path, out)
+    if own:
+        shutil.rmtree(wd)
+    return path
+
+
 def _mesh_scale(text: str) -> float:
     value = float(text)
     if not (math.isfinite(value) and value > 0):
@@ -225,12 +288,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         prog="python -m gf180tcad.history",
         description="Rebuild a gplugins DEVSIM plugin-history record (results/plugin-history).",
     )
-    ap.add_argument("--version", required=True, choices=sorted(VERSIONS))
+    ap.add_argument("--version", required=True, choices=sorted([*VERSIONS, LATEST]))
     ap.add_argument(
         "--mesh-scale",
         type=_mesh_scale,
         default=1.0,
-        help="multiply every value of the PN slab's resolutions dict (v0.8.0 only; default 1)",
+        help="multiply every value of the PN slab's resolutions dict (v0.8.0 and latest only; "
+        "default 1)",
     )
     ap.add_argument("--out", type=Path, required=True, help="directory for the record JSON")
     ap.add_argument(
@@ -241,7 +305,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "directory, removed on success. Never the repo, its git dirs or $HOME.",
     )
     args = ap.parse_args(argv)
-    if args.mesh_scale != 1 and not VERSIONS[args.version].meshed:
+    if args.mesh_scale != 1 and args.version != LATEST and not VERSIONS[args.version].meshed:
         ap.error(f"--mesh-scale does not apply to {args.version} (it runs only the import check)")
     return args
 
@@ -249,6 +313,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     """``python -m gf180tcad.history``: rebuild one record (see the module docstring)."""
     args = parse_args(argv)
-    path = run(args.version, args.out, args.mesh_scale, args.workdir)
+    if args.version == LATEST:
+        path = run_latest(args.out, args.mesh_scale, args.workdir)
+    else:
+        path = run(args.version, args.out, args.mesh_scale, args.workdir)
     print(f"[history] wrote {path}")
     return 0
