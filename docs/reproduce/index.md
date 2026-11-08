@@ -502,7 +502,7 @@ too ({test}`tests/tcad/test_tcad_provenance.py::test_registry_lists_match_the_im
 runs once per entry point).
 
 The calibration and corner-fit entry points also hash {repo}`data/pdk_elec_spec.json`, whose
-Cox spec they copy into their results. The map {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties
+{term}`Cox` spec they copy into their results. The map {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties
 each results folder to its writer. The test
 {test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` requires every
 results folder to name its writer and to carry that writer's current hash.
