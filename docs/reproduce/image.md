@@ -165,8 +165,11 @@ the base image updates both images in **one** pull request:
 2. Rebuild the TCAD image locally (twice, `--no-cache`) FROM the pushed base, and commit the new
    {repo}`docker/tcad/IMAGE_ID` and {repo}`docker/tcad/versions.json`.
 3. CI pushes the TCAD image; commit {repo}`docker/TCAD_IMAGE` (its manifest digest).
-4. Regenerate any TCAD results in the new image and commit them.
-5. Merge only when every check is green.
+4. Re-record meshwell's square with `tools/meshwell-square record` under the docker lock, and
+   commit {repo}`data/images/meshwell-square.json`. The record names both TCAD pins, and
+   `lint-test` fails until it matches them.
+5. Regenerate any TCAD results in the new image and commit them.
+6. Merge only when every check is green.
 
 On the first push of step 1, the TCAD entry can also fail to pull a base that the base entry has
 not pushed (the two entries run in parallel). That failure is expected; it goes away on
@@ -356,25 +359,6 @@ plugin fork is the submodule of {repo}`.gitmodules`, at the commit that
     {test}`tests/test_tcad_image.py::test_meshwell_mesh_reads_back` asserts in the stable image
     (gmsh 4.15.2), so the two images are compared. The square's mesh in both images is drawn in
     {numref}`meshwell-square`.
-- **{{ gplugins_fork }}** (MIT), [mithro/gplugins#10](https://github.com/mithro/gplugins/pull/10).
-  - **Problem.** The fork's PN-slab test
-    ([`test_mesh.py`](https://github.com/mithro/gplugins/blob/408d0af89c6691e78e03b4d7e75b6dcccc74ee99/gplugins/devsim/tests/test_mesh.py) at `408d0af`) checked that the v0.8.0-topology rib floats
-    by requiring `boundary_jump_v > 0.05` V. That is the size of the rib's arbitrary offset,
-    which only the mesh and the initial guess set: 0.118 V with gmsh 4.15.2 and 0.035 V with
-    gmsh 5 at mesh ×1.
-  - **Fix.** The test now checks the mesh-independent invariant. Between bias steps only the slab
-    moves, so the signed core − slab jump at the rib's right bottom vertex changes by exactly the
-    step of the contact potential difference (−0.1 V) and at the left one by 0. Both hold to
-    1e-3 V at mesh ×1 and ×0.5; the fork test records them as measured to 1e-15 V
-    ([`RIB_JUMP_TOL_V`](https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/tests/test_mesh.py#L48)). This is a
-    stronger check: it fails for a coupled rib.
-  - **Check here.**
-    {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained` runs
-    that fork test in the dev image and requires it to pass. The fork test is the one that holds
-    the invariant. It runs from a [`git archive`](https://git-scm.com/docs/git-archive) of the submodule pin,
-    {repo}`third_party/gplugins <.gitmodules>` at
-    [`0715c81`](https://github.com/mithro/gplugins/commit/0715c81c4439533512621a97358d9d779411ebf6),
-    the commit the committed results are made with.
 
 ```{figure} /_generated/reproduce/meshwell-square-light.svg
 :name: meshwell-square
@@ -398,6 +382,26 @@ its number in that image's mesh. The two meshes have the same points and triangl
 a different order. Drawn from {repo}`data/images/meshwell-square.json`, which
 {repo}`tools/meshwell-square` records in both images.
 ```
+
+- **{{ gplugins_fork }}** (MIT), [mithro/gplugins#10](https://github.com/mithro/gplugins/pull/10).
+  - **Problem.** The fork's PN-slab test
+    ([`test_mesh.py`](https://github.com/mithro/gplugins/blob/408d0af89c6691e78e03b4d7e75b6dcccc74ee99/gplugins/devsim/tests/test_mesh.py) at `408d0af`) checked that the v0.8.0-topology rib floats
+    by requiring `boundary_jump_v > 0.05` V. That is the size of the rib's arbitrary offset,
+    which only the mesh and the initial guess set: 0.118 V with gmsh 4.15.2 and 0.035 V with
+    gmsh 5 at mesh ×1.
+  - **Fix.** The test now checks the mesh-independent invariant. Between bias steps only the slab
+    moves, so the signed core − slab jump at the rib's right bottom vertex changes by exactly the
+    step of the contact potential difference (−0.1 V) and at the left one by 0. Both hold to
+    1e-3 V at mesh ×1 and ×0.5; the fork test records them as measured to 1e-15 V
+    ([`RIB_JUMP_TOL_V`](https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/tests/test_mesh.py#L48)). This is a
+    stronger check: it fails for a coupled rib.
+  - **Check here.**
+    {test}`tests/test_tcad_dev_image.py::test_tcad_dev_fork_pn_slab_currents_explained` runs
+    that fork test in the dev image and requires it to pass. The fork test is the one that holds
+    the invariant. It runs from a [`git archive`](https://git-scm.com/docs/git-archive) of the submodule pin,
+    {repo}`third_party/gplugins <.gitmodules>` at
+    [`0715c81`](https://github.com/mithro/gplugins/commit/0715c81c4439533512621a97358d9d779411ebf6),
+    the commit the committed results are made with.
 
 **The full flow runs in the current dev image** (2026-10-24, image {term}`config digest` `b4bae2b3…`,
 {term}`manifest digest` `fe347528…`, with the submodule pinned at gplugins `1c071d0`):
@@ -579,6 +583,9 @@ The build script refuses a builder in which any node lacks the pinned {{ BuildKi
    - the tag named in this page.
 4. Rebuild twice (`--no-cache`), commit {repo}`docker/tcad-dev/IMAGE_ID` and
    {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.
+5. Re-record meshwell's square with `tools/meshwell-square record` under the docker lock, and
+   commit {repo}`data/images/meshwell-square.json`. `lint-test` fails until the record names the
+   pin in {repo}`docker/TCAD_DEV_IMAGE`.
 
 (charon-images)=
 
