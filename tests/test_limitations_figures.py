@@ -364,7 +364,7 @@ def _allowed_names() -> set[str]:
     ids, the plugin-history record files, the figures, the dimensions of the model, the model's
     name and the text encoding."""
     gids = {geometry_id(g) for d in DEVICES.values() for g in d.geometries}
-    names = set(DEVICES) | gids | set(lf.PLUGIN_FILES) | set(lf.FIGURES)
+    names = set(DEVICES) | gids | set(lf.PLUGIN_FILES) | set(lf.LATEST_FILES) | set(lf.FIGURES)
     return names | {"1D", "2D", "BSIM4", "utf-8"}
 
 
@@ -760,10 +760,14 @@ def check_pn_slab(fig):
                 slots.append(round((bar.get_x() + w / 2 - s["v"]) / w, 9))
     # Each record and region has its own slot beside the bias, the same at every step.
     assert len(set(slots)) == len(recs) * 2
-    first = next(iter(recs.values()))["ddcomponent"]
-    steps = [{"v": 0.0, **first["equilibrium"]}, *first["bias"]]
-    b = np.array([s["v"] for s in steps])
-    d.line("connected", b, steps[0]["junction"]["drop_v"] - b, top)
+    # The latest-stack records (#162): the measured drop of the connected rib, each mesh.
+    for file in ("latest.json", "latest-mesh0p5.json"):
+        rec = json.loads((REPO_ROOT / "results" / "plugin-history" / file).read_text("utf-8"))
+        slab = rec["pn_slab"]
+        scale = rec["mesh_scale"]
+        name = rec["gplugins_tag"] + ("" if scale == 1 else f" × {scale:g}")
+        drops = [s["junction"]["drop_v"] for s in (slab["equilibrium"], *slab["bias"])]
+        d.line(f"{name} drop", slab["bias_v"], drops, top)
     d.done()
 
 
