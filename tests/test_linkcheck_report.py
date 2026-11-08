@@ -227,3 +227,108 @@ def test_fetch_state_without_history_succeeds_with_no_file(
     assert lr.fetch_state("linkcheck.yml", out) == 0
     assert not out.exists()
     assert lr.read_state(out) == {}
+
+
+# --- urls: the links of README.md and CONTRIBUTING.md (issue #136) ------------------------------
+
+
+def _pages(tmp_path: Path, text: str) -> Path:
+    """A root with docs/conf.py (one ignore pattern) and a README.md holding ``text``."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "conf.py").write_text(
+        'import sys\nlinkcheck_ignore = [r"https://flaky\\.example/"]\n', encoding="utf-8"
+    )
+    (tmp_path / "README.md").write_text(text, encoding="utf-8")
+    return tmp_path
+
+
+def test_page_urls_skip_the_published_docs_but_their_root(tmp_path):
+    own = lr.OWN_DOCS
+    f = tmp_path / "README.md"
+    f.write_text(f"[a](https://x.example/a) [b]({own}page.html) [c]({own}) [a](https://x.example/a)",
+                 encoding="utf-8")  # fmt: skip
+    assert lr.page_urls([f]) == [own, "https://x.example/a"]
+
+
+def test_ignore_patterns_are_the_docs_conf_list():
+    patterns = lr.ignore_patterns(ROOT / "docs" / "conf.py")
+    assert r"https://doi\.org/10\.2172/" in patterns and r"https://man7\.org/" in patterns
+
+
+def _raiser(errors):
+    calls = []
+
+    def get(url):
+        calls.append(url)
+        e = errors[min(len(calls) - 1, len(errors) - 1)]
+        if isinstance(e, BaseException):
+            raise e
+        return e
+
+    return get, calls
+
+
+@pytest.mark.parametrize(
+    ("errors", "want", "tries"),
+    [
+        ([200], "ok", 1),
+        ([TimeoutError("t"), 200], "ok", 2),
+        ([TimeoutError("t")], "timeout", 3),
+        ([lr.urllib.error.URLError(lr.socket.timeout("t"))], "timeout", 3),
+        ([lr.urllib.error.HTTPError("u", 404, "Not Found", None, None)], "broken", 3),
+        ([lr.urllib.error.URLError("no such host")], "broken", 3),
+    ],
+    ids=["ok", "retry ok", "timeout", "url timeout", "404", "dns"],
+)
+def test_check_url_classifies(errors, want, tries):
+    get, calls = _raiser(errors)
+    status, _ = lr.check_url("https://x.example/", get=get, sleep=lambda s: None)
+    assert status == want and len(calls) == tries
+
+
+def test_check_urls_fails_on_a_broken_link_and_skips_ignored_ones(tmp_path, capsys):
+    root = _pages(tmp_path, "[a](https://ok.example/) [b](https://dead.example/) "
+                            "[c](https://flaky.example/x)")  # fmt: skip
+    seen = []
+
+    def check(url):
+        seen.append(url)
+        return ("broken", "404") if "dead" in url else ("ok", "200")
+
+    assert lr.check_urls([Path("README.md")], root, check=check) == 1
+    assert seen == ["https://dead.example/", "https://ok.example/"]
+    out = capsys.readouterr().out
+    assert "IGNORED (docs/conf.py linkcheck_ignore) https://flaky.example/x" in out
+    assert "BROKEN https://dead.example/ (404)" in out
+
+
+def test_check_urls_timeouts_warn_count_on_and_fail_at_the_threshold(tmp_path, capsys):
+    """A timeout warns; on a scheduled run it counts on from the previous run, beside the counts
+    report wrote for this run, and fails at the threshold."""
+    root = _pages(tmp_path, "[s](https://slow.example/)")
+    previous = tmp_path / "prev.json"
+    state = tmp_path / "state.json"
+    previous.write_text(json.dumps({"https://slow.example/": 1}), encoding="utf-8")
+    state.write_text(json.dumps({"https://sphinx.example/": 2}), encoding="utf-8")
+
+    def slow(url):
+        return "timeout", "timed out"
+
+    assert lr.check_urls([Path("README.md")], root, check=slow) == 0  # not scheduled: a warning
+    assert "::warning::link timeout: https://slow.example/" in capsys.readouterr().out
+    assert lr.check_urls([Path("README.md")], root, previous, state, threshold=3, check=slow) == 0
+    assert json.loads(state.read_text()) == {
+        "https://sphinx.example/": 2,
+        "https://slow.example/": 2,
+    }
+    state.write_text(json.dumps({}), encoding="utf-8")
+    previous.write_text(json.dumps({"https://slow.example/": 2}), encoding="utf-8")
+    assert lr.check_urls([Path("README.md")], root, previous, state, threshold=3, check=slow) == 1
+    assert "timed out in 3 scheduled runs in a row" in capsys.readouterr().out
+
+
+def test_urls_cli(tmp_path, monkeypatch):
+    root = _pages(tmp_path, "[a](https://ok.example/)")
+    monkeypatch.setattr(lr, "check_url", lambda url: ("ok", "200"))
+    monkeypatch.setattr(lr, "check_urls", lambda *a, **k: 7 if a[1] == root else 0)
+    assert lr.main(["urls", "README.md", "--root", str(root)]) == 7
