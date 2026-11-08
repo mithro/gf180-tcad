@@ -165,8 +165,11 @@ the base image updates both images in **one** pull request:
 2. Rebuild the TCAD image locally (twice, `--no-cache`) FROM the pushed base, and commit the new
    {repo}`docker/tcad/IMAGE_ID` and {repo}`docker/tcad/versions.json`.
 3. CI pushes the TCAD image; commit {repo}`docker/TCAD_IMAGE` (its manifest digest).
-4. Regenerate any TCAD results in the new image and commit them.
-5. Merge only when every check is green.
+4. Re-record meshwell's square: run `record` of {repo}`tools/meshwell-square` with no other
+   sandbox job running, and commit {repo}`data/images/meshwell-square.json`. The record names both TCAD pins, and
+   `lint-test` fails until it matches them.
+5. Regenerate any TCAD results in the new image and commit them.
+6. Merge only when every check is green.
 
 On the first push of step 1, the TCAD entry can also fail to pull a base that the base entry has
 not pushed (the two entries run in parallel). That failure is expected; it goes away on
@@ -354,7 +357,32 @@ plugin fork is the submodule of {repo}`.gitmodules`, at the commit that
     reads meshwell's square back in the dev image and asserts its point count, cell blocks,
     `field_data` and `cell_sets`. These are the same values that
     {test}`tests/test_tcad_image.py::test_meshwell_mesh_reads_back` asserts in the stable image
-    (gmsh 4.15.2), so the two images are compared.
+    (gmsh 4.15.2), so the two images are compared. The square's mesh in both images is drawn in
+    {numref}`meshwell-square`.
+
+```{figure} /_generated/reproduce/meshwell-square-light.svg
+:name: meshwell-square
+:figclass: only-light
+:alt: Two squares side by side, each cut into the same triangles, with a numbered label at every corner of a triangle. The numbers at the same place differ between the two squares.
+
+meshwell's mesh of the unit square, read back through {{ meshio }}, in the stable image (left)
+and the dev-HEAD image (right). Each panel's title gives its gmsh version, and each point carries
+its number in that image's mesh. The two meshes have the same points and triangles, numbered in
+a different order. Drawn from {repo}`data/images/meshwell-square.json`, which
+{repo}`tools/meshwell-square` records in both images.
+```
+
+```{figure} /_generated/reproduce/meshwell-square-dark.svg
+:figclass: only-dark
+:alt: Two squares side by side, each cut into the same triangles, with a numbered label at every corner of a triangle. The numbers at the same place differ between the two squares.
+
+meshwell's mesh of the unit square, read back through {{ meshio }}, in the stable image (left)
+and the dev-HEAD image (right). Each panel's title gives its gmsh version, and each point carries
+its number in that image's mesh. The two meshes have the same points and triangles, numbered in
+a different order. Drawn from {repo}`data/images/meshwell-square.json`, which
+{repo}`tools/meshwell-square` records in both images.
+```
+
 - **{{ gplugins_fork }}** (MIT), [mithro/gplugins#10](https://github.com/mithro/gplugins/pull/10).
   - **Problem.** The fork's PN-slab test
     ([`test_mesh.py`](https://github.com/mithro/gplugins/blob/408d0af89c6691e78e03b4d7e75b6dcccc74ee99/gplugins/devsim/tests/test_mesh.py) at `408d0af`) checked that the v0.8.0-topology rib floats
@@ -555,6 +583,9 @@ The build script refuses a builder in which any node lacks the pinned {{ BuildKi
    - the tag named in this page.
 4. Rebuild twice (`--no-cache`), commit {repo}`docker/tcad-dev/IMAGE_ID` and
    {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.
+5. Re-record meshwell's square: run `record` of {repo}`tools/meshwell-square` with no other
+   sandbox job running, and commit {repo}`data/images/meshwell-square.json`. `lint-test` fails until the record names the
+   pin in {repo}`docker/TCAD_DEV_IMAGE`.
 
 (charon-images)=
 

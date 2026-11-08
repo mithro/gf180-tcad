@@ -7,7 +7,8 @@ Each figure is drawn from committed files only: the :repo:`Makefile`, the SPICE 
 and the committed 2D job records, the render-manifest fixture
 (``tests/fixtures/renders/r-test.render.json``), the display values of the renders
 (``data/render/display.toml``), the dev-HEAD image's input list
-(``docker/tcad-dev/upstream.json``) and :data:`gf180tcad.tcad.RESULTS_IMAGE`.
+(``docker/tcad-dev/upstream.json``), meshwell's mesh of the unit square in each TCAD image
+(``data/images/meshwell-square.json``) and :data:`gf180tcad.tcad.RESULTS_IMAGE`.
 
 The box diagrams use the colours and boxes of :mod:`gf180tcad.imagefig`, whose contrast is
 tested; the plots use those of the explainer figures (:mod:`gf180tcad.explain.figures`).
@@ -87,6 +88,11 @@ STYLE = {
     "silicon_x": (1.0, 2.0),
     "arrow_at": 0.5,
     "line_width": 2.4,
+    # The meshwell-square figure: its size, the width of a triangle's edges (pt), and the
+    # margin round the unit square, as a fraction of its side.
+    "square_in": (6.4, 3.7),
+    "edge_width": 1.2,
+    "square_margin": 0.08,
 }
 
 #: Unit conversions: the nanometres in one of each length unit of a render manifest.
@@ -110,6 +116,10 @@ DISPLAY = REPO_ROOT / "data" / "render" / "display.toml"
 DEV_INPUTS = REPO_ROOT / "docker" / "tcad-dev" / "upstream.json"
 #: The submodule list, which names the plugin fork.
 GITMODULES = REPO_ROOT / ".gitmodules"
+#: meshwell's mesh of the unit square in each TCAD image, recorded by ``tools/meshwell-square``.
+MESHWELL_SQUARE = REPO_ROOT / "data" / "images" / "meshwell-square.json"
+#: The panels of :func:`meshwell_square_figure`: the record's key and the image's name.
+SQUARE_PANELS = (("stable", "stable image"), ("dev", "dev-HEAD image"))
 
 #: The example of a partial run on the reproduce page: one engine, one corner, one device.
 EXAMPLE_RUN = {"engine": "ngspice", "corner": "typical", "device": "nfet_05v0"}
@@ -659,6 +669,44 @@ def results_images_figure(palette: str):
 # --- every figure -------------------------------------------------------------------------------------
 
 
+def meshwell_square(path: Path = MESHWELL_SQUARE) -> dict:
+    """The record of ``tools/meshwell-square``: per image, its pin, the gmsh version, the points
+    (x, y) and the triangles and boundary lines as point numbers."""
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def meshwell_square_figure(palette: str):
+    """meshwell's mesh of the unit square in the stable image (left) and the dev-HEAD image
+    (right): each triangle's edges, and each point at its place with its number in that
+    image's mesh."""
+    pal = ef.PALETTES[palette]
+    record = meshwell_square()
+    margin = STYLE["square_margin"]
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = Figure(figsize=STYLE["square_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(SQUARE_PANELS))
+        for ax, (key, name) in zip(axes, SQUARE_PANELS, strict=True):
+            mesh = record[key]
+            xs = [p[0] for p in mesh["points"]]
+            ys = [p[1] for p in mesh["points"]]
+            for i, tri in enumerate(mesh["triangles"]):
+                loop = [*tri, tri[0]]
+                ax.plot([xs[j] for j in loop], [ys[j] for j in loop], color=pal["muted"],
+                        lw=STYLE["edge_width"], gid=f"{key} triangle {i}")  # fmt: skip
+            for i, (x, y) in enumerate(mesh["points"]):
+                ax.text(x, y, f"{i}", ha="center", va="center", gid=f"{key} point {i}",
+                        bbox={"boxstyle": "round", "fc": pal["background"],
+                              "ec": pal["text"]})  # fmt: skip
+            ax.set_title(f"{name}, gmsh {mesh['gmsh']}")
+            ax.set_xlim(min(xs) - margin, max(xs) + margin)
+            ax.set_ylim(min(ys) - margin, max(ys) + margin)
+            ax.set_aspect("equal")
+            ax.set_xticks([])
+            ax.set_yticks([])
+    return fig
+
+
 def _svg_of(draw: Callable) -> Callable[[str], bytes]:
     def svg(palette: str = "light") -> bytes:
         return _svg(draw(palette), palette)
@@ -670,6 +718,7 @@ def _svg_of(draw: Callable) -> Callable[[str], bytes]:
 #: The figure functions, by file name stem. Each returns the matplotlib figure of one palette.
 DRAW: dict[str, Callable] = {
     "image-forks": forks_figure,
+    "meshwell-square": meshwell_square_figure,
     "results-images": results_images_figure,
     "reproduce-targets": reproduce_figure,
     "reference-jobs": jobs_figure,

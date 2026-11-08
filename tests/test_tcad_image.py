@@ -18,6 +18,8 @@ DOCKER = REPO_ROOT / "docker"
 TCAD_IMAGE_FILE = DOCKER / "TCAD_IMAGE"
 VERSIONS = DOCKER / "tcad" / "versions.json"
 VENV = "/opt/gf180tcad-tcad"
+# meshwell's mesh of the unit square in each TCAD image (tools/meshwell-square, #157).
+MESHWELL_SQUARE = REPO_ROOT / "data" / "images" / "meshwell-square.json"
 
 BASE_KEYS = set(json.loads((DOCKER / "base" / "versions.json").read_text(encoding="utf-8")))
 TCAD_KEYS = BASE_KEYS | {
@@ -250,10 +252,43 @@ MESH_READBACK_EXPECTED = {
 }
 
 
+def test_meshwell_square_record_is_the_readback_square():
+    """Review of #178: tools/meshwell-square meshes the square that the read-back tests mesh, so
+    each image's record has their point, triangle and boundary-line counts; and every boundary
+    line runs along one edge of the unit square."""
+    record = json.loads(MESHWELL_SQUARE.read_text(encoding="utf-8"))
+    cells = MESH_READBACK_EXPECTED["cells"]
+    triangles = sum(n for kind, n in cells if kind == "triangle")
+    lines = sum(n for kind, n in cells if kind == "line")
+    assert set(record) == {"stable", "dev"}
+    for key, mesh in record.items():
+        assert len(mesh["points"]) == MESH_READBACK_EXPECTED["points"], key
+        assert len(mesh["triangles"]) == triangles, key
+        assert len(mesh["lines"]) == lines, key
+        xs = [p[0] for p in mesh["points"]]
+        ys = [p[1] for p in mesh["points"]]
+        edges = (min(xs), max(xs), min(ys), max(ys))
+        for a, b in mesh["lines"]:
+            (xa, ya), (xb, yb) = mesh["points"][a], mesh["points"][b]
+            on_x = xa == xb and xa in edges[:2]
+            on_y = ya == yb and ya in edges[2:]
+            assert on_x or on_y, (key, a, b)
+
+
 @pytest.mark.sandbox
 def test_meshwell_mesh_reads_back(tmp_path):
     res = _run(["python3", "-c", _MESH_READBACK], tmp_path)
     assert json.loads(res.stdout.splitlines()[-1]) == MESH_READBACK_EXPECTED
+
+
+@pytest.mark.sandbox
+def test_tcad_meshwell_square_is_the_record(tmp_path):
+    """tools/meshwell-square's probe gives the mesh data/images/meshwell-square.json records for
+    this image, so the image page's meshwell-square figure draws what the image makes (#157)."""
+    record = json.loads(MESHWELL_SQUARE.read_text(encoding="utf-8"))["stable"]
+    assert record.pop("image") == _tcad_image()
+    res = _run(["python3", "/work/src/tools/meshwell-square", "probe"], tmp_path)
+    assert json.loads(res.stdout.splitlines()[-1]) == record
 
 
 @pytest.mark.sandbox

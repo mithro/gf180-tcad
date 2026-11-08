@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""meshwell's mesh of the unit square, in each TCAD image (issue #157).
+
+The square is the one ``tests/test_tcad_image.py::test_meshwell_mesh_reads_back`` and
+``tests/test_tcad_dev_image.py::test_tcad_dev_meshwell_mesh_reads_back`` mesh: a 1 x 1
+``PolySurface`` at characteristic length 0.5, read back through meshio.
+
+  tools/meshwell-square probe     inside an image: print the mesh as JSON on stdout
+  tools/meshwell-square record    on the host: run the probe in the stable and the dev-HEAD
+                                  image through the sandbox, write data/images/meshwell-square.json
+
+The record holds, per image, its pin, the gmsh version, the points (x, y) and the triangle and
+boundary-line cells as point indices. The image page's ``meshwell-square`` figure draws it.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+RECORD = REPO / "data" / "images" / "meshwell-square.json"
+PINS = {"stable": REPO / "docker" / "TCAD_IMAGE", "dev": REPO / "docker" / "TCAD_DEV_IMAGE"}
+
+
+def probe() -> dict:
+    """The square's mesh in this image."""
+    import gmsh
+    from meshwell.orchestrator import generate_mesh
+    from meshwell.polysurface import PolySurface
+    from shapely.geometry import box
+
+    m = generate_mesh(
+        [PolySurface(polygons=box(0, 0, 1, 1), physical_name="sq", mesh_order=1)],
+        dim=2,
+        default_characteristic_length=0.5,
+        verbosity=0,
+    )
+    cells = {"triangle": [], "line": []}
+    for block in m.cells:
+        if block.type in cells:
+            cells[block.type] += [[int(i) for i in c] for c in block.data]
+    return {
+        "gmsh": gmsh.__version__,
+        "points": [[float(p[0]), float(p[1])] for p in m.points],
+        "triangles": cells["triangle"],
+        "lines": cells["line"],
+    }
+
+
+def record() -> None:
+    """Run the probe in both images through the sandbox and write the record."""
+    import tempfile
+
+    sys.path.insert(0, str(REPO / "src"))
+    from gf180tcad import sandbox
+
+    out = {}
+    for name, pin_file in PINS.items():
+        pin = pin_file.read_text(encoding="utf-8").strip()
+        scratch = Path.home() / ".cache" / "gf180-tcad"
+        scratch.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+            res = sandbox.run(
+                ["python3", "/work/src/tools/meshwell-square", "probe"],
+                out_dir=Path(tmp),
+                mem="2g",
+                cpus=1,
+                image=pin,
+            )
+        if res.returncode != 0:
+            raise SystemExit(f"{name}: probe failed ({res.returncode}):\n{res.stderr}")
+        out[name] = {"image": pin, **json.loads(res.stdout.splitlines()[-1])}
+    RECORD.parent.mkdir(parents=True, exist_ok=True)
+    RECORD.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"wrote {RECORD.relative_to(REPO)}")
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["probe"]:
+        print(json.dumps(probe(), sort_keys=True))
+    elif sys.argv[1:] == ["record"]:
+        record()
+    else:
+        raise SystemExit(__doc__)
