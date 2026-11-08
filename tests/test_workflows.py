@@ -185,14 +185,25 @@ def _linkcheck_text() -> str:
 
 
 def test_linkcheck_steps_run_the_tested_script_not_inline_shell():
-    """The status handling and the number check live in tools/linkcheck_report.py (unit-tested in
-    tests/test_linkcheck_report.py), so the workflow carries no jq, gh loop or heredoc for them."""
+    """The status handling, the number check and the README/CONTRIBUTING link check live in
+    tools/linkcheck_report.py (unit-tested in tests/test_linkcheck_report.py), so the workflow
+    carries no jq, gh loop, heredoc or inline python for them (issue #136)."""
     text = _linkcheck_text()
     assert "tools/linkcheck_report.py report --status" in text
     assert "tools/linkcheck_report.py numbers --repo" in text
     assert "tools/linkcheck_report.py fetch-state" in text
+    assert "tools/linkcheck_report.py urls README.md CONTRIBUTING.md $STATE_ARGS" in text
     assert "jq " not in text
     assert "gh api" not in text
+    assert "<<" not in text and "urllib" not in text
+    assert not re.search(r"python -(\s|$)", text, re.MULTILINE)  # a script read from stdin
+
+
+def test_linkcheck_uploads_the_counts_after_every_step_that_writes_them():
+    """The README link check adds its timeouts to the state file, so the upload comes after it."""
+    text = _linkcheck_text()
+    assert text.index("linkcheck_report.py urls") < text.index("name: linkcheck-timeouts")
+    assert text.index("linkcheck_report.py report") < text.index("name: linkcheck-timeouts")
 
 
 def test_linkcheck_keeps_timeout_counts_only_on_scheduled_runs():

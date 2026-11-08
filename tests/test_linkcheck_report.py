@@ -122,6 +122,8 @@ def test_without_state_out_a_timeout_never_escalates(tmp_path):
 def test_a_broken_link_still_fails_on_a_scheduled_run(tmp_path):
     new = tmp_path / "new.json"
     assert lr.report(1, _write(tmp_path / "output.json", [BROKEN, TIMEOUT]), None, new) == 1
+    # the timeouts of that run are still counted (review of #186)
+    assert json.loads(new.read_text()) == {TIMEOUT["uri"]: 1}
 
 
 def test_cli_exit_code(tmp_path):
@@ -227,3 +229,144 @@ def test_fetch_state_without_history_succeeds_with_no_file(
     assert lr.fetch_state("linkcheck.yml", out) == 0
     assert not out.exists()
     assert lr.read_state(out) == {}
+
+
+# --- urls: the links of README.md and CONTRIBUTING.md (issue #136) ------------------------------
+
+
+def _pages(tmp_path: Path, text: str) -> Path:
+    """A root with docs/conf.py (one ignore pattern) and a README.md holding ``text``."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "conf.py").write_text(
+        'import sys\nlinkcheck_ignore = [r"https://flaky\\.example/"]\n', encoding="utf-8"
+    )
+    (tmp_path / "README.md").write_text(text, encoding="utf-8")
+    return tmp_path
+
+
+def test_page_urls_skip_the_published_docs_but_their_root(tmp_path):
+    own = lr.OWN_DOCS
+    f = tmp_path / "README.md"
+    f.write_text(f"[a](https://x.example/a) [b]({own}page.html) [c]({own}) [a](https://x.example/a)",
+                 encoding="utf-8")  # fmt: skip
+    assert lr.page_urls([f]) == [own, "https://x.example/a"]
+
+
+def test_ignore_patterns_are_the_docs_conf_list():
+    patterns = lr.ignore_patterns(ROOT / "docs" / "conf.py")
+    assert r"https://doi\.org/10\.2172/" in patterns and r"https://man7\.org/" in patterns
+
+
+def _raiser(errors):
+    calls = []
+
+    def get(url):
+        calls.append(url)
+        e = errors[min(len(calls) - 1, len(errors) - 1)]
+        if isinstance(e, BaseException):
+            raise e
+        return e
+
+    return get, calls
+
+
+@pytest.mark.parametrize(
+    ("errors", "want", "tries"),
+    [
+        ([200], "ok", 1),
+        ([TimeoutError("t"), 200], "ok", 2),
+        ([TimeoutError("t")], "timeout", 3),
+        ([lr.urllib.error.URLError(lr.socket.timeout("t"))], "timeout", 3),
+        ([lr.urllib.error.HTTPError("u", 404, "Not Found", None, None)], "broken", 3),
+        ([lr.urllib.error.URLError("no such host")], "broken", 3),
+    ],
+    ids=["ok", "retry ok", "timeout", "url timeout", "404", "dns"],
+)
+def test_check_url_classifies(errors, want, tries):
+    get, calls = _raiser(errors)
+    status, _ = lr.check_url("https://x.example/", get=get, sleep=lambda s: None)
+    assert status == want and len(calls) == tries
+
+
+def test_check_urls_fails_on_a_broken_link_and_skips_ignored_ones(tmp_path, capsys):
+    root = _pages(tmp_path, "[a](https://ok.example/) [b](https://dead.example/) "
+                            "[c](https://flaky.example/x)")  # fmt: skip
+    seen = []
+
+    def check(url):
+        seen.append(url)
+        return ("broken", "404") if "dead" in url else ("ok", "200")
+
+    assert lr.check_urls([Path("README.md")], root, check=check) == 1
+    assert seen == ["https://dead.example/", "https://ok.example/"]
+    out = capsys.readouterr().out
+    assert "IGNORED (docs/conf.py linkcheck_ignore) https://flaky.example/x" in out
+    assert "BROKEN https://dead.example/ (404)" in out
+
+
+def test_check_urls_timeouts_warn_count_on_and_fail_at_the_threshold(tmp_path, capsys):
+    """A timeout warns; on a scheduled run it counts on from the previous run, beside the counts
+    report wrote for this run, and fails at the threshold."""
+    root = _pages(tmp_path, "[s](https://slow.example/)")
+    previous = tmp_path / "prev.json"
+    state = tmp_path / "state.json"
+    previous.write_text(json.dumps({"https://slow.example/": 1}), encoding="utf-8")
+    state.write_text(json.dumps({"https://sphinx.example/": 2}), encoding="utf-8")
+
+    def slow(url):
+        return "timeout", "timed out"
+
+    assert lr.check_urls([Path("README.md")], root, check=slow) == 0  # not scheduled: a warning
+    assert "::warning::link timeout: https://slow.example/" in capsys.readouterr().out
+    assert lr.check_urls([Path("README.md")], root, previous, state, threshold=3, check=slow) == 0
+    assert json.loads(state.read_text()) == {
+        "https://sphinx.example/": 2,
+        "https://slow.example/": 2,
+    }
+    state.write_text(json.dumps({}), encoding="utf-8")
+    previous.write_text(json.dumps({"https://slow.example/": 2}), encoding="utf-8")
+    assert lr.check_urls([Path("README.md")], root, previous, state, threshold=3, check=slow) == 1
+    assert "timed out in 3 scheduled runs in a row" in capsys.readouterr().out
+
+
+def test_check_urls_a_link_that_answers_again_drops_its_count(tmp_path):
+    """Review of #186: a README link that timed out before but answers now has no count."""
+    root = _pages(tmp_path, "[s](https://slow.example/)")
+    previous = tmp_path / "prev.json"
+    state = tmp_path / "state.json"
+    previous.write_text(json.dumps({"https://slow.example/": 2}), encoding="utf-8")
+    state.write_text(json.dumps({}), encoding="utf-8")
+    ok = lambda url: ("ok", "200")
+    assert lr.check_urls([Path("README.md")], root, previous, state, threshold=3, check=ok) == 0
+    assert json.loads(state.read_text()) == {}
+
+
+def test_check_urls_a_link_in_both_counts_once(tmp_path):
+    """Review of #186: a URL that report counted for this run and that times out here too takes
+    the larger count, not the sum."""
+    root = _pages(tmp_path, "[s](https://slow.example/)")
+    previous = tmp_path / "prev.json"
+    state = tmp_path / "state.json"
+    previous.write_text(json.dumps({"https://slow.example/": 1}), encoding="utf-8")
+    state.write_text(json.dumps({"https://slow.example/": 2}), encoding="utf-8")
+    slow = lambda url: ("timeout", "timed out")
+    assert lr.check_urls([Path("README.md")], root, previous, state, threshold=3, check=slow) == 0
+    assert json.loads(state.read_text()) == {"https://slow.example/": 2}
+
+
+def test_urls_cli(tmp_path, monkeypatch):
+    """The command line passes each option to its parameter (review of #186)."""
+    got = {}
+
+    def fake(paths, root, previous, state_out, threshold):
+        got.update(
+            paths=paths, root=root, previous=previous, state_out=state_out, threshold=threshold
+        )
+        return 7
+
+    monkeypatch.setattr(lr, "check_urls", fake)
+    argv = ["urls", "README.md", "CONTRIBUTING.md", "--root", str(tmp_path), "--previous", "p.json",
+            "--state-out", "s.json", "--threshold", "5"]  # fmt: skip
+    assert lr.main(argv) == 7
+    assert got == {"paths": [Path("README.md"), Path("CONTRIBUTING.md")], "root": tmp_path,
+                   "previous": Path("p.json"), "state_out": Path("s.json"), "threshold": 5}  # fmt: skip
