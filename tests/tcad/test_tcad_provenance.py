@@ -141,7 +141,8 @@ def test_registry_is_plain_data():
     dicts of gf180tcad.tcad are exactly its contents."""
     reg = json.loads(REGISTRY.read_bytes())
     assert set(reg) == {
-        "calibration_dirs", "entry_points", "images", "plugin_excludes", "schema", "trees",
+        "calibration_dirs", "entry_points", "extra_files", "images", "plugin_excludes", "schema",
+        "trees",
     }  # fmt: skip
     assert reg["schema"] == 1
     assert tcad.REGISTRY_FILE == REGISTRY
@@ -152,6 +153,10 @@ def test_registry_is_plain_data():
         n: (Path(v["pin"]), Path(v["versions"])) for n, v in reg["images"].items()
     }
     assert tcad.CALIBRATION_DIRS == {b: Path(d) for b, d in reg["calibration_dirs"].items()}
+    assert tcad.EXTRA_FILES == {e: tuple(f) for e, f in reg["extra_files"].items()}
+    assert set(reg["extra_files"]) <= set(reg["entry_points"])
+    for files in reg["extra_files"].values():
+        assert all((REPO / f).is_file() for f in files), files
     for entry, modules in reg["entry_points"].items():
         assert entry in modules and modules == sorted(set(modules)), entry
     # every tree, exclusion and image is of a known entry point / an existing file
@@ -487,9 +492,12 @@ def test_generator_files_per_entry_point():
     assert "src/gf180tcad/tcad/__main__.py" in tcad_files - calibrate_files
     assert "src/gf180tcad/calibrate/cv.py" in calibrate_files - tcad_files
     assert "src/gf180tcad/specwindow.py" in calibrate_files - tcad_files
-    # the shared non-module inputs are the same for both
+    # the shared non-module inputs are the same for both; the calibration adds its own
+    # extra_files (issue #145)
     shared = {f for f in tcad_files if not f.startswith("src/")}
-    assert shared == {f for f in calibrate_files if not f.startswith("src/")}
+    extra = set(tcad.EXTRA_FILES[CALIBRATE_MAIN])
+    assert extra and not extra & tcad_files
+    assert shared | extra == {f for f in calibrate_files if not f.startswith("src/")}
     with pytest.raises(KeyError):
         tcad.generator_files("gf180tcad.__main__")
 
@@ -515,6 +523,39 @@ def test_generator_sha256_per_entry_point(monkeypatch):
     for target in ("tools/sandbox-run", "data/process/nfet_05v0.toml", "src/gf180tcad/io.py"):
         for e in ROOTS:
             assert tcad.generator_sha256(e) != before[e], (target, e)
+
+
+def test_the_spec_file_is_hashed_by_the_calibration_entry_points_only(monkeypatch):
+    """Issue #145: data/pdk_elec_spec.json, whose Cox spec the calibration and corner-fit
+    entry points copy into their results, is in their hashed files and in no other's, and a
+    change to it moves only their hashes."""
+    spec = "data/pdk_elec_spec.json"
+    readers = {CALIBRATE_MAIN, "gf180tcad.calibrate.corners"}
+    for entry in tcad.TCAD_GENERATORS:
+        assert (spec in tcad.generator_files(entry)) == (entry in readers), entry
+    before = {e: tcad.generator_sha256(e) for e in tcad.TCAD_GENERATORS}
+    real = tcad._sha256
+    monkeypatch.setattr(
+        tcad, "_sha256", lambda p: "0" * 64 if p.as_posix().endswith(spec) else real(p)
+    )
+    after = {e: tcad.generator_sha256(e) for e in tcad.TCAD_GENERATORS}
+    assert {e for e in before if before[e] != after[e]} == readers
+
+
+def test_the_calibration_code_reads_the_spec_file():
+    """The reason for #145: cv.cox_spec reads data/pdk_elec_spec.json through
+    specwindow.load_spec, and both calibration entry points call it."""
+    import inspect
+
+    from gf180tcad import specwindow
+    from gf180tcad.calibrate import corners, cv
+
+    assert "data/pdk_elec_spec.json" in inspect.getsource(specwindow).replace("\\", "/") or (
+        specwindow.SPEC_PATH.as_posix().endswith("data/pdk_elec_spec.json")
+    )
+    assert "specwindow.load_spec()" in inspect.getsource(cv.cox_spec)
+    assert "cv.cox_spec(device)" in inspect.getsource(corners)
+    assert "cox = cox_spec(device)" in inspect.getsource(cv)
 
 
 @pytest.mark.parametrize("entry", ENTRY_POINTS)
