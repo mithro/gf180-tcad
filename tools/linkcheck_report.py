@@ -13,8 +13,8 @@ report  Turn sphinx-build's linkcheck result into the job result.
 fetch-state  Download that file from the latest completed scheduled run (none is fine).
 numbers Check through the GitHub API that each issue and pull request number the docs link to
         exists (Sphinx ignores those links because github.com answers them with HTTP 429, #87).
-urls    Fetch each https link of README.md and CONTRIBUTING.md, which Sphinx does not build
-        (issue #136). Links into the published docs are checked offline against docs/ by
+urls    Fetch each https link of the Markdown files given, README.md and CONTRIBUTING.md in the
+        workflow, which Sphinx does not build (issue #136). Links into the published docs are checked offline against docs/ by
         tests/test_doc_links.py, and links matching docs/conf.py's ``linkcheck_ignore`` are skipped.
         A broken link fails; a timeout is a ``::warning::`` and, on a scheduled run, counts in the
         same state file as ``report``'s, so a link that times out in ``--threshold`` runs in a row
@@ -103,20 +103,19 @@ def report(
     for e in timeouts:
         print(f"::warning::linkcheck timeout: {e['uri']} ({e['filename']}:{e['lineno']})")
     print(f"sphinx-build exit {status}; broken links: {len(broken)}")
-    if broken:
-        return 1
-    if not timeouts:
+    if not broken and not timeouts:
         print(f"sphinx-build failed (exit {status}) with no broken link and no timeout")
         return status
-    if state_out is None:
-        return 0
-    before = read_state(previous)
-    counts = {uri: before.get(uri, 0) + 1 for uri in sorted({e["uri"] for e in timeouts})}
-    write_state(state_out, counts)
-    dead = [uri for uri, n in counts.items() if n >= threshold]
-    for uri in dead:
-        print(f"::error::linkcheck: {uri} timed out in {counts[uri]} scheduled runs in a row")
-    return 1 if dead else 0
+    dead = []
+    if state_out is not None:
+        # Counted on a run with a broken link too, so a broken link does not reset a streak.
+        before = read_state(previous)
+        counts = {uri: before.get(uri, 0) + 1 for uri in sorted({e["uri"] for e in timeouts})}
+        write_state(state_out, counts)
+        dead = [uri for uri, n in counts.items() if n >= threshold]
+        for uri in dead:
+            print(f"::error::linkcheck: {uri} timed out in {counts[uri]} scheduled runs in a row")
+    return 1 if broken or dead else 0
 
 
 def fetch_state(workflow: str, out: Path) -> int:
