@@ -866,7 +866,7 @@ The image's ENV keeps the dev image's settings, `OMP_NUM_THREADS=1` among them. 
 {repo}`docker/charon/probe_versions.py` writes {repo}`docker/charon/versions.json`. It holds the
 dev image's probe, both pinned image references, the charon-libs keys and the versions below.
 
-```{table} The Python packages the charon image adds, and the C libraries inside the netCDF4 wheel. Values from {repo}`docker/charon/versions.json`.
+~~~{table} The Python packages the charon image adds, and the C libraries inside the netCDF4 wheel. Values from {repo}`docker/charon/versions.json`.
 :name: charon-image-versions
 
 | Component | Version |
@@ -875,7 +875,7 @@ dev image's probe, both pinned image references, the charon-libs keys and the ve
 | `cftime` | 1.6.6.1 |
 | netCDF-C in the `netCDF4` wheel | 4.10.1 |
 | HDF5 in the `netCDF4` wheel | 2.2.0 |
-```
+~~~
 
 {repo}`docker/charon/build` works like {repo}`docker/charon-libs/build`, in the same 16 GiB
 builder. Its build inputs are the files in {repo}`docker/charon/`, the two pin files and
