@@ -542,20 +542,25 @@ def test_the_spec_file_is_hashed_by_the_calibration_entry_points_only(monkeypatc
     assert {e for e in before if before[e] != after[e]} == readers
 
 
-def test_the_calibration_code_reads_the_spec_file():
-    """The reason for #145: cv.cox_spec reads data/pdk_elec_spec.json through
-    specwindow.load_spec, and both calibration entry points call it."""
-    import inspect
-
+def test_every_entry_point_that_reads_the_spec_hashes_it():
+    """Review of #187: the spec file is read only through gf180tcad.specwindow (SPEC_PATH), so an
+    entry point hashes it exactly when specwindow is in its import closure. A new entry point that
+    starts importing specwindow without listing the file in extra_files fails here."""
     from gf180tcad import specwindow
-    from gf180tcad.calibrate import corners, cv
 
-    assert "data/pdk_elec_spec.json" in inspect.getsource(specwindow).replace("\\", "/") or (
-        specwindow.SPEC_PATH.as_posix().endswith("data/pdk_elec_spec.json")
+    spec = specwindow.SPEC_PATH.relative_to(REPO).as_posix()
+    assert spec == "data/pdk_elec_spec.json"
+    for entry, modules in tcad.TCAD_GENERATORS.items():
+        reads = "gf180tcad.specwindow" in modules
+        assert (spec in tcad.EXTRA_FILES.get(entry, ())) == reads, entry
+    # specwindow is the only module that names the file as a string, so every reader goes
+    # through it (docstrings mention the file with double backquotes, never as a literal)
+    readers = sorted(
+        p.relative_to(REPO).as_posix()
+        for p in (REPO / "src").rglob("*.py")
+        if '"pdk_elec_spec.json"' in p.read_text(encoding="utf-8")
     )
-    assert "specwindow.load_spec()" in inspect.getsource(cv.cox_spec)
-    assert "cv.cox_spec(device)" in inspect.getsource(corners)
-    assert "cox = cox_spec(device)" in inspect.getsource(cv)
+    assert readers == ["src/gf180tcad/specwindow.py"], readers
 
 
 @pytest.mark.parametrize("entry", ENTRY_POINTS)
