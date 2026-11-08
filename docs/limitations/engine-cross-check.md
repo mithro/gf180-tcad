@@ -25,22 +25,22 @@ threshold in {numref}`engine-diff-figure`.
 ```{figure} /_generated/limitations/engine-diff-light.svg
 :name: engine-diff-figure
 :figclass: only-light
-:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the filled circles and squares sit above a dashed threshold line, and hollow markers for the same sweeps sit below it; every pfet marker sits below it.
+:alt: Two panels of engine difference on a log axis. Filled nfet circles and squares sit above a dashed threshold; hollow nfet markers and all pfet markers sit below it.
 
 The {term}`engine_diff` of each {term}`typical corner` sweep, nfet above and pfet below, from the
 committed {{ ngspice }} and {{ Xyce }} files ({repo}`results/spice`). The dashed line is the 0.5 %
-threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry. The hollow
+threshold. The filled nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry. The hollow
 nfet markers are the same sweeps with the card's `version` forced to 4.6, from
 {repo}`data/spice/engine-forced-bsim46.json`; all of them lie below it.
 ```
 
 ```{figure} /_generated/limitations/engine-diff-dark.svg
 :figclass: only-dark
-:alt: Two panels of engine difference on a log axis, one marker per sweep and geometry. In the nfet panel the filled circles and squares sit above a dashed threshold line, and hollow markers for the same sweeps sit below it; every pfet marker sits below it.
+:alt: Two panels of engine difference on a log axis. Filled nfet circles and squares sit above a dashed threshold; hollow nfet markers and all pfet markers sit below it.
 
 The {term}`engine_diff` of each {term}`typical corner` sweep, nfet above and pfet below, from the
 committed {{ ngspice }} and {{ Xyce }} files ({repo}`results/spice`). The dashed line is the 0.5 %
-threshold. The nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry. The hollow
+threshold. The filled nfet `idvg_lin` and `idvg_sat` markers lie above it at every geometry. The hollow
 nfet markers are the same sweeps with the card's `version` forced to 4.6, from
 {repo}`data/spice/engine-forced-bsim46.json`; all of them lie below it.
 ```
@@ -112,7 +112,8 @@ identically to scratch copies of both libraries.
   `lpe0 = 0` makes it larger (3.1e-2). The parameters are described in the
   {ref}`BSIM4 manual <lit-bsim4>`.
 - **ngspice `version` set to 4.6, 4.7 or 4.8** (all three give identical
-  results): the difference goes away.
+  results): the difference goes away. At W = 10 µm, L = 0.6 µm the record
+  {repo}`data/spice/engine-forced-bsim46.json` gives:
 
   | Sweep | ngspice 4.5 (PDK as published) | ngspice 4.6 |
   |---|---|---|
