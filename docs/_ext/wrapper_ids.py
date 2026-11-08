@@ -4,7 +4,7 @@
 The Furo theme wraps every table and every display equation in a ``container`` (classes
 ``table-wrapper`` and ``math-wrapper``) so that it can scroll at phone width. Its
 post-transform ``WrapTableAndMathInAContainerTransform`` (priority 500) copies all attributes of
-the wrapped node onto the wrapper, ids included, and leaves them on the wrapped node too. A
+the wrapped node onto the wrapper. The ids go with them, and the wrapped node keeps its own. A
 labelled equation or a named table then carries its id twice, which is invalid HTML.
 
 :class:`DropWrapperIds` runs after it and removes from each wrapper the ids its wrapped node
