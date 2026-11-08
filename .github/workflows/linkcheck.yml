@@ -67,13 +67,6 @@ jobs:
             cat docs/_build/linkcheck/output.txt
             cat docs/_build/linkcheck/output.txt >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Keep the timeout counts for the next scheduled run
-        if: always() && github.event_name == 'schedule'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: linkcheck-timeouts
-          path: docs/_build/state/timeouts.json
-          if-no-files-found: ignore
       # Sphinx ignores links to this repository's issues and pull requests because github.com
       # answers them with HTTP 429 (issue #87). This step checks the numbers through the API.
       - name: Issue and pull request links exist
@@ -81,37 +74,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: uv run --no-project python -I tools/linkcheck_report.py numbers --repo "${GITHUB_REPOSITORY}"
+      # README.md and CONTRIBUTING.md are not part of the Sphinx build. tools/linkcheck_report.py
+      # fetches their links (issue #136): a broken link fails, a timeout warns and, on a scheduled
+      # run, counts in the same state file as the Sphinx timeouts.
       - name: README.md and CONTRIBUTING.md links
         if: always()
-        run: |
-          uv run --no-project python - <<'EOF'
-          import re, sys, time, urllib.request
-          # Links into the published docs are checked offline against docs/ by
-          # tests/test_doc_links.py (the pages of a PR are not published yet).
-          own = "https://gf180-tcad.readthedocs.io/en/latest/"
-          urls = sorted({u for f in ("README.md", "CONTRIBUTING.md")
-                         for u in re.findall(r"\((https://[^)\s]+)\)", open(f).read())
-                         if not u.startswith(own) or u == own})
-          # The same documented flaky hosts as docs/conf.py:linkcheck_ignore.
-          flaky = ("https://doi.org/10.2172/", "https://doi.org/10.1103/",
-                   "https://www.semiconductors.org/", "https://semimod.de/",
-                   "https://man7.org/")
-          bad = []
-          for url in urls:
-              if url.startswith(flaky):
-                  print("IGNORED (flaky host)", url)
-                  continue
-              req = urllib.request.Request(url, headers={"User-Agent": "gf180-tcad-linkcheck"})
-              for attempt in range(3):
-                  try:
-                      with urllib.request.urlopen(req, timeout=30) as r:
-                          print(r.status, url)
-                      break
-                  except Exception as e:  # noqa: BLE001
-                      if attempt == 2:
-                          print("BROKEN", url, e)
-                          bad.append(url)
-                      else:
-                          time.sleep(10)
-          sys.exit(1 if bad else 0)
-          EOF
+        env:
+          STATE_ARGS: ${{ github.event_name == 'schedule' && '--previous docs/_build/previous/timeouts.json --state-out docs/_build/state/timeouts.json' || '' }}
+        # STATE_ARGS is unquoted on purpose: it holds two options or nothing.
+        run: uv run --no-project python -I tools/linkcheck_report.py urls README.md CONTRIBUTING.md $STATE_ARGS
+      - name: Keep the timeout counts for the next scheduled run
+        if: always() && github.event_name == 'schedule'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linkcheck-timeouts
+          path: docs/_build/state/timeouts.json
+          if-no-files-found: ignore
