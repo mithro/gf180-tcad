@@ -483,6 +483,9 @@ class Drawn:
 
 
 def check_engine_diff(fig):
+    forced = json.loads(
+        (REPO_ROOT / "data" / "spice" / "engine-forced-bsim46.json").read_text("utf-8")
+    )
     d = Drawn(fig)
     for ax, device in zip(fig.axes, DEV, strict=True):
         gs = _by_falling_w_l(device)
@@ -500,6 +503,12 @@ def check_engine_diff(fig):
             assert _close(ln.get_ydata(), want), sweep
             # Each marker sits beside its geometry's tick, within half a tick spacing.
             assert np.all(np.abs(ln.get_xdata() - ticks) < 1 / 2), sweep
+            if device == forced["device"]:  # the card forced to 4.6 (#161), hollow, same x
+                at46 = d(f"{device} {sweep} at 4.6", ax)
+                want46 = [forced["cases"][geometry_id(g)][sweep]["forced_4p6"] for g in gs]
+                assert np.array_equal(at46.get_ydata(), want46), sweep
+                assert np.array_equal(at46.get_xdata(), ln.get_xdata()), sweep
+                assert at46.get_markerfacecolor() == "none", sweep
         d.hline("threshold", xyce.ENGINE_DIFF_THRESHOLD, ax)
     d.done()
 
@@ -905,3 +914,40 @@ def test_page_numbers_are_the_committed_files():
 def test_docs_conf_registers_the_substitutions():
     conf = (REPO_ROOT / "docs/conf.py").read_text("utf-8")
     assert "limitations_figures" in conf and ".substitutions()" in conf
+
+
+def _shown(text: str, value: float) -> bool:
+    """Whether ``text`` (as the page writes a number, such as 5.62e-3 or 3.9e-5) is ``value``
+    rounded to the significant digits the page shows."""
+    mantissa = text.split("e")[0].replace(".", "").lstrip("0")
+    return float(text) == float(f"{value:.{max(len(mantissa), 1) - 1}e}")
+
+
+def test_engine_page_forced_values_are_the_record():
+    """Issue #161: the engine-cross-check page's stock and forced-4.6 values are those of
+    data/spice/engine-forced-bsim46.json, rounded as the page shows them."""
+    record = json.loads(
+        (REPO_ROOT / "data" / "spice" / "engine-forced-bsim46.json").read_text("utf-8")
+    )
+    cases = record["cases"]
+    page = (REPO_ROOT / "docs" / "limitations" / "engine-cross-check.md").read_text("utf-8")
+    nfet = DEVICES[record["device"]]
+    by_wl = {(f"{g.w_um:g}", f"{g.l_um:g}"): geometry_id(g) for g in nfet.geometries}
+    rows = 0
+    for sweep in ("idvg_lin", "idvg_sat"):
+        table = page.split(f"The `{sweep}` sweep:", 1)[1].split("\n\n", 2)[1]
+        for line in table.splitlines()[2:]:
+            w, l, stock, at46 = (c.strip() for c in line.strip("|").split("|"))
+            got = cases[by_wl[(w, l)]][sweep]
+            assert _shown(stock, got["stock"]), (sweep, w, l, stock, got)
+            assert _shown(at46, got["forced_4p6"]), (sweep, w, l, at46, got)
+            rows += 1
+    assert rows == 2 * len(nfet.geometries)
+    # the summary: the forced values' range of each sweep
+    m = re.search(r"every nfet geometry agrees: `idvg_lin` (\S+) to\s+(\S+), `idvg_sat` (\S+) to "
+                  r"(\S+), `idvd` (\S+) to (\S+)\.", page)  # fmt: skip
+    assert m, "summary sentence"
+    for k, sweep in enumerate(("idvg_lin", "idvg_sat", "idvd")):
+        vals = [cases[gid][sweep]["forced_4p6"] for gid in cases]
+        assert _shown(m[2 * k + 1].rstrip(","), min(vals)), (sweep, m[2 * k + 1])
+        assert _shown(m[2 * k + 2].rstrip(","), max(vals)), (sweep, m[2 * k + 2])

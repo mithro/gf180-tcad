@@ -43,6 +43,8 @@ DEVICE = DEVICES["nfet_05v0"]
 SWEEP_NAMES = ("idvg_lin", "idvg_sat", "idvd")
 #: The corner and temperature of the engine cross-check.
 CORNER, TEMP_C = "typical", 25.0
+#: The BSIM4 version the patched nfet card declares (the PDK's card declares 4.5).
+FORCED_VERSION = "4.6"
 #: The working-directory subdirectory that holds the patched copy, passed to the ngspice
 #: runner as an explicit input.
 PATCHED_LIB_DIR = "lib"
