@@ -416,3 +416,31 @@ def test_latest_reproduces(tmp_path, scale, name):
     history.main(["--version", "latest", "--mesh-scale", repr(scale), "--out", str(out),
                   "--workdir", str(tmp_path / "wd")])  # fmt: skip
     assert (out / name).read_bytes() == (RESULTS / name).read_bytes()
+
+
+def test_doc_as_ported_rows_are_the_latest_record():
+    """Issue #162: the plugin-history page's "as ported" rows (mesh x1) are those of
+    results/plugin-history/latest.json: the junction drop to 6 decimals, the currents to 4
+    significant digits, and a rib/slab jump of 0."""
+    slab = _load(LATEST[1.0])["pn_slab"]
+    steps = dict(zip(slab["bias_v"], [slab["equilibrium"], *slab["bias"]], strict=True))
+    page = (REPO / "docs" / "limitations" / "plugin-history.md").read_text("utf-8")
+    potential_table = page.split("uses every interface. The", 1)[1].split("The currents:", 1)[0]
+    current_table = page.split("The currents:", 1)[1].split("\n\n- ", 1)[0]
+    row = r"^\| as ported \| (\S+) \| (.+?) \| (.+?) \|$"
+    potentials = re.findall(row, potential_table, re.MULTILINE)
+    assert [float(v) for v, _, _ in potentials] == slab["bias_v"]
+    for v, drop, jump in potentials:
+        step = steps[float(v)]["junction"]
+        assert drop == f"{step['drop_v']:.6f}", (v, drop)
+        assert float(jump) == step["boundary_jump_v"] == 0, (v, jump)
+    currents = re.findall(row, current_table, re.MULTILINE)
+    assert [float(v) for v, _, _ in currents] == slab["bias_v"]
+    for v, anode, cathode in currents:
+        got = steps[float(v)]["currents"]
+        for text, value in ((anode, got["anode"]), (cathode, got["cathode"])):
+            text = text.replace("\u2212", "-")
+            if text.startswith("below"):
+                assert abs(value) < float(text.split()[-1]), (v, text, value)
+            else:
+                assert text == f"{value:.4g}", (v, text, value)
