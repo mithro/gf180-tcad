@@ -53,6 +53,9 @@ STYLE = {
     "label_lift": 0.03,
     # The engine plot: markers of the three sweeps side by side, this far apart (category units).
     "sweep_offset": 0.22,
+    # A hollow marker (the card forced to 4.6) sits this far right of its filled one, so the two
+    # stay apart where their values are close.
+    "forced_offset": 0.1,
     # The engine plot's y axis spans these decades of relative difference.
     "engine_decades": (-8.0, -1.0),
     "decade": 10,
@@ -215,8 +218,8 @@ def engine_diff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                         gid=f"{device} {sweep}")  # fmt: skip
                 if device == forced_device:
                     y = [forced[(geometry_id(g), sweep)] for g in gs]
-                    ax.plot(x + dx, y, ls="none", marker=_SWEEP_MARKER[sweep],
-                            ms=STYLE["marker_pt"], mfc="none", color=pal[_SWEEP_COLOUR[sweep]],
+                    ax.plot(x + dx + STYLE["forced_offset"], y, ls="none",
+                            marker=_SWEEP_MARKER[sweep], ms=STYLE["marker_pt"], mfc="none", color=pal[_SWEEP_COLOUR[sweep]],
                             label=f"{sweep}, card at {engine46.FORCED_VERSION}",
                             gid=f"{device} {sweep} at {engine46.FORCED_VERSION}")  # fmt: skip
             ax.axhline(thr, color=pal["text"], lw=ef.STYLE["edge_width"], ls="--",
