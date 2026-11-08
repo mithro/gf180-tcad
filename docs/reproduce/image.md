@@ -165,8 +165,8 @@ the base image updates both images in **one** pull request:
 2. Rebuild the TCAD image locally (twice, `--no-cache`) FROM the pushed base, and commit the new
    {repo}`docker/tcad/IMAGE_ID` and {repo}`docker/tcad/versions.json`.
 3. CI pushes the TCAD image; commit {repo}`docker/TCAD_IMAGE` (its manifest digest).
-4. Re-record meshwell's square with `tools/meshwell-square record` under the docker lock, and
-   commit {repo}`data/images/meshwell-square.json`. The record names both TCAD pins, and
+4. Re-record meshwell's square: run `record` of {repo}`tools/meshwell-square` with no other
+   sandbox job running, and commit {repo}`data/images/meshwell-square.json`. The record names both TCAD pins, and
    `lint-test` fails until it matches them.
 5. Regenerate any TCAD results in the new image and commit them.
 6. Merge only when every check is green.
@@ -583,8 +583,8 @@ The build script refuses a builder in which any node lacks the pinned {{ BuildKi
    - the tag named in this page.
 4. Rebuild twice (`--no-cache`), commit {repo}`docker/tcad-dev/IMAGE_ID` and
    {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.
-5. Re-record meshwell's square with `tools/meshwell-square record` under the docker lock, and
-   commit {repo}`data/images/meshwell-square.json`. `lint-test` fails until the record names the
+5. Re-record meshwell's square: run `record` of {repo}`tools/meshwell-square` with no other
+   sandbox job running, and commit {repo}`data/images/meshwell-square.json`. `lint-test` fails until the record names the
    pin in {repo}`docker/TCAD_DEV_IMAGE`.
 
 (charon-images)=

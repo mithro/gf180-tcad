@@ -82,7 +82,7 @@ def test_image_docs_name_the_sandbox_environment():
     step1 = re.search(r"^1\. (.*?)^2\. ", base_change, re.MULTILINE | re.DOTALL)
     assert step1 and "{repo}`docker/IMAGE`" in step1.group(1)
     # a pin bump re-records meshwell's square (#157), whose record names the TCAD pins
-    assert re.search(r"^4\. Re-record meshwell's square .*tools/meshwell-square record", base_change,
+    assert re.search(r"^4\. Re-record meshwell's square: run `record` of \{repo\}`tools/meshwell-square`", base_change,
                      re.MULTILINE)  # fmt: skip
     assert re.search(r"^6\. .*green", base_change, re.MULTILINE)
 
