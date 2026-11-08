@@ -20,6 +20,7 @@ from test_tcad_image import (
     _GMSH_MESH,
     _MESH_READBACK,
     MESH_READBACK_EXPECTED,
+    MESHWELL_SQUARE,
     TCAD_KEYS,
     _base_path,
 )
@@ -247,6 +248,16 @@ def test_tcad_dev_meshwell_mesh_reads_back(tmp_path):
     # and with gmsh single-threaded, after a real read-back
     got = json.loads(_run(["python3", "-c", _GMSH_MESH], tmp_path).stdout.splitlines()[-1])
     assert got == {"NumThreads": 1, "OCCParallel": 0}
+
+
+@pytest.mark.sandbox
+def test_tcad_dev_meshwell_square_is_the_record(tmp_path):
+    """tools/meshwell-square's probe gives the mesh data/images/meshwell-square.json records for
+    this image, so the image page's meshwell-square figure draws what the image makes (#157)."""
+    record = json.loads(MESHWELL_SQUARE.read_text(encoding="utf-8"))["dev"]
+    assert record.pop("image") == _image()
+    res = _run(["python3", "/work/src/tools/meshwell-square", "probe"], tmp_path)
+    assert json.loads(res.stdout.splitlines()[-1]) == record
 
 
 # The same meshwell mesh as _GMSH_MESH, with only the meshio read-back of the finished mesh

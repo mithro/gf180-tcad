@@ -18,6 +18,8 @@ DOCKER = REPO_ROOT / "docker"
 TCAD_IMAGE_FILE = DOCKER / "TCAD_IMAGE"
 VERSIONS = DOCKER / "tcad" / "versions.json"
 VENV = "/opt/gf180tcad-tcad"
+# meshwell's mesh of the unit square in each TCAD image (tools/meshwell-square, #157).
+MESHWELL_SQUARE = REPO_ROOT / "data" / "images" / "meshwell-square.json"
 
 BASE_KEYS = set(json.loads((DOCKER / "base" / "versions.json").read_text(encoding="utf-8")))
 TCAD_KEYS = BASE_KEYS | {
@@ -254,6 +256,16 @@ MESH_READBACK_EXPECTED = {
 def test_meshwell_mesh_reads_back(tmp_path):
     res = _run(["python3", "-c", _MESH_READBACK], tmp_path)
     assert json.loads(res.stdout.splitlines()[-1]) == MESH_READBACK_EXPECTED
+
+
+@pytest.mark.sandbox
+def test_tcad_meshwell_square_is_the_record(tmp_path):
+    """tools/meshwell-square's probe gives the mesh data/images/meshwell-square.json records for
+    this image, so the image page's meshwell-square figure draws what the image makes (#157)."""
+    record = json.loads(MESHWELL_SQUARE.read_text(encoding="utf-8"))["stable"]
+    assert record.pop("image") == _tcad_image()
+    res = _run(["python3", "/work/src/tools/meshwell-square", "probe"], tmp_path)
+    assert json.loads(res.stdout.splitlines()[-1]) == record
 
 
 @pytest.mark.sandbox
