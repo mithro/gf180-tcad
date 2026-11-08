@@ -126,7 +126,7 @@ def _diagram(rows: float, palette: str, row_in: float | None = None):
     pal = imagefig.PALETTES[palette]
     row_in = row_in or STYLE["row_in"]
     height = row_in * rows + 2 * STYLE["pad_in"]
-    with matplotlib.rc_context(imagefig._rc(palette)):
+    with matplotlib.rc_context(imagefig.palette_rc(palette)):
         fig = Figure(figsize=(STYLE["width_in"], height))
         FigureCanvasAgg(fig)
         fig.set_facecolor(pal["background"])
@@ -226,8 +226,8 @@ def _two_columns(left: list[tuple[str, list[str], str]], right: list[tuple[str, 
 def _svg(fig: Figure, palette: str) -> bytes:
     """The SVG bytes of ``fig`` with the deterministic settings of :mod:`gf180tcad.plots` (text
     kept as text, fixed hash salt, no date) on the background of ``palette``."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(fig)
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(fig)
 
 
 # --- make reproduce: the Makefile's chain of targets ----------------------------------------------
@@ -313,7 +313,7 @@ def jobs_figure(palette: str, root: Path = SPICE_ROOT):
     pal = ef.PALETTES[palette]
     jobs = reference_jobs(root)
     rows, cols, pos = job_grid(jobs)
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = Figure(figsize=STYLE["grid_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.add_subplot()
@@ -480,7 +480,7 @@ def cache_tree_figure(palette: str):
     lines = cache_tree()
     pal = imagefig.PALETTES[palette]
     height = STYLE["tree_line_in"] * len(lines) + 2 * STYLE["pad_in"]
-    with matplotlib.rc_context(imagefig._rc(palette)):
+    with matplotlib.rc_context(imagefig.palette_rc(palette)):
         fig = Figure(figsize=(STYLE["width_in"], height))
         FigureCanvasAgg(fig)
         ax = fig.add_axes((0, 0, 1, 1))
@@ -519,7 +519,7 @@ def exaggeration_figure(palette: str):
     pal = ef.PALETTES[palette]
     layers = exaggerated_geometry()
     colours = {"poly": pal["muted"], "t_ox": pal["highlight_oxide"]}
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = Figure(figsize=STYLE["stack_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.add_subplot()
@@ -561,7 +561,7 @@ def band_offset_figure(palette: str):
     pal = ef.PALETTES[palette]
     edges = band_edges()
     d = display_values()
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = Figure(figsize=STYLE["bands_in"], layout="constrained")
         FigureCanvasAgg(fig)
         ax = fig.add_subplot()

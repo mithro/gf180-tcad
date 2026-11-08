@@ -93,8 +93,8 @@ TWO_D_PARAMS = ("calibrated", "start")
 
 def svg(draw: Callable, *args, palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """The SVG bytes of ``draw(*args, palette, roots)``, saved inside the palette's rc context."""
-    with matplotlib.rc_context(ef._rc(palette)):
-        return ef._svg(draw(*args, palette, roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(draw(*args, palette, roots))
 
 
 def _figure(size: tuple[float, float]) -> Figure:
@@ -224,7 +224,7 @@ def idvg_figure(device: str, gid: str, sweep: str, palette: str, roots: Roots = 
     pal = ef.PALETTES[palette]
     s = sweep_data(device, gid, sweep, roots.spice)
     vds = bias(device, gid, sweep, "vd", roots.spice)
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["two_in"])
         lin, log = fig.subplots(2, 1)
         _draw_sweep(lin, s, [pal["electron"]], [pal["band"]], UNITS["ma_per_a"], None, pal)
@@ -251,7 +251,7 @@ def idvd_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROOT
     if len(gates) > len(family):
         raise ValueError(f"{device} {gid} idvd: {len(gates)} gate voltages, {len(family)} colours")
     colours = family[: len(gates)]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["one_in"])
         ax = fig.subplots()
         _draw_sweep(ax, s, colours, colours, UNITS["ma_per_a"], None, pal)
@@ -276,7 +276,7 @@ def cv_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROOTS)
     no C-V sweep)."""
     pal = ef.PALETTES[palette]
     s = sweep_data(device, gid, "cv", roots.spice)
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["one_in"])
         ax = fig.subplots()
         _draw_sweep(ax, s, [pal["electron"]], [pal["band"]], 1, None, pal)
@@ -310,7 +310,7 @@ def engine_diff_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     pal = ef.PALETTES[palette]
     family = [pal[c] for c in ef.STYLE["family"]]
     pct = UNITS["pct_per_one"]
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["two_in"])
         axes = fig.subplots(len(DEVICES), 1)
         for ax, (device, dev) in zip(axes, DEVICES.items(), strict=True):
@@ -383,7 +383,7 @@ def cgg_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROOTS
     rec, _src = comparison(roots.tcad, device, gid)
     u, _i, _p, cal = tcad_cgg(roots.tcad, device, gid, "calibrated")
     us, _i, _p, start = tcad_cgg(roots.tcad, device, gid, "start")
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["two_in"])
         top, bottom = fig.subplots(2, 1)
         _draw_sweep(top, spice_cv_sweep(roots.spice, device, gid), [pal["text"]], [pal["band"]], 1,
@@ -435,7 +435,7 @@ def split_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROO
     lw = STYLE["line_width"]
     u, intrinsic, parasitic, total = tcad_cgg(roots.tcad, device, gid, "calibrated")
     s = spice_cv_sweep(roots.spice, device, gid)
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["one_in"])
         ax = fig.subplots()
         ((_v, x, tt),) = s.corners[TYPICAL]
@@ -484,7 +484,7 @@ def two_d_figure(device: str, gid: str, palette: str, roots: Roots = DEFAULT_ROO
     cells = two_d_cells(roots.tcad, device, gid)
     if not cells:
         raise ValueError(f"{device} {gid}: no committed 2D cell")
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["one_in"] if len(cells) == 1 else STYLE["two_in"])
         axes = fig.subplots(len(cells), 1, squeeze=False)[:, 0]
         for ax, params in zip(axes, cells, strict=True):
@@ -521,7 +521,7 @@ def meshconv_figure(device: str, structure: str, palette: str, roots: Roots = DE
     family = [pal[c] for c in ef.STYLE["family"]]
     if len(report["levels"]) > len(family):
         raise ValueError(f"{device} {structure}: more levels than colours")
-    with matplotlib.rc_context(ef._rc(palette)):
+    with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["two_in"])
         vals, changes = fig.subplots(2, 1)
         keys = []
