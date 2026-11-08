@@ -863,9 +863,9 @@ The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
 
 No data changed. The evidence differs by folder:
 
-- The jobs of the `crosscheck-tcad` subset were rerun at the updated hashes, on the project's host
-  and by the `crosscheck-tcad` job of [pull request #187](https://github.com/mithro/gf180-tcad/pull/187)
-  ([run 42518417843](https://github.com/mithro/gf180-tcad/actions/runs/42518417843)).
+- The jobs of the `crosscheck-tcad` subset were rerun at the updated hashes on the project's host.
+  The `crosscheck-tcad` job of [pull request #187](https://github.com/mithro/gf180-tcad/pull/187)
+  reran them too ([run 42518417843](https://github.com/mithro/gf180-tcad/actions/runs/42518417843)).
   They are the two calibrated 1D jobs and the reduced mesh artefacts of the calibrated 2D cells.
   Their 26 files are byte-identical to the committed ones, including
   {repo}`results/tcad/moscap1d/provenance.json` and {repo}`results/tcad/meshes/stable/provenance.json`.
