@@ -122,6 +122,8 @@ def test_without_state_out_a_timeout_never_escalates(tmp_path):
 def test_a_broken_link_still_fails_on_a_scheduled_run(tmp_path):
     new = tmp_path / "new.json"
     assert lr.report(1, _write(tmp_path / "output.json", [BROKEN, TIMEOUT]), None, new) == 1
+    # the timeouts of that run are still counted (review of #186)
+    assert json.loads(new.read_text()) == {TIMEOUT["uri"]: 1}
 
 
 def test_cli_exit_code(tmp_path):
@@ -327,8 +329,44 @@ def test_check_urls_timeouts_warn_count_on_and_fail_at_the_threshold(tmp_path, c
     assert "timed out in 3 scheduled runs in a row" in capsys.readouterr().out
 
 
+def test_check_urls_a_link_that_answers_again_drops_its_count(tmp_path):
+    """Review of #186: a README link that timed out before but answers now has no count."""
+    root = _pages(tmp_path, "[s](https://slow.example/)")
+    previous = tmp_path / "prev.json"
+    state = tmp_path / "state.json"
+    previous.write_text(json.dumps({"https://slow.example/": 2}), encoding="utf-8")
+    state.write_text(json.dumps({}), encoding="utf-8")
+    ok = lambda url: ("ok", "200")
+    assert lr.check_urls([Path("README.md")], root, previous, state, threshold=3, check=ok) == 0
+    assert json.loads(state.read_text()) == {}
+
+
+def test_check_urls_a_link_in_both_counts_once(tmp_path):
+    """Review of #186: a URL that report counted for this run and that times out here too takes
+    the larger count, not the sum."""
+    root = _pages(tmp_path, "[s](https://slow.example/)")
+    previous = tmp_path / "prev.json"
+    state = tmp_path / "state.json"
+    previous.write_text(json.dumps({"https://slow.example/": 1}), encoding="utf-8")
+    state.write_text(json.dumps({"https://slow.example/": 2}), encoding="utf-8")
+    slow = lambda url: ("timeout", "timed out")
+    assert lr.check_urls([Path("README.md")], root, previous, state, threshold=3, check=slow) == 0
+    assert json.loads(state.read_text()) == {"https://slow.example/": 2}
+
+
 def test_urls_cli(tmp_path, monkeypatch):
-    root = _pages(tmp_path, "[a](https://ok.example/)")
-    monkeypatch.setattr(lr, "check_url", lambda url: ("ok", "200"))
-    monkeypatch.setattr(lr, "check_urls", lambda *a, **k: 7 if a[1] == root else 0)
-    assert lr.main(["urls", "README.md", "--root", str(root)]) == 7
+    """The command line passes each option to its parameter (review of #186)."""
+    got = {}
+
+    def fake(paths, root, previous, state_out, threshold):
+        got.update(
+            paths=paths, root=root, previous=previous, state_out=state_out, threshold=threshold
+        )
+        return 7
+
+    monkeypatch.setattr(lr, "check_urls", fake)
+    argv = ["urls", "README.md", "CONTRIBUTING.md", "--root", str(tmp_path), "--previous", "p.json",
+            "--state-out", "s.json", "--threshold", "5"]  # fmt: skip
+    assert lr.main(argv) == 7
+    assert got == {"paths": [Path("README.md"), Path("CONTRIBUTING.md")], "root": tmp_path,
+                   "previous": Path("p.json"), "state_out": Path("s.json"), "threshold": 5}  # fmt: skip
