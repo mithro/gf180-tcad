@@ -172,7 +172,8 @@ DEVSIM's own mesh, so the two lines lie on each other.
 :figclass: only-light
 :alt: Top: a falling line of contact potential and a flat line of junction drop against cathode bias, with a grey falling line of the latest stack's drop below the flat one. Bottom: bars of each region's potential range at three biases; the slab bars move up with the bias, the rib bars stay put.
 
-The PN slab of the two v0.8.0 records ({repo}`results/plugin-history`) against the cathode bias.
+The PN slab of the two v0.8.0 records and the two latest-stack records
+({repo}`results/plugin-history`) against the cathode bias.
 Top: the anode − cathode contact potential (circles) and the junction drop (squares), solid at full
 mesh and dashed at half mesh, which lie on each other. The grey triangles are the junction drop
 of the latest-stack records, whose rib is connected ({repo}`results/plugin-history/latest.json`,
@@ -185,7 +186,8 @@ at half mesh.
 :figclass: only-dark
 :alt: Top: a falling line of contact potential and a flat line of junction drop against cathode bias, with a grey falling line of the latest stack's drop below the flat one. Bottom: bars of each region's potential range at three biases; the slab bars move up with the bias, the rib bars stay put.
 
-The PN slab of the two v0.8.0 records ({repo}`results/plugin-history`) against the cathode bias.
+The PN slab of the two v0.8.0 records and the two latest-stack records
+({repo}`results/plugin-history`) against the cathode bias.
 Top: the anode − cathode contact potential (circles) and the junction drop (squares), solid at full
 mesh and dashed at half mesh, which lie on each other. The grey triangles are the junction drop
 of the latest-stack records, whose rib is connected ({repo}`results/plugin-history/latest.json`,
@@ -322,13 +324,16 @@ Two local runs give byte-identical records. The record holds no timings and no h
 ({test}`tests/test_plugin_history.py::test_history_json_has_no_timings_or_paths`). The
 {test}`tests/test_plugin_history.py::test_v080_once_worked` and
 {test}`tests/test_plugin_history.py::test_v142_import_broken` tests re-run the record in the
-sandbox (`pytest -m sandbox`, {{ pytest }}) and compare it with the committed one. The record is
-listed in the {term}`manifest`.
+sandbox (`pytest -m sandbox`, {{ pytest }}) and compare it with the committed one. The test
+{test}`tests/test_plugin_history.py::test_latest_reproduces` does the same for the latest-stack
+records. Every record is listed in the {term}`manifest`.
 
-**It is not part of the check on another computer (a {{ GitHub_hosted_runner }})**
-({ref}`cross-host-determinism`). That check covers only {repo}`results/spice`. The 2023 stack
-has {{ numpy }} 1.26 with its own {term}`SIMD dispatch` and no guarantee of the same bytes on
-another computer, so the record is reproducible on one host only.
+**No record is part of the check on another computer (a {{ GitHub_hosted_runner }})**
+({ref}`cross-host-determinism`). The 2023 stack has {{ numpy }} 1.26 with its own
+{term}`SIMD dispatch` and no guarantee of the same bytes on another computer. The latest-stack
+records use the stable TCAD image, but the TCAD cross-check, {repo}`tools/crosscheck-tcad-run`,
+runs only the jobs of {repo}`results/tcad`
+([issue #181](https://github.com/mithro/gf180-tcad/issues/181)).
 
 (plugin-history-latest)=
 
@@ -358,8 +363,8 @@ The file links in this section stay at the commits they name.
 
 **Where the numbers come from.** Every latest-stack value in this section is one that the
 linked fork tests assert or record. They ran in the fork's own continuous integration (CI), in the TCAD image, at the
-pinned `400f842`. Their values are quoted here from those runs. This repository measures
-only the PN slab's "as ported" values itself:
+fork's commit `400f842`. Their values are quoted here from those runs. This repository checks
+the plugin in these ways:
 - Its own tests check that the submodule is pinned on the fork's main
   ({test}`tests/test_submodule.py::test_submodule_pinned_on_fork_main`). They also check that
   `import gplugins` resolves to the submodule in the TCAD image
