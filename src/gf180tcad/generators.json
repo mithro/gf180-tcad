@@ -85,6 +85,14 @@
       "gf180tcad.tcad.stack"
     ]
   },
+  "extra_files": {
+    "gf180tcad.calibrate.__main__": [
+      "data/pdk_elec_spec.json"
+    ],
+    "gf180tcad.calibrate.corners": [
+      "data/pdk_elec_spec.json"
+    ]
+  },
   "images": {
     "dev": {
       "pin": "docker/TCAD_DEV_IMAGE",

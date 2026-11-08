@@ -141,7 +141,8 @@ def test_registry_is_plain_data():
     dicts of gf180tcad.tcad are exactly its contents."""
     reg = json.loads(REGISTRY.read_bytes())
     assert set(reg) == {
-        "calibration_dirs", "entry_points", "images", "plugin_excludes", "schema", "trees",
+        "calibration_dirs", "entry_points", "extra_files", "images", "plugin_excludes", "schema",
+        "trees",
     }  # fmt: skip
     assert reg["schema"] == 1
     assert tcad.REGISTRY_FILE == REGISTRY
@@ -152,6 +153,10 @@ def test_registry_is_plain_data():
         n: (Path(v["pin"]), Path(v["versions"])) for n, v in reg["images"].items()
     }
     assert tcad.CALIBRATION_DIRS == {b: Path(d) for b, d in reg["calibration_dirs"].items()}
+    assert tcad.EXTRA_FILES == {e: tuple(f) for e, f in reg["extra_files"].items()}
+    assert set(reg["extra_files"]) <= set(reg["entry_points"])
+    for files in reg["extra_files"].values():
+        assert all((REPO / f).is_file() for f in files), files
     for entry, modules in reg["entry_points"].items():
         assert entry in modules and modules == sorted(set(modules)), entry
     # every tree, exclusion and image is of a known entry point / an existing file
@@ -487,9 +492,12 @@ def test_generator_files_per_entry_point():
     assert "src/gf180tcad/tcad/__main__.py" in tcad_files - calibrate_files
     assert "src/gf180tcad/calibrate/cv.py" in calibrate_files - tcad_files
     assert "src/gf180tcad/specwindow.py" in calibrate_files - tcad_files
-    # the shared non-module inputs are the same for both
+    # the shared non-module inputs are the same for both; the calibration adds its own
+    # extra_files (issue #145)
     shared = {f for f in tcad_files if not f.startswith("src/")}
-    assert shared == {f for f in calibrate_files if not f.startswith("src/")}
+    extra = set(tcad.EXTRA_FILES[CALIBRATE_MAIN])
+    assert extra and not extra & tcad_files
+    assert shared | extra == {f for f in calibrate_files if not f.startswith("src/")}
     with pytest.raises(KeyError):
         tcad.generator_files("gf180tcad.__main__")
 
@@ -515,6 +523,78 @@ def test_generator_sha256_per_entry_point(monkeypatch):
     for target in ("tools/sandbox-run", "data/process/nfet_05v0.toml", "src/gf180tcad/io.py"):
         for e in ROOTS:
             assert tcad.generator_sha256(e) != before[e], (target, e)
+
+
+def test_the_spec_file_is_hashed_by_the_calibration_entry_points_only(monkeypatch):
+    """Issue #145: data/pdk_elec_spec.json, whose Cox spec the calibration and corner-fit
+    entry points copy into their results, is in their hashed files and in no other's, and a
+    change to it moves only their hashes."""
+    spec = "data/pdk_elec_spec.json"
+    readers = {CALIBRATE_MAIN, "gf180tcad.calibrate.corners"}
+    for entry in tcad.TCAD_GENERATORS:
+        assert (spec in tcad.generator_files(entry)) == (entry in readers), entry
+    before = {e: tcad.generator_sha256(e) for e in tcad.TCAD_GENERATORS}
+    real = tcad._sha256
+    monkeypatch.setattr(
+        tcad, "_sha256", lambda p: "0" * 64 if p.as_posix().endswith(spec) else real(p)
+    )
+    after = {e: tcad.generator_sha256(e) for e in tcad.TCAD_GENERATORS}
+    assert {e for e in before if before[e] != after[e]} == readers
+
+
+def test_every_entry_point_that_reads_the_spec_hashes_it():
+    """Review of #187: the spec file is read only through gf180tcad.specwindow (SPEC_PATH), so an
+    entry point hashes it exactly when specwindow is in its import closure. A new entry point that
+    starts importing specwindow without listing the file in extra_files fails here."""
+    from gf180tcad import specwindow
+
+    spec = specwindow.SPEC_PATH.relative_to(REPO).as_posix()
+    assert spec == "data/pdk_elec_spec.json"
+    for entry, modules in tcad.TCAD_GENERATORS.items():
+        reads = "gf180tcad.specwindow" in modules
+        assert (spec in tcad.EXTRA_FILES.get(entry, ())) == reads, entry
+    # specwindow is the only module whose code names the file, so every reader goes through it:
+    # every string constant of every module, docstrings left out, is scanned, whatever the
+    # spelling ("pdk_elec_spec.json", "data/pdk_elec_spec.json", ...)
+    assert _modules_naming("pdk_elec_spec.json") == ["src/gf180tcad/specwindow.py"]
+
+
+def _modules_naming(name: str) -> list[str]:
+    """The repo-relative modules under src/ with a string constant, not a docstring, that ends
+    in ``name``."""
+    import ast
+
+    found = []
+    for path in sorted((REPO / "src").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        docstrings = {
+            id(node.body[0].value)
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+        }
+        if any(
+            isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in docstrings
+            and n.value.endswith(name)
+            for n in ast.walk(tree)
+        ):  # fmt: skip
+            found.append(path.relative_to(REPO).as_posix())
+    return found
+
+
+def test_the_spec_scan_finds_every_spelling(tmp_path, monkeypatch):
+    """Positive control for _modules_naming: a module spelling the path whole is found, and a
+    docstring that names it is not."""
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "a.py").write_text(
+        '"""Reads ``data/pdk_elec_spec.json``."""\nX = "data/pdk_elec_spec.json"\n'
+    )
+    (src / "b.py").write_text('"""Mentions data/pdk_elec_spec.json in a docstring only."""\n')
+    monkeypatch.setattr(sys.modules[__name__], "REPO", tmp_path)
+    assert _modules_naming("pdk_elec_spec.json") == ["src/a.py"]
 
 
 @pytest.mark.parametrize("entry", ENTRY_POINTS)

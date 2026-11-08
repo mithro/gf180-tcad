@@ -499,9 +499,13 @@ the entry point that writes the folder, one module list per entry point in
 {py:data}`gf180tcad.tcad.TCAD_GENERATORS`. It also covers the inputs every entry point shares: the plugin's `gplugins/devsim` files, the {term}`process files <process file>` and
 {repo}`tools/sandbox-run`. The closure is the static one, so an import inside a function counts
 too ({test}`tests/tcad/test_tcad_provenance.py::test_registry_lists_match_the_import_graph`
-runs once per entry point). {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties each results folder
-to its writer, and {test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current`
-requires every results folder to name its writer and to carry that writer's current hash.
+runs once per entry point).
+
+The calibration and corner-fit entry points also hash {repo}`data/pdk_elec_spec.json`, whose
+{term}`Cox` spec they copy into their results. The map {py:data}`gf180tcad.tcad.TREE_GENERATORS` ties
+each results folder to its writer. The test
+{test}`tests/tcad/test_tcad_provenance.py::test_committed_tcad_provenance_current` requires every
+results folder to name its writer and to carry that writer's current hash.
 
 **The generator registry.** It is a data file, {repo}`src/gf180tcad/generators.json`. It holds
 the module lists, each results folder's writer, the images and the calibration folder. At
@@ -528,8 +532,8 @@ folder to its writer.
 ```
 
 
-The file is not hashed: it decides what is hashed. A change to its module lists or plugin
-exclusions adds or removes a hashed file, which changes the hash. A renamed results folder
+The file is not hashed: it decides what is hashed. A change to its module lists, plugin
+exclusions or extra files adds or removes a hashed file, which changes the hash. A renamed results folder
 changes the manifest. A changed image or calibration folder changes the image digest or the
 calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>` records. Its keys:
 
@@ -540,6 +544,7 @@ calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>`
 | `images` | each image's pin file and {repo}`versions.json <docker/tcad-dev/versions.json>` |
 | `plugin_excludes` | each entry point's plugin files left out of its hash |
 | `calibration_dirs` | each backend's calibration folder |
+| `extra_files` | each entry point's data files hashed beyond the shared inputs |
 
 Every entry point leaves the plugin's `gplugins/devsim/backends/charon/` out of its hash
 ({py:data}`gf180tcad.tcad.PLUGIN_EXCLUDES`), and
@@ -836,6 +841,39 @@ The representative rerun at `bf8f2dcc…` is the `crosscheck-tcad` run and the `
 They ran at gplugins `0715c81` and `bf8f2dcc…`.
 Those are the stamps the folder already had, so the jobs left
 {repo}`results/tcad/moscap2d/provenance.json` unchanged.
+
+**The spec file in the calibration hash ([issue #145](https://github.com/mithro/gf180-tcad/issues/145)).**
+Both calibration entry points copy its Cox spec into their results.
+Their hashes cover {repo}`data/pdk_elec_spec.json`. The change edits {py:mod}`gf180tcad.tcad`, which every
+entry point imports, so every results folder's hash moved. The edits are bookkeeping: the list of
+hashed files and the module docstring, nothing that computes a result.
+
+The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
+`generator_sha256`.
+
+| results folder | writer | before | after |
+|---|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `c8cf20b562088612489bf71c2f0ea2270c2489c337da4cb0bda3aaad4595daea` | `54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `c8cf20b562088612489bf71c2f0ea2270c2489c337da4cb0bda3aaad4595daea` | `54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `115cd158dc2676db3d94d30a8f896a4b84846e9416a7a3ecec8f2190bbfaaaa4` | `b3f9f92c1462a3f8e6cc5b75f4261284f408829ab89e5acec7eda7e6dbc6f483` |
+| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `cade71acad8a433171828cf0f286cfc06be278bdf03cc51f52a1f6d034633ec7` | `c817a025c70d65accc3df9c8b98b195855cdfbd32113c85d9f97a7a9353c8305` |
+
+No data changed. The evidence differs by folder:
+
+- The jobs of the `crosscheck-tcad` subset were rerun at the updated hashes on the project's host.
+  The `crosscheck-tcad` job of [pull request #187](https://github.com/mithro/gf180-tcad/pull/187)
+  reran them too ([run 42518417843](https://github.com/mithro/gf180-tcad/actions/runs/42518417843)).
+  They are the two calibrated 1D jobs and the reduced mesh artefacts of the calibrated 2D cells.
+  Their 26 files are byte-identical to the committed ones, including
+  {repo}`results/tcad/moscap1d/provenance.json` and {repo}`results/tcad/meshes/stable/provenance.json`.
+- {repo}`results/tcad/calibration`, {repo}`results/tcad/validation` and {repo}`results/tcad/corners`
+  were not rerun. The spec file is the only input their hash gained. Every Cox spec they record, ten in
+  all, equals the spec the code reads from the file.
+- {repo}`results/tcad/moscap2d` and {repo}`results/tcad/meshconv` were not rerun. Their writer's
+  hash moved only through the bookkeeping edits.
 
 (cross-host-determinism)=
 

@@ -4,10 +4,11 @@
 Nothing here is a SPICE generator module (:data:`gf180tcad.reference.GENERATOR_MODULES`), so
 changes to this package never touch ``results/spice/provenance.json``.
 
-**Provenance.** Each TCAD tree root (:repo:`results/tcad/moscap1d`, :repo:`results/tcad/moscap2d`,
-:repo:`results/tcad/meshconv`, and the ``calibration`` and ``validation`` trees of Task 12 under
-:repo:`results/tcad`) holds one
-``provenance.json``, written from :func:`tree_provenance`. It holds, under ``images``, for each
+**Provenance.** Each TCAD tree root holds one ``provenance.json``, written from
+:func:`tree_provenance`. The roots are the trees of :data:`TREE_GENERATORS`, under
+:repo:`results/tcad`: ``moscap1d``, ``moscap2d`` and ``meshconv``; the ``calibration`` and
+``validation`` trees of Task 12; the corner fits, ``corners``; and the reduced mesh artefacts,
+``meshes/stable``. It holds, under ``images``, for each
 result kind in the tree (``moscap1d``, ``moscap2d``) the TCAD image that made it: its name
 (:data:`IMAGES`), reference and ``versions.json`` contents. It also holds the plugin
 commit ``gplugins_commit``, the entry point that wrote the tree, ``generator``
@@ -34,21 +35,27 @@ the gitlink recorded in ``HEAD`` (``git ls-tree HEAD third_party/gplugins``), so
 plugin files are exactly the pinned commit's.
 
 **One hash per entry point** (issue #34). ``generator_sha256`` covers the import closure of the
-entry point that writes the tree (:data:`TCAD_GENERATORS`), not of both: a change to a module that
+entry point that writes the tree (:data:`TCAD_GENERATORS`), not of every entry point: a change to a module that
 a tree's writer never imports (the calibration code, for the MOS capacitor and mesh-convergence
 trees) leaves that tree's hash alone. The non-module inputs (:data:`TCAD_GENERATOR_EXTRA_FILES`,
-the plugin's files and the process files) are the same for both entry points.
+the plugin's files and the process files) are the same for every entry point. An entry point's
+:data:`EXTRA_FILES` add the data files only it reads: the calibration and corner-fit entry
+points hash ``data/pdk_elec_spec.json``, whose Cox spec they copy into their results (issue
+#145).
 
 **The registry** (Charon plan Task B0). The entry points' module lists, the tree that each one
-writes, the images and the calibration directories are data, in
-:repo:`src/gf180tcad/generators.json` (:data:`REGISTRY_FILE`), read once at import into the dicts below. The file is not hashed: it
-decides what is hashed, and a change to it either adds or removes a hashed file (visible in the
-hash) or renames a tree (visible in the manifest). Adding an entry point, a tree or an image for
+writes, the images, the calibration directories, the plugin files each entry point leaves out
+(``plugin_excludes``) and the data files each one hashes (``extra_files``) are data, in
+:repo:`src/gf180tcad/generators.json` (:data:`REGISTRY_FILE`), read once at import into the dicts below. The file is not hashed.
+It decides what is hashed: a change to it adds or removes a hashed file (visible in the hash) or
+renames a tree (visible in the manifest). Its ``images`` and ``calibration_dirs`` also decide
+what a job reads, and a change to either shows in the recorded image digests and the applied
+calibration (issue #127). Adding an entry point, a tree or an image for
 another backend is then a data row, and changes no committed tree's ``generator_sha256``.
 
 Only the plugin's ``gplugins/devsim/`` files are hashed into ``generator_sha256``, less those an
 entry point's ``plugin_excludes`` in the registry leave out (:data:`PLUGIN_EXCLUDES`: the Charon
-backend's ``gplugins/devsim/backends/charon/`` for both DEVSIM entry points). The rest of
+backend's ``gplugins/devsim/backends/charon/`` for every entry point). The rest of
 the plugin that the TCAD imports (``gplugins/__init__.py``, ``gplugins.common``,
 ``gplugins.meshwell``) is covered by ``gplugins_commit`` together with the clean-tree check, not
 by the file hashes.
@@ -120,6 +127,12 @@ PLUGIN_EXCLUDES: dict[str, tuple[str, ...]] = {
     entry: tuple(patterns) for entry, patterns in _REGISTRY["plugin_excludes"].items()
 }
 
+# Per entry point, the repo-relative data files it reads and hashes beyond the shared inputs
+# (the registry's ``extra_files``; issue #145).
+EXTRA_FILES: dict[str, tuple[str, ...]] = {
+    entry: tuple(files) for entry, files in _REGISTRY["extra_files"].items()
+}
+
 # Where each backend's calibrated values live (the registry's ``calibration_dirs``).
 CALIBRATION_DIRS: dict[str, Path] = {
     backend: Path(d) for backend, d in _REGISTRY["calibration_dirs"].items()
@@ -189,7 +202,7 @@ def generator_files(generator: str, repo_root: Path | None = None) -> list[str]:
     ``generator``, sorted by UTF-8 bytes.
 
     The files of its modules (:data:`TCAD_GENERATORS`, KeyError for another entry point), of
-    :data:`TCAD_GENERATOR_EXTRA_FILES`, the git-tracked files under
+    :data:`TCAD_GENERATOR_EXTRA_FILES` and its own :data:`EXTRA_FILES`, the git-tracked files under
     ``third_party/gplugins/gplugins/devsim/`` less the entry point's :data:`PLUGIN_EXCLUDES`, and
     the process files ``data/process/*.toml``. A missing one raises FileNotFoundError.
     """
@@ -200,7 +213,7 @@ def generator_files(generator: str, repo_root: Path | None = None) -> list[str]:
         if not (root / rel).is_file():
             raise FileNotFoundError(f"TCAD generator module {name} not found: {root / rel}")
         files.append(rel.as_posix())
-    for rel in TCAD_GENERATOR_EXTRA_FILES:
+    for rel in (*TCAD_GENERATOR_EXTRA_FILES, *EXTRA_FILES.get(generator, ())):
         if not (root / rel).is_file():
             raise FileNotFoundError(f"TCAD generator file not found: {root / rel}")
         files.append(rel)
