@@ -28,7 +28,7 @@ extensions = [
     "theme_figures",
     "unit_join",
     # docs/_ext/wrapper_ids.py: Furo copies a table's or equation's ids onto its scroll wrapper;
-    # this removes them from the wrapped node, so each id is on one element (issue #150).
+    # this removes them from the wrapper, so each id is on one element (issue #150).
     "wrapper_ids",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
@@ -148,7 +148,7 @@ myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.ite
 # (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure with one number,
 # and numbers each page's figures from 1.
 numfig = True
-numfig_format = {"figure": "Figure %s"}
+numfig_format = {"figure": "Figure %s", "table": "Table %s"}
 
 # --- API reference ---------------------------------------------------------------------------
 # autodoc imports gf180tcad from ../src (the sys.path entry below); the docs dependency group is
