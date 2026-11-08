@@ -507,7 +507,8 @@ def check_engine_diff(fig):
                 at46 = d(f"{device} {sweep} at 4.6", ax)
                 want46 = [forced["cases"][geometry_id(g)][sweep]["forced_4p6"] for g in gs]
                 assert np.array_equal(at46.get_ydata(), want46), sweep
-                assert np.array_equal(at46.get_xdata(), ln.get_xdata()), sweep
+                assert np.allclose(at46.get_xdata() - ln.get_xdata(),
+                                   lf.STYLE["forced_offset"], rtol=0, atol=1e-12), sweep  # fmt: skip
                 assert at46.get_markerfacecolor() == "none", sweep
         d.hline("threshold", xyce.ENGINE_DIFF_THRESHOLD, ax)
     d.done()
@@ -916,6 +917,21 @@ def test_docs_conf_registers_the_substitutions():
     assert "limitations_figures" in conf and ".substitutions()" in conf
 
 
+def test_forced_record_stock_is_the_figures_filled_markers():
+    """The record's stock values are the engine differences of the committed results, which the
+    figure draws as the filled nfet markers (review of #179)."""
+    record = json.loads(
+        (REPO_ROOT / "data" / "spice" / "engine-forced-bsim46.json").read_text("utf-8")
+    )
+    d = lf.engine_diffs()
+    for gid, sweeps in record["cases"].items():
+        for sweep, v in sweeps.items():
+            assert v["stock"] == pytest.approx(d[(record["device"], gid, sweep)], rel=1e-12), (
+                gid,
+                sweep,
+            )
+
+
 def _shown(text: str, value: float) -> bool:
     """Whether ``text`` (as the page writes a number, such as 5.62e-3 or 3.9e-5) is ``value``
     rounded to the significant digits the page shows."""
@@ -943,6 +959,19 @@ def test_engine_page_forced_values_are_the_record():
             assert _shown(at46, got["forced_4p6"]), (sweep, w, l, at46, got)
             rows += 1
     assert rows == 2 * len(nfet.geometries)
+    # the bisection table at W = 10 um, L = 0.6 um: the stock (4.5) and forced (4.6) values
+    l06 = cases[geometry_id(nfet.geometries[0])]
+    assert "At W = 10 µm, L = 0.6 µm the record" in page
+    assert (nfet.geometries[0].w_um, nfet.geometries[0].l_um) == (10, 0.6)
+    table = page.split("| Sweep | ngspice 4.5 (PDK as published) | ngspice 4.6 |", 1)[1]
+    table = table.split("\n\n", 1)[0].strip().splitlines()[1:]
+    assert len(table) == 3
+    for line in table:
+        sweep, stock, at46 = (c.strip().strip("`") for c in line.strip().strip("|").split("|"))
+        assert _shown(stock, l06[sweep]["stock"]), (sweep, stock)
+        assert _shown(at46, l06[sweep]["forced_4p6"]), (sweep, at46)
+    remaining = re.search(r"At Vds = 5 V the remaining (\S+) is", page)
+    assert remaining and _shown(remaining[1], l06["idvg_sat"]["forced_4p6"])
     # the summary: the forced values' range of each sweep
     m = re.search(r"every nfet geometry agrees: `idvg_lin` (\S+) to\s+(\S+), `idvg_sat` (\S+) to "
                   r"(\S+), `idvd` (\S+) to (\S+)\.", page)  # fmt: skip

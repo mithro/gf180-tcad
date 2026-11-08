@@ -516,10 +516,15 @@ PATCHED_LIB = engine46.PATCHED_LIB
 
 
 @pytest.fixture(scope="session")
-def nfet_v46_lib(tmp_path_factory) -> Path:
-    """The patched copy, written and checked in the sandbox (engine46.patch_lib)."""
-    lib, _ = engine46.patch_lib(tmp_path_factory.mktemp("nfet_v46_lib"))
-    return lib
+def nfet_v46(tmp_path_factory) -> tuple[Path, dict]:
+    """The patched copy and what the patch read and changed, written and checked in the sandbox
+    (engine46.patch_lib)."""
+    return engine46.patch_lib(tmp_path_factory.mktemp("nfet_v46_lib"))
+
+
+@pytest.fixture(scope="session")
+def nfet_v46_lib(nfet_v46) -> Path:
+    return nfet_v46[0]
 
 
 def _bsim4_code(tmp_path: Path, pdk: PdkInfo, g: Geometry, lib_copy: Path | None) -> str:
@@ -573,6 +578,8 @@ def test_forced_4p6_record_covers_every_case():
     record = json.loads(engine46.RECORD.read_text(encoding="utf-8"))
     assert record["image"] == (REPO_ROOT / "docker" / "IMAGE").read_text("utf-8").strip()
     assert record["device"] == NFET.name
+    assert (record["corner"], record["temp_c"]) == (engine46.CORNER, engine46.TEMP_C)
+    assert re.fullmatch(r"[0-9a-f]{64}", record["pdk_ngspice_lib_sha256"])
     assert record["cases"].keys() == {geometry_id(g) for g in NFET.geometries}
     for gid, sweeps in record["cases"].items():
         assert tuple(sweeps) == tuple(sorted(engine46.SWEEP_NAMES)), gid
@@ -588,13 +595,15 @@ def test_forced_4p6_record_covers_every_case():
 @pytest.mark.sandbox
 @pytest.mark.parametrize(("g", "sweep_name"), _DIAG_CASES)
 def test_engines_agree_with_ngspice_forced_to_bsim4_4p6(
-    image_pdk, nfet_v46_lib, tmp_path, g, sweep_name
+    image_pdk, nfet_v46, nfet_v46_lib, tmp_path, g, sweep_name
 ):
     """Proves the cause in docs/limitations/engine-cross-check.md for each nfet case, and
     re-derives its committed record."""
     got = engine46.case(g, sweep_name, image_pdk, nfet_v46_lib, tmp_path)
     print(f"diag {geometry_id(g)} {sweep_name} {got!r}")
     record = json.loads(engine46.RECORD.read_text(encoding="utf-8"))
+    # the image's ngspice library is the one the record was made from
+    assert nfet_v46[1]["lib_sha"] == record["pdk_ngspice_lib_sha256"]
     assert got == record["cases"][geometry_id(g)][sweep_name]
     if (NFET.name, sweep_name) in KNOWN_ENGINE_DIFFS:
         assert got["stock"] > TOL  # the xfailed comparison, as published
