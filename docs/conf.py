@@ -27,6 +27,9 @@ extensions = [
     "table_cells",
     "theme_figures",
     "unit_join",
+    # docs/_ext/wrapper_ids.py: Furo copies a table's or equation's ids onto its scroll wrapper;
+    # this removes them from the wrapped node, so each id is on one element (issue #150).
+    "wrapper_ids",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
