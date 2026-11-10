@@ -591,7 +591,7 @@ then `--method combine-qs`. The validation is regenerated after the calibration 
 
 **Input results folders** ([issue #188](https://github.com/mithro/gf180-tcad/issues/188)).
 Three results folders are made from committed results: the calibration, the validation and the
-corner fits. They read the ngspice {term}`SPICE reference`, the selected 1D meshes, the
+corner fits. They read the ngspice {term}`SPICE reference <SPICE reference results>`, the selected 1D meshes, the
 calibration and the calibrated 2D cells. {numref}`tcad-inputs` draws which folder reads which.
 
 Each of the three records a digest of every input folder, under `inputs` in its
