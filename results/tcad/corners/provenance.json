@@ -1,6 +1,6 @@
 {
   "generator": "gf180tcad.calibrate.corners",
-  "generator_sha256": "b3f9f92c1462a3f8e6cc5b75f4261284f408829ab89e5acec7eda7e6dbc6f483",
+  "generator_sha256": "c02af793644ac0df687363c1dc2d7381bd751cd7573dc432df6a4fc2ec12dc75",
   "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",
   "images": {
     "moscap1d": {
@@ -257,6 +257,20 @@
         "xyce": "7.10-opensource",
         "xyce_parallel": "mpi-capable, run single-process"
       }
+    }
+  },
+  "inputs": {
+    "spice/ngspice": {
+      "files": 360,
+      "sha256": "137aea31e9e3e821670356e791322f62f8790b389a13d3f1de56baa1f018f451"
+    },
+    "tcad/calibration": {
+      "files": 4,
+      "sha256": "62f541265ee51e4a71ec97a4b9d092225d18cd8589e1c90ca51bbd43bb2627fd"
+    },
+    "tcad/meshconv/moscap1d": {
+      "files": 4,
+      "sha256": "1f79a69ac97cdb022d0c870f2b4b98aa8b561b119917ec83848ec9f7c5e4f3ad"
     }
   }
 }
