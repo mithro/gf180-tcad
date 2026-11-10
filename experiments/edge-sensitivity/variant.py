@@ -13,7 +13,8 @@ oxide longer by <nm> nm at each end, the source/drain doping still self-aligned 
 ``+``-joined combination (``plugs+bias30``). ``ldd<peak>`` (e.g. ``ldd1e18``) adds a lightly
 doped extension self-aligned to the (biased) poly edge: a Gaussian of that surface peak that
 falls to the body doping at ``ldddepth<nm>`` (default 100 nm), and then moves the heavy
-source/drain out by ``sp<nm>`` (the spacer, default 0) from the poly edge.
+source/drain out by ``sp<nm>`` (the spacer, default 0) from the poly edge. ``latr<r>`` sets the
+extension's lateral straggle to r times its vertical one (default stack.LATERAL_STRAGGLE_RATIO).
 """
 
 import dataclasses
@@ -44,7 +45,9 @@ def _rect(x0, x1, y, layer, component):
     )
 
 
-def _ldd_doping(proc, xs: st.CrossSection, *, peak: float, depth_um: float, spacer_um: float):
+def _ldd_doping(
+    proc, xs: st.CrossSection, *, peak: float, depth_um: float, spacer_um: float, lateral: float
+):
     """``xs.doping`` with the body's source/drain profiles replaced: the heavy one masked by the
     spacer (``spacer_um`` out from each poly edge), and an extension of surface ``peak`` that
     falls to the body doping at ``depth_um``, masked by the poly."""
@@ -56,7 +59,7 @@ def _ldd_doping(proc, xs: st.CrossSection, *, peak: float, depth_um: float, spac
     s_ldd = depth_um / math.sqrt(2 * math.log(peak / v["n_ch_cm3"]))
     heavy = doping.gaussian(xs.sd_peak_cm3, 0.0, s_sd)
     light = doping.gaussian(peak, 0.0, s_ldd)
-    lat_sd, lat_ldd = st.LATERAL_STRAGGLE_RATIO * s_sd, st.LATERAL_STRAGGLE_RATIO * s_ldd
+    lat_sd, lat_ldd = st.LATERAL_STRAGGLE_RATIO * s_sd, lateral * s_ldd
     sd = (
         heavy * doping.lateral(lat_sd, None, g0 - spacer_um),
         heavy * doping.lateral(lat_sd, g1 + spacer_um, None),
@@ -117,7 +120,7 @@ def cross_section(
 def parse(variant: str) -> tuple[float, bool, dict | None]:
     bias_nm, plugs = 0.0, False
     ldd: dict | None = None
-    depth_nm, spacer_nm = 100.0, 0.0
+    depth_nm, spacer_nm, lateral = 100.0, 0.0, st.LATERAL_STRAGGLE_RATIO
     for part in variant.split("+"):
         if part == "base":
             continue
@@ -129,12 +132,14 @@ def parse(variant: str) -> tuple[float, bool, dict | None]:
             depth_nm = float(part[len("ldddepth") :])
         elif part.startswith("ldd"):
             ldd = {"peak": float(part[len("ldd") :])}
+        elif part.startswith("latr"):
+            lateral = float(part[len("latr") :])
         elif part.startswith("sp"):
             spacer_nm = float(part[len("sp") :])
         else:
             raise SystemExit(f"unknown variant part {part!r}")
     if ldd is not None:
-        ldd.update(depth_um=depth_nm * 1e-3, spacer_um=spacer_nm * 1e-3)
+        ldd.update(depth_um=depth_nm * 1e-3, spacer_um=spacer_nm * 1e-3, lateral=lateral)
     return bias_nm * 1e-3, plugs, ldd
 
 
