@@ -34,7 +34,7 @@ from gf180tcad.explain import data, model
 from gf180tcad.explain import figures as ef
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.spice import netlist
-from gf180tcad.tcad import process
+from gf180tcad.tcad import moscap1d, process
 
 STYLE = {
     # Two or three rows of panels: a taller figure at the explainer figures' width.
@@ -77,6 +77,10 @@ STYLE = {
     "legend_cols": 3,
     # The tick labels of gate lengths stand upright, so that 0.5, 0.6 and 0.7 do not overlap.
     "tick_deg": 90,
+    # The edge-capacitance figure: the line's degree (C per width is a straight line in L), and
+    # the dash of the BSIM4 extrinsic terms.
+    "edge_degree": 1,
+    "extrinsic_dash": ":",
 }
 
 # Unit conversions: m to µm and nm, A to µA.
@@ -540,6 +544,109 @@ def pfet_edge(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
         return ef.svg_bytes(pfet_edge_figure(palette, roots))
 
 
+# --- the 2D edge capacitance (issues #77 and #74) -------------------------------------------------
+
+# The parameters of the 2D cells the edge split reads.
+EDGE_PARAMS = "calibrated"
+
+
+def edge_geometries(device: str, tcad_root: Path = TCAD_ROOT) -> list[Geometry]:
+    """The widest geometries of ``device`` that have a committed 2D cell at :data:`EDGE_PARAMS`,
+    by rising L."""
+    wide = max(g.w_um for g in DEVICES[device].geometries)
+    root = Path(tcad_root) / calcv.MOSCAP2D_ROOT.name / device / EDGE_PARAMS
+    gs = [g for g in DEVICES[device].geometries
+          if g.w_um == wide and (root / geometry_id(g) / "cv.csv").is_file()]  # fmt: skip
+    return sorted(gs, key=lambda g: g.l_um)
+
+
+def _line(lengths: np.ndarray, c_per_w: np.ndarray) -> dict:
+    """The straight line ``c_per_w = edge + area * L`` through each column of ``c_per_w``
+    (rows: the lengths), by least squares: ``edge`` (fF/µm), ``area`` (fF/µm²) and the rms of
+    the residuals (fF/µm), one value per column."""
+    area, edge = np.polyfit(lengths, c_per_w, STYLE["edge_degree"])
+    rms = np.sqrt(np.mean((c_per_w - (edge + np.outer(lengths, area))) ** 2, axis=0))
+    return {"edge": edge, "area": area, "rms": rms}
+
+
+def edge_split(device: str, spice_root: Path = SPICE_ROOT, tcad_root: Path = TCAD_ROOT) -> dict:
+    """Cgg per unit width against gate length, at each gate bias, as a straight line
+    ``Cgg / W = C_edge + C_area * L`` (:func:`_line`) over :func:`edge_geometries`.
+
+    Three lines: the SPICE typical curves (``spice``), the 2D cells (``two_d``) and the BSIM4
+    extrinsic terms of the card (``extrinsic``: both overlaps, CF and CGBO,
+    :func:`gf180tcad.tcad.moscap1d.parasitic_ff`). ``u`` is polarity × Vg (V), ascending;
+    ``lengths`` the gate lengths (µm). The SPICE and 2D grids must be the same (ValueError);
+    FileNotFoundError without a 2D cell."""
+    pol = DEVICES[device].polarity
+    gs = edge_geometries(device, tcad_root)
+    if not gs:
+        raise FileNotFoundError(f"no committed {EDGE_PARAMS} 2D cell of {device} under {tcad_root}")
+    lengths = np.array([g.l_um for g in gs])
+    spice, two_d, extrinsic = [], [], []
+    card = process.load(device).card_values()
+    u = None
+    for g in gs:
+        gid = geometry_id(g)
+        u_s, c_s = data.spice_cv(
+            data.spice_columns(spice_root, "ngspice", TYPICAL, device, gid, "cv"), pol
+        )
+        u_t, c_t = data.two_d_cgg(tcad_root, device, EDGE_PARAMS, gid, pol)
+        if not np.array_equal(u_s, u_t) or (u is not None and not np.array_equal(u, u_s)):
+            raise ValueError(f"{device} {gid}: the SPICE and 2D gate-bias grids differ")
+        u = u_s
+        par = np.array(moscap1d.parasitic_ff(card, tuple((pol * u).tolist()), g))
+        spice.append(c_s / g.w_um)
+        two_d.append(c_t / g.w_um)
+        extrinsic.append(par / g.w_um)
+    return {
+        "u": u,
+        "lengths": lengths,
+        "spice": _line(lengths, np.array(spice)),
+        "two_d": _line(lengths, np.array(two_d)),
+        "extrinsic": _line(lengths, np.array(extrinsic)),
+    }
+
+
+def edge_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Per device (columns), the edge capacitance per width (top) and the capacitance per area
+    (bottom) against u: the SPICE typical curves (solid), the 2D cells (dashed) and, on top, the
+    BSIM4 extrinsic terms (dotted); each the line of :func:`edge_split`."""
+    pal = ef.PALETTES[palette]
+    lw = ef.STYLE["line_width"]
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(STYLE["tall_in"])
+        axes = fig.subplots(2, len(_DEVICES), sharex=True)
+        for col, device in enumerate(_DEVICES):
+            s = edge_split(device, roots.spice, roots.tcad)
+            top, bottom = axes[0][col], axes[1][col]
+            top.set_title(_SHORT[device], fontsize=ef.STYLE["text_pt"])
+            for ax, key, unit in ((top, "edge", "fF/µm"), (bottom, "area", "fF/µm²")):
+                ax.plot(s["u"], s["spice"][key], color=pal["text"], lw=lw,
+                        label="SPICE, typical", gid=f"{device} spice {key}")  # fmt: skip
+                ax.plot(s["u"], s["two_d"][key], color=pal["highlight"], lw=lw, ls="--",
+                        label="2D cells, fitted", gid=f"{device} two_d {key}")  # fmt: skip
+                ax.grid(True)
+                ax.tick_params(labelsize=ef.STYLE["text_pt"])
+                if col == 0:
+                    ax.set_ylabel(f"C_{key} ({unit})")
+            top.plot(s["u"], s["extrinsic"]["edge"], color=pal["hole"], lw=lw,
+                     ls=STYLE["extrinsic_dash"], label="BSIM4 extrinsic terms",
+                     gid=f"{device} extrinsic edge")  # fmt: skip
+            bottom.set_ylim(bottom=0)
+            bottom.set_xlabel("u (V)")
+        handles, labels = axes[0][0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=len(labels),
+                   frameon=False)  # fmt: skip
+        return fig
+
+
+def edge(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
+    """:func:`edge_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(edge_figure(palette, roots))
+
+
 # --- the process data ------------------------------------------------------------------------
 
 
@@ -714,6 +821,7 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "cv-validation": cv_validation,
     "cv-metric": cv_metric,
     "pfet-edge": pfet_edge,
+    "edge-capacitance": edge,
     "start-stack": start_stack,
     "cgg-split": cgg_split,
     "centroid": centroid,

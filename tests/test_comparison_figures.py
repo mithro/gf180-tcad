@@ -34,6 +34,7 @@ FIGURES = [
     "cv-validation",
     "cv-metric",
     "pfet-edge",
+    "edge-capacitance",
     "start-stack",
     "cgg-split",
     "centroid",
@@ -526,9 +527,10 @@ def literal_digits(source: str, allowed: set[str]) -> list[tuple[int, str]]:
 
 def _allowed_names() -> set[str]:
     """Names that hold digits but are identifiers, not numbers: the devices, their geometry ids,
-    the older PDK's commit and the text encoding."""
+    the older PDK's commit, the text encoding, the compact model's name and the 2D cells'
+    dimension (the edge-capacitance legend)."""
     gids = {geometry_id(g) for d in DEVICES.values() for g in d.geometries}
-    return set(DEVICES) | gids | {"d658698", "utf-8"}
+    return set(DEVICES) | gids | {"d658698", "utf-8", "BSIM4", "2D"}
 
 
 def test_drawn_labels_type_no_numbers():
@@ -680,3 +682,117 @@ def test_centroid_curves_are_the_card_formula(palette):
         assert _close(x, want, rel=1e-12), device
         drawn = dict(zip(u.tolist(), x.tolist(), strict=True))
         assert round(drawn[-2.0], 3) == edge[k] and round(drawn[-5.0], 3) == end[k], device
+
+
+# --- the edge capacitance (issues #77, #74) -------------------------------------------------------
+
+
+def _cells(device):
+    """``{L: (u, C per width)}`` of the committed calibrated 2D cells at W = 10 um, read
+    directly from their cv.csv."""
+    import numpy as np
+
+    pol = DEVICES[device].polarity
+    out = {}
+    for path in sorted(
+        (REPO_ROOT / "results/tcad/moscap2d" / device / "calibrated").glob("w10p0_*/cv.csv")
+    ):
+        cols = _csv(*path.relative_to(REPO_ROOT / "results").parts)
+        u = pol * cols["vg"]
+        order = np.argsort(u)
+        out[float(path.parent.name.split("_l")[1].replace("p", "."))] = (
+            u[order],
+            cols["cgg_total"][order] / 10.0,
+        )
+    return out
+
+
+@pytest.mark.parametrize("device", ["nfet_05v0", "pfet_05v0"])
+def test_edge_split_is_the_least_squares_line_through_the_cells(device):
+    """The 2D line at every bias is the least-squares line through the cells' own cv.csv (an
+    independent solve), and the lengths are every W = 10 um cell."""
+    import numpy as np
+
+    cells = _cells(device)
+    s = cf.edge_split(device)
+    assert s["lengths"].tolist() == sorted(cells)
+    ls = np.array(sorted(cells))
+    a = np.vstack([np.ones_like(ls), ls]).T
+    for i, u in enumerate(s["u"]):
+        y = np.array([np.interp(u, *cells[length]) for length in ls])
+        (edge, area), *_ = np.linalg.lstsq(a, y, rcond=None)
+        assert math.isclose(s["two_d"]["edge"][i], edge, abs_tol=1e-9), u
+        assert math.isclose(s["two_d"]["area"][i], area, abs_tol=1e-9), u
+    # the 2D cells lie on their line to 1e-3 fF/um at every bias
+    assert float(np.max(s["two_d"]["rms"])) < 1e-3
+
+
+@pytest.mark.parametrize("device", ["nfet_05v0", "pfet_05v0"])
+def test_edge_split_extrinsic_is_linear_in_l(device):
+    """The BSIM4 extrinsic terms are exactly a line in L (overlap and fringe per width, plus CGBO
+    times L), so their residual is round-off."""
+    import numpy as np
+
+    s = cf.edge_split(device)
+    assert float(np.max(s["extrinsic"]["rms"])) < 1e-12
+
+
+@pytest.mark.parametrize("palette", ["light", "dark"])
+def test_edge_figure_draws_the_split(palette):
+    fig = cf.edge_figure(palette)
+    for device in ("nfet_05v0", "pfet_05v0"):
+        s = cf.edge_split(device)
+        for key in ("edge", "area"):
+            for line in ("spice", "two_d"):
+                art = _artist(fig, f"{device} {line} {key}")
+                assert art.get_xdata().tolist() == s["u"].tolist()
+                assert art.get_ydata().tolist() == s[line][key].tolist()
+        art = _artist(fig, f"{device} extrinsic edge")
+        assert art.get_ydata().tolist() == s["extrinsic"]["edge"].tolist()
+
+
+def _edge_numbers() -> dict:
+    """The numbers the C-V page prints from the edge split."""
+    import numpy as np
+
+    from gf180tcad.tcad import process
+
+    out = {"rows": [], "area": [], "gap": []}
+    for device in ("nfet_05v0", "pfet_05v0"):
+        s = cf.edge_split(device)
+        for side, u in (("accumulation", -5.0), ("inversion", 5.0)):
+            i = int(np.flatnonzero(s["u"] == u)[0])
+            e = {k: float(s[k]["edge"][i]) for k in ("spice", "two_d", "extrinsic")}
+            a = {k: float(s[k]["area"][i]) for k in ("spice", "two_d")}
+            out["rows"].append((device, side, u, e, a))
+            out["area"].append(abs(a["two_d"] / a["spice"] - 1) * 100)
+            out["gap"].append(e["spice"] - e["two_d"])
+            if device == "nfet_05v0":
+                dlc_um = process.load(device).card_values()["dlc"] * 1e6
+                out.setdefault("check", []).append(
+                    abs(e["extrinsic"] - 2 * dlc_um * a["spice"] - e["spice"])
+                )
+                if u == 5.0:
+                    out["nfet_total"] = (
+                        10 * (e["spice"] + a["spice"] * 0.6),
+                        10 * (e["two_d"] + a["two_d"] * 0.6),
+                    )
+    return out
+
+
+def test_cv_page_prints_the_edge_split():
+    """The edge-capacitance section's table and sentences are the split's values."""
+    n = _edge_numbers()
+    page = (REPO_ROOT / "docs/comparison/cv-agreement.md").read_text("utf-8")
+    for device, side, u, e, a in n["rows"]:
+        row = (
+            f"| {device.split('_')[0]} | {side} | {u:+g} | {e['spice']:.3f} | {e['two_d']:.3f} | "
+            f"{e['extrinsic']:.3f} | {a['spice']:.3f} | {a['two_d']:.3f} |"
+        ).replace("-", "−")
+        assert row in page, row
+    assert f"agrees within {max(n['area']):.1f} %" in page
+    assert f"{min(n['gap']):.2f} to {max(n['gap']):.2f} fF/µm below SPICE" in page
+    spice, two_d = n["nfet_total"]
+    assert f"give {spice:.2f} fF (SPICE) and {two_d:.2f} fF (2D)" in page
+    assert f"to within {max(n['check']):.4f} fF/µm" in page
+    assert max(n["check"]) < 1e-3
