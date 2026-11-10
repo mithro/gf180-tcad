@@ -752,14 +752,17 @@ def test_edge_figure_draws_the_split(palette):
 
 
 def _edge_numbers() -> dict:
-    """The numbers the C-V page prints from the edge split."""
+    """The numbers the C-V page prints from the edge split: the table rows, and per placeholder
+    of the section's sentences its printed text (``fill``)."""
     import numpy as np
 
     from gf180tcad.tcad import process
 
-    out = {"rows": [], "area": [], "gap": []}
+    out = {"rows": [], "area": [], "gap": [], "check": {}, "rms": {}}
     for device in ("nfet_05v0", "pfet_05v0"):
         s = cf.edge_split(device)
+        card = process.load(device).card_values()
+        dlc_um = card["dlc"] * 1e6
         for side, u in (("accumulation", -5.0), ("inversion", 5.0)):
             i = int(np.flatnonzero(s["u"] == u)[0])
             e = {k: float(s[k]["edge"][i]) for k in ("spice", "two_d", "extrinsic")}
@@ -767,21 +770,60 @@ def _edge_numbers() -> dict:
             out["rows"].append((device, side, u, e, a))
             out["area"].append(abs(a["two_d"] / a["spice"] - 1) * 100)
             out["gap"].append(e["spice"] - e["two_d"])
-            if device == "nfet_05v0":
-                dlc_um = process.load(device).card_values()["dlc"] * 1e6
-                out.setdefault("check", []).append(
-                    abs(e["extrinsic"] - 2 * dlc_um * a["spice"] - e["spice"])
-                )
-                if u == 5.0:
-                    out["nfet_total"] = (
-                        10 * (e["spice"] + a["spice"] * 0.6),
-                        10 * (e["two_d"] + a["two_d"] * 0.6),
-                    )
+            out["check"][device, side] = e["spice"] - (e["extrinsic"] - 2 * dlc_um * a["spice"])
+            out["rms"][device, side] = float(s["spice"]["rms"][i])
+            if (device, u) == ("nfet_05v0", 5.0):
+                out["nfet_total"] = (10 * (e["spice"] + a["spice"] * 0.6),
+                                     10 * (e["two_d"] + a["two_d"] * 0.6))  # fmt: skip
+                out["nfet_2d_inv"] = e["two_d"]
+            if (device, u) == ("pfet_05v0", 5.0):
+                long = float(s["lengths"].max())
+                out["pfet_parts"] = (10 * (e["spice"] - e["two_d"]),
+                                     10 * (a["spice"] - a["two_d"]) * long)  # fmt: skip
+    nfet = process.load("nfet_05v0").card_values()
+    c = out["check"]
+    out["fill"] = {
+        "AREA_MAX": f"{max(out['area']):.1f}",
+        "EDGE_MIN": f"{min(out['gap']):.2f}",
+        "EDGE_MAX": f"{max(out['gap']):.2f}",
+        "NFET_SPICE": f"{out['nfet_total'][0]:.2f}",
+        "NFET_TWO_D": f"{out['nfet_total'][1]:.2f}",
+        "PFET_EDGE": f"{out['pfet_parts'][0]:.2f}",
+        "PFET_AREA": f"{out['pfet_parts'][1]:.2f}".replace("-", "−"),
+        "NFET_CHECK": f"{max(abs(c['nfet_05v0', k]) for k in ('accumulation', 'inversion')):.4f}",
+        "DLC_NM": f"{nfet['dlc'] * 1e9:.0f}",
+        "PFET_ACC": f"{c['pfet_05v0', 'accumulation']:.3f}",
+        "PFET_INV": f"{c['pfet_05v0', 'inversion']:.3f}",
+        "PFET_RMS": f"{max(out['rms']['pfet_05v0', k] for k in ('accumulation', 'inversion')):.4f}",
+        "NFET_RMS": f"{max(out['rms']['nfet_05v0', k] for k in ('accumulation', 'inversion')):.4f}",
+        "NFET_2D_INV": f"{out['nfet_2d_inv']:.3f}",
+        "CF_EDGE": f"{nfet['cf'] * 1e9:.3f}",
+    }
     return out
 
 
+# Each placeholder of the section and the words around it on the page.
+_EDGE_PHRASES = {
+    "AREA_MAX": "agrees within {} %",
+    "EDGE_MIN": "is {} to",
+    "EDGE_MAX": "to {} fF/µm below SPICE",
+    "NFET_SPICE": "give {} fF (SPICE)",
+    "NFET_TWO_D": "and {} fF (2D)",
+    "PFET_EDGE": "the gap is {} fF",
+    "PFET_AREA": "per-area part\n{} fF.",
+    "NFET_CHECK": "to within {} fF/µm",
+    "DLC_NM": "The card's DLC, {} nm",
+    "PFET_ACC": "by {} fF/µm (accumulation)",
+    "PFET_INV": "and {} fF/µm (inversion)",
+    "PFET_RMS": "up to {} fF/µm rms",
+    "NFET_RMS": "against {} fF/µm for the",
+    "NFET_2D_INV": "inversion side, {} fF/µm",
+    "CF_EDGE": "\n{} fF/µm per edge",
+}
+
+
 def test_cv_page_prints_the_edge_split():
-    """The edge-capacitance section's table and sentences are the split's values."""
+    """The edge-capacitance section's tables and sentences are the split's values."""
     n = _edge_numbers()
     page = (REPO_ROOT / "docs/comparison/cv-agreement.md").read_text("utf-8")
     for device, side, u, e, a in n["rows"]:
@@ -792,13 +834,66 @@ def test_cv_page_prints_the_edge_split():
         assert area in page, area
     assert "accumulation at u = −5 V, inversion at u = +5 V" in page
     assert {u for _d, _s, u, _e, _a in n["rows"]} == {-5.0, 5.0}
-    assert f"agrees within {max(n['area']):.1f} %" in page
-    assert f"{min(n['gap']):.2f} to {max(n['gap']):.2f} fF/µm below SPICE" in page
-    spice, two_d = n["nfet_total"]
-    assert f"give {spice:.2f} fF (SPICE) and {two_d:.2f} fF (2D)" in page
-    assert f"to within {max(n['check']):.4f} fF/µm" in page
-    from gf180tcad.tcad import process
+    assert sorted(_EDGE_PHRASES) == sorted(n["fill"])
+    for key, phrase in _EDGE_PHRASES.items():
+        assert phrase.format(n["fill"][key]) in page, (key, phrase.format(n["fill"][key]))
+    # the nfet check holds; the pfet's misses (issue #194), and the per-area part opposes the edge
+    assert all(abs(n["check"]["nfet_05v0", k]) < 1e-3 for k in ("accumulation", "inversion"))
+    assert all(n["check"]["pfet_05v0", k] > 0.01 for k in ("accumulation", "inversion"))
+    assert n["pfet_parts"][0] > 0 > n["pfet_parts"][1]
 
-    dlc_nm = process.load("nfet_05v0").card_values()["dlc"] * 1e9
-    assert f"The card's DLC, {dlc_nm:.0f} nm," in page
-    assert max(n["check"]) < 1e-3
+
+@pytest.mark.parametrize("device", ["nfet_05v0", "pfet_05v0"])
+def test_edge_split_extrinsic_is_the_card(device):
+    """Where the overlap is fully on (u = +5 V: the nfet's n-type and the pfet's p-type overlap
+    accumulated), the extrinsic edge is both sides' CGSO + CGSL + CF times WeffCV per drawn W,
+    plus CGBO's share of the line's intercept; at u = -5 V it is lower (the overlap depleted).
+    Computed from the card directly, so a polarity swap of the curve fails here."""
+    import numpy as np
+
+    from gf180tcad.tcad import moscap1d, process
+
+    card = process.load(device).card_values()
+    g = cf.edge_geometries(device)[0]
+    leff, weff = moscap1d.cv_geometry_um(card, g)
+    full = 2 * (card["cgso"] + card["cgsl"] + card["cf"]) * weff / g.w_um * 1e9
+    cgbo = card["cgbo"] * (leff - g.l_um) / g.w_um * 1e9
+    s = cf.edge_split(device)
+    hi = int(np.flatnonzero(s["u"] == 5.0)[0])
+    lo = int(np.flatnonzero(s["u"] == -5.0)[0])
+    # BSIM4's smooth overlap function is on to 5e-6 at 5 V, not exactly
+    assert math.isclose(s["extrinsic"]["edge"][hi], full + cgbo, rel_tol=1e-4)
+    assert s["extrinsic"]["edge"][lo] < s["extrinsic"]["edge"][hi]
+
+
+@pytest.mark.parametrize("device", ["nfet_05v0", "pfet_05v0"])
+def test_edge_split_spice_is_the_least_squares_line(device):
+    """The SPICE line at the plateaus is the least-squares line through the typical cv.csv files
+    read directly; its rms there is pinned (the pfet's is the larger, issue #194)."""
+    import numpy as np
+
+    s = cf.edge_split(device)
+    pol = DEVICES[device].polarity
+    ls = s["lengths"]
+    a = np.vstack([np.ones_like(ls), ls]).T
+    for u in (-5.0, 5.0):
+        i = int(np.flatnonzero(s["u"] == u)[0])
+        y = []
+        for length in ls:
+            gid = f"w10p0_l{length:.2f}".replace(".", "p")
+            cols = _csv("spice", "ngspice", "typical", device, gid, "cv.csv")
+            (j,) = np.flatnonzero(pol * cols["vg"] == u)
+            y.append(cols["cgg"][j] * 1e15 / 10.0)
+        (edge, area), *_ = np.linalg.lstsq(a, np.array(y), rcond=None)
+        assert math.isclose(s["spice"]["edge"][i], edge, abs_tol=1e-9)
+        assert math.isclose(s["spice"]["area"][i], area, abs_tol=1e-9)
+        rms = float(np.sqrt(np.mean((np.array(y) - (edge + area * ls)) ** 2)))
+        assert math.isclose(s["spice"]["rms"][i], rms, rel_tol=1e-6)
+        assert rms < (1e-2 if device == "pfet_05v0" else 1e-3)
+
+
+def test_edge_split_needs_three_lengths(monkeypatch):
+    gs = cf.edge_geometries("nfet_05v0")
+    monkeypatch.setattr(cf, "edge_geometries", lambda device, root=None: gs[:2])
+    with pytest.raises(ValueError, match="needs 3"):
+        cf.edge_split("nfet_05v0")

@@ -80,6 +80,8 @@ STYLE = {
     # The edge-capacitance figure: the line's degree (C per width is a straight line in L), and
     # the dash of the BSIM4 extrinsic terms.
     "edge_degree": 1,
+    # ... and the fewest lengths it is fitted through: two to fit, one to test the line.
+    "edge_min_lengths": 3,
     "extrinsic_dash": ":",
 }
 
@@ -577,11 +579,16 @@ def edge_split(device: str, spice_root: Path = SPICE_ROOT, tcad_root: Path = TCA
     extrinsic terms of the card (``extrinsic``: both overlaps, CF and CGBO,
     :func:`gf180tcad.tcad.moscap1d.parasitic_ff`). ``u`` is polarity × Vg (V), ascending;
     ``lengths`` the gate lengths (µm). The SPICE and 2D grids must be the same (ValueError);
-    FileNotFoundError without a 2D cell."""
+    FileNotFoundError without a 2D cell, ValueError with fewer than ``STYLE["edge_min_lengths"]``."""
     pol = DEVICES[device].polarity
     gs = edge_geometries(device, tcad_root)
     if not gs:
         raise FileNotFoundError(f"no committed {EDGE_PARAMS} 2D cell of {device} under {tcad_root}")
+    if len(gs) < STYLE["edge_min_lengths"]:
+        raise ValueError(
+            f"{device}: {len(gs)} gate lengths with a 2D cell; the line needs "
+            f"{STYLE['edge_min_lengths']} (two to fit, one to test it)"
+        )
     lengths = np.array([g.l_um for g in gs])
     spice, two_d, extrinsic = [], [], []
     card = process.load(device).card_values()

@@ -637,17 +637,30 @@ The capacitance per area of the same lines:
 | pfet | inversion | 2.044 | 2.092 |
 
 The capacitance per area agrees within 2.4 % on both plateaus of both devices. The edge
-capacitance of the 2D cells is 0.05 to 0.28 fF/µm below SPICE. So the whole plateau gap is the
-edge. At nfet W10/L0.6 and u = +5 V, the two lines give 16.70 fF (SPICE) and 14.11 fF (2D).
+capacitance of the 2D cells is 0.05 to 0.28 fF/µm below SPICE. At the short gates that is
+most of the plateau gap. At nfet W10/L0.6 and u = +5 V, the two lines give 16.70 fF (SPICE)
+and 14.11 fF (2D).
+
+The per-area difference grows with L, and in three of the four cases it works against the edge.
+At pfet W10/L2 and u = +5 V, the edge part of the gap is 2.77 fF and the per-area part
+−0.97 fF.
 
 For the nfet, the SPICE edge is the card's extrinsic terms less 2·DLC·$C_{\mathrm{area}}$,
-to within 0.0003 fF/µm. The card's DLC, 54 nm, shortens the length that BSIM4 multiplies by
-$C_{\mathrm{area}}$. So the SPICE edge is the card's overlap and fringe model.
+to within 0.0003 fF/µm. The card's DLC, 54 nm ({repo}`data/process/nfet_05v0.toml`),
+shortens the length that BSIM4 multiplies by $C_{\mathrm{area}}$. So the nfet's SPICE edge is
+the card's overlap and fringe terms.
 
-The 2D cross-section has a self-aligned source and drain, with no lightly doped extension and
-no spacer ({py:mod}`gf180tcad.tcad.stack`). Its only overlap is the lateral tail of the
-source/drain doping under the gate. The card's overlap terms are larger and depend on bias, as
-a lightly doped extension under the gate edge does. Modelling it in 2D is
+For the pfet the same check misses. Its SPICE edge exceeds the card's terms less
+2·DLC·$C_{\mathrm{area}}$ by 0.051 fF/µm (accumulation) and 0.055 fF/µm (inversion). Its SPICE
+plateaus also lie off their line by up to 0.0053 fF/µm rms, against 0.0001 fF/µm for the
+nfet. Which pfet card terms add this length-dependent part is
+[issue #194](https://github.com/mithro/gf180-tcad/issues/194).
+
+The 2D edge on the inversion side, 0.151 fF/µm, is about twice the card's outer fringe CF,
+0.073 fF/µm per edge. What the nfet cells lack there is the card's overlap less the DLC
+shortening, 2·(CGSO + CGSL − DLC·$C_{\mathrm{area}}$). The 2D cross-section has no lightly doped
+extension and no spacer ({py:mod}`gf180tcad.tcad.stack`). What supplies the missing edge, a longer
+printed poly, more outer fringe or an extension, is
 [issue #189](https://github.com/mithro/gf180-tcad/issues/189).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
