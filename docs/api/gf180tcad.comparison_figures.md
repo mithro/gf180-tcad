@@ -38,6 +38,8 @@ Source: {repo}`src/gf180tcad/comparison_figures.py`. Its figures appear on the
 
 .. autodata:: gf180tcad.comparison_figures.PDK_GEOMETRY
 
+.. autodata:: gf180tcad.comparison_figures.EDGE_PARAMS
+
 .. autodata:: gf180tcad.comparison_figures.FIGURES
    :no-value:
 ```
