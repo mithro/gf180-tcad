@@ -21,7 +21,8 @@
       "gf180tcad.tcad.moscap1d",
       "gf180tcad.tcad.moscap2d",
       "gf180tcad.tcad.process",
-      "gf180tcad.tcad.stack"
+      "gf180tcad.tcad.stack",
+      "gf180tcad.treedigest"
     ],
     "gf180tcad.calibrate.corners": [
       "gf180tcad",
@@ -41,7 +42,8 @@
       "gf180tcad.tcad.moscap1d",
       "gf180tcad.tcad.moscap2d",
       "gf180tcad.tcad.process",
-      "gf180tcad.tcad.stack"
+      "gf180tcad.tcad.stack",
+      "gf180tcad.treedigest"
     ],
     "gf180tcad.meshcut.__main__": [
       "gf180tcad",
@@ -65,7 +67,8 @@
       "gf180tcad.tcad.moscap1d",
       "gf180tcad.tcad.moscap2d",
       "gf180tcad.tcad.process",
-      "gf180tcad.tcad.stack"
+      "gf180tcad.tcad.stack",
+      "gf180tcad.treedigest"
     ],
     "gf180tcad.tcad.__main__": [
       "gf180tcad",
@@ -82,7 +85,8 @@
       "gf180tcad.tcad.moscap1d",
       "gf180tcad.tcad.moscap2d",
       "gf180tcad.tcad.process",
-      "gf180tcad.tcad.stack"
+      "gf180tcad.tcad.stack",
+      "gf180tcad.treedigest"
     ]
   },
   "extra_files": {
@@ -102,6 +106,24 @@
       "pin": "docker/TCAD_IMAGE",
       "versions": "docker/tcad/versions.json"
     }
+  },
+  "input_trees": {
+    "tcad/calibration": [
+      "spice/ngspice",
+      "tcad/meshconv/moscap1d"
+    ],
+    "tcad/corners": [
+      "spice/ngspice",
+      "tcad/calibration",
+      "tcad/meshconv/moscap1d"
+    ],
+    "tcad/validation": [
+      "spice/ngspice",
+      "tcad/calibration",
+      "tcad/meshconv/moscap1d",
+      "tcad/moscap2d/nfet_05v0/calibrated",
+      "tcad/moscap2d/pfet_05v0/calibrated"
+    ]
   },
   "plugin_excludes": {
     "gf180tcad.calibrate.__main__": [

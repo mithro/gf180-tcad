@@ -8,10 +8,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from gf180tcad.layout import ENVELOPE_NAME, PROVENANCE_NAME
-
-# Regenerable 25-62 MB gmsh meshes are git-ignored (see docs/limitations/moscap2d.md); their
-# sha256 is recorded as mesh_sha256 in each cv.meta.json instead.
-_UNTRACKED_MESH_NAME = "mesh.msh"
+from gf180tcad.treedigest import UNTRACKED_MESH_NAME as _UNTRACKED_MESH_NAME
 
 
 def _digest(p: Path) -> str:
