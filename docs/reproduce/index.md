@@ -590,15 +590,21 @@ then `--method combine-qs`. The validation is regenerated after the calibration 
 (tcad-input-trees)=
 
 **Input results folders** ([issue #188](https://github.com/mithro/gf180-tcad/issues/188)).
-Three results folders are made from committed results: the calibration, the validation and the
-corner fits. They read the ngspice {term}`SPICE reference <SPICE reference results>`, the selected 1D meshes, the
+Three results folders record their input results folders: the calibration, the validation and
+the corner fits. They read the ngspice {term}`SPICE reference <SPICE reference results>`, the selected 1D meshes, the
 calibration and the calibrated 2D cells. {numref}`tcad-inputs` draws which folder reads which.
 
 Each of the three records a digest of every input folder, under `inputs` in its
 {repo}`provenance.json <results/tcad/calibration/provenance.json>`. The digest is the sha256 of
 the folder's lines in the {term}`manifest`, {repo}`results/MANIFEST.sha256`, less its provenance
 files ({py:func}`gf180tcad.treedigest.prefix_digest`). Updating an input folder's provenance
-leaves the digest alone; a change to its data moves it.
+leaves the digest alone; a change to its data moves it. The digest covers every file of an
+input folder, so a rerun of any SPICE sweep, not only the C–V ones, moves it.
+
+The MOS capacitor folders and the mesh artefacts also read committed results, but record no
+`inputs` ([issue #192](https://github.com/mithro/gf180-tcad/issues/192)). Each of their jobs
+records its selected mesh and that mesh's sha256 instead, and the provenance records the
+calibration applied.
 
 ```{figure} /_generated/reproduce/tcad-inputs-light.svg
 :name: tcad-inputs
