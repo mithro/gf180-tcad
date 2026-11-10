@@ -604,8 +604,9 @@ input folder, so a rerun of any SPICE sweep, not only the C–V ones, moves it.
 
 The MOS capacitor folders and the mesh artefacts also read committed results, but record no
 `inputs` ([issue #192](https://github.com/mithro/gf180-tcad/issues/192)). Each of their jobs
-records its selected mesh and that mesh's sha256 instead, and the provenance records the
-calibration applied.
+records its selected mesh spec and that spec's source file instead, and the 2D jobs add
+the mesh's sha256. The mesh artefacts record their source job and the sha256 of its mesh and
+C–V meta. The provenance records the calibration applied.
 
 ```{figure} /_generated/reproduce/tcad-inputs-light.svg
 :name: tcad-inputs
