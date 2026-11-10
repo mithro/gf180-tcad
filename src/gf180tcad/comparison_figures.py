@@ -571,7 +571,7 @@ def _line(lengths: np.ndarray, c_per_w: np.ndarray) -> dict:
 
 def edge_split(device: str, spice_root: Path = SPICE_ROOT, tcad_root: Path = TCAD_ROOT) -> dict:
     """Cgg per unit width against gate length, at each gate bias, as a straight line
-    ``Cgg / W = C_edge + C_area * L`` (:func:`_line`) over :func:`edge_geometries`.
+    ``Cgg / W = C_edge + C_area * L`` (least squares) over :func:`edge_geometries`.
 
     Three lines: the SPICE typical curves (``spice``), the 2D cells (``two_d``) and the BSIM4
     extrinsic terms of the card (``extrinsic``: both overlaps, CF and CGBO,
