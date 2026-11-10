@@ -18,7 +18,10 @@ with calibrated results (:func:`calibrated_devices`: calibrated job directories,
 with a validation result at the tree root), per device the sha256 of its calibration file
 ``results/tcad/calibration/<device>.json`` (:mod:`gf180tcad.tcad.calibration`, written by
 :repo:`Task 12 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`) and the ``param_sha256`` of the
-values applied (:func:`gf180tcad.tcad.calibration.param_sha256`). It holds no date.
+values applied (:func:`gf180tcad.tcad.calibration.param_sha256`). A tree that reads other result
+trees (:data:`INPUT_TREES`: the calibration, validation and corner-fit trees) records under
+``inputs``, per input tree, the digest of its files (:func:`gf180tcad.treedigest.prefix_digest`,
+issue #188). It holds no date.
 
 **Images.** :data:`RESULTS_IMAGE` names the image each result kind is generated with: the 1D
 results on the dev-HEAD image (:repo:`docker/TCAD_DEV_IMAGE`), the 2D results on the stable
@@ -45,7 +48,8 @@ points hash ``data/pdk_elec_spec.json``, whose Cox spec they copy into their res
 
 **The registry** (Charon plan Task B0). The entry points' module lists, the tree that each one
 writes, the images, the calibration directories, the plugin files each entry point leaves out
-(``plugin_excludes``) and the data files each one hashes (``extra_files``) are data, in
+(``plugin_excludes``), the data files each one hashes (``extra_files``) and the result trees each
+tree reads (``input_trees``) are data, in
 :repo:`src/gf180tcad/generators.json` (:data:`REGISTRY_FILE`), read once at import into the dicts below. The file is not hashed.
 It decides what is hashed: a change to it adds or removes a hashed file (visible in the hash) or
 renames a tree (visible in the manifest). Its ``images`` and ``calibration_dirs`` also decide
@@ -69,6 +73,7 @@ import subprocess
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
+from gf180tcad import treedigest
 from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.sandbox import REPO_ROOT
 
@@ -131,6 +136,12 @@ PLUGIN_EXCLUDES: dict[str, tuple[str, ...]] = {
 # (the registry's ``extra_files``; issue #145).
 EXTRA_FILES: dict[str, tuple[str, ...]] = {
     entry: tuple(files) for entry, files in _REGISTRY["extra_files"].items()
+}
+
+# Per results tree (as in TREE_GENERATORS), the result trees it is made from, as prefixes under
+# results/ (the registry's ``input_trees``; issue #188). Its provenance records their digests.
+INPUT_TREES: dict[str, tuple[str, ...]] = {
+    tree: tuple(prefixes) for tree, prefixes in _REGISTRY["input_trees"].items()
 }
 
 # Where each backend's calibrated values live (the registry's ``calibration_dirs``).
@@ -339,10 +350,20 @@ def tree_provenance(
     repo_root: Path | None = None,
     *,
     generator: str,
+    inputs: Iterable[str] = (),
 ) -> dict:
     """:func:`provenance` of the tree root ``tree_root``, from its calibrated job directories,
-    with ``images`` (result kind to image name), written by the entry point ``generator``."""
-    return provenance(calibrated_devices(tree_root), repo_root, images=images, generator=generator)
+    with ``images`` (result kind to image name), written by the entry point ``generator``.
+
+    ``inputs`` are the result trees the tree is made from (prefixes under ``results/``, a row of
+    :data:`INPUT_TREES`); each one's :func:`gf180tcad.treedigest.tree_digest` goes under
+    ``inputs``, which is left out when there are none."""
+    out = provenance(calibrated_devices(tree_root), repo_root, images=images, generator=generator)
+    inputs = tuple(inputs)
+    if inputs:
+        results = (Path(repo_root) if repo_root is not None else REPO_ROOT) / "results"
+        out["inputs"] = {p: treedigest.tree_digest(results, p) for p in sorted(inputs)}
+    return out
 
 
 def recorded_images(tree_root: Path) -> dict[str, str]:

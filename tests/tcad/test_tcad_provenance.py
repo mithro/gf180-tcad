@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from gf180tcad import manifest, reference, sandbox, tcad
+from gf180tcad import manifest, reference, sandbox, tcad, treedigest
 from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.tcad import calibration
 
@@ -141,8 +141,8 @@ def test_registry_is_plain_data():
     dicts of gf180tcad.tcad are exactly its contents."""
     reg = json.loads(REGISTRY.read_bytes())
     assert set(reg) == {
-        "calibration_dirs", "entry_points", "extra_files", "images", "plugin_excludes", "schema",
-        "trees",
+        "calibration_dirs", "entry_points", "extra_files", "images", "input_trees",
+        "plugin_excludes", "schema", "trees",
     }  # fmt: skip
     assert reg["schema"] == 1
     assert tcad.REGISTRY_FILE == REGISTRY
@@ -155,6 +155,11 @@ def test_registry_is_plain_data():
     assert tcad.CALIBRATION_DIRS == {b: Path(d) for b, d in reg["calibration_dirs"].items()}
     assert tcad.EXTRA_FILES == {e: tuple(f) for e, f in reg["extra_files"].items()}
     assert set(reg["extra_files"]) <= set(reg["entry_points"])
+    assert tcad.INPUT_TREES == {t: tuple(p) for t, p in reg["input_trees"].items()}
+    assert set(reg["input_trees"]) <= set(reg["trees"])
+    for tree, prefixes in reg["input_trees"].items():
+        assert prefixes == sorted(set(prefixes)) and tree not in prefixes, tree
+        assert all((RESULTS / p).is_dir() for p in prefixes), prefixes
     for files in reg["extra_files"].values():
         assert all((REPO / f).is_file() for f in files), files
     for entry, modules in reg["entry_points"].items():
@@ -839,11 +844,130 @@ def test_committed_tcad_provenance_current():
             f"{root.relative_to(REPO)}/provenance.json names generator "
             f"{committed.get('generator')!r}, not its writer {writer}; {REGENERATE}"
         )
-        current = tcad.tree_provenance(root, _expected_images(root), generator=writer)
+        current = tcad.tree_provenance(
+            root, _expected_images(root), generator=writer,
+            inputs=tcad.INPUT_TREES.get(_key(root), ()),
+        )  # fmt: skip
         assert committed == current, (
             f"{root.relative_to(REPO)}/provenance.json differs from what the generator would "
             f"write ({sorted(k for k in current if committed.get(k) != current[k])}); {REGENERATE}"
         )
+
+
+# The result trees each tree's entry point reads, and where (issue #188).
+READS = {
+    "tcad/calibration": {
+        # cv.load_curve: the five-corner ngspice Cgg-Vg curves it fits (cv.SPICE_ROOT)
+        "spice/ngspice",
+        # meshconv.selected_spec(device, 1): the selected 1D mesh
+        "tcad/meshconv/moscap1d",
+    },
+    "tcad/validation": {
+        "spice/ngspice", "tcad/meshconv/moscap1d",
+        # cv.load_frozen: the committed calibration (cv.CALIBRATION_ROOT)
+        "tcad/calibration",
+        # cv.devsim_2d_results: the calibrated 2D cells (cv.MOSCAP2D_ROOT)
+        "tcad/moscap2d/nfet_05v0/calibrated", "tcad/moscap2d/pfet_05v0/calibrated",
+    },
+    "tcad/corners": {"spice/ngspice", "tcad/meshconv/moscap1d", "tcad/calibration"},
+}  # fmt: skip
+
+
+def test_input_trees_are_what_the_code_reads():
+    """The registry's input_trees rows are READS, and READS names the roots the code reads."""
+    from gf180tcad.calibrate import cv
+    from gf180tcad.tcad import meshconv
+
+    assert {t: set(p) for t, p in tcad.INPUT_TREES.items()} == READS
+    assert cv.SPICE_ROOT == RESULTS / "spice"
+    assert cv.CALIBRATION_ROOT == TCAD_RESULTS / "calibration"
+    assert cv.MOSCAP2D_ROOT == TCAD_RESULTS / "moscap2d"
+    assert meshconv.job_dir(TCAD_RESULTS / "meshconv", "nfet_05v0", 1) == (
+        TCAD_RESULTS / "meshconv" / "moscap1d" / "nfet_05v0"
+    )
+    assert {p.name for p in (RESULTS / "spice" / "ngspice").iterdir()} >= {"typical", "ff", "ss"}
+    for device in tcad.process.DEVICES:
+        assert (TCAD_RESULTS / "moscap2d" / device / "calibrated").is_dir()
+
+
+def test_committed_trees_record_their_committed_inputs():
+    """Each tree with input trees records, under ``inputs``, the digest of each one's entries in
+    results/MANIFEST.sha256: a regenerated input tree fails here until the tree is regenerated
+    from it."""
+    entries = manifest._load(RESULTS / "MANIFEST.sha256")
+    for tree, prefixes in tcad.INPUT_TREES.items():
+        committed = json.loads((RESULTS / tree / PROVENANCE_NAME).read_bytes())
+        want = {p: treedigest.prefix_digest(entries, p) for p in prefixes}
+        assert committed.get("inputs") == want, (
+            f"results/{tree}/provenance.json records other input trees than the committed ones; "
+            f"regenerate it ({REGENERATE})"
+        )
+    # the trees that read no other result tree record none
+    for root in _committed_tree_roots():
+        if _key(root) not in tcad.INPUT_TREES:
+            assert "inputs" not in json.loads((root / PROVENANCE_NAME).read_bytes()), root
+
+
+def _tree(tmp_path: Path) -> Path:
+    results = tmp_path / "results"
+    for rel, text in {
+        "a/x/one.csv": "1", "a/x/" + PROVENANCE_NAME: "{}", "a/y/two.csv": "2",
+        "a/y/mesh.msh": "big", PROVENANCE_NAME: "{}", "b/three.csv": "3",
+    }.items():  # fmt: skip
+        (results / rel).parent.mkdir(parents=True, exist_ok=True)
+        (results / rel).write_text(text, encoding="utf-8")
+    return results
+
+
+def test_tree_digest_is_the_manifest_digest(tmp_path):
+    """On disk and from the manifest the digest is the same; it leaves out every provenance.json
+    and mesh.msh, and covers only the prefix."""
+    results = _tree(tmp_path)
+    manifest.update(results, results / "MANIFEST.sha256")
+    entries = manifest._load(results / "MANIFEST.sha256")
+    got = treedigest.tree_digest(results, "a")
+    assert got == treedigest.prefix_digest(entries, "a")
+    lines = "".join(f"{entries[r]}  {r}\n" for r in ("a/x/one.csv", "a/y/two.csv"))
+    assert got == {"files": 2, "sha256": hashlib.sha256(lines.encode()).hexdigest()}
+
+
+def test_tree_digest_moves_with_the_data_not_the_provenance(tmp_path):
+    results = _tree(tmp_path)
+    before = treedigest.tree_digest(results, "a")
+    (results / "a" / "x" / PROVENANCE_NAME).write_text('{"generator_sha256": "x"}', "utf-8")
+    (results / "b" / "three.csv").write_text("4", "utf-8")
+    assert treedigest.tree_digest(results, "a") == before
+    (results / "a" / "y" / "two.csv").write_text("5", "utf-8")
+    assert treedigest.tree_digest(results, "a") != before
+
+
+def test_tree_digest_refuses_an_empty_or_missing_tree(tmp_path):
+    results = _tree(tmp_path)
+    (results / "c").mkdir()
+    with pytest.raises(ValueError, match="no file under c/"):
+        treedigest.tree_digest(results, "c")
+    with pytest.raises(NotADirectoryError):
+        treedigest.tree_digest(results, "d")
+    # "a" is not a prefix of "ab"
+    (results / "ab").mkdir()
+    (results / "ab" / "f.csv").write_text("6", "utf-8")
+    assert treedigest.prefix_digest({"ab/f.csv": "0" * 64}, "ab")["files"] == 1
+    with pytest.raises(ValueError):
+        treedigest.prefix_digest({"ab/f.csv": "0" * 64}, "a")
+
+
+def test_tree_provenance_records_inputs_only_when_given(tmp_path):
+    root = tmp_path / "out"
+    root.mkdir()
+    bare = tcad.tree_provenance(root, {"moscap1d": "dev"}, generator=CALIBRATE_MAIN)
+    assert "inputs" not in bare
+    prov = tcad.tree_provenance(
+        root, {"moscap1d": "dev"}, generator=CALIBRATE_MAIN, inputs=("tcad/calibration",)
+    )
+    assert prov["inputs"] == {
+        "tcad/calibration": treedigest.tree_digest(RESULTS, "tcad/calibration")
+    }
+    assert {k: v for k, v in prov.items() if k != "inputs"} == bare
 
 
 def test_manifest_covers_the_tcad_results():
