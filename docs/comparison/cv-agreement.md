@@ -617,14 +617,24 @@ the card's BSIM4 extrinsic terms (dotted, top). Each value is the line through t
 cells at one bias.
 ```
 
-The table gives both lines on the plateaus, at u = −5 V and u = +5 V:
+The tables give both lines on the plateaus: accumulation at u = −5 V, inversion at u = +5 V.
+The edge capacitance per width:
 
-| device | side | u (V) | SPICE C_edge (fF/µm) | 2D C_edge (fF/µm) | BSIM4 extrinsic (fF/µm) | SPICE C_area (fF/µm²) | 2D C_area (fF/µm²) |
-|---|---|---|---|---|---|---|---|
-| nfet | accumulation | −5 | 0.170 | 0.118 | 0.397 | 2.106 | 2.116 |
-| nfet | inversion | +5 | 0.420 | 0.151 | 0.645 | 2.083 | 2.100 |
-| pfet | accumulation | −5 | 0.332 | 0.115 | 0.313 | 2.174 | 2.154 |
-| pfet | inversion | +5 | 0.424 | 0.148 | 0.400 | 2.044 | 2.092 |
+| device | side | SPICE C_edge (fF/µm) | 2D C_edge (fF/µm) | BSIM4 extrinsic (fF/µm) |
+|---|---|---|---|---|
+| nfet | accumulation | 0.170 | 0.118 | 0.397 |
+| nfet | inversion | 0.420 | 0.151 | 0.645 |
+| pfet | accumulation | 0.332 | 0.115 | 0.313 |
+| pfet | inversion | 0.424 | 0.148 | 0.400 |
+
+The capacitance per area of the same lines:
+
+| device | side | SPICE C_area (fF/µm²) | 2D C_area (fF/µm²) |
+|---|---|---|---|
+| nfet | accumulation | 2.106 | 2.116 |
+| nfet | inversion | 2.083 | 2.100 |
+| pfet | accumulation | 2.174 | 2.154 |
+| pfet | inversion | 2.044 | 2.092 |
 
 The capacitance per area agrees within 2.4 % on both plateaus of both devices. The edge
 capacitance of the 2D cells is 0.05 to 0.28 fF/µm below SPICE. So the whole plateau gap is the

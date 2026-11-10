@@ -785,11 +785,13 @@ def test_cv_page_prints_the_edge_split():
     n = _edge_numbers()
     page = (REPO_ROOT / "docs/comparison/cv-agreement.md").read_text("utf-8")
     for device, side, u, e, a in n["rows"]:
-        row = (
-            f"| {device.split('_')[0]} | {side} | {u:+g} | {e['spice']:.3f} | {e['two_d']:.3f} | "
-            f"{e['extrinsic']:.3f} | {a['spice']:.3f} | {a['two_d']:.3f} |"
-        ).replace("-", "−")
-        assert row in page, row
+        d = device.split("_")[0]
+        edge = f"| {d} | {side} | {e['spice']:.3f} | {e['two_d']:.3f} | {e['extrinsic']:.3f} |"
+        area = f"| {d} | {side} | {a['spice']:.3f} | {a['two_d']:.3f} |"
+        assert edge in page, edge
+        assert area in page, area
+    assert "accumulation at u = −5 V, inversion at u = +5 V" in page
+    assert {u for _d, _s, u, _e, _a in n["rows"]} == {-5.0, 5.0}
     assert f"agrees within {max(n['area']):.1f} %" in page
     assert f"{min(n['gap']):.2f} to {max(n['gap']):.2f} fF/µm below SPICE" in page
     spice, two_d = n["nfet_total"]
