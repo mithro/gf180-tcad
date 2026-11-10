@@ -52,7 +52,7 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
   two calibrated 1D {term}`jobs <job>` and the calibrated mesh artefacts. The other results
   folders have no byte-for-byte evidence.
 - **Three TCAD results folders record no input folders.** The MOS capacitor folders and the mesh
-  artefacts record no `inputs` digest ({ref}`tcad-input-trees`,
+  artefacts record no `inputs` digest ({ref}`input results folders <tcad-input-trees>`,
   [issue #192](https://github.com/mithro/gf180-tcad/issues/192)).
 - **`make reproduce` does not reproduce the 2D TCAD files.** It has not been run end to end.
   The 2D job files lack entries the current job writes. The L = 2 µm
