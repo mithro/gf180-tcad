@@ -533,8 +533,9 @@ folder to its writer.
 
 
 The file is not hashed: it decides what is hashed. A change to its module lists, plugin
-exclusions or extra files adds or removes a hashed file, which changes the hash. A change to its
-input folders changes the `inputs` that the provenance records. A renamed results folder
+exclusions or extra files adds or removes a hashed file, which changes the hash.
+
+A change to its input folders changes the `inputs` that the provenance records. A renamed results folder
 changes the manifest. A changed image or calibration folder changes the image digest or the
 calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>` records. Its keys:
 
@@ -588,15 +589,16 @@ then `--method combine-qs`. The validation is regenerated after the calibration 
 
 (tcad-input-trees)=
 
-**Input results folders** ([issue #188](https://github.com/mithro/gf180-tcad/issues/188)). The
-calibration, the validation and the corner fits read committed results: the ngspice
-{term}`SPICE reference`, the selected 1D meshes, the calibration and the calibrated 2D cells.
-{numref}`tcad-inputs` draws which folder reads which. Each of the three records, under `inputs`
-in its {repo}`provenance.json <results/tcad/calibration/provenance.json>`, a digest of every
-input folder. The digest is the sha256 of the folder's lines in the {term}`manifest`,
-{repo}`results/MANIFEST.sha256`, leaving out each `provenance.json`
-({py:func}`gf180tcad.treedigest.prefix_digest`). Updating an input folder's provenance therefore
-leaves the digest alone, and a change to its data moves it.
+**Input results folders** ([issue #188](https://github.com/mithro/gf180-tcad/issues/188)).
+Three results folders are made from committed results: the calibration, the validation and the
+corner fits. They read the ngspice {term}`SPICE reference`, the selected 1D meshes, the
+calibration and the calibrated 2D cells. {numref}`tcad-inputs` draws which folder reads which.
+
+Each of the three records a digest of every input folder, under `inputs` in its
+{repo}`provenance.json <results/tcad/calibration/provenance.json>`. The digest is the sha256 of
+the folder's lines in the {term}`manifest`, {repo}`results/MANIFEST.sha256`, less its provenance
+files ({py:func}`gf180tcad.treedigest.prefix_digest`). Updating an input folder's provenance
+leaves the digest alone; a change to its data moves it.
 
 ```{figure} /_generated/reproduce/tcad-inputs-light.svg
 :name: tcad-inputs
@@ -630,12 +632,15 @@ uv run --locked python tools/restamp-tcad-provenance results/tcad/<tree>   # --d
 make manifest
 ```
 
-{repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`, and with
-`--record-inputs` also `inputs`. It takes
+{repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`. It takes
 the writer from the folder's path under {repo}`results/` (the `trees` of the registry). It refuses
 (exit 2, file unchanged) if anything else in the file differs from what the writer would write
 now. That covers the plugin commit, an image, the calibration applied, or a `generator` naming
 the other entry point. Then the folder has to be regenerated.
+
+It also refuses a folder whose recorded `inputs` differ from the committed input folders. With
+`--record-inputs` it writes their current digests instead. Check first that the folder was made
+from the input folders as they are committed.
 
 Such an update claims that the data did not change; it does not show it. So every one is
 recorded below, with the hash the folder had before. The records before the
@@ -911,6 +916,39 @@ No data changed. The evidence differs by folder:
   all, equals the spec the code reads from the file.
 - {repo}`results/tcad/moscap2d` and {repo}`results/tcad/meshconv` were not rerun. Their writer's
   hash moved only through the bookkeeping edits.
+
+**Input folders in the provenance ([issue #188](https://github.com/mithro/gf180-tcad/issues/188)).**
+The change edits {py:mod}`gf180tcad.tcad` and adds {py:mod}`gf180tcad.treedigest`. Every entry
+point imports both, so every results folder's hash moved. The edits record the input folders'
+digests and compute nothing that a result holds.
+
+The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
+`generator_sha256`. With `--record-inputs` it also wrote the `inputs` of the calibration, the
+validation and the corner fits.
+
+| results folder | writer | before | after |
+|---|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` | `faab4b279fa1ba515d2c6c83295046094511dc5ed0935c8f3d93acd22def49c4` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` | `faab4b279fa1ba515d2c6c83295046094511dc5ed0935c8f3d93acd22def49c4` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `0c8eeb9e8e9d1d2fec5167919b7135529914f4832b99a0e6accd5a62eb1a0af4` | `faab4b279fa1ba515d2c6c83295046094511dc5ed0935c8f3d93acd22def49c4` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268` | `6b1812a9a65a84f9917c24d5230830fa94bc3e46024465181d43eb33a403fbd3` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268` | `6b1812a9a65a84f9917c24d5230830fa94bc3e46024465181d43eb33a403fbd3` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `b3f9f92c1462a3f8e6cc5b75f4261284f408829ab89e5acec7eda7e6dbc6f483` | `c02af793644ac0df687363c1dc2d7381bd751cd7573dc432df6a4fc2ec12dc75` |
+| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `c817a025c70d65accc3df9c8b98b195855cdfbd32113c85d9f97a7a9353c8305` | `716311ee6abc6ba36dcc80423fe504102f64e9c575fb14adb9d177627fe6f998` |
+
+No data changed. The evidence differs by folder:
+
+- The jobs of the `crosscheck-tcad` subset were rerun at the updated hashes on the project's host.
+  Their 26 files are byte-identical to the committed ones, including
+  {repo}`results/tcad/moscap1d/provenance.json` and {repo}`results/tcad/meshes/stable/provenance.json`.
+- The other folders were not rerun. Their writers' hashes moved only through the provenance code.
+
+The recorded `inputs` claim that each folder was made from its input folders as committed. The
+git history backs it: no input folder's data changed after the data of a folder made from it,
+with one exception. After the calibration, the selected 1D meshes gained fields in
+{repo}`results/tcad/meshconv/moscap1d` (commit
+[690cf7b](https://github.com/mithro/gf180-tcad/commit/690cf7beba26658e4b6b541925df6ac09fabe6bc)).
+That commit only added lines, so the mesh the calibration read is unchanged.
 
 (cross-host-determinism)=
 
