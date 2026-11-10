@@ -49,6 +49,8 @@ STYLE = {
     "step_row_in": 0.56,
     # A row's centre lies this share of the row below its top.
     "mid": 0.5,
+    # The input-folders figure: a folder path longer than this many characters takes two lines.
+    "folder_chars": 32,
     # The push and pull arrows sit one of this many parts of a box's height inside its edges.
     "arrow_parts": 3,
     # The forks figure: a row tall enough for a fork's commit and three lines of its fix.
@@ -366,6 +368,28 @@ def registry_figure(palette: str):
     right = [(tree, [f"results/{tree}"], "image")
              for tree in sorted(reg["trees"], key=lambda t: (reg["trees"][t], t))]  # fmt: skip
     edges = [(writer, tree) for tree, writer in sorted(reg["trees"].items())]
+    return _two_columns(left, right, edges, palette)
+
+
+def _folder_lines(prefix: str) -> list[str]:
+    """``results/<prefix>`` as one line, or two (split before its last two parts) when it is
+    longer than ``STYLE["folder_chars"]``."""
+    path = f"results/{prefix}"
+    if len(path) <= STYLE["folder_chars"]:
+        return [path]
+    head, *tail = path.rsplit("/", 2)
+    return [f"{head}/", "/".join(tail)]
+
+
+def inputs_figure(palette: str):
+    """The input results folders of the registry's ``input_trees`` (left) and the results folders
+    made from them (right), each input joined to every folder that reads it (issue #188)."""
+    reg = registry()["input_trees"]
+    sources = sorted({p for prefixes in reg.values() for p in prefixes})
+    # An input box's key is "input <folder>": the calibration is an input and a results folder.
+    left = [(f"input {p}", _folder_lines(p), "stage") for p in sources]
+    right = [(tree, [f"results/{tree}"], "image") for tree in sorted(reg)]
+    edges = [(f"input {p}", tree) for tree, prefixes in sorted(reg.items()) for p in prefixes]
     return _two_columns(left, right, edges, palette)
 
 
@@ -723,6 +747,7 @@ DRAW: dict[str, Callable] = {
     "reproduce-targets": reproduce_figure,
     "reference-jobs": jobs_figure,
     "tcad-registry": registry_figure,
+    "tcad-inputs": inputs_figure,
     "crosscheck-steps": crosscheck_figure,
     "crosscheck-tcad-steps": crosscheck_tcad_figure,
     "output-cache-flow": cache_flow_figure,

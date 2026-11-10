@@ -533,7 +533,8 @@ folder to its writer.
 
 
 The file is not hashed: it decides what is hashed. A change to its module lists, plugin
-exclusions or extra files adds or removes a hashed file, which changes the hash. A renamed results folder
+exclusions or extra files adds or removes a hashed file, which changes the hash. A change to its
+input folders changes the `inputs` that the provenance records. A renamed results folder
 changes the manifest. A changed image or calibration folder changes the image digest or the
 calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>` records. Its keys:
 
@@ -545,6 +546,7 @@ calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>`
 | `plugin_excludes` | each entry point's plugin files left out of its hash |
 | `calibration_dirs` | each backend's calibration folder |
 | `extra_files` | each entry point's data files hashed beyond the shared inputs |
+| `input_trees` | each results folder's input results folders ({ref}`tcad-input-trees`) |
 
 Every entry point leaves the plugin's `gplugins/devsim/backends/charon/` out of its hash
 ({py:data}`gf180tcad.tcad.PLUGIN_EXCLUDES`), and
@@ -584,6 +586,40 @@ every hash. The results folders, their writers and the commands that regenerate 
 The 2D jobs run one 16 GiB job at a time, hours each; the L = 2 µm cells run `--method qs`,
 then `--method combine-qs`. The validation is regenerated after the calibration is committed.
 
+(tcad-input-trees)=
+
+**Input results folders** ([issue #188](https://github.com/mithro/gf180-tcad/issues/188)). The
+calibration, the validation and the corner fits read committed results: the ngspice
+{term}`SPICE reference`, the selected 1D meshes, the calibration and the calibrated 2D cells.
+{numref}`tcad-inputs` draws which folder reads which. Each of the three records, under `inputs`
+in its {repo}`provenance.json <results/tcad/calibration/provenance.json>`, a digest of every
+input folder. The digest is the sha256 of the folder's lines in the {term}`manifest`,
+{repo}`results/MANIFEST.sha256`, leaving out each `provenance.json`
+({py:func}`gf180tcad.treedigest.prefix_digest`). Updating an input folder's provenance therefore
+leaves the digest alone, and a change to its data moves it.
+
+```{figure} /_generated/reproduce/tcad-inputs-light.svg
+:name: tcad-inputs
+:figclass: only-light
+:alt: Boxes in two columns. Left, the input results folders. Right, the calibration, corner-fit and validation folders, each joined by an arrow from every input folder it reads.
+
+The input results folders of the registry's `input_trees` (left) and the results folders made
+from them (right). An arrow joins each input folder to every folder that reads it.
+```
+
+```{figure} /_generated/reproduce/tcad-inputs-dark.svg
+:figclass: only-dark
+:alt: Boxes in two columns. Left, the input results folders. Right, the calibration, corner-fit and validation folders, each joined by an arrow from every input folder it reads.
+
+The input results folders of the registry's `input_trees` (left) and the results folders made
+from them (right). An arrow joins each input folder to every folder that reads it.
+```
+
+The test
+{test}`tests/tcad/test_tcad_provenance.py::test_committed_trees_record_their_committed_inputs`
+requires each recorded digest to match the committed input folder. A regenerated SPICE
+reference or calibration fails it until the folders made from it are regenerated.
+
 **Updating the provenance without a rerun.** This applies when a change to a writer's closure
 cannot have changed a results folder's data. A rerun of a representative job must give the same
 bytes (design spec §9). Then the folder's provenance can be updated to the current hash instead
@@ -594,7 +630,8 @@ uv run --locked python tools/restamp-tcad-provenance results/tcad/<tree>   # --d
 make manifest
 ```
 
-{repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`. It takes
+{repo}`tools/restamp-tcad-provenance` rewrites only `generator` and `generator_sha256`, and with
+`--record-inputs` also `inputs`. It takes
 the writer from the folder's path under {repo}`results/` (the `trees` of the registry). It refuses
 (exit 2, file unchanged) if anything else in the file differs from what the writer would write
 now. That covers the plugin commit, an image, the calibration applied, or a `generator` naming
