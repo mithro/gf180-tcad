@@ -10,11 +10,15 @@ VARIANT is ``base`` (the committed cell's cross-section, to check the harness ag
 committed cv.csv), ``plugs`` (the source/drain electrodes run up as contact plugs of the PDK's
 height, 0.86 um, with the inter-layer oxide around them), or ``bias<nm>`` (the poly and gate
 oxide longer by <nm> nm at each end, the source/drain doping still self-aligned to them), or a
-``+``-joined combination (``plugs+bias30``).
+``+``-joined combination (``plugs+bias30``). ``ldd<peak>`` (e.g. ``ldd1e18``) adds a lightly
+doped extension self-aligned to the (biased) poly edge: a Gaussian of that surface peak that
+falls to the body doping at ``ldddepth<nm>`` (default 100 nm), and then moves the heavy
+source/drain out by ``sp<nm>`` (the spacer, default 0) from the poly edge.
 """
 
 import dataclasses
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -40,7 +44,33 @@ def _rect(x0, x1, y, layer, component):
     )
 
 
-def cross_section(proc, geometry, *, bias_um: float, plugs: bool) -> st.CrossSection:
+def _ldd_doping(proc, xs: st.CrossSection, *, peak: float, depth_um: float, spacer_um: float):
+    """``xs.doping`` with the body's source/drain profiles replaced: the heavy one masked by the
+    spacer (``spacer_um`` out from each poly edge), and an extension of surface ``peak`` that
+    falls to the body doping at ``depth_um``, masked by the poly."""
+    from gplugins.devsim import doping
+
+    v = proc.values()
+    g0, g1 = xs.gate_u
+    s_sd = xs.sd_straggle_um
+    s_ldd = depth_um / math.sqrt(2 * math.log(peak / v["n_ch_cm3"]))
+    heavy = doping.gaussian(xs.sd_peak_cm3, 0.0, s_sd)
+    light = doping.gaussian(peak, 0.0, s_ldd)
+    lat_sd, lat_ldd = st.LATERAL_STRAGGLE_RATIO * s_sd, st.LATERAL_STRAGGLE_RATIO * s_ldd
+    sd = (
+        heavy * doping.lateral(lat_sd, None, g0 - spacer_um),
+        heavy * doping.lateral(lat_sd, g1 + spacer_um, None),
+        light * doping.lateral(lat_ldd, None, g0),
+        light * doping.lateral(lat_ldd, g1, None),
+    )
+    donors, acceptors = xs.doping[st.BODY]
+    body = (sd, acceptors) if proc.polarity == "n" else (donors, sd)
+    return {**xs.doping, st.BODY: body}
+
+
+def cross_section(
+    proc, geometry, *, bias_um: float, plugs: bool, ldd: dict | None = None
+) -> st.CrossSection:
     """The committed cell's cross-section (stack.build), with the gate longer by ``bias_um`` at
     each end and, with ``plugs``, the source/drain electrodes PLUG_UM tall. Its ``l_um`` is the
     poly's length (the mesh check compares them), so use ``cgg_ff_per_um``, not C per area."""
@@ -79,11 +109,15 @@ def cross_section(proc, geometry, *, bias_um: float, plugs: bool) -> st.CrossSec
             layer, _z, _t, material = levels[region]
             levels[region] = (layer, 0.0, PLUG_UM, material)
         xs = dataclasses.replace(xs, levels=levels)
+    if ldd is not None:
+        xs = dataclasses.replace(xs, doping=_ldd_doping(proc, xs, **ldd))
     return xs
 
 
-def parse(variant: str) -> tuple[float, bool]:
+def parse(variant: str) -> tuple[float, bool, dict | None]:
     bias_nm, plugs = 0.0, False
+    ldd: dict | None = None
+    depth_nm, spacer_nm = 100.0, 0.0
     for part in variant.split("+"):
         if part == "base":
             continue
@@ -91,19 +125,27 @@ def parse(variant: str) -> tuple[float, bool]:
             plugs = True
         elif part.startswith("bias"):
             bias_nm = float(part[len("bias") :])
+        elif part.startswith("ldddepth"):
+            depth_nm = float(part[len("ldddepth") :])
+        elif part.startswith("ldd"):
+            ldd = {"peak": float(part[len("ldd") :])}
+        elif part.startswith("sp"):
+            spacer_nm = float(part[len("sp") :])
         else:
             raise SystemExit(f"unknown variant part {part!r}")
-    return bias_nm * 1e-3, plugs
+    if ldd is not None:
+        ldd.update(depth_um=depth_nm * 1e-3, spacer_um=spacer_nm * 1e-3)
+    return bias_nm * 1e-3, plugs, ldd
 
 
 def main(argv: list[str]) -> int:
     device, gid, variant, out = argv
-    bias_um, plugs = parse(variant)
+    bias_um, plugs, ldd = parse(variant)
     proc, _ = load_params(device, "calibrated")
     geometry = geometry_of(device, gid)
     pol = 1.0 if proc.polarity == "n" else -1.0
     vg = (-5.0 * pol, 5.0 * pol)  # from accumulation, as the jobs sweep
-    xs = cross_section(proc, geometry, bias_um=bias_um, plugs=plugs)
+    xs = cross_section(proc, geometry, bias_um=bias_um, plugs=plugs, ldd=ldd)
     t0 = time.monotonic()
     cv = moscap2d.simulate(
         proc,
@@ -121,6 +163,7 @@ def main(argv: list[str]) -> int:
         variant=variant,
         bias_um=bias_um,
         plugs=plugs,
+        ldd=ldd,
         plug_um=PLUG_UM if plugs else None,
         gid=gid,
         elapsed_s=time.monotonic() - t0,
