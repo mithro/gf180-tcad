@@ -576,23 +576,25 @@ The plateau gap shrinks with L, as at the shorter pfet cells ({ref}`cv-agreement
 ### The 2D cells' edge capacitance
 
 Every 2D plateau lies below SPICE, by less at longer gates. A gate's capacitance per unit width is
-a straight line in its length:
+a straight line in its length, {math:numref}`eq-cv-edge`:
 
 $$
-\frac{C_\text{gg}}{W} = C_\text{edge} + C_\text{area}\,L
-$$
+\frac{C_{\mathrm{gg}}}{W} = C_{\mathrm{edge}} + C_{\mathrm{area}}\,L
+$$ (eq-cv-edge)
 
-- $C_\text{gg}$ is the gate capacitance (fF);
-- $W$ and $L$ are the drawn gate width and length (µm);
-- $C_\text{edge}$ is the part that does not scale with L: the overlap and fringe at both gate
-  edges, per unit width (fF/µm);
-- $C_\text{area}$ is the capacitance per unit gate area (fF/µm²).
+where
 
-At each gate bias, the line is fitted through the W = 10 µm cells with a committed 2D cell:
-L = 0.6, 0.7, 1 and 2 µm (nfet) and 0.5, 0.7, 1 and 2 µm (pfet)
-({py:func}`~gf180tcad.comparison_figures.edge_split`). The same fit runs through the SPICE
-typical curves at those lengths. {numref}`cv-edge-figure` draws both, with the card's {term}`BSIM4`
-extrinsic terms (overlaps, fringe, gate-bulk) fitted the same way.
+- $C_{\mathrm{gg}}$ is the gate capacitance, in fF;
+- $W$ is the drawn gate width, in µm;
+- $L$ is the drawn gate length, in µm;
+- $C_{\mathrm{edge}}$ is the overlap and fringe at both gate edges per unit width, in fF/µm;
+- $C_{\mathrm{area}}$ is the capacitance per unit gate area, in fF/µm².
+
+At each gate bias, the line is fitted through the W = 10 µm cells that have a 2D cell
+({py:func}`~gf180tcad.comparison_figures.edge_split`). Their lengths are 0.6, 0.7, 1 and 2 µm
+(nfet) and 0.5, 0.7, 1 and 2 µm (pfet). The same fit runs through the SPICE curves at the
+{term}`typical corner <TT>`. {numref}`cv-edge-figure` draws both lines. It adds the card's
+{term}`BSIM4` extrinsic terms (overlaps, fringe, gate-bulk), fitted the same way.
 
 ```{figure} /_generated/comparison/edge-capacitance-light.svg
 :name: cv-edge-figure
@@ -615,7 +617,7 @@ the card's BSIM4 extrinsic terms (dotted, top). Each value is the line through t
 cells at one bias.
 ```
 
-On the plateaus, at u = −5 V and u = +5 V:
+The table gives both lines on the plateaus, at u = −5 V and u = +5 V:
 
 | device | side | u (V) | SPICE C_edge (fF/µm) | 2D C_edge (fF/µm) | BSIM4 extrinsic (fF/µm) | SPICE C_area (fF/µm²) | 2D C_area (fF/µm²) |
 |---|---|---|---|---|---|---|---|
@@ -625,13 +627,12 @@ On the plateaus, at u = −5 V and u = +5 V:
 | pfet | inversion | +5 | 0.424 | 0.148 | 0.400 | 2.044 | 2.092 |
 
 The capacitance per area agrees within 2.4 % on both plateaus of both devices. The edge
-capacitance of the 2D cells is 0.05 to 0.28 fF/µm below SPICE. So the whole plateau gap is
-the edge: at nfet W10/L0.6 the two lines give 16.70 fF (SPICE) and 14.11 fF (2D) at
-u = +5 V.
+capacitance of the 2D cells is 0.05 to 0.28 fF/µm below SPICE. So the whole plateau gap is the
+edge. At nfet W10/L0.6 and u = +5 V, the two lines give 16.70 fF (SPICE) and 14.11 fF (2D).
 
-For the nfet, the SPICE edge is the card's extrinsic terms less 2·DLC·$C_\text{area}$,
-to within 0.0003 fF/µm. DLC (54 nm) shortens the length that BSIM4 multiplies by $C_\text{area}$. So
-the SPICE edge is the card's overlap and fringe model.
+For the nfet, the SPICE edge is the card's extrinsic terms less 2·DLC·$C_{\mathrm{area}}$,
+to within 0.0003 fF/µm. The card's DLC, 54 nm, shortens the length that BSIM4 multiplies by
+$C_{\mathrm{area}}$. So the SPICE edge is the card's overlap and fringe model.
 
 The 2D cross-section has a self-aligned source and drain, with no lightly doped extension and
 no spacer ({py:mod}`gf180tcad.tcad.stack`). Its only overlap is the lateral tail of the

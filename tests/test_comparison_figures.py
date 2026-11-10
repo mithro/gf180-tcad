@@ -795,4 +795,8 @@ def test_cv_page_prints_the_edge_split():
     spice, two_d = n["nfet_total"]
     assert f"give {spice:.2f} fF (SPICE) and {two_d:.2f} fF (2D)" in page
     assert f"to within {max(n['check']):.4f} fF/µm" in page
+    from gf180tcad.tcad import process
+
+    dlc_nm = process.load("nfet_05v0").card_values()["dlc"] * 1e9
+    assert f"The card's DLC, {dlc_nm:.0f} nm," in page
     assert max(n["check"]) < 1e-3
