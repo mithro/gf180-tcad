@@ -37,6 +37,8 @@ Source: {repo}`src/gf180tcad/tcad/__init__.py`.
 
 .. autodata:: gf180tcad.tcad.EXTRA_FILES
 
+.. autodata:: gf180tcad.tcad.INPUT_TREES
+
 .. autodata:: gf180tcad.tcad.TCAD_GENERATOR_EXTRA_FILES
 
 .. autodata:: gf180tcad.tcad.GPLUGINS_SUBMODULE

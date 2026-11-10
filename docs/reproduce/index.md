@@ -547,7 +547,7 @@ calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>`
 | `plugin_excludes` | each entry point's plugin files left out of its hash |
 | `calibration_dirs` | each backend's calibration folder |
 | `extra_files` | each entry point's data files hashed beyond the shared inputs |
-| `input_trees` | each results folder's input results folders ({ref}`tcad-input-trees`) |
+| `input_trees` | each results folder's input results folders ({ref}`input results folders <tcad-input-trees>`) |
 
 Every entry point leaves the plugin's `gplugins/devsim/backends/charon/` out of its hash
 ({py:data}`gf180tcad.tcad.PLUGIN_EXCLUDES`), and
