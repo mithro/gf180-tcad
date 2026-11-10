@@ -96,8 +96,9 @@ lists them. Each box names the results folders its target writes. The last box i
 | `tcad-corners` | `python -m gf180tcad.calibrate.corners run` for both devices at ff, ss, fs and sf, four 2 GiB {term}`jobs <job>` at a time, then `summary` for each device ({ref}`reproduce-corners`) | {repo}`results/tcad/corners` |
 
 In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs`. Both use the
-same `--resume` directory under `tmp/reproduce-scratch` (`TCAD_SCRATCH=`), so a cut-off job
-resumes when the target runs again.
+same `--resume` directory under `~/.cache/gf180-tcad/reproduce-scratch` (`TCAD_SCRATCH=`), so a
+cut-off job resumes when the target runs again. The directory is outside the checkout because the
+{term}`sandbox` refuses a read-write workdir inside the repository.
 
 In `tcad-calibrated`, the nfet L = 2 µm cell runs the same two steps. Its {term}`QS <C–V>` step outgrows the
 16 GiB cap before the {term}`sweep` ends ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)).
