@@ -9,8 +9,10 @@ an ``https://`` link. Values taken from the card cite its model line and the ``.
 of its ``.lib typical`` section that the card expression uses; :func:`eval_card_expr`
 evaluates those expressions.
 
-Exactly three parameters are free (:data:`TUNABLES`). They are the calibration tunables: they
-are tagged ``calibrated`` because they will be fitted, and instead of ``source`` each has a
+Exactly four parameters are free: the three calibration tunables of the 1D and 2D MOS capacitors
+(:data:`TUNABLES`) and the 2D-only poly length bias (:data:`TUNABLES_2D`, issue #189), which only
+:func:`gf180tcad.tcad.stack.build` reads. They are tagged ``calibrated`` because they are fitted,
+and instead of ``source`` each has a
 ``start_source`` and a ``bounds_source``. The files hold only their starts and numeric bounds,
 written before any fit; fitted values are written under ``results/tcad/calibration/``. All the
 other parameters are fixed and never tagged ``calibrated``.
@@ -55,11 +57,16 @@ TAGS = ("pdk-doc", "spice-card", "literature", "calibrated")
 # card value that a tunable's start or bounds come from. ``process``: a fixed input of the TCAD
 # structure. ``reference-bookkeeping``: how BSIM4 splits the SPICE Cgg into intrinsic and
 # extrinsic parts, used only by the 1D comparison; not process data, and not part of the parameter
-# budget.
-ROLES = ("tunable", "bound-basis", "process", "reference-bookkeeping")
+# budget. ``tunable-2d``: a calibration parameter of the 2D cross-section only, with bounds; the
+# 1D MOS capacitor never reads it.
+ROLES = ("tunable", "tunable-2d", "bound-basis", "process", "reference-bookkeeping")
 
-# The free parameters of every process file.
+# The free parameters of every process file that the 1D calibration fits.
 TUNABLES = ("t_ox_eff_nm", "n_ch_cm3", "dv_fb_v")
+
+# The free parameters of every process file that only the 2D cross-section reads: the poly length
+# bias at each gate end (nm), fitted to the 2D cells' edge capacitance (issue #189).
+TUNABLES_2D = ("poly_bias_nm",)
 
 # What a tunable's start (``start_kind``) and each of its bounds (``bounds_kind``) rest on: a
 # card value, a value derived from card values by a cited formula, or a project choice.
@@ -433,7 +440,7 @@ def _parameter(name: str, raw: Mapping) -> Parameter:
     role = raw["role"]
     if role not in ROLES:
         raise ValueError(f"role {role!r} is not one of {ROLES}")
-    if (role == "tunable") == fixed:
+    if (role in ("tunable", "tunable-2d")) == fixed:
         raise ValueError(f"role {role!r} does not match fixed={fixed}")
     if fixed:
         if provenance == "calibrated":
@@ -527,7 +534,8 @@ def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
     """Read and validate ``<data_dir>/<device>.toml`` (default :data:`DATA_DIR`).
 
     Checks the provenance tags (``calibrated`` exactly on the tunables), that every source is
-    a card line or a link, that exactly :data:`TUNABLES` are free and have a start source and
+    a card line or a link, that exactly :data:`TUNABLES` and :data:`TUNABLES_2D` are free (with
+    the roles ``tunable`` and ``tunable-2d``) and have a start source and
     bounds with lo ≤ start ≤ hi and a bounds source, that every cited card line of a card value
     is in its source, and the ``[centroid_allowance]`` table.
     """
@@ -579,8 +587,14 @@ def load(device: str, data_dir: Path | None = None) -> ProcessDescription:
         except ValueError as e:
             raise ValueError(f"{path}: parameter {name}: {e}") from None
     free = {n for n, p in params.items() if not p.fixed}
-    if free != set(TUNABLES):
-        raise ValueError(f"{path}: free parameters are {sorted(free)}, expected {TUNABLES}")
+    if free != set(TUNABLES) | set(TUNABLES_2D):
+        raise ValueError(
+            f"{path}: free parameters are {sorted(free)}, expected {TUNABLES + TUNABLES_2D}"
+        )
+    for n in free:
+        want = "tunable-2d" if n in TUNABLES_2D else "tunable"
+        if params[n].role != want:
+            raise ValueError(f"{path}: parameter {n} has role {params[n].role!r}, not {want!r}")
     for p in params.values():
         for d in p.derived_from:
             if d == p.name or d not in params or not params[d].fixed:
