@@ -177,6 +177,5 @@ def test_page_prints_the_fit():
                    if v["ldd"])  # fmt: skip
     assert (peaks[0], peaks[-1]) == (1e18, 2e19)
     assert "1e18 to 2e19 cm⁻³" in page
-    worst = max(abs(lf.edge_fit(d, g)["residual"][0]) for d, g in CELLS)
     index = (REPO_ROOT / "docs/limitations/index.md").read_text("utf-8")
-    assert f"up to {worst:.2f} fF/µm at each plateau" in index
+    assert "too little edge capacitance ({ref}`moscap2d-edge`" in index

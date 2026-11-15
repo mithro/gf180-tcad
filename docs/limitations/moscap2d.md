@@ -635,7 +635,7 @@ Its comparison is {term}`Same process`
 ## What the 2D edge needs
 
 The calibrated 2D cells have less edge capacitance than {term}`SPICE` on both plateaus
-({ref}`cv-agreement-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
+({ref}`cv-agreement-edge`).
 The edge-sensitivity harness ({repo}`experiments/edge-sensitivity`) changes one feature of a
 committed cell's cross-section. It then solves {term}`QS <C–V>` at u = −5 V and +5 V, the two
 plateaus. Its base variant reproduces the committed cell's Cgg to 1e-9
@@ -643,12 +643,13 @@ plateaus. Its base variant reproduces the committed cell's Cgg to 1e-9
 
 Each variant's gain over the base is in {numref}`moscap2d-edge-figure`, in fF/µm of Cgg per unit width:
 
-- **Contact plugs.** Source and drain electrodes 0.86 µm tall, the PDK's contact height, change
-  Cgg by {{ lim_edge_plugs_acc }} and {{ lim_edge_plugs_inv }}.
-- **A longer poly.** Poly and gate oxide 30 nm longer at each end, with the source/drain still
-  aligned to them, add {{ lim_edge_bias30_acc }} and {{ lim_edge_bias30_inv }}. The gain is linear in the added length.
+- **Contact plugs.** Source and drain electrodes 0.86 µm tall change Cgg by
+  {{ lim_edge_plugs_acc }} and {{ lim_edge_plugs_inv }}. That height is the PDK's contact height.
+- **A longer poly.** Poly and gate oxide 30 nm longer at each end add {{ lim_edge_bias30_acc }}
+  and {{ lim_edge_bias30_inv }}. The source/drain stays aligned to them. The gain is linear in
+  the added length.
 - **An extension under a longer poly.** A lightly doped extension ({term}`LDD`) of
-  1e18 to 2e19 cm⁻³ adds close to the same on both plateaus as the longer poly alone.
+  1e18 to 2e19 cm⁻³ adds close to what the longer poly adds. It does so on both plateaus.
 
 No variant adds much more at +5 V than at −5 V, as the nfet target asks.
 A light extension inverts at −5 V, because the adjacent body supplies its carriers. A heavy one hardly depletes.
@@ -669,25 +670,24 @@ Each variant's gain in Cgg per unit width over the committed cell, at u = +5 V a
 Each variant's gain in Cgg per unit width over the committed cell, at u = +5 V against u = −5 V, where u = polarity × Vg: nfet W10/L0.6 (left) and pfet W10/L0.5 (right). The diagonal is equal gain on both plateaus. The star is the target, SPICE minus 2D edge ({ref}`cv-agreement-edge`); the open ring is the fitted bias δ ({repo}`records <results/edge-sensitivity>`).
 ```
 
-The best single change is a poly length bias δ at each end, fitted to both plateaus at once:
+The best single change is a poly length bias δ at each end, fitted to both plateaus at once,
+{math:numref}`eq-moscap2d-edge-bias`:
 
-```{math}
-:label: eq-moscap2d-edge-bias
-
+$$
 s \, \delta = \tfrac{1}{2} \left( g_{-5} + g_{+5} \right)
-```
+$$ (eq-moscap2d-edge-bias)
 
 where
 
-- $s$ is the gain per nm of δ (fF/µm per nm), the least-squares slope through the origin of the
-  longer-poly variants at both plateaus;
-- $\delta$ is the poly length bias at each gate end (nm);
-- $g_{-5}$ and $g_{+5}$ are the 2D edge's shortfall against SPICE (fF/µm) at u = −5 V and +5 V.
+- $s$ is the gain per nm of δ, the least-squares slope through the origin of the
+  longer-poly variants at both plateaus, in fF/(µm·nm);
+- $\delta$ is the poly length bias at each gate end, in nm;
+- $g_{-5}$ and $g_{+5}$ are the 2D edge's shortfall against SPICE at u = −5 V and +5 V, in fF/µm.
 
 The fit leaves equal and opposite misses at the two plateaus
 ({test}`tests/test_edge_sensitivity.py::test_edge_fit_is_the_least_squares_bias`):
 
-| Device | s (fF/µm per nm) | δ (nm) | Miss at each plateau (fF/µm) |
+| Device | s (fF/(µm·nm)) | δ (nm) | Miss at each plateau (fF/µm) |
 |---|---|---|---|
 | nfet | {{ lim_edge_nfet_slope }} | {{ lim_edge_nfet_delta }} | ±{{ lim_edge_nfet_residual }} |
 | pfet | {{ lim_edge_pfet_slope }} | {{ lim_edge_pfet_delta }} | ±{{ lim_edge_pfet_residual }} |
