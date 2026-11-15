@@ -413,8 +413,9 @@ oxide is 16.05 nm, within 15.2–16.95 nm. The pfet oxide is 15.72 nm, within 15
 The fourth tunable, `poly_bias_nm`, is read only by the 2D cross-section
 ({py:func}`gf180tcad.tcad.stack.build`, {py:data}`gf180tcad.tcad.process.TUNABLES_2D`). Its role is
 `tunable-2d`. The poly, the gate oxide and the gate electrode are longer by it at each end, and the
-source/drain doping stays aligned to them. The drawn L still divides Cgg into C per area. The 1D MOS
-capacitor never reads it. The gate and its ends are drawn in
+source/drain doping stays aligned to them. The drawn L still divides Cgg into C per area.
+
+The 1D MOS capacitor never reads it. The gate and its ends are drawn in
 {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`.
 
 | Name | Unit | Start | Min | Max |
