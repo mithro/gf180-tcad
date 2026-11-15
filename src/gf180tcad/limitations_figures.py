@@ -96,6 +96,10 @@ STYLE = {
     # The numbers the pages print: significant digits of e-notation, decimals of C/Cox.
     "page_digits": 2,
     "ccox_digits": 3,
+    # The edge-sensitivity figure: the plateau biases (u, V) of the record, and the equal-gain
+    # line's span past the largest gain (fraction).
+    "edge_u_v": (-5.0, 5.0),
+    "edge_headroom": 1.15,
 }
 
 # Unit conversions: fraction to per cent, µm to nm, V to mV, A to pA, Hz to MHz.
@@ -871,6 +875,148 @@ def meshconv_2d_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     return _meshconv_figure(2, palette, roots)
 
 
+# --- the 2D edge sensitivity (issue #189) ---------------------------------------------------------
+
+#: The committed edge-sensitivity records (``experiments/edge-sensitivity/record.py``): one per
+#: device, at its shortest W = 10 µm calibrated 2D cell.
+EDGE_CELLS = (("nfet_05v0", "w10p0_l0p60"), ("pfet_05v0", "w10p0_l0p50"))
+EDGE_ROOT = REPO_ROOT / "results" / "edge-sensitivity"
+
+# The variant families of the record, by the parts of their names, and how the figure draws them.
+_EDGE_FAMILIES = (
+    ("plugs+bias", "contact plugs and a longer poly", "hole", "D"),
+    ("ldd", "a longer poly over an extension", "intrinsic", "s"),
+    ("bias", "a longer poly", "electron", "o"),
+    ("plugs", "contact plugs", "highlight", "^"),
+)
+
+
+def _edge_family(variant: str) -> str:
+    """The family of a variant name: ``plugs+bias``, ``ldd`` (any variant with an extension),
+    ``bias`` or ``plugs``."""
+    if "ldd" in variant:
+        return "ldd"
+    if variant.startswith("plugs+bias"):
+        return "plugs+bias"
+    if variant.startswith("bias"):
+        return "bias"
+    if variant == "plugs":
+        return "plugs"
+    raise ValueError(f"no family for the variant {variant!r}")
+
+
+def edge_root(roots: Roots = DEFAULT_ROOTS) -> Path:
+    """The edge-sensitivity records of ``roots``: ``edge-sensitivity`` beside its SPICE tree, so
+    the committed :data:`EDGE_ROOT` for the committed trees."""
+    return Path(roots.spice).parent / "edge-sensitivity"
+
+
+def edge_record(device: str, gid: str, root: Path = EDGE_ROOT) -> dict:
+    """The committed record of ``device``'s cell ``gid`` (FileNotFoundError if missing)."""
+    return json.loads((Path(root) / f"{device}-{gid}.json").read_text("utf-8"))
+
+
+def edge_gains(device: str, gid: str, root: Path = EDGE_ROOT) -> dict[str, tuple[float, float]]:
+    """``{variant: (gain at u = -5 V, gain at u = +5 V)}``: each variant's Cgg per unit width
+    minus the base's (fF/µm), at the record's two biases (u = polarity × Vg)."""
+    rec = edge_record(device, gid, root)
+    pol = DEVICES[device].polarity
+    base = rec["variants"]["base"]
+
+    def at(v: dict) -> dict[float, float]:
+        return {pol * vg: c for vg, c in zip(v["vg"], v["cgg_ff_per_um"], strict=True)}
+
+    b = at(base)
+    lo, hi = STYLE["edge_u_v"]
+    return {
+        name: (at(v)[lo] - b[lo], at(v)[hi] - b[hi])
+        for name, v in rec["variants"].items()
+        if name != "base"
+    }
+
+
+def edge_targets(device: str, roots: Roots = DEFAULT_ROOTS) -> tuple[float, float]:
+    """The 2D edge's shortfall against SPICE (fF/µm) at u = -5 and +5 V: the SPICE minus the 2D
+    ``C_edge`` of :func:`gf180tcad.comparison_figures.edge_split`."""
+    from gf180tcad.comparison_figures import edge_split
+
+    s = edge_split(device, roots.spice, roots.tcad)
+    out = []
+    for u in STYLE["edge_u_v"]:
+        (i,) = np.flatnonzero(s["u"] == u)
+        out.append(float(s["spice"]["edge"][i] - s["two_d"]["edge"][i]))
+    return out[0], out[1]
+
+
+def edge_fit(device: str, gid: str, roots: Roots = DEFAULT_ROOTS) -> dict:
+    """The least-squares poly length bias of ``device`` (issue #189).
+
+    A poly longer by δ at each end adds the same Cgg per width on both plateaus, ``slope`` × δ
+    (fF/µm per nm): the line through the origin of the record's ``bias<nm>`` variants, both
+    biases. δ minimises the squared misses of the two targets, so ``slope`` × δ is their mean.
+    Returns ``slope``, ``targets``, ``delta_nm`` and the ``residual`` (fF/µm) at each plateau,
+    target minus gain."""
+    gains = edge_gains(device, gid, edge_root(roots))
+    xs, ys = [], []
+    for name, (lo, hi) in gains.items():
+        if name.startswith("bias") and name[len("bias") :].isdigit():
+            xs += [float(name[len("bias") :])] * 2
+            ys += [lo, hi]
+    if not xs:
+        raise ValueError(f"{device} {gid}: no bias<nm> variant in the record")
+    x, y = np.array(xs), np.array(ys)
+    slope = float(x @ y / (x @ x))
+    targets = edge_targets(device, roots)
+    delta = float(np.mean(targets)) / slope
+    return {
+        "slope": slope,
+        "targets": targets,
+        "delta_nm": delta,
+        "residual": tuple(t - slope * delta for t in targets),
+    }
+
+
+def edge_sensitivity_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Per device: each variant's gain at u = +5 V against its gain at u = -5 V, the target
+    (SPICE minus 2D edge), the line of equal gain on which every longer poly lies, and the
+    least-squares δ on that line."""
+    pal = ef.PALETTES[palette]
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(ef.STYLE["size_in"])
+        axes = fig.subplots(1, len(EDGE_CELLS))
+        for ax, (device, gid) in zip(axes, EDGE_CELLS, strict=True):
+            gains = edge_gains(device, gid, edge_root(roots))
+            fit = edge_fit(device, gid, roots)
+            top = STYLE["edge_headroom"] * max(
+                [*fit["targets"], *(v for g in gains.values() for v in g)]
+            )
+            ax.plot([0, top], [0, top], color=pal["band"], lw=ef.STYLE["line_width"],
+                    label="equal gain", gid=f"{device} equal")  # fmt: skip
+            for prefix, label, colour, marker in _EDGE_FAMILIES:
+                names = [n for n in gains if _edge_family(n) == prefix]
+                if not names:
+                    continue
+                ax.plot([gains[n][0] for n in names], [gains[n][1] for n in names], ls="none",
+                        marker=marker, ms=STYLE["marker_pt"], color=pal[colour], label=label,
+                        gid=f"{device} {prefix}")  # fmt: skip
+            lo, hi = fit["targets"]
+            ax.plot([lo], [hi], ls="none", marker="*", ms=STYLE["ring_pt"], color=pal["text"],
+                    label="target: SPICE minus 2D", gid=f"{device} target")  # fmt: skip
+            g = fit["slope"] * fit["delta_nm"]
+            ax.plot([g], [g], ls="none", marker="o", ms=STYLE["ring_pt"], mfc="none",
+                    color=pal["text"], label="fitted poly length bias", gid=f"{device} fit")  # fmt: skip
+            ax.set_title(
+                f"{_SHORT[device]} {_label(_geometry(device, gid))}", fontsize=ef.STYLE["text_pt"]
+            )
+            ax.set_xlabel("gain at u = −5 V (fF/µm)")
+            ax.set_ylabel("gain at u = +5 V (fF/µm)")
+            ax.grid(True)
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
 # --- the plugin history ---------------------------------------------------------------------------
 
 # The committed records of the plugin-history page: the release at its own mesh, then at half it.
@@ -1086,6 +1232,7 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "meshconv-2d": _svg_of(meshconv_2d_figure),
     "pn-slab": _svg_of(pn_slab_figure),
     "pin-depletion": _svg_of(pin_depletion_figure),
+    "edge-sensitivity": _svg_of(edge_sensitivity_figure),
 }
 
 
