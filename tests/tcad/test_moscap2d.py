@@ -416,6 +416,14 @@ def test_dualgate_required(driver):
         assert math.isclose(d["l_um"], g.l_um, abs_tol=1e-9)
         assert math.isclose(d["w_um"], g.w_um, abs_tol=1e-9)
         assert d["contacts"] == ["body", "drain", "gate", "source"]
+        # the poly bias (issue #189): 0 by default; 40 nm longer at each end, the drawn L kept
+        assert math.isclose(d["poly_l_um"], g.l_um, abs_tol=1e-9)
+        b = d["biased"]
+        assert b["l_um"] == d["l_um"]
+        assert math.isclose(b["gate_u"][0], d["gate_u"][0] - 0.04, abs_tol=1e-12)
+        assert math.isclose(b["gate_u"][1], d["gate_u"][1] + 0.04, abs_tol=1e-12)
+        assert math.isclose(b["poly_l_um"], g.l_um + 0.08, abs_tol=1e-9)
+        assert d["reaches"] and "reaches a source/drain contact" in d["reaches"]
 
 
 @pytest.mark.sandbox

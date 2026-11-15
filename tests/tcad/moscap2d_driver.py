@@ -8,6 +8,7 @@ parallel; the tests assert on the numbers. The 1D references are computed here t
 (results/tcad/meshconv/moscap2d/<device>/selected.json).
 """
 
+import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -146,14 +147,28 @@ def case_dualgate() -> dict:
             refused = None
         except stack.DualgateMissing as e:
             refused = str(e)
+        biased = stack.build(proc.with_values({"poly_bias_nm": 40.0}), cell, with_sd=True)
+        p = proc.params["poly_bias_nm"]
+        huge = dataclasses.replace(
+            proc, params={**proc.params, "poly_bias_nm": dataclasses.replace(p, value=1e4)}
+        )
+        try:
+            stack.build(huge, cell, with_sd=True)
+            reaches = None
+        except ValueError as e:
+            reaches = str(e)
         out[device] = {
             "l_um": xs.l_um,
             "w_um": xs.w_um,
             "gate_u": list(xs.gate_u),
+            "poly_l_um": xs.poly_l_um,
             "length_um": xs.length_um,
             "contacts": sorted(xs.contacts),
             "refused": refused,
-        }
+            "biased": {"l_um": biased.l_um, "gate_u": list(biased.gate_u),
+                       "poly_l_um": biased.poly_l_um, "line": biased.line},
+            "reaches": reaches,
+        }  # fmt: skip
     return out
 
 

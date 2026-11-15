@@ -47,6 +47,8 @@ def main() -> None:
         )
         shifted = moscap1d.simulate(proc.with_values({"dv_fb_v": 0.1}), vg=SHIFT_VG, mesh=MESH)
         unshifted = moscap1d.simulate(proc, vg=[v - 0.1 for v in SHIFT_VG], mesh=MESH)
+        biased = moscap1d.simulate(proc.with_values({"poly_bias_nm": 50.0}), vg=SHIFT_VG, mesh=MESH)
+        unbiased = moscap1d.simulate(proc, vg=SHIFT_VG, mesh=MESH)
         out[device] = {
             "vg": list(cv.vg),
             "tcad": list(cv.c_per_area_ff_um2),
@@ -61,6 +63,8 @@ def main() -> None:
             "shifted_vg": list(shifted.vg),
             "unshifted_vg": list(unshifted.vg),
             "unshifted": list(unshifted.c_per_area_ff_um2),
+            "biased": list(biased.c_per_area_ff_um2),
+            "unbiased": list(unbiased.c_per_area_ff_um2),
         }
     # mirror: A = p-body N with an n+ gate, B = n-body N with a p+ gate (same |N|, NGATE, t_ox)
     nf = moscap1d.stack_of(process.load("nfet_05v0"))
