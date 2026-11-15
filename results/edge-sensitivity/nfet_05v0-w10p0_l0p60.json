@@ -1,5 +1,10 @@
 {
   "calibration_file_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+  "calibration_values": {
+    "dv_fb_v": 0.09874753146964436,
+    "n_ch_cm3": 8.813323306821749e+16,
+    "t_ox_eff_nm": 16.050483616382458
+  },
   "device": "nfet_05v0",
   "geometry": "w10p0_l0p60",
   "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",

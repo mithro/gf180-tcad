@@ -41,4 +41,4 @@ to `<workdir>/<device>/<gid>/<variant>/variant.log`. On this project's host one 
 
 A record keeps, per variant, the gate biases, Cgg per unit width (fF/µm), the node count, the
 meshed gate length and the variant's parameters. It also pins the TCAD image, the gplugins commit,
-and the sha256 of `variant.py` and of the device's calibration file.
+the sha256 of `variant.py` and of the device's calibration file, and that file's values.

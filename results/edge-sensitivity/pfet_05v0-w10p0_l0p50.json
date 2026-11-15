@@ -1,5 +1,10 @@
 {
   "calibration_file_sha256": "60144f8196dbd0bd5e2f99d82fe8aa6e8de0d82faad023c00763c6a584caa995",
+  "calibration_values": {
+    "dv_fb_v": 0.1872304428294613,
+    "n_ch_cm3": 2.14664982697726e+17,
+    "t_ox_eff_nm": 15.720664949091667
+  },
   "device": "pfet_05v0",
   "geometry": "w10p0_l0p50",
   "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",

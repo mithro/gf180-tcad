@@ -5,7 +5,8 @@
 
 WORKDIR is run.py's work directory; each WORKDIR/DEVICE/GID/<variant>/result.json becomes one
 entry of the record. The record pins what the runs used: the TCAD image (docker/TCAD_IMAGE), the
-plugin commit, the sha256 of variant.py and of the device's calibration file. Only the values a
+plugin commit, the sha256 of variant.py and of the device's calibration file, and that file's
+values. Only the values a
 reader needs are kept: per variant its gate biases, Cgg per unit width (fF/um), the node count, the
 meshed gate length and the variant's parameters.
 """
@@ -16,7 +17,7 @@ import sys
 from pathlib import Path
 
 from gf180tcad import io
-from gf180tcad.tcad import calibration_file, gplugins_commit
+from gf180tcad.tcad import calibration, calibration_file, gplugins_commit
 
 REPO = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
@@ -49,6 +50,7 @@ def record(work: Path, device: str, gid: str) -> dict:
         "gplugins_commit": gplugins_commit(),
         "variant_py_sha256": _sha256(HERE / "variant.py"),
         "calibration_file_sha256": _sha256(calibration_file(device)),
+        "calibration_values": calibration.read(calibration_file(device), device),
         "variants": variants,
     }
 

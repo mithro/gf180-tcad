@@ -17,7 +17,7 @@ from gf180tcad import limitations_figures as lf
 from gf180tcad.comparison_figures import edge_split
 from gf180tcad.devices import DEVICES
 from gf180tcad.sandbox import REPO_ROOT
-from gf180tcad.tcad import calibration_file
+from gf180tcad.tcad import calibration, calibration_file
 
 HERE = REPO_ROOT / "experiments" / "edge-sensitivity"
 CELLS = list(lf.EDGE_CELLS)
@@ -56,6 +56,7 @@ def test_record_pins_what_the_runs_used(device, gid):
     assert rec["gplugins_commit"] == tree[2]
     assert rec["variant_py_sha256"] == _sha256(HERE / "variant.py")
     assert rec["calibration_file_sha256"] == _sha256(calibration_file(device))
+    assert rec["calibration_values"] == calibration.read(calibration_file(device), device)
 
 
 @pytest.mark.parametrize(("device", "gid"), CELLS)
