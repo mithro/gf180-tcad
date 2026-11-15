@@ -630,6 +630,70 @@ Its comparison is {term}`Same process`
 | Depletion crossing shift (mV) | −109 | Same process |
 | Inversion crossing shift (mV) | +7 | Agree |
 
+(moscap2d-edge)=
+
+## What the 2D edge needs
+
+The calibrated 2D cells have less edge capacitance than {term}`SPICE` on both plateaus
+({ref}`cv-agreement-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
+The edge-sensitivity harness ({repo}`experiments/edge-sensitivity`) changes one feature of a
+committed cell's cross-section. It then solves {term}`QS <C–V>` at u = −5 V and +5 V, the two
+plateaus. Its base variant reproduces the committed cell's Cgg to 1e-9
+({test}`tests/test_edge_sensitivity.py::test_record_base_is_the_committed_cell`).
+
+Each variant's gain over the base is in {numref}`moscap2d-edge-figure`, in fF/µm of Cgg per unit width:
+
+- **Contact plugs.** Source and drain electrodes 0.86 µm tall, the PDK's contact height, change
+  Cgg by {{ lim_edge_plugs_acc }} and {{ lim_edge_plugs_inv }}.
+- **A longer poly.** Poly and gate oxide 30 nm longer at each end, with the source/drain still
+  aligned to them, add {{ lim_edge_bias30_acc }} and {{ lim_edge_bias30_inv }}. The gain is linear in the added length.
+- **An extension under a longer poly.** A lightly doped extension ({term}`LDD`) of
+  1e18 to 2e19 cm⁻³ adds close to the same on both plateaus as the longer poly alone.
+
+No variant adds much more at +5 V than at −5 V, as the nfet target asks.
+A light extension inverts at −5 V, because the adjacent body supplies its carriers. A heavy one hardly depletes.
+The card's bias-dependent overlap (CGSL with CKAPPA) therefore has no counterpart in these cross-sections.
+
+```{figure} /_generated/limitations/edge-sensitivity-light.svg
+:name: moscap2d-edge-figure
+:figclass: only-light
+:alt: Two panels, nfet and pfet, each plotting a point's gain at +5 V against its gain at −5 V. A diagonal line of equal gain runs from the origin. The longer-poly circles and the contact-plug triangle lie on it; the nfet's extension squares lie just below it. A star marks the target, off the line for the nfet, near it for the pfet, and an open ring on the line marks the fitted bias.
+
+Each variant's gain in Cgg per unit width over the committed cell, at u = +5 V against u = −5 V, where u = polarity × Vg: nfet W10/L0.6 (left) and pfet W10/L0.5 (right). The diagonal is equal gain on both plateaus. The star is the target, SPICE minus 2D edge ({ref}`cv-agreement-edge`); the open ring is the fitted bias δ ({repo}`records <results/edge-sensitivity>`).
+```
+
+```{figure} /_generated/limitations/edge-sensitivity-dark.svg
+:figclass: only-dark
+:alt: Two panels, nfet and pfet, each plotting a point's gain at +5 V against its gain at −5 V. A diagonal line of equal gain runs from the origin. The longer-poly circles and the contact-plug triangle lie on it; the nfet's extension squares lie just below it. A star marks the target, off the line for the nfet, near it for the pfet, and an open ring on the line marks the fitted bias.
+
+Each variant's gain in Cgg per unit width over the committed cell, at u = +5 V against u = −5 V, where u = polarity × Vg: nfet W10/L0.6 (left) and pfet W10/L0.5 (right). The diagonal is equal gain on both plateaus. The star is the target, SPICE minus 2D edge ({ref}`cv-agreement-edge`); the open ring is the fitted bias δ ({repo}`records <results/edge-sensitivity>`).
+```
+
+The best single change is a poly length bias δ at each end, fitted to both plateaus at once:
+
+```{math}
+:label: eq-moscap2d-edge-bias
+
+s \, \delta = \tfrac{1}{2} \left( g_{-5} + g_{+5} \right)
+```
+
+where
+
+- $s$ is the gain per nm of δ (fF/µm per nm), the least-squares slope through the origin of the
+  longer-poly variants at both plateaus;
+- $\delta$ is the poly length bias at each gate end (nm);
+- $g_{-5}$ and $g_{+5}$ are the 2D edge's shortfall against SPICE (fF/µm) at u = −5 V and +5 V.
+
+The fit leaves equal and opposite misses at the two plateaus
+({test}`tests/test_edge_sensitivity.py::test_edge_fit_is_the_least_squares_bias`):
+
+| Device | s (fF/µm per nm) | δ (nm) | Miss at each plateau (fF/µm) |
+|---|---|---|---|
+| nfet | {{ lim_edge_nfet_slope }} | {{ lim_edge_nfet_delta }} | ±{{ lim_edge_nfet_residual }} |
+| pfet | {{ lim_edge_pfet_slope }} | {{ lim_edge_pfet_delta }} | ±{{ lim_edge_pfet_residual }} |
+
+The committed calibrated cells are solved at the drawn poly length, δ = 0.
+
 (moscap2d-l10)=
 
 ## The 2D cell at L = 10 µm: the equilibrium solve fails

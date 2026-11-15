@@ -659,9 +659,9 @@ nfet. Which pfet card terms add this length-dependent part is
 The 2D edge on the inversion side, 0.151 fF/µm, is about twice the card's outer fringe CF,
 0.073 fF/µm per edge. What the nfet cells lack there is the card's overlap less the DLC
 shortening, 2·(CGSO + CGSL − DLC·$C_{\mathrm{area}}$). The 2D cross-section has no lightly doped
-extension and no spacer ({py:mod}`gf180tcad.tcad.stack`). What supplies the missing edge, a longer
-printed poly, more outer fringe or an extension, is
-[issue #189](https://github.com/mithro/gf180-tcad/issues/189).
+extension and no spacer ({py:mod}`gf180tcad.tcad.stack`). Contact plugs, a longer poly and
+extensions were tried in the 2D cross-section; none adds more at one plateau than the other
+({ref}`moscap2d-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
 in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call

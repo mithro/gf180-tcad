@@ -100,6 +100,10 @@ STYLE = {
     # line's span past the largest gain (fraction).
     "edge_u_v": (-5.0, 5.0),
     "edge_headroom": 1.15,
+    # The digits the page prints: gains and residuals (fF/µm), the slope (fF/µm per nm), δ (nm).
+    "edge_digits": 3,
+    "edge_slope_digits": 5,
+    "edge_delta_digits": 1,
 }
 
 # Unit conversions: fraction to per cent, µm to nm, V to mV, A to pA, Hz to MHz.
@@ -1008,8 +1012,9 @@ def edge_sensitivity_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             ax.set_title(
                 f"{_SHORT[device]} {_label(_geometry(device, gid))}", fontsize=ef.STYLE["text_pt"]
             )
-            ax.set_xlabel("gain at u = −5 V (fF/µm)")
-            ax.set_ylabel("gain at u = +5 V (fF/µm)")
+            lo_u, hi_u = STYLE["edge_u_v"]
+            ax.set_xlabel(f"gain at u = {lo_u:+g} V (fF/µm)".replace("-", "−"))
+            ax.set_ylabel(f"gain at u = {hi_u:+g} V (fF/µm)")
             ax.grid(True)
         handles, labels = axes[0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
@@ -1190,7 +1195,9 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
     ``lim_roundoff_update`` and ``lim_roundoff_bound``: the accepted solve of level
     :data:`ROUNDOFF_LEVEL` of :func:`roundoff_points`; ``lim_ccox_acc`` and ``lim_ccox_inv``: C/Cox
     per drawn area of the nfet's Lmin start cell (:func:`c_over_cox`) at the accumulation and
-    inversion ends of its sweep."""
+    inversion ends of its sweep. ``lim_edge_<dev>_{slope,delta,residual}``: :func:`edge_fit` of
+    each :data:`EDGE_CELLS` cell (``<dev>`` is ``nfet`` or ``pfet``); ``lim_edge_<variant>_{acc,inv}``
+    (``plugs``, ``bias30``): the nfet record's gains (:func:`edge_gains`) at u = -5 and +5 V."""
     k = roundoff_points(roots)
     (p,) = [p for p in k["points"] if p["level"] == ROUNDOFF_LEVEL]
     nfet = c_over_cox(EVIDENCE_DEVICE, roots)
@@ -1203,7 +1210,26 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
         "lim_roundoff_bound": _sci(k["bound"]),
         "lim_ccox_acc": f"{cell['ratio'][np.argmin(cell['u'])]:.{ccox}f}",
         "lim_ccox_inv": f"{cell['ratio'][np.argmax(cell['u'])]:.{ccox}f}",
+        **_edge_substitutions(roots),
     }
+
+
+def _edge_substitutions(roots: Roots) -> dict[str, str]:
+    out = {}
+    for device, gid in EDGE_CELLS:
+        fit = edge_fit(device, gid, roots)
+        dev = _SHORT[device]
+        out[f"lim_edge_{dev}_slope"] = f"{fit['slope']:.{STYLE['edge_slope_digits']}f}"
+        out[f"lim_edge_{dev}_delta"] = f"{fit['delta_nm']:.{STYLE['edge_delta_digits']}f}"
+        out[f"lim_edge_{dev}_residual"] = f"{abs(fit['residual'][1]):.{STYLE['edge_digits']}f}"
+    device, gid = EDGE_CELLS[0]
+    gains = edge_gains(device, gid, edge_root(roots))
+    for variant in ("plugs", "bias30"):
+        for side, g in zip(("acc", "inv"), gains[variant], strict=True):
+            out[f"lim_edge_{variant}_{side}"] = f"{g:.{STYLE['edge_digits']}f}".replace(
+                "-", "\u2212"
+            )
+    return out
 
 
 # --- the registry -------------------------------------------------------------------------------

@@ -22,11 +22,11 @@ The Phase 2 Global Constraints apply unchanged (`docs/superpowers/plans/2026-10-
 
 ## Task E1: commit the sensitivity study
 
-- [ ] `experiments/edge-sensitivity/variant.py` and `run.py`, with a `README.md`: what the harness changes, how to run it, and where results go.
-- [ ] A results record, `results/tcad/edge-sensitivity/<device>/<gid>.json`. It holds every variant's Cgg per unit width at ±5 V, the image, the plugin commit, the variant's parameters and its node count. A writer, `experiments/edge-sensitivity/record.py`, builds it from the run directories.
-- [ ] A sandbox test (marked `sandbox`, long) reruns the `base` and `bias30` variants of the nfet and compares them with the record. The base must also equal the committed cell's `cv.csv`.
-- [ ] A host test computes δ by least squares from the record and `comparison_figures.edge_split`: `2·δ·slope = mean of the two plateau gaps`, where `slope` is the measured Cgg gain per nm of δ. Pin it.
-- [ ] Docs: a section on `docs/limitations/moscap2d.md`, "What the 2D edge needs". It has a figure: per variant, the gain at −5 V against the gain at +5 V, with the target point. It explains the LDD finding in plain words and gives the fitted δ per device. Update the limitations index and the #189 links.
+- [x] `experiments/edge-sensitivity/variant.py` and `run.py`, with a `README.md`: what the harness changes, how to run it, and where results go.
+- [x] A results record, `results/edge-sensitivity/<device>-<gid>.json` (outside `results/tcad/`, so the TCAD provenance checks do not cover it; the record pins its own inputs). It holds every variant's Cgg per unit width at ±5 V, the image, the plugin commit, the variant's parameters and its node count. A writer, `experiments/edge-sensitivity/record.py`, builds it from the run directories.
+- [x] A sandbox test (marked `sandbox`, long) reruns the `base` and `bias30` variants of the nfet and compares them with the record. The base must also equal the committed cell's `cv.csv`.
+- [x] A host test computes δ by least squares from the record and `comparison_figures.edge_split`: `2·δ·slope = mean of the two plateau gaps`, where `slope` is the measured Cgg gain per nm of δ. Pin it.
+- [x] Docs: a section on `docs/limitations/moscap2d.md`, "What the 2D edge needs". It has a figure: per variant, the gain at −5 V against the gain at +5 V, with the target point. It explains the LDD finding in plain words and gives the fitted δ per device (nfet 40.2 nm, pfet 61.5 nm; misses ±0.109 and ±0.030 fF/µm). Update the limitations index and the #189 links.
 
 ## Task E2: δ as a tunable, at its start value
 
