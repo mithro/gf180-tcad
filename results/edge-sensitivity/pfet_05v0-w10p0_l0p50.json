@@ -1,0 +1,60 @@
+{
+  "calibration_file_sha256": "60144f8196dbd0bd5e2f99d82fe8aa6e8de0d82faad023c00763c6a584caa995",
+  "device": "pfet_05v0",
+  "geometry": "w10p0_l0p50",
+  "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",
+  "image": "ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8",
+  "params": "calibrated",
+  "schema": 1,
+  "variant_py_sha256": "73d2f3ddb62b4754795a2bddd988cf60c5e9b125139426106e56426dc1a64e6a",
+  "variants": {
+    "base": {
+      "bias_um": 0.0,
+      "cgg_ff_per_um": [
+        1.1925482000635657,
+        1.1941539009696833
+      ],
+      "ldd": null,
+      "meshed_l_um": 0.49999999999999983,
+      "node_count": 205520,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        5.0,
+        -5.0
+      ]
+    },
+    "bias30": {
+      "bias_um": 0.03,
+      "cgg_ff_per_um": [
+        1.3159904751209377,
+        1.313967860186013
+      ],
+      "ldd": null,
+      "meshed_l_um": 0.5599999999999999,
+      "node_count": 211400,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        5.0,
+        -5.0
+      ]
+    },
+    "bias60": {
+      "bias_um": 0.06,
+      "cgg_ff_per_um": [
+        1.4365136050261054,
+        1.430825874865552
+      ],
+      "ldd": null,
+      "meshed_l_um": 0.62,
+      "node_count": 217437,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        5.0,
+        -5.0
+      ]
+    }
+  }
+}

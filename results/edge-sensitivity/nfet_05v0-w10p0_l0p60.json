@@ -1,0 +1,174 @@
+{
+  "calibration_file_sha256": "b83b221e3927cd9d7fca07f8a2a48784f8fc00d11ecdf644f5ee2ad290e9f2c9",
+  "device": "nfet_05v0",
+  "geometry": "w10p0_l0p60",
+  "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",
+  "image": "ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8",
+  "params": "calibrated",
+  "schema": 1,
+  "variant_py_sha256": "73d2f3ddb62b4754795a2bddd988cf60c5e9b125139426106e56426dc1a64e6a",
+  "variants": {
+    "base": {
+      "bias_um": 0.0,
+      "cgg_ff_per_um": [
+        1.3878303959450016,
+        1.411516795746503
+      ],
+      "ldd": null,
+      "meshed_l_um": 0.5999999999999999,
+      "node_count": 225964,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    },
+    "bias30": {
+      "bias_um": 0.03,
+      "cgg_ff_per_um": [
+        1.508999731233478,
+        1.5317324659880993
+      ],
+      "ldd": null,
+      "meshed_l_um": 0.66,
+      "node_count": 231478,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    },
+    "bias60": {
+      "bias_um": 0.06,
+      "cgg_ff_per_um": [
+        1.6274641337987727,
+        1.6492542983230347
+      ],
+      "ldd": null,
+      "meshed_l_um": 0.7200000000000001,
+      "node_count": 237808,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    },
+    "bias65+ldd1e18+sp100": {
+      "bias_um": 0.065,
+      "cgg_ff_per_um": [
+        1.6710889316718385,
+        1.667164235214646
+      ],
+      "ldd": {
+        "depth_um": 0.1,
+        "peak": 1e+18,
+        "spacer_um": 0.1
+      },
+      "meshed_l_um": 0.73,
+      "node_count": 238560,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    },
+    "bias65+ldd2e19+ldddepth60+latr0.2+sp100": {
+      "bias_um": 0.065,
+      "cgg_ff_per_um": [
+        1.6732046921720902,
+        1.667393337671146
+      ],
+      "ldd": {
+        "depth_um": 0.06,
+        "lateral": 0.2,
+        "peak": 2e+19,
+        "spacer_um": 0.1
+      },
+      "meshed_l_um": 0.73,
+      "node_count": 238560,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    },
+    "bias65+ldd5e18+ldddepth60+latr0.2+sp100": {
+      "bias_um": 0.065,
+      "cgg_ff_per_um": [
+        1.6713015821250479,
+        1.6672153552744162
+      ],
+      "ldd": {
+        "depth_um": 0.06,
+        "lateral": 0.2,
+        "peak": 5e+18,
+        "spacer_um": 0.1
+      },
+      "meshed_l_um": 0.73,
+      "node_count": 238560,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    },
+    "bias65+ldd5e18+sp100": {
+      "bias_um": 0.065,
+      "cgg_ff_per_um": [
+        1.661455825158793,
+        1.6673189512328068
+      ],
+      "ldd": {
+        "depth_um": 0.1,
+        "peak": 5e+18,
+        "spacer_um": 0.1
+      },
+      "meshed_l_um": 0.73,
+      "node_count": 238560,
+      "plug_um": null,
+      "plugs": false,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    },
+    "plugs": {
+      "bias_um": 0.0,
+      "cgg_ff_per_um": [
+        1.3754838116687362,
+        1.3991877421202785
+      ],
+      "ldd": null,
+      "meshed_l_um": 0.5999999999999999,
+      "node_count": 226974,
+      "plug_um": 0.86,
+      "plugs": true,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    },
+    "plugs+bias30": {
+      "bias_um": 0.03,
+      "cgg_ff_per_um": [
+        1.493175964221864,
+        1.51592575810902
+      ],
+      "ldd": null,
+      "meshed_l_um": 0.66,
+      "node_count": 232640,
+      "plug_um": 0.86,
+      "plugs": true,
+      "vg": [
+        -5.0,
+        5.0
+      ]
+    }
+  }
+}
