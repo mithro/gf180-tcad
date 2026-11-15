@@ -225,7 +225,8 @@ The dotted line is the overlap, fringe and gate-bulk part.
 
 ## The three tunables
 
-These are 3 of the 8 calibrated parameters per device type. The calibration fits them, so they are
+These are 3 of the 8 calibrated parameters per device type; the fourth is the 2D poly length bias
+({ref}`process-data-poly-bias`). The calibration fits them, so they are
 tagged `calibrated`, never `spice-card`. Instead of a `source`, each has a `start_source` and a
 `bounds_source`, and a structured `start_kind` and `bounds_kind` (one kind per bound). A kind is
 `card`, `derived` or `project-choice`
@@ -404,6 +405,24 @@ can be evaluated from the public manual and code.
 
 The fitted oxides are inside these bounds and at neither end ({doc}`cv-agreement`). The nfet
 oxide is 16.05 nm, within 15.2–16.95 nm. The pfet oxide is 15.72 nm, within 15.6–16.39 nm.
+
+(process-data-poly-bias)=
+
+## The 2D poly length bias
+
+The fourth tunable, `poly_bias_nm`, is read only by the 2D cross-section
+({py:func}`gf180tcad.tcad.stack.build`, {py:data}`gf180tcad.tcad.process.TUNABLES_2D`). Its role is
+`tunable-2d`. The poly, the gate oxide and the gate electrode are longer by it at each end, and the
+source/drain doping stays aligned to them. The drawn L still divides Cgg into C per area. The 1D MOS
+capacitor never reads it. The gate and its ends are drawn in
+{numref}`Figure %s of Definition of agreement <agreement-cell-figure>`.
+
+| Name | Unit | Start | Min | Max |
+|---|---|---|---|---|
+| `poly_bias_nm` | nm | 0 | 0 | 100 |
+
+The start, both bounds and their sources are project choices, the same for both devices. The start
+is the poly as drawn. Why the 2D cells need it is in {ref}`moscap2d-edge`.
 
 ## No calibrated values in the files
 

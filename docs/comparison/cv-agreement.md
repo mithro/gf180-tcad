@@ -61,7 +61,8 @@ Three {term}`process file` tunables, 3 of the 8 parameters of the
 {ref}`parameter budget <parameter-budget>` of each device type. Their start values, bounds and
 the sources of the bounds are those of {doc}`process-data` (read with
 {py:func}`gf180tcad.tcad.process.load`); the calibration never redefines them and never writes the
-process files.
+process files. The fourth tunable, the 2D poly length bias, is not fitted here
+({ref}`process-data-poly-bias`).
 
 - `t_ox_eff_nm`, the {term}`effective oxide thickness`, between TOXE and TOXP plus the
   charge-centroid allowance (it absorbs the quantum-mechanical dark space, which is not
@@ -211,7 +212,7 @@ Fitted values, from {repo}`results/tcad/calibration/nfet_05v0.json` and
 {repo}`results/tcad/calibration/pfet_05v0.json`; the full results (residuals, regions,
 windows) are beside them in {repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`
 and {repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json>`. Budget used:
-3 of 8 per device type. The curves behind the rows below are in {numref}`cv-fit-figure` and
+3 of 8 per device type in this fit; the 2D poly length bias is the fourth. The curves behind the rows below are in {numref}`cv-fit-figure` and
 {numref}`cv-validation-figure`. No value is within 1e-3 of a bound. The pfet `dv_fb_v`, +187.2 mV,
 is the nearest: 13 mV inside the +200 mV bound (93.6 % of the way from 0 to it), not a bound hit by the
 1e-3 rule but close to one.
