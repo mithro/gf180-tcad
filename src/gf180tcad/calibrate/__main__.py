@@ -39,6 +39,7 @@ from gf180tcad.devices import DEVICES
 from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.tcad import (
     CALIBRATE_MAIN,
+    INPUT_TREES,
     RESULTS_IMAGE,
     calibration_file,
     gplugins_commit,
@@ -129,7 +130,13 @@ def run_host(device: str, root: Path) -> None:
     for name in (f"{device}.json", f"{device}{cv.RESULT_SUFFIX}"):
         shutil.copyfile(scratch / name, root / name)
     io.write_json(
-        root / PROVENANCE_NAME, tree_provenance(root, {"moscap1d": IMAGE}, generator=CALIBRATE_MAIN)
+        root / PROVENANCE_NAME,
+        tree_provenance(
+            root,
+            {"moscap1d": IMAGE},
+            generator=CALIBRATE_MAIN,
+            inputs=INPUT_TREES["tcad/calibration"],
+        ),
     )
     shutil.rmtree(scratch)
 
@@ -166,7 +173,13 @@ def run_validate_host(device: str, root: Path) -> None:
     root.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(scratch / f"{device}.json", root / f"{device}.json")
     io.write_json(
-        root / PROVENANCE_NAME, tree_provenance(root, {"moscap1d": IMAGE}, generator=CALIBRATE_MAIN)
+        root / PROVENANCE_NAME,
+        tree_provenance(
+            root,
+            {"moscap1d": IMAGE},
+            generator=CALIBRATE_MAIN,
+            inputs=INPUT_TREES["tcad/validation"],
+        ),
     )
     shutil.rmtree(scratch)
 

@@ -1,6 +1,6 @@
 {
   "generator": "gf180tcad.calibrate.__main__",
-  "generator_sha256": "54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268",
+  "generator_sha256": "6b1812a9a65a84f9917c24d5230830fa94bc3e46024465181d43eb33a403fbd3",
   "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",
   "images": {
     "moscap1d": {
@@ -257,6 +257,16 @@
         "xyce": "7.10-opensource",
         "xyce_parallel": "mpi-capable, run single-process"
       }
+    }
+  },
+  "inputs": {
+    "spice/ngspice": {
+      "files": 360,
+      "sha256": "137aea31e9e3e821670356e791322f62f8790b389a13d3f1de56baa1f018f451"
+    },
+    "tcad/meshconv/moscap1d": {
+      "files": 4,
+      "sha256": "1f79a69ac97cdb022d0c870f2b4b98aa8b561b119917ec83848ec9f7c5e4f3ad"
     }
   }
 }

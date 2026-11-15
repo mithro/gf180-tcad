@@ -61,6 +61,7 @@ from gf180tcad.devices import CORNERS, DEVICES, Geometry, geometry_id
 from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import (
+    INPUT_TREES,
     RESULTS_IMAGE,
     calibration,
     gplugins_commit,
@@ -687,7 +688,10 @@ def _sandbox_job(cmd: list[str], scratch: Path, what: str) -> str:
 
 def _provenance(root: Path) -> None:
     _write_atomic(
-        root / PROVENANCE_NAME, tree_provenance(root, {"moscap1d": IMAGE}, generator=CORNERS_MAIN)
+        root / PROVENANCE_NAME,
+        tree_provenance(
+            root, {"moscap1d": IMAGE}, generator=CORNERS_MAIN, inputs=INPUT_TREES["tcad/corners"]
+        ),
     )
 
 

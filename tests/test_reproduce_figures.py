@@ -45,6 +45,7 @@ FIGURES = [
     "reproduce-targets",
     "reference-jobs",
     "tcad-registry",
+    "tcad-inputs",
     "crosscheck-steps",
     "crosscheck-tcad-steps",
     "output-cache-flow",
@@ -149,12 +150,18 @@ def _on_edge(pt, box, tol=1e-9) -> bool:
 
 
 def assert_box_texts_inside(fig, keys):
-    """Each box's text sits inside that box."""
+    """Each box's text sits inside that box: its anchor, and its drawn extent (no line runs past
+    the box's edges)."""
+    renderer = fig.canvas.get_renderer()
     for key in keys:
         (t,) = [t for t in _plain_texts(fig) if t.get_gid() == f"text {key}"]
         x0, y0, x1, y1 = _box(fig, key)
         x, y = t.get_position()
         assert x0 <= x <= x1 and y0 <= y <= y1, key
+        (p,) = [p for ax in fig.axes for p in ax.patches if p.get_gid() == f"box {key}"]
+        text, box = t.get_window_extent(renderer), p.get_window_extent(renderer)
+        assert box.x0 <= text.x0 and text.x1 <= box.x1, (key, "runs past the box", text, box)
+        assert box.y0 <= text.y0 and text.y1 <= box.y1, (key, "runs past the box", text, box)
 
 
 def assert_box_arrows(fig, edges: dict[str, tuple[str, str]]):
@@ -244,6 +251,28 @@ def check_tcad_registry(fig):
     assert_texts(fig, want)
     assert_box_texts_inside(fig, [*reg["entry_points"], *reg["trees"]])
     assert_box_arrows(fig, {f"{w}->{t}": (w, t) for t, w in reg["trees"].items()})
+
+
+def check_tcad_inputs(fig):
+    reg = _registry()["input_trees"]
+    sources = {p for prefixes in reg.values() for p in prefixes}
+
+    def drawn(path: str) -> str:
+        # a path longer than STYLE["folder_chars"] is drawn on two lines, split before its last
+        # two parts (the moscap2d cells)
+        if len(path) <= rf.STYLE["folder_chars"]:
+            return path
+        head, a, b = path.rsplit("/", 2)
+        return f"{head}/ {a}/{b}"
+
+    want = {f"text input {p}": drawn(f"results/{p}") for p in sources}
+    assert sum(" " in v for v in want.values()) == 2  # the two moscap2d cells
+    want |= {f"text {t}": f"results/{t}" for t in reg}
+    assert_texts(fig, want)
+    assert_box_texts_inside(fig, [*(f"input {p}" for p in sources), *reg])
+    assert_box_arrows(
+        fig, {f"input {p}->{t}": (f"input {p}", t) for t, ps in reg.items() for p in ps}
+    )
 
 
 def _steps(job: str) -> list[tuple[str, bool]]:
@@ -502,6 +531,7 @@ CHECKS = {
     "reproduce-targets": check_reproduce_targets,
     "reference-jobs": check_reference_jobs,
     "tcad-registry": check_tcad_registry,
+    "tcad-inputs": check_tcad_inputs,
     "crosscheck-steps": _check_steps("crosscheck"),
     "crosscheck-tcad-steps": _check_steps("crosscheck-tcad"),
     "output-cache-flow": check_cache_flow,

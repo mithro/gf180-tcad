@@ -23,6 +23,12 @@ generator would write now: the plugin commit, an image, the calibration applied,
 ``generator`` naming another entry point. Then the tree has to be regenerated. ``--dry-run``
 prints what would change and writes nothing.
 
+A tree that reads other result trees (:data:`gf180tcad.tcad.INPUT_TREES`) records their digests
+under ``inputs`` (issue #188). A restamp refuses a tree whose recorded ``inputs`` differ from the
+committed input trees' digests, unless ``--record-inputs`` is given: then it writes the current
+digests too. That is a claim that the tree was made from the input trees as they are now; check
+it first (no input tree's data changed since the tree's data were written).
+
 A restamp is a claim that the data did not change, not evidence of it: record every restamped
 tree, with the hash it had before, on docs/reproduce/index.md (tcad-provenance), then run
 ``make manifest``.
@@ -39,17 +45,30 @@ from gf180tcad.sandbox import REPO_ROOT
 
 # The fields a restamp may change.
 STAMP = ("generator", "generator_sha256")
+# The field a restamp may also change with --record-inputs (issue #188).
+INPUTS = "inputs"
 
 # The results root the registry's tree paths are relative to.
 RESULTS_ROOT = REPO_ROOT / "results"
 
 
-def restamp(tree_root: Path, generator: str, *, write: bool = True) -> tuple[str, str]:
+def restamp(
+    tree_root: Path,
+    generator: str,
+    *,
+    write: bool = True,
+    inputs: tuple[str, ...] = (),
+    record_inputs: bool = False,
+) -> tuple[str, str]:
     """Rewrite ``tree_root/provenance.json`` with the ``generator`` and its current hash.
+
+    ``inputs`` are the tree's input trees (its row of :data:`gf180tcad.tcad.INPUT_TREES`); with
+    ``record_inputs`` their current digests may replace the recorded ones.
 
     Returns the hash before and after (equal if the file was already current, and then it is
     not touched). Raises FileNotFoundError without a provenance.json, KeyError for an unknown
-    ``generator``, and ValueError (nothing written) if anything but :data:`STAMP` would change.
+    ``generator``, and ValueError (nothing written) if anything but :data:`STAMP` (and, with
+    ``record_inputs``, :data:`INPUTS`) would change.
     """
     path = Path(tree_root) / PROVENANCE_NAME
     committed = json.loads(path.read_bytes())
@@ -59,16 +78,18 @@ def restamp(tree_root: Path, generator: str, *, write: bool = True) -> tuple[str
             f"{path} was written by {recorded}, not {generator}; regenerate the tree instead"
         )
     images = {k: v["name"] for k, v in committed.get("images", {}).items()}
-    current = tcad.tree_provenance(tree_root, images, generator=generator)
+    current = tcad.tree_provenance(tree_root, images, generator=generator, inputs=inputs)
+    may = (*STAMP, INPUTS) if record_inputs else STAMP
     differs = sorted(
         k
         for k in set(committed) | set(current)
-        if k not in STAMP and committed.get(k) != current.get(k)
+        if k not in may and committed.get(k) != current.get(k)
     )
     if differs:
+        hint = " (--record-inputs records the current input trees)" if differs == [INPUTS] else ""
         raise ValueError(
             f"{path}: {', '.join(differs)} differ from what {generator} would write now, so a "
-            "restamp would hide a real change; regenerate the tree instead"
+            f"restamp would hide a real change; regenerate the tree instead{hint}"
         )
     old, new = committed.get("generator_sha256"), current["generator_sha256"]
     if write and committed != current:
@@ -87,6 +108,11 @@ def parser() -> argparse.ArgumentParser:
         help="the entry point that wrote the trees (default: from each tree's path)",
     )
     ap.add_argument("--dry-run", action="store_true", help="print the change, write nothing")
+    ap.add_argument(
+        "--record-inputs",
+        action="store_true",
+        help="also write the current digests of the trees' input result trees (issue #188)",
+    )
     return ap
 
 
@@ -119,6 +145,13 @@ def _writer(tree: Path, override: str | None) -> str:
     return known or override
 
 
+def _inputs(tree: Path) -> tuple[str, ...]:
+    """The input trees of ``tree``: its row of :data:`gf180tcad.tcad.INPUT_TREES` for a
+    registered tree path, else none."""
+    key = tree_key(tree)
+    return tcad.INPUT_TREES.get(key, ()) if key is not None else ()
+
+
 def main(argv: list[str] | None = None) -> int:
     a = parser().parse_args(argv)
     # Check every tree before writing any, so that a refusal leaves all of them unchanged.
@@ -127,21 +160,30 @@ def main(argv: list[str] | None = None) -> int:
         for tree in a.trees:
             generator = _writer(tree, a.generator)
             prov = Path(tree) / PROVENANCE_NAME
-            stamped = json.loads(prov.read_bytes()).get("generator") == generator
-            old, new = restamp(tree, generator, write=False)
-            plan.append((tree, prov, generator, stamped, old, new))
+            committed = json.loads(prov.read_bytes())
+            inputs = _inputs(tree)
+            kw = {"inputs": inputs, "record_inputs": a.record_inputs}
+            stamped = committed.get("generator") == generator
+            old, new = restamp(tree, generator, write=False, **kw)
+            current = tcad.tree_provenance(
+                tree, {k: v["name"] for k, v in committed.get("images", {}).items()},
+                generator=generator, inputs=inputs,
+            )  # fmt: skip
+            moved = committed.get(INPUTS) != current.get(INPUTS)
+            plan.append((tree, prov, generator, stamped, old, new, kw, moved))
     except (FileNotFoundError, ValueError) as e:
         print(f"restamp-tcad-provenance: {e}; nothing written", file=sys.stderr)
         return 2
-    for tree, prov, generator, stamped, old, new in plan:
-        if stamped and old == new:
+    for tree, prov, generator, stamped, old, new, kw, moved in plan:
+        if stamped and old == new and not moved:
             print(f"{prov.as_posix()}: current ({generator}, generator_sha256 {new})")
             continue
         if not a.dry_run:
-            restamp(tree, generator)
+            restamp(tree, generator, **kw)
         verb = "would restamp" if a.dry_run else "restamped"
+        extra = f", inputs {'would be ' if a.dry_run else ''}recorded" if moved else ""
         print(
-            f"{prov.as_posix()}: generator_sha256 {old} -> {new} ({generator}); {verb}, "
+            f"{prov.as_posix()}: generator_sha256 {old} -> {new} ({generator}){extra}; {verb}, "
             "data not regenerated"
         )
     return 0

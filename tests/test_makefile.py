@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from gf180tcad import manifest, outcache, reference
+from gf180tcad import manifest, outcache, reference, sandbox
 from gf180tcad.calibrate import corners
 from gf180tcad.calibrate.__main__ import _parser as calibrate_parser
 from gf180tcad.meshcut.__main__ import _parser as meshcut_parser
@@ -178,6 +178,8 @@ def test_reproduce_2d_moscap_jobs_are_the_committed_cells(reproduce):
             # QS alone, then the job files from it, on one scratch directory
             assert [s.method for s in steps] == ["qs", "combine-qs"]
             assert steps[0].resume == steps[1].resume is not None
+            # the sandbox accepts it as the read-write workdir (issue #55)
+            sandbox.check_workdir(steps[0].resume.expanduser().resolve())
         else:
             assert [(s.method, s.resume) for s in steps] == [("both", None)]
 

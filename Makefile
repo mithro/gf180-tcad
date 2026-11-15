@@ -9,8 +9,9 @@ TCAD = $(PYTHON) -m gf180tcad.tcad
 CALIBRATE = $(PYTHON) -m gf180tcad.calibrate
 CORNERS = $(PYTHON) -m gf180tcad.calibrate.corners
 # Scratch directories of the split 2D jobs (--method qs, then combine-qs on the same directory);
-# a cut-off job resumes from here when the target runs again.
-TCAD_SCRATCH ?= tmp/reproduce-scratch
+# a cut-off job resumes from here when the target runs again. Outside the checkout: the sandbox
+# refuses a read-write workdir inside the repository (issue #55).
+TCAD_SCRATCH ?= $(HOME)/.cache/gf180-tcad/reproduce-scratch
 # The temporary tree root of reproduce-quick (never results/: tools/crosscheck-tcad-run refuses).
 QUICK_OUT ?= tmp/reproduce-quick
 TCAD_SUBSET = tests/crosscheck_tcad_subset.txt

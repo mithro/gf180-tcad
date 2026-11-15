@@ -461,7 +461,7 @@ At W10/L1:
 W10/L2 is a calibration geometry of the 1D fit, run with QS only ({ref}`moscap2d-l2`).
 The 1D fit is {term}`Agree` on all four checks there, so this cell is no held-out evidence.
 It tests the 2D cross-section's own edge, overlap and fringe capacitance at a fitted geometry.
-Its plateau gap belongs to [issue #77](https://github.com/mithro/gf180-tcad/issues/77), not to the fit. At W10/L2:
+Its plateau gap is the cells' edge capacitance ({ref}`cv-agreement-edge`), not the fit. At W10/L2:
 
 | Check | 2D | Verdict |
 |---|---|---|
@@ -474,7 +474,7 @@ The 2D Cgg lies below SPICE on both plateaus, by more on the inversion side. At 
 is 14.12 fF at +5 V
 ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.csv>`). The
 SPICE inversion level there is 16.70 fF (`spice_regions` in the validation file). The gap
-shrinks as the gate gets longer. Why the 2D Cgg is low is open ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+shrinks as the gate gets longer. The gap is the cells' edge capacitance ({ref}`cv-agreement-edge`).
 
 **The pfet cell, W10/L0.5.** It is a calibration geometry, and the 1D fit is {term}`Disagree` there,
 on the depletion crossing ({repo}`pfet calibration file <results/tcad/calibration/pfet_05v0.result.json>`).
@@ -516,7 +516,7 @@ No start-value pfet cell exists at L = 0.7 µm, so the start-value comparison is
 
 The 1D validation here has plateaus of 4.3 % and 2.3 % and a depletion shift of +124 mV.
 In 2D they are 13.7 %, 13.0 % and −117 mV, with every plateau point below SPICE.
-Only the inversion crossing agrees in both. Why the 2D Cgg is low is [issue #77](https://github.com/mithro/gf180-tcad/issues/77).
+Only the inversion crossing agrees in both. The low 2D Cgg is the cells' edge capacitance ({ref}`cv-agreement-edge`).
 
 **The pfet cell, W10/L1.** It is a {term}`held-out geometry`, and the 1D validation there is {term}`Agree` on all four checks.
 The 2D cell is {term}`Disagree`, on the depletion crossing:
@@ -545,7 +545,7 @@ The plateau window is the Cox spec over the 10 µm² gate, 18.0 to 28.0 fF.
 
 The cell gives 22.69 fF at +5 V and 22.40 fF at −5 V
 ({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l1p00/cv.csv>`). SPICE gives 25.00 and 24.61 fF.
-The plateau gap shrinks with L, as at the shorter pfet cells ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+The plateau gap shrinks with L, as at the shorter pfet cells ({ref}`cv-agreement-edge`).
 
 **The pfet cell, W10/L2.** It is a calibration geometry, run with QS only ({ref}`moscap2d-l2`). The 1D fit there is
 {term}`Same process`, on the depletion crossing (−128 mV). The 2D cell is {term}`Disagree`, on the same check:
@@ -569,7 +569,99 @@ The envelope narrows from 0.288 V to 0.262 V wide ([issue #108](https://github.c
 The plateau window is the Cox spec over the 20 µm² gate, 36.0 to 56.0 fF.
 The cell gives 44.24 fF at +5 V and 43.33 fF at −5 V
 ({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l2p00/cv.csv>`). SPICE gives 46.83 and 45.14 fF.
-The plateau gap shrinks with L, as at the shorter pfet cells ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+The plateau gap shrinks with L, as at the shorter pfet cells ({ref}`cv-agreement-edge`).
+
+(cv-agreement-edge)=
+
+### The 2D cells' edge capacitance
+
+Every 2D plateau lies below SPICE, by less at longer gates. A gate's capacitance per unit width is
+a straight line in its length, {math:numref}`eq-cv-edge`:
+
+$$
+\frac{C_{\mathrm{gg}}}{W} = C_{\mathrm{edge}} + C_{\mathrm{area}}\,L
+$$ (eq-cv-edge)
+
+where
+
+- $C_{\mathrm{gg}}$ is the gate capacitance, in fF;
+- $W$ is the drawn gate width, in µm;
+- $L$ is the drawn gate length, in µm;
+- $C_{\mathrm{edge}}$ is the overlap and fringe at both gate edges per unit width, in fF/µm;
+- $C_{\mathrm{area}}$ is the capacitance per unit gate area, in fF/µm².
+
+At each gate bias, the line is fitted through the W = 10 µm cells that have a 2D cell
+({py:func}`~gf180tcad.comparison_figures.edge_split`). Their lengths are 0.6, 0.7, 1 and 2 µm
+(nfet) and 0.5, 0.7, 1 and 2 µm (pfet). The same fit runs through the SPICE curves at the
+{term}`typical corner <TT>`. {numref}`cv-edge-figure` draws both lines. It adds the card's
+{term}`BSIM4` extrinsic terms (overlaps, fringe, gate-bulk), fitted the same way.
+
+```{figure} /_generated/comparison/edge-capacitance-light.svg
+:name: cv-edge-figure
+:figclass: only-light
+:alt: Four panels against u. Top, edge capacitance per width: the dashed 2D line lies well below the solid SPICE line on both plateaus. Bottom, capacitance per area: the two lines nearly coincide.
+
+The edge capacitance per width (top) and the capacitance per area (bottom) of each device
+against u: SPICE at the {term}`typical corner <TT>` (solid), the calibrated 2D cells (dashed) and
+the card's BSIM4 extrinsic terms (dotted, top). Each value is the line through the W = 10 µm
+cells at one bias.
+```
+
+```{figure} /_generated/comparison/edge-capacitance-dark.svg
+:figclass: only-dark
+:alt: Four panels against u. Top, edge capacitance per width: the dashed 2D line lies well below the solid SPICE line on both plateaus. Bottom, capacitance per area: the two lines nearly coincide.
+
+The edge capacitance per width (top) and the capacitance per area (bottom) of each device
+against u: SPICE at the {term}`typical corner <TT>` (solid), the calibrated 2D cells (dashed) and
+the card's BSIM4 extrinsic terms (dotted, top). Each value is the line through the W = 10 µm
+cells at one bias.
+```
+
+The tables give both lines on the plateaus: accumulation at u = −5 V, inversion at u = +5 V.
+The edge capacitance per width:
+
+| device | side | SPICE C_edge (fF/µm) | 2D C_edge (fF/µm) | BSIM4 extrinsic (fF/µm) |
+|---|---|---|---|---|
+| nfet | accumulation | 0.170 | 0.118 | 0.397 |
+| nfet | inversion | 0.420 | 0.151 | 0.645 |
+| pfet | accumulation | 0.332 | 0.115 | 0.313 |
+| pfet | inversion | 0.424 | 0.148 | 0.400 |
+
+The capacitance per area of the same lines:
+
+| device | side | SPICE C_area (fF/µm²) | 2D C_area (fF/µm²) |
+|---|---|---|---|
+| nfet | accumulation | 2.106 | 2.116 |
+| nfet | inversion | 2.083 | 2.100 |
+| pfet | accumulation | 2.174 | 2.154 |
+| pfet | inversion | 2.044 | 2.092 |
+
+The capacitance per area agrees within 2.4 % on both plateaus of both devices. The edge
+capacitance of the 2D cells is 0.05 to 0.28 fF/µm below SPICE. At the short gates that is
+most of the plateau gap. At nfet W10/L0.6 and u = +5 V, the two lines give 16.70 fF (SPICE)
+and 14.11 fF (2D).
+
+The per-area difference grows with L, and in three of the four cases it works against the edge.
+At pfet W10/L2 and u = +5 V, the edge part of the gap is 2.77 fF and the per-area part
+−0.97 fF.
+
+For the nfet, the SPICE edge is the card's extrinsic terms less 2·DLC·$C_{\mathrm{area}}$,
+to within 0.0003 fF/µm. The card's DLC, 54 nm ({repo}`data/process/nfet_05v0.toml`),
+shortens the length that BSIM4 multiplies by $C_{\mathrm{area}}$. So the nfet's SPICE edge is
+the card's overlap and fringe terms.
+
+For the pfet the same check misses. Its SPICE edge exceeds the card's terms less
+2·DLC·$C_{\mathrm{area}}$ by 0.051 fF/µm (accumulation) and 0.055 fF/µm (inversion). Its SPICE
+plateaus also lie off their line by up to 0.0053 fF/µm rms, against 0.0001 fF/µm for the
+nfet. Which pfet card terms add this length-dependent part is
+[issue #194](https://github.com/mithro/gf180-tcad/issues/194).
+
+The 2D edge on the inversion side, 0.151 fF/µm, is about twice the card's outer fringe CF,
+0.073 fF/µm per edge. What the nfet cells lack there is the card's overlap less the DLC
+shortening, 2·(CGSO + CGSL − DLC·$C_{\mathrm{area}}$). The 2D cross-section has no lightly doped
+extension and no spacer ({py:mod}`gf180tcad.tcad.stack`). What supplies the missing edge, a longer
+printed poly, more outer fringe or an extension, is
+[issue #189](https://github.com/mithro/gf180-tcad/issues/189).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
 in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call

@@ -580,7 +580,11 @@ def test_host_side_writes_the_tree(tmp_path, monkeypatch):
         assert corners.main(["run", "--device", NFET, "--corner", c, "--out", str(root)]) == 0
     assert corners.main(["summary", "--device", NFET, "--out", str(root)]) == 0
     prov = json.loads((root / "provenance.json").read_bytes())
-    assert prov == tcad.tree_provenance(root, {"moscap1d": "dev"}, generator=corners.CORNERS_MAIN)
+    assert prov == tcad.tree_provenance(
+        root, {"moscap1d": "dev"}, generator=corners.CORNERS_MAIN,
+        inputs=tcad.INPUT_TREES["tcad/corners"],
+    )  # fmt: skip
+    assert set(prov["inputs"]) == {"spice/ngspice", "tcad/calibration", "tcad/meshconv/moscap1d"}
     assert prov["generator"] == "gf180tcad.calibrate.corners"
     assert sorted(p.name for p in (root / NFET).iterdir()) == sorted(
         [f"{c}.json" for c in corners.FIT_CORNERS] + ["summary.json"]

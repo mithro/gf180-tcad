@@ -21,8 +21,8 @@ there.
   follow the SPICE pfet's {term}`depletion` edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`).
 - **2D validation: {term}`Disagree` at five cells,** nfet W10/L0.6, W10/L0.7 and W1.6/L0.7, pfet W10/L1 and W10/L2.
-  All five fail on the depletion crossing, which the 2D cell moves below 1D ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
-  Every 2D plateau lies below SPICE ([issue #77](https://github.com/mithro/gf180-tcad/issues/77)).
+  All five fail on the 2D-only depletion shift ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
+  Every 2D plateau is low: too little edge capacitance ([issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
   The L = 2 µm AC solve and the L = 10 µm equilibrium solve fail
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59), [issue #58](https://github.com/mithro/gf180-tcad/issues/58);
   {ref}`cv-agreement-validation`, {doc}`moscap2d`).
@@ -46,14 +46,14 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
 
 ## Reproducing the results
 
-- **Two targets cannot run their split 2D jobs as written:** `make tcad-start` and `make tcad-calibrated`.
-  Their `--resume` directory, `TCAD_SCRATCH=tmp/reproduce-scratch`, is inside the repository, which the {term}`sandbox` refuses as a
-  read-write workdir; pass a `TCAD_SCRATCH` outside the checkout. [issue #55](https://github.com/mithro/gf180-tcad/issues/55).
 - **TCAD {term}`provenance` updated without a rerun.** A code change that leaves the results
   alone still changes the {term}`generator_sha256`. Each time, the provenance was updated without a
   full rerun ({ref}`tcad-provenance`). Only the `crosscheck-tcad` subset is rerun byte for byte:
   two calibrated 1D {term}`jobs <job>` and the calibrated mesh artefacts. The other results
   folders have no byte-for-byte evidence.
+- **Three TCAD results folders record no input folders.** The MOS capacitor folders and the mesh
+  artefacts record no `inputs` digest ({ref}`input results folders <tcad-input-trees>`,
+  [issue #192](https://github.com/mithro/gf180-tcad/issues/192)).
 - **`make reproduce` does not reproduce the 2D TCAD files.** It has not been run end to end.
   The 2D job files lack entries the current job writes. The L = 2 µm
   {term}`sweeps <sweep>` are resumed ones. A fresh run therefore differs from them

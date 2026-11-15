@@ -107,12 +107,17 @@ def test_restamp_refuses_another_writer(tmp_path):
 
 def test_main_picks_the_writer_by_tree_path(tmp_path, capsys):
     root = _old_scheme_tree(tmp_path, "results/tcad/validation")
-    assert tool.main([str(root)]) == 0
+    # the validation tree has input trees (issue #188), which the old scheme did not record
+    assert tool.main([str(root), "--record-inputs"]) == 0
     out = capsys.readouterr().out
     new = tcad.generator_sha256(tcad.CALIBRATE_MAIN)
     assert f"{OLD} -> {new}" in out and "gf180tcad.calibrate.__main__" in out
     assert "not regenerated" in out
-    assert (root / PROVENANCE_NAME).read_bytes() == _expected(root, tcad.CALIBRATE_MAIN)
+    want = tcad.tree_provenance(
+        root, {"moscap1d": "dev"}, generator=tcad.CALIBRATE_MAIN,
+        inputs=tcad.INPUT_TREES["tcad/validation"],
+    )  # fmt: skip
+    assert json.loads((root / PROVENANCE_NAME).read_bytes()) == want
     assert tool.main([str(root)]) == 0
     assert "current" in capsys.readouterr().out
 
@@ -189,3 +194,63 @@ def test_restamp_resolves_writer_by_tree_path(tmp_path, capsys):
     for prov in sorted((REPO / "results").glob(f"tcad*/*/{PROVENANCE_NAME}")):
         key = tool.tree_key(prov.parent, REPO / "results")
         assert tcad.TREE_GENERATORS[key] == json.loads(prov.read_bytes())["generator"], key
+
+
+# --- input trees (issue #188) -------------------------------------------------------------------
+
+INPUTS = ("tcad/calibration",)
+
+
+def _calibration_tree(results: Path, *, inputs: dict | None) -> Path:
+    """A calibration tree root under ``results`` at the current hash, with ``inputs`` recorded
+    (None: none)."""
+    root = results / "tcad" / "calibration"
+    root.mkdir(parents=True)
+    prov = tcad.tree_provenance(root, {"moscap1d": "dev"}, generator=tcad.CALIBRATE_MAIN)
+    if inputs is not None:
+        prov["inputs"] = inputs
+    io.write_json(root / PROVENANCE_NAME, prov)
+    return root
+
+
+def test_restamp_refuses_other_inputs_without_record_inputs(results_root):
+    root = _calibration_tree(results_root, inputs=None)
+    before = (root / PROVENANCE_NAME).read_bytes()
+    with pytest.raises(ValueError, match=r"inputs differ.*--record-inputs"):
+        tool.restamp(root, tcad.CALIBRATE_MAIN, inputs=INPUTS)
+    assert (root / PROVENANCE_NAME).read_bytes() == before
+
+
+def test_restamp_record_inputs_writes_the_current_digests(results_root):
+    root = _calibration_tree(results_root, inputs={"tcad/calibration": {"files": 1, "sha256": "0"}})
+    tool.restamp(root, tcad.CALIBRATE_MAIN, inputs=INPUTS, record_inputs=True)
+    prov = json.loads((root / PROVENANCE_NAME).read_bytes())
+    assert prov == tcad.tree_provenance(
+        root, {"moscap1d": "dev"}, generator=tcad.CALIBRATE_MAIN, inputs=INPUTS
+    )
+    assert set(prov["inputs"]) == set(INPUTS)
+
+
+def test_record_inputs_still_refuses_another_change(results_root):
+    root = _calibration_tree(results_root, inputs=None)
+    prov = json.loads((root / PROVENANCE_NAME).read_bytes())
+    prov["gplugins_commit"] = "0" * 40
+    io.write_json(root / PROVENANCE_NAME, prov)
+    with pytest.raises(ValueError, match="gplugins_commit"):
+        tool.restamp(root, tcad.CALIBRATE_MAIN, inputs=INPUTS, record_inputs=True)
+
+
+def test_main_takes_the_inputs_from_the_registry(results_root, capsys):
+    """The CLI looks up a registered tree's input trees; --dry-run names the change."""
+    root = _calibration_tree(results_root, inputs=None)
+    before = (root / PROVENANCE_NAME).read_bytes()
+    assert tool.main([str(root)]) == 2
+    assert "--record-inputs" in capsys.readouterr().err
+    assert tool.main([str(root), "--record-inputs", "--dry-run"]) == 0
+    assert "inputs would be recorded; would restamp" in capsys.readouterr().out
+    assert (root / PROVENANCE_NAME).read_bytes() == before
+    assert tool.main([str(root), "--record-inputs"]) == 0
+    prov = json.loads((root / PROVENANCE_NAME).read_bytes())
+    assert set(prov["inputs"]) == set(tcad.INPUT_TREES["tcad/calibration"])
+    assert tool.main([str(root)]) == 0
+    assert "current" in capsys.readouterr().out
