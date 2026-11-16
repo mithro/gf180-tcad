@@ -340,7 +340,7 @@ The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` ke
   sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
   hypotheses are open: something only the source/drain cell has (four contacts, the inter-layer
   dielectric region), or memory-allocator fragmentation at large node counts. The resume
-  mechanism works around it; the cause is open ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)).
+  mechanism works around it; the cause is open (issue #59).
 
 The resumed start cells are the dotted QS curves of {numref}`moscap2d-ccox-figure`, with no AC points.
 
@@ -485,7 +485,7 @@ committed `mesh_sha256`.
 
 ## The calibrated 2D cells
 
-The calibrated 2D jobs ({ref}`cv-agreement-validation`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)) run the committed
+The calibrated 2D jobs ({ref}`cv-agreement-validation`, issue #35) run the committed
 cells with `--params calibrated`, one 16 GiB {term}`job` at a time.
 
 Two of them are compared with SPICE in {numref}`moscap2d-validation-figure`. Every compared cell's crossing shift and plateau difference is in {numref}`moscap2d-metrics-figure`.
