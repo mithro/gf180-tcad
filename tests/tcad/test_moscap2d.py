@@ -37,6 +37,9 @@ CASES = (
     "sd_pfet_05v0_l2",
     "dualgate",
 )
+# The driver runs at most this many cases at once (8 GiB each). The project's host has 31 GiB,
+# and the session and its containers stay under about 24 GiB, of which the session takes 8.
+DRIVER_JOBS = 2
 CAL = {d: [g for g in SPICE_DEVICES[d].geometries if g.role == "calibration"] for d in DEVICES}
 
 
@@ -304,19 +307,29 @@ def test_committed_ac_follows_qs():
 # --- in the TCAD image -----------------------------------------------------------------------
 
 
+def _run_case(tmp_path_factory, case: str) -> tuple[str, dict]:
+    """One case of the driver in the sandbox (8 GiB, one CPU) and its JSON."""
+    out = tmp_path_factory.mktemp(case)
+    sandbox.run(
+        ["python3", "/work/src/tests/tcad/moscap2d_driver.py", case],
+        out_dir=out, image=TCAD_IMAGE, mem="8g", cpus=1,
+    )  # fmt: skip
+    return case, json.loads((out / f"{case}.json").read_bytes())
+
+
 @pytest.fixture(scope="module")
 def driver(tmp_path_factory) -> dict:
-    def run(case: str) -> tuple[str, dict]:
-        out = tmp_path_factory.mktemp(case)
-        sandbox.run(
-            ["python3", "/work/src/tests/tcad/moscap2d_driver.py", case],
-            out_dir=out, image=TCAD_IMAGE, mem="8g", cpus=1,
-        )  # fmt: skip
-        return case, json.loads((out / f"{case}.json").read_bytes())
+    """Every case but ``dualgate``, :data:`DRIVER_JOBS` at a time."""
+    cases = [c for c in CASES if c != "dualgate"]
+    meshconv.check_admission(DRIVER_JOBS, "8g")
+    with ThreadPoolExecutor(max_workers=DRIVER_JOBS) as pool:
+        return dict(pool.map(lambda c: _run_case(tmp_path_factory, c), cases))
 
-    meshconv.check_admission(len(CASES), "8g")
-    with ThreadPoolExecutor(max_workers=len(CASES)) as pool:
-        return dict(pool.map(run, CASES))
+
+@pytest.fixture(scope="module")
+def dualgate(tmp_path_factory) -> dict:
+    """The ``dualgate`` case alone: it builds cross-sections and solves nothing."""
+    return _run_case(tmp_path_factory, "dualgate")[1]
 
 
 @pytest.mark.sandbox
@@ -409,9 +422,9 @@ def test_pfet_sd_doping_insensitive(driver, case):
 
 
 @pytest.mark.sandbox
-def test_dualgate_required(driver):
+def test_dualgate_required(dualgate):
     """stack.build accepts both 5 V cells and raises DualgateMissing without Dualgate (55,0)."""
-    for device, d in driver["dualgate"].items():
+    for device, d in dualgate.items():
         g = meshconv.geometry_2d(device)
         assert d["refused"] and "Dualgate" in d["refused"]
         assert math.isclose(d["l_um"], g.l_um, abs_tol=1e-9)
