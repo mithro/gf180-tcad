@@ -452,7 +452,10 @@ def test_dualgate_required(dualgate):
             assert math.isclose(poly_l, drawn_l[gid] + 2 * d["bound_nm"] * 1e-3, abs_tol=1e-9)
         # the edge-sensitivity harness's bias<nm> is stack.build's bias but for its l_um
         h = d["harness"]
-        assert h["same_doping"] and h["same_section"]
+        assert np.allclose(h["gate_u"], h["biased_gate_u"], rtol=0, atol=1e-12)
+        assert h["same_rest"]
+        harness_sd, biased_sd = (np.asarray(s) for s in h["sd"])
+        assert np.allclose(harness_sd, biased_sd, rtol=1e-9, atol=1e-9 * biased_sd.max())
         assert math.isclose(h["l_um"], g.l_um + 2 * d["bias_um"], abs_tol=1e-9)
 
 

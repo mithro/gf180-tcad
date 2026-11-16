@@ -179,6 +179,8 @@ def _poly_bias(proc, g, xs, biased) -> dict:
     variant = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(variant)
     harness = variant.cross_section(proc, g, bias_um=bias, plugs=False)
+    # across both gate ends of the biased cell
+    u = np.concatenate([biased.gate_u[0] + steps, biased.gate_u[1] + steps])
     return {
         "bias_um": bias,
         "drain_moved": drain_moved,
@@ -187,8 +189,12 @@ def _poly_bias(proc, g, xs, biased) -> dict:
         "at_bound": at_bound,
         "bound_nm": hi,
         "harness": {
-            "same_doping": harness.doping == biased.doping,
-            "same_section": dataclasses.replace(harness, l_um=biased.l_um) == biased,
+            # the two compute the gate ends in a different order, so they agree to rounding
+            "gate_u": list(harness.gate_u),
+            "biased_gate_u": list(biased.gate_u),
+            "sd": [list(_sd(harness, u)), list(_sd(biased, u))],
+            "same_rest": dataclasses.replace(harness, l_um=biased.l_um, gate_u=biased.gate_u)
+            == biased,
             "l_um": harness.l_um,
         },
     }
