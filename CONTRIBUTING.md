@@ -138,7 +138,7 @@ A failure of either step refuses the push:
 - A pushed commit that changes the [`third_party/gplugins`](third_party) pin must pin a commit
   that a branch of the [gplugins fork](https://github.com/mithro/gplugins) holds. The hook fetches
   the fork and refuses the push otherwise, because CI's checkout of a pin the fork lacks fails
-  before any job starts.
+  before anything runs.
 
 A push that runs both steps takes many minutes. An agent runs `git push` in the
 background with no timeout, and never with `--no-verify`. The hook skips the calibration fits, so
