@@ -281,9 +281,31 @@ def verify_subset(
     return sorted(((prefix + r, why) for r, why in bad), key=lambda t: t[0].encode("utf-8"))
 
 
+def verify_files(tree: Path, against: Path, prefix: str) -> list[tuple[str, str]]:
+    """``(manifest path, reason)`` for every file of ``tree`` that differs from the manifest
+    entry ``prefix + relpath`` of ``against``, sorted: ``changed`` (another sha256) or ``not in
+    manifest``. For single-file records that sit outside a job tree, such as the latest-stack
+    plugin-history records: every file of ``tree`` must be in the manifest and equal, and the
+    manifest's other entries under ``prefix`` are not required. ValueError for an empty ``tree``.
+    """
+    if not prefix.endswith("/"):
+        raise ValueError(f"prefix must end with '/', got {prefix!r}")
+    have = _scan(tree, Path(against))
+    if not have:
+        raise ValueError(f"{tree}: no files to verify")
+    want = _load(against)
+    bad = []
+    for rel, digest in have.items():
+        if prefix + rel not in want:
+            bad.append((prefix + rel, "not in manifest"))
+        elif want[prefix + rel] != digest:
+            bad.append((prefix + rel, "changed"))
+    return sorted(bad, key=lambda t: t[0].encode("utf-8"))
+
+
 def _parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="python -m gf180tcad.manifest")
-    ap.add_argument("command", choices=["update", "verify", "verify-subset"])
+    ap.add_argument("command", choices=["update", "verify", "verify-subset", "verify-files"])
     ap.add_argument("root", type=Path)
     ap.add_argument("--manifest", type=Path, default=None)
     ap.add_argument("--against", type=Path, help="verify-subset: the committed MANIFEST.sha256")
@@ -330,6 +352,18 @@ def main(argv: list[str] | None = None) -> int:
         if args.against is None or args.subset is None:
             ap.error("verify-subset needs --against and --subset")
         return _verify_subset_main(args)
+    if args.command == "verify-files":
+        if args.against is None:
+            ap.error("verify-files needs --against and --prefix")
+        bad = verify_files(args.root, args.against, args.prefix)
+        for path, why in bad:
+            print(f"{why}: {path}")
+        if bad:
+            print(f"{len(bad)} difference(s) from {args.against}", file=sys.stderr)
+            return 1
+        n = len(_scan(args.root, args.against))
+        print(f"identical: {n} files in {args.root} match {args.against} under {args.prefix}")
+        return 0
     m = args.manifest or args.root / "MANIFEST.sha256"
     if args.command == "update":
         update(args.root, m)
