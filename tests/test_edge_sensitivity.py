@@ -235,4 +235,22 @@ def test_page_prints_the_fit():
     index = (REPO_ROOT / "docs/limitations/index.md").read_text("utf-8")
     assert "too little edge capacitance ({ref}`moscap2d-edge`" in index
     cv = (REPO_ROOT / "docs/comparison/cv-agreement.md").read_text("utf-8")
-    assert "None adds as much as 0.001 fF/µm more at +5 V than at −5 V" in cv
+    assert (
+        "None adds as much as 0.001 fF/µm more at +5 V than at −5 V"
+        " ({ref}`moscap2d-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189))."
+        " The nfet needs {{ lim_edge_nfet_target_step }} fF/µm more there."
+    ) in " ".join(cv.split())
+
+
+def test_page_names_the_extension_shapes():
+    """The extension bullet's depths and lateral straggles are the record's."""
+    device, gid = CELLS[0]
+    shapes = sorted(
+        (v["ldd"]["depth_um"], v["ldd"]["lateral"])
+        for v in lf.edge_record(device, gid)["variants"].values()
+        if v.get("ldd")
+    )
+    assert shapes == [(0.06, 0.2), (0.06, 0.2), (0.1, 1.0), (0.1, 1.0)]
+    page = (REPO_ROOT / "docs/limitations/moscap2d.md").read_text("utf-8")
+    assert "Two of the four extensions are 100 nm deep. The other two are 60 nm deep" in page
+    assert "straggle of 0.2 times their vertical one" in " ".join(page.split())

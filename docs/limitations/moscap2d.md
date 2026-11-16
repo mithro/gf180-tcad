@@ -653,7 +653,8 @@ Each variant's gain over the base is in {numref}`moscap2d-edge-figure`, in fF/µ
   end. A {{ lim_edge_ldd_spacer_nm }} nm spacer moves the heavy source/drain out. An {term}`LDD`
   of 1e18 to 2e19 cm⁻³ adds {{ lim_edge_ldd_acc }} at −5 V and {{ lim_edge_ldd_inv }} at +5 V.
 
-No variant adds as much as 0.001 fF/µm more at +5 V than at −5 V. The nfet target asks for
+Two of the four extensions are 100 nm deep. The other two are 60 nm deep, with a lateral
+straggle of 0.2 times their vertical one. No variant adds as much as 0.001 fF/µm more at +5 V than at −5 V. The targets ask for
 {{ lim_edge_nfet_target_step }} fF/µm (nfet) and {{ lim_edge_pfet_target_step }} fF/µm (pfet) more there.
 The card's bias-dependent overlap (CGSL with CKAPPA) therefore has no counterpart in these cross-sections.
 
