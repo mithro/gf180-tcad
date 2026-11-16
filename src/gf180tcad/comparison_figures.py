@@ -83,6 +83,14 @@ STYLE = {
     # ... and the fewest lengths it is fitted through: two to fit, one to test the line.
     "edge_min_lengths": 3,
     "extrinsic_dash": ":",
+    # The poly-bias figure: the window spans this many biases either side of the drawn gate end,
+    # the drawn end is dashed, and the bias label sits this fraction of the poly thickness above
+    # the poly.
+    "bias_window": 3.0,
+    "drawn_dash": "--",
+    "bias_label_lift": 0.25,
+    # ... and the figure reaches this many label lifts above the arrow.
+    "bias_label_rows": 3,
 }
 
 # Unit conversions: m to µm and nm, A to µA.
@@ -98,9 +106,10 @@ TCAD_ROOT = REPO_ROOT / "results" / "tcad"
 
 class Roots(NamedTuple):
     """The results trees the figures read: the committed ones unless
-    :func:`gf180tcad.docgen.generate` is given others. The process-cell and start-stack drawings
-    read the committed TCAD tree through the explainer model (:mod:`gf180tcad.explain.model`),
-    and the centroid plot reads the process files, so those three take no root."""
+    :func:`gf180tcad.docgen.generate` is given others. The process-cell, poly-bias and
+    start-stack drawings read the committed TCAD tree through the explainer model
+    (:mod:`gf180tcad.explain.model`), and the centroid plot reads the process files, so those
+    four take no root."""
 
     # Spelled pathlib.Path: the docs link that name (docs/_ext/api_links.py), not a bare Path.
     spice: pathlib.Path = SPICE_ROOT
@@ -191,6 +200,76 @@ def process_cell(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
     """:func:`process_cell_figure` as SVG bytes, saved inside the palette's rc context."""
     with matplotlib.rc_context(ef.palette_rc(palette)):
         return ef.svg_bytes(process_cell_figure(palette, roots))
+
+
+def poly_bias_um(device: str = "nfet_05v0") -> float:
+    """The largest poly length bias the process file allows (µm): the upper bound of
+    ``poly_bias_nm`` (:data:`gf180tcad.tcad.process.TUNABLES_2D`)."""
+    (name,) = process.TUNABLES_2D
+    nm_per_um = UNITS["nm_per_m"] / UNITS["um_per_m"]
+    return process.load(device).params[name].bounds[1] / nm_per_um
+
+
+def poly_bias_cell() -> model.Cell:
+    """The cell of :func:`process_cell_model` with no scale factors, every length as meshed."""
+    c = process_cell_model()
+    return model.cell(c.name, c.params, c.geometry, scales={})
+
+
+def poly_bias_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """The drain-side end of the gate of :func:`process_cell_model`'s cell, to scale (the oxide
+    unscaled, :func:`poly_bias_cell`), with the poly
+    length bias at its upper bound (:func:`poly_bias_um`): the drawn gate and oxide end at the
+    dashed line, the bias adds the highlighted poly and oxide past it, and the drain starts at
+    the longer gate's end."""
+    pal = ef.PALETTES[palette]
+    c = poly_bias_cell()
+    ext = ef.cell_extents(c)
+    gate, oxide, drain = ext["gate"], ext["oxide"], ext["drain"]
+    bias = poly_bias_um()
+    end, new_end = gate.x1, gate.x1 + bias
+    x_lo, x_hi = end - STYLE["bias_window"] * bias, end + STYLE["bias_window"] * bias
+    lw = ef.STYLE["edge_width"]
+    lift = (gate.y1 - gate.y0) * STYLE["bias_label_lift"]
+    nm_per_um = UNITS["nm_per_m"] / UNITS["um_per_m"]
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(ef.STYLE["size_in"])
+        ax = fig.subplots()
+        ax.set_axis_off()
+        alpha = ef.STYLE["cell_alpha"]
+        for box, colour, gid in (
+            ((x_lo, end, gate.y0, gate.y1), pal["muted"], "drawn gate"),
+            ((x_lo, end, oxide.y0, oxide.y1), pal["text"], "drawn oxide"),
+            ((end, new_end, gate.y0, gate.y1), pal["highlight"], "bias gate"),
+            ((end, new_end, oxide.y0, oxide.y1), pal["highlight"], "bias oxide"),
+            ((new_end, x_hi, drain.y0, drain.y1), pal[_CARRIER[c.name]], "drain"),
+        ):
+            x0, x1, y0, y1 = box
+            ax.fill_between([x0, x1], y0, y1, color=colour, alpha=alpha, lw=0, gid=gid)
+        ax.plot([x_lo, x_hi], [0.0, 0.0], color=pal["text"], lw=lw, gid="surface")
+        ax.plot([end, end], [gate.y0, drain.y1], color=pal["text"], lw=lw,
+                ls=STYLE["drawn_dash"], gid="drawn end")  # fmt: skip
+        top = gate.y0 - lift
+        arrow = {"arrowstyle": "<->", "color": pal["text"], "lw": lw}
+        ax.annotate("", xy=(end, top), xytext=(new_end, top), arrowprops=arrow)
+        ax.text((end + new_end) / 2, top - lift, f"δ = {bias * nm_per_um:g} nm", ha="center",
+                va="bottom", gid="bias label")  # fmt: skip
+        mid = (gate.y0 + gate.y1) / 2
+        ax.text((x_lo + end) / 2, mid, "drawn poly", ha="center", va="center")
+        ax.text(end, drain.y1, " drawn gate end", ha="left", va="bottom", gid="drawn end label")
+        ax.text((new_end + x_hi) / 2, (drain.y0 + drain.y1) / 2, "drain", ha="center",
+                va="center")  # fmt: skip
+        ax.text((x_lo + end) / 2, (drain.y0 + drain.y1) / 2, "channel", ha="center",
+                va="center")  # fmt: skip
+        ax.set_xlim(x_lo, x_hi)
+        ax.set_ylim(drain.y1, top - lift * STYLE["bias_label_rows"])
+        return fig
+
+
+def poly_bias(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
+    """:func:`poly_bias_figure` as SVG bytes, saved inside the palette's rc context."""
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        return ef.svg_bytes(poly_bias_figure(palette, roots))
 
 
 # The device of the plan view.
@@ -821,6 +900,7 @@ def pdk_sweeps(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "process-cell": process_cell,
+    "poly-bias": poly_bias,
     "instance-plan": instance_plan,
     "geometries": geometries,
     "meshconv": meshconv,

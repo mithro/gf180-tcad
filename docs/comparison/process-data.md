@@ -412,11 +412,28 @@ oxide is 16.05 nm, within 15.2–16.95 nm. The pfet oxide is 15.72 nm, within 15
 
 The fourth tunable, `poly_bias_nm`, is read only by the 2D cross-section
 ({py:func}`gf180tcad.tcad.stack.build`, {py:data}`gf180tcad.tcad.process.TUNABLES_2D`). Its role is
-`tunable-2d`. The poly, the gate oxide and the gate electrode are longer by it at each end, and the
+`tunable-2d`. The poly, the {term}`gate oxide` and the gate electrode are longer by it at each end, and the
 source/drain doping stays aligned to them. The drawn L still divides Cgg into C per area.
+The 1D MOS capacitor never reads it. {numref}`process-data-poly-bias-figure` shows one gate end.
 
-The 1D MOS capacitor never reads it. The gate and its ends are drawn in
-{numref}`Figure %s of Definition of agreement <agreement-cell-figure>`.
+```{figure} /_generated/comparison/poly-bias-light.svg
+:name: process-data-poly-bias-figure
+:figclass: only-light
+:alt: The drain-side end of the gate, to scale: the drawn poly and thin oxide end at a dashed line; a highlighted strip of poly and oxide 100 nm wide continues past it; the drain starts at the strip's end, beside the channel.
+
+The drain-side end of the gate of the {term}`nfet_05v0` cell `w10p0_l0p70`, to scale, with the
+bias at its upper bound. The highlighted poly and oxide are the bias. The drain moves out with
+the gate's end.
+```
+
+```{figure} /_generated/comparison/poly-bias-dark.svg
+:figclass: only-dark
+:alt: The drain-side end of the gate, to scale: the drawn poly and thin oxide end at a dashed line; a highlighted strip of poly and oxide 100 nm wide continues past it; the drain starts at the strip's end, beside the channel.
+
+The drain-side end of the gate of the {term}`nfet_05v0` cell `w10p0_l0p70`, to scale, with the
+bias at its upper bound. The highlighted poly and oxide are the bias. The drain moves out with
+the gate's end.
+```
 
 | Name | Unit | Start | Min | Max |
 |---|---|---|---|---|
