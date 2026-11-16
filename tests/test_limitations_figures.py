@@ -53,6 +53,7 @@ FIGURES = [
     "meshconv-2d",
     "pn-slab",
     "pin-depletion",
+    "edge-sensitivity",
 ]
 
 _RENDER = textwrap.dedent(
@@ -780,6 +781,28 @@ def check_pin_depletion(fig):
     d.done()
 
 
+def check_edge_sensitivity(fig):
+    """Per cell: each family's points are the record's gains, the target is SPICE minus 2D, the
+    fit sits on the equal-gain line at slope × δ, and that line spans the largest value."""
+    d = Drawn(fig)
+    for ax, (device, gid) in zip(fig.axes, lf.EDGE_CELLS, strict=True):
+        gains = lf.edge_gains(device, gid)
+        fit = lf.edge_fit(device, gid)
+        for prefix, *_ in lf._EDGE_FAMILIES:
+            names = [n for n in gains if lf._edge_family(n) == prefix]
+            if names:
+                d.line(f"{device} {prefix}", [gains[n][0] for n in names],
+                       [gains[n][1] for n in names], ax)  # fmt: skip
+            else:
+                assert not _lines(fig, f"{device} {prefix}")
+        d.line(f"{device} target", [fit["targets"][0]], [fit["targets"][1]], ax)
+        g = fit["slope"] * fit["delta_nm"]
+        d.line(f"{device} fit", [g], [g], ax)
+        top = lf.STYLE["edge_headroom"] * max([*fit["targets"], *np.ravel(list(gains.values()))])
+        d.line(f"{device} equal", [0, top], [0, top], ax)
+    d.done()
+
+
 CHECKS = {
     "engine-diff": (lf.engine_diff_figure, check_engine_diff),
     "engine-subthreshold": (lf.engine_subthreshold_figure, check_engine_subthreshold),
@@ -794,6 +817,7 @@ CHECKS = {
     "meshconv-2d": (lf.meshconv_2d_figure, check_meshconv_2d),
     "pn-slab": (lf.pn_slab_figure, check_pn_slab),
     "pin-depletion": (lf.pin_depletion_figure, check_pin_depletion),
+    "edge-sensitivity": (lf.edge_sensitivity_figure, check_edge_sensitivity),
 }
 
 

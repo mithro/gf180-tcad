@@ -26,6 +26,9 @@ Source: {repo}`src/gf180tcad/limitations_figures.py`. Its figures appear on the
 
 .. autodata:: gf180tcad.limitations_figures.VALIDATION_CELLS
 
+.. autodata:: gf180tcad.limitations_figures.EDGE_ROOT
+   :no-value:
+
 .. autodata:: gf180tcad.limitations_figures.ROUNDOFF_DEVICE
 
 .. autodata:: gf180tcad.limitations_figures.SAME_PROCESS
