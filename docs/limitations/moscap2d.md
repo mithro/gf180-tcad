@@ -649,10 +649,9 @@ Each variant's gain over the base is in {numref}`moscap2d-edge-figure`, in fF/µ
 - **A longer poly.** Poly and gate oxide 30 nm longer at each end add {{ lim_edge_bias30_acc }}
   and {{ lim_edge_bias30_inv }}. The source/drain stays aligned to them. The gain is linear in
   the added length.
-- **An extension under a longer poly.** Each extension variant has a poly
-  {{ lim_edge_ldd_bias_nm }} nm longer at each end and a {{ lim_edge_ldd_spacer_nm }} nm spacer before the
-  heavy source/drain. A lightly doped extension ({term}`LDD`) of 1e18 to 2e19 cm⁻³ under it adds
-  {{ lim_edge_ldd_acc }} at −5 V and {{ lim_edge_ldd_inv }} at +5 V.
+- **An extension under a longer poly.** The poly is {{ lim_edge_ldd_bias_nm }} nm longer at each
+  end. A {{ lim_edge_ldd_spacer_nm }} nm spacer moves the heavy source/drain out. An {term}`LDD`
+  of 1e18 to 2e19 cm⁻³ adds {{ lim_edge_ldd_acc }} at −5 V and {{ lim_edge_ldd_inv }} at +5 V.
 
 No variant adds as much as 0.001 fF/µm more at +5 V than at −5 V. The nfet target asks for
 {{ lim_edge_nfet_target_step }} fF/µm (nfet) and {{ lim_edge_pfet_target_step }} fF/µm (pfet) more there.
