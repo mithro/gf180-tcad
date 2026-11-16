@@ -1215,20 +1215,39 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
 
 
 def _edge_substitutions(roots: Roots) -> dict[str, str]:
+    """The edge section's numbers: per device the fit's slope, δ and signed miss (target minus
+    gain) at each plateau and the target's step from u = -5 to +5 V; from the nfet record the plug height, the plug and bias30 gains, and
+    the extension variants' common poly bias and spacer and the range of their gains."""
+
+    def fmt(v: float) -> str:
+        return f"{v:.{STYLE['edge_digits']}f}".replace("-", "\u2212")
+
     out = {}
     for device, gid in EDGE_CELLS:
         fit = edge_fit(device, gid, roots)
         dev = _SHORT[device]
         out[f"lim_edge_{dev}_slope"] = f"{fit['slope']:.{STYLE['edge_slope_digits']}f}"
         out[f"lim_edge_{dev}_delta"] = f"{fit['delta_nm']:.{STYLE['edge_delta_digits']}f}"
-        out[f"lim_edge_{dev}_residual"] = f"{abs(fit['residual'][1]):.{STYLE['edge_digits']}f}"
+        for side, r in zip(("acc", "inv"), fit["residual"], strict=True):
+            out[f"lim_edge_{dev}_miss_{side}"] = fmt(r)
+        out[f"lim_edge_{dev}_target_step"] = fmt(fit["targets"][1] - fit["targets"][0])
     device, gid = EDGE_CELLS[0]
-    gains = edge_gains(device, gid, edge_root(roots))
+    root = edge_root(roots)
+    gains = edge_gains(device, gid, root)
     for variant in ("plugs", "bias30"):
         for side, g in zip(("acc", "inv"), gains[variant], strict=True):
-            out[f"lim_edge_{variant}_{side}"] = f"{g:.{STYLE['edge_digits']}f}".replace(
-                "-", "\u2212"
-            )
+            out[f"lim_edge_{variant}_{side}"] = fmt(g)
+    variants = edge_record(device, gid, root)["variants"]
+    (plug_um,) = {v["plug_um"] for v in variants.values() if v["plugs"]}
+    out["lim_edge_plug_um"] = f"{plug_um:g}"
+    ldd = [n for n in gains if _edge_family(n) == "ldd"]
+    (bias_um,) = {variants[n]["bias_um"] for n in ldd}
+    (spacer_um,) = {variants[n]["ldd"]["spacer_um"] for n in ldd}
+    out["lim_edge_ldd_bias_nm"] = f"{bias_um * 1e3:.0f}"
+    out["lim_edge_ldd_spacer_nm"] = f"{spacer_um * 1e3:.0f}"
+    for i, side in enumerate(("acc", "inv")):
+        lo, hi = (fmt(f([gains[n][i] for n in ldd])) for f in (min, max))
+        out[f"lim_edge_ldd_{side}"] = lo if lo == hi else f"{lo} to {hi}"
     return out
 
 

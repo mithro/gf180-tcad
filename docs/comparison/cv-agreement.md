@@ -660,7 +660,7 @@ The 2D edge on the inversion side, 0.151 fF/µm, is about twice the card's outer
 0.073 fF/µm per edge. What the nfet cells lack there is the card's overlap less the DLC
 shortening, 2·(CGSO + CGSL − DLC·$C_{\mathrm{area}}$). The 2D cross-section has no lightly doped
 extension and no spacer ({py:mod}`gf180tcad.tcad.stack`). The 2D cross-section was tried with
-contact plugs, a longer poly and extensions. None adds more at one plateau than the other
+contact plugs, a longer poly and extensions. None adds as much as 0.001 fF/µm more at +5 V than at −5 V, as the nfet needs
 ({ref}`moscap2d-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
