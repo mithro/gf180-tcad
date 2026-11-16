@@ -42,6 +42,7 @@ def _sources():
     yield from sorted(SRC.rglob("*.py"))
     yield TOOLS / "crosscheck-args"
     yield TOOLS / "crosscheck-tcad-run"
+    yield TOOLS / "crosscheck-history-run"
     yield TOOLS / "restamp-tcad-provenance"
 
 
