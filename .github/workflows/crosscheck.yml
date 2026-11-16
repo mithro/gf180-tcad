@@ -274,22 +274,28 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$rc"
       - name: Pull the image of the latest-stack plugin-history records by digest
+        # also after a failed TCAD subset, so one failure does not hide the other
+        if: success() || failure()
         run: |
           # the stable TCAD image (docker/TCAD_IMAGE); the meshes/stable jobs above pulled it already
-          uv run --locked python tools/crosscheck-history-run --images > "$LOGS/history-images.txt" 2>&1 \
-            || { cat "$LOGS/history-images.txt"; exit 1; }
+          uv run --locked python tools/crosscheck-history-run --images > "$LOGS/history-images.txt" \
+            2> "$LOGS/history-images.err" || { cat "$LOGS/history-images.err"; exit 1; }
           image="$(cat "$LOGS/history-images.txt")"
           echo "$image"
           case "$image" in *@sha256:*) ;; *) echo "::error::TCAD image is not pinned by digest: $image"; exit 1 ;; esac
           time docker pull --quiet "$image"
           df -h /
       - name: Rebuild the latest-stack plugin-history records (issue #181)
+        # also after a failed TCAD subset, so one failure does not hide the other
+        if: success() || failure()
         run: |
           uv run --locked python tools/crosscheck-history-run --out "$HOUT" \
             > "$LOGS/crosscheck-history-run.log" 2>&1 \
             || { cat "$LOGS/crosscheck-history-run.log"; exit 1; }
           cat "$LOGS/crosscheck-history-run.log"
       - name: verify-files of the plugin-history records against results/MANIFEST.sha256
+        # also after a failed TCAD subset, so one failure does not hide the other
+        if: success() || failure()
         run: |
           rc=0
           uv run --locked python -m gf180tcad.manifest verify-files "$HOUT" \

@@ -76,6 +76,19 @@ def test_out_must_be_empty_unless_clean(tmp_path):
     assert not out.exists()
 
 
+def test_check_written_requires_exactly_the_committed_names(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "latest.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(ValueError, match="not the committed records"):
+        tool.check_written(out)  # one missing
+    (out / "latest-mesh0p5.json").write_text("{}", encoding="utf-8")
+    tool.check_written(out)
+    (out / "extra.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(ValueError, match="not the committed records"):
+        tool.check_written(out)
+
+
 def _manifest(tmp_path: Path, entries: dict[str, bytes]) -> Path:
     lines = sorted(f"{hashlib.sha256(b).hexdigest()}  {rel}\n" for rel, b in entries.items())
     m = tmp_path / "MANIFEST.sha256"
@@ -128,6 +141,11 @@ def test_workflow_runs_the_tool_and_verify_files():
     assert "tools/crosscheck-history-run --images" in job
     assert "tools/crosscheck-history-run --out" in job
     assert "verify-files" in job and "--prefix plugin-history/" in job
+    steps = job.split("      - name: ")
+    for title in ("Pull the image of the latest-stack", "Rebuild the latest-stack",
+                  "verify-files of the plugin-history"):  # fmt: skip
+        (step,) = [s for s in steps if s.startswith(title)]
+        assert "if: success() || failure()" in step, title
 
 
 def test_records_hold_their_mesh_scale():

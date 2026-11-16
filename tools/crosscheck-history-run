@@ -53,6 +53,15 @@ def commands(out: Path) -> list[list[str]]:
     ]  # fmt: skip
 
 
+def check_written(out: Path) -> None:
+    """ValueError unless ``out`` holds exactly the committed latest-stack records' file names, so
+    that verify-files (which compares the files present) also notices a missing one."""
+    got = sorted(p.name for p in Path(out).iterdir())
+    want = sorted(latest_records())
+    if got != want:
+        raise ValueError(f"{out} holds {got}, not the committed records {want}")
+
+
 def check_out(out: Path, clean: bool) -> None:
     """Refuse an ``out`` overlapping ``results/`` or in the repository outside ``tmp/``, and a
     non-empty one unless ``clean`` (then delete)."""
@@ -96,6 +105,11 @@ def main(argv: list[str] | None = None) -> int:
         if rc != 0:
             print(f"[{n}/{len(cmds)}] failed with exit code {rc}", file=sys.stderr, flush=True)
             return rc
+    try:
+        check_written(a.out)
+    except ValueError as e:
+        print(f"crosscheck-history-run: {e}", file=sys.stderr)
+        return 1
     print(f"{len(cmds)} record(s) written under {a.out}", flush=True)
     return 0
 
