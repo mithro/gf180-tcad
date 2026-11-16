@@ -5,12 +5,15 @@
     "n_ch_cm3": 2.14664982697726e+17,
     "t_ox_eff_nm": 15.720664949091667
   },
+  "commit": "c8c00195efff4850d0a40d7083e42829ce899daa",
   "device": "pfet_05v0",
+  "generator": "gf180tcad.tcad.__main__",
+  "generator_sha256": "faab4b279fa1ba515d2c6c83295046094511dc5ed0935c8f3d93acd22def49c4",
   "geometry": "w10p0_l0p50",
   "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",
   "image": "ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8",
   "params": "calibrated",
-  "schema": 1,
+  "schema": 2,
   "variant_py_sha256": "73d2f3ddb62b4754795a2bddd988cf60c5e9b125139426106e56426dc1a64e6a",
   "variants": {
     "base": {

@@ -135,6 +135,11 @@ A failure of either step refuses the push:
   commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), [README.md](README.md) or
   [CONTRIBUTING.md](CONTRIBUTING.md). It also runs when the commit changes one of those two test
   files, [`tests/conftest.py`](tests/conftest.py) or [`tests/offline_build.py`](tests/offline_build.py).
+- A pushed commit that changes the [`third_party/gplugins`](third_party) pin must pin a commit
+  that a branch of the [gplugins fork](https://github.com/mithro/gplugins) holds. The hook fetches
+  the fork and refuses the push otherwise, or when the fetch fails or the submodule is not
+  initialised. CI's checkout of a pin the fork lacks fails
+  before anything runs.
 
 A push that runs both steps takes many minutes. An agent runs `git push` in the
 background with no timeout, and never with `--no-verify`. The hook skips the calibration fits, so

@@ -11,7 +11,7 @@ plateaus, u = −5 V and +5 V. The records are in
 | File | What it is |
 |---|---|
 | [`variant.py`](variant.py) | One variant's cross-section and QS solve. It runs inside the sandbox. Its docstring lists the variant names. |
-| [`run.py`](run.py) | Runs variants one at a time through `tools/sandbox-run`: 16 GiB, one CPU, the stable TCAD image. |
+| [`run.py`](run.py) | Runs variants one at a time through [`tools/sandbox-run`](../../tools/sandbox-run): 16 GiB, one CPU, the stable TCAD image. It refuses a checkout with uncommitted changes and writes each run's pins. |
 | [`record.py`](record.py) | Writes one cell's record from the run directories. |
 
 The tests are [`tests/test_edge_sensitivity.py`](../../tests/test_edge_sensitivity.py). The figure
@@ -21,13 +21,13 @@ and the least-squares poly length bias are in
 ## Rebuild a record
 
 ```sh
-GF180_LOCK=docker uv run --locked python experiments/edge-sensitivity/run.py \
+uv run --locked python experiments/edge-sensitivity/run.py \
     ~/.cache/gf180-tcad/edge-sens nfet_05v0 w10p0_l0p60 base plugs bias30 bias60 plugs+bias30 \
     bias65+ldd1e18+sp100 bias65+ldd5e18+sp100 \
     bias65+ldd5e18+ldddepth60+latr0.2+sp100 bias65+ldd2e19+ldddepth60+latr0.2+sp100
 uv run --locked python experiments/edge-sensitivity/record.py \
     ~/.cache/gf180-tcad/edge-sens nfet_05v0 w10p0_l0p60 results/edge-sensitivity/nfet_05v0-w10p0_l0p60.json
-GF180_LOCK=docker uv run --locked python experiments/edge-sensitivity/run.py \
+uv run --locked python experiments/edge-sensitivity/run.py \
     ~/.cache/gf180-tcad/edge-sens pfet_05v0 w10p0_l0p50 base bias30 bias60
 uv run --locked python experiments/edge-sensitivity/record.py \
     ~/.cache/gf180-tcad/edge-sens pfet_05v0 w10p0_l0p50 results/edge-sensitivity/pfet_05v0-w10p0_l0p50.json
@@ -40,5 +40,7 @@ to `<workdir>/<device>/<gid>/<variant>/variant.log`. On this project's host one 
 50 minutes.
 
 A record keeps, per variant, the gate biases, Cgg per unit width (fF/µm), the node count, the
-meshed gate length and the variant's parameters. It also pins the TCAD image, the gplugins commit,
-the sha256 of `variant.py` and of the device's calibration file, and that file's values.
+meshed gate length and the variant's parameters. It also holds the pins every run shared: the
+commit, the TCAD image, the gplugins commit, the sha256 of `variant.py`, the 2D writer's
+`generator_sha256` and the device's calibration file and values. `record.py` refuses runs whose
+pins differ.

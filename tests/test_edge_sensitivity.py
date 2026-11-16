@@ -17,7 +17,7 @@ from gf180tcad import limitations_figures as lf
 from gf180tcad.comparison_figures import edge_split
 from gf180tcad.devices import DEVICES
 from gf180tcad.sandbox import REPO_ROOT
-from gf180tcad.tcad import calibration, calibration_file
+from gf180tcad.tcad import calibration, calibration_file, generator_sha256
 
 HERE = REPO_ROOT / "experiments" / "edge-sensitivity"
 CELLS = list(lf.EDGE_CELLS)
@@ -45,11 +45,21 @@ def test_records_are_the_listed_cells():
 
 @pytest.mark.parametrize(("device", "gid"), CELLS)
 def test_record_pins_what_the_runs_used(device, gid):
-    """The record names the image, the plugin commit, variant.py and the calibration file that
-    its runs used, and each is the one committed now: a change to any makes the record stale."""
+    """The record holds the pins its runs shared (run.py's pins.json, which record.py requires to
+    agree): the image, the plugin commit, variant.py, the 2D writer's generator_sha256 and the
+    calibration. Each is the one committed now: a change to any makes the record stale. The
+    writer's hash is the one the committed 2D cells record, so a restamp of those cells has to
+    carry the record along."""
     rec = lf.edge_record(device, gid)
     assert (rec["schema"], rec["device"], rec["geometry"], rec["params"]) == (
-        1, device, gid, "calibrated")  # fmt: skip
+        2, device, gid, "calibrated")  # fmt: skip
+    assert rec["generator"] == "gf180tcad.tcad.__main__"
+    assert rec["generator_sha256"] == generator_sha256(rec["generator"])
+    prov = json.loads((REPO_ROOT / "results/tcad/moscap2d/provenance.json").read_bytes())
+    assert (prov["generator"], prov["generator_sha256"]) == (
+        rec["generator"], rec["generator_sha256"])  # fmt: skip
+    subprocess.run(["git", "cat-file", "-e", rec["commit"] + "^{commit}"], cwd=REPO_ROOT,
+                   check=True)  # fmt: skip
     assert rec["image"] == (REPO_ROOT / "docker" / "TCAD_IMAGE").read_text("utf-8").strip()
     tree = subprocess.run(["git", "ls-tree", "HEAD", "third_party/gplugins"], cwd=REPO_ROOT,
                           check=True, capture_output=True, text=True).stdout.split()  # fmt: skip
@@ -75,7 +85,9 @@ def test_record_base_is_the_committed_cell(device, gid):
     assert base["meshed_l_um"] == meta["meshed_l_um"]
     assert base["bias_um"] == 0.0 and not base["plugs"] and base["ldd"] is None
     pol = DEVICES[device].polarity
-    assert sorted(pol * v for v in base["vg"]) == list(lf.STYLE["edge_u_v"])
+    # every run sweeps from accumulation, as the committed jobs do: u = -5 V first
+    for v in lf.edge_record(device, gid)["variants"].values():
+        assert [pol * vg for vg in v["vg"]] == list(lf.STYLE["edge_u_v"])
     for vg, c in zip(base["vg"], base["cgg_ff_per_um"], strict=True):
         (i,) = np.flatnonzero(cv["vg"] == vg)
         assert math.isclose(c, cv["cgg_per_um"][i], rel_tol=1e-9), (vg, c)
@@ -131,6 +143,21 @@ def test_edge_fit_is_the_least_squares_bias(device, gid):
     assert f"{abs(hi):.3f}" == f"{want_residual:.3f}"
 
 
+@pytest.mark.parametrize(("device", "gid"), CELLS)
+def test_edge_gains_are_at_u(device, gid):
+    """Each variant's gain at u = -5 V is Cgg minus the base's at Vg = -5 V × polarity, read
+    from the raw record (the pfet's u = -5 V is Vg = +5 V)."""
+    rec = lf.edge_record(device, gid)["variants"]
+    pol = DEVICES[device].polarity
+    base = dict(zip(rec["base"]["vg"], rec["base"]["cgg_ff_per_um"], strict=True))
+    for name, (lo, hi) in lf.edge_gains(device, gid).items():
+        c = dict(zip(rec[name]["vg"], rec[name]["cgg_ff_per_um"], strict=True))
+        assert lo == c[-5.0 * pol] - base[-5.0 * pol], name
+        assert hi == c[5.0 * pol] - base[5.0 * pol], name
+    if device == "pfet_05v0":
+        assert pol == -1 and rec["base"]["vg"] == [5.0, -5.0]
+
+
 def test_edge_fit_needs_a_bias_variant(monkeypatch):
     monkeypatch.setattr(lf, "edge_gains", lambda *a, **k: {"plugs": (0.0, 0.0)})
     with pytest.raises(ValueError, match="no bias<nm> variant"):
@@ -152,31 +179,60 @@ def test_rerun_reproduces_the_record(tmp_path):
         got = json.loads((work / device / gid / v / "result.json").read_bytes())
         for key in ("vg", "cgg_ff_per_um", "node_count", "meshed_l_um", "bias_um"):
             assert got[key] == want[v][key], (v, key)
+        pins = json.loads((work / device / gid / v / "pins.json").read_bytes())
+        rec = lf.edge_record(device, gid)
+        for key in pins:
+            if key != "commit":
+                assert pins[key] == rec[key], (v, key)
+
+
+def _shown(v: float) -> str:
+    return f"{v:.3f}".replace("-", "\u2212")
 
 
 def test_page_prints_the_fit():
     """The moscap2d page's "What the 2D edge needs" numbers are substitutions from the fit and the
-    nfet record, and its extension range is the record's extension peaks."""
-    subs = lf.substitutions()
+    nfet record; every substitution key is on the page; the extension range is the record's
+    extension peaks; and the page's claim that no variant adds more at +5 V than at -5 V holds."""
+    subs = {k: v for k, v in lf.substitutions().items() if k.startswith("lim_edge_")}
     page = (REPO_ROOT / "docs/limitations/moscap2d.md").read_text("utf-8")
+    for key in subs:
+        assert f"{{{{ {key} }}}}" in page, key
     for device, gid in CELLS:
         dev = device.split("_")[0]
         fit = lf.edge_fit(device, gid)
         assert subs[f"lim_edge_{dev}_slope"] == f"{fit['slope']:.5f}"
         assert subs[f"lim_edge_{dev}_delta"] == f"{fit['delta_nm']:.1f}"
-        assert subs[f"lim_edge_{dev}_residual"] == f"{abs(fit['residual'][0]):.3f}"
+        acc, inv = fit["residual"]
+        assert (subs[f"lim_edge_{dev}_miss_acc"], subs[f"lim_edge_{dev}_miss_inv"]) == (
+            _shown(acc), _shown(inv))  # fmt: skip
+        # the nfet's fit overfills accumulation, so its miss there is negative
+        assert acc < 0 < inv
         row = (f"| {dev} | {{{{ lim_edge_{dev}_slope }}}} | {{{{ lim_edge_{dev}_delta }}}} | "
-               f"±{{{{ lim_edge_{dev}_residual }}}} |")  # fmt: skip
+               f"{{{{ lim_edge_{dev}_miss_acc }}}} | {{{{ lim_edge_{dev}_miss_inv }}}} |")  # fmt: skip
         assert row in page, row
+        assert all(hi - lo < 1e-3 for lo, hi in lf.edge_gains(device, gid).values()), device
+        step = fit["targets"][1] - fit["targets"][0]
+        assert subs[f"lim_edge_{dev}_target_step"] == _shown(step)
+    assert "No variant adds as much as 0.001 fF/µm more at +5 V than at −5 V." in page
     gains = lf.edge_gains(*CELLS[0])
     for variant in ("plugs", "bias30"):
         for side, g in zip(("acc", "inv"), gains[variant], strict=True):
-            key = f"lim_edge_{variant}_{side}"
-            assert subs[key] == f"{g:.3f}".replace("-", "\u2212")
-            assert f"{{{{ {key} }}}}" in page, key
-    peaks = sorted(v["ldd"]["peak"] for v in lf.edge_record(*CELLS[0])["variants"].values()
-                   if v["ldd"])  # fmt: skip
+            assert subs[f"lim_edge_{variant}_{side}"] == _shown(g)
+    variants = lf.edge_record(*CELLS[0])["variants"]
+    assert subs["lim_edge_plug_um"] == "0.86" == f"{variants['plugs']['plug_um']:g}"
+    ldd = {n: v for n, v in variants.items() if v["ldd"]}
+    assert {v["bias_um"] for v in ldd.values()} == {0.065}
+    assert {v["ldd"]["spacer_um"] for v in ldd.values()} == {0.1}
+    assert (subs["lim_edge_ldd_bias_nm"], subs["lim_edge_ldd_spacer_nm"]) == ("65", "100")
+    for i, side in enumerate(("acc", "inv")):
+        vals = [gains[n][i] for n in ldd]
+        lo, hi = _shown(min(vals)), _shown(max(vals))
+        assert subs[f"lim_edge_ldd_{side}"] == (lo if lo == hi else f"{lo} to {hi}")
+    peaks = sorted(v["ldd"]["peak"] for v in ldd.values())
     assert (peaks[0], peaks[-1]) == (1e18, 2e19)
     assert "1e18 to 2e19 cm⁻³" in page
     index = (REPO_ROOT / "docs/limitations/index.md").read_text("utf-8")
     assert "too little edge capacitance ({ref}`moscap2d-edge`" in index
+    cv = (REPO_ROOT / "docs/comparison/cv-agreement.md").read_text("utf-8")
+    assert "None adds as much as 0.001 fF/µm more at +5 V than at −5 V" in cv
