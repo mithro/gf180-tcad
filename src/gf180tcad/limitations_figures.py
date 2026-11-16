@@ -1243,8 +1243,8 @@ def _edge_substitutions(roots: Roots) -> dict[str, str]:
     ldd = [n for n in gains if _edge_family(n) == "ldd"]
     (bias_um,) = {variants[n]["bias_um"] for n in ldd}
     (spacer_um,) = {variants[n]["ldd"]["spacer_um"] for n in ldd}
-    out["lim_edge_ldd_bias_nm"] = f"{bias_um * UNITS["nm_per_um"]:.0f}"
-    out["lim_edge_ldd_spacer_nm"] = f"{spacer_um * UNITS["nm_per_um"]:.0f}"
+    out["lim_edge_ldd_bias_nm"] = f"{bias_um * UNITS['nm_per_um']:.0f}"
+    out["lim_edge_ldd_spacer_nm"] = f"{spacer_um * UNITS['nm_per_um']:.0f}"
     for i, side in enumerate(("acc", "inv")):
         lo, hi = (fmt(f([gains[n][i] for n in ldd])) for f in (min, max))
         out[f"lim_edge_ldd_{side}"] = lo if lo == hi else f"{lo} to {hi}"
