@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""Rebuild the committed latest-stack plugin-history records into a directory, for a byte check.
+
+    uv run --locked python tools/crosscheck-history-run --out OUT [--clean]
+    uv run --locked python tools/crosscheck-history-run --images
+
+Every committed ``results/plugin-history/*.json`` whose ``gplugins_tag`` is ``latest`` is rebuilt
+with ``python -m gf180tcad.history --version latest --mesh-scale R --out OUT``, at the mesh scale
+``R`` the record holds, one at a time (issue #181). Each runs the fork's PN slab at the submodule
+pin in the stable TCAD image (docker/TCAD_IMAGE) with no network.
+
+Afterwards ``python -m gf180tcad.manifest verify-files OUT --against results/MANIFEST.sha256
+--prefix plugin-history/`` compares the files. ``--out`` must be outside ``results/``, outside the
+repository or under its ``tmp/``, and absent or empty (``--clean`` deletes it first).
+``--images`` prints the pinned reference of the image the records run in, for ``docker pull``.
+"""
+
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from gf180tcad.history import LATEST
+from gf180tcad.sandbox import REPO_ROOT
+
+RESULTS = REPO_ROOT / "results"
+RECORDS = RESULTS / "plugin-history"
+IMAGE_FILE = REPO_ROOT / "docker" / "TCAD_IMAGE"
+
+
+def latest_records() -> dict[str, float]:
+    """``{file name: mesh scale}`` of every committed latest-stack record, sorted by name;
+    ValueError if there is none."""
+    out = {}
+    for p in sorted(RECORDS.glob("*.json")):
+        rec = json.loads(p.read_bytes())
+        if rec.get("gplugins_tag") == LATEST:
+            out[p.name] = float(rec["mesh_scale"])
+    if not out:
+        raise ValueError(f"no latest-stack record in {RECORDS}")
+    return out
+
+
+def commands(out: Path) -> list[list[str]]:
+    """One ``python -m gf180tcad.history`` command per committed latest-stack record."""
+    return [
+        [sys.executable, "-m", "gf180tcad.history", "--version", LATEST, "--mesh-scale",
+         repr(scale), "--out", str(out)]
+        for scale in latest_records().values()
+    ]  # fmt: skip
+
+
+def check_out(out: Path, clean: bool) -> None:
+    """Refuse an ``out`` overlapping ``results/`` or in the repository outside ``tmp/``, and a
+    non-empty one unless ``clean`` (then delete)."""
+    resolved = Path(out).resolve()
+    if resolved == RESULTS or resolved.is_relative_to(RESULTS) or RESULTS.is_relative_to(resolved):
+        raise ValueError(
+            f"--out {out} overlaps {RESULTS}: write the records to a directory of their own"
+        )
+    tmp = REPO_ROOT / "tmp"
+    if resolved.is_relative_to(REPO_ROOT) and (resolved == tmp or not resolved.is_relative_to(tmp)):
+        raise ValueError(f"--out {out} is inside the repository but not under tmp/")
+    if resolved.exists() and any(resolved.iterdir()):
+        if not clean:
+            raise ValueError(f"--out {out} is not empty (pass --clean to delete it first)")
+        shutil.rmtree(resolved)
+
+
+def parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(prog="tools/crosscheck-history-run")
+    which = ap.add_mutually_exclusive_group(required=True)
+    which.add_argument("--out", type=Path, help="directory to write the records to")
+    which.add_argument("--images", action="store_true", help="print the image reference")
+    ap.add_argument("--clean", action="store_true", help="delete a non-empty --out first")
+    return ap
+
+
+def main(argv: list[str] | None = None) -> int:
+    a = parser().parse_args(argv)
+    try:
+        if a.images:
+            print(IMAGE_FILE.read_text(encoding="utf-8").splitlines()[0].strip())
+            return 0
+        cmds = commands(a.out)
+        check_out(a.out, a.clean)
+    except ValueError as e:
+        print(f"crosscheck-history-run: {e}", file=sys.stderr)
+        return 2
+    for n, cmd in enumerate(cmds, 1):
+        print(f"[{n}/{len(cmds)}] {' '.join(cmd[1:])}", flush=True)
+        rc = subprocess.run(cmd, check=False).returncode
+        if rc != 0:
+            print(f"[{n}/{len(cmds)}] failed with exit code {rc}", file=sys.stderr, flush=True)
+            return rc
+    print(f"{len(cmds)} record(s) written under {a.out}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

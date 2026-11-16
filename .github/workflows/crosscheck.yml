@@ -6,7 +6,9 @@
 # The subset goes to a temporary --out, never results/spice: spice-reference replaces --out, so
 # a subset written there would replace the full tree. See docs/reproduce/index.md.
 # The crosscheck-tcad job does the same for the TCAD jobs of tests/crosscheck_tcad_subset.txt
-# (tools/crosscheck-tcad-run, then verify-subset --kind tcad --prefix tcad/).
+# (tools/crosscheck-tcad-run, then verify-subset --kind tcad --prefix tcad/), then rebuilds the
+# latest-stack plugin-history records (tools/crosscheck-history-run, then verify-files --prefix
+# plugin-history/; issue #181).
 name: crosscheck
 
 on:
@@ -29,6 +31,7 @@ on:
       - "results/tcad/meshes/**"
       - "data/output-cache.json"
       - "tests/tcad/**"
+      - "experiments/plugin-history/**"
       - "pyproject.toml"
       - "uv.lock"
       - "Makefile"
@@ -201,6 +204,7 @@ jobs:
         run: |
           {
             echo "OUT=$RUNNER_TEMP/crosscheck-tcad/tcad"
+            echo "HOUT=$RUNNER_TEMP/crosscheck-tcad/plugin-history"
             echo "LOGS=$RUNNER_TEMP/crosscheck-tcad-logs"
             # the TCAD host commands make each job's scratch dir under $TMPDIR (kept on failure)
             echo "TMPDIR=$RUNNER_TEMP/tmp"
@@ -269,6 +273,36 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$rc"
+      - name: Pull the image of the latest-stack plugin-history records by digest
+        run: |
+          # the stable TCAD image (docker/TCAD_IMAGE); the meshes/stable jobs above pulled it already
+          uv run --locked python tools/crosscheck-history-run --images > "$LOGS/history-images.txt" 2>&1 \
+            || { cat "$LOGS/history-images.txt"; exit 1; }
+          image="$(cat "$LOGS/history-images.txt")"
+          echo "$image"
+          case "$image" in *@sha256:*) ;; *) echo "::error::TCAD image is not pinned by digest: $image"; exit 1 ;; esac
+          time docker pull --quiet "$image"
+          df -h /
+      - name: Rebuild the latest-stack plugin-history records (issue #181)
+        run: |
+          uv run --locked python tools/crosscheck-history-run --out "$HOUT" \
+            > "$LOGS/crosscheck-history-run.log" 2>&1 \
+            || { cat "$LOGS/crosscheck-history-run.log"; exit 1; }
+          cat "$LOGS/crosscheck-history-run.log"
+      - name: verify-files of the plugin-history records against results/MANIFEST.sha256
+        run: |
+          rc=0
+          uv run --locked python -m gf180tcad.manifest verify-files "$HOUT" \
+            --against results/MANIFEST.sha256 --prefix plugin-history/ \
+            > "$LOGS/verify-files.txt" 2>&1 || rc=$?
+          cat "$LOGS/verify-files.txt"
+          {
+            echo "### crosscheck-tcad: verify-files of the plugin-history records (exit $rc)"
+            echo '```'
+            cat "$LOGS/verify-files.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
       - name: Collect differing files
         if: failure()
         run: |
@@ -287,6 +321,9 @@ jobs:
               fi
             done < "$d/paths.txt"
           fi
+          # the rebuilt plugin-history records, and failed history runs' scratch dirs
+          if [ -d "$HOUT" ]; then cp -r "$HOUT" "$d/plugin-history"; fi
+          find "$TMPDIR" -maxdepth 1 -name 'gf180tcad-history-*' -exec cp -r {} "$d/" \;
           # failed jobs' scratch dirs (job logs), if generation failed
           find "$TMPDIR" -maxdepth 1 -name 'gf180tcad-moscap*' -exec cp -r {} "$d/" \;
           ls -R "$d" > "$d/listing.txt"
