@@ -6,6 +6,8 @@
 # and `make pre-push-docs` (the docs build of tests/test_doc_links.py and the generated pages of
 # tests/test_docgen.py) when a pushed commit changes docs/, src/, results/, README.md,
 # CONTRIBUTING.md, one of those two test files, tests/conftest.py or tests/offline_build.py.
+# A pushed commit that changes the third_party/gplugins gitlink must pin a commit that a branch of
+# the submodule's remote (the gplugins fork) holds, or CI's checkout fails (issue #64).
 # See CONTRIBUTING.md.
 set -euo pipefail
 
@@ -17,6 +19,8 @@ differs=0
 docs=0
 branches=0
 foreign=()
+pins=()
+submodule=third_party/gplugins
 while read -r local_ref local_sha _remote_ref remote_sha; do
   [ "$local_sha" = "$zero" ] && continue # a branch deletion: nothing to check
   pushing=1
@@ -38,6 +42,11 @@ while read -r local_ref local_sha _remote_ref remote_sha; do
       tests/conftest.py tests/offline_build.py tests/test_docgen.py tests/test_doc_links.py \
       | grep -q .; then
     docs=1
+  fi
+  # a changed gitlink: the pin the pushed commit holds
+  if [ -z "$base" ] || ! git diff --quiet "$base" "$local_sha" -- "$submodule"; then
+    pin="$(git ls-tree "$local_sha" -- "$submodule" | awk '$2 == "commit" { print $3 }')"
+    [ -n "$pin" ] && pins+=("$pin")
   fi
 done
 [ "$pushing" = 1 ] || exit 0
@@ -68,6 +77,22 @@ fi
 # point git back at this one.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY \
   GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH
+# Each changed pin must be on a branch of the submodule's remote: fetch it, then ask.
+if [ "${#pins[@]}" -gt 0 ]; then
+  if ! git -C "$submodule" fetch -q origin; then
+    echo "pre-push: refused: could not fetch $submodule from its remote to check the pin" >&2
+    exit 1
+  fi
+  for pin in "${pins[@]}"; do
+    if [ -z "$(git -C "$submodule" branch -r --contains "$pin" 2>&1 | grep -v '^error')" ]; then
+      {
+        echo "pre-push: refused: $submodule is pinned at $pin, which no branch of its remote holds."
+        echo "Push that commit to the fork first, or CI's checkout fails (upload-pack: not our ref)."
+      } >&2
+      exit 1
+    fi
+  done
+fi
 targets=(pre-push)
 [ "$docs" = 1 ] && targets+=(pre-push-docs)
 if ! make --no-print-directory "${targets[@]}"; then

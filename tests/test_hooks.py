@@ -254,3 +254,70 @@ def test_real_matching_push_of_another_worktree_s_branch_is_refused(tmp_path):
     assert r.returncode != 0
     assert "refused" in r.stderr and "  a" in r.stderr
     assert _git(bare, "rev-parse", "refs/heads/a").stdout.strip() == before
+
+
+def _with_submodule(tmp_path: Path) -> tuple[Path, Path, str]:
+    """A superproject with third_party/gplugins as a submodule of a bare "fork" whose main holds
+    one commit. Returns the superproject, the submodule's checkout and the commit before the
+    gitlink was added (the remote's old tip of a push)."""
+    fork = tmp_path / "fork.git"
+    _git(tmp_path, "init", "-q", "--bare", "-b", "main", str(fork))
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    _git(seed, "init", "-q", "-b", "main")
+    (seed / "README").write_text("x\n", encoding="utf-8")
+    _git(seed, "add", "README")
+    _git(seed, "commit", "-q", "-m", "seed")
+    _git(seed, "push", "-q", str(fork), "main")
+    repo = _repo(tmp_path)
+    before = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    _git(repo, "-c", "protocol.file.allow=always", "submodule", "add", "-q", str(fork),
+         "third_party/gplugins")  # fmt: skip
+    _git(repo, "commit", "-q", "-m", "submodule")
+    return repo, repo / "third_party" / "gplugins", before
+
+
+def _pin(repo: Path, sub: Path, *, push: bool) -> None:
+    """Commit a new submodule commit (pushed to the fork's main or kept local) and pin it."""
+    _commit(sub, f"f{len(_git(sub, 'log', '--oneline').stdout.splitlines())}")
+    if push:
+        _git(sub, "push", "-q", "origin", "HEAD:main")
+    _git(repo, "add", "third_party/gplugins")
+    _git(repo, "commit", "-q", "-m", "pin")
+
+
+def test_hook_passes_a_pin_on_the_fork(tmp_path):
+    repo, sub, before = _with_submodule(tmp_path)
+    _pin(repo, sub, push=True)
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 0, r.stderr
+
+
+def test_hook_refuses_a_pin_the_fork_does_not_hold(tmp_path):
+    """Issue #64: a gitlink to a commit only in the local submodule fails CI's checkout."""
+    repo, sub, before = _with_submodule(tmp_path)
+    _pin(repo, sub, push=False)
+    pin = _git(sub, "rev-parse", "HEAD").stdout.strip()
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 1
+    assert "refused" in r.stderr and pin in r.stderr and "no branch of its remote" in r.stderr
+    assert not (tmp_path / "docs-ran").exists()  # refused before make ran
+
+
+def test_hook_refuses_an_unknown_pin(tmp_path):
+    """A gitlink to a commit that is not even in the local submodule is refused too."""
+    repo, _sub, before = _with_submodule(tmp_path)
+    _git(repo, "update-index", "--cacheinfo", f"160000,{'1' * 40},third_party/gplugins")
+    _git(repo, "commit", "-q", "-m", "bad pin")
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 1 and "1" * 40 in r.stderr
+
+
+def test_hook_ignores_an_unchanged_pin(tmp_path):
+    """A push that leaves the gitlink as it was does not fetch or check it: a pin kept local in
+    an earlier commit is not this push's change."""
+    repo, sub, _ = _with_submodule(tmp_path)
+    _pin(repo, sub, push=False)
+    before = _commit(repo, "src/m.py")
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 0, r.stderr
