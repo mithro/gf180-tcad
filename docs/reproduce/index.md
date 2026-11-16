@@ -959,8 +959,8 @@ with one exception. After the calibration, the selected 1D meshes gained fields 
 That commit only added lines, so the mesh the calibration read is unchanged.
 
 **The 2D poly length bias ([issue #189](https://github.com/mithro/gf180-tcad/issues/189)).**
-The change adds the tunable `poly_bias_nm` to both process files at its start, 0, and lets
-{py:func}`gf180tcad.tcad.stack.build` lengthen the gate by it. It also rewords the `dv_fb_v` note
+The change adds the tunable `poly_bias_nm` to both process files at its start, 0.
+{py:func}`gf180tcad.tcad.stack.build` lengthens the gate by it. It also rewords the `dv_fb_v` note
 ([issue #96](https://github.com/mithro/gf180-tcad/issues/96)). Every entry point hashes the
 process files, so every results folder's hash moved. At δ = 0 the cross-section is the one built before.
 
@@ -984,8 +984,8 @@ No data changed. The evidence:
   {repo}`results/tcad/moscap1d/provenance.json` and {repo}`results/tcad/meshes/stable/provenance.json`.
 - The 1D sandbox tests passed, among them
   {test}`tests/tcad/test_moscap1d.py::test_poly_bias_is_2d_only`: the 1D C–V is the same at 50 nm as at 0.
-- The nfet W10/L0.6 calibrated cell was built by the changed {py:func}`~gf180tcad.tcad.stack.build`
-  and solved at u = −5 V and +5 V ({repo}`experiments/edge-sensitivity`, variant `base`). Its node
+- The changed {py:func}`~gf180tcad.tcad.stack.build` built the nfet W10/L0.6 calibrated cell.
+  It was solved at u = −5 V and +5 V ({repo}`experiments/edge-sensitivity`, variant `base`). Its node
   count and its Cgg per unit width equal those of the edge-sensitivity record bit for bit
   ({repo}`results/edge-sensitivity/nfet_05v0-w10p0_l0p60.json`).
 - The other folders were not rerun. Their writers' hashes moved only through the process files
