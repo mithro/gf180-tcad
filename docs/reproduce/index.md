@@ -1148,7 +1148,8 @@ bottom. A dashed box runs only when a step before it failed.
    On success it prints `identical: 26 files of 4 jobs ...`.
 5. {repo}`tools/crosscheck-history-run` rebuilds the latest-stack plugin-history records,
    and `python -m gf180tcad.manifest verify-files` compares them with the manifest. These
-   steps run even when the manifest check of step 4 failed.
+   steps run even when the manifest check of step 4 failed. Both records first passed in
+   [run 43830781115](https://github.com/mithro/gf180-tcad/actions/runs/43830781115).
 6. On failure, the artefact `crosscheck-tcad-differences` holds the generated and committed copy
    of each differing file, their `diff -u`, the logs and the scratch directory of any failed job.
 

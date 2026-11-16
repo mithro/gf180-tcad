@@ -333,7 +333,8 @@ records. Every record is listed in the {term}`manifest`.
 rebuilds each one with {repo}`tools/crosscheck-history-run`, in the {term}`stable TCAD image`. Then
 `python -m gf180tcad.manifest verify-files` ({py:func}`gf180tcad.manifest.verify_files`) requires
 each file to equal its {term}`manifest` entry
-([issue #181](https://github.com/mithro/gf180-tcad/issues/181)).
+([issue #181](https://github.com/mithro/gf180-tcad/issues/181)). Both records first passed in
+[run 43830781115](https://github.com/mithro/gf180-tcad/actions/runs/43830781115), on an AMD EPYC 9V45.
 
 The 2023-stack records are not part of that check. The 2023 stack has {{ numpy }} 1.26 with its
 own {term}`SIMD dispatch` and no guarantee of the same bytes on another computer.
