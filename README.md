@@ -59,7 +59,7 @@ The 1D MOS capacitor is calibrated against the SPICE
 [`results/tcad/calibration`](results/tcad/calibration),
 [`results/tcad/validation`](results/tcad/validation),
 [C–V calibration page](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html)):
-three tunables, 3 of the 8-parameter budget. A 2D poly length bias is the fourth. In 1D the nfet agrees with SPICE at every geometry,
+three tunables, 3 of the 8-parameter budget. A 2D poly length bias is the fourth. Every committed 2D cell has it at 0, the poly as drawn. In 1D the nfet agrees with SPICE at every geometry,
 fitted and held out. Figure 2 shows both devices, 1D and 2D, at the minimum gate length.
 
 The pfet is published as a disagreement. The SPICE pfet's
