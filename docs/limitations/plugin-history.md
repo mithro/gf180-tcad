@@ -328,12 +328,15 @@ sandbox (`pytest -m sandbox`, {{ pytest }}) and compare it with the committed on
 {test}`tests/test_plugin_history.py::test_latest_reproduces` does the same for the latest-stack
 records. Every record is listed in the {term}`manifest`.
 
-**No record is part of the check on another computer (a {{ GitHub_hosted_runner }})**
-({ref}`cross-host-determinism`). The 2023 stack has {{ numpy }} 1.26 with its own
-{term}`SIMD dispatch` and no guarantee of the same bytes on another computer. The latest-stack
-records use the {term}`stable TCAD image`, but the TCAD cross-check, {repo}`tools/crosscheck-tcad-run`,
-runs only the {term}`jobs <job>` of {repo}`results/tcad`
+**The latest-stack records are checked on another computer (a {{ GitHub_hosted_runner }})**
+({ref}`cross-host-determinism`). The `crosscheck-tcad` job of {repo}`.github/workflows/crosscheck.yml`
+rebuilds each one with {repo}`tools/crosscheck-history-run`, in the {term}`stable TCAD image`. Then
+`python -m gf180tcad.manifest verify-files` ({py:func}`gf180tcad.manifest.verify_files`) requires
+each file to equal its {term}`manifest` entry
 ([issue #181](https://github.com/mithro/gf180-tcad/issues/181)).
+
+The 2023-stack records are not part of that check. The 2023 stack has {{ numpy }} 1.26 with its
+own {term}`SIMD dispatch` and no guarantee of the same bytes on another computer.
 
 (plugin-history-latest)=
 

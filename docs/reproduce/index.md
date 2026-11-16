@@ -1096,6 +1096,11 @@ GitHub-hosted runner and requires every file to be byte-identical to the manifes
 - `meshes/stable/nfet_05v0/calibrated` and `meshes/stable/pfet_05v0/calibrated`: the reduced
   mesh artefacts, cut again from full meshes pulled from the {ref}`output cache <output-cache>`.
 
+It then rebuilds the two latest-stack plugin-history records,
+{repo}`results/plugin-history/latest.json` and {repo}`results/plugin-history/latest-mesh0p5.json`
+({ref}`plugin-history-latest`), with {repo}`tools/crosscheck-history-run`. The command
+`python -m gf180tcad.manifest verify-files` requires each to equal its manifest entry.
+
 Its steps are drawn in {numref}`crosscheck-tcad-steps`:
 
 ```{figure} /_generated/reproduce/crosscheck-tcad-steps-light.svg
