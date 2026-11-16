@@ -12,7 +12,7 @@
 - **The sensitivity study** (`experiments/edge-sensitivity/`, nfet W10/L0.6):
   - Contact plugs change nothing beyond re-meshing (−0.012 fF/µm).
   - A poly longer by δ at each end adds Cox·2δ on both plateaus, linear in δ (0.121 fF/µm for 30 nm).
-  - Extensions (LDD) of any doping under the longer poly add the same on both plateaus. A light extension inverts at −5 V, because the adjacent p-body supplies holes. A heavy one barely depletes.
+  - Extensions (LDD) of 1e18 to 2e19 cm⁻³ under a poly 65 nm longer, with a 100 nm spacer, add 0.274–0.285 fF/µm at −5 V and 0.256 at +5 V: more at −5 V, never more at +5 V. The mechanism (a light extension inverting at −5 V, a heavy one hardly depleting) is a reading of #189's comments, not on the page.
   - So the card's bias-dependent overlap (CGSL with CKAPPA) cannot be matched on both plateaus by any structure tried. The least-squares δ makes Cox·2δ the mean of the two gaps.
 - **Budget.** The design spec (§5.2) allows 8 calibrated parameters per device type. A structural feature that no public source documents counts against it, and a residual that cannot otherwise be removed must justify it. The study is that justification. δ makes 4 of 8.
 
@@ -26,7 +26,7 @@ The Phase 2 Global Constraints apply unchanged (`docs/superpowers/plans/2026-10-
 - [x] A results record, `results/edge-sensitivity/<device>-<gid>.json` (outside `results/tcad/`, so the TCAD provenance checks do not cover it; the record pins its own inputs). It holds every variant's Cgg per unit width at ±5 V, the image, the plugin commit, the variant's parameters and its node count. A writer, `experiments/edge-sensitivity/record.py`, builds it from the run directories.
 - [x] A sandbox test (marked `sandbox`, long) reruns the `base` and `bias30` variants of the nfet and compares them with the record. The base must also equal the committed cell's `cv.csv`.
 - [x] A host test computes δ by least squares from the record and `comparison_figures.edge_split`: `2·δ·slope = mean of the two plateau gaps`, where `slope` is the measured Cgg gain per nm of δ. Pin it.
-- [x] Docs: a section on `docs/limitations/moscap2d.md`, "What the 2D edge needs". It has a figure: per variant, the gain at −5 V against the gain at +5 V, with the target point. It explains the LDD finding in plain words and gives the fitted δ per device (nfet 40.2 nm, pfet 61.5 nm; misses ±0.109 and ±0.030 fF/µm). Update the limitations index and the #189 links.
+- [x] Docs: a section on `docs/limitations/moscap2d.md`, "What the 2D edge needs". It has a figure: per variant, the gain at −5 V against the gain at +5 V, with the target point. It gives each variant family's gain at both plateaus and gives the fitted δ per device (nfet 40.2 nm, pfet 61.5 nm; misses −0.109/+0.109 and −0.030/+0.030 fF/µm at −5 V/+5 V). Update the limitations index and the #189 links.
 
 ## Task E2: δ as a tunable, at its start value
 
