@@ -70,15 +70,16 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
 (lit-altermatt)=
 
 - Altermatt, Schenk, Geelhaar and Heiser, "[Reassessment of the intrinsic carrier density in
-  crystalline silicon in view of band-gap narrowing](https://doi.org/10.1063/1.1529297)",
-  J. Appl. Phys. 93(3), 1598-1604, 2003: the {term}`intrinsic carrier density` of silicon at 300 K. The
-  simulations start from its value, 9.65×10⁹ cm⁻³ ({ref}`explained-silicon`).
+  crystalline silicon in view of band-gap narrowing](https://doi.org/10.1063/1.1529297)".
+  J. Appl. Phys. 93(3), 1598-1604, 2003. It gives the {term}`intrinsic carrier density` of
+  silicon at 300 K. The simulations start from its value, 9.65×10⁹ cm⁻³ ({ref}`explained-silicon`).
 
 (lit-misiakos)=
 
 - Misiakos and Tsamakis, "[Accurate measurements of the silicon intrinsic carrier density from
   78 to 340 K](https://doi.org/10.1063/1.354551)", J. Appl. Phys. 74(5), 3293-3297, 1993: the intrinsic
-  carrier density measured from 78 to 340 K, the temperature dependence the simulations use.
+  carrier density measured from 78 to 340 K. The code cites it for the temperature scaling of
+  n_i ({py:attr}`gf180tcad.tcad.process.Constants.n_i_cm3`).
 
 (lit-shockley)=
 

@@ -184,8 +184,8 @@ These pages are grounded in the committed SPICE reference, which exists for ever
   The plan's earlier "≈ 37 mV" is not reproduced; the route through the committed n_i and
   E_g = 1.12 eV gives 27.9 mV (PR #95 review). The page leaves the number out (#88, #98), and
   the process-file note's "about 40 mV" is #96.
-- The page leaves out `constants.n_i300_cm3` (#97) and every fact without a checked source
-  (#99).
+- The page prints `constants.n_i300_cm3` with its two sources on the literature page (#97). It
+  leaves out every fact without a checked source (#99).
 - Glossary entries "gate oxide", "poly-silicon" and "n-well" land in E0 (planned for E1),
   because the first page uses them. The gate, the body, the source and the drain get one plain
   clause on the page instead: as glossary terms the link checkers would match every use of

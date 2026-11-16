@@ -70,8 +70,8 @@ committed constants
 ({repo}`per_area.meta.json <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`).
 That value starts from the room-temperature $n_i$ of
 {ref}`Altermatt and co-authors <lit-altermatt>`, {{ x_n_i300_tcad }}.
-The code ({py:attr}`~gf180tcad.tcad.process.Constants.n_i_cm3`) scales it to {{ x_t_tcad }} with the
-temperature dependence that {ref}`Misiakos and Tsamakis <lit-misiakos>` measured.
+The code ({py:attr}`~gf180tcad.tcad.process.Constants.n_i_cm3`) scales it to {{ x_t_tcad }}, citing
+{ref}`Misiakos and Tsamakis <lit-misiakos>` for the temperature dependence.
 The dopings in the next section are far higher.
 
 (explained-dopants)=
