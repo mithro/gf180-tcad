@@ -329,7 +329,7 @@ sandbox (`pytest -m sandbox`, {{ pytest }}) and compare it with the committed on
 records. Every record is listed in the {term}`manifest`.
 
 **The latest-stack records are checked on another computer (a {{ GitHub_hosted_runner }})**
-({ref}`cross-host-determinism`). The `crosscheck-tcad` job of {repo}`.github/workflows/crosscheck.yml`
+({ref}`cross-host-determinism`). The `crosscheck-tcad` {term}`job` of {repo}`.github/workflows/crosscheck.yml`
 rebuilds each one with {repo}`tools/crosscheck-history-run`, in the {term}`stable TCAD image`. Then
 `python -m gf180tcad.manifest verify-files` ({py:func}`gf180tcad.manifest.verify_files`) requires
 each file to equal its {term}`manifest` entry
