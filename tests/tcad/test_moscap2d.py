@@ -14,6 +14,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from gf180tcad import io, sandbox
@@ -424,6 +425,22 @@ def test_dualgate_required(driver):
         assert math.isclose(b["gate_u"][1], d["gate_u"][1] + 0.04, abs_tol=1e-12)
         assert math.isclose(b["poly_l_um"], g.l_um + 0.08, abs_tol=1e-9)
         assert d["reaches"] and "reaches a source/drain contact" in d["reaches"]
+        # the source/drain doping moves out with each gate end, the cut line stays
+        assert math.isclose(d["bias_um"], 0.04, abs_tol=1e-12) and d["line_kept"]
+        for moved in (d["drain_moved"], d["source_moved"]):
+            biased_sd, drawn_sd = (np.asarray(m) for m in moved)
+            assert np.allclose(biased_sd, drawn_sd, rtol=1e-9, atol=1e-9 * drawn_sd.max())
+            assert drawn_sd.max() > drawn_sd.min() * 10  # the window crosses the junction
+        # the upper bound builds on every calibrated 2D cell, the gate 2 * bound longer
+        cells = sorted(p.name for p in (TREE / device / "calibrated").iterdir())
+        assert sorted(d["at_bound"]) == cells and len(cells) == 5
+        drawn_l = {geometry_id(x): x.l_um for x in SPICE_DEVICES[device].geometries}
+        for gid, poly_l in d["at_bound"].items():
+            assert math.isclose(poly_l, drawn_l[gid] + 2 * d["bound_nm"] * 1e-3, abs_tol=1e-9)
+        # the edge-sensitivity harness's bias<nm> is stack.build's bias but for its l_um
+        h = d["harness"]
+        assert h["same_doping"] and h["same_section"]
+        assert math.isclose(h["l_um"], g.l_um + 2 * d["bias_um"], abs_tol=1e-9)
 
 
 @pytest.mark.sandbox
