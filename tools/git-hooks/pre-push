@@ -46,7 +46,9 @@ while read -r local_ref local_sha _remote_ref remote_sha; do
   # a changed gitlink: the pin the pushed commit holds
   if [ -z "$base" ] || ! git diff --quiet "$base" "$local_sha" -- "$submodule"; then
     pin="$(git ls-tree "$local_sha" -- "$submodule" | awk '$2 == "commit" { print $3 }')"
-    [ -n "$pin" ] && pins+=("$pin")
+    if [ -n "$pin" ]; then
+      pins+=("$pin")
+    fi
   fi
 done
 [ "$pushing" = 1 ] || exit 0
@@ -77,14 +79,22 @@ fi
 # point git back at this one.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY \
   GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH
-# Each changed pin must be on a branch of the submodule's remote: fetch it, then ask.
+# Each changed pin must be on a branch of the submodule's remote: fetch it, then ask. An
+# uninitialised submodule is refused first: git -C would act on this repository instead.
 if [ "${#pins[@]}" -gt 0 ]; then
+  if [ "$(git -C "$submodule" rev-parse --show-toplevel)" != "$(pwd -P)/$submodule" ]; then
+    {
+      echo "pre-push: refused: $submodule is not initialised, so its pin cannot be checked."
+      echo "Run: git submodule update --init"
+    } >&2
+    exit 1
+  fi
   if ! git -C "$submodule" fetch -q origin; then
     echo "pre-push: refused: could not fetch $submodule from its remote to check the pin" >&2
     exit 1
   fi
   for pin in "${pins[@]}"; do
-    if [ -z "$(git -C "$submodule" branch -r --contains "$pin" 2>&1 | grep -v '^error')" ]; then
+    if ! held="$(git -C "$submodule" branch -r --contains "$pin")" || [ -z "$held" ]; then
       {
         echo "pre-push: refused: $submodule is pinned at $pin, which no branch of its remote holds."
         echo "Push that commit to the fork first, or CI's checkout fails (upload-pack: not our ref)."

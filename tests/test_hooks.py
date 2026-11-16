@@ -321,3 +321,57 @@ def test_hook_ignores_an_unchanged_pin(tmp_path):
     before = _commit(repo, "src/m.py")
     r = _hook(repo, _push_line(repo, before))
     assert r.returncode == 0, r.stderr
+
+
+def test_hook_checks_the_pin_not_the_submodule_head(tmp_path):
+    """The pushed commit's gitlink is checked, even when the submodule's checkout has moved to a
+    commit the fork holds."""
+    repo, sub, before = _with_submodule(tmp_path)
+    _pin(repo, sub, push=False)
+    pin = _git(sub, "rev-parse", "HEAD").stdout.strip()
+    _git(sub, "checkout", "-q", "--detach", "origin/main")
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 1 and pin in r.stderr
+
+
+def test_hook_refuses_a_pin_only_a_tag_holds(tmp_path):
+    repo, sub, before = _with_submodule(tmp_path)
+    _pin(repo, sub, push=False)
+    _git(sub, "push", "-q", "origin", "HEAD:refs/tags/t")
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 1 and "no branch of its remote" in r.stderr
+
+
+def test_hook_refuses_when_the_fetch_fails(tmp_path):
+    repo, sub, before = _with_submodule(tmp_path)
+    _pin(repo, sub, push=True)
+    _git(sub, "remote", "set-url", "origin", str(tmp_path / "gone.git"))
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 1 and "could not fetch" in r.stderr
+
+
+def test_hook_refuses_an_uninitialised_submodule(tmp_path):
+    """git -C on an empty submodule directory acts on the superproject; the hook says so instead
+    of claiming the fork lacks the pin."""
+    repo, sub, before = _with_submodule(tmp_path)
+    _pin(repo, sub, push=True)
+    _git(repo, "submodule", "deinit", "-q", "-f", "third_party/gplugins")
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 1 and "not initialised" in r.stderr
+
+
+def test_hook_checks_a_new_branch_s_pin(tmp_path):
+    """A new branch (remote sha zero, no origin/main to compare with) has its pin checked."""
+    repo, sub, _ = _with_submodule(tmp_path)
+    _pin(repo, sub, push=False)
+    r = _hook(repo, _push_line(repo))
+    assert r.returncode == 1 and "no branch of its remote" in r.stderr
+
+
+def test_hook_checks_a_pin_changed_earlier_in_the_push(tmp_path):
+    """The pin changed in the first of several pushed commits is checked."""
+    repo, sub, before = _with_submodule(tmp_path)
+    _pin(repo, sub, push=False)
+    _commit(repo, "src/m.py")
+    r = _hook(repo, _push_line(repo, before))
+    assert r.returncode == 1 and "no branch of its remote" in r.stderr
