@@ -97,6 +97,8 @@ No simulation reads the file. Each value has a unit and a source in the
 implies with the band gap the drawing uses. A committed render manifest reads every `display`
 entry from this file and no other, and never reads the oxide gap
 ({py:meth}`gf180tcad.render.manifest.Manifest.display_problems`).
+Every number the public sources give for the six values, and which one the file takes, is on
+{doc}`display-values`.
 
 ```{figure} /_generated/reproduce/render-band-offsets-light.svg
 :name: render-band-offsets
