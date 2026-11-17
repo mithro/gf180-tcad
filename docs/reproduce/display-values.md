@@ -3,7 +3,7 @@
 # Display values and their sources
 
 The file {repo}`data/render/display.toml` holds six display-only values. A render band diagram
-draws three of them: silicon's band gap and the two Si/SiO₂ band offsets
+draws three of them: silicon's {term}`band gap` and the two Si/SiO₂ band offsets
 ({numref}`Figure %s of The render manifest <render-band-offsets>`). The oxide's band gap is cited
 beside them, and N_c and N_v size the error of the midgap approximation
 ({py:func}`gf180tcad.derive.midgap_offset`). No simulation reads them.
@@ -38,7 +38,7 @@ where
 - $N$ is the effective density of states of the band (the tables give it per cm³), in m⁻³;
 - $\pi$ is the ratio of a circle's circumference to its diameter, dimensionless;
 - $m^*$ is the density-of-states effective mass (quoted in multiples of $m_0$, the mass of a free
-  electron), in kg;
+  {term}`electron`), in kg;
 - $k_B$ is the Boltzmann constant, in J/K;
 - $T$ is the temperature, in K;
 - $h$ is the Planck constant, in J·s.
@@ -49,7 +49,7 @@ the source prints. The test
 {test}`tests/test_display_sources.py::test_each_density_of_states_is_the_formula_at_its_mass`
 checks every row.
 
-For {term}`electrons <electron>` the masses span 1.08 m₀ (Colorado sheet) to 1.18 m₀ (Ioffe), with
+For electrons the masses span 1.08 m₀ (Colorado sheet) to 1.18 m₀ (Ioffe), with
 1.09 m₀ from Wikipedia's table. For {term}`holes <hole>` Ioffe and the Colorado sheet give
 0.81 m₀ and Wikipedia's table 1.15 m₀, all at 300 K. Wikipedia's table gives the hole mass as
 0.59 m₀ at 4 K. It states that this mass changes by a factor of two in silicon between absolute
@@ -89,7 +89,7 @@ source gives, from {repo}`data/render/display-sources.toml`.
 
 ## Silicon's band gap
 
-The Ioffe archive gives the {term}`band gap` of silicon as a function of temperature,
+The Ioffe archive gives the band gap of silicon as a function of temperature,
 {math:numref}`eq-display-gap` ({ref}`Ioffe archive <lit-ioffe>`).
 
 $$
