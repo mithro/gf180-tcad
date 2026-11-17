@@ -15,7 +15,7 @@ note = "display only: not an input to any simulation"
 [names]
 lit-ioffe = "Ioffe archive"
 lit-colorado-constants = "Colorado sheet"
-lit-wikipedia-effective-mass = "Green's masses"
+lit-wikipedia-effective-mass = "Wikipedia masses"
 lit-wikipedia-band-gap = "Wikipedia"
 lit-alkauskas = "Alkauskas et al."
 lit-shaltaf = "Shaltaf et al."

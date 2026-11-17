@@ -2,14 +2,18 @@
 
 # Display values and their sources
 
-The six values of {repo}`data/render/display.toml` draw the render band diagrams
-({numref}`Figure %s of The render manifest <render-band-offsets>`). No simulation reads them. Public sources give different numbers
-for each value. This page shows every number the sources give, the one the file takes, and what
+The file {repo}`data/render/display.toml` holds six display-only values. A render band diagram
+draws three of them: silicon's band gap and the two Si/SiO₂ band offsets
+({numref}`Figure %s of The render manifest <render-band-offsets>`). The oxide's band gap is cited
+beside them, and N_c and N_v size the error of the midgap approximation
+({py:func}`gf180tcad.derive.midgap_offset`). No simulation reads them.
+
+Public sources give different numbers for each value. This page shows every number the sources give, the one the file takes, and what
 the sources show about why the numbers differ.
 
 Each section has one table per value, one row per source. Basis is "listed" when the source
 prints the number, and "computed" when it is this repo's arithmetic from the source's mass.
-"Used" marks the row the display file takes.
+Used is "yes" for the row the display file takes.
 
 The file {repo}`data/render/display-sources.toml` lists the numbers, and
 {py:mod}`gf180tcad.display_sources` reads it. The test
@@ -21,7 +25,8 @@ holds the display file to the rows marked used.
 ## Densities of states and the effective mass
 
 The effective density of states of a band follows from its density-of-states effective mass.
-{math:numref}`eq-display-dos` gives it
+{math:numref}`eq-display-dos` gives it. The Ioffe archive gives the same formula with its
+constants evaluated, 4.82×10¹⁵ cm⁻³ K^-3/2 per free-electron mass
 ({ref}`Ioffe archive <lit-ioffe>`).
 
 $$
@@ -32,7 +37,8 @@ where
 
 - $N$ is the effective density of states of the band (the tables give it per cm³), in m⁻³;
 - $\pi$ is the ratio of a circle's circumference to its diameter, dimensionless;
-- $m^*$ is the density-of-states effective mass (quoted in free-electron masses $m_0$), in kg;
+- $m^*$ is the density-of-states effective mass (quoted in multiples of $m_0$, the mass of a free
+  electron), in kg;
 - $k_B$ is the Boltzmann constant, in J/K;
 - $T$ is the temperature, in K;
 - $h$ is the Planck constant, in J·s.
@@ -43,12 +49,12 @@ the source prints. The test
 {test}`tests/test_display_sources.py::test_each_density_of_states_is_the_formula_at_its_mass`
 checks every row.
 
-For {term}`electrons <electron>` the masses are close: 1.18 m₀ from Ioffe, 1.08 m₀ from the Colorado sheet and
-1.09 m₀ from Green. For {term}`holes <hole>` they are not: Ioffe and the Colorado sheet give 0.81 m₀, Green
-1.15 m₀. Wikipedia gives Green's hole mass as 0.59 m₀ at 4 K and 1.15 m₀ at 300 K. It states
-that this mass changes by a factor of two in silicon between absolute zero and room temperature
-({ref}`Wikipedia <lit-wikipedia-effective-mass>`). The file takes Green's 300 K masses, the
-temperature of the display values.
+For {term}`electrons <electron>` the masses span 1.08 m₀ (Colorado sheet) to 1.18 m₀ (Ioffe), with
+1.09 m₀ from Wikipedia's table. For {term}`holes <hole>` Ioffe and the Colorado sheet give
+0.81 m₀ and Wikipedia's table 1.15 m₀, all at 300 K. Wikipedia's table gives the hole mass as
+0.59 m₀ at 4 K. It states that this mass changes by a factor of two in silicon between absolute
+zero and room temperature ({ref}`Wikipedia <lit-wikipedia-effective-mass>`). The file takes
+Wikipedia's 300 K masses, which its table cites to Green (1990) among others.
 
 N_c, with m* the electron mass each number goes with:
 

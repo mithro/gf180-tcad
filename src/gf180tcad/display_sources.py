@@ -55,7 +55,8 @@ def density_of_states_cm3(mass_m0: float, temperature_k: float) -> float:
     the density-of-states mass ``mass_m0`` (in free-electron masses) at ``temperature_k`` (K).
 
     Reference: Ioffe archive (lit-ioffe), silicon, "Effective density of states in the conduction
-    band", N_c = 4.82·10¹⁵·M·(m_c/m_0)^{3/2}·T^{3/2} cm⁻³, the same formula.
+    band", N_c = 4.82·10¹⁵·M·(m_c/m_0)^{3/2}·T^{3/2} cm⁻³: this formula with its constants
+    evaluated (2 (2π m_0 k_B / h²)^{3/2} = 4.83·10¹⁵ cm⁻³ K^{-3/2}).
     """
     m = mass_m0 * m_e
     return 2 * (2 * math.pi * m * k * temperature_k / h**2) ** 1.5 / CM3_PER_M3
@@ -82,10 +83,6 @@ def number(value: float, digits: int | None = None) -> str:
     return f"{mantissa}×10{str(int(exponent)).translate(_SUPERSCRIPT)}"
 
 
-def _basis(r: dict) -> str:
-    return r["basis"] + (", used" if r["used"] else "")
-
-
 def label(d: dict, quantity: str) -> str:
     """A quantity's name with its unit, as the figures print it."""
     return f"{d['quantities'][quantity]} ({d['units'][quantity]})"
@@ -97,27 +94,27 @@ def table_name(quantity: str) -> str:
 
 
 def table_markdown(quantity: str, path: Path = SOURCES) -> str:
-    """The table of one quantity: a row per source with its value and its basis ("listed" or
-    "computed", and "used" for the row the display file takes). A quantity whose sources state
+    """The table of one quantity: a row per source with its value, its basis ("listed" or
+    "computed") and whether the display file takes it ("yes" or "no"). A quantity whose sources state
     a temperature has a T column ("none" for a source that states none); one whose numbers go
     with a mass has an m* column. The table holds no prose: the page section that includes it
     names the quantity and its figure."""
     d = load(path)
-    rows = [r for r in d["row"] if r["quantity"] == quantity]
-    if not rows:
+    picked = [r for r in d["row"] if r["quantity"] == quantity]
+    if not picked:
         raise ValueError(f"{quantity}: no row")
-    has_t = any("temperature_k" in r for r in rows)
-    has_m = any("mass_m0" in r for r in rows)
+    has_t = any("temperature_k" in r for r in picked)
+    has_m = any("mass_m0" in r for r in picked)
     head = ["Source", f"Value ({d['units'][quantity]})"]
-    head += ["T (K)"] * has_t + ["m* (m₀)"] * has_m + ["Basis"]
+    head += ["T (K)"] * has_t + ["m* (m₀)"] * has_m + ["Basis", "Used"]
     out = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
-    for r in rows:
+    for r in picked:
         cells = [f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`",
                  number(r["value"], r.get("digits"))]  # fmt: skip
         if has_t:
             cells.append(f"{r['temperature_k']:g}" if "temperature_k" in r else "none")
         if has_m:
             cells.append(f"{r['mass_m0']:g}")
-        cells.append(_basis(r))
+        cells += [r["basis"], "yes" if r["used"] else "no"]
         out.append("| " + " | ".join(cells) + " |")
     return "\n".join(out) + "\n"

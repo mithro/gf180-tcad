@@ -6,7 +6,7 @@
 # quantity. Each value's source cites an anchor of docs/limitations/literature.md.
 
 note = "display only: not an input to any simulation"
-mismatch = "The simulation runs at T = 298.15 K and scales n_i by exp(-6726 K (1/T - 1/300 K)) (gf180tcad.tcad.process.Constants.n_i_cm3), which implies E_g = 1.16 eV (2 x 6726 K x k_B/q). The drawing uses the 300 K value of the Ioffe archive and Sze and Ng, E_g = 1.12 eV. The band gap in the image is a display value, not the simulation's."
+mismatch = "The simulation runs at T = 298.15 K and scales n_i by exp(-6726 K (1/T - 1/300 K)) (gf180tcad.tcad.process.Constants.n_i_cm3), which implies E_g = 1.16 eV (2 x 6726 K x k_B/q). The drawing uses the 300 K value of the Ioffe archive, E_g = 1.12 eV. The band gap in the image is a display value, not the simulation's."
 drawing = "A band diagram is drawn from three values: silicon.band_gap_ev and the two sio2 offsets, conduction_offset_ev above silicon's conduction band edge and valence_offset_ev below its valence band edge. The oxide gap it shows is their sum, 8.92 eV. sio2.band_gap_ev, 8.9 eV, is the separately cited oxide gap; the two differ by 0.02 eV, less than half the 0.1 eV step of the cited values, and the drawing never uses sio2.band_gap_ev."
 
 [silicon]
@@ -21,8 +21,8 @@ nv_cm3 = "cm^-3"
 
 [silicon.sources]
 band_gap_ev = "Ioffe NSM archive (lit-ioffe), Si, Band structure and carrier concentration, Basic Parameters: energy gap of Si at 300 K"
-nc_cm3 = "our arithmetic, 2 (2 pi m k_B T / h^2)^(3/2) at T = 300 K, from the density-of-states effective mass of electrons in Si at 300 K, m = 1.09 m_0 (lit-wikipedia-effective-mass), which cites Green 1990"
-nv_cm3 = "our arithmetic, 2 (2 pi m k_B T / h^2)^(3/2) at T = 300 K, from the density-of-states effective mass of holes in Si at 300 K, m = 1.15 m_0 (lit-wikipedia-effective-mass), which cites Green 1990"
+nc_cm3 = "our arithmetic, 2 (2 pi m k_B T / h^2)^(3/2) at T = 300 K, from the density-of-states effective mass of electrons in Si at 300 K, m = 1.09 m_0 (lit-wikipedia-effective-mass), whose table cites Green 1990 among four references"
+nv_cm3 = "our arithmetic, 2 (2 pi m k_B T / h^2)^(3/2) at T = 300 K, from the density-of-states effective mass of holes in Si at 300 K, m = 1.15 m_0 (lit-wikipedia-effective-mass), whose table cites Green 1990 among four references"
 
 [sio2]
 band_gap_ev = 8.9

@@ -71,6 +71,8 @@ def test_density_of_states_hand_value():
     value scales as m^{3/2}."""
     assert ds.density_of_states_cm3(1.0, 300.0) == pytest.approx(2.5094e19, rel=1e-4)
     assert ds.density_of_states_cm3(1.21, 300.0) == pytest.approx(1.331 * 2.5094e19, rel=1e-4)
+    # Ioffe's numeric form, 4.82e15 (m/m_0)^{3/2} T^{3/2} per valley, is this formula evaluated.
+    assert ds.density_of_states_cm3(1.0, 300.0) / 300.0**1.5 == pytest.approx(4.83e15, rel=1e-3)
 
 
 def test_each_density_of_states_is_the_formula_at_its_mass():
@@ -111,7 +113,7 @@ def test_each_quantity_has_a_table_in_its_section(quantity):
     lines = ds.table_markdown(quantity).splitlines()
     extra = {"silicon.band_gap_ev": ["T (K)"], "silicon.nc_cm3": ["m* (m₀)"],
              "silicon.nv_cm3": ["m* (m₀)"]}.get(quantity, [])  # fmt: skip
-    head = ["Source", f"Value ({d['units'][quantity]})", *extra, "Basis"]
+    head = ["Source", f"Value ({d['units'][quantity]})", *extra, "Basis", "Used"]
     assert lines[0] == "| " + " | ".join(head) + " |"
     assert len(lines) == 2 + len(rows)
     for line, r in zip(lines[2:], rows, strict=True):
@@ -123,7 +125,8 @@ def test_each_quantity_has_a_table_in_its_section(quantity):
             assert cells["T (K)"] == want
         if "m* (m₀)" in cells:
             assert cells["m* (m₀)"] == f"{r['mass_m0']:g}"
-        assert cells["Basis"] == r["basis"] + (", used" if r["used"] else "")
+        assert cells["Basis"] == r["basis"]
+        assert cells["Used"] == ("yes" if r["used"] else "no")
     page = PAGE.read_text("utf-8")
     include = f"```{{include}} /_generated/reproduce/{ds.table_name(quantity)}\n```"
     assert page.count(include) == 1
