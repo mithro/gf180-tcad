@@ -959,7 +959,8 @@ with one exception. After the calibration, the selected 1D meshes gained fields 
 That commit only added lines, so the mesh the calibration read is unchanged.
 
 **The 2D poly length bias ([issue #189](https://github.com/mithro/gf180-tcad/issues/189)).**
-The change adds `poly_bias_nm` to both process files, at 0, with its bounds and their note.
+The change adds `poly_bias_nm` to both process files, at 0. The files give its bounds and a
+note on them.
 {py:func}`gf180tcad.tcad.stack.build` lengthens the gate by it. It also rewords the `dv_fb_v` note
 ([issue #96](https://github.com/mithro/gf180-tcad/issues/96)). Every entry point hashes the
 process files, so every results folder's hash moved. At δ = 0 the cross-section is the one built before.

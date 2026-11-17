@@ -241,7 +241,7 @@ def poly_bias_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             ((x_lo, end, gate.y0, gate.y1), pal["muted"], "drawn gate"),
             ((x_lo, end, oxide.y0, oxide.y1), pal["text"], "drawn oxide"),
             ((end, new_end, gate.y0, gate.y1), pal["highlight"], "bias gate"),
-            ((end, new_end, oxide.y0, oxide.y1), pal["highlight"], "bias oxide"),
+            ((end, new_end, oxide.y0, oxide.y1), pal["highlight_oxide"], "bias oxide"),
             ((new_end, x_hi, drain.y0, drain.y1), pal[_CARRIER[c.name]], "drain"),
         ):
             x0, x1, y0, y1 = box
