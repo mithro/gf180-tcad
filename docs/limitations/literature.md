@@ -53,8 +53,6 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
   {doi}`10.1002/0470068329`: ch. 2, the p-n junction ({term}`built-in potential`, the
   {term}`depletion approximation`, the {term}`ideality factor`); ch. 1, carrier statistics
   ({term}`Boltzmann statistics`); ch. 3, metal-semiconductor and {term}`ohmic contacts <ohmic contact>`.
-- Its ch. 4 and appendices G and H: the Si and SiO₂ band values the render band diagrams draw
-  ({repo}`data/render/display.toml`).
 - Its ch. 1, "Physics and Properties of Semiconductors—A Review": the explainer pages'
   carriers, {term}`dopants <dopant>`, the mass-action law and Fermi–Dirac statistics ({ref}`explained-silicon`).
 - Its ch. 4, the ideal MIS capacitor: {term}`accumulation`, {term}`depletion`, {term}`inversion`,
@@ -66,6 +64,24 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
   [band structure and carrier concentration](https://web.archive.org/web/20261009101141/https://www.ioffe.ru/SVA/NSM/Semicond/Si/bandstr.html)
   (archived copy of 2026-10-09). It gives the {term}`band gap` of silicon at 300 K that the
   explainer's band diagrams draw ({ref}`explained-bands`).
+
+(lit-wikipedia-effective-mass)=
+
+- Wikipedia, "[Effective mass (solid-state physics)](https://en.wikipedia.org/w/index.php?title=Effective_mass_%28solid-state_physics%29&oldid=1383927910)",
+  table "Density of states effective mass in various semiconductors". It
+  gives silicon's masses at 300 K, 1.09 for electrons and 1.15 for holes, in units of the free
+  electron mass. It cites Green, "[Intrinsic concentration, effective densities of states, and
+  effective mass in silicon](https://doi.org/10.1063/1.345414)", J. Appl. Phys. 67(6),
+  2944-2954, 1990. The two masses set the band-edge densities of states N_c and N_v in
+  {repo}`data/render/display.toml`.
+
+(lit-alkauskas)=
+
+- Alkauskas, Broqvist, Devynck and Pasquarello, "[Band offsets at semiconductor-oxide interfaces
+  from hybrid density functional calculations](https://arxiv.org/abs/0809.3119)", Phys. Rev.
+  Lett. 101, 106802, 2008. Its tables give the measured band gap of SiO₂, 8.9 eV. They give the
+  measured Si/SiO₂ band offsets too: 4.4 eV for the valence band, 3.4 eV for the conduction band.
+  The render band diagrams draw them ({repo}`data/render/display.toml`).
 
 (lit-altermatt)=
 
