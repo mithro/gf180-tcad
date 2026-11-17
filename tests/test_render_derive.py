@@ -83,9 +83,9 @@ def test_oxide_band_edges_follow_psi_per_node():
 
 def test_gate_fermi_level_and_midgap_offset():
     assert derive.gate_fermi_level(1.5) == -1.5
-    # (kT/2) ln(Nv/Nc) with V_t = 0.025852 V, Nc = 2.8e19, Nv = 2.65e19:
-    # 0.012926 * ln(0.94643) = 0.012926 * -0.0550588 = -7.1169e-4 eV.
-    assert derive.midgap_offset(0.025852, 2.8e19, 2.65e19) == pytest.approx(-7.1169e-4, rel=1e-4)
+    # (kT/2) ln(Nv/Nc) with V_t = 0.025852 V, Nc = 2.86e19, Nv = 3.09e19:
+    # 0.012926 * ln(1.080420) = 0.012926 * 0.0773495 = 9.99819e-4 eV.
+    assert derive.midgap_offset(0.025852, 2.86e19, 3.09e19) == pytest.approx(9.99819e-4, rel=1e-4)
 
 
 def test_depletion_edge_on_step_profile():
