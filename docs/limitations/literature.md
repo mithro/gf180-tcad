@@ -77,9 +77,9 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
 (lit-wikipedia-band-gap)=
 
 - Wikipedia, "[Band gap](https://en.wikipedia.org/w/index.php?title=Band_gap&oldid=1380816580)",
-  the table of band gaps at 302 K. It gives 1.14 eV for silicon, citing Streetman and Banerjee,
-  *Solid State Electronic Devices*, 5th ed., p. 524, and Pankove, *Optical Processes in
-  Semiconductors*, 1971. It gives 9 eV for SiO₂, citing Vella et al.,
+  the table of band gaps at 302 K. It gives 1.14 eV for silicon. For that value it cites Streetman
+  and Banerjee, *Solid State Electronic Devices*, 5th ed., p. 524. It also cites Pankove,
+  *Optical Processes in Semiconductors*, 1971. It gives 9 eV for SiO₂, citing Vella et al.,
   "[Unraveling exciton dynamics in amorphous silicon dioxide](https://doi.org/10.1103/PhysRevB.83.174201)",
   Phys. Rev. B 83, 174201, 2011 ({ref}`display-values`).
 
@@ -88,8 +88,8 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
 - Wikipedia, "[Effective mass (solid-state physics)](https://en.wikipedia.org/w/index.php?title=Effective_mass_%28solid-state_physics%29&oldid=1383927910)",
   table "Density of states effective mass in various semiconductors". It
   gives silicon's masses at 300 K, 1.09 for {term}`electrons <electron>` and 1.15 for {term}`holes <hole>`, in units of the free
-  electron mass. The table cites four references, among them Green, "[Intrinsic concentration,
-  effective densities of states, and effective mass in silicon](https://doi.org/10.1063/1.345414)",
+  electron mass. The table cites four references. One of them is Green, "[Intrinsic
+  concentration, effective densities of states, and effective mass in silicon](https://doi.org/10.1063/1.345414)",
   J. Appl. Phys. 67(6), 2944-2954, 1990. The two masses set the band-edge densities of states
   N_c and N_v in {repo}`data/render/display.toml`.
 

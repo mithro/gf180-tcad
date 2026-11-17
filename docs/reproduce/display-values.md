@@ -25,8 +25,8 @@ holds the display file to the rows marked used.
 ## Densities of states and the effective mass
 
 The effective density of states of a band follows from its density-of-states effective mass.
-{math:numref}`eq-display-dos` gives it. The Ioffe archive gives the same formula with its
-constants evaluated, 4.82×10¹⁵ cm⁻³ K^-3/2 per free-electron mass
+{math:numref}`eq-display-dos` gives it. The Ioffe archive gives this formula with its constants
+evaluated. For one valley it reads $4.82 \times 10^{15} \, (m^*/m_0)^{3/2} \, T^{3/2}$ cm⁻³
 ({ref}`Ioffe archive <lit-ioffe>`).
 
 $$
@@ -51,7 +51,9 @@ checks every row.
 
 For electrons the masses span 1.08 m₀ (Colorado sheet) to 1.18 m₀ (Ioffe), with
 1.09 m₀ from Wikipedia's table. For {term}`holes <hole>` Ioffe and the Colorado sheet give
-0.81 m₀ and Wikipedia's table 1.15 m₀, all at 300 K. Wikipedia's table gives the hole mass as
+0.81 m₀, beside their 300 K densities. Wikipedia's table gives 1.15 m₀ at 300 K.
+
+Wikipedia's table gives the hole mass as
 0.59 m₀ at 4 K. It states that this mass changes by a factor of two in silicon between absolute
 zero and room temperature ({ref}`Wikipedia <lit-wikipedia-effective-mass>`). The file takes
 Wikipedia's 300 K masses, which its table cites to Green (1990) among others.
