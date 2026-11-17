@@ -891,7 +891,18 @@ def string_digits(source: str, allowed: set[str]) -> list[tuple[int, str]]:
 # Names that hold digits but are not numbers: the hash, the generator registry's file name,
 # the device names, the render fixture, the regex classes of the module and the display
 # file's keys (sio2, nc_cm3).
-_ALLOWED = {"sha256", "nfet_05v0", "pfet_05v0", "r-test", "2D", "1D", "utf-8", "moscap2d", "sio2", "cm3"}
+_ALLOWED = {
+    "sha256",
+    "nfet_05v0",
+    "pfet_05v0",
+    "r-test",
+    "2D",
+    "1D",
+    "utf-8",
+    "moscap2d",
+    "sio2",
+    "cm3",
+}
 
 
 def test_figure_code_has_no_numeric_literals(monkeypatch):

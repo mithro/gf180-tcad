@@ -27,7 +27,9 @@ def _display_value(d: dict, quantity: str):
 
 
 def test_every_source_is_a_literature_entry_with_a_name():
-    anchors = set(re.findall(r"^\((lit-[a-z0-9-]+)\)=$", LITERATURE.read_text("utf-8"), re.M))
+    anchors = set(
+        re.findall(r"^\((lit-[a-z0-9-]+)\)=$", LITERATURE.read_text("utf-8"), re.MULTILINE)
+    )
     d = ds.load()
     sources = {r["source"] for r in d["row"]} | {d["ioffe_gap"]["source"]}
     assert sources <= anchors, sources - anchors
@@ -114,7 +116,10 @@ def test_table_has_every_row_and_the_page_includes_it():
         assert cells[4] == ("yes" if r["used"] else "no")
     text = "\n".join(body)
     for term in ds.TERMS:
-        assert text.count(f"{{term}}`{term}`") == 1 and text.index(f"{{term}}`{term}`") == text.index(term) - 7
+        assert (
+            text.count(f"{{term}}`{term}`") == 1
+            and text.index(f"{{term}}`{term}`") == text.index(term) - 7
+        )
     page = PAGE.read_text("utf-8")
     assert "```{include} /_generated/reproduce/display-sources.inc.md\n```" in page
 
