@@ -52,6 +52,9 @@ FIGURES = [
     "output-cache-tree",
     "render-exaggeration",
     "render-band-offsets",
+    "display-dos-masses",
+    "display-silicon-gap",
+    "display-oxide-sources",
 ]
 
 _RENDER = textwrap.dedent(
@@ -443,6 +446,101 @@ def check_band_offsets(fig):
     assert ax.get_ylabel() == "energy (eV), silicon's valence band edge at 0"
 
 
+def _sources() -> dict:
+    with (REPO_ROOT / "data" / "render" / "display-sources.toml").open("rb") as f:
+        return tomllib.load(f)
+
+
+def _scatters(ax) -> dict:
+    return {c.get_gid(): c for c in ax.collections}
+
+
+def _source_label(d: dict, r: dict, *parts: str) -> str:
+    return ", ".join([d["names"][r["source"]], *parts, *(["used"] if r["used"] else [])])
+
+
+def check_dos_masses(fig):
+    """The formula N = 2 (2π m k_B T / h²)^{3/2}, recomputed here, over the mass range, and each
+    source's N_c and N_v at its mass, from data/render/display-sources.toml."""
+    from scipy.constants import h, k, m_e
+
+    d = _sources()
+    t = d["dos"]["temperature_k"]
+    (ax,) = fig.axes
+    lines = {ln.get_gid(): ln for ln in ax.get_lines()}
+    assert set(lines) == {"formula"}
+    m = np.linspace(*rf.STYLE["mass_range"], rf.STYLE["curve_points"])
+    want_n = 2 * (2 * np.pi * m * m_e * k * t / h**2) ** 1.5 / 1e6
+    assert np.array_equal(lines["formula"].get_xdata(), m)
+    assert np.allclose(lines["formula"].get_ydata(), want_n, rtol=1e-12, atol=0)
+    bands = {"silicon.nc_cm3": "electrons", "silicon.nv_cm3": "holes"}
+    rows = [r for r in d["row"] if r["quantity"] in bands]
+    assert len(rows) == 6
+    dots = _scatters(ax)
+    assert set(dots) == {f"{r['source']} {r['quantity']}" for r in rows}
+    for r in rows:
+        off = dots[f"{r['source']} {r['quantity']}"].get_offsets()
+        assert np.array_equal(off, [[r["mass_m0"], r["value"]]]), r
+    want_legend = [f"N(m*) at {t:g} K"]
+    want_legend += [_source_label(d, r, bands[r["quantity"]]) for r in rows]
+    assert _legend(fig) == want_legend
+    assert ax.get_xlabel() == "density-of-states mass m* (free-electron masses)"
+    assert ax.get_ylabel() == f"density of states at {t:g} K (cm⁻³)"
+    assert_texts(fig, {})
+    assert not _annotations(fig)
+
+
+def check_silicon_gap(fig):
+    """Ioffe's E_g(T), recomputed here from the file's coefficients, and each source's silicon
+    band gap at the temperature it gives."""
+    d = _sources()
+    g = d["ioffe_gap"]
+    (ax,) = fig.axes
+    lines = {ln.get_gid(): ln for ln in ax.get_lines()}
+    assert set(lines) == {"formula"}
+    t = np.linspace(*rf.STYLE["gap_t_range"], rf.STYLE["curve_points"])
+    want = g["e0_ev"] - g["alpha_ev_per_k"] * t**2 / (t + g["beta_k"])
+    assert np.array_equal(lines["formula"].get_xdata(), t)
+    assert np.allclose(lines["formula"].get_ydata(), want, rtol=0, atol=1e-12)
+    rows = [r for r in d["row"] if r["quantity"] == "silicon.band_gap_ev" and "temperature_k" in r]
+    assert len(rows) == 3
+    dots = _scatters(ax)
+    assert set(dots) == {f"{r['source']} silicon.band_gap_ev" for r in rows}
+    for r in rows:
+        off = dots[f"{r['source']} silicon.band_gap_ev"].get_offsets()
+        assert np.array_equal(off, [[r["temperature_k"], r["value"]]]), r
+    want_legend = [f"{d['names'][g['source']]}, formula", *(_source_label(d, r) for r in rows)]
+    assert _legend(fig) == want_legend
+    assert ax.get_xlabel() == "temperature (K)"
+    assert (
+        ax.get_ylabel()
+        == f"{d['quantities']['silicon.band_gap_ev']} ({d['units']['silicon.band_gap_ev']})"
+    )
+    assert_texts(fig, {})
+    assert not _annotations(fig)
+
+
+def check_oxide_sources(fig):
+    """One panel per oxide quantity, titled with its name; one row per source, its value on x."""
+    d = _sources()
+    quantities = ["sio2.band_gap_ev", "sio2.conduction_offset_ev", "sio2.valence_offset_ev"]
+    assert len(fig.axes) == len(quantities)
+    for ax, q in zip(fig.axes, quantities, strict=True):
+        rows = [r for r in d["row"] if r["quantity"] == q]
+        assert len(rows) >= 2, q
+        assert ax.get_title() == f"{d['quantities'][q]} ({d['units'][q]})"
+        dots = _scatters(ax)
+        assert set(dots) == {f"{r['source']} {q}" for r in rows}
+        for i, r in enumerate(rows):
+            assert np.array_equal(dots[f"{r['source']} {q}"].get_offsets(), [[r["value"], i]]), r
+        assert _ticks(ax.yaxis) == [_source_label(d, r) for r in rows]
+        assert ax.get_xlabel() == ("energy (eV)" if ax is fig.axes[-1] else "")
+        assert ax.get_ylabel() == ""
+    assert not _legend(fig)
+    assert_texts(fig, {})
+    assert not _annotations(fig)
+
+
 def check_forks(fig):
     inputs = json.loads((REPO_ROOT / "docker" / "tcad-dev" / "upstream.json").read_text("utf-8"))
     forks = [e for e in inputs.values() if e.get("repository", "").startswith(GITHUB + "mithro/")]
@@ -538,6 +636,9 @@ CHECKS = {
     "output-cache-tree": check_cache_tree,
     "render-exaggeration": check_exaggeration,
     "render-band-offsets": check_band_offsets,
+    "display-dos-masses": check_dos_masses,
+    "display-silicon-gap": check_silicon_gap,
+    "display-oxide-sources": check_oxide_sources,
 }
 
 
@@ -720,7 +821,15 @@ def test_the_data_figures_have_data_artists():
 
 # --- colours ------------------------------------------------------------------------------------
 
-_PLOTS = ("reference-jobs", "render-exaggeration", "render-band-offsets", "meshwell-square")
+_PLOTS = (
+    "reference-jobs",
+    "render-exaggeration",
+    "render-band-offsets",
+    "meshwell-square",
+    "display-dos-masses",
+    "display-silicon-gap",
+    "display-oxide-sources",
+)
 _DIAGRAMS = [n for n in FIGURES if n not in _PLOTS]
 
 
@@ -783,8 +892,20 @@ def string_digits(source: str, allowed: set[str]) -> list[tuple[int, str]]:
 
 
 # Names that hold digits but are not numbers: the hash, the generator registry's file name,
-# the device names, the render fixture and the regex classes of the module.
-_ALLOWED = {"sha256", "nfet_05v0", "pfet_05v0", "r-test", "2D", "1D", "utf-8", "moscap2d"}
+# the device names, the render fixture, the regex classes of the module and the display
+# file's keys (sio2, nc_cm3).
+_ALLOWED = {
+    "sha256",
+    "nfet_05v0",
+    "pfet_05v0",
+    "r-test",
+    "2D",
+    "1D",
+    "utf-8",
+    "moscap2d",
+    "sio2",
+    "cm3",
+}
 
 
 def test_figure_code_has_no_numeric_literals(monkeypatch):

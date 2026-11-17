@@ -53,8 +53,6 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
   {doi}`10.1002/0470068329`: ch. 2, the p-n junction ({term}`built-in potential`, the
   {term}`depletion approximation`, the {term}`ideality factor`); ch. 1, carrier statistics
   ({term}`Boltzmann statistics`); ch. 3, metal-semiconductor and {term}`ohmic contacts <ohmic contact>`.
-- Its ch. 4 and appendices G and H: the Si and SiO₂ band values the render band diagrams draw
-  ({repo}`data/render/display.toml`).
 - Its ch. 1, "Physics and Properties of Semiconductors—A Review": the explainer pages'
   carriers, {term}`dopants <dopant>`, the mass-action law and Fermi–Dirac statistics ({ref}`explained-silicon`).
 - Its ch. 4, the ideal MIS capacitor: {term}`accumulation`, {term}`depletion`, {term}`inversion`,
@@ -65,7 +63,51 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
 - Ioffe Physico-Technical Institute, NSM archive of semiconductor properties, silicon,
   [band structure and carrier concentration](https://web.archive.org/web/20261009101141/https://www.ioffe.ru/SVA/NSM/Semicond/Si/bandstr.html)
   (archived copy of 2026-10-09). It gives the {term}`band gap` of silicon at 300 K that the
-  explainer's band diagrams draw ({ref}`explained-bands`).
+  explainer's band diagrams draw ({ref}`explained-bands`). It also gives the band gap's
+  temperature dependence and the band-edge densities of states with their masses
+  ({ref}`display-values`).
+
+(lit-colorado-constants)=
+
+- University of Colorado Boulder, Electrical, Computer and Energy Engineering, constants sheet
+  "[Si material parameters](https://www.colorado.edu/ecee/sites/default/files/attached-files/sd_constants_sheet.pdf)".
+  It lists silicon's band gap at 300 K and its band-edge densities of states with their masses
+  ({ref}`display-values`).
+
+(lit-wikipedia-band-gap)=
+
+- Wikipedia, "[Band gap](https://en.wikipedia.org/w/index.php?title=Band_gap&oldid=1380816580)",
+  the table of band gaps at 302 K. It gives 1.14 eV for silicon. For that value it cites Streetman
+  and Banerjee, *Solid State Electronic Devices*, 5th ed., p. 524. It also cites Pankove,
+  *Optical Processes in Semiconductors*, 1971. It gives 9 eV for SiO₂, citing Vella et al.,
+  "[Unraveling exciton dynamics in amorphous silicon dioxide](https://doi.org/10.1103/PhysRevB.83.174201)",
+  Phys. Rev. B 83, 174201, 2011 ({ref}`display-values`).
+
+(lit-wikipedia-effective-mass)=
+
+- Wikipedia, "[Effective mass (solid-state physics)](https://en.wikipedia.org/w/index.php?title=Effective_mass_%28solid-state_physics%29&oldid=1383927910)",
+  table "Density of states effective mass in various semiconductors". It
+  gives silicon's masses at 300 K, 1.09 for {term}`electrons <electron>` and 1.15 for {term}`holes <hole>`, in units of the free
+  electron mass. The table cites four references. One of them is Green, "[Intrinsic
+  concentration, effective densities of states, and effective mass in silicon](https://doi.org/10.1063/1.345414)",
+  J. Appl. Phys. 67(6), 2944-2954, 1990. The two masses set the band-edge densities of states
+  N_c and N_v in {repo}`data/render/display.toml`.
+
+(lit-alkauskas)=
+
+- Alkauskas, Broqvist, Devynck and Pasquarello, "[Band offsets at semiconductor-oxide interfaces
+  from hybrid density functional calculations](https://arxiv.org/abs/0809.3119)", Phys. Rev.
+  Lett. 101, 106802, 2008. Its tables give the measured band gap of SiO₂, 8.9 eV. They give the
+  measured Si/SiO₂ band offsets too: 4.4 eV for the {term}`valence band`, 3.4 eV for the {term}`conduction band`.
+  The render band diagrams draw them ({repo}`data/render/display.toml`).
+
+(lit-shaltaf)=
+
+- Shaltaf, Rignanese, Gonze, Giustino and Pasquarello, "[Band offsets at the Si/SiO₂ interface
+  from many-body perturbation theory](https://arxiv.org/abs/0805.0212)", Phys. Rev. Lett. 100,
+  186401, 2008. Its measured offsets are 4.3 eV for the valence band and 3.1 eV for the
+  conduction band. Its measured gaps are 8.9 eV for SiO₂ and 1.2 eV for silicon
+  ({ref}`display-values`).
 
 (lit-altermatt)=
 
