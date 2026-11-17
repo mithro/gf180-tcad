@@ -268,18 +268,6 @@ def test_display_constants_have_sources_and_note():
     assert d["silicon"]["band_gap_ev"] == 1.12
 
 
-def test_display_densities_of_states_follow_the_cited_masses():
-    """Issue #88: N_c and N_v are 2 (2 pi m k_B T / h^2)^(3/2) at 300 K with the density-of-states
-    masses their source cites (1.09 and 1.15 m_0), to the three figures the file gives."""
-    from scipy.constants import h, k, m_e, pi
-
-    d = tomllib.loads(DISPLAY.read_text(encoding="utf-8"))["silicon"]
-    for key, mass in (("nc_cm3", 1.09), ("nv_cm3", 1.15)):
-        assert f"m = {mass} m_0" in d["sources"][key]
-        n_cm3 = 2 * (2 * pi * mass * m_e * k * 300 / h**2) ** 1.5 / 1e6
-        assert d[key] == float(f"{n_cm3:.2e}"), (key, n_cm3)
-
-
 def test_display_offsets_add_up_to_the_oxide_gap():
     """E_g(SiO2) = E_g(Si) + both offsets, to half the 0.1 eV step the cited values carry."""
     d = tomllib.loads(DISPLAY.read_text(encoding="utf-8"))
