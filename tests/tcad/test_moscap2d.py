@@ -40,6 +40,10 @@ CASES = (
 # The driver runs at most this many cases at once (8 GiB each). The project's host has 31 GiB,
 # and the session and its containers stay under about 24 GiB, of which the session takes 8.
 DRIVER_JOBS = 2
+# The source/drain cases solve on the selected 2D mesh at W = 10 um, as a 2D job does, so they
+# get a 2D job's memory (cli.JOB_MEM_2D) and run one at a time: at 8 GiB the L = 2 um case was
+# killed for memory.
+SD_CASES = ("sd_pfet_05v0_lmin", "sd_pfet_05v0_l2")
 CAL = {d: [g for g in SPICE_DEVICES[d].geometries if g.role == "calibration"] for d in DEVICES}
 
 
@@ -307,23 +311,26 @@ def test_committed_ac_follows_qs():
 # --- in the TCAD image -----------------------------------------------------------------------
 
 
-def _run_case(tmp_path_factory, case: str) -> tuple[str, dict]:
-    """One case of the driver in the sandbox (8 GiB, one CPU) and its JSON."""
+def _run_case(tmp_path_factory, case: str, mem: str = "8g") -> tuple[str, dict]:
+    """One case of the driver in the sandbox (``mem``, one CPU) and its JSON."""
     out = tmp_path_factory.mktemp(case)
     sandbox.run(
         ["python3", "/work/src/tests/tcad/moscap2d_driver.py", case],
-        out_dir=out, image=TCAD_IMAGE, mem="8g", cpus=1,
+        out_dir=out, image=TCAD_IMAGE, mem=mem, cpus=1,
     )  # fmt: skip
     return case, json.loads((out / f"{case}.json").read_bytes())
 
 
 @pytest.fixture(scope="module")
 def driver(tmp_path_factory) -> dict:
-    """Every case but ``dualgate``, :data:`DRIVER_JOBS` at a time."""
-    cases = [c for c in CASES if c != "dualgate"]
+    """Every case but ``dualgate``: :data:`DRIVER_JOBS` at a time, then :data:`SD_CASES` alone."""
+    cases = [c for c in CASES if c != "dualgate" and c not in SD_CASES]
     meshconv.check_admission(DRIVER_JOBS, "8g")
     with ThreadPoolExecutor(max_workers=DRIVER_JOBS) as pool:
-        return dict(pool.map(lambda c: _run_case(tmp_path_factory, c), cases))
+        out = dict(pool.map(lambda c: _run_case(tmp_path_factory, c), cases))
+    meshconv.check_admission(1, cli.JOB_MEM_2D)
+    out.update(_run_case(tmp_path_factory, c, cli.JOB_MEM_2D) for c in SD_CASES)
+    return out
 
 
 @pytest.fixture(scope="module")
