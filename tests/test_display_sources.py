@@ -102,46 +102,41 @@ def test_number_format():
     assert ds.number(3.09e19, 3) == "3.09×10¹⁹"
 
 
-def test_table_has_every_row_and_the_page_includes_it():
-    """One table per quantity under its name; one row per source with one value per cell."""
+@pytest.mark.parametrize("quantity", list(ds.load()["quantities"]))
+def test_each_quantity_has_a_table_in_its_section(quantity):
+    """One table per quantity, one row per source, one value per cell, no hedge; the page
+    includes it in the section that draws the quantity's figure."""
     d = ds.load()
-    lines = ds.table_markdown().splitlines()
-    quantities = list(dict.fromkeys(r["quantity"] for r in d["row"]))
-    titles = [i for i, line in enumerate(lines) if line.startswith("**")]
-    assert len(titles) == len(quantities)
-    plain = [re.sub(r"\{term\}`([^`]+)`", r"\1", lines[i].split("**")[1]) for i in titles]
-    assert [s.lower() for s in plain] == [d["quantities"][q].lower() for q in quantities]
-    for i, q in zip(titles, quantities, strict=True):
-        figure = f"{{numref}}`Figure %s of {ds.PAGE_TITLE} <{ds.FIGURE_OF[q]}>`"
-        assert lines[i].endswith(f"** ({figure})")
-        rows = [r for r in d["row"] if r["quantity"] == q]
-        extra = {"silicon.band_gap_ev": ["T (K)"], "silicon.nc_cm3": ["m* (m₀)"],
-                 "silicon.nv_cm3": ["m* (m₀)"]}.get(q, [])  # fmt: skip
-        head = ["Source", f"Value ({d['units'][q]})", *extra, "Basis"]
-        assert lines[i + 2] == "| " + " | ".join(head) + " |"
-        body = lines[i + 4 : i + 4 + len(rows)]
-        for line, r in zip(body, rows, strict=True):
-            cells = dict(zip(head, (c.strip() for c in line.strip("|").split("|")), strict=True))
-            assert cells["Source"] == f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`"
-            assert cells[head[1]] == ds.number(r["value"], r.get("digits"))
-            if "T (K)" in cells:
-                assert (
-                    cells["T (K)"] == f"{r.get('temperature_k', 'none'):g}"
-                    if "temperature_k" in r
-                    else cells["T (K)"] == "none"
-                )
-            if "m* (m₀)" in cells:
-                assert cells["m* (m₀)"] == f"{r['mass_m0']:g}"
-            assert cells["Basis"] == r["basis"] + (", used" if r["used"] else "")
-    assert "not stated" not in "\n".join(lines)
-    text = "\n".join(lines)
-    for term in ds.TERMS:  # linked once, at the first use
-        link = f"{{term}}`{term}`"
-        assert text.count(link) == 1
-        assert text.replace(link, term, 1).index(term) == text.index(link)
+    rows = [r for r in d["row"] if r["quantity"] == quantity]
+    lines = ds.table_markdown(quantity).splitlines()
+    extra = {"silicon.band_gap_ev": ["T (K)"], "silicon.nc_cm3": ["m* (m₀)"],
+             "silicon.nv_cm3": ["m* (m₀)"]}.get(quantity, [])  # fmt: skip
+    head = ["Source", f"Value ({d['units'][quantity]})", *extra, "Basis"]
+    assert lines[0] == "| " + " | ".join(head) + " |"
+    assert len(lines) == 2 + len(rows)
+    for line, r in zip(lines[2:], rows, strict=True):
+        cells = dict(zip(head, (c.strip() for c in line.strip("|").split("|")), strict=True))
+        assert cells["Source"] == f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`"
+        assert cells[head[1]] == ds.number(r["value"], r.get("digits"))
+        if "T (K)" in cells:
+            want = f"{r['temperature_k']:g}" if "temperature_k" in r else "none"
+            assert cells["T (K)"] == want
+        if "m* (m₀)" in cells:
+            assert cells["m* (m₀)"] == f"{r['mass_m0']:g}"
+        assert cells["Basis"] == r["basis"] + (", used" if r["used"] else "")
     page = PAGE.read_text("utf-8")
-    assert f"\n# {ds.PAGE_TITLE}\n" in page
-    assert "```{include} /_generated/reproduce/display-sources.inc.md\n```" in page
+    include = f"```{{include}} /_generated/reproduce/{ds.table_name(quantity)}\n```"
+    assert page.count(include) == 1
+    figure = {"silicon.band_gap_ev": "display-silicon-gap", "silicon.nc_cm3": "display-dos-masses",
+              "silicon.nv_cm3": "display-dos-masses"}.get(quantity, "display-oxide-sources")  # fmt: skip
+    section = page[page.rindex("\n## ", 0, page.index(include)) :]
+    section = section[: section.find("\n## ", 1) if "\n## " in section[1:] else len(section)]
+    assert f":name: {figure}\n" in section, quantity
+
+
+def test_table_refuses_an_unknown_quantity():
+    with pytest.raises(ValueError, match="silicon.mobility: no row"):
+        ds.table_markdown("silicon.mobility")
 
 
 def test_page_prose_states_the_files_numbers():

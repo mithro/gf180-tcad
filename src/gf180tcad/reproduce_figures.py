@@ -670,8 +670,6 @@ def band_offset_figure(palette: str):
 OXIDE_QUANTITIES = ("sio2.band_gap_ev", "sio2.conduction_offset_ev", "sio2.valence_offset_ev")
 #: The band of each density of states, for the legend.
 DOS_BANDS = {"silicon.nc_cm3": "electrons", "silicon.nv_cm3": "holes"}
-#: The include file of the sources table, written next to the figures.
-SOURCES_TABLE = "display-sources.inc.md"
 
 
 def _source_label(d: dict, r: dict, *parts: str) -> str:
@@ -886,10 +884,13 @@ FIGURES: dict[str, Callable[[str], bytes]] = {name: _svg_of(draw) for name, draw
 
 def write_all(out_dir: Path) -> None:
     """Write every figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg``, and
-    the display sources' table as :data:`SOURCES_TABLE`."""
+    each display quantity's table of sources
+    (:func:`gf180tcad.display_sources.table_name`)."""
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    (out / SOURCES_TABLE).write_text(display_sources.table_markdown(), encoding="utf-8")
+    for q in display_sources.load()["quantities"]:
+        table = display_sources.table_markdown(q)
+        (out / display_sources.table_name(q)).write_text(table, encoding="utf-8")
     for name, draw in FIGURES.items():
         for palette in ("light", "dark"):
             (out / f"{name}-{palette}.svg").write_bytes(draw(palette))

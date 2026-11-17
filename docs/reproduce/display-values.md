@@ -7,20 +7,14 @@ The six values of {repo}`data/render/display.toml` draw the render band diagrams
 for each value. This page shows every number the sources give, the one the file takes, and what
 the sources show about why the numbers differ.
 
+Each section has one table per value, one row per source. Basis is "listed" when the source
+prints the number, and "computed" when it is this repo's arithmetic from the source's mass.
+"Used" marks the row the display file takes.
+
 The file {repo}`data/render/display-sources.toml` lists the numbers, and
 {py:mod}`gf180tcad.display_sources` reads it. The test
 {test}`tests/test_display_sources.py::test_the_display_file_takes_the_used_row_of_each_quantity`
 holds the display file to the rows marked used.
-
-## The numbers each source gives
-
-Each table holds one quantity, one row per source. T is the temperature the source states, and
-m* the density-of-states mass a density of states goes with. Basis is "listed" when the source
-prints the number, and "computed" when it is this repo's arithmetic from the source's mass.
-"Used" marks the row the display file takes.
-
-```{include} /_generated/reproduce/display-sources.inc.md
-```
 
 (display-values-dos)=
 
@@ -55,6 +49,16 @@ For {term}`electrons <electron>` the masses are close: 1.18 m₀ from Ioffe, 1.0
 that this mass changes by a factor of two in silicon between absolute zero and room temperature
 ({ref}`Wikipedia <lit-wikipedia-effective-mass>`). The file takes Green's 300 K masses, the
 temperature of the display values.
+
+N_c, with m* the electron mass each number goes with:
+
+```{include} /_generated/reproduce/display-sources-silicon-nc-cm3.inc.md
+```
+
+N_v, with m* the hole mass:
+
+```{include} /_generated/reproduce/display-sources-silicon-nv-cm3.inc.md
+```
 
 ```{figure} /_generated/reproduce/display-dos-masses-light.svg
 :name: display-dos-masses
@@ -94,11 +98,16 @@ where
 - $\alpha$ is a coefficient of the fit, 4.73×10⁻⁴, in eV/K;
 - $\beta$ is a temperature of the fit, 636, in K.
 
-At 300 K the formula gives 1.1245 eV (this repo's arithmetic). Ioffe lists 1.12 eV, the formula's value to two decimals,
-and the Colorado sheet lists 1.124 eV. Wikipedia gives 1.14 eV at 302 K, where the formula gives
-1.1240 eV (this repo's arithmetic). The two papers on the oxide give 1.1 eV and 1.2 eV, to one decimal. The file takes
-Ioffe's 1.12 eV. {numref}`display-silicon-gap` draws the formula and the three numbers that state
-a temperature.
+At 300 K the formula gives 1.1245 eV (this repo's arithmetic). Ioffe lists 1.12 eV, the
+formula's value to two decimals, and the Colorado sheet lists 1.124 eV. Wikipedia gives 1.14 eV
+at 302 K, where the formula gives 1.1240 eV (this repo's arithmetic). The two papers on the oxide
+give 1.1 eV and 1.2 eV, to one decimal.
+
+The file takes Ioffe's 1.12 eV. {numref}`display-silicon-gap` draws the formula and the three
+numbers that state a temperature. T is the temperature a source gives with its number:
+
+```{include} /_generated/reproduce/display-sources-silicon-band-gap-ev.inc.md
+```
 
 ```{figure} /_generated/reproduce/display-silicon-gap-light.svg
 :name: display-silicon-gap
@@ -137,6 +146,21 @@ numbers do not add up: 1.2 + 4.3 + 3.1 = 8.6 eV (this repo's arithmetic). Wikipe
 The file takes the three numbers of Alkauskas et al. A band diagram's oxide gap is then silicon's
 gap plus both offsets. That is 1.12 + 3.4 + 4.4 = 8.92 eV (this repo's arithmetic). {numref}`display-oxide-sources` draws each
 source's number.
+
+The SiO₂ band gap:
+
+```{include} /_generated/reproduce/display-sources-sio2-band-gap-ev.inc.md
+```
+
+The conduction band offset:
+
+```{include} /_generated/reproduce/display-sources-sio2-conduction-offset-ev.inc.md
+```
+
+The valence band offset:
+
+```{include} /_generated/reproduce/display-sources-sio2-valence-offset-ev.inc.md
+```
 
 ```{figure} /_generated/reproduce/display-oxide-sources-light.svg
 :name: display-oxide-sources
