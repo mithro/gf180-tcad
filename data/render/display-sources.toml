@@ -1,0 +1,182 @@
+# SPDX-License-Identifier: Apache-2.0
+# Every value that the public sources read for issue #88 give for the six display quantities of
+# data/render/display.toml. The display file takes the row marked `used` of each quantity. No
+# simulation reads this file. gf180tcad.display_sources reads it; docs/reproduce/display-values.md
+# draws and tabulates it. Each `source` is an anchor of docs/limitations/literature.md, named for
+# the page by [names].
+#
+# basis: "listed" when the source prints the number; "computed" when the number is our arithmetic,
+# N = 2 (2 pi m k_B T / h^2)^(3/2) at [dos].temperature_k, from the density-of-states mass the
+# source gives. A row with mass_m0 gives the mass (in free-electron masses) its value goes with,
+# and digits the significant figures the value carries.
+
+note = "display only: not an input to any simulation"
+
+[names]
+lit-ioffe = "Ioffe archive"
+lit-colorado-constants = "Colorado sheet"
+lit-wikipedia-effective-mass = "Green's masses"
+lit-wikipedia-band-gap = "Wikipedia"
+lit-alkauskas = "Alkauskas et al."
+lit-shaltaf = "Shaltaf et al."
+
+[quantities]
+"silicon.band_gap_ev" = "silicon band gap (eV)"
+"silicon.nc_cm3" = "N_c of silicon (cm⁻³)"
+"silicon.nv_cm3" = "N_v of silicon (cm⁻³)"
+"sio2.band_gap_ev" = "SiO₂ band gap (eV)"
+"sio2.conduction_offset_ev" = "Si/SiO₂ conduction band offset (eV)"
+"sio2.valence_offset_ev" = "Si/SiO₂ valence band offset (eV)"
+
+# The densities of states are taken at this temperature.
+[dos]
+temperature_k = 300.0
+
+# Ioffe's temperature dependence of silicon's band gap,
+# E_g = e0_ev - alpha_ev_per_k T^2 / (T + beta_k), T in K ("Temperature Dependences").
+[ioffe_gap]
+source = "lit-ioffe"
+e0_ev = 1.17
+alpha_ev_per_k = 4.73e-4
+beta_k = 636.0
+
+[[row]]
+quantity = "silicon.band_gap_ev"
+source = "lit-ioffe"
+value = 1.12
+temperature_k = 300.0
+basis = "listed"
+used = true
+
+[[row]]
+quantity = "silicon.band_gap_ev"
+source = "lit-colorado-constants"
+value = 1.124
+temperature_k = 300.0
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "silicon.band_gap_ev"
+source = "lit-wikipedia-band-gap"
+value = 1.14
+temperature_k = 302.0
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "silicon.band_gap_ev"
+source = "lit-alkauskas"
+value = 1.1
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "silicon.band_gap_ev"
+source = "lit-shaltaf"
+value = 1.2
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "silicon.nc_cm3"
+source = "lit-ioffe"
+value = 3.2e19
+mass_m0 = 1.18
+digits = 2
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "silicon.nc_cm3"
+source = "lit-colorado-constants"
+value = 2.82e19
+mass_m0 = 1.08
+digits = 3
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "silicon.nc_cm3"
+source = "lit-wikipedia-effective-mass"
+value = 2.86e19
+mass_m0 = 1.09
+digits = 3
+basis = "computed"
+used = true
+
+[[row]]
+quantity = "silicon.nv_cm3"
+source = "lit-ioffe"
+value = 1.8e19
+mass_m0 = 0.81
+digits = 2
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "silicon.nv_cm3"
+source = "lit-colorado-constants"
+value = 1.83e19
+mass_m0 = 0.81
+digits = 3
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "silicon.nv_cm3"
+source = "lit-wikipedia-effective-mass"
+value = 3.09e19
+mass_m0 = 1.15
+digits = 3
+basis = "computed"
+used = true
+
+[[row]]
+quantity = "sio2.band_gap_ev"
+source = "lit-alkauskas"
+value = 8.9
+basis = "listed"
+used = true
+
+[[row]]
+quantity = "sio2.band_gap_ev"
+source = "lit-shaltaf"
+value = 8.9
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "sio2.band_gap_ev"
+source = "lit-wikipedia-band-gap"
+value = 9.0
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "sio2.conduction_offset_ev"
+source = "lit-alkauskas"
+value = 3.4
+basis = "listed"
+used = true
+
+[[row]]
+quantity = "sio2.conduction_offset_ev"
+source = "lit-shaltaf"
+value = 3.1
+basis = "listed"
+used = false
+
+[[row]]
+quantity = "sio2.valence_offset_ev"
+source = "lit-alkauskas"
+value = 4.4
+basis = "listed"
+used = true
+
+[[row]]
+quantity = "sio2.valence_offset_ev"
+source = "lit-shaltaf"
+value = 4.3
+basis = "listed"
+used = false
