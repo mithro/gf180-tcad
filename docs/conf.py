@@ -204,11 +204,13 @@ linkcheck_ignore = [
     # onlinelibrary.wiley.com (where doi:10.1002/0470068329, Sze & Ng, resolves) answers 403 to
     # GitHub-hosted runners; the DOI was checked against its Crossref record when it was added.
     r"https://doi\.org/10\.1002/0470068329",
-    # pubs.aip.org (doi:10.1063/...) answers 403 to GitHub-hosted runners. Both DOIs were checked
+    # pubs.aip.org (doi:10.1063/...) answers 403 to GitHub-hosted runners. These DOIs were checked
     # against their Crossref records when added: Altermatt et al., J. Appl. Phys. 93, 1598
-    # (2003), and Misiakos & Tsamakis, J. Appl. Phys. 74, 3293 (1993).
+    # (2003), Misiakos & Tsamakis, J. Appl. Phys. 74, 3293 (1993), and Green, J. Appl. Phys.
+    # 67, 2944 (1990).
     r"https://doi\.org/10\.1063/1\.1529297",
     r"https://doi\.org/10\.1063/1\.354551",
+    r"https://doi\.org/10\.1063/1\.345414",
     # asmedigitalcollection.asme.org (doi:10.1115/...) and royalsocietypublishing.org
     # (doi:10.1098/...) answer 403 to automated clients. The DOIs were checked against their
     # Crossref records when added: Roache, J. Fluids Eng. 116, 405 (1994); Celik et al.,
