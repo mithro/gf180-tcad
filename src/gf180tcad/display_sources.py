@@ -107,10 +107,11 @@ def label(d: dict, quantity: str) -> str:
 
 def table_markdown(path: Path = SOURCES) -> str:
     """One table per quantity, in file order, each under the quantity's name and the figure that
-    draws it (:data:`FIGURE_OF`): a row per source
-    with its value, the temperature and the mass it states, and its basis ("listed" or
-    "computed", and "used" for the row the display file takes). Each term of :data:`TERMS`
-    links to the glossary at its first use."""
+    draws it (:data:`FIGURE_OF`): a row per source with its value and its basis ("listed" or
+    "computed", and "used" for the row the display file takes). A quantity whose sources state
+    a temperature has a T column ("none" for a source that states none); one whose numbers go
+    with a mass has an m* column. Each term of :data:`TERMS` links to the glossary at its
+    first use."""
     d = load(path)
     out: list[str] = []
     linked: set[str] = set()
@@ -122,18 +123,20 @@ def table_markdown(path: Path = SOURCES) -> str:
                 linked.add(term)
         figure = f"{{numref}}`Figure %s of {PAGE_TITLE} <{FIGURE_OF[q]}>`"
         out += [f"**{name[0].upper()}{name[1:]}** ({figure})", ""]
-        out += [f"| Source | Value ({d['units'][q]}) | T (K) | m* (m₀) | Basis |",
-                "|---|---|---|---|---|"]  # fmt: skip
-        for r in d["row"]:
-            if r["quantity"] != q:
-                continue
-            cells = (
-                f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`",
-                number(r["value"], r.get("digits")),
-                f"{r['temperature_k']:g}" if "temperature_k" in r else "not stated",
-                f"{r['mass_m0']:g}" if "mass_m0" in r else "not applicable",
-                _basis(r),
-            )
+        rows = [r for r in d["row"] if r["quantity"] == q]
+        has_t = any("temperature_k" in r for r in rows)
+        has_m = any("mass_m0" in r for r in rows)
+        head = ["Source", f"Value ({d['units'][q]})"]
+        head += ["T (K)"] * has_t + ["m* (m₀)"] * has_m + ["Basis"]
+        out += ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+        for r in rows:
+            cells = [f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`",
+                     number(r["value"], r.get("digits"))]  # fmt: skip
+            if has_t:
+                cells.append(f"{r['temperature_k']:g}" if "temperature_k" in r else "none")
+            if has_m:
+                cells.append(f"{r['mass_m0']:g}")
+            cells.append(_basis(r))
             out.append("| " + " | ".join(cells) + " |")
         out.append("")
     return "\n".join(out)

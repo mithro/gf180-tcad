@@ -114,16 +114,26 @@ def test_table_has_every_row_and_the_page_includes_it():
     for i, q in zip(titles, quantities, strict=True):
         figure = f"{{numref}}`Figure %s of {ds.PAGE_TITLE} <{ds.FIGURE_OF[q]}>`"
         assert lines[i].endswith(f"** ({figure})")
-        assert lines[i + 2] == f"| Source | Value ({d['units'][q]}) | T (K) | m* (m₀) | Basis |"
         rows = [r for r in d["row"] if r["quantity"] == q]
+        extra = {"silicon.band_gap_ev": ["T (K)"], "silicon.nc_cm3": ["m* (m₀)"],
+                 "silicon.nv_cm3": ["m* (m₀)"]}.get(q, [])  # fmt: skip
+        head = ["Source", f"Value ({d['units'][q]})", *extra, "Basis"]
+        assert lines[i + 2] == "| " + " | ".join(head) + " |"
         body = lines[i + 4 : i + 4 + len(rows)]
         for line, r in zip(body, rows, strict=True):
-            cells = [c.strip() for c in line.strip("|").split("|")]
-            assert cells[0] == f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`"
-            assert cells[1] == ds.number(r["value"], r.get("digits"))
-            assert cells[2] == (f"{r['temperature_k']:g}" if "temperature_k" in r else "not stated")
-            assert cells[3] == (f"{r['mass_m0']:g}" if "mass_m0" in r else "not applicable")
-            assert cells[4] == r["basis"] + (", used" if r["used"] else "")
+            cells = dict(zip(head, (c.strip() for c in line.strip("|").split("|")), strict=True))
+            assert cells["Source"] == f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`"
+            assert cells[head[1]] == ds.number(r["value"], r.get("digits"))
+            if "T (K)" in cells:
+                assert (
+                    cells["T (K)"] == f"{r.get('temperature_k', 'none'):g}"
+                    if "temperature_k" in r
+                    else cells["T (K)"] == "none"
+                )
+            if "m* (m₀)" in cells:
+                assert cells["m* (m₀)"] == f"{r['mass_m0']:g}"
+            assert cells["Basis"] == r["basis"] + (", used" if r["used"] else "")
+    assert "not stated" not in "\n".join(lines)
     text = "\n".join(lines)
     for term in ds.TERMS:  # linked once, at the first use
         link = f"{{term}}`{term}`"
