@@ -512,7 +512,10 @@ def check_silicon_gap(fig):
     want_legend = [f"{d['names'][g['source']]}, formula", *(_source_label(d, r) for r in rows)]
     assert _legend(fig) == want_legend
     assert ax.get_xlabel() == "temperature (K)"
-    assert ax.get_ylabel() == d["quantities"]["silicon.band_gap_ev"]
+    assert (
+        ax.get_ylabel()
+        == f"{d['quantities']['silicon.band_gap_ev']} ({d['units']['silicon.band_gap_ev']})"
+    )
     assert_texts(fig, {})
     assert not _annotations(fig)
 
@@ -525,7 +528,7 @@ def check_oxide_sources(fig):
     for ax, q in zip(fig.axes, quantities, strict=True):
         rows = [r for r in d["row"] if r["quantity"] == q]
         assert len(rows) >= 2, q
-        assert ax.get_title() == d["quantities"][q]
+        assert ax.get_title() == f"{d['quantities'][q]} ({d['units'][q]})"
         dots = _scatters(ax)
         assert set(dots) == {f"{r['source']} {q}" for r in rows}
         for i, r in enumerate(rows):

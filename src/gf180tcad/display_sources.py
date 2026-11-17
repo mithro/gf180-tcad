@@ -26,6 +26,18 @@ DISPLAY = REPO_ROOT / "data" / "render" / "display.toml"
 CM3_PER_M3 = 1e6
 #: The glossary terms of the table's quantity names: the table links each at its first use.
 TERMS = ("band gap", "conduction band", "valence band")
+#: The title of ``docs/reproduce/display-values.md``, the page that includes the table. The table
+#: is linted as a page of its own, so it names that page when it cites the page's figures.
+PAGE_TITLE = "Display values and their sources"
+#: The figure of ``docs/reproduce/display-values.md`` that draws each quantity's sources.
+FIGURE_OF = {
+    "silicon.band_gap_ev": "display-silicon-gap",
+    "silicon.nc_cm3": "display-dos-masses",
+    "silicon.nv_cm3": "display-dos-masses",
+    "sio2.band_gap_ev": "display-oxide-sources",
+    "sio2.conduction_offset_ev": "display-oxide-sources",
+    "sio2.valence_offset_ev": "display-oxide-sources",
+}
 #: The digits Unicode writes as superscripts, for the powers of ten in the table.
 _SUPERSCRIPT = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
 
@@ -85,37 +97,43 @@ def number(value: float, digits: int | None = None) -> str:
 
 
 def _basis(r: dict) -> str:
-    if r["basis"] == "computed":
-        return f"computed from m* = {r['mass_m0']:g} m₀"
-    if "mass_m0" in r:
-        return f"listed, m* = {r['mass_m0']:g} m₀"
-    return "listed"
+    return r["basis"] + (", used" if r["used"] else "")
 
 
-def _value(r: dict) -> str:
-    text = number(r["value"], r.get("digits"))
-    if "temperature_k" in r:
-        text += f" at {r['temperature_k']:g} K"
-    return text
+def label(d: dict, quantity: str) -> str:
+    """A quantity's name with its unit, as the figures print it."""
+    return f"{d['quantities'][quantity]} ({d['units'][quantity]})"
 
 
 def table_markdown(path: Path = SOURCES) -> str:
-    """The table of every row: quantity, source (a link to its literature entry), value, basis
-    and whether the display file takes it. Each term of :data:`TERMS` links to the glossary at
-    its first use."""
+    """One table per quantity, in file order, each under the quantity's name and the figure that
+    draws it (:data:`FIGURE_OF`): a row per source
+    with its value, the temperature and the mass it states, and its basis ("listed" or
+    "computed", and "used" for the row the display file takes). Each term of :data:`TERMS`
+    links to the glossary at its first use."""
     d = load(path)
-    lines = [
-        "| Quantity | Source | Value | Basis | Used |",
-        "|---|---|---|---|---|",
-    ]
+    out: list[str] = []
     linked: set[str] = set()
-    for r in d["row"]:
-        quantity = d["quantities"][r["quantity"]]
+    for q in dict.fromkeys(r["quantity"] for r in d["row"]):
+        name = d["quantities"][q]
         for term in TERMS:
-            if term in quantity and term not in linked:
-                quantity = quantity.replace(term, f"{{term}}`{term}`", 1)
+            if term in name and term not in linked:
+                name = name.replace(term, f"{{term}}`{term}`", 1)
                 linked.add(term)
-        source = f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`"
-        cells = (quantity, source, _value(r), _basis(r), "yes" if r["used"] else "no")
-        lines.append("| " + " | ".join(cells) + " |")
-    return "\n".join(lines) + "\n"
+        figure = f"{{numref}}`Figure %s of {PAGE_TITLE} <{FIGURE_OF[q]}>`"
+        out += [f"**{name[0].upper()}{name[1:]}** ({figure})", ""]
+        out += [f"| Source | Value ({d['units'][q]}) | T (K) | m* (m₀) | Basis |",
+                "|---|---|---|---|---|"]  # fmt: skip
+        for r in d["row"]:
+            if r["quantity"] != q:
+                continue
+            cells = (
+                f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`",
+                number(r["value"], r.get("digits")),
+                f"{r['temperature_k']:g}" if "temperature_k" in r else "not stated",
+                f"{r['mass_m0']:g}" if "mass_m0" in r else "not applicable",
+                _basis(r),
+            )
+            out.append("| " + " | ".join(cells) + " |")
+        out.append("")
+    return "\n".join(out)

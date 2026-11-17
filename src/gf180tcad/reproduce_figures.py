@@ -726,7 +726,7 @@ def silicon_gap_figure(palette: str):
                        s=STYLE["source_marker_area"], color=pal[STYLE["source_colours"][r["source"]]],
                        gid=f"{r['source']} {r['quantity']}", label=_source_label(d, r), zorder=STYLE["marker_z"])  # fmt: skip
         ax.set_xlabel("temperature (K)")
-        ax.set_ylabel(d["quantities"]["silicon.band_gap_ev"])
+        ax.set_ylabel(display_sources.label(d, "silicon.band_gap_ev"))
         ax.legend(loc="upper right")
     return fig
 
@@ -748,7 +748,7 @@ def oxide_sources_figure(palette: str):
                            gid=f"{r['source']} {q}", zorder=STYLE["marker_z"])  # fmt: skip
             ax.set_yticks(range(len(rs)), [_source_label(d, r) for r in rs])
             ax.set_ylim(-STYLE["row_margin"], len(rs) - 1 + STYLE["row_margin"])
-            ax.set_title(d["quantities"][q])
+            ax.set_title(display_sources.label(d, q))
         axes[-1].set_xlabel("energy (eV)")
     return fig
 

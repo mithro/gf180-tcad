@@ -3,7 +3,7 @@
 # Display values and their sources
 
 The six values of {repo}`data/render/display.toml` draw the render band diagrams
-({numref}`render-band-offsets`). No simulation reads them. Public sources give different numbers
+({numref}`Figure %s of The render manifest <render-band-offsets>`). No simulation reads them. Public sources give different numbers
 for each value. This page shows every number the sources give, the one the file takes, and what
 the sources show about why the numbers differ.
 
@@ -14,10 +14,10 @@ holds the display file to the rows marked used.
 
 ## The numbers each source gives
 
-One row is one number from one source. Value is the number as the source gives it, with the
-temperature the source states. Basis is "listed" when the source prints the number, and
-"computed" when the number is this repo's arithmetic from the source's mass. Used marks the row
-the display file takes.
+Each table holds one quantity, one row per source. T is the temperature the source states, and
+m* the density-of-states mass a density of states goes with. Basis is "listed" when the source
+prints the number, and "computed" when it is this repo's arithmetic from the source's mass.
+"Used" marks the row the display file takes.
 
 ```{include} /_generated/reproduce/display-sources.inc.md
 ```
@@ -36,8 +36,9 @@ $$ (eq-display-dos)
 
 where
 
-- $N$ is the effective density of states of the band, in m⁻³ (the table gives it in cm⁻³);
-- $m^*$ is the density-of-states effective mass, in kg, quoted in free-electron masses $m_0$;
+- $N$ is the effective density of states of the band (the tables give it per cm³), in m⁻³;
+- $\pi$ is the ratio of a circle's circumference to its diameter, dimensionless;
+- $m^*$ is the density-of-states effective mass (quoted in free-electron masses $m_0$), in kg;
 - $k_B$ is the Boltzmann constant, in J/K;
 - $T$ is the temperature, in K;
 - $h$ is the Planck constant, in J·s.
@@ -89,9 +90,9 @@ where
 
 - $E_g$ is the band gap of silicon, in eV;
 - $T$ is the temperature, in K;
-- $E_0$ is 1.17 eV;
-- $\alpha$ is 4.73×10⁻⁴ eV/K;
-- $\beta$ is 636 K.
+- $E_0$ is the band gap at 0 K, 1.17, in eV;
+- $\alpha$ is a coefficient of the fit, 4.73×10⁻⁴, in eV/K;
+- $\beta$ is a temperature of the fit, 636, in K.
 
 At 300 K the formula gives 1.1245 eV (this repo's arithmetic). Ioffe lists 1.12 eV, the formula's value to two decimals,
 and the Colorado sheet lists 1.124 eV. Wikipedia gives 1.14 eV at 302 K, where the formula gives
@@ -123,7 +124,9 @@ that give a temperature, from {repo}`data/render/display-sources.toml`.
 Alkauskas et al. give the measured band gap of SiO₂, 8.9 eV, and the measured Si/SiO₂ offsets.
 These are 4.4 eV for the {term}`valence band` and 3.4 eV for the {term}`conduction band`
 ({ref}`Alkauskas et al. <lit-alkauskas>`). Their offsets are those of Himpsel et al. (1988) and
-Keister et al. (1999). With their silicon gap of 1.1 eV, the three add up: 1.1 + 4.4 + 3.4 = 8.9 eV
+Keister et al. (1999).
+
+With their silicon gap of 1.1 eV, the three add up: 1.1 + 4.4 + 3.4 = 8.9 eV
 (this repo's arithmetic).
 
 Shaltaf et al. give 8.9 eV for the oxide and 1.2 eV for silicon. Their offsets are 4.3 eV for

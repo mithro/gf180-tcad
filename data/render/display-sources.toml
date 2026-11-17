@@ -21,12 +21,21 @@ lit-alkauskas = "Alkauskas et al."
 lit-shaltaf = "Shaltaf et al."
 
 [quantities]
-"silicon.band_gap_ev" = "silicon band gap (eV)"
-"silicon.nc_cm3" = "N_c of silicon (cm⁻³)"
-"silicon.nv_cm3" = "N_v of silicon (cm⁻³)"
-"sio2.band_gap_ev" = "SiO₂ band gap (eV)"
-"sio2.conduction_offset_ev" = "Si/SiO₂ conduction band offset (eV)"
-"sio2.valence_offset_ev" = "Si/SiO₂ valence band offset (eV)"
+"silicon.band_gap_ev" = "silicon band gap"
+"silicon.nc_cm3" = "N_c of silicon"
+"silicon.nv_cm3" = "N_v of silicon"
+"sio2.band_gap_ev" = "SiO₂ band gap"
+"sio2.conduction_offset_ev" = "Si/SiO₂ conduction band offset"
+"sio2.valence_offset_ev" = "Si/SiO₂ valence band offset"
+
+# The unit of each quantity, as the page and the figures print it.
+[units]
+"silicon.band_gap_ev" = "eV"
+"silicon.nc_cm3" = "cm⁻³"
+"silicon.nv_cm3" = "cm⁻³"
+"sio2.band_gap_ev" = "eV"
+"sio2.conduction_offset_ev" = "eV"
+"sio2.valence_offset_ev" = "eV"
 
 # The densities of states are taken at this temperature.
 [dos]

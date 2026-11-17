@@ -103,24 +103,34 @@ def test_number_format():
 
 
 def test_table_has_every_row_and_the_page_includes_it():
+    """One table per quantity under its name; one row per source with one value per cell."""
     d = ds.load()
     lines = ds.table_markdown().splitlines()
-    assert lines[0] == "| Quantity | Source | Value | Basis | Used |"
-    body = lines[2:]
-    assert len(body) == len(d["row"])
-    for line, r in zip(body, d["row"], strict=True):
-        cells = [c.strip() for c in line.strip("|").split("|")]
-        assert re.sub(r"\{term\}`([^`]+)`", r"\1", cells[0]) == d["quantities"][r["quantity"]]
-        assert cells[1] == f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`"
-        assert cells[2].startswith(ds.number(r["value"], r.get("digits")))
-        assert cells[4] == ("yes" if r["used"] else "no")
-    text = "\n".join(body)
-    for term in ds.TERMS:
-        assert (
-            text.count(f"{{term}}`{term}`") == 1
-            and text.index(f"{{term}}`{term}`") == text.index(term) - 7
-        )
+    quantities = list(dict.fromkeys(r["quantity"] for r in d["row"]))
+    titles = [i for i, line in enumerate(lines) if line.startswith("**")]
+    assert len(titles) == len(quantities)
+    plain = [re.sub(r"\{term\}`([^`]+)`", r"\1", lines[i].split("**")[1]) for i in titles]
+    assert [s.lower() for s in plain] == [d["quantities"][q].lower() for q in quantities]
+    for i, q in zip(titles, quantities, strict=True):
+        figure = f"{{numref}}`Figure %s of {ds.PAGE_TITLE} <{ds.FIGURE_OF[q]}>`"
+        assert lines[i].endswith(f"** ({figure})")
+        assert lines[i + 2] == f"| Source | Value ({d['units'][q]}) | T (K) | m* (m₀) | Basis |"
+        rows = [r for r in d["row"] if r["quantity"] == q]
+        body = lines[i + 4 : i + 4 + len(rows)]
+        for line, r in zip(body, rows, strict=True):
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            assert cells[0] == f"{{ref}}`{d['names'][r['source']]} <{r['source']}>`"
+            assert cells[1] == ds.number(r["value"], r.get("digits"))
+            assert cells[2] == (f"{r['temperature_k']:g}" if "temperature_k" in r else "not stated")
+            assert cells[3] == (f"{r['mass_m0']:g}" if "mass_m0" in r else "not applicable")
+            assert cells[4] == r["basis"] + (", used" if r["used"] else "")
+    text = "\n".join(lines)
+    for term in ds.TERMS:  # linked once, at the first use
+        link = f"{{term}}`{term}`"
+        assert text.count(link) == 1
+        assert text.replace(link, term, 1).index(term) == text.index(link)
     page = PAGE.read_text("utf-8")
+    assert f"\n# {ds.PAGE_TITLE}\n" in page
     assert "```{include} /_generated/reproduce/display-sources.inc.md\n```" in page
 
 
@@ -135,7 +145,8 @@ def test_page_prose_states_the_files_numbers():
         elif r["quantity"].endswith("_ev"):
             assert f"{r['value']:g} eV" in page, r
     g = d["ioffe_gap"]
-    assert f"$E_0$ is {g['e0_ev']:g} eV" in page and f"$\\beta$ is {g['beta_k']:g} K" in page
+    assert f"$E_0$ is the band gap at 0 K, {g['e0_ev']:g}, in eV" in page
+    assert f"$\\beta$ is a temperature of the fit, {g['beta_k']:g}, in K" in page
     for t, shown in ((300.0, "1.1245 eV"), (302.0, "1.1240 eV")):
         eg = ds.ioffe_band_gap_ev(t, g["e0_ev"], g["alpha_ev_per_k"], g["beta_k"])
         assert f"{eg:.4f} eV" == shown and shown in page
