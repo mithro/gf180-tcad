@@ -14,14 +14,21 @@ import math
 import tomllib
 from pathlib import Path
 
-from scipy.constants import h, k, m_e
-
 from gf180tcad.sandbox import REPO_ROOT
 
 #: The sources file.
 SOURCES = REPO_ROOT / "data" / "render" / "display-sources.toml"
 #: The display file, which takes one row of each quantity.
 DISPLAY = REPO_ROOT / "data" / "render" / "display.toml"
+#: The Planck constant (J·s), exact in the SI: CODATA 2022, NIST
+#: (https://physics.nist.gov/cgi-bin/cuu/Value?h). The docs build has no scipy, so the three
+#: constants are written here; a test checks them against ``scipy.constants``.
+H_J_S = 6.62607015e-34
+#: The Boltzmann constant (J/K), exact in the SI: CODATA 2022, NIST
+#: (https://physics.nist.gov/cgi-bin/cuu/Value?k).
+K_B_J_PER_K = 1.380649e-23
+#: The electron mass (kg): CODATA 2022, NIST (https://physics.nist.gov/cgi-bin/cuu/Value?me).
+M_E_KG = 9.1093837139e-31
 #: Cubic centimetres in one cubic metre.
 CM3_PER_M3 = 1e6
 #: The digits Unicode writes as superscripts, for the powers of ten in the table.
@@ -58,8 +65,8 @@ def density_of_states_cm3(mass_m0: float, temperature_k: float) -> float:
     band", N_c = 4.82·10¹⁵·M·(m_c/m_0)^{3/2}·T^{3/2} cm⁻³: this formula with its constants
     evaluated (2 (2π m_0 k_B / h²)^{3/2} = 4.83·10¹⁵ cm⁻³ K^{-3/2}).
     """
-    m = mass_m0 * m_e
-    return 2 * (2 * math.pi * m * k * temperature_k / h**2) ** 1.5 / CM3_PER_M3
+    m = mass_m0 * M_E_KG
+    return 2 * (2 * math.pi * m * K_B_J_PER_K * temperature_k / H_J_S**2) ** 1.5 / CM3_PER_M3
 
 
 def ioffe_band_gap_ev(temperature_k, e0_ev: float, alpha_ev_per_k: float, beta_k: float):

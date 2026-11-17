@@ -66,6 +66,14 @@ def test_used_refuses_two_used_rows(tmp_path):
         ds.used(path)
 
 
+def test_constants_are_codata_2022():
+    """The module's constants (written out, because the docs build has no scipy) equal
+    scipy's CODATA values."""
+    from scipy.constants import h, k, m_e
+
+    assert (ds.H_J_S, ds.K_B_J_PER_K, ds.M_E_KG) == (h, k, m_e)
+
+
 def test_density_of_states_hand_value():
     """At 300 K and the free-electron mass, 2 (2π m_0 k_B T / h²)^{3/2} = 2.5094e19 cm⁻³; the
     value scales as m^{3/2}."""
