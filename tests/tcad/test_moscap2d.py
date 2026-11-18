@@ -405,6 +405,13 @@ _SD_LMIN_REASON = (
     "sd_peak_cm3 is load-bearing at Lmin (0.5 um): Cgg moves -1.52 % / +1.25 % (worst, "
     "depletion) for 5e19 / 2e20 against 1e20; fixed XJ couples peak and straggle"
 )
+# At L = 2 um it is load-bearing too (issue #203, first run with a 2D job's memory): worst
+# -0.528 % (5e19) / +0.442 % (2e20) in depletion at Vg = 0 V, -0.151 % / +0.137 % at +5 V and
+# -0.008 % / +0.009 % at -5 V. Issue #203 replaces the 0.1 % bound with these measured numbers.
+_SD_L2_REASON = (
+    "sd_peak_cm3 is load-bearing at L = 2 um too (issue #203): Cgg moves -0.53 % / +0.44 % "
+    "(worst, depletion) for 5e19 / 2e20 against 1e20"
+)
 
 
 @pytest.mark.sandbox
@@ -415,7 +422,10 @@ _SD_LMIN_REASON = (
             "sd_pfet_05v0_lmin",
             marks=pytest.mark.xfail(strict=True, raises=SdSensitivity, reason=_SD_LMIN_REASON),
         ),
-        "sd_pfet_05v0_l2",
+        pytest.param(
+            "sd_pfet_05v0_l2",
+            marks=pytest.mark.xfail(strict=True, raises=SdSensitivity, reason=_SD_L2_REASON),
+        ),
     ],
 )
 def test_pfet_sd_doping_insensitive(driver, case):

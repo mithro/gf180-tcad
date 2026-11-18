@@ -312,7 +312,8 @@ uncertainty list of the calibration and the comparison (Phase 2 plan:
 {repo}`calibration <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
 {repo}`results pages <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-13a-tcad-results-and-docs-pages>`).
 The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` keeps the 0.1 % bound. It is a
-{term}`strict expected failure` at Lmin (on the sensitivity assertion only) and asserted at L = 2 µm.
+{term}`strict expected failure` (on the sensitivity assertion only) at Lmin and at L = 2 µm, where
+the peak moves Cgg by −0.53 % / +0.44 % at worst ([issue #203](https://github.com/mithro/gf180-tcad/issues/203)).
 
 (moscap2d-l2)=
 
