@@ -221,7 +221,7 @@ def test_non_committed_values_are_labelled():
     assert not bad, "\n".join(bad)
 
 
-# A textbook entry for the controls (no page prints a textbook value while #88 is open).
+# A textbook entry for the controls: N_c, which no page prints.
 _NC = {"name": "nc_si", "kind": "textbook", "unit": "cm⁻³", "digits": 2,
        "source": "data/render/display.toml", "key": {"toml": ["silicon", "nc_cm3"]}}  # fmt: skip
 
@@ -237,7 +237,7 @@ def textbook_entry(monkeypatch):
 
 def test_citation_reads_the_sources_table(textbook_entry):
     cite = textbook_entry.citation("nc_si")
-    assert "(lit-sze)" in cite and "Appendix G" in cite
+    assert "(lit-wikipedia-effective-mass)" in cite and "1.09 m_0" in cite
     with pytest.raises(ValueError, match="not a textbook value"):
         textbook_entry.citation("n_i_tcad")
 
@@ -902,8 +902,7 @@ BANDS_PAGE = EXPLAINED / "bands-and-fermi-level.md"
 
 def test_band_gap_is_the_display_value_with_a_checked_source():
     """The band gap has one home, data/render/display.toml (plan, Decisions), and the source it
-    cites there includes the Ioffe archive page that was read (lit-ioffe); #88 doubts the
-    Sze and Ng values that were not read."""
+    cites there is the Ioffe archive page that was read (lit-ioffe), as #88 asked."""
     numbers = _numbers()
     display = tomllib.loads(DISPLAY.read_text("utf-8"))
     n = numbers.REGISTRY["band_gap_si"]

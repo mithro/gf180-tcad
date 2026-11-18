@@ -6,7 +6,8 @@ Each figure is drawn from committed files only: the :repo:`Makefile`, the SPICE 
 ``.github/workflows/crosscheck.yml``, the output-cache configuration (``data/output-cache.json``)
 and the committed 2D job records, the render-manifest fixture
 (``tests/fixtures/renders/r-test.render.json``), the display values of the renders
-(``data/render/display.toml``), the dev-HEAD image's input list
+(``data/render/display.toml``) and every value their public sources give
+(``data/render/display-sources.toml``), the dev-HEAD image's input list
 (``docker/tcad-dev/upstream.json``), meshwell's mesh of the unit square in each TCAD image
 (``data/images/meshwell-square.json``) and :data:`gf180tcad.tcad.RESULTS_IMAGE`.
 
@@ -32,11 +33,12 @@ from itertools import pairwise
 from pathlib import Path
 
 import matplotlib
+import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyBboxPatch
 
-from gf180tcad import imagefig, outcache
+from gf180tcad import display_sources, imagefig, outcache
 from gf180tcad.devices import DEVICES, geometry_id
 from gf180tcad.explain import figures as ef
 from gf180tcad.sandbox import REPO_ROOT
@@ -95,6 +97,38 @@ STYLE = {
     "square_in": (6.4, 3.7),
     "edge_width": 1.2,
     "square_margin": 0.08,
+    # The display-source figures: their size, the marker area (pt²) and the number of points of
+    # a drawn formula.
+    "sources_in": (6.4, 4.6),
+    "oxide_sources_in": (6.4, 5.4),
+    # A panel of the oxide-sources figure leaves this much of a row above and below its rows.
+    "row_margin": 0.6,
+    "source_marker_area": 70.0,
+    # Markers draw above the grid and the formula line.
+    "marker_z": 3,
+    "curve_points": 81,
+    # The mass range (free-electron masses) of the density-of-states figure, and the
+    # temperature range (K) of the band-gap figure.
+    "mass_range": (0.5, 1.3),
+    "gap_t_range": (250.0, 350.0),
+    # Each source's marker, and its colour (a key of the explainer palette) where a figure
+    # colours by source.
+    "source_markers": {
+        "lit-ioffe": "o",
+        "lit-colorado-constants": "s",
+        "lit-wikipedia-effective-mass": "D",
+        "lit-wikipedia-band-gap": "^",
+        "lit-alkauskas": "D",
+        "lit-shaltaf": "v",
+    },
+    "source_colours": {
+        "lit-ioffe": "electron",
+        "lit-colorado-constants": "hole",
+        "lit-wikipedia-effective-mass": "highlight",
+        "lit-wikipedia-band-gap": "intrinsic",
+        "lit-alkauskas": "highlight",
+        "lit-shaltaf": "highlight_oxide",
+    },
 }
 
 #: Unit conversions: the nanometres in one of each length unit of a render manifest.
@@ -632,6 +666,91 @@ def band_offset_figure(palette: str):
     return fig
 
 
+#: The quantities of the display file whose sources the oxide figure draws, top to bottom.
+OXIDE_QUANTITIES = ("sio2.band_gap_ev", "sio2.conduction_offset_ev", "sio2.valence_offset_ev")
+#: The band of each density of states, for the legend.
+DOS_BANDS = {"silicon.nc_cm3": "electrons", "silicon.nv_cm3": "holes"}
+
+
+def _source_label(d: dict, r: dict, *parts: str) -> str:
+    """A legend entry: the source's name, any ``parts``, and "used" for the display file's row."""
+    return ", ".join([d["names"][r["source"]], *parts, *(["used"] if r["used"] else [])])
+
+
+def dos_masses_figure(palette: str):
+    """The band-edge density of states against the density-of-states mass at the sources'
+    temperature, with each source's N_c and N_v at the mass it goes with."""
+    pal = ef.PALETTES[palette]
+    d = display_sources.load()
+    t = d["dos"]["temperature_k"]
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = Figure(figsize=STYLE["sources_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.add_subplot()
+        m = np.linspace(*STYLE["mass_range"], STYLE["curve_points"])
+        ax.plot(m, [display_sources.density_of_states_cm3(x, t) for x in m], color=pal["muted"],
+                lw=STYLE["line_width"], gid="formula", label=f"N(m*) at {t:g} K")  # fmt: skip
+        for r in d["row"]:
+            if r["quantity"] not in DOS_BANDS:
+                continue
+            band = DOS_BANDS[r["quantity"]]
+            ax.scatter([r["mass_m0"]], [r["value"]], marker=STYLE["source_markers"][r["source"]],
+                       s=STYLE["source_marker_area"], color=pal["electron" if band == "electrons" else "hole"],
+                       gid=f"{r['source']} {r['quantity']}", label=_source_label(d, r, band), zorder=STYLE["marker_z"])  # fmt: skip
+        ax.set_xlabel("density-of-states mass m* (free-electron masses)")
+        ax.set_ylabel(f"density of states at {t:g} K (cm⁻³)")
+        ax.legend(loc="upper left")
+    return fig
+
+
+def silicon_gap_figure(palette: str):
+    """Silicon's band gap against temperature by Ioffe's formula, with each source's band gap
+    at the temperature it gives."""
+    pal = ef.PALETTES[palette]
+    d = display_sources.load()
+    g = d["ioffe_gap"]
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = Figure(figsize=STYLE["sources_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        ax = fig.add_subplot()
+        t = np.linspace(*STYLE["gap_t_range"], STYLE["curve_points"])
+        eg = display_sources.ioffe_band_gap_ev(t, g["e0_ev"], g["alpha_ev_per_k"], g["beta_k"])
+        ax.plot(t, eg, color=pal["muted"], lw=STYLE["line_width"], gid="formula",
+                label=f"{d['names'][g['source']]}, formula")  # fmt: skip
+        for r in d["row"]:
+            if r["quantity"] != "silicon.band_gap_ev" or "temperature_k" not in r:
+                continue
+            ax.scatter([r["temperature_k"]], [r["value"]], marker=STYLE["source_markers"][r["source"]],
+                       s=STYLE["source_marker_area"], color=pal[STYLE["source_colours"][r["source"]]],
+                       gid=f"{r['source']} {r['quantity']}", label=_source_label(d, r), zorder=STYLE["marker_z"])  # fmt: skip
+        ax.set_xlabel("temperature (K)")
+        ax.set_ylabel(display_sources.label(d, "silicon.band_gap_ev"))
+        ax.legend(loc="upper right")
+    return fig
+
+
+def oxide_sources_figure(palette: str):
+    """The SiO₂ band gap and the two Si/SiO₂ band offsets that each source gives: one panel per
+    quantity, one row per source."""
+    pal = ef.PALETTES[palette]
+    d = display_sources.load()
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = Figure(figsize=STYLE["oxide_sources_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(len(OXIDE_QUANTITIES), 1)
+        for ax, q in zip(axes, OXIDE_QUANTITIES, strict=True):
+            rs = [r for r in d["row"] if r["quantity"] == q]
+            for i, r in enumerate(rs):
+                ax.scatter([r["value"]], [i], marker=STYLE["source_markers"][r["source"]],
+                           s=STYLE["source_marker_area"], color=pal[STYLE["source_colours"][r["source"]]],
+                           gid=f"{r['source']} {q}", zorder=STYLE["marker_z"])  # fmt: skip
+            ax.set_yticks(range(len(rs)), [_source_label(d, r) for r in rs])
+            ax.set_ylim(-STYLE["row_margin"], len(rs) - 1 + STYLE["row_margin"])
+            ax.set_title(display_sources.label(d, q))
+        axes[-1].set_xlabel("energy (eV)")
+    return fig
+
+
 # --- the dev-HEAD image: forks and which image makes which results ---------------------------------
 
 
@@ -754,6 +873,9 @@ DRAW: dict[str, Callable] = {
     "output-cache-tree": cache_tree_figure,
     "render-exaggeration": exaggeration_figure,
     "render-band-offsets": band_offset_figure,
+    "display-dos-masses": dos_masses_figure,
+    "display-silicon-gap": silicon_gap_figure,
+    "display-oxide-sources": oxide_sources_figure,
 }
 
 #: Every figure of the reproduce pages as SVG bytes, by file name stem.
@@ -761,9 +883,14 @@ FIGURES: dict[str, Callable[[str], bytes]] = {name: _svg_of(draw) for name, draw
 
 
 def write_all(out_dir: Path) -> None:
-    """Write every figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg``."""
+    """Write every figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg``, and
+    each display quantity's table of sources
+    (:func:`gf180tcad.display_sources.table_name`)."""
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    for q in display_sources.load()["quantities"]:
+        table = display_sources.table_markdown(q)
+        (out / display_sources.table_name(q)).write_text(table, encoding="utf-8")
     for name, draw in FIGURES.items():
         for palette in ("light", "dark"):
             (out / f"{name}-{palette}.svg").write_bytes(draw(palette))

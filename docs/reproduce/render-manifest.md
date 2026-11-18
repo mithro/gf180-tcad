@@ -93,10 +93,12 @@ of the oxide, and the two Si–SiO₂ band offsets. A band diagram is drawn with
 the two offsets, as the file's `drawing` entry says. {numref}`render-band-offsets` draws those three.
 
 No simulation reads the file. Each value has a unit and a source in the
-{ref}`literature list <lit-sze>`. The file's `mismatch` text compares the band gap the simulation
+{ref}`literature list <lit-alkauskas>`. The file's `mismatch` text compares the band gap the simulation
 implies with the band gap the drawing uses. A committed render manifest reads every `display`
 entry from this file and no other, and never reads the oxide gap
 ({py:meth}`gf180tcad.render.manifest.Manifest.display_problems`).
+Every number the public sources give for the six values, and which one the file takes, is on
+{doc}`display-values`.
 
 ```{figure} /_generated/reproduce/render-band-offsets-light.svg
 :name: render-band-offsets
@@ -105,9 +107,9 @@ entry from this file and no other, and never reads the oxide gap
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
 silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
-the conduction and valence band offsets above and below silicon's. The oxide gap drawn, 9.02 eV,
+the conduction and valence band offsets above and below silicon's. The oxide gap drawn, 8.92 eV,
 is silicon's band gap plus both offsets. The figure leaves it unlabelled, because the file cites the
-oxide gap separately as 9.0 eV. The file's `drawing` entry says which three values a drawing uses.
+oxide gap separately as 8.9 eV. The file's `drawing` entry says which three values a drawing uses.
 ```
 
 ```{figure} /_generated/reproduce/render-band-offsets-dark.svg
@@ -116,9 +118,9 @@ oxide gap separately as 9.0 eV. The file's `drawing` entry says which three valu
 
 The band edges at the silicon and oxide interface, from {repo}`data/render/display.toml`, with
 silicon's {term}`valence band` edge at 0. Silicon's edges are its band gap apart. The oxide's edges sit
-the conduction and valence band offsets above and below silicon's. The oxide gap drawn, 9.02 eV,
+the conduction and valence band offsets above and below silicon's. The oxide gap drawn, 8.92 eV,
 is silicon's band gap plus both offsets. The figure leaves it unlabelled, because the file cites the
-oxide gap separately as 9.0 eV. The file's `drawing` entry says which three values a drawing uses.
+oxide gap separately as 8.9 eV. The file's `drawing` entry says which three values a drawing uses.
 ```
 
 ## What the check rejects

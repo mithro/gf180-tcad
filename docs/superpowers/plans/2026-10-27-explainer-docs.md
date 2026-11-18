@@ -269,7 +269,8 @@ E1b ships in two PRs as well. E1b-1 (branch `task/p5-e1b-explainer-pages`) is
   not a committed data file, so no registry entry can read it, and its source (Misiakos and
   Tsamakis 1993) is not on the literature page. #97 settles it. The page says the simulations read
   n_i and no band gap.
-- `idealised.degenerate_offset` stays off the page (#88, #98): the gap section states the plain
+- `idealised.degenerate_offset` stays off the page (#98; #88 set N_c to 2.86×10¹⁹ cm⁻³, which gives
+  30.4 mV at 10²⁰ cm⁻³ and 298.15 K): the gap section states the plain
   claim and links the limitations item on the poly gate, which gives the size of the error.
 - New glossary terms make their first uses elsewhere links: the Boltzmann statistics entry, the
   limitations item on the poly gate, the render manifest page and the `gf180tcad.derive` module
