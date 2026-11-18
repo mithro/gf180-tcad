@@ -147,7 +147,7 @@ used. The pfet source/drain peak of the 2D {term}`MOSCAP` is therefore a `litera
 1e20 cm⁻³. It is the p⁺ source/drain implant of a complementary MOS (CMOS) process flow. That
 flow is in chapter 2 of Plummer, Deal and Griffin, *Silicon VLSI Technology* (Prentice Hall,
 2000, [ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)). Halving or
-doubling the peak moves the 2D Cgg by up to 1.52 % at Lmin and 0.53 % at L = 2 µm
+doubling the peak moves the 2D {term}`Cgg` up to 1.52 % at {term}`Lmin`, 0.53 % at 2 µm
 ({ref}`moscap2d-sd`).
 
 (process-data-bins)=
