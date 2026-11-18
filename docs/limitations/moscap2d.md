@@ -305,15 +305,17 @@ at 0, where each is half its peak. The dashed line is the body doping.
 
 
 A factor of two in the peak moves the pfet Cgg most in depletion. At {term}`Lmin` (0.5 µm) the
-peaks 5e19 and 2e20 against 1e20 move it by −1.52 % / +1.25 % at worst. In accumulation they
+peaks 5e19 and 2e20 cm⁻³ against 1e20 cm⁻³ move it by −1.52 % / +1.25 % at worst. In accumulation they
 move it by −0.56 % / +0.50 %, and in inversion by −0.03 % / +0.03 %. At L = 2 µm the same three
 changes are −0.53 % / +0.44 %, −0.15 % / +0.14 % and −0.01 % / +0.01 %
 ([issue #203](https://github.com/mithro/gf180-tcad/issues/203)).
 
 The effect is at the gate edges, so it falls as L grows. At L = 2 µm it is 0.27 times the Lmin
-change in accumulation and 0.35 times in depletion (our arithmetic). A 1/L share gives 0.25.
+change in accumulation and 0.35 times the worst change in depletion. The length ratio, 0.5 / 2,
+is 0.25 (all three our arithmetic).
 
-The 2D Lmin depletion Cgg therefore carries up to −1.52 % / +1.25 % from this value. That belongs in the uncertainty list of the calibration and the comparison (Phase 2 plan:
+The 2D Lmin depletion Cgg therefore carries up to −1.52 % / +1.25 % from this value. This
+belongs in the uncertainty list of the calibration and the comparison (Phase 2 plan:
 {repo}`calibration <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
 {repo}`results pages <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-13a-tcad-results-and-docs-pages>`).
 The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` keeps the 0.1 %

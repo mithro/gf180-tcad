@@ -144,11 +144,11 @@ belongs to the next bin, `.model nfet_06v0.1`.
 
 The pfet card's {term}`NSD` of 6e16 (line [38207](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38207)) has no clear physical meaning and is not
 used. The pfet source/drain peak of the 2D {term}`MOSCAP` is therefore a `literature` value,
-1e20 cm⁻³. It is the p⁺ source/drain implant of a complementary MOS (CMOS) process flow. That
-flow is in chapter 2 of Plummer, Deal and Griffin, *Silicon VLSI Technology* (Prentice Hall,
-2000, [ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)). Halving or
-doubling the peak moves the 2D {term}`Cgg` up to 1.52 % at {term}`Lmin`, 0.53 % at 2 µm
-({ref}`moscap2d-sd`).
+1e20 cm⁻³. Halving or doubling it changes its {term}`Cgg` by at most 1.52 % at {term}`Lmin`
+and 0.53 % at L = 2 µm ({ref}`moscap2d-sd`). The value is the p⁺ source/drain implant of a
+complementary MOS (CMOS) process flow. That flow is in chapter 2 of Plummer, Deal and Griffin,
+*Silicon VLSI Technology* (Prentice Hall, 2000,
+[ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)).
 
 (process-data-bins)=
 
