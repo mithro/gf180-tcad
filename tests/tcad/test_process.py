@@ -107,10 +107,12 @@ def test_files_load(device):
 def test_tunables_present(device):
     desc = process.load(device)
     free = {n for n, p in desc.params.items() if not p.fixed}
-    assert free == {"t_ox_eff_nm", "n_ch_cm3", "dv_fb_v"} == set(process.TUNABLES)
+    assert free == {"t_ox_eff_nm", "n_ch_cm3", "dv_fb_v", "poly_bias_nm"}
+    assert set(process.TUNABLES) == {"t_ox_eff_nm", "n_ch_cm3", "dv_fb_v"}
+    assert process.TUNABLES_2D == ("poly_bias_nm",)
     for name in free:
         p = desc.params[name]
-        assert p.role == "tunable"
+        assert p.role == ("tunable-2d" if name in process.TUNABLES_2D else "tunable")
         lo, hi = p.bounds
         assert all(isinstance(b, float) and math.isfinite(b) for b in (lo, hi))
         assert lo <= p.value <= hi
@@ -118,7 +120,7 @@ def test_tunables_present(device):
         assert p.start_source and p.bounds_source
     for p in desc.params.values():
         if p.fixed:
-            assert p.bounds is None and p.role != "tunable", p.name
+            assert p.bounds is None and p.role not in ("tunable", "tunable-2d"), p.name
 
 
 @pytest.mark.parametrize("device", DEVICES)
@@ -133,6 +135,10 @@ def test_tunable_starts(device):
     assert desc.params["dv_fb_v"].bounds == (-0.2, 0.2)
     assert "project choice" in desc.params["dv_fb_v"].bounds_source
     assert "project choice" in desc.params["dv_fb_v"].start_source
+    bias = desc.params["poly_bias_nm"]
+    assert (bias.value, bias.unit, bias.bounds) == (0.0, "nm", (0.0, 100.0))
+    assert bias.start_kind == "project-choice" and bias.bounds_kind == ("project-choice",) * 2
+    assert "project choice" in bias.start_source and "project choice" in bias.bounds_source
     assert "sm141064.ngspice:" in desc.params["t_ox_eff_nm"].start_source  # TOXE
     assert "sm141064.ngspice:" in desc.params["n_ch_cm3"].start_source  # NDEP
     assert "project choice" in desc.params["n_ch_cm3"].bounds_source
@@ -507,7 +513,8 @@ def test_no_calibrated_values_in_data(tmp_path):
     assert sorted(f.stem for f in DATA.glob("*.toml")) == sorted(DEVICES)
     for f in sorted(DATA.glob("*.toml")):
         for name, p in tomllib.loads(f.read_text(encoding="utf-8"))["param"].items():
-            assert (p["provenance"] == "calibrated") == (p["role"] == "tunable"), name
+            tunable = p["role"] in ("tunable", "tunable-2d")
+            assert (p["provenance"] == "calibrated") == tunable, name
     raw = _raw("nfet_05v0")
     raw["param"]["ndep_cm3"]["provenance"] = "calibrated"
     with pytest.raises(ValueError, match="ndep_cm3.*calibrated"):
@@ -519,6 +526,17 @@ def test_tunable_must_be_tagged_calibrated(tmp_path, tag):
     raw = _raw("nfet_05v0")
     raw["param"]["n_ch_cm3"]["provenance"] = tag
     with pytest.raises(ValueError, match="n_ch_cm3.*calibrated"):
+        process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
+
+
+@pytest.mark.parametrize(("name", "role"), [("poly_bias_nm", "tunable"),
+                                           ("dv_fb_v", "tunable-2d")])  # fmt: skip
+def test_tunable_roles_are_fixed_by_name(tmp_path, name, role):
+    """The 1D tunables have the role ``tunable`` and the poly bias ``tunable-2d``, never the
+    other way round."""
+    raw = _raw("nfet_05v0")
+    raw["param"][name]["role"] = role
+    with pytest.raises(ValueError, match=f"{name} has role"):
         process.load("nfet_05v0", data_dir=_write(tmp_path, "nfet_05v0", raw))
 
 

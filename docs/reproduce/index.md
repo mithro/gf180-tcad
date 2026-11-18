@@ -958,6 +958,45 @@ with one exception. After the calibration, the selected 1D meshes gained fields 
 [690cf7b](https://github.com/mithro/gf180-tcad/commit/690cf7beba26658e4b6b541925df6ac09fabe6bc)).
 That commit only added lines, so the mesh the calibration read is unchanged.
 
+**The 2D poly length bias ([issue #189](https://github.com/mithro/gf180-tcad/issues/189)).**
+The change adds `poly_bias_nm` to both process files, at 0. The files give its bounds and a
+note on them.
+{py:func}`gf180tcad.tcad.stack.build` lengthens the gate by it. It also rewords the `dv_fb_v` note
+([issue #96](https://github.com/mithro/gf180-tcad/issues/96)). Every entry point hashes the
+process files, so every results folder's hash moved. At δ = 0 the cross-section is the one built before.
+
+The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
+`generator_sha256`.
+
+| results folder | writer | before | after |
+|---|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `faab4b279fa1ba515d2c6c83295046094511dc5ed0935c8f3d93acd22def49c4` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `faab4b279fa1ba515d2c6c83295046094511dc5ed0935c8f3d93acd22def49c4` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `faab4b279fa1ba515d2c6c83295046094511dc5ed0935c8f3d93acd22def49c4` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `6b1812a9a65a84f9917c24d5230830fa94bc3e46024465181d43eb33a403fbd3` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `6b1812a9a65a84f9917c24d5230830fa94bc3e46024465181d43eb33a403fbd3` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `c02af793644ac0df687363c1dc2d7381bd751cd7573dc432df6a4fc2ec12dc75` | `748acf7b51df9ec48f9956660d8a7aa1c2c10f196c6349d68900167265279391` |
+| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `716311ee6abc6ba36dcc80423fe504102f64e9c575fb14adb9d177627fe6f998` | `74ac12581ee2c0e69051887b70c88762ac9e2c7c293945f30bf87a09f2f0637e` |
+
+No data changed. The evidence, all at commit
+[0e7a2e3](https://github.com/mithro/gf180-tcad/commit/0e7a2e3f78795014a7055884f41adf97ef60994f):
+
+- The jobs of the `crosscheck-tcad` subset were rerun at the updated hashes on the project's host.
+  Their 26 files are byte-identical to the committed ones, including
+  {repo}`results/tcad/moscap1d/provenance.json` and {repo}`results/tcad/meshes/stable/provenance.json`.
+- The 1D sandbox tests passed, among them
+  {test}`tests/tcad/test_moscap1d.py::test_poly_bias_is_2d_only`: the 1D C–V is the same at 50 nm as at 0.
+- {test}`tests/tcad/test_moscap2d.py::test_dualgate_required` passed. It builds every calibrated
+  cell at the upper bound of δ and checks the edge harness against {py:func}`~gf180tcad.tcad.stack.build`.
+- The edge-sensitivity records pin the writer's hash, so all 12 variants were rerun with the changed
+  {py:func}`~gf180tcad.tcad.stack.build`. Every node count and every Cgg is bit for bit the one
+  recorded before. Only `commit` and `generator_sha256` changed in
+  {repo}`results/edge-sensitivity/nfet_05v0-w10p0_l0p60.json` and
+  {repo}`results/edge-sensitivity/pfet_05v0-w10p0_l0p50.json`.
+  {test}`tests/test_edge_sensitivity.py::test_rerun_reproduces_the_record` then passed.
+- The other folders were not rerun. Their writers' hashes moved only through the process files
+  and the code above, which compute the same at δ = 0.
+
 (cross-host-determinism)=
 
 ## The same bytes on another computer

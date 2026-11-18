@@ -23,7 +23,9 @@ MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MO
   {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`,
   {numref}`index-cv-figure`);
 - the calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7, in {repo}`results/tcad/moscap2d`;
-- the calibrated 2D pfet cells at W10/L0.5, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7, in the same folder;
+- the calibrated 2D pfet cells at W10/L0.5, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7, in the same
+  folder. In every 2D cell the poly is as drawn, its length bias at 0
+  ({ref}`process-data-poly-bias`).
 - the reduced mesh artefact of each calibrated 2D cell, the mesh around its gate, in
   {repo}`results/tcad/meshes/stable` ({ref}`moscap2d-mesh-artefact`);
 - their {term}`mesh convergence`, 1D and 2D, in {repo}`results/tcad/meshconv`

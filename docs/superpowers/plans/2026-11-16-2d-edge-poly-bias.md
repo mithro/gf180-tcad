@@ -30,18 +30,19 @@ The Phase 2 Global Constraints apply unchanged (`docs/superpowers/plans/2026-10-
 
 ## Task E2: δ as a tunable, at its start value
 
-- [ ] `data/process/{nfet,pfet}_05v0.toml`: `[param.poly_bias_nm]`, role `tunable`, provenance `calibrated`, start 0 (`project choice`), bounds [0, 100] nm (`project choice`). Each note says the fit is 2D only (Task E3).
-  - Also fix the `dv_fb_v` note's "about 40 mV" ([issue #96](https://github.com/mithro/gf180-tcad/issues/96)): state the 31 mV of `explain.idealised.degenerate_offset` with its inputs, or drop the number.
-- [ ] `process.TUNABLES` gains `poly_bias_nm`. The 1D model ignores it (`moscap1d` never reads it), with a test that the 1D C–V is the same at any δ.
-- [ ] `stack.build` widens the oxide, the poly and the gate electrode by δ at each end. The source/drain stays self-aligned to the widened poly. `CrossSection` keeps the drawn `l_um` for the normalisation and records `poly_l_um`, which `moscap2d.check_geometry` checks.
-- [ ] The 1D calibration (`calibrate_cv`) fits the three 1D tunables. `poly_bias_nm` passes through it at its start value, and the calibration file records it with origin `start` until E3. Check how `calibration.read` handles the new name, and migrate the two committed calibration files with a recorded procedure (they gain `poly_bias_nm: 0`).
-- [ ] At δ = 0 nothing computed changes. Restamp every tree. Rerun the `crosscheck-tcad` subset byte for byte, plus one calibrated 2D cell's first QS points, against the committed `cv.csv`. Record it.
+Design as built (changed from the first draft, which put δ in `process.TUNABLES`): every 1D consumer (the 1D fit, the corner fits, the calibration file check, the explainer pages) iterates `TUNABLES`, and none of them reads δ. So δ has its own role and tuple, and the 1D calibration files stay as they are.
+
+- [x] `data/process/{nfet,pfet}_05v0.toml`: `[param.poly_bias_nm]`, role `tunable-2d`, provenance `calibrated`, start 0 (`project choice`), bounds [0, 100] nm (`project choice`). The note says it is 2D only. The budget comment is 4 of 8.
+  - [x] The `dv_fb_v` note ([issue #96](https://github.com/mithro/gf180-tcad/issues/96)) drops "about 40 mV" and names `gf180tcad.explain.idealised.degenerate_offset` (its N_c input is still under #88, so no number).
+- [x] `process.TUNABLES_2D = ("poly_bias_nm",)`, role `tunable-2d` in `ROLES`; `process.load` requires exactly `TUNABLES` + `TUNABLES_2D` free, each with its own role. `TUNABLES` is unchanged. Test: the 1D C-V is the same at δ = 50 nm as at 0 (`tests/tcad/test_moscap1d.py::test_poly_bias_is_2d_only`, sandbox).
+- [x] `stack.build` widens the oxide, the poly and the gate electrode by δ at each end; `gate_u` is the widened gate, so the source/drain stays self-aligned to it and `check_geometry` checks the widened gate. `l_um` stays drawn; `CrossSection.poly_l_um` is the meshed length. A δ that reaches a contact raises ValueError. Test: the dualgate driver case (sandbox).
+- [x] At δ = 0 nothing computed changes. Every tree restamped (docs/reproduce/index.md record). Evidence: the `crosscheck-tcad` subset byte for byte, the 1D sandbox tests, the dualgate driver case and the nfet W10/L0.6 base variant equal to the E1 record. The other 2D driver cases pass. The L = 2 µm source/drain case, first run with a 2D job's memory, is a strict expected failure like Lmin's ([issue #203](https://github.com/mithro/gf180-tcad/issues/203)).
 
 ## Task E3: fit δ and rerun
 
-- [ ] `python -m gf180tcad.calibrate edge-fit --device D`: δ from the E1 record and the edge split of the committed calibrated cells at δ = 0, written into `results/tcad/calibration/<device>.json` with origin `calibrated-2d`. The test re-derives it.
+- [ ] `python -m gf180tcad.calibrate edge-fit --device D`: δ from the E1 record and the edge split of the committed calibrated cells at δ = 0, written to its own file, `results/tcad/calibration/<device>.edge.json` (so the 1D calibration's `param_sha256` and the 1D jobs stay as they are). `load_params(..., "calibrated")` applies it for 2D jobs; the 2D job meta records its sha256, and adds δ and its origin to `tunables` with `param_sha256` covering it (E2 leaves them out so the δ = 0 cells stay byte-identical). The test re-derives δ.
 - [ ] Rerun every calibrated 2D cell at the fitted δ, one 16 GiB job at a time: nfet W10/L0.6, W10/L0.7, W10/L1, W10/L2 (QS only) and W1.6/L0.7; pfet W10/L0.5, W10/L0.7, W10/L1, W10/L2 (QS only) and W1.6/L0.7. One PR per cell, or per pair, as the commit-early rule asks.
-- [ ] After the last cell: rerun the 1D calibrated jobs (their provenance records the calibration's `param_sha256`), the validation, the corner fits (their provenance records the calibration) and the mesh artefacts. Update the manifest.
+- [ ] After the last cell: rerun the validation (it reads the 2D cells) and the reduced mesh artefacts. The 1D jobs, the 1D calibration and the corner fits do not read δ: restamp them. Update the manifest.
 - [ ] Docs: the C–V page's 2D tables and the edge-capacitance section show the new values. The new residual at each plateau is tagged `spice-fit` (the card's bias-dependent overlap). Update the limitations pages, the README Status and the docs index Status.
 
 ## Task E4: check the depletion crossing

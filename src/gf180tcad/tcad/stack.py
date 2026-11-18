@@ -132,6 +132,12 @@ class CrossSection:
     sd_peak_cm3: float | None
     sd_straggle_um: float | None
 
+    @property
+    def poly_l_um(self) -> float:
+        """The meshed poly's length (um): the drawn ``l_um`` plus twice the process file's
+        ``poly_bias_nm`` for a cell from :func:`build`."""
+        return self.gate_u[1] - self.gate_u[0]
+
     def contact_region(self, contact: str) -> str:
         """The region a contact is placed on: the poly for the gate, else the body."""
         if contact not in self.contacts:
@@ -301,6 +307,12 @@ def build(
     process file's source/drain peak (for the sensitivity check). Raises
     :class:`DualgateMissing` unless Dualgate covers the gate, and ValueError if the cell does
     not have one gate over one active area with one source and one drain contact on the cut.
+
+    The poly, the gate oxide and the gate electrode are longer than drawn by the process file's
+    ``poly_bias_nm`` (:data:`gf180tcad.tcad.process.TUNABLES_2D`) at each end, and the
+    source/drain doping is self-aligned to them (issue #189). ``l_um`` stays the drawn length,
+    which normalises C per area; :attr:`CrossSection.poly_l_um` is the meshed one. Raises
+    ValueError if the longer gate would reach a source or drain contact.
     """
     from gdsfactory import Component
 
@@ -329,13 +341,20 @@ def build(
             f"{proc.device}: expected one source and one drain contact on the cut, found {contacts}"
         )
     a0, a1 = active
+    bias_um = proc.values()["poly_bias_nm"] * 1e-3
+    px0, px1 = gx0 - bias_um, gx1 + bias_um
+    if px0 <= src[0][1] or px1 >= drn[0][0]:
+        raise ValueError(
+            f"{proc.device}: a poly bias of {bias_um * 1e3!r} nm reaches a source/drain contact "
+            f"(gate {gx0!r}..{gx1!r} um, contacts end at {src[0][1]!r} and start at {drn[0][0]!r})"
+        )
     sim = Component()
     rects = {
         BODY: (a0, a1),
         "body_contact": (a0, a1),
-        OXIDE: (gx0, gx1),
-        POLY: (gx0, gx1),
-        "gate_contact": (gx0, gx1),
+        OXIDE: (px0, px1),
+        POLY: (px0, px1),
+        "gate_contact": (px0, px1),
     }
     if with_sd:
         rects["source_contact"] = src[0]
@@ -349,7 +368,7 @@ def build(
         proc,
         component=sim,
         line=((a0, y), (a1, y)),
-        gate_u=(gx0 - a0, gx1 - a0),
+        gate_u=(px0 - a0, px1 - a0),
         l_um=gx1 - gx0,
         w_um=gy1 - gy0,
         with_sd=with_sd,

@@ -144,11 +144,11 @@ belongs to the next bin, `.model nfet_06v0.1`.
 
 The pfet card's {term}`NSD` of 6e16 (line [38207](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38207)) has no clear physical meaning and is not
 used. The pfet source/drain peak of the 2D {term}`MOSCAP` is therefore a `literature` value,
-1e20 cm⁻³. It is the p⁺ source/drain implant of a complementary MOS (CMOS) process flow. That
-flow is in chapter 2 of Plummer, Deal and Griffin, *Silicon VLSI Technology* (Prentice Hall,
-2000, [ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)). It is not
-load-bearing for the {term}`C–V`
-({test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive`, {ref}`moscap2d`).
+1e20 cm⁻³. Halving or doubling it changes its {term}`Cgg` by at most 1.52 % at {term}`Lmin`
+and 0.53 % at L = 2 µm ({ref}`moscap2d-sd`). The value is the p⁺ source/drain implant of a
+complementary MOS (CMOS) process flow. That flow is in chapter 2 of Plummer, Deal and Griffin,
+*Silicon VLSI Technology* (Prentice Hall, 2000,
+[ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)).
 
 (process-data-bins)=
 
@@ -225,7 +225,8 @@ The dotted line is the overlap, fringe and gate-bulk part.
 
 ## The three tunables
 
-These are 3 of the 8 calibrated parameters per device type. The calibration fits them, so they are
+These are 3 of the 8 calibrated parameters per device type; the fourth is the 2D poly length bias
+({ref}`process-data-poly-bias`). The calibration fits them, so they are
 tagged `calibrated`, never `spice-card`. Instead of a `source`, each has a `start_source` and a
 `bounds_source`, and a structured `start_kind` and `bounds_kind` (one kind per bound). A kind is
 `card`, `derived` or `project-choice`
@@ -404,6 +405,42 @@ can be evaluated from the public manual and code.
 
 The fitted oxides are inside these bounds and at neither end ({doc}`cv-agreement`). The nfet
 oxide is 16.05 nm, within 15.2–16.95 nm. The pfet oxide is 15.72 nm, within 15.6–16.39 nm.
+
+(process-data-poly-bias)=
+
+## The 2D poly length bias
+
+The fourth tunable, `poly_bias_nm`, is read only by the 2D cross-section
+({py:func}`gf180tcad.tcad.stack.build`, {py:data}`gf180tcad.tcad.process.TUNABLES_2D`). Its role is
+`tunable-2d`. The poly, the {term}`gate oxide` and the gate electrode are longer by it at each end, and the
+source/drain doping stays aligned to them. The drawn L still divides Cgg into C per area.
+The 1D MOS capacitor never reads it. {numref}`process-data-poly-bias-figure` shows one gate end.
+
+```{figure} /_generated/comparison/poly-bias-light.svg
+:name: process-data-poly-bias-figure
+:figclass: only-light
+:alt: The drain-side end of the gate, to scale: the drawn poly and thin oxide end at a dashed line; a highlighted strip of poly and oxide 100 nm wide continues past it; the drain starts at the strip's end, beside the channel.
+
+The drain-side end of the gate of the {term}`nfet_05v0` cell `w10p0_l0p70`, to scale, with the
+bias at its upper bound. The highlighted poly and oxide are the bias. The drain moves out with
+the gate's end.
+```
+
+```{figure} /_generated/comparison/poly-bias-dark.svg
+:figclass: only-dark
+:alt: The drain-side end of the gate, to scale: the drawn poly and thin oxide end at a dashed line; a highlighted strip of poly and oxide 100 nm wide continues past it; the drain starts at the strip's end, beside the channel.
+
+The drain-side end of the gate of the {term}`nfet_05v0` cell `w10p0_l0p70`, to scale, with the
+bias at its upper bound. The highlighted poly and oxide are the bias. The drain moves out with
+the gate's end.
+```
+
+| Name | Unit | Start | Min | Max |
+|---|---|---|---|---|
+| `poly_bias_nm` | nm | 0 | 0 | 100 |
+
+The start, both bounds and their sources are project choices, the same for both devices. The start
+is the poly as drawn. Why the 2D cells need it is in {ref}`moscap2d-edge`.
 
 ## No calibrated values in the files
 

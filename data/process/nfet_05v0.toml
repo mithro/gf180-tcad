@@ -22,7 +22,7 @@ plateau_v = 2.0
 delta_nm = 0.95
 note = "Max of the BSIM4 4.5.0 CTM charge thickness X_DC times EPSROX/eps_si over the accumulation and strong-inversion plateaus only: polarity*Vg <= -2 V and >= +2 V of the cv sweep (the +-2 V plateau convention of the calibration). Depletion is left out, where the X_DC formula saturates near Ldebye/3 and says nothing about the oxide-capacitance plateaus. The maximum is the accumulation X_DC at the plateau edge, 2.841 nm at Vg = -2 V. Computed by gf180tcad.tcad.process.centroid_allowance_nm."
 
-# --- calibration tunables (3 of the 8-parameter budget) -------------------------------------
+# --- calibration tunables (4 of the 8-parameter budget) -------------------------------------
 
 [param.t_ox_eff_nm]
 value = 15.2
@@ -61,7 +61,20 @@ role = "tunable"
 bounds = [-0.2, 0.2]
 bounds_source = "project choice: +-0.2 V for a lumped flat-band offset."
 bounds_kind = ["project-choice", "project-choice"]
-note = "Lumped flat-band offset, applied as a rigid gate-bias shift vg_device = vg - dv_fb_v. It absorbs Boltzmann statistics in the degenerate gate (about 40 mV), SPICE's empirical flat band and interface/fixed charge; it is not a fixed-oxide-charge parameter."
+note = "Lumped flat-band offset, applied as a rigid gate-bias shift vg_device = vg - dv_fb_v. It absorbs the error of Boltzmann statistics in the degenerate gate (gf180tcad.explain.idealised.degenerate_offset), SPICE's empirical flat band and interface/fixed charge; it is not a fixed-oxide-charge parameter."
+
+[param.poly_bias_nm]
+value = 0.0
+unit = "nm"
+provenance = "calibrated"
+start_source = "project choice: 0, the poly as drawn."
+start_kind = "project-choice"
+fixed = false
+role = "tunable-2d"
+bounds = [0.0, 100.0]
+bounds_source = "project choice: 0 to 100 nm at each gate end; the least-squares fits of issue #189 are 40.2 nm (nfet) and 61.5 nm (pfet)."
+bounds_kind = ["project-choice", "project-choice"]
+note = "Poly length bias of the 2D cross-section: the poly, the gate oxide and the gate electrode are longer by this at each end, and the source/drain stays self-aligned to them. The drawn L still normalises C per area. Fitted to the 2D cells' edge capacitance only (issue #189); the 1D MOS capacitor never reads it."
 
 # --- card values that tunable starts and bounds come from ------------------------------------
 

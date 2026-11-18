@@ -1946,8 +1946,12 @@ def test_limit_kinds_are_the_process_files(tmp_path):
         dst.write_text((ROOT / f"data/process/{device}.toml").read_text("utf-8"), "utf-8")
     p = tmp_path / "data/process/pfet_05v0.toml"
     text = p.read_text("utf-8")
-    assert text.count('start_kind = "project-choice"') == 1
-    p.write_text(text.replace('start_kind = "project-choice"', 'start_kind = "card"'), "utf-8")
+    # Only dv_fb_v's start: poly_bias_nm (TUNABLES_2D) is not in the table.
+    head, sep, tail = text.partition("[param.dv_fb_v]")
+    block, nxt, rest = tail.partition("\n[param.")
+    assert sep and block.count('start_kind = "project-choice"') == 1
+    block = block.replace('start_kind = "project-choice"', 'start_kind = "card"')
+    p.write_text(head + sep + block + nxt + rest, "utf-8")
     with pytest.raises(ValueError, match="differ"):
         numbers.limit_kinds(root=tmp_path)
 

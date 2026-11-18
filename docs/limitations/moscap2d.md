@@ -273,7 +273,7 @@ acceptance bound ({repo}`report <results/tcad/meshconv/moscap2d/nfet_05v0/report
 
 (moscap2d-sd)=
 
-## The source/drain peak matters at Lmin
+## The source/drain peak matters at the gate edges
 
 The pfet source/drain peak, `sd_peak_cm3` = 1e20 cm⁻³, is a `literature` value, not a card value.
 With the junction depth {term}`XJ` fixed, the peak also sets the straggle (44.5, 42.0 and 39.9 nm
@@ -304,15 +304,22 @@ at 0, where each is half its peak. The dashed line is the body doping.
 ```
 
 
-At the pfet {term}`Lmin` (0.5 µm) a factor of two in the
-peak moves Cgg by −1.52 % / +1.25 % at worst (depletion), −0.56 % / +0.50 % in accumulation and
-−0.03 % / +0.03 % in inversion; the effect is at the gate edges, so its share of Cgg scales as 1/L. So the
-2D Lmin depletion Cgg carries up to −1.52 % / +1.25 % from this value. That belongs in the
-uncertainty list of the calibration and the comparison (Phase 2 plan:
+A factor of two in the peak moves the pfet Cgg most in depletion. At {term}`Lmin` (0.5 µm) the
+peaks 5e19 and 2e20 cm⁻³ against 1e20 cm⁻³ move it by −1.52 % / +1.25 % at worst. In accumulation they
+move it by −0.56 % / +0.50 %, and in inversion by −0.03 % / +0.03 %. At L = 2 µm the same three
+changes are −0.53 % / +0.44 %, −0.15 % / +0.14 % and −0.01 % / +0.01 %
+([issue #203](https://github.com/mithro/gf180-tcad/issues/203)).
+
+The effect is at the gate edges, so it falls as L grows. At L = 2 µm it is 0.27 times the Lmin
+change in accumulation and 0.35 times the worst change in depletion. The length ratio, 0.5 / 2,
+is 0.25 (all three our arithmetic).
+
+The 2D Lmin depletion Cgg therefore carries up to −1.52 % / +1.25 % from this value. This
+belongs in the uncertainty list of the calibration and the comparison (Phase 2 plan:
 {repo}`calibration <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg>`,
 {repo}`results pages <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-13a-tcad-results-and-docs-pages>`).
-The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` keeps the 0.1 % bound. It is a
-{term}`strict expected failure` at Lmin (on the sensitivity assertion only) and asserted at L = 2 µm.
+The test {test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive` keeps the 0.1 %
+bound, as a {term}`strict expected failure` at both lengths on the sensitivity assertion only.
 
 (moscap2d-l2)=
 
@@ -767,6 +774,6 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
 - **Few calibrated 2D cells** ({ref}`moscap2d-calibrated`, [issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
   They are the nfet W10/L0.6, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7.
   The pfet cells are W10/L0.5, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7.
-- **The pfet source/drain peak is uncertain** and matters at Lmin ({ref}`moscap2d-sd`).
+- **The pfet source/drain peak is uncertain** and matters at the gate edges, most at Lmin ({ref}`moscap2d-sd`).
 
 The modelled cell is in {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`. Its fringe and plateaus are in {numref}`moscap2d-ccox-figure`.

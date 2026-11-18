@@ -14,6 +14,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from gf180tcad import io, sandbox
@@ -36,6 +37,13 @@ CASES = (
     "sd_pfet_05v0_l2",
     "dualgate",
 )
+# The driver runs at most this many cases at once (8 GiB each). The project's host has 31 GiB,
+# and the session and its containers stay under about 24 GiB, of which the session takes 8.
+DRIVER_JOBS = 2
+# The source/drain cases solve on the selected 2D mesh at W = 10 um, as a 2D job does, so they
+# get a 2D job's memory (cli.JOB_MEM_2D) and run one at a time: at 8 GiB the L = 2 um case was
+# killed for memory.
+SD_CASES = ("sd_pfet_05v0_lmin", "sd_pfet_05v0_l2")
 CAL = {d: [g for g in SPICE_DEVICES[d].geometries if g.role == "calibration"] for d in DEVICES}
 
 
@@ -303,19 +311,32 @@ def test_committed_ac_follows_qs():
 # --- in the TCAD image -----------------------------------------------------------------------
 
 
+def _run_case(tmp_path_factory, case: str, mem: str = "8g") -> tuple[str, dict]:
+    """One case of the driver in the sandbox (``mem``, one CPU) and its JSON."""
+    out = tmp_path_factory.mktemp(case)
+    sandbox.run(
+        ["python3", "/work/src/tests/tcad/moscap2d_driver.py", case],
+        out_dir=out, image=TCAD_IMAGE, mem=mem, cpus=1,
+    )  # fmt: skip
+    return case, json.loads((out / f"{case}.json").read_bytes())
+
+
 @pytest.fixture(scope="module")
 def driver(tmp_path_factory) -> dict:
-    def run(case: str) -> tuple[str, dict]:
-        out = tmp_path_factory.mktemp(case)
-        sandbox.run(
-            ["python3", "/work/src/tests/tcad/moscap2d_driver.py", case],
-            out_dir=out, image=TCAD_IMAGE, mem="8g", cpus=1,
-        )  # fmt: skip
-        return case, json.loads((out / f"{case}.json").read_bytes())
+    """Every case but ``dualgate``: :data:`DRIVER_JOBS` at a time, then :data:`SD_CASES` alone."""
+    cases = [c for c in CASES if c != "dualgate" and c not in SD_CASES]
+    meshconv.check_admission(DRIVER_JOBS, "8g")
+    with ThreadPoolExecutor(max_workers=DRIVER_JOBS) as pool:
+        out = dict(pool.map(lambda c: _run_case(tmp_path_factory, c), cases))
+    meshconv.check_admission(1, cli.JOB_MEM_2D)
+    out.update(_run_case(tmp_path_factory, c, cli.JOB_MEM_2D) for c in SD_CASES)
+    return out
 
-    meshconv.check_admission(len(CASES), "8g")
-    with ThreadPoolExecutor(max_workers=len(CASES)) as pool:
-        return dict(pool.map(run, CASES))
+
+@pytest.fixture(scope="module")
+def dualgate(tmp_path_factory) -> dict:
+    """The ``dualgate`` case alone: it builds cross-sections and solves nothing."""
+    return _run_case(tmp_path_factory, "dualgate")[1]
 
 
 @pytest.mark.sandbox
@@ -384,6 +405,13 @@ _SD_LMIN_REASON = (
     "sd_peak_cm3 is load-bearing at Lmin (0.5 um): Cgg moves -1.52 % / +1.25 % (worst, "
     "depletion) for 5e19 / 2e20 against 1e20; fixed XJ couples peak and straggle"
 )
+# At L = 2 um it is load-bearing too (issue #203, first run with a 2D job's memory): worst
+# -0.528 % (5e19) / +0.442 % (2e20) in depletion at Vg = 0 V, -0.151 % / +0.137 % at +5 V and
+# -0.008 % / +0.009 % at -5 V. Issue #203 replaces the 0.1 % bound with these measured numbers.
+_SD_L2_REASON = (
+    "sd_peak_cm3 is load-bearing at L = 2 um too (issue #203): Cgg moves -0.53 % / +0.44 % "
+    "(worst, depletion) for 5e19 / 2e20 against 1e20"
+)
 
 
 @pytest.mark.sandbox
@@ -394,7 +422,10 @@ _SD_LMIN_REASON = (
             "sd_pfet_05v0_lmin",
             marks=pytest.mark.xfail(strict=True, raises=SdSensitivity, reason=_SD_LMIN_REASON),
         ),
-        "sd_pfet_05v0_l2",
+        pytest.param(
+            "sd_pfet_05v0_l2",
+            marks=pytest.mark.xfail(strict=True, raises=SdSensitivity, reason=_SD_L2_REASON),
+        ),
     ],
 )
 def test_pfet_sd_doping_insensitive(driver, case):
@@ -408,14 +439,41 @@ def test_pfet_sd_doping_insensitive(driver, case):
 
 
 @pytest.mark.sandbox
-def test_dualgate_required(driver):
+def test_dualgate_required(dualgate):
     """stack.build accepts both 5 V cells and raises DualgateMissing without Dualgate (55,0)."""
-    for device, d in driver["dualgate"].items():
+    for device, d in dualgate.items():
         g = meshconv.geometry_2d(device)
         assert d["refused"] and "Dualgate" in d["refused"]
         assert math.isclose(d["l_um"], g.l_um, abs_tol=1e-9)
         assert math.isclose(d["w_um"], g.w_um, abs_tol=1e-9)
         assert d["contacts"] == ["body", "drain", "gate", "source"]
+        # the poly bias (issue #189): 0 by default; 40 nm longer at each end, the drawn L kept
+        assert math.isclose(d["poly_l_um"], g.l_um, abs_tol=1e-9)
+        b = d["biased"]
+        assert b["l_um"] == d["l_um"]
+        assert math.isclose(b["gate_u"][0], d["gate_u"][0] - 0.04, abs_tol=1e-12)
+        assert math.isclose(b["gate_u"][1], d["gate_u"][1] + 0.04, abs_tol=1e-12)
+        assert math.isclose(b["poly_l_um"], g.l_um + 0.08, abs_tol=1e-9)
+        assert d["reaches"] and "reaches a source/drain contact" in d["reaches"]
+        # the source/drain doping moves out with each gate end, the cut line stays
+        assert math.isclose(d["bias_um"], 0.04, abs_tol=1e-12) and d["line_kept"]
+        for moved in (d["drain_moved"], d["source_moved"]):
+            biased_sd, drawn_sd = (np.asarray(m) for m in moved)
+            assert np.allclose(biased_sd, drawn_sd, rtol=1e-9, atol=1e-9 * drawn_sd.max())
+            assert drawn_sd.max() > drawn_sd.min() * 10  # the window crosses the junction
+        # the upper bound builds on every calibrated 2D cell, the gate 2 * bound longer
+        cells = sorted(p.name for p in (TREE / device / "calibrated").iterdir())
+        assert sorted(d["at_bound"]) == cells and len(cells) == 5
+        drawn_l = {geometry_id(x): x.l_um for x in SPICE_DEVICES[device].geometries}
+        for gid, poly_l in d["at_bound"].items():
+            assert math.isclose(poly_l, drawn_l[gid] + 2 * d["bound_nm"] * 1e-3, abs_tol=1e-9)
+        # the edge-sensitivity harness's bias<nm> is stack.build's bias but for its l_um
+        h = d["harness"]
+        assert np.allclose(h["gate_u"], h["biased_gate_u"], rtol=0, atol=1e-12)
+        assert h["same_rest"]
+        harness_sd, biased_sd = (np.asarray(s) for s in h["sd"])
+        assert np.allclose(harness_sd, biased_sd, rtol=1e-9, atol=1e-9 * biased_sd.max())
+        assert math.isclose(h["l_um"], g.l_um + 2 * d["bias_um"], abs_tol=1e-9)
 
 
 @pytest.mark.sandbox

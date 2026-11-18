@@ -293,6 +293,15 @@ def _run_cli(root: Path, device: str) -> None:
 
 
 @pytest.mark.sandbox
+@pytest.mark.parametrize("device", DEVICES)
+def test_poly_bias_is_2d_only(driver, device):
+    """The 1D MOS capacitor never reads the 2D poly length bias (issue #189): the same C-V at
+    50 nm as at 0."""
+    d = driver[device]
+    assert d["biased"] == d["unbiased"]
+
+
+@pytest.mark.sandbox
 def test_byte_identical(tmp_path):
     """Two runs give byte-identical files, equal to the committed ones."""
     roots = [tmp_path / "a", tmp_path / "b"]

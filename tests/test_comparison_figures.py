@@ -27,6 +27,7 @@ SRC = REPO_ROOT / "src" / "gf180tcad" / "comparison_figures.py"
 # Every figure (test_figures_listed_here_are_all_the_figures holds the list complete).
 FIGURES = [
     "process-cell",
+    "poly-bias",
     "instance-plan",
     "geometries",
     "meshconv",
@@ -493,6 +494,41 @@ def test_process_cell_marks_the_channel_and_the_doping(palette):
     assert statement == ef.substitutions()["x_fig_parts_cell_scale"]
 
 
+def _fill_box(collection) -> tuple[float, float, float, float]:
+    """(x0, x1, y0, y1) of a fill_between polygon."""
+    xy = collection.get_paths()[0].vertices
+    return xy[:, 0].min(), xy[:, 0].max(), xy[:, 1].min(), xy[:, 1].max()
+
+
+@pytest.mark.parametrize("palette", ["light", "dark"])
+def test_poly_bias_figure_draws_the_bias(palette):
+    """The drawn gate ends at L / 2 of the committed cell; the bias adds poly and oxide from there
+    to L / 2 plus the process file's upper bound of poly_bias_nm, as thick as the meshed poly
+    and oxide; the drain starts at the longer gate's end, as deep as the junction."""
+    import tomllib
+
+    from gf180tcad.explain import model
+
+    c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={})
+    raw = tomllib.loads((REPO_ROOT / "data/process/nfet_05v0.toml").read_text("utf-8"))
+    bias_um = raw["param"]["poly_bias_nm"]["bounds"][1] * 1e-3
+    assert cf.poly_bias_um() == pytest.approx(bias_um, rel=1e-12)
+    half = c.l_um / 2
+    fig = cf.poly_bias_figure(palette)
+    gate = _fill_box(_artist(fig, "bias gate"))
+    oxide = _fill_box(_artist(fig, "bias oxide"))
+    drain = _fill_box(_artist(fig, "drain"))
+    assert _close(gate, [half, half + bias_um, -(c.t_ox_um + c.poly_um), -c.t_ox_um])
+    assert _close(oxide, [half, half + bias_um, -c.t_ox_um, 0.0])
+    assert _close(drain[0], half + bias_um) and _close(drain[2:], [0.0, c.xj_um])
+    assert _close(_artist(fig, "drawn end").get_xdata(), [half, half])
+    assert _close(_fill_box(_artist(fig, "drawn gate"))[1], half)
+    (label,) = [t for t in fig.axes[0].texts if t.get_gid() == "bias label"]
+    assert label.get_text() == f"δ = {bias_um * 1e3:g} nm"
+    page = (REPO_ROOT / "docs/comparison/process-data.md").read_text("utf-8")
+    assert page.count(f"strip of poly and oxide {bias_um * 1e3:g} nm wide") == 2
+
+
 def literal_digits(source: str, allowed: set[str]) -> list[tuple[int, str]]:
     """(line, text) of each string literal inside a function (f-string parts included) that holds
     a digit once the ``allowed`` names are taken out; docstrings and raise messages are skipped.
@@ -550,9 +586,9 @@ def test_positive_control_literal_digits():
     assert [line for line, _ in literal_digits(src, {"nfet_05v0"})] == [2, 3]
 
 
-# The figures drawn from no results tree: the two explainer-model drawings (the committed TCAD
+# The figures drawn from no results tree: the three explainer-model drawings (the committed TCAD
 # tree through gf180tcad.explain.model), the process-file plot and the two drawn from code.
-NO_ROOT = {"process-cell", "start-stack", "centroid", "geometries", "instance-plan"}
+NO_ROOT = {"process-cell", "poly-bias", "start-stack", "centroid", "geometries", "instance-plan"}
 
 
 @pytest.mark.parametrize("name", sorted(set(FIGURES) - NO_ROOT))

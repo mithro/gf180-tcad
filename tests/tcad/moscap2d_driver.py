@@ -8,6 +8,7 @@ parallel; the tests assert on the numbers. The 1D references are computed here t
 (results/tcad/meshconv/moscap2d/<device>/selected.json).
 """
 
+import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -133,6 +134,72 @@ def _without(component, layer):
     return c
 
 
+# The calibrated 2D cells (results/tcad/moscap2d/<device>/calibrated/<geometry id>).
+MOSCAP2D = Path(__file__).resolve().parents[2] / "results" / "tcad" / "moscap2d"
+# The edge-sensitivity harness, whose bias<nm> variants widen the gate on their own (issue #189).
+VARIANT_PY = Path(__file__).resolve().parents[2] / "experiments" / "edge-sensitivity" / "variant.py"
+
+
+def _sd(xs, u, depth_um: float = 0.0):
+    """The source/drain doping of ``xs`` along the surface at the u positions ``u`` (cm^-3)."""
+    import numpy as np
+
+    donors, acceptors = xs.doping[stack.BODY]
+    profiles = donors if xs.polarity == "n" else acceptors
+    u = np.asarray(u, float)
+    return sum(p(u, np.full_like(u, depth_um)) for p in profiles)
+
+
+def _poly_bias(proc, g, xs, biased) -> dict:
+    """The poly bias (issue #189): the source/drain moves out with the gate's ends; the upper
+    bound builds on every calibrated 2D cell; the edge-sensitivity harness's bias<nm> is the same
+    cross-section as stack.build's, but for its l_um (the poly's length, not the drawn one)."""
+    import importlib.util
+
+    import numpy as np
+
+    from gf180tcad.devices import DEVICES, geometry_id
+
+    bias = biased.gate_u[1] - xs.gate_u[1]
+    steps = np.linspace(-0.2, 0.2, 41)
+    drain_moved = [list(_sd(biased, biased.gate_u[1] + steps)), list(_sd(xs, xs.gate_u[1] + steps))]
+    source_moved = [
+        list(_sd(biased, biased.gate_u[0] + steps)),
+        list(_sd(xs, xs.gate_u[0] + steps)),
+    ]
+    name = process.TUNABLES_2D[0]
+    hi = proc.params[name].bounds[1]
+    by_id = {geometry_id(x): x for x in DEVICES[proc.device].geometries}
+    at_bound = {}
+    for path in sorted((MOSCAP2D / proc.device / "calibrated").iterdir()):
+        top = stack.build(proc.with_values({name: hi}), stack.cell(proc.device, by_id[path.name]),
+                          with_sd=True)  # fmt: skip
+        at_bound[path.name] = top.poly_l_um
+    spec = importlib.util.spec_from_file_location("edge_variant", VARIANT_PY)
+    variant = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(variant)
+    harness = variant.cross_section(proc, g, bias_um=bias, plugs=False)
+    # across both gate ends of the biased cell
+    u = np.concatenate([biased.gate_u[0] + steps, biased.gate_u[1] + steps])
+    return {
+        "bias_um": bias,
+        "drain_moved": drain_moved,
+        "source_moved": source_moved,
+        "line_kept": biased.line == xs.line,
+        "at_bound": at_bound,
+        "bound_nm": hi,
+        "harness": {
+            # the two compute the gate ends in a different order, so they agree to rounding
+            "gate_u": list(harness.gate_u),
+            "biased_gate_u": list(biased.gate_u),
+            "sd": [list(_sd(harness, u)), list(_sd(biased, u))],
+            "same_rest": dataclasses.replace(harness, l_um=biased.l_um, gate_u=biased.gate_u)
+            == biased,
+            "l_um": harness.l_um,
+        },
+    }
+
+
 def case_dualgate() -> dict:
     """stack.build accepts the cells and refuses them without Dualgate."""
     out = {}
@@ -146,14 +213,29 @@ def case_dualgate() -> dict:
             refused = None
         except stack.DualgateMissing as e:
             refused = str(e)
+        biased = stack.build(proc.with_values({"poly_bias_nm": 40.0}), cell, with_sd=True)
+        p = proc.params["poly_bias_nm"]
+        huge = dataclasses.replace(
+            proc, params={**proc.params, "poly_bias_nm": dataclasses.replace(p, value=1e4)}
+        )
+        try:
+            stack.build(huge, cell, with_sd=True)
+            reaches = None
+        except ValueError as e:
+            reaches = str(e)
         out[device] = {
+            **_poly_bias(proc, g, xs, biased),
             "l_um": xs.l_um,
             "w_um": xs.w_um,
             "gate_u": list(xs.gate_u),
+            "poly_l_um": xs.poly_l_um,
             "length_um": xs.length_um,
             "contacts": sorted(xs.contacts),
             "refused": refused,
-        }
+            "biased": {"l_um": biased.l_um, "gate_u": list(biased.gate_u),
+                       "poly_l_um": biased.poly_l_um, "line": biased.line},
+            "reaches": reaches,
+        }  # fmt: skip
     return out
 
 

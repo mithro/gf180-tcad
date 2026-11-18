@@ -10,7 +10,7 @@
     }
   },
   "generator": "gf180tcad.meshcut.__main__",
-  "generator_sha256": "716311ee6abc6ba36dcc80423fe504102f64e9c575fb14adb9d177627fe6f998",
+  "generator_sha256": "74ac12581ee2c0e69051887b70c88762ac9e2c7c293945f30bf87a09f2f0637e",
   "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",
   "images": {
     "meshes": {
