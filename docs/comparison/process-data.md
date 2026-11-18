@@ -146,9 +146,9 @@ The pfet card's {term}`NSD` of 6e16 (line [38207](https://github.com/fossi-found
 used. The pfet source/drain peak of the 2D {term}`MOSCAP` is therefore a `literature` value,
 1e20 cm⁻³. It is the p⁺ source/drain implant of a complementary MOS (CMOS) process flow. That
 flow is in chapter 2 of Plummer, Deal and Griffin, *Silicon VLSI Technology* (Prentice Hall,
-2000, [ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)). It is not
-load-bearing for the {term}`C–V`
-({test}`tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive`, {ref}`moscap2d`).
+2000, [ISBN 0-13-085037-3](https://openlibrary.org/isbn/0130850373)). Halving or
+doubling the peak moves the 2D Cgg by up to 1.52 % at Lmin and 0.53 % at L = 2 µm
+({ref}`moscap2d-sd`).
 
 (process-data-bins)=
 
