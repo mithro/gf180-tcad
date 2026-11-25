@@ -1503,7 +1503,7 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
     return {
         "lim_charon_nodes": f"{cv[n_ref]['boundary_nodes'][-1] + 1}",
         "lim_charon_points": f"{cv[n_ref]['n']}",
-        "lim_charon_ni": f"{ni!r}",
+        "lim_charon_ni": f"{ni:.15e}".replace("e+0", "e"),  # all the digits the deck writes
         "lim_charon_ref_tau": cv[n_ref]["settings"]["CX_TAU"],
         "lim_charon_nfet_devsim": _sci(cv[n_ref]["max_abs_rel_vs_devsim"]),
         "lim_charon_pfet_devsim": _sci(cv[p_ref]["max_abs_rel_vs_devsim"]),
