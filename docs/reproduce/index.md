@@ -114,8 +114,8 @@ Then run its `--method combine-qs` line.
 It exits non-zero if any job fails or if any file differs from, is missing from, or is not
 listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Docker }}, the sandbox
 (see {doc}`sandbox`), the pinned images (see {doc}`image`) and the plugin submodule
-({ref}`getting-the-source`), so clone with `--recurse-submodules`. The commands are those of the
-{ref}`TCAD provenance table <tcad-provenance>`;
+({ref}`getting-the-source`), so clone with `--recurse-submodules`. The commands are those of
+{numref}`tab-results-writers`;
 {test}`tests/test_makefile.py::test_reproduce_runs_in_dependency_order` and the other tests of
 {repo}`tests/test_makefile.py` parse every command `make -n reproduce` prints with the argument
 parser of the command line it calls, and compare the jobs with the committed job directories.
