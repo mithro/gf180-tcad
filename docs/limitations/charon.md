@@ -45,8 +45,9 @@ the project's 8.265841554853887e9 cm⁻³ exactly.
 (charon-cv)=
 ## The quasi-static C–V
 
-Charon solves zero-current {term}`drift-diffusion` at the gate biases vg ± 1 mV, stepped by LOCA
-continuation. The C per area is the central difference of the gate charge,
+The gate {term}`sweep <sweep>` takes the device from {term}`accumulation` through {term}`depletion` into
+{term}`inversion`. Charon solves zero-current {term}`drift-diffusion` at the gate biases
+vg ± 1 mV, stepped by LOCA continuation. The C per area is the central difference of the gate charge,
 {math:numref}`eq-charon-cv`:
 
 $$
@@ -87,7 +88,7 @@ The dashed line is the 1 % tolerance.
 
 The reference runs use SRH lifetimes of 1e-15 s, not the project's 1e-5 s. With no current, the
 steady state is each region's equilibrium, whatever the lifetimes. The short lifetimes only let
-the {term}`inversion` charge appear quickly during the Newton solve. In the bottom panel of
+the inversion charge appear quickly during the Newton solve. In the bottom panel of
 {numref}`fig-charon-cv`, another lifetime moves C by at most 1.1e-9.
 
 A ten times looser tolerance moves C by at most 1.0e-9, in the same panel. In the reference runs,
@@ -96,7 +97,7 @@ n·p equals n_i² within 2e-6 at every node and state, so each state is an equil
 (charon-hard-range)=
 ## Where the default settings stop
 
-With the project's lifetimes, the nfet {term}`sweep` stops at the onset of inversion. That is a device
+With the project's lifetimes, the nfet sweep stops at the onset of inversion. That is a device
 bias of 0.35 V. {numref}`fig-charon-hard-range` shows the last bias each solver setting reached,
 sweeping up from 0 V. Looser tolerances, another concentration scaling, 5 mV steps and the FEM
 discretisation all stop between 0.05 V and 0.45 V. Only lifetimes of 1e-14 s or shorter reach
@@ -136,16 +137,16 @@ range. Solves started on the inversion side fail too, at every bias from 0.5 V t
 ```{table} The other questions of Task B and what the experiments found.
 :name: tab-charon-other-answers
 
-| Experiment | Question | Answer | Measured | Quantity |
-|---|---|---|---|---|
-| B1 | Does Charon read TRI3 blocks? | Yes | 2.6e-4 | C at 0 V of a 2D {{ gmsh }} mesh, relative to DEVSIM's 1D |
-| B2 | Does the nonlinear-Poisson solve honour a biased poly gate? | No | 0 | Its C, fF/µm²: the bias drops inside the poly |
-| B3 | Does Belos GMRES converge on the sweep? | No | not applicable | Amesos2 KLU2 converges instead |
-| B4 | Do the cosine current columns give C on a parallel plate? | Yes | 2.1e-9 | Relative error of C |
-| B4 | Do they give C with the ohmic poly gate? | No | 0.20 | Ratio to the QS C in accumulation ([issue #213](https://github.com/mithro/gf180-tcad/issues/213)) |
-| B6 | Is the oxide flux a conservative gate charge? | Yes | 8.2e-13 | Relative mismatch with the poly and body charges |
-| B7 | Does a ten times looser tolerance move C? | No | 1.3e-9 | Largest relative change of C |
-| B7 | Does a ten times tighter tolerance converge? | No | 1e-11 | The WRMS tolerance that fails in depletion |
+| Question | Answer | Measured |
+|---|---|---|
+| B1: does Charon read TRI3 blocks? (C of a 2D {{ gmsh }} mesh, relative to DEVSIM's 1D) | Yes | 2.6e-4 |
+| B2: does the nonlinear-Poisson solve honour a biased poly gate? (its C, fF/µm²) | No | 0 |
+| B3: does Belos GMRES converge on the sweep? (Amesos2 KLU2 does) | No | not applicable |
+| B4: do the cosine current columns give C on a parallel plate? (relative error) | Yes | 2.1e-9 |
+| B4: do they give C with the ohmic poly gate? (ratio to the QS C, [issue #213](https://github.com/mithro/gf180-tcad/issues/213)) | No | 0.20 |
+| B6: is the oxide flux a conservative gate charge? (mismatch with the poly and body charges) | Yes | 8.2e-13 |
+| B7: does a ten times looser tolerance move C? (largest relative change) | No | 1.3e-9 |
+| B7: does a ten times tighter tolerance converge? (the WRMS tolerance) | No | 1e-11 |
 ```
 
 ## Deck rules the backend follows
