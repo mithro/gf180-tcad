@@ -117,6 +117,7 @@ class Page:
         out = []
         in_fm = False
         fence = None          # the fence string that opened a skipped block
+        table_fence = None    # LOCAL (gf180-tcad): the fence of an open {table} directive
         in_callout = 0
         callout_fence = []
         for i, line in enumerate(self.lines, 1):
@@ -131,7 +132,21 @@ class Page:
                 if line.startswith(fence[:3]) and line.strip() == fence.strip():
                     fence = None
                 continue
+            # LOCAL (gf180-tcad): a {table} directive holds a pipe table and its caption, which
+            # are checked like any table and sentence; only its fences and options are skipped.
+            if table_fence:
+                if line.strip() == table_fence:
+                    table_fence = None
+                    continue
+                if re.match(r"^\s*:[\w-]+:", line):
+                    continue
             d = DIRECTIVE.match(line)
+            if d and d.group(2).lower() == "table" and not table_fence:
+                table_fence = d.group(1)
+                caption = line[d.end():].strip()
+                if caption:
+                    out.append((i, caption, "prose"))
+                continue
             if d:
                 mark, name = d.group(1), d.group(2).lower()
                 if name in CALLOUT_DIRECTIVES:
@@ -292,6 +307,8 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             section whose noun is not a physical thing (a mesh file, a sweep command):
             <!-- figure-ok: a reason of six words or more --> in the section. Each opt-out
             prints PATH:LINE: NOTE FIGURE-OK reason.
+            A {numref} to a table (a {table} named on the page, or a name starting "tab-")
+            is not a figure. A {table} directive's caption and cells are read as a table's.
   FIGURE-FORM  a {figure} with no :name:, no caption, or no {numref} on the page citing it.
             The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
             A {numref} to a target not on the page needs the page's title in its text
@@ -473,6 +490,9 @@ def _rule_lines(text):
             if kind == "figure" and re.match(r"^\s*:[\w-]+:", line):
                 out.append((i, line, "option"))
                 continue
+            if kind == "tabledir" and re.match(r"^\s*:[\w-]+:", line):
+                out.append((i, line, "tableopt"))
+                continue
         if in_comment:
             out.append((i, line, "comment"))
             in_comment = "-->" not in line
@@ -490,12 +510,16 @@ def _rule_lines(text):
                 kind = "figure"
             elif name == "math":
                 kind = "mathdir"
+            elif name == "table":
+                kind = "tabledir"
             elif name in _PROSE_DIRECTIVES:
                 kind = "callout"
             else:
                 kind = "code"
             stack.append((f.group(2), kind))
-            out.append((i, line, kind if kind in ("figure", "mathdir") else "fence"))
+            # A {table}'s opening line holds its caption, checked as a caption is.
+            shown = {"figure": "figure", "mathdir": "mathdir", "tabledir": "caption"}
+            out.append((i, line, shown.get(kind, "fence")))
             continue
         context = stack[-1][1] if stack else None
         if s.startswith("<!--"):
@@ -545,14 +569,32 @@ _FIGURE_OK = re.compile(r"<!--\s*figure-ok:\s*(?P<reason>[^>]*?)\s*-->")
 _IMAGE_LINE = re.compile(r"^\s*(!\[[^\]]+\]\([^)]+\)|<img\s[^>]*\balt=\"[^\"]+\"[^>]*\bsrc=)")
 
 
+_NUMREF = re.compile(r"\{numref\}`(?:([^`<]*)<)?\s*([^`<>]+?)\s*>?`")
+
+
+def _table_names(lines):
+    """The :name: of each {table} directive on the page."""
+    return {m.group(1) for _, ln, k in lines if k == "tableopt"
+            for m in [re.match(r"^\s*:name:\s*(\S+)", ln)] if m}
+
+
+def _cites_a_figure(line, tables):
+    """Whether the line has a {numref} to something other than a table: a {table} named on the
+    page, or a "tab-" name (the label prefix of every table)."""
+    return any(m.group(2) not in tables and not m.group(2).startswith("tab-")
+               for m in _NUMREF.finditer(line))
+
+
 def figure_findings(lines, sphinx=True):
     out, sections = [], [[]]
     for row in lines:
         if row[2] == "heading":
             sections.append([])
         sections[-1].append(row)
+    # A {numref} to a table is not a figure: a table named on the page, or any "tab-" name.
+    tables = _table_names(lines)
     for sec in sections:
-        has_figure = any(k == "figure" or "{numref}" in ln for _, ln, k in sec)
+        has_figure = any(k == "figure" or _cites_a_figure(ln, tables) for _, ln, k in sec)
         if not sphinx:
             has_figure = has_figure or any(_IMAGE_LINE.match(ln) for _, ln, _k in sec)
         opt_out = any(len((m.group("reason") or "").split()) >= OPT_OUT_WORDS
@@ -627,6 +669,7 @@ def figure_form_findings(lines):
     targets = {opts["name"] for _, opts, _ in _figure_blocks(lines) if opts.get("name")}
     targets |= {re.match(r"^\s*\(([\w.:-]+)\)=", ln).group(1) for _, ln, k in lines if k == "label"
                 and re.match(r"^\s*\(([\w.:-]+)\)=", ln)}
+    targets |= _table_names(lines)
     for i, text, target in refs:
         if target in targets:
             continue

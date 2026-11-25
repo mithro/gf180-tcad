@@ -151,14 +151,21 @@ def tables(text: str, path: str) -> list[Table]:
     lines = text.splitlines()
     out: list[Table] = []
     fence = None
+    table_fence = None  # the fence of an open {table} directive, whose table is checked
     i = 0
     while i < len(lines):
         line = lines[i]
-        m = re.match(r"^\s*(`{3,}|~{3,})", line)
+        if fence is None and table_fence and line.strip() == table_fence:
+            table_fence = None
+            i += 1
+            continue
+        m = re.match(r"^\s*(`{3,}|~{3,}|:{3,})", line)
         if m:
             tok = m.group(1)
             if fence is None:
-                if not line.strip().startswith(("```{", "~~~{")) or "table" not in line:
+                if re.match(r"^\s*(`{3,}|~{3,}|:{3,})\s*\{(list-)?table\}", line):
+                    table_fence = tok
+                elif tok[0] != ":":
                     fence = tok[0] * len(tok)
             elif line.strip().startswith(fence):
                 fence = None

@@ -766,3 +766,64 @@ def test_cross_page_numref_without_the_page_title_fires(cite):
 )
 def test_numref_with_a_target_on_the_page_or_a_title_passes(page):
     assert found(page, "FIGURE-FORM") == []
+
+
+# --- {table}: a captioned, named table is checked like any table, and is not a figure --------
+
+_TABLE = (
+    "~~~{table} The oxide thickness of each device.\n:name: tab-tox\n\n"
+    "| Device | t_ox (nm) |\n|---|---|\n| nfet | 15 |\n~~~\n"
+)
+
+
+def test_table_caption_is_checked_for_banned_words(tmp_path):
+    """Positive control: the upstream checks read a {table}'s caption (a banned word fires) and
+    go on reading the page after the table (the closing fence does not open a code block)."""
+    page = tmp_path / "page.md"
+    page.write_text(
+        "# T\n\n" + _TABLE.replace("The oxide", "Simply the oxide") + "\nThis is just text.\n",
+        encoding="utf-8",
+    )
+    out = _run("--no-front-matter", str(page)).stdout
+    assert "page.md:3: FAIL banned word 'simply'" in out, out
+    assert "page.md:11: FAIL banned word 'just'" in out, out
+    page.write_text("# T\n\n{numref}`tab-tox` lists them.\n\n" + _TABLE, encoding="utf-8")
+    assert _run("--no-front-matter", "--rules", "all", str(page)).returncode == 0
+
+
+def test_table_caption_is_checked_for_file_links():
+    page = "# T\n\n{numref}`tab-tox` lists them.\n\n" + _TABLE.replace(
+        "each device.", "each device, from `results/a.json`."
+    )
+    assert [c for _, c, _ in lint().rule_findings(page)] == ["FILELINK"]
+
+
+def test_numref_to_a_table_is_not_a_figure():
+    """Positive control: a section that describes the oxide and cites only a table still has
+    no figure; a {numref} to a table on the page needs no page title."""
+    page = "# T\n\nThe oxide is 15 nm thick; {numref}`tab-tox` lists it.\n\n" + _TABLE
+    assert [c for _, c, _ in lint().rule_findings(page)] == ["FIGURE"]
+    other = "# T\n\nThe oxide is 15 nm thick, {numref}`Table %s of Process data <tab-x>`.\n"
+    assert [c for _, c, _ in lint().rule_findings(other)] == ["FIGURE"]
+
+
+def test_table_cells_in_a_table_directive_are_checked():
+    """tests/doc_style.py reads the cells of a {table} (a prose cell fires) and the text after
+    its closing fence is not a code block (a later table is read too)."""
+    from doc_style import tables
+
+    prose = _TABLE.replace("| nfet | 15 |", "| nfet | " + "word " * 30 + "|")
+    text = prose + "\n| A | B |\n|---|---|\n| 1 | 2 |\n"
+    found = tables(text, "x")
+    assert len(found) == 2 and found[0].problems and not found[1].problems
+
+
+def test_measure_docs_reads_table_directive_caption_and_cells():
+    spec = importlib.util.spec_from_file_location(
+        "measure_docs", ROOT / "tools" / "measure_docs.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    got = list(mod.blocks(_TABLE + "\nAfter the table.\n"))
+    assert ("paragraph", 1, "The oxide thickness of each device.") in got
+    assert ("cell", 6, "nfet") in got and ("paragraph", 9, "After the table.") in got

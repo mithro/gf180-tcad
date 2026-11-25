@@ -95,6 +95,7 @@ def blocks(text: str):
     lines = text.split("\n")
     i, n = 0, len(lines)
     in_fence = None
+    in_table = None
     in_generated = False
     in_defs = False
     buf: list[str] = []
@@ -113,6 +114,22 @@ def blocks(text: str):
     while i < n:
         line = lines[i]
         stripped = line.strip()
+        # LOCAL (gf180-tcad): a {table} directive holds a pipe table and its caption; its cells
+        # and caption are measured like any other, only the fences and options are skipped.
+        if in_table and stripped == in_table:
+            in_table = None
+            i += 1
+            continue
+        table = re.match(r"^(:::+|```+|~~~+)\s*\{table\}\s*(.*)$", stripped)
+        if table and in_fence is None and in_table is None:
+            out = flush()
+            if out:
+                yield out
+            in_table = table.group(1)
+            if table.group(2):
+                yield ("paragraph", i + 1, table.group(2))
+            i += 1
+            continue
         if re.match(r"^(:::+|```+|~~~+)", stripped):
             fence = re.match(r"^(:::+|```+|~~~+)", stripped).group(1)
             if in_fence is None:
