@@ -64,6 +64,7 @@ EXPLAINED_FIGURES = [
     "corner-crosscheck",
     "corner-crossing",
     "corner-limits",
+    "project-flow",
 ]
 
 
