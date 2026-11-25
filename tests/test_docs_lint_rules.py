@@ -283,7 +283,15 @@ def _run(*args: str) -> subprocess.CompletedProcess:
 
 def test_help_documents_the_three_checks():
     out = _run("--help").stdout
-    for check in ("FIGURE", "FIGURE-FORM", "FIGURE-OK", "EQUATION", "FILELINK", "--rules"):
+    for check in (
+        "FIGURE",
+        "FIGURE-FORM",
+        "FIGURE-OK",
+        "NUMBER-REF",
+        "EQUATION",
+        "FILELINK",
+        "--rules",
+    ):
         assert check in out
 
 
@@ -358,7 +366,8 @@ def _site_conf() -> dict:
 def test_house_forms_build_and_number(tmp_path):
     """The figure and equation forms of spec §10.3 build under -W with docs/conf.py's own
     extensions (docs/_ext on the path), with numfig on; {numref} and {math:numref} resolve; and
-    a light/dark twin pair (the light twin named, the dark twin not) takes one number."""
+    a light/dark twin pair (the light twin named, the dark twin not) is one figure, identified
+    by its label (docs/_ext/stable_ids.py)."""
     pytest.importorskip("sphinx")
     pytest.importorskip("myst_parser")
     site = _site_conf()
@@ -414,14 +423,20 @@ def test_house_forms_build_and_number(tmp_path):
     html = (tmp_path / "o" / "index.html").read_text(encoding="utf-8")
     assert 'href="#equation-eq-cox"' in html
 
-    def number(name):
-        m = re.search(rf'href="#{name}"[^>]*><span[^>]*>[^<]*?(\d+)</span>', html)
-        assert m, f"no numbered reference to {name}"
-        return int(m.group(1))
+    def cited(name):
+        m = re.search(rf'href="#{name}"[^>]*><span[^>]*>([^<]*)</span>', html)
+        assert m, f"no {{numref}} reference to {name}"
+        return m.group(1)
 
-    assert number("fig-stack") == 1
+    assert cited("fig-stack") == "Figure stack"
+    assert cited("fig-two") == "Figure two"
     assert "theme_figures" in site["extensions"]  # docs/_ext/theme_figures.py, PR #140
-    assert number("fig-two") == 2  # the dark twin takes no number
+    assert "stable_ids" in site["extensions"]  # docs/_ext/stable_ids.py
+    # the dark twin is merged into the light one: two figures, two captions
+    assert re.findall(r'<span class="caption-number">([^<]*)</span>', html) == [
+        "Figure stack: ",
+        "Figure two: ",
+    ]
 
 
 # --- FIGURE: the nouns of the review of PR #143 ---------------------------------------------
@@ -738,7 +753,7 @@ def test_equation_symbol_named_inside_an_item_is_not_defined():
 
 
 # --- FIGURE-FORM: a {numref} to another page names that page --------------------------------
-# Figure numbers restart on each page, so "Figure 2" alone does not say which page's figure.
+# The link text says where the link leads: "Figure stack of The oxide", not "Figure stack".
 
 
 @pytest.mark.parametrize(
@@ -921,3 +936,45 @@ def test_table_ref_across_a_line_wrap_reports_its_first_line():
     hits = [(n, m) for n, c, m in lint().rule_findings(page) if c == "TABLE-REF"]
     assert [n for n, _ in hits] == [3, 7], hits
     assert "'table below'" in hits[0][1], hits
+
+
+# --- NUMBER-REF: "Figure 3" typed by hand ------------------------------------------------------
+# Figures and tables are identified by their labels (docs/_ext/stable_ids.py), so no number of
+# the site's own names one.
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["As Figure 3 shows, it rises.", "Fig. 3 draws it.", "Table 12 lists them.",
+     "Tables 2 and 3 agree.", "See Figs 4.", "The values (Table 1.2) agree.",
+     "It rises, as\nFigure 3 shows."],
+)  # fmt: skip
+def test_number_ref_fires_on_a_typed_number(line):
+    """Positive control: in prose, wrapped across two lines too."""
+    hits = found(f"# T\n\n{line}\n", "NUMBER-REF")
+    assert len(hits) == 1 and hits[0][0] == 3 + line.count("\n"), hits
+
+
+def test_number_ref_fires_in_a_caption_and_a_table_cell():
+    caption = "# T\n\nSee {numref}`fig-a`.\n\n```{figure} a.svg\n:name: fig-a\n:alt: a\n\nAs in Table 2.\n```\n"
+    assert found(caption, "NUMBER-REF"), caption
+    table = "# T\n\n| A | B |\n|---|---|\n| see Figure 4 | 1 |\n"
+    assert found(table, "NUMBER-REF"), table
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["{numref}`fig-a` shows it.", "{numref}`Figure %s of The oxide <fig-a>` shows it.",
+     "The commits that Table 2-1 of the user manual names.", "Figure 3 of Sze gives it.",
+     "Never write `Table 3`.", "The table has 12 rows.", "Figure stack shows it.",
+     "Three tables, 12 figures."],
+)  # fmt: skip
+def test_number_ref_quiet_on_citations_and_other_documents(line):
+    assert found(f"# T\n\n{line}\n", "NUMBER-REF") == []
+
+
+def test_number_ref_skips_pages_read_on_github():
+    """README.md and CONTRIBUTING.md (sphinx=False) number their own figures by hand."""
+    page = "# T\n\n![a](a.svg)\n\nAs Figure 1 shows.\n"
+    assert [c for _, c, _ in lint().rule_findings(page, sphinx=False) if c == "NUMBER-REF"] == []
+    assert [c for _, c, _ in lint().rule_findings(page) if c == "NUMBER-REF"]

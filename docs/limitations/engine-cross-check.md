@@ -20,10 +20,10 @@ The threshold is not loosened. **Twelve of the 36 cases fail:** `idvg_lin`
 {term}`strict expected failures <strict expected failure>` (listed in
 {py:data}`gf180tcad.known.KNOWN_ENGINE_DIFFS`) that point to this page, so a fix would show up as an
 unexpected pass. The engine difference of every sweep and geometry is plotted against the
-threshold in {numref}`engine-diff-figure`.
+threshold in {numref}`fig-engine-diff`.
 
 ```{figure} /_generated/limitations/engine-diff-light.svg
-:name: engine-diff-figure
+:name: fig-engine-diff
 :figclass: only-light
 :alt: Two panels of engine difference on a log axis. Filled nfet circles and squares sit above a dashed threshold; hollow nfet markers and all pfet markers sit below it.
 
@@ -84,10 +84,10 @@ the drain current Id reaches each level is in {numref}`tab-engine-vg-levels`.
 In subthreshold, Xyce's current is a nearly constant 0.59 % higher. That is
 a gate-voltage shift of 0.229 to 0.254 mV, and its effect fades in strong
 {term}`inversion` (7e-5 at Vgs = 5 V). Both currents and their difference over the whole gate
-sweep are in {numref}`engine-subthreshold-figure`.
+sweep are in {numref}`fig-engine-subthreshold`.
 
 ```{figure} /_generated/limitations/engine-subthreshold-light.svg
-:name: engine-subthreshold-figure
+:name: fig-engine-subthreshold
 :figclass: only-light
 :alt: Top, two drain-current curves on a log axis that lie on each other. Bottom, their relative difference: a flat step above the 0.5 % line at low gate voltage, falling towards zero above 1 V.
 
@@ -162,7 +162,7 @@ subdirectory of the working directory. For each case it asserts these things:
 - Patched ngspice against Xyce stays below 0.005.
 
 The {term}`engine_diff` of each nfet geometry, with the stock card and with `version` set to 4.6,
-from the record. The stock values are the filled nfet markers of {numref}`engine-diff-figure`,
+from the record. The stock values are the filled nfet markers of {numref}`fig-engine-diff`,
 and the values at 4.6 its hollow ones.
 
 {numref}`tab-engine-idvg-lin` gives the `idvg_lin` sweep.
@@ -226,7 +226,7 @@ typical corner and 25 °C, within 0.5 %.
 ~~~
 
 The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA. These four cases
-are the markers below the threshold in {numref}`engine-diff-figure`.
+are the markers below the threshold in {numref}`fig-engine-diff`.
 
 For scale, the effect of the nfet version is small next to the
 {term}`TCAD`-vs-SPICE comparison ({doc}`../comparison/agreement`): 0.229 to 0.254 mV of {term}`threshold voltage <Vt>`. It is still a

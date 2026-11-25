@@ -99,11 +99,11 @@ def test_figures_have_dark_twins_and_every_page_embeds_pairs(tmp_path):
         for name in set(re.findall(r"/_generated/reproduce/([\w-]+)-light\.svg", text)):
             if name not in rf.FIGURES:
                 continue  # a figure of gf180tcad.imagefig
-            light = f"```{{figure}} /_generated/reproduce/{name}-light.svg\n:name: {name}\n:figclass: only-light\n"
+            light = f"```{{figure}} /_generated/reproduce/{name}-light.svg\n:name: fig-{name}\n:figclass: only-light\n"
             dark = f"```{{figure}} /_generated/reproduce/{name}-dark.svg\n:figclass: only-dark\n"
             assert light in text and dark in text, (page.name, name)
             assert text.index(light) < text.index(dark), (page.name, name)
-            assert f"{{numref}}`{name}`" in text, (page.name, name)
+            assert f"{{numref}}`fig-{name}`" in text, (page.name, name)
             used.add(name)
     assert used == set(rf.FIGURES), f"drawn but on no page: {sorted(set(rf.FIGURES) - used)}"
 

@@ -7,6 +7,10 @@ job, Read the Docs with ``fail_on_warning``, the offline build of tests/offline_
 
 * A numbered figure, table or code block that no link on the site points to: a number nobody
   uses. Refer to it with ``{numref}``, or drop its caption so it is not numbered.
+* A caption identified by a running number ("Table 12") instead of its label ("Table
+  poe-pairs"), which stable_ids (docs/_ext/stable_ids.py) shows; and "Figure 3" or "Table 12"
+  typed in a page's text, which names no item, since no item has a number. Another document's
+  table, as in "Table 2-1 of the user manual", is allowed.
 * A figure or content table with no caption: it has no number, so the text cannot cite it.
 * An image without alternative text. docutils fills a missing ``:alt:`` with the image's path,
   so an ``alt`` that is empty, equals the ``src`` or names an image file counts as missing.
@@ -15,7 +19,7 @@ job, Read the Docs with ``fail_on_warning``, the offline build of tests/offline_
 
 A light/dark figure pair is one figure by the time the pages are written: theme_figures
 (docs/_ext/theme_figures.py) merges the dark twin into the light one before numbering, so the
-pair has one number, and the light twin's ``:name:`` is the target a ``{numref}`` links to.
+pair has one identifier, and the light twin's ``:name:`` is the target a ``{numref}`` links to.
 
 It needs the whole site, because a figure on one page may be cited only from another. Run by
 hand on a build folder: ``uv run --locked python docs/_ext/html_checks.py docs/_build``.
@@ -26,6 +30,7 @@ from __future__ import annotations
 
 import html.parser
 import posixpath
+import re
 import sys
 import urllib.parse
 from pathlib import Path
@@ -40,6 +45,17 @@ MARKERS = {
 }  # fmt: skip
 
 IMAGE_SUFFIXES = (".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp")
+
+#: A caption's identifier that is a running number, such as "Figure 3: " or "Table 1.2 ".
+NUMBERED_CAPTION = re.compile(r"\S+\s+\d+(?:\.\d+)*:?")
+
+#: "Figure 3" or "Table 12" in a page's text, not followed by "of" (another document's item).
+NUMBER_REF = re.compile(
+    r"\b((?:Fig(?:ure)?s?\.?|Tables?|Tab\.)\s+\d+(?:[-.]\d+)*)\b(?![-.]?\d)(?!\s+of\b)"
+)
+
+# Elements whose text is not prose a reader is pointed by: links (a {numref} is one), code.
+_NOT_PROSE = ("a", "code", "pre", "script", "style")
 
 
 class PageParser(html.parser.HTMLParser):
@@ -57,6 +73,12 @@ class PageParser(html.parser.HTMLParser):
         self.numbered: list[tuple[str, set[str]]] = []
         self.missing_alt: list[str] = []
         self.uncaptioned: list[str] = []
+        # The text of the page's main content (the element with role="main": Furo's <article>)
+        # outside links and code, in which a hand-typed "Figure 3" is looked for. _main holds
+        # the main element's tag and how many elements of that tag are open inside it.
+        self.prose: list[str] = []
+        self._main: list | None = None
+        self._not_prose = 0
         # Open numbered-element candidates, each [kind, ids, caption number]; kind is "figure",
         # "table" (a docutils table: the content tables of a page), "code" or "other" (a table
         # Sphinx draws itself, such as the index). A <div> is pushed as a code block's wrapper,
@@ -69,6 +91,14 @@ class PageParser(html.parser.HTMLParser):
         classes = (attrs.get("class") or "").split()
         if tag == "a" and "href" in attrs and "headerlink" not in classes:
             self.links.append(attrs["href"])
+        if self._main is None and attrs.get("role") == "main":
+            self._main = [tag, 0]
+        if self._main is not None and tag == self._main[0]:
+            self._main[1] += 1
+        if tag in _NOT_PROSE:
+            self._not_prose += 1
+        elif tag in ("p", "li", "td", "th", "div", "figcaption", "caption", "dd", "dt", "br"):
+            self.prose.append(" ")
         if tag == "figure":
             self._open.append(["figure", set(), None])
         elif tag == "table":
@@ -95,8 +125,14 @@ class PageParser(html.parser.HTMLParser):
     def handle_data(self, data):
         if self._caption is not None:
             self._caption += data
+        elif self._main is not None and self._main[1] and not self._not_prose:
+            self.prose.append(data)
 
     def handle_endtag(self, tag):
+        if self._main is not None and tag == self._main[0] and self._main[1]:
+            self._main[1] -= 1
+        if tag in _NOT_PROSE and self._not_prose:
+            self._not_prose -= 1
         if tag == "span" and self._caption is not None:
             for element in reversed(self._open):
                 if element is not None:
@@ -150,11 +186,21 @@ def site_problems(pages: dict[str, str]) -> list[str]:
     for name, parser in parsed.items():
         problems += page_problems(name, pages[name])
         for number, ids in parser.numbered:
+            if NUMBERED_CAPTION.fullmatch(number):
+                problems.append(
+                    f"{name}: '{number}' is identified by a running number, not its label; is "
+                    "docs/_ext/stable_ids.py in the conf.py extensions?"
+                )
             if not any((name, i) in targets for i in ids):
                 problems.append(
                     f"{name}: '{number}' is numbered but no page refers to it; add a "
                     f"{{numref}} reference or remove its caption"
                 )
+        for m in NUMBER_REF.finditer(" ".join("".join(parser.prose).split())):
+            problems.append(
+                f"{name}: '{m.group(1)}' typed in the text: figures and tables are identified "
+                "by their labels, not numbers, so cite the item with {numref}"
+            )
         for item in parser.uncaptioned:
             problems.append(
                 f"{name}: {item} has no caption, so it has no number to cite; give it a "

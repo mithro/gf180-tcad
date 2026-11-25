@@ -3,14 +3,14 @@
 The {term}`SPICE reference <SPICE reference results>` dataset ({term}`Phase 1`) is published
 here as generated pages, one per device and geometry (2 devices x 6 geometries). Each has Id-Vg
 (linear and log), Id-Vd and {term}`Cgg`-Vg plots and a table of extracted metrics.
-Three of the {term}`sweeps <sweep>` of one geometry are drawn in {numref}`results-sweeps-figure`. A summary
+Three of the {term}`sweeps <sweep>` of one geometry are drawn in {numref}`fig-results-sweeps`. A summary
 compares the {term}`TT` (typical corner) values with the
 {doc}`PDK spec </comparison/pdk-spec-check>` and lists the {{ ngspice }}-versus-{{ Xyce }}
 differences ({doc}`/limitations/engine-cross-check`).
 
 ```{figure} /_generated/explained/spice-sweeps-light.svg
 :figclass: only-light
-:name: results-sweeps-figure
+:name: fig-results-sweeps
 :alt: Three stacked plots of the nfet: drain current against gate voltage, a family of drain current against drain voltage, and gate capacitance against gate voltage.
 
 Three sweeps of the {term}`SPICE` reference of the {term}`nfet_05v0` at W = 10 µm and L = 0.6 µm,
@@ -79,11 +79,11 @@ bookkeeping and the {term}`mesh convergence` plots.
 
 A geometry page gives the TCAD-against-ngspice Cgg overlay with the {term}`corner envelope`, the
 verdicts, the intrinsic and parasitic parts and the committed 2D result. The curves of such an
-overlay are drawn for both devices at the minimum gate length in {numref}`results-cv-figure`.
+overlay are drawn for both devices at the minimum gate length in {numref}`fig-results-cv`.
 
 ```{figure} /_generated/explained/cv-overview-light.svg
 :figclass: only-light
-:name: results-cv-figure
+:name: fig-results-cv
 :alt: Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.
 
 The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the

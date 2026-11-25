@@ -355,7 +355,7 @@ def test_doc_quotes_the_record():
         assert sel, label
         return {r[i] for r in sel}
 
-    pin = _table_after(page, ":name: tab-plugin-history-pin")
+    pin = _table_after(page, ":name: tab-plugin-history-pin-widths")
     w = [f"{b['depletion_width_um']:.3g}" for b in full["pin"]["bias"]]
     assert set(w) <= column(pin, 1)
     static = _table_after(page, ":name: tab-plugin-history-pn-mesh")

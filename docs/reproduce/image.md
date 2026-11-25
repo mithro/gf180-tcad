@@ -288,10 +288,10 @@ made there. Each fork keeps its upstream licence, says at the top of its README 
 fork and why, and runs CI on {{ GitHub_hosted_runner }}s with no secrets and no publishing
 workflows.
 
-Each fork, at its commit, and where it enters the flow are drawn in {numref}`image-forks`.
+Each fork, at its commit, and where it enters the flow are drawn in {numref}`fig-image-forks`.
 
 ```{figure} /_generated/reproduce/image-forks-light.svg
-:name: image-forks
+:name: fig-image-forks
 :figclass: only-light
 :alt: Boxes in two columns. Left, the three forks, each with its commit and, for two of them, the fix it carries. Right, the dev-HEAD TCAD image, which two forks enter, and the plugin submodule, which the third enters.
 
@@ -358,10 +358,10 @@ plugin fork is the submodule of {repo}`.gitmodules`, at the commit that
     `field_data` and `cell_sets`. These are the same values that
     {test}`tests/test_tcad_image.py::test_meshwell_mesh_reads_back` asserts in the stable image
     (gmsh 4.15.2), so the two images are compared. The square's mesh in both images is drawn in
-    {numref}`meshwell-square`.
+    {numref}`fig-meshwell-square`.
 
 ```{figure} /_generated/reproduce/meshwell-square-light.svg
-:name: meshwell-square
+:name: fig-meshwell-square
 :figclass: only-light
 :alt: Two squares side by side, each cut into the same triangles, with a numbered label at every corner of a triangle. The numbers at the same place differ between the two squares.
 
@@ -443,10 +443,10 @@ kind is generated with, and it is the default of `python -m gf180tcad.tcad mosca
 | 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | see below |
 ~~~
 
-The same mapping, read from the code, is drawn in {numref}`results-images`.
+The same mapping, read from the code, is drawn in {numref}`fig-results-images`.
 
 ```{figure} /_generated/reproduce/results-images-light.svg
-:name: results-images
+:name: fig-results-images
 :figclass: only-light
 :alt: Boxes in two columns. Left, the 1D and the 2D result kinds, each naming its results folder and its mesh-convergence folder. Right, the dev and the stable image, each naming its pin file. An arrow joins each kind to its image.
 
@@ -479,7 +479,7 @@ result kind in it: the image's name, its reference and its probe record. That re
   image, which has {{ gmsh }} 4.15.2. The dev image has gmsh 5 and no 2D mesh convergence (next
   item). The 2D results of
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
-  are therefore made on the stable image, explicitly, as {numref}`results-images` shows.
+  are therefore made on the stable image, explicitly, as {numref}`fig-results-images` shows.
 - **No 2D mesh convergence on dev.** The 2D mesh convergence has not been rerun on the dev
   image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
 - **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, has the laxer
@@ -601,7 +601,7 @@ own recipe. {repo}`docker/CHARON_LIBS_IMAGE` pins that image by digest. The `cha
 adds its `/opt/charon` to the dev-HEAD TCAD image ({ref}`charon-image`). No TCAD job runs Charon.
 
 ```{figure} /_generated/reproduce/charon-stages-light.svg
-:name: charon-stages
+:name: fig-charon-stages
 :figclass: only-light
 :alt: Five boxes joined by arrows. The inputs box at the top feeds the deps stage, which feeds the build stage, which feeds the charon-libs image at the bottom. A base image box on the left feeds both the deps stage and the image.
 
@@ -704,7 +704,7 @@ buildx places a builder in a given {term}`cgroup` only when docker uses the cgro
 and the project's host runs docker with {{ systemd }}.
 [Issue #155](https://github.com/mithro/gf180-tcad/issues/155) holds the ways to place it in the slice.
 
-{numref}`charon-stages` shows the three stages of {repo}`docker/charon-libs/Dockerfile`:
+{numref}`fig-charon-stages` shows the three stages of {repo}`docker/charon-libs/Dockerfile`:
 
 1. `deps` fetches every input, checks its sha256, installs the build packages and applies the
    patches. This is the only step with a network.
@@ -744,7 +744,7 @@ the number of compile jobs.
 ### One MPI process in the sandbox
 
 ```{figure} /_generated/reproduce/charon-mpi-light.svg
-:name: charon-mpi
+:name: fig-charon-mpi
 :figclass: only-light
 :alt: A container box holds a process box with two thread boxes, main and progress. An arrow leads from the process to a /tmp box. A dashed box lists orted and the pmix files as not started.
 
@@ -766,7 +766,7 @@ Charon is an MPI program. Every TCAD job runs `charon_mp.exe` as one process, wi
 `mpirun`, under the rules of {repo}`tools/sandbox-run`: no network, and only `/tmp` writable.
 Started that way, OpenMPI 4.1 forks a helper daemon, `orted`, and writes shared-memory files
 under `/tmp`. {repo}`docker/charon-libs/Dockerfile` sets `OMPI_MCA_ess_singleton_isolated=1`,
-which stops both. The solve then runs in one process with two threads, as {numref}`charon-mpi`
+which stops both. The solve then runs in one process with two threads, as {numref}`fig-charon-mpi`
 shows: the main thread, which computes, and OpenMPI's progress thread.
 
 The Exodus output file holds the date, time and host of the run in its QA record. Two runs of
@@ -797,7 +797,7 @@ the base image. One is 91.7 MB compressed, and the other is 32 bytes.
 ### Checks on GitHub
 
 ```{figure} /_generated/reproduce/charon-ci-light.svg
-:name: charon-ci
+:name: fig-charon-ci
 :figclass: only-light
 :alt: Flow from the trigger to a gate on three paths. No leads to a skip box. Yes leads to the build, then three checks in a row, then the published tags.
 
@@ -814,7 +814,7 @@ in turn, and a failed check ends the job before any published tag.
 ```
 
 {repo}`.github/workflows/image.yml` builds this image only when it changes, as
-{numref}`charon-ci` shows. Its build job runs on a pull request or a push that changes
+{numref}`fig-charon-ci` shows. Its build job runs on a pull request or a push that changes
 {repo}`docker/charon-libs/`, {repo}`docker/IMAGE` or {repo}`docker/CHARON_LIBS_IMAGE`, and on a
 manual run. It allows 350 minutes. The rebuild from scratch, which proves the digests
 reproducible, runs on the weekly schedule and on a manual run. Every other pull request skips
@@ -840,7 +840,7 @@ the {{ DEVSIM }} stack, `netCDF4` and `charon_mp.exe`. {repo}`docker/charon/` ho
 {repo}`docker/CHARON_IMAGE` pins it by digest.
 
 ```{figure} /_generated/reproduce/charon-layers-light.svg
-:name: charon-layers
+:name: fig-charon-layers
 :figclass: only-light
 :alt: A tall container box on the right holds four boxes stacked from the bottom: the dev-HEAD TCAD image, layer 1 /opt/charon, layer 2 netCDF4 and cftime, and the ENV. Two boxes on the left, the charon-libs image and the wheels stage, each have an arrow to the layer beside them.
 
@@ -858,7 +858,7 @@ is the bottom of the stack. The charon-libs image gives layer 1 and the `wheels`
 layer 2.
 ```
 
-{numref}`charon-layers` shows the two layers the image adds:
+{numref}`fig-charon-layers` shows the two layers the image adds:
 
 1. Layer 1 copies `/opt/charon` byte for byte from the image that {repo}`docker/CHARON_LIBS_IMAGE`
    pins. Both images start from {repo}`docker/IMAGE`, so the runtime libraries are present. The
@@ -916,7 +916,7 @@ The manifest of the pin in {repo}`docker/CHARON_IMAGE` gives the two layers as 9
 12.5 MB, compressed. They sit on top of the dev-HEAD TCAD image.
 
 {repo}`.github/workflows/image.yml` builds the charon image whenever a pull request or a push
-changes a file under {repo}`docker/`. The entry has no gate. It is {numref}`charon-ci` without
+changes a file under {repo}`docker/`. The entry has no gate. It is {numref}`fig-charon-ci` without
 the gate box: the trigger leads to the build, then to the same three checks and published tags. Its rebuild from
 scratch runs on every such change as well. The sandbox tests of
 {repo}`tests/test_charon_image.py` also check the ENV above and read the `pmoscap.nlp` output
