@@ -431,13 +431,17 @@ byte-identical to the first GCC 14 pin's.
 The final results come from upstream dev HEAD; the stable image is for testing how things used
 to work, and for debugging. {py:data}`gf180tcad.tcad.RESULTS_IMAGE` names the image each result
 kind is generated with, and it is the default of `python -m gf180tcad.tcad moscap` and
-`meshconv` ({py:mod}`gf180tcad.tcad.__main__`); `--image dev|stable` picks the other one.
+`meshconv` ({py:mod}`gf180tcad.tcad.__main__`); `--image dev|stable` picks the other one. Each result's image is in {numref}`tab-image-results`.
+
+~~~{table} The image each kind of result is generated with.
+:name: tab-image-results
 
 | results | image | why |
 |---|---|---|
 | 1D {term}`MOS capacitor <MOSCAP>`, {repo}`results/tcad/moscap1d` | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the stack of the final results |
 | 1D {term}`mesh convergence`, {repo}`results/tcad/meshconv` (`moscap1d/`) | dev HEAD, {repo}`docker/TCAD_DEV_IMAGE` | the same |
 | 2D MOS capacitor and its mesh convergence (`moscap2d/`) | stable, {repo}`docker/TCAD_IMAGE` | see below |
+~~~
 
 The same mapping, read from the code, is drawn in {numref}`results-images`.
 
@@ -648,7 +652,10 @@ release are never replaced, and changed files go to another dated tag.
 
 The build applies six patches from {repo}`docker/charon-libs/patches/`. The first sets
 constants. Four let 2022 sources build with the base image's GCC 13, netCDF 4.9 and tools. The
-last makes the build reproducible across hosts.
+last makes the build reproducible across hosts. The six patches are in {numref}`tab-charon-libs-patches`.
+
+~~~{table} The patches of the charon-libs build.
+:name: tab-charon-libs-patches
 
 | Patch | What it changes | Licence |
 |---|---|---|
@@ -658,6 +665,7 @@ last makes the build reproducible across hosts.
 | {repo}`0004 <docker/charon-libs/patches/0004-teuchos-include-cstdint.patch>` | Teuchos: adds `<cstdint>` | BSD-3-Clause |
 | {repo}`0005 <docker/charon-libs/patches/0005-interpreter-copy-without-rsync.patch>` | Charon's configure: copies without `rsync` | GPL-3.0-or-later |
 | {repo}`0006 <docker/charon-libs/patches/0006-interpreter-sorted-listings.patch>` | Charon's interpreter generator: sorted file lists | GPL-3.0-or-later |
+~~~
 
 The constants patch sets three values to the CODATA 2018 values that the {{ DEVSIM }} jobs use:
 
@@ -771,12 +779,16 @@ between the two Exodus files in any variable at any time step.
 The pinned image was built twice from the same commit, with two compile jobs both times. One
 build ran on a GitHub runner with 4 CPUs. The other ran on the project's host in the 16 GiB
 builder, with other jobs sharing its 8 CPUs. Both gave the same digests. The record of both builds is in
-[pull request #120](https://github.com/mithro/gf180-tcad/pull/120).
+[pull request #120](https://github.com/mithro/gf180-tcad/pull/120); {numref}`tab-charon-libs-builds` compares them.
+
+~~~{table} The two builds of the pinned charon-libs image.
+:name: tab-charon-libs-builds
 
 | Quantity | GitHub runner | Project's host |
 |---|---|---|
 | Wall time of the whole build (min) | 71 | 216 |
 | Wall time of `make` (min) | 65 | 209 |
+~~~
 
 On the project's host the builder's memory peaked at 6.35 GB. In the pinned image, the files in
 `/opt/charon` add up to 353 MB (`du -sb`). The {term}`manifest` pinned by {repo}`docker/CHARON_LIBS_IMAGE` adds two layers to
@@ -864,10 +876,11 @@ The image's ENV keeps the dev image's settings, `OMP_NUM_THREADS=1` among them. 
 - `PYTHON_CPU_COUNT=1`, the dev image's value, set again.
 
 {repo}`docker/charon/probe_versions.py` writes {repo}`docker/charon/versions.json`. It holds the
-dev image's probe, both pinned image references, the charon-libs keys and the versions below.
+dev image's probe, both pinned image references, the charon-libs keys and the versions of
+{numref}`tab-charon-image-versions`.
 
 ~~~{table} The Python packages the charon image adds, and the C libraries inside the netCDF4 wheel. Values from {repo}`docker/charon/versions.json`.
-:name: charon-image-versions
+:name: tab-charon-image-versions
 
 | Component | Version |
 |---|---|
@@ -884,12 +897,16 @@ builder. Its build inputs are the files in {repo}`docker/charon/`, the two pin f
 The pinned image was built twice from the same commit, once on a GitHub runner and once on the
 project's host. Both gave the same digests, as [pull request #164](https://github.com/mithro/gf180-tcad/pull/164)
 records. The runner's time includes the push of the image, and the host's its load into the
-local image store. The table gives values from the two build logs that the pull request records.
+local image store. The values of {numref}`tab-charon-builds` come from the two build logs that the pull request records.
+
+~~~{table} The two builds of the pinned charon image.
+:name: tab-charon-builds
 
 | Quantity | GitHub runner | Project's host |
 |---|---|---|
 | Wall time of the whole build (s) | 295 | 335 |
 | Builder memory peak (GB) | — | 5.10 |
+~~~
 
 Workflow [run 42349097853](https://github.com/mithro/gf180-tcad/actions/runs/42349097853)
 rebuilt both Charon images from scratch on a GitHub runner. Each rebuilt digest equals its pin, in

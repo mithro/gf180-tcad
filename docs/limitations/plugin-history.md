@@ -110,7 +110,11 @@ The checks, and what each one runs:
 
 ## Results
 
-On this page, v0.8.0 × 0.5 is v0.8.0 with the PN mesh × 0.5.
+On this page, v0.8.0 × 0.5 is v0.8.0 with the PN mesh × 0.5. The result of each check is in
+{numref}`tab-plugin-history-checks`.
+
+~~~{table} The result of each check at v0.8.0, at v0.8.0 with the PN mesh × 0.5, and at v1.4.2.
+:name: tab-plugin-history-checks
 
 | Check | v0.8.0 | v0.8.0 × 0.5 | v1.4.2 |
 |---|---|---|---|
@@ -121,6 +125,7 @@ On this page, v0.8.0 × 0.5 is v0.8.0 with the PN mesh × 0.5.
 | `ddsolver` | pass | pass | not run |
 | `refine` | **fail** | **fail** | not run |
 | `refined_solve` | not run | not run | not run |
+~~~
 
 The records are {repo}`results/plugin-history/v0.8.0.json`,
 {repo}`results/plugin-history/v0.8.0-mesh0p5.json` (both drawn in {numref}`plugin-history-pin-figure`
@@ -197,14 +202,21 @@ at half mesh.
 ```
 
 
-**PIN waveguide**, depletion width (µm):
+{numref}`tab-plugin-history-pin` gives the depletion width of the PIN waveguide.
+
+~~~{table} The depletion width of the PIN waveguide at each bias, in µm.
+:name: tab-plugin-history-pin
 
 | Bias (V) | v0.8.0 | v0.8.0 × 0.5 |
 |---|---|---|
 | 0 | 0.069 | 0.069 |
 | −1 | 0.138 | 0.138 |
+~~~
 
-**PN slab, mesh and equilibrium:**
+{numref}`tab-plugin-history-pn-mesh` gives the mesh and the equilibrium of the PN slab.
+
+~~~{table} The mesh and the equilibrium of the PN slab.
+:name: tab-plugin-history-pn-mesh
 
 | Quantity | v0.8.0 | v0.8.0 × 0.5 |
 |---|---|---|
@@ -216,25 +228,30 @@ at half mesh.
 | Potential span over the silicon (V) | 1.3613 | 1.6267 |
 | Potential at the junction, ψ(x_j) (V) | −0.47002 | −0.67054 |
 | rib/slab Potential jump (V) | 0.46 | 0.73 |
+~~~
 
-In the two ramp tables, "span" is the PN-slab Potential span over the silicon, "anode −
+In {numref}`tab-plugin-history-ramp` and {numref}`tab-plugin-history-ramp-half`, "span" is the PN-slab Potential span over the silicon, "anode −
 cathode" the anode − cathode contact potential and "drop" the junction drop, all in V.
 
-**PN slab during the ramp, v0.8.0:**
+~~~{table} The PN slab during the ramp, v0.8.0.
+:name: tab-plugin-history-ramp
 
 | Bias (V) | Span | Anode − cathode | Drop |
 |---|---|---|---|
 | 0 | 1.3613 | 0.9587 | 0.83450 |
 | 0.1 | 1.3613 | 0.8587 | 0.83450 |
 | 0.2 | 1.3613 | 0.7587 | 0.83450 |
+~~~
 
-**PN slab during the ramp, v0.8.0 × 0.5:**
+~~~{table} The PN slab during the ramp, v0.8.0 × 0.5.
+:name: tab-plugin-history-ramp-half
 
 | Bias (V) | Span | Anode − cathode | Drop |
 |---|---|---|---|
 | 0 | 1.6267 | 0.9587 | 0.83450 |
 | 0.1 | 1.6267 | 0.8587 | 0.83450 |
 | 0.2 | 1.6267 | 0.7587 | 0.83450 |
+~~~
 
 What the quantities are:
 
@@ -380,6 +397,11 @@ the plugin in these ways:
 - Its sandbox rebuild ({ref}`plugin-history-reproducibility`) recomputes the v0.8.0 side,
   {repo}`results/plugin-history/v0.8.0.json` and {repo}`results/plugin-history/v0.8.0-mesh0p5.json`.
 
+{numref}`tab-plugin-history-fork-prs` lists the fork PRs and their merge commits.
+
+~~~{table} The fork pull requests and their merge commits.
+:name: tab-plugin-history-fork-prs
+
 | Fork PR | Merge commit |
 |---|---|
 | [mithro/gplugins#2](https://github.com/mithro/gplugins/pull/2) | [`4b0a07a`](https://github.com/mithro/gplugins/commit/4b0a07a78b5a282bb15cee230dc906aa17ee2529) |
@@ -387,6 +409,7 @@ the plugin in these ways:
 | [mithro/gplugins#3](https://github.com/mithro/gplugins/pull/3) | [`b519c87`](https://github.com/mithro/gplugins/commit/b519c87e79882baa71fb89bb77c2956b9ff56257) |
 | [mithro/gplugins#5](https://github.com/mithro/gplugins/pull/5) | [`400f842`](https://github.com/mithro/gplugins/commit/400f8423d7b0d1aac48eea1c0145342d0c1f766a) |
 | [mithro/gplugins#6](https://github.com/mithro/gplugins/pull/6) | [`dddaa07`](https://github.com/mithro/gplugins/commit/dddaa071321c5177c8471312c565ad86d4b245d7) |
+~~~
 
 What each fork PR changes:
 
@@ -430,7 +453,10 @@ latest stack its depletion widths are **bit-identical** to v0.8.0's
 ([`test_pin_depletion_width_match_v080`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/test_devsim.py#L134)):
 
 The v0.8.0 stack has devsim 2.6.3 and Python 3.11; the latest has devsim 2.11.1 and Python 3.13.
-Each difference between them is 0:
+Each difference between them is 0, as {numref}`tab-plugin-history-stacks` shows.
+
+~~~{table} The difference of each PIN waveguide quantity between the v0.8.0 and the latest stack.
+:name: tab-plugin-history-stacks
 
 | Quantity | v0.8.0 and latest |
 |---|---|
@@ -439,6 +465,7 @@ Each difference between them is 0:
 | cut row y (µm) | 0.11027488009949704 |
 | depleted nodes at 0 V | 51 |
 | depleted nodes at −1 V | 82 |
+~~~
 
 The test allows 1e-6 relative; the measured difference is 0. The contact currents are
 bit-identical too, and stay below the 1e-13 A/cm floor
@@ -460,19 +487,27 @@ against × 0.5: v0.8.0's from {repo}`results/plugin-history/v0.8.0.json` and
 both scales
 ([`test_pn_slab_physical_anchors_match_v080`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py#L366)).
 
-The names, which must match exactly at both mesh scales:
+{numref}`tab-plugin-history-anchor-names` gives the names, which must match exactly at both mesh
+scales.
+
+~~~{table} The region, interface and contact names of the PN slab at v0.8.0 and at the latest stack.
+:name: tab-plugin-history-anchor-names
 
 | Anchor | v0.8.0 | latest |
 |---|---|---|
 | regions → material | Aluminum: anode, cathode; si: slab90, core | the same |
 | DEVSIM regions / contacts | anode, cathode, core, slab90 / anode, cathode | the same |
 | interfaces | slab90\_\_\_anode, slab90\_\_\_cathode | the same **plus core\_\_\_slab90** |
+~~~
 
 The regions and the contacts match. The interfaces differ by `core___slab90`, the fix (see below).
 
 The numbers, at mesh × 1 and × 0.5. Every anchor matches within its allowed difference; the node
 count is reported, not asserted. The v0.8.0 anode − cathode at 0 V is 0.9586540658880733 V at
-× 1 and …742 at × 0.5. The other v0.8.0 values:
+× 1 and …742 at × 0.5. The other v0.8.0 values are in {numref}`tab-plugin-history-anchors-v080`.
+
+~~~{table} The v0.8.0 anchor values at mesh × 1 and × 0.5.
+:name: tab-plugin-history-anchors-v080
 
 | Anchor | × 1 | × 0.5 |
 |---|---|---|
@@ -483,8 +518,12 @@ count is reported, not asserted. The v0.8.0 anode − cathode at 0 V is 0.958654
 | depletion width, bottom edge (µm) | 0.03863 | 0.06883 |
 | depletion width against the {term}`depletion approximation` (µm) | not applicable | not applicable |
 | node count | 3523 | 11326 |
+~~~
 
-The latest values:
+{numref}`tab-plugin-history-anchors-latest` gives the latest values.
+
+~~~{table} The latest-stack anchor values at mesh × 1 and × 0.5.
+:name: tab-plugin-history-anchors-latest
 
 | Anchor | × 1 | × 0.5 |
 |---|---|---|
@@ -496,8 +535,12 @@ The latest values:
 | depletion width, bottom edge (µm) | 0.06000 | 0.06000 |
 | depletion width against the depletion approximation (µm) | not applicable | 0.06000 |
 | node count | 3384 | 10424 |
+~~~
 
-The allowed differences:
+{numref}`tab-plugin-history-anchors-allowed` gives the allowed differences.
+
+~~~{table} The allowed difference of each anchor.
+:name: tab-plugin-history-anchors-allowed
 
 | Anchor | Allowed difference |
 |---|---|
@@ -509,6 +552,7 @@ The allowed differences:
 | depletion width, bottom edge (µm) | 0.0302 |
 | depletion width against the depletion approximation (µm) | 0.0100 |
 | node count | not asserted |
+~~~
 
 - **anode − cathode:** the allowed difference, 8.9e-16 V, is 4 {term}`ulp` of 1 V. The port's
   self-difference (× 1 against × 0.5) is 0.
@@ -542,7 +586,10 @@ the same mesh both ways on the latest stack (mesh × 1):
 The cathode voltage steps through 0, 0.1 and 0.2 V; with `core___slab90` left out, the values
 are the same at every step. "v0.8.0 topology" leaves `core___slab90` out of DEVSIM; "as ported"
 uses every interface. The "as ported" rows are also those of
-{repo}`results/plugin-history/latest.json`, solved at the submodule pin. The potentials:
+{repo}`results/plugin-history/latest.json`, solved at the submodule pin. The potentials are in {numref}`tab-plugin-history-potentials`.
+
+~~~{table} The potentials of the PN slab with and without the `core___slab90` interface.
+:name: tab-plugin-history-potentials
 
 | Device | V_cathode (V) | Junction drop (V) | Rib/slab jump (V) |
 |---|---|---|---|
@@ -550,8 +597,12 @@ uses every interface. The "as ported" rows are also those of
 | as ported | 0 | 0.834504 | 0 |
 | as ported | 0.1 | 0.734504 | 0 |
 | as ported | 0.2 | 0.634504 | 0 |
+~~~
 
-The currents:
+{numref}`tab-plugin-history-currents` gives the currents.
+
+~~~{table} The currents of the PN slab with and without the `core___slab90` interface.
+:name: tab-plugin-history-currents
 
 | Device | V_cathode (V) | I_anode (A/cm) | I_cathode (A/cm) |
 |---|---|---|---|
@@ -559,6 +610,7 @@ The currents:
 | as ported | 0 | below 1e-26 | below 1e-26 |
 | as ported | 0.1 | −9.749e-15 | 9.749e-15 |
 | as ported | 0.2 | −1.005e-13 | 1.005e-13 |
+~~~
 
 - **Leaving the interface out reproduces v0.8.0's signatures:** a constant junction drop at the
   rib's built-in potential, currents below the noise floor and a nonzero rib/slab jump. The

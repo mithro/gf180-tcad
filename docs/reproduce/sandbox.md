@@ -11,13 +11,18 @@ wrapper {py:func}`gf180tcad.sandbox.run`). Nothing is run directly on the host.
 [slice unit](https://www.freedesktop.org/software/systemd/man/latest/systemd.slice.html)
 `/etc/systemd/system/gf180-tcad.slice` and reloads systemd. The {term}`slice` caps the
 **aggregate** resources of all sandbox containers together
-([resource control](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html)):
+([resource control](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html)).
+Its settings are in {numref}`tab-sandbox-slice`.
+
+~~~{table} The settings of the gf180-tcad slice, which cap all sandbox containers together.
+:name: tab-sandbox-slice
 
 | Setting | Value | Limits |
 |---|---|---|
 | [`MemoryMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#MemoryMax=bytes) | `128G` | total memory: 128 GiB |
 | [`MemorySwapMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#MemorySwapMax=bytes) | `0` | swap: none |
 | [`TasksMax`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html#TasksMax=N) | `32768` | total tasks: 32768 |
+~~~
 
 (sandbox-per-run-limits)=
 
@@ -29,7 +34,10 @@ wrapper {py:func}`gf180tcad.sandbox.run`). Nothing is run directly on the host.
 tools/sandbox-run [--mem 16g] [--cpus 8] [--pids 4096] [--image REF] --workdir DIR [--network none|bridge] -- CMD...
 ```
 
-and starts `CMD` in a {{ Docker }} container ({{ docker_run }}) with these defaults:
+and starts `CMD` in a {{ Docker }} container ({{ docker_run }}) with the defaults of {numref}`tab-sandbox-run-limits`.
+
+~~~{table} The limits of each sandbox container and the option that changes each.
+:name: tab-sandbox-run-limits
 
 | Limit | Default | Option |
 |---|---|---|
@@ -39,6 +47,7 @@ and starts `CMD` in a {{ Docker }} container ({{ docker_run }}) with these defau
 | Processes | 4096 | `--pids` |
 | Network | [`--network=none`](https://docs.docker.com/reference/cli/docker/container/run/#network) (no network at all) | `--network bridge` to opt in |
 | {term}`Cgroup <cgroup>` parent | [`gf180-tcad.slice`](https://docs.docker.com/reference/cli/docker/container/run/#cgroup-parent) | fixed |
+~~~
 
 There is no swap because
 [`--memory-swap`](https://docs.docker.com/reference/cli/docker/container/run/#memory) is set

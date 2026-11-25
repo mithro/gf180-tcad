@@ -4,9 +4,12 @@ There is **no measured data**, and no single-device `05v0` structure exists
 on {{ wafer_space }} {term}`runs 1 and 2 <wafer.space run>` (design lists:
 [run 1](https://github.com/wafer-space/ws-run1), [run 2](https://github.com/wafer-space/ws-run2)).
 Since the `05v0` and `06v0` models are the same {term}`BSIM4` {term}`cards <model card>`, the
-taped-out `06v0` devices are directly relevant. This page is the inventory of those structures.
+taped-out `06v0` devices are directly relevant. The inventory of those structures is {numref}`tab-silicon-designs`.
 The narrow 1.6/0.7 geometry of the priority-1 devices is part of the
 {ref}`comparison space <comparison-space>`.
+
+~~~{table} The taped-out designs with test structures, by priority.
+:name: tab-silicon-designs
 
 | Priority | Design | Run | Licence |
 |---|---|---|---|
@@ -17,6 +20,7 @@ The narrow 1.6/0.7 geometry of the priority-1 devices is part of the
 | 4 | [2975](https://github.com/ThorbenMoos/Cloneless1) | ws-run1 | not recorded |
 | 5 | ISHI ([run 1](https://github.com/ishi-kai/ISHI-KAI_Multiple_Projects_WaferSapce-GF180-1)) | ws-run1 | not recorded |
 | 5 | ISHI ([run 2](https://github.com/ishi-kai/ISHI-KAI_Multiple_Projects_WaferSapce-GF180-2)) | ws-run2 | not recorded |
+~~~
 
 The structures of each design, and what to note about them:
 

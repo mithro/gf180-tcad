@@ -69,13 +69,17 @@ BSIM4 4.5.0 in ngspice and BSIM4 4.6.1 in Xyce.
 ### Evidence
 
 nfet W = 10 µm, L = 0.6 µm, typical corner, Vbs = 0, Vds = 5 V. The gate voltage at which
-the drain current Id reaches each level:
+the drain current Id reaches each level is in {numref}`tab-engine-vg-levels`.
+
+~~~{table} The gate voltage at which Id reaches each level, nfet W = 10 µm, L = 0.6 µm, Vds = 5 V.
+:name: tab-engine-vg-levels
 
 | Id | Vg, ngspice 4.5 (V) | Vg, Xyce (V) | Shift (mV) |
 |---|---|---|---|
 | 1 nA | 0.281972 | 0.281743 | −0.229 |
 | 100 nA | 0.463006 | 0.462770 | −0.237 |
 | 1 µA | 0.558662 | 0.558408 | −0.254 |
+~~~
 
 In subthreshold, Xyce's current is a nearly constant 0.59 % higher. That is
 a gate-voltage shift of 0.229 to 0.254 mV, and its effect fades in strong
@@ -113,13 +117,17 @@ identically to scratch copies of both libraries.
   {ref}`BSIM4 manual <lit-bsim4>`.
 - **ngspice `version` set to 4.6, 4.7 or 4.8** (all three give identical
   results): the difference goes away. At W = 10 µm, L = 0.6 µm the record
-  {repo}`data/spice/engine-forced-bsim46.json` gives:
+  {repo}`data/spice/engine-forced-bsim46.json` gives {numref}`tab-engine-forced-bsim46`.
+
+  ~~~{table} The engine difference of the W = 10 µm, L = 0.6 µm nfet at two ngspice version settings.
+  :name: tab-engine-forced-bsim46
 
   | Sweep | ngspice 4.5 (PDK as published) | ngspice 4.6 |
   |---|---|---|
   | `idvg_lin` | 5.62e-3 | 1.47e-4 |
   | `idvg_sat` | 6.05e-3 | 3.64e-3 |
   | `idvd` | 3.27e-3 | 1.03e-7 |
+  ~~~
 
   At Vds = 5 V the remaining 3.6e-3 is at the ~6 pA off-state floor, set by gmin
 leakage (≈ 1e-12 S × 5 V) plus junction leakage,
@@ -157,7 +165,10 @@ The {term}`engine_diff` of each nfet geometry, with the stock card and with `ver
 from the record. The stock values are the filled nfet markers of {numref}`engine-diff-figure`,
 and the values at 4.6 its hollow ones.
 
-The `idvg_lin` sweep:
+{numref}`tab-engine-idvg-lin` gives the `idvg_lin` sweep.
+
+~~~{table} The engine difference of the idvg_lin sweep per geometry, stock and at version 4.6.
+:name: tab-engine-idvg-lin
 
 | W (µm) | L (µm) | Stock | At 4.6 |
 |---|---|---|---|
@@ -167,8 +178,12 @@ The `idvg_lin` sweep:
 | 10 | 2 | 5.58e-3 | 1.93e-4 |
 | 10 | 10 | 5.60e-3 | 1.59e-4 |
 | 1.6 | 0.7 | 5.55e-3 | 3.9e-5 |
+~~~
 
-The `idvg_sat` sweep:
+{numref}`tab-engine-idvg-sat` gives the `idvg_sat` sweep.
+
+~~~{table} The engine difference of the idvg_sat sweep per geometry, stock and at version 4.6.
+:name: tab-engine-idvg-sat
 
 | W (µm) | L (µm) | Stock | At 4.6 |
 |---|---|---|---|
@@ -178,6 +193,7 @@ The `idvg_sat` sweep:
 | 10 | 2 | 5.61e-3 | 1.85e-3 |
 | 10 | 10 | 5.59e-3 | 2.28e-3 |
 | 1.6 | 0.7 | 5.76e-3 | 2.73e-4 |
+~~~
 
 (engine-consequence)=
 
@@ -195,8 +211,11 @@ BSIM4 release, not a netlist or library error. The diagnostic test above
 proves the cause, but it does not give an independent check of the published
 4.5 evaluation.
 
-The Xyce cross-check claims exactly the following, at the typical corner and
-25 °C, within 0.5 %:
+The Xyce cross-check claims exactly the values of {numref}`tab-engine-claim`, at the
+typical corner and 25 °C, within 0.5 %.
+
+~~~{table} The largest engine difference of each device and sweep.
+:name: tab-engine-claim
 
 | Device | Sweep | Max {term}`engine_diff` |
 |---|---|---|
@@ -204,6 +223,7 @@ The Xyce cross-check claims exactly the following, at the typical corner and
 | pfet | `idvd` | 7e-7 |
 | pfet | `idvg_lin` | 0.02 % |
 | pfet | `idvg_sat` | 0.221 % |
+~~~
 
 The pfet `idvg_sat` worst points lie near the gmin leakage floor of a few pA. These four cases
 are the markers below the threshold in {numref}`engine-diff-figure`.

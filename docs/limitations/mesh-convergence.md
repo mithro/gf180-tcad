@@ -80,7 +80,7 @@ monotone biases. In 1D no bias oscillates or falls below the floor.
 The {term}`C–V` is the quasi-static curve on the 201 gate biases of the {term}`SPICE` {term}`cv` sweep,
 with the start values of the {term}`process files <process file>`. The start spec is
 {py:attr}`~gf180tcad.tcad.mesh.MeshSpec.DEFAULT_1D` (0.05 nm at both oxide interfaces, 20 nm
-in the bulk, grading 1.1). "Max change" is the largest relative change against the next finer
+in the bulk, grading 1.1). Each level is in {numref}`tab-meshconv-1d-levels`, where "Max change" is the largest relative change against the next finer
 level over all biases.
 
 {numref}`meshconv-1d-figure` shows the change at every bias.
@@ -105,6 +105,9 @@ is the 1 % criterion.
 ```
 
 
+~~~{table} The 1D mesh levels of each device and the largest change of each against the next finer level.
+:name: tab-meshconv-1d-levels
+
 | Device | Level | Scale | Nodes | Max change |
 |---|---|---|---|---|
 | {term}`nfet_05v0` | 0 | 1 | 668 | 3.7e-5 |
@@ -115,8 +118,13 @@ is the 1 % criterion.
 | pfet_05v0 | 1 | 0.707 | 949 | 2.9e-5 |
 | pfet_05v0 | 2 | 0.5 | 1343 | 1.4e-5 |
 | pfet_05v0 | 3 | 0.354 | 1900 | (finest) |
+~~~
 
-The median {term}`observed order of convergence` of each triple of neighbouring levels:
+{numref}`tab-meshconv-1d-order` gives the median {term}`observed order of convergence` of each
+triple of neighbouring levels.
+
+~~~{table} The median observed order of convergence of each triple of neighbouring 1D levels.
+:name: tab-meshconv-1d-order
 
 | Device | Coarsest level | Finest level | Median observed order |
 |---|---|---|---|
@@ -124,6 +132,7 @@ The median {term}`observed order of convergence` of each triple of neighbouring 
 | nfet_05v0 | 1 | 3 | 2.05 |
 | pfet_05v0 | 0 | 2 | 1.26 |
 | pfet_05v0 | 1 | 3 | 2.08 |
+~~~
 
 - **The selected level is level 0, `DEFAULT_1D` itself, for both devices.** Its largest change
   is 3.7e-5 (nfet) and 3.8e-5 (pfet). That is over 250 times below the 1 % criterion.
@@ -149,12 +158,17 @@ The median {term}`observed order of convergence` of each triple of neighbouring 
 
 Classical {term}`accumulation` and {term}`inversion` layers add a capacitance in series with the
 {term}`oxide capacitance <Cox>`, so C/Cox > 1 is impossible in 1D. The committed 1D results at
-|Vg| = 5 V confirm it ({test}`tests/tcad/test_meshconv.py::test_1d_c_over_cox_below_one_at_5v`):
+|Vg| = 5 V confirm it ({test}`tests/tcad/test_meshconv.py::test_1d_c_over_cox_below_one_at_5v`)
+in {numref}`tab-meshconv-c-over-cox`.
+
+~~~{table} The committed 1D C/Cox of each device at a gate voltage of −5 V and +5 V.
+:name: tab-meshconv-c-over-cox
 
 | Device | Cox (fF/µm²) | C/Cox at −5 V | C/Cox at +5 V |
 |---|---|---|---|
 | {term}`nfet_05v0` (15.2 nm) | 2.2718 | 0.98099 (accumulation) | 0.97302 (inversion) |
 | {term}`pfet_05v0` (15.6 nm) | 2.2135 | 0.95135 (inversion) | 0.97915 (accumulation) |
+~~~
 
 An early 2D prototype gave a C/Cox of 1.0039 at −5 V (see the
 {repo}`Phase 2 plan <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`).
@@ -181,19 +195,27 @@ matters in 2D, unlike in 1D, and starts at 1 nm ({ref}`moscap2d-artefact`).
 {py:data}`gf180tcad.tcad.meshconv.EXCLUDED_2D`; the report records it as `excluded_levels`).
 Meshing every level without solving gives its node count. With the refined grading, the node
 count doubles per level. Both Lmin cells have W = 10 µm; L is 0.6 µm for the nfet and 0.5 µm for
-the pfet. Nodes per level:
+the pfet. The nodes per level are in {numref}`tab-meshconv-2d-nodes`.
+
+~~~{table} The node count of each 2D level of the two Lmin cells.
+:name: tab-meshconv-2d-nodes
 
 | Lmin cell | Level 0 | Level 1 | Level 2 | Level 3 |
 |---|---|---|---|---|
 | nfet | 115,689 | 224,640 | 437,039 | 861,897 |
 | pfet | 105,701 | 205,327 | 399,554 | 788,074 |
+~~~
 
-The estimated time of one QS sweep ({term}`job`) at each level:
+{numref}`tab-meshconv-2d-time` gives the estimated time of one QS sweep ({term}`job`) at each level.
+
+~~~{table} The estimated time of one quasi-static sweep at each 2D level of the two Lmin cells.
+:name: tab-meshconv-2d-time
 
 | Lmin cell | Level 0 (h) | Level 1 (h) | Level 2 (h) | Level 3 (h) |
 |---|---|---|---|---|
 | nfet | 0.75 | 1.75 | 4.1 | 9.7 |
 | pfet | 0.67 | 1.56 | 3.65 | 8.7 |
+~~~
 
 The times come from the measured cost of the first 2D study. The cost per bias is
 3.25e-6 · nodes^1.278 s. A sweep takes that times the 201 biases, times 1.4 for the equilibrium set-up and the retried points. Level 3 has
@@ -204,15 +226,20 @@ levels 0 and 1 are the candidates, each with a finer neighbour, and level 2 is o
 neighbour of level 1. The levels 0–2 give one triple, and so one observed order, which the
 report gives with its oscillating and noise-floor biases.
 
-The selection (the report's `levels` and `selected`, in {repo}`results/tcad/meshconv/moscap2d`; the
-2D-equals-1D column is the largest relative difference of the extruded uniform stack's C per area
-against 1D, {py:data}`~gf180tcad.tcad.meshconv.AGREEMENT_1D` = 0.5 %):
+{numref}`tab-meshconv-2d-selection` gives the selection: the report's `levels` and `selected`, in
+{repo}`results/tcad/meshconv/moscap2d`. Its against-1D columns hold the largest relative difference
+of the extruded uniform stack's C per area against 1D. The limit is
+{py:data}`~gf180tcad.tcad.meshconv.AGREEMENT_1D` = 0.5 %.
+
+~~~{table} The change of each 2D level against the next one and against 1D.
+:name: tab-meshconv-2d-selection
 
 | Level | nfet: change to next level | nfet: against 1D | pfet: change to next level | pfet: against 1D |
 |---|---|---|---|---|
 | 0 | 0.256 % | 0.553 % | 0.170 % | 0.546 % |
 | 1 | 0.092 % | 0.289 % | 0.076 % | 0.281 % |
 | 2 | (finest) | 0.152 % | (finest) | 0.152 % |
+~~~
 
 Level 0 meets the 1 % convergence criterion but not the 0.5 % 2D-equals-1D one, so level 1 (scale
 0.7071) is the coarsest level that meets both, for both devices. The selected level has 224,640

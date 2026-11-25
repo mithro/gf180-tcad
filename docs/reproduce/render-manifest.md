@@ -15,7 +15,10 @@ The synthetic example shows each kind of entry.
 
 ## Top-level keys
 
-Key is the JSON key, Holds what its value is, Required whether every render manifest has it.
+{numref}`tab-manifest-keys` lists the top-level keys. Key is the JSON key, Holds what its value is, Required whether every render manifest has it.
+
+~~~{table} The top-level keys of a render manifest.
+:name: tab-manifest-keys
 
 | Key | Holds | Required |
 |---|---|---|
@@ -27,6 +30,7 @@ Key is the JSON key, Holds what its value is, Required whether every render mani
 | `device`, `params` | the device and parameter set the render shows | no |
 | `outputs`, `scene`, `frames` | the rendered files, the scene description and the animation frames | no |
 | `generator`, `image`, `cycles` | the generator hash, the render image and the renderer settings | no |
+~~~
 
 ## Entry keys
 
@@ -68,7 +72,10 @@ thickness times the entry's scale, with the exaggeration statement of the scaled
 
 ## Selector kinds
 
-Kind is the selector's one key, Points at what its value names, Reads what comes back.
+{numref}`tab-manifest-selectors` lists the selector kinds. Kind is the selector's one key, Points at what its value names, Reads what comes back.
+
+~~~{table} The selector kinds of a render manifest entry.
+:name: tab-manifest-selectors
 
 | Kind | Points at | Reads |
 |---|---|---|
@@ -76,6 +83,7 @@ Kind is the selector's one key, Points at what its value names, Reads what comes
 | `csv` | column names and one row rule | one column or several, over all rows or one row |
 | `npz` | the name of one array of an `.npz` archive | that array |
 | `toml` | a key path of table and key names | the value at that path |
+~~~
 
 A CSV row rule is `rows: "all"`, `where` with one column and the value it equals exactly, or
 `index` with a row number from 0. A CSV file may be gzip-compressed.

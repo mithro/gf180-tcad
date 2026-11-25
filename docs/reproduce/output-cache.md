@@ -33,7 +33,10 @@ The object drawn is the first that the committed calibrated 2D jobs name.
 ```
 
 The cache holds eight objects, the {repo}`mesh.msh <.gitignore#L15>` of ten calibrated cells of
-[issue #35](https://github.com/mithro/gf180-tcad/issues/35):
+[issue #35](https://github.com/mithro/gf180-tcad/issues/35), listed in {numref}`tab-output-cache-meshes`.
+
+~~~{table} The cached mesh of each calibrated cell, by the first 12 hexadecimal digits of its sha256.
+:name: tab-output-cache-meshes
 
 | Cell | Mesh sha256 |
 |---|---|
@@ -45,6 +48,7 @@ The cache holds eight objects, the {repo}`mesh.msh <.gitignore#L15>` of ten cali
 | pfet W10/L0.7 and W1.6/L0.7 | `c3d2585f18a2…` |
 | pfet W10/L1 | `62e0517082a3…` |
 | pfet W10/L2 | `f31e0f46e9bc…` |
+~~~
 
 The meshes of the four committed 2D start jobs are not in it and are on no disk.
 They have to be regenerated before they can be pushed ({ref}`first population <output-cache-first-population>`).

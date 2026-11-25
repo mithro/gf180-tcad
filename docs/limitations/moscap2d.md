@@ -56,24 +56,28 @@ over the whole domain, no source or drain and zero-flux sides
 (accumulation) and the 2D/1D ratio minus 1 at the worst of five biases (−5, −1, 0.65, +2, +5 V);
 the 1D reference is the converged 1D stack, C/Cox = 0.98099. Interfaces at 0.5 nm, grading 1.2.
 
-Each mesh change below adds to the ones above it; the last row of each table is the vertex-grid
-fix. These rows use a 2 nm oxide spacing; the 2D start mesh, `DEFAULT_2D`, uses 1 nm (see below).
+Each mesh change adds to the ones above it in {numref}`tab-moscap2d-mesh-15p2` and
+{numref}`tab-moscap2d-mesh-16`; the last row of each is the vertex-grid fix. These rows use a 2 nm oxide spacing; the 2D start mesh, `DEFAULT_2D`, uses 1 nm (see below).
 
-Oxide 15.2 nm:
+~~~{table} The uniform stack with a 15.2 nm oxide, one mesh change per row.
+:name: tab-moscap2d-mesh-15p2
 
 | Mesh | C/Cox | Worst 2D/1D − 1 (%) |
 |---|---|---|
 | {{ meshwell }} defaults, oxide spacing 2 nm | **1.00126** | +2.07 |
 | distance-field sampling cap lifted | 0.99989 | +1.93 |
 | vertex grid 1e-6 µm (the fix) | 0.98666 | +0.58 |
+~~~
 
-Oxide 16 nm:
+~~~{table} The uniform stack with a 16 nm oxide, one mesh change per row.
+:name: tab-moscap2d-mesh-16
 
 | Mesh | C/Cox | Worst 2D/1D − 1 (%) |
 |---|---|---|
 | {{ meshwell }} defaults, oxide spacing 2 nm | 0.98765 | +0.66 |
 | distance-field sampling cap lifted | 0.98623 | +0.55 |
 | vertex grid 1e-6 µm (the fix) | 0.98623 | +0.55 |
+~~~
 
 The 16 nm oxide is unchanged by the vertex-grid fix because it lies on the 1 nm grid.
 
@@ -146,13 +150,18 @@ interface spacing is then 0.51 nm everywhere. This is worth 0.14 % at 15.2 nm.
 exact, the 2D stack is still +0.44 % to +0.58 % above 1D at 0.5 nm. The tensor mesh at the same
 0.5 nm interface spacing is +0.07 % to +0.28 %, the 1D-like spacing error; the rest comes from the
 coarse triangles in the oxide, whose discrete capacitance is too large when the oxide spacing is
-coarser than at its interfaces. With the 1 nm vertex grid of the {{ meshwell }} defaults:
+coarser than at its interfaces. The result with the 1 nm vertex grid of the {{ meshwell }} defaults is in
+{numref}`tab-moscap2d-oxide-spacing`.
+
+~~~{table} The worst 2D/1D difference at −5 V of each oxide spacing, with the 1 nm vertex grid.
+:name: tab-moscap2d-oxide-spacing
 
 | Oxide spacing (nm) | Worst 2D/1D − 1 at −5 V (%) | Minus the 1.3 % vertex-grid error (%) |
 |---|---|---|
 | 2 | +1.93 | +0.62 |
 | 1 | +1.72 | +0.41 |
 | 0.5 | +1.64 | +0.33 |
+~~~
 
 So the 2D start mesh ({py:attr}`MeshSpec.DEFAULT_2D <gf180tcad.tcad.mesh.MeshSpec.DEFAULT_2D>`) has a
 1 nm oxide spacing. Both parts fall under {term}`uniform refinement`, so the 2D mesh-convergence
@@ -165,7 +174,11 @@ coarsest level, is within 0.38 % of 1D on both plateaus but +0.55 % at the minim
 {term}`C–V` (nfet +0.5 V, pfet −0.5 V), where the {term}`depletion` region sets C. A bisection on the
 uniform nfet stack (worst 2D/1D − 1 over −5, 0, +0.5, +1, +5 V) shows that the grading of the
 body mesh through the depletion region sets it, not the oxide or the bulk spacing. `DEFAULT_2D`
-has 0.5 nm interfaces, a 1 nm oxide spacing, a 100 nm bulk spacing and grading 1.2:
+has 0.5 nm interfaces, a 1 nm oxide spacing, a 100 nm bulk spacing and grading 1.2.
+Its variants are in {numref}`tab-moscap2d-variants`.
+
+~~~{table} The node count and worst 2D/1D difference of each variant of `DEFAULT_2D`.
+:name: tab-moscap2d-variants
 
 | Variant of `DEFAULT_2D` | Nodes | Worst 2D/1D − 1 |
 |---|---|---|
@@ -174,6 +187,7 @@ has 0.5 nm interfaces, a 1 nm oxide spacing, a 100 nm bulk spacing and grading 1
 | oxide spacing 0.5 nm | 147k | +0.57 % |
 | every spacing × 0.707 (the next refinement level) | 154k | +0.45 % |
 | grading 1.1 | 171k | +0.32 % |
+~~~
 
 The design spec requires both mesh convergence (less than 1 % on refinement) and, here, 2D = 1D
 within 0.5 % ({test}`tests/tcad/test_moscap2d.py::test_2d_equals_1d_without_sd`), so the 2D
@@ -194,10 +208,13 @@ so with the grading held fixed, beyond a few nm (the depletion region) every lev
 same size. Only the interfaces are refined. The 2D/1D agreement then converges on the
 plateaus but not at the C–V minimum, and at the finest level it gets worse.
 
-Here is the uniform nfet stack with the grading held fixed, 2D/1D − 1 by level (these results are not
+{numref}`tab-moscap2d-fixed-grading` gives the uniform nfet stack with the grading held fixed, 2D/1D − 1 by level (these results are not
 committed). Levels 0 to 3 have 101k, 154k, 239k and 381k nodes. In the gate-bias column,
 −5 V is accumulation, +0.5 V the C–V minimum, +1 V past the minimum and +5 V {term}`inversion`.
 The last row is the worst of 21 biases.
+
+~~~{table} The 2D/1D − 1 of the uniform nfet stack by level, with the grading held fixed.
+:name: tab-moscap2d-fixed-grading
 
 | Gate bias | Level 0 | Level 1 | Level 2 | Level 3 |
 |---|---|---|---|---|
@@ -207,6 +224,7 @@ The last row is the worst of 21 biases.
 | +1 V | −0.05 % | −0.22 % | −0.21 % | −0.41 % |
 | +5 V | +0.25 % | +0.18 % | +0.15 % | +0.08 % |
 | worst | 0.553 % | 0.463 % | 0.398 % | 0.483 % |
+~~~
 
 The pfet's worst values are 0.546, 0.518, 0.446 and 0.734 %. A uniform refinement scales the
 size at every point, size_r(d) = r·size(d), so the slope scales as well:
@@ -455,6 +473,10 @@ Each calibrated 2D cell has one, in {repo}`results/tcad/meshes/stable`. The cuts
 {term}`stable TCAD image`, which made the 2D jobs. Each artefact records the full mesh's sha256,
 and it equals the job's committed `mesh_sha256`
 ({test}`tests/test_meshcut.py::test_committed_artefacts_match_their_jobs`).
+The artefacts are in {numref}`tab-moscap2d-artefacts`.
+
+~~~{table} The size of the reduced mesh artefact of each calibrated 2D cell.
+:name: tab-moscap2d-artefacts
 
 | Cell | Nodes kept | Triangles kept | Full-mesh triangles | Size (bytes) |
 |---|---|---|---|---|
@@ -468,6 +490,7 @@ and it equals the job's committed `mesh_sha256`
 | pfet `w10p0_l1p00` | 168640 | 334122 | 608867 | 5367277 |
 | pfet `w10p0_l2p00` | 313845 | 621643 | 1006380 | 10039177 |
 | pfet `w1p6_l0p70` | 123351 | 244427 | 489146 | 3913892 |
+~~~
 
 The sizes come from each meta file's `size_bytes`. A W1.6/L0.7 cell has the W10/L0.7 mesh,
 so its `.npz` has the same bytes. In the two `w10p0_l2p00` cells the window is wider than the
@@ -543,7 +566,11 @@ A hollow marker is a {term}`Same process` verdict: outside the tolerance, inside
 A filled marker outside the band is {term}`Disagree`.
 ```
 
-The committed cells:
+{numref}`tab-moscap2d-cell-times` gives the node count and sweep times of each committed cell, and
+{numref}`tab-moscap2d-cell-memory` its peak memory and attempts.
+
+~~~{table} The node count and sweep times of each committed calibrated 2D cell.
+:name: tab-moscap2d-cell-times
 
 | Cell | Nodes | QS sweep (min) | AC sweep (min) | Job total (min) |
 |---|---|---|---|---|
@@ -557,6 +584,10 @@ The committed cells:
 | pfet `w10p0_l1p00` | 304781 | 131 | 123 | 255 |
 | pfet `w10p0_l2p00` | 503672 | 236 | none | 236 |
 | pfet `w1p6_l0p70` | 244880 | 102 | 91 | 193 |
+~~~
+
+~~~{table} The peak memory and attempts of each committed calibrated 2D cell.
+:name: tab-moscap2d-cell-memory
 
 | Cell | Peak memory (GiB) | Attempts |
 |---|---|---|
@@ -570,6 +601,7 @@ The committed cells:
 | pfet `w10p0_l1p00` | 7.8 | 1 |
 | pfet `w10p0_l2p00` | 9.8 | 1 |
 | pfet `w1p6_l0p70` | 5.4 | 1 |
+~~~
 
 The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
 201 points and AC 21. The job total is the wall time of the host command.
@@ -615,7 +647,11 @@ The W10/L0.7 `cgg_per_um`
 ({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.csv>`) times 1.6 µm
 is compared with the {term}`TT` {{ ngspice }} target by {py:func}`~gf180tcad.calibrate.cv.compare`.
 For the nfet W1.6/L0.7 the result is {term}`Disagree`
-({test}`tests/test_calibrate_cv.py::test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell`):
+({test}`tests/test_calibrate_cv.py::test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell`), as
+{numref}`tab-moscap2d-nfet-narrow` shows.
+
+~~~{table} The comparison of the nfet W1.6/L0.7 cell with SPICE.
+:name: tab-moscap2d-nfet-narrow
 
 | Check | Value | Verdict |
 |---|---|---|
@@ -623,12 +659,17 @@ For the nfet W1.6/L0.7 the result is {term}`Disagree`
 | Inversion plateau, worst difference (%) | 13.8 | Same process |
 | Depletion crossing shift (mV) | −194 | Disagree |
 | Inversion crossing shift (mV) | −33 | {term}`Agree` |
+~~~
 
 The pfet W1.6/L0.7 job is committed. Its mesh is the pfet W10/L0.7 mesh, and its `cgg_per_um` equals that
 cell's at all 201 points
 ({test}`tests/test_calibrate_cv.py::test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell`).
 Its comparison is {term}`Same process`
-({test}`tests/test_calibrate_cv.py::test_pfet_w1p6_l0p70_two_d`):
+({test}`tests/test_calibrate_cv.py::test_pfet_w1p6_l0p70_two_d`), as
+{numref}`tab-moscap2d-pfet-narrow` shows.
+
+~~~{table} The comparison of the pfet W1.6/L0.7 cell with SPICE.
+:name: tab-moscap2d-pfet-narrow
 
 | Check | Value | Verdict |
 |---|---|---|
@@ -636,6 +677,7 @@ Its comparison is {term}`Same process`
 | Inversion plateau, worst difference (%) | 9.9 | Same process |
 | Depletion crossing shift (mV) | −109 | Same process |
 | Inversion crossing shift (mV) | +7 | Agree |
+~~~
 
 (moscap2d-edge)=
 
@@ -697,12 +739,16 @@ where
 
 The fit leaves equal and opposite misses, target minus $s\,\delta$, at the two plateaus
 ({test}`tests/test_edge_sensitivity.py::test_edge_fit_is_the_least_squares_bias`). A negative
-miss is a plateau the fit overfills:
+miss is a plateau the fit overfills. The misses are in {numref}`tab-moscap2d-edge-fit`.
+
+~~~{table} The edge-fit slope, bias and plateau misses of each device.
+:name: tab-moscap2d-edge-fit
 
 | Device | s (fF/(µm·nm)) | δ (nm) | Miss at −5 V (fF/µm) | Miss at +5 V (fF/µm) |
 |---|---|---|---|---|
 | nfet | {{ lim_edge_nfet_slope }} | {{ lim_edge_nfet_delta }} | {{ lim_edge_nfet_miss_acc }} | {{ lim_edge_nfet_miss_inv }} |
 | pfet | {{ lim_edge_pfet_slope }} | {{ lim_edge_pfet_delta }} | {{ lim_edge_pfet_miss_acc }} | {{ lim_edge_pfet_miss_inv }} |
+~~~
 
 The committed calibrated cells are solved at the drawn poly length, δ = 0.
 
