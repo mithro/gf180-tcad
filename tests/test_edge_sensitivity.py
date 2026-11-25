@@ -17,7 +17,7 @@ from gf180tcad import limitations_figures as lf
 from gf180tcad.comparison_figures import edge_split
 from gf180tcad.devices import DEVICES
 from gf180tcad.sandbox import REPO_ROOT
-from gf180tcad.tcad import calibration, calibration_file, generator_sha256
+from gf180tcad.tcad import calibration, calibration_file
 
 HERE = REPO_ROOT / "experiments" / "edge-sensitivity"
 CELLS = list(lf.EDGE_CELLS)
@@ -43,28 +43,41 @@ def test_records_are_the_listed_cells():
     assert files == sorted(f"{d}-{g}.json" for d, g in CELLS)
 
 
+def _git(*args: str) -> str:
+    return subprocess.run(["git", *args], cwd=REPO_ROOT, check=True, capture_output=True,
+                          text=True).stdout  # fmt: skip
+
+
+def _at(commit: str, path: str) -> bytes:
+    """The bytes of ``path`` at ``commit``."""
+    return subprocess.run(["git", "show", f"{commit}:{path}"], cwd=REPO_ROOT, check=True,
+                          capture_output=True).stdout  # fmt: skip
+
+
 @pytest.mark.parametrize(("device", "gid"), CELLS)
 def test_record_pins_what_the_runs_used(device, gid):
-    """The record holds the pins its runs shared (run.py's pins.json, which record.py requires to
-    agree): the image, the plugin commit, variant.py, the 2D writer's generator_sha256 and the
-    calibration. Each is the one committed now: a change to any makes the record stale. The
-    writer's hash is the one the committed 2D cells record, so a restamp of those cells has to
-    carry the record along."""
+    """The record is a frozen input of the poly length bias fit (plan Task E3, "Design"): its pins
+    are the ones of the commit its runs used (run.py's pins.json, which record.py requires to
+    agree), not today's. That commit is on this branch's history (a rebase would drop it), and
+    at it the image pin, the plugin gitlink, variant.py and the 2D writer's generator_sha256 (the
+    committed moscap2d provenance) are the record's. The 1D calibration is today's: a new 1D
+    calibration makes the record, and the fit made from it, stale. Drift of the physics since
+    the commit is caught by the sandbox rerun below, which is evidence of every restamp."""
     rec = lf.edge_record(device, gid)
     assert (rec["schema"], rec["device"], rec["geometry"], rec["params"]) == (
         2, device, gid, "calibrated")  # fmt: skip
     assert rec["generator"] == "gf180tcad.tcad.__main__"
-    assert rec["generator_sha256"] == generator_sha256(rec["generator"])
-    prov = json.loads((REPO_ROOT / "results/tcad/moscap2d/provenance.json").read_bytes())
+    commit = rec["commit"]
+    subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=REPO_ROOT,
+                   check=True)  # fmt: skip
+    prov = json.loads(_at(commit, "results/tcad/moscap2d/provenance.json"))
     assert (prov["generator"], prov["generator_sha256"]) == (
         rec["generator"], rec["generator_sha256"])  # fmt: skip
-    subprocess.run(["git", "cat-file", "-e", rec["commit"] + "^{commit}"], cwd=REPO_ROOT,
-                   check=True)  # fmt: skip
-    assert rec["image"] == (REPO_ROOT / "docker" / "TCAD_IMAGE").read_text("utf-8").strip()
-    tree = subprocess.run(["git", "ls-tree", "HEAD", "third_party/gplugins"], cwd=REPO_ROOT,
-                          check=True, capture_output=True, text=True).stdout.split()  # fmt: skip
+    assert rec["image"] == _at(commit, "docker/TCAD_IMAGE").decode("utf-8").strip()
+    tree = _git("ls-tree", commit, "third_party/gplugins").split()
     assert rec["gplugins_commit"] == tree[2]
-    assert rec["variant_py_sha256"] == _sha256(HERE / "variant.py")
+    variant = _at(commit, "experiments/edge-sensitivity/variant.py")
+    assert rec["variant_py_sha256"] == hashlib.sha256(variant).hexdigest()
     assert rec["calibration_file_sha256"] == _sha256(calibration_file(device))
     assert rec["calibration_values"] == calibration.read(calibration_file(device), device)
 
@@ -165,10 +178,14 @@ def test_edge_fit_needs_a_bias_variant(monkeypatch):
 
 
 @pytest.mark.sandbox
-def test_rerun_reproduces_the_record(tmp_path):
-    """A rerun of the nfet's base and bias30 variants in the sandbox gives the record's values
-    exactly (about 50 minutes each, one 16 GiB job at a time)."""
-    device, gid = CELLS[0]
+@pytest.mark.parametrize(("device", "gid"), CELLS)
+def test_rerun_reproduces_the_record(device, gid, tmp_path):
+    """A rerun of each record's base and bias30 variants in the sandbox, on today's code, gives
+    the record's values exactly (about 50 minutes each, one 16 GiB job at a time). The variants
+    build from δ = 0 whatever fit is committed, so this holds across a restamp; it is the
+    evidence of every restamp that the records are still what today's code computes. Of the
+    pins it compares the image, the plugin commit and the calibration; the generator and
+    variant.py hashes are the record's commit's (test_record_pins_what_the_runs_used)."""
     work = tmp_path / "work"
     variants = ["base", "bias30"]
     r = subprocess.run([sys.executable, str(HERE / "run.py"), str(work), device, gid, *variants],
@@ -181,9 +198,9 @@ def test_rerun_reproduces_the_record(tmp_path):
             assert got[key] == want[v][key], (v, key)
         pins = json.loads((work / device / gid / v / "pins.json").read_bytes())
         rec = lf.edge_record(device, gid)
-        for key in pins:
-            if key != "commit":
-                assert pins[key] == rec[key], (v, key)
+        for key in ("image", "gplugins_commit", "calibration_file_sha256",
+                    "calibration_values"):  # fmt: skip
+            assert pins[key] == rec[key], (v, key)
 
 
 def _shown(v: float) -> str:
