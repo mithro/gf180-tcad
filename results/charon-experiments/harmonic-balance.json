@@ -1,0 +1,139 @@
+{
+  "commit": "a85d9da055ca475d6cc575f06a098d6953c9eaa9",
+  "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",
+  "image": "ghcr.io/mithro/gf180-tcad-charon@sha256:b2b981c4606c8b65113add4824c1c449d46d5a4525ad8323d7f2aafa5a7ee4af",
+  "metal_gate": {
+    "accumulation": {
+      "c_qs_f_cm2": 2.0461180834267848e-07,
+      "hb_ok": false,
+      "v": -2.0
+    },
+    "depletion": {
+      "c_qs_f_cm2": 1.1025338988001136e-07,
+      "hb_ok": true,
+      "ratio": {
+        "body_contact_body_CosH1.000000__Current": 0.9999989211563428,
+        "body_contact_body_CosH1.000000__DispCurrent": 8.873673642291702e-09,
+        "body_contact_body_SinH1.000000__Current": 0.009065924015219431,
+        "body_contact_body_SinH1.000000__DispCurrent": -9.797255909962547e-07,
+        "gate_oxide_CosH1.000000__DispCurrent": -0.9999996616912677,
+        "gate_oxide_SinH1.000000__DispCurrent": -9.948860139714564e-06
+      },
+      "v": -0.5
+    }
+  },
+  "parallel_plate": {
+    "c_exact_f_cm2": 2.151420062799508e-07,
+    "dc_ok": true,
+    "runs": {
+      "pp_hb_1000_0.0001": {
+        "columns": [
+          "top_Voltage",
+          "bottom_Voltage",
+          "bottom_oxide_CosH1.000000__DispCurrent",
+          "top_oxide_CosH1.000000__DispCurrent",
+          "bottom_oxide_SinH1.000000__DispCurrent",
+          "top_oxide_SinH1.000000__DispCurrent"
+        ],
+        "ok": true,
+        "ratio": {
+          "bottom_oxide_CosH1.000000__DispCurrent": 0.9999999979173154,
+          "bottom_oxide_SinH1.000000__DispCurrent": -1.863631787659066e-13,
+          "top_oxide_CosH1.000000__DispCurrent": -0.9999999979173154,
+          "top_oxide_SinH1.000000__DispCurrent": -2.6985388266957056e-10
+        }
+      },
+      "pp_hb_1_0.0001": {
+        "columns": [
+          "top_Voltage",
+          "bottom_Voltage",
+          "bottom_oxide_CosH1.000000__DispCurrent",
+          "top_oxide_CosH1.000000__DispCurrent",
+          "bottom_oxide_SinH1.000000__DispCurrent",
+          "top_oxide_SinH1.000000__DispCurrent"
+        ],
+        "ok": true,
+        "ratio": {
+          "bottom_oxide_CosH1.000000__DispCurrent": 0.9999999979173155,
+          "bottom_oxide_SinH1.000000__DispCurrent": -1.8636317876590666e-13,
+          "top_oxide_CosH1.000000__DispCurrent": -0.9999999979173155,
+          "top_oxide_SinH1.000000__DispCurrent": -2.698538826695706e-10
+        }
+      },
+      "pp_hb_1e+06_0.0001": {
+        "columns": [
+          "top_Voltage",
+          "bottom_Voltage",
+          "bottom_oxide_CosH1.000000__DispCurrent",
+          "top_oxide_CosH1.000000__DispCurrent",
+          "bottom_oxide_SinH1.000000__DispCurrent",
+          "top_oxide_SinH1.000000__DispCurrent"
+        ],
+        "ok": true,
+        "ratio": {
+          "bottom_oxide_CosH1.000000__DispCurrent": 0.9999999979173154,
+          "bottom_oxide_SinH1.000000__DispCurrent": -1.8636317876590661e-13,
+          "top_oxide_CosH1.000000__DispCurrent": -0.9999999979173154,
+          "top_oxide_SinH1.000000__DispCurrent": -2.6985388266957056e-10
+        }
+      },
+      "pp_hb_1e+06_0.001": {
+        "columns": [
+          "top_Voltage",
+          "bottom_Voltage",
+          "bottom_oxide_CosH1.000000__DispCurrent",
+          "top_oxide_CosH1.000000__DispCurrent",
+          "bottom_oxide_SinH1.000000__DispCurrent",
+          "top_oxide_SinH1.000000__DispCurrent"
+        ],
+        "ok": true,
+        "ratio": {
+          "bottom_oxide_CosH1.000000__DispCurrent": 0.9999999979173155,
+          "bottom_oxide_SinH1.000000__DispCurrent": 4.873495160566396e-25,
+          "top_oxide_CosH1.000000__DispCurrent": -0.9999999979173155,
+          "top_oxide_SinH1.000000__DispCurrent": 3.0004471754679356e-12
+        }
+      },
+      "pp_hb_1e+06_1e-05": {
+        "columns": [
+          "top_Voltage",
+          "bottom_Voltage",
+          "bottom_oxide_CosH1.000000__DispCurrent",
+          "top_oxide_CosH1.000000__DispCurrent",
+          "bottom_oxide_SinH1.000000__DispCurrent",
+          "top_oxide_SinH1.000000__DispCurrent"
+        ],
+        "ok": true,
+        "ratio": {
+          "bottom_oxide_CosH1.000000__DispCurrent": 0.9999999979173154,
+          "bottom_oxide_SinH1.000000__DispCurrent": 4.8568393523568425e-23,
+          "top_oxide_CosH1.000000__DispCurrent": -0.9999999979173154,
+          "top_oxide_SinH1.000000__DispCurrent": 3.0004471754679356e-10
+        }
+      }
+    },
+    "t_ox_cm": 1.605048361638245e-06
+  },
+  "schema": 1,
+  "scripts_sha256": {
+    "b1.py": "bcab7fba1fda731108c165e3a394ee14acaf9f3d2ed2d3c81b516a6da046e4d6",
+    "b1an.py": "c7a8631fc955decd799454b64a49bb898ec9afacc4987fea046ab6a39b64e5f4",
+    "b2.py": "786cf9e8e32085575887f13511953bce6b0ed5b3276d9a034bc29883342220a9",
+    "b2an.py": "ef2ae9e49912355b7967eaad8c2b037bd8c4573475a6abd188868906a2e7b7d2",
+    "b2d.py": "6819c0f97eeaf3596cd1c9bf3741709f6642f74a9066b20ff57778305c1ec6f4",
+    "b2h.py": "dd067f1afc39a4fed41149d11147ed7c434b1826431da9f986e954aff96d67ca",
+    "b2nlp.py": "f580a3c762aa774984f4ad162d78ab268340397aae9f296dd10aa342dd55aea5",
+    "b3.py": "46a453a3c513e8cb7a22ded3c10eeb10ef040d9b347e10dbf32642654ffd90b3",
+    "b4.py": "a475834710ffb7e7c37228ca6398cc646a4974f825879529a835860c4db9ad0e",
+    "b4mg.py": "8ebc3e05d67114d43c23976a87e2fdc497f8807a8f21ad414eba45bbf89b22ad",
+    "b4pp.py": "e26db671019cdd2d43a5a9b006bc7f1bd3ce64a8377d5cc0fccd131d3a9ae6a2",
+    "b5.py": "5f26bfae2614c5957c5a0d1cf106bee5fb514b697deebe0349641ea3a61ec7ac",
+    "cx.py": "383dc16850d1c634e9a0cfa2561675f417ab94158b2642f59f0c0bad689a8316",
+    "decks.py": "f781f97dbd928b0fbd72bbec6150735368b62a6bced68ee55215e872fe997397",
+    "diag.py": "3d99de3347df23cd704414b7c66fe98c384557653dbab6184b1a194c44f37f4d",
+    "ncdump.py": "5c121d2de278394eaeef2f9a3b92c04cdf8d535a97fa5a7dbf1e66e4f56b330f",
+    "opts.py": "68f48844892b8f1c57a76a9ca5c6d4a55a0a12c5674944a951453c74202c03be",
+    "record.py": "18ce9e9fceb2a8920a9ab99b986115e27958b055a2893e9bd4c229c59dc0783f",
+    "run.py": "0fd22ec48e40076cb7d7c5d7f426f62f79a10f1460522a792dc379012a049a9e"
+  }
+}

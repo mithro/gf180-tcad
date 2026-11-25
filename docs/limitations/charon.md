@@ -61,8 +61,8 @@ where
 - $\Delta V$ is the half step, 1 mV, as in the DEVSIM job, in V.
 
 {numref}`fig-charon-cv` shows the result for both devices against the committed DEVSIM curves.
-Charon agrees with DEVSIM within 3.0e-5 relative at every one of the 201 biases of each device,
-far inside the 1 % comparison tolerance.
+Charon agrees with DEVSIM at every one of the 201 biases. The largest relative difference is
+3.0e-5 on the nfet and 5.4e-5 on the pfet, far inside the 1 % comparison tolerance.
 
 ```{figure} /_generated/limitations/charon-cv-light.svg
 :name: fig-charon-cv
@@ -90,8 +90,8 @@ steady state is each region's equilibrium, whatever the lifetimes. The short lif
 the inversion charge appear quickly during the Newton solve. In the bottom panel of
 {numref}`fig-charon-cv`, another lifetime moves C by at most 1.1e-9.
 
-A ten times looser tolerance moves C by at most 1.3e-9, in the same panel. At every node and
-state, n·p equals n_i² within 7e-6, so each state is an equilibrium.
+A ten times looser tolerance moves C by at most 1.0e-9, in the same panel. In the reference runs,
+n·p equals n_i² within 2e-6 at every node and state, so each state is an equilibrium.
 
 (charon-hard-range)=
 ## Where the default settings stop
@@ -99,7 +99,8 @@ state, n·p equals n_i² within 7e-6, so each state is an equilibrium.
 With the project's lifetimes, the nfet sweep stops at the onset of inversion. That is a device
 bias of 0.35 V. {numref}`fig-charon-hard-range` shows the last bias each solver setting reached,
 sweeping up from 0 V. Looser tolerances, another concentration scaling, 5 mV steps and the FEM
-discretisation all stop there or earlier. Only lifetimes of 1e-14 s or shorter reach 5 V.
+discretisation all stop between 0.05 V and 0.45 V. Only lifetimes of 1e-14 s or shorter reach
+5 V.
 
 ```{figure} /_generated/limitations/charon-hard-range-light.svg
 :name: fig-charon-hard-range
@@ -130,7 +131,8 @@ range. Solves started on the inversion side fail too, at every bias from 0.5 V t
 
 {numref}`tab-charon-other-answers` lists the other questions and their answers. They come from
 {repo}`probes.json <results/charon-experiments/probes.json>` and
-{repo}`hard-range.json <results/charon-experiments/hard-range.json>`.
+{repo}`hard-range.json <results/charon-experiments/hard-range.json>` and
+{repo}`harmonic-balance.json <results/charon-experiments/harmonic-balance.json>`.
 
 ```{table} The other questions of Task B and what the experiments found.
 :name: tab-charon-other-answers
@@ -140,7 +142,7 @@ range. Solves started on the inversion side fail too, at every bias from 0.5 V t
 | B1 | Does Charon read TRI3 blocks? | Yes: a 2D gmsh mesh of the uniform stack solves, C at 0 V within 2.6e-4 of DEVSIM's 1D |
 | B2 | Does the nonlinear-Poisson solve honour a biased poly gate? | No: the whole gate bias drops inside the poly, so C is 0 |
 | B3 | Which linear solvers work? | Amesos2 KLU2; Belos GMRES with ILUT stops on the same sweep |
-| B4 | Which harmonic-balance columns give C? | Not settled: the 1 MHz columns give 0.20 to 0.38 of the QS C ([issue #NNN]) |
+| B4 | Which harmonic-balance columns give C? | The cosine current of a contact over 2π·f·A·w, exact on a parallel plate; on the poly gate it gives 0.20 to 0.38 of the QS C ([issue #213](https://github.com/mithro/gf180-tcad/issues/213)) |
 | B6 | Is the oxide flux a conservative gate charge? | Yes: poly and body charges match it within 4.4e-13 |
 | B7 | Does a tighter tolerance move C? | WRMS 1e-11 does not converge; 1e-8 against 1e-10 moves C by 1.3e-9 |
 ```
