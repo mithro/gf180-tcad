@@ -284,6 +284,42 @@ def test_unchanged_generated_files_keep_their_mtime(tmp_path):
     assert (new / "added.md").stat().st_mtime_ns != 10**18
 
 
+def test_regenerating_keeps_the_mtime_of_unchanged_files(tmp_path, monkeypatch):
+    """The whole generate-and-swap step of docs/conf.py (``_generate_results``) on a small fake
+    tree: after a second build, a file with the same bytes keeps the first build's modification
+    time and a changed file gets a new one. Fails if ``_generate_results`` stops calling
+    ``_keep_unchanged_mtimes``."""
+    import os
+    import runpy
+
+    conf = runpy.run_path(str(DOCS / "conf.py"))
+    generate, release = conf["_generate_results"], conf["_release_lock"]
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    monkeypatch.setitem(generate.__globals__, "_generated", docs / "_generated")
+    monkeypatch.setitem(generate.__globals__, "_lock_path", docs / ".generated.lock")
+    content = {"same.md": "same", "sub/changed.md": "before"}
+
+    def fake_generate(out):
+        for name, text in content.items():
+            (out / name).parent.mkdir(parents=True, exist_ok=True)
+            (out / name).write_text(text, "utf-8")
+
+    monkeypatch.setattr(docgen, "generate", fake_generate)
+    generate(None)
+    release(None)
+    old = 10**18
+    for name in content:
+        os.utime(docs / "_generated" / name, ns=(old, old))
+    content["sub/changed.md"] = "after"
+    generate(None)
+    release(None)
+    assert (docs / "_generated" / "same.md").stat().st_mtime_ns == old
+    assert (docs / "_generated" / "sub" / "changed.md").read_text("utf-8") == "after"
+    assert (docs / "_generated" / "sub" / "changed.md").stat().st_mtime_ns != old
+    assert not list(docs.glob("_generated.*")), "temporary directories left behind"
+
+
 def test_known_diffs_single_source():
     assert docgen.KNOWN_DIFFS is KNOWN_ENGINE_DIFFS
     assert KNOWN_ENGINE_DIFFS == {("nfet_05v0", "idvg_sat"), ("nfet_05v0", "idvg_lin")}
