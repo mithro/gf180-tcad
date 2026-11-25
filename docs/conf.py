@@ -294,6 +294,17 @@ def _release_lock(app, exception=None):
         _lock_file = None
 
 
+def _keep_unchanged_mtimes(new: Path, old: Path) -> None:
+    """Give each file of the freshly generated tree ``new`` whose bytes equal its copy in the
+    previous tree ``old`` that copy's modification time. Sphinx decides what to read again by
+    modification time, so a rebuild with no change then reads and writes no page."""
+    for path in new.rglob("*"):
+        prev = old / path.relative_to(new)
+        if path.is_file() and prev.is_file() and path.read_bytes() == prev.read_bytes():
+            st = prev.stat()
+            os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns))
+
+
 def _generate_results(app):
     """Regenerate docs/_generated (committed files in, only docs/_generated out).
 
@@ -311,6 +322,7 @@ def _generate_results(app):
     try:
         tmp.mkdir()
         docgen.generate(tmp)
+        _keep_unchanged_mtimes(tmp, _generated)
         old = _generated.with_name(f"_generated.old-{os.getpid()}")
         if _generated.exists():  # also drops stale pages from older builds
             os.replace(_generated, old)

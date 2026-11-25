@@ -260,6 +260,30 @@ def test_concurrent_docs_generation_does_not_race(tmp_path):
     assert not list(DOCS.glob("_generated.*")), "temporary directories left behind"
 
 
+def test_unchanged_generated_files_keep_their_mtime(tmp_path):
+    """docs/conf.py regenerates docs/_generated on every build; a file whose bytes did not
+    change keeps the old copy's modification time, so Sphinx reads and writes no page for it
+    and a rebuild with no change writes no page. A changed or new file keeps its new time."""
+    import os
+    import runpy
+
+    keep = runpy.run_path(str(DOCS / "conf.py"))["_keep_unchanged_mtimes"]
+    old, new = tmp_path / "old", tmp_path / "new"
+    for d in (old, new):
+        (d / "sub").mkdir(parents=True)
+    (old / "sub" / "same.md").write_text("same", "utf-8")
+    (new / "sub" / "same.md").write_text("same", "utf-8")
+    (old / "changed.md").write_text("before", "utf-8")
+    (new / "changed.md").write_text("after", "utf-8")
+    (new / "added.md").write_text("new", "utf-8")
+    for f in old.rglob("*.md"):
+        os.utime(f, ns=(10**18, 10**18))
+    keep(new, old)
+    assert (new / "sub" / "same.md").stat().st_mtime_ns == 10**18
+    assert (new / "changed.md").stat().st_mtime_ns != 10**18
+    assert (new / "added.md").stat().st_mtime_ns != 10**18
+
+
 def test_known_diffs_single_source():
     assert docgen.KNOWN_DIFFS is KNOWN_ENGINE_DIFFS
     assert KNOWN_ENGINE_DIFFS == {("nfet_05v0", "idvg_sat"), ("nfet_05v0", "idvg_lin")}
