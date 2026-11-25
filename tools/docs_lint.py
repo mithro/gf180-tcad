@@ -310,7 +310,8 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             A {numref} to a table (a {table} named on the page, or a name starting "tab-")
             is not a figure. A {table} directive's caption and cells are read as a table's.
   TABLE-REF  (with figure) a table named by its place in prose or a caption: "the table
-            below", "tables above", "the following table", "this table". Cite it with {numref}.
+            below", "tables above", "the following table", "this table", "these tables", "in the
+            table", or a sentence that starts "The table(s) gives". Cite it with {numref}.
   FIGURE-FORM  a {figure} with no :name:, no caption, or no {numref} on the page citing it.
             The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
             A {numref} to a target not on the page needs the page's title in its text
@@ -828,15 +829,18 @@ def _bare_prose(line):
 
 
 _TABLE_REF = re.compile(
-    r"\b(tables?\s+(?:above|below)|(?:the|these)\s+(?:following|next|previous)\s+tables?"
-    r"|this\s+table)\b",
+    r"(\btables?\s+(?:above|below)|\b(?:the|these)\s+(?:following|next|previous)\s+tables?"
+    r"|\b(?:this|these|those)\s+tables?|\bin\s+the\s+tables?"
+    # "The table gives ...": a sentence that starts by naming a table it does not cite.
+    r"|(?:^\s*|(?<=[.!?;:]\s))(?-i:The)\s+tables?\s+(?:give|list|show|hold|ask|say|repeat)s?)\b",
     flags=re.I,
 )
 
 
 def table_ref_findings(lines):
-    """TABLE-REF: a table named by its place ("the table below", "the following table", "this
-    table") instead of a {numref}, whose number stays right when tables move."""
+    """TABLE-REF: a table named by its place or as "the table" ("the table below", "the following
+    table", "this table", "these tables", "in the table", a sentence starting "The table gives")
+    instead of a {numref}, whose number stays right when tables move."""
     out = []
     for i, line, kind in lines:
         if kind not in ("prose", "caption"):

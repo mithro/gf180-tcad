@@ -836,7 +836,11 @@ def test_measure_docs_reads_table_directive_caption_and_cells():
     "line",
     ["The table below lists them.", "As the tables above show, it holds.",
      "The following table gives the values.", "In this table none means no value.",
-     "See the next table.", "The values are in the figure, and the table below repeats them."],
+     "See the next table.", "The values are in the figure, and the table below repeats them.",
+     "The rows of these tables hold one value.", "In the table none means no value.",
+     "The gm is not the gm of those tables.", "The table gives both lines.",
+     "The tables give one value per cell.", "It is fitted. The tables list the values.",
+     "The table shows the verdicts.", "The table holds the card.", "The table asks for gm."],
 )  # fmt: skip
 def test_table_ref_fires_on_a_place_reference(line):
     """Positive control: a table named by its place, in prose or in a figure caption."""
@@ -849,7 +853,7 @@ def test_table_ref_fires_on_a_place_reference(line):
     "line",
     ["{numref}`tab-a` lists them.", "The tolerance table of the design spec sets it.",
      "Wikipedia's table gives 1.14 eV.", "Never write `the table below`.",
-     "The tables give one value per cell."],
+     "Wikipedia's table of band gaps at 302 K gives it.", "Each table gives one value per cell."],
 )  # fmt: skip
 def test_table_ref_quiet_on_citations_and_other_tables(line):
     assert not [c for _, c, _ in lint().rule_findings(f"# T\n\n{line}\n") if c == "TABLE-REF"]
