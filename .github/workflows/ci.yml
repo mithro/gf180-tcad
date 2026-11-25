@@ -36,7 +36,8 @@ jobs:
           version: "0.13.1"
       # --group docs: tests/test_docgen.py renders the plots and builds the docs.
       - run: uv sync --locked --group docs
-      # The same target as the local pre-push hook (tools/install-hooks): ruff check, ruff format.
+      # make lint (Makefile): ruff check, ruff format --check. Checks run here, on the pull request,
+      # not in a git hook at commit or push time.
       - run: make lint
       - name: Generate de_DE.UTF-8 locale (so test_csv_bytes_stable_under_locale runs, not skips)
         run: |

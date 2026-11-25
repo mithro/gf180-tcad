@@ -162,7 +162,7 @@ def test_crosscheck_tcad_job():
 
 
 def test_lint_test_lints_with_make_lint():
-    """CI and the local pre-push hook (tools/git-hooks/pre-push) run the same `make lint`."""
+    """CI lints with the same `make lint` that a contributor runs by hand."""
     body = _jobs(_lines("ci.yml"))["lint-test"]
     assert "      - run: make lint" in body
     assert not [ln for ln in body if "ruff" in ln and "run:" in ln], "ruff outside make lint"
