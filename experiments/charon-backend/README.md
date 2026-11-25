@@ -35,6 +35,8 @@ make manifest
 ```
 
 The work directory must be outside the repository, because the sandbox refuses the repository.
-A step whose `done.json` exists is skipped, so a cut-off run resumes. Each step writes its
+A step whose `done.json` exists is skipped, so a cut-off run resumes. The records carry the pins
+of the run; record.py only reads the run directories, so a later fix to it rewrites the records
+from the same runs. Each step writes its
 complete output to `<workdir>/<step>/run.log`. The whole set takes about three hours on this
 project's host, one 2 GiB container at a time.

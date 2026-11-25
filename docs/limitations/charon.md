@@ -14,11 +14,11 @@ records in {repo}`results/charon-experiments/`.
 Charon has no 1D mode and reads only Exodus II meshes. The experiments take the 686 nodes of the
 committed DEVSIM job of `nfet_05v0` at the calibrated values
 ({repo}`its meta file <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`). They
-extrude the nodes into a strip one element wide, as {numref}`charon-strip-figure` shows near the
+extrude the nodes into a strip one element wide, as {numref}`fig-charon-strip` shows near the
 oxide. Node i of the description becomes nodes 2i and 2i + 1 of the strip, so no node moves.
 
 ```{figure} /_generated/limitations/charon-strip-light.svg
-:name: charon-strip-figure
+:name: fig-charon-strip
 :figclass: only-light
 :alt: Vertical lines at the node positions near the oxide, dense at both oxide faces, over three shaded blocks: poly on the left, oxide in the middle, body on the right.
 
@@ -60,12 +60,12 @@ where
 - $v_g$ is the gate bias of the committed grid, in V;
 - $\Delta V$ is the half step, 1 mV, as in the DEVSIM job, in V.
 
-{numref}`charon-cv-figure` shows the result for both devices against the committed DEVSIM curves.
+{numref}`fig-charon-cv` shows the result for both devices against the committed DEVSIM curves.
 Charon agrees with DEVSIM within 3.0e-5 relative at every one of the 201 biases of each device,
 far inside the 1 % comparison tolerance.
 
 ```{figure} /_generated/limitations/charon-cv-light.svg
-:name: charon-cv-figure
+:name: fig-charon-cv
 :figclass: only-light
 :alt: Top, the C-V of nfet and pfet, Charon points on DEVSIM lines. Bottom, log relative differences near 1e-5 against DEVSIM and near 1e-9 between Charon runs, far below a dashed 1 % line.
 
@@ -88,7 +88,7 @@ The dashed line is the 1 % tolerance.
 The reference runs use SRH lifetimes of 1e-15 s, not the project's 1e-5 s. With no current, the
 steady state is each region's equilibrium, whatever the lifetimes. The short lifetimes only let
 the inversion charge appear quickly during the Newton solve. In the bottom panel of
-{numref}`charon-cv-figure`, another lifetime moves C by at most 1.1e-9.
+{numref}`fig-charon-cv`, another lifetime moves C by at most 1.1e-9.
 
 A ten times looser tolerance moves C by at most 1.3e-9, in the same panel. At every node and
 state, n·p equals n_i² within 7e-6, so each state is an equilibrium.
@@ -97,12 +97,12 @@ state, n·p equals n_i² within 7e-6, so each state is an equilibrium.
 ## Where the default settings stop
 
 With the project's lifetimes, the nfet sweep stops at the onset of inversion. That is a device
-bias of 0.35 V. {numref}`charon-hard-range-figure` shows the last bias each solver setting reached,
+bias of 0.35 V. {numref}`fig-charon-hard-range` shows the last bias each solver setting reached,
 sweeping up from 0 V. Looser tolerances, another concentration scaling, 5 mV steps and the FEM
 discretisation all stop there or earlier. Only lifetimes of 1e-14 s or shorter reach 5 V.
 
 ```{figure} /_generated/limitations/charon-hard-range-light.svg
-:name: charon-hard-range-figure
+:name: fig-charon-hard-range
 :figclass: only-light
 :alt: One marker per solver setting at the last converged bias: most hollow markers sit between 0.1 and 0.5 V, filled markers for the shortest lifetimes sit at 5 V, crosses at 0 V.
 
@@ -128,12 +128,12 @@ range. Solves started on the inversion side fail too, at every bias from 0.5 V t
 
 <!-- figure-ok: a summary table of answers, each with its record -->
 
-{numref}`tab-charon-answers` lists the other questions and their answers. They come from
+{numref}`tab-charon-other-answers` lists the other questions and their answers. They come from
 {repo}`probes.json <results/charon-experiments/probes.json>` and
 {repo}`hard-range.json <results/charon-experiments/hard-range.json>`.
 
 ```{table} The other questions of Task B and what the experiments found.
-:name: tab-charon-answers
+:name: tab-charon-other-answers
 
 | Experiment | Question | Answer |
 |---|---|---|

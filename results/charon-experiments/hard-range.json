@@ -172,7 +172,7 @@
         13,
         25
       ],
-      "last_converged_v": 0.30000000000000004,
+      "last_converged_v": 0.3,
       "settings": {
         "abs_": 1e-12,
         "rel": 1e-10
@@ -210,7 +210,7 @@
         8,
         11
       ],
-      "last_converged_v": 0.30000000000000004,
+      "last_converged_v": 0.3,
       "settings": {
         "abs_": 1e-12,
         "conc_scaling": 1e+20,
@@ -298,7 +298,7 @@
         47,
         35
       ],
-      "last_converged_v": 0.34500000000000003,
+      "last_converged_v": 0.345,
       "settings": {
         "abs_": 1e-12,
         "rel": 1e-10
@@ -351,7 +351,7 @@
         18,
         16
       ],
-      "last_converged_v": 0.35000000000000003,
+      "last_converged_v": 0.35,
       "settings": {
         "abs_": 1e-10,
         "rel": 1e-08,
@@ -496,7 +496,7 @@
         3,
         1
       ],
-      "last_converged_v": 5.050000000000001,
+      "last_converged_v": 5.0,
       "settings": {
         "abs_": 1e-12,
         "rel": 1e-10,
@@ -613,7 +613,7 @@
         3,
         1
       ],
-      "last_converged_v": 5.050000000000001,
+      "last_converged_v": 5.0,
       "settings": {
         "abs_": 1e-12,
         "rel": 1e-10,
@@ -1630,7 +1630,7 @@
         2,
         1
       ],
-      "last_converged_v": 5.005,
+      "last_converged_v": 5.0,
       "settings": {
         "abs_": 1e-12,
         "rel": 1e-10,
@@ -1656,7 +1656,7 @@
         15,
         7
       ],
-      "last_converged_v": 0.35000000000000003,
+      "last_converged_v": 0.35,
       "settings": {
         "abs_": 1e-06,
         "rel": 0.0001
@@ -1680,7 +1680,7 @@
         8,
         14
       ],
-      "last_converged_v": 0.30000000000000004,
+      "last_converged_v": 0.3,
       "settings": {
         "abs_": 1e-08,
         "rel": 1e-06
@@ -1704,7 +1704,7 @@
         9,
         22
       ],
-      "last_converged_v": 0.30000000000000004,
+      "last_converged_v": 0.3,
       "settings": {
         "abs_": 1e-10,
         "rel": 1e-08

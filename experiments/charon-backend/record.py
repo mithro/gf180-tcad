@@ -79,8 +79,10 @@ def _reached(v: dict) -> dict:
     its = sweep.get("iters", [])
     return {"settings": v["settings"], "step_v": v["step"], "end_v": v["vend"],
             "equilibrium_converged": v["eq_ok"], "sweep_converged": bool(v.get("sweep_ok")),
-            # LOCA step 0 is the solve at the start bias, 0 V
-            "last_converged_v": (len(its) - 1) * v["step"] if its else None,
+            # LOCA step 0 is the solve at the start bias, 0 V; a sweep that converged throughout
+            # ends at its end bias (its last step is the zero-length one onto the bound)
+            "last_converged_v": (v["vend"] if v.get("sweep_ok")
+                                 else round((len(its) - 1) * v["step"], 12) if its else None),
             "iterations": its, "failed_at": sweep.get("failed_at", [])}  # fmt: skip
 
 
