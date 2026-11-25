@@ -979,8 +979,8 @@ def test_engine_page_forced_values_are_the_record():
     by_wl = {(f"{g.w_um:g}", f"{g.l_um:g}"): geometry_id(g) for g in nfet.geometries}
     rows = 0
     for sweep in ("idvg_lin", "idvg_sat"):
-        table = page.split(f"The `{sweep}` sweep:", 1)[1].split("\n\n", 2)[1]
-        for line in table.splitlines()[2:]:
+        table = page.split(f":name: tab-engine-{sweep.replace('_', '-')}", 1)[1].split("~~~", 1)[0]
+        for line in [ln for ln in table.splitlines() if ln.startswith("|")][2:]:
             w, l, stock, at46 = (c.strip() for c in line.strip("|").split("|"))
             got = cases[by_wl[(w, l)]][sweep]
             assert _shown(stock, got["stock"]), (sweep, w, l, stock, got)
@@ -992,7 +992,7 @@ def test_engine_page_forced_values_are_the_record():
     assert "At W = 10 µm, L = 0.6 µm the record" in page
     assert (nfet.geometries[0].w_um, nfet.geometries[0].l_um) == (10, 0.6)
     table = page.split("| Sweep | ngspice 4.5 (PDK as published) | ngspice 4.6 |", 1)[1]
-    table = table.split("\n\n", 1)[0].strip().splitlines()[1:]
+    table = [ln for ln in table.split("~~~", 1)[0].strip().splitlines()[1:] if ln.strip()]
     assert len(table) == 3
     for line in table:
         sweep, stock, at46 = (c.strip().strip("`") for c in line.strip().strip("|").split("|"))

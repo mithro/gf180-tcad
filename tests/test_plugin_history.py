@@ -331,7 +331,8 @@ def test_io_is_the_writer():
 
 
 def _table_after(page: str, heading: str) -> list[list[str]]:
-    """The body rows (cells) of the first table after the line ``heading`` of the page."""
+    """The body rows (cells) of the first table after the line ``heading`` of the page (the
+    ``:name:`` line of its ``{table}`` directive)."""
     lines = page.splitlines()
     start = lines.index(heading)
     rows: list[list[str]] = []
@@ -354,13 +355,13 @@ def test_doc_quotes_the_record():
         assert sel, label
         return {r[i] for r in sel}
 
-    pin = _table_after(page, "**PIN waveguide**, depletion width (µm):")
+    pin = _table_after(page, ":name: tab-plugin-history-pin")
     w = [f"{b['depletion_width_um']:.3g}" for b in full["pin"]["bias"]]
     assert set(w) <= column(pin, 1)
-    static = _table_after(page, "**PN slab, mesh and equilibrium:**")
+    static = _table_after(page, ":name: tab-plugin-history-pn-mesh")
     for i, d, ramp_heading in (
-        (1, full, "**PN slab during the ramp, v0.8.0:**"),
-        (2, half, "**PN slab during the ramp, v0.8.0 × 0.5:**"),
+        (1, full, ":name: tab-plugin-history-ramp"),
+        (2, half, ":name: tab-plugin-history-ramp-half"),
     ):
         dd = d["ddcomponent"]
         eq, steps = dd["equilibrium"], [dd["equilibrium"], *dd["bias"]]
@@ -427,8 +428,8 @@ def test_doc_as_ported_rows_are_the_latest_record():
     slab = _load(LATEST[1.0])["pn_slab"]
     steps = dict(zip(slab["bias_v"], [slab["equilibrium"], *slab["bias"]], strict=True))
     page = (REPO / "docs" / "limitations" / "plugin-history.md").read_text("utf-8")
-    potential_table = page.split("uses every interface. The", 1)[1].split("The currents:", 1)[0]
-    current_table = page.split("The currents:", 1)[1].split("\n\n- ", 1)[0]
+    potential_table = page.split(":name: tab-plugin-history-potentials", 1)[1].split("~~~", 1)[0]
+    current_table = page.split(":name: tab-plugin-history-currents", 1)[1].split("~~~", 1)[0]
     row = r"^\| as ported \| (\S+) \| (.+?) \| (.+?) \|$"
     potentials = re.findall(row, potential_table, re.MULTILINE)
     assert [float(v) for v, _, _ in potentials] == slab["bias_v"]
