@@ -219,3 +219,38 @@ def test_a_label_without_its_kind_prefix_fails_the_build(tmp_path):
     assert r.returncode != 0
     assert "the figure label 'under_score' does not start with 'fig-'" in r.stderr, r.stderr
     assert "the table label 'values' does not start with 'tab-' or 'tbl-'" in r.stderr, r.stderr
+
+
+def test_adding_a_figure_keeps_every_identifier(tmp_path):
+    """An incremental build after a figure is added before the others: Sphinx's numbers shift,
+    but no identifier changes, the new figure shows its own, and page two's {numref}s to page
+    one still name the same items. Then a rebuild with no change writes no page."""
+    importorskip("sphinx")
+    two = _TWO.replace(
+        "See :numref:`fig-plot`",
+        "See :numref:`Figure %s of Page one <fig-stack>`, :numref:`fig-plot`",
+    )
+    _site(tmp_path / "src", two=two)
+    _age(tmp_path / "src")
+    out = tmp_path / "out"
+    assert _build(tmp_path / "src", out).returncode == 0
+    page_one = tmp_path / "src" / "one.rst"
+    added = page_one.read_text("utf-8").replace(
+        "See :numref:",
+        "See :numref:`fig-added`.\n\n.. figure:: plain.svg\n   :name: fig-added\n\n   Added.\n\nSee :numref:",
+        1,
+    )
+    page_one.write_text(added, "utf-8")
+    r = _build(tmp_path / "src", out)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "0 added, 1 changed, 0 removed" in r.stdout, r.stdout
+    one = (out / "one.html").read_text("utf-8")
+    assert _captions(one) == [
+        "Figure added: ", "Figure stack: ", "Table values: ", "Figure under_score: ",
+    ]  # fmt: skip
+    assert _numrefs(one)[0] == "Figure added"
+    assert _numrefs((out / "two.html").read_text("utf-8")) == [
+        "Figure stack of Page one", "Figure plot", "Table values of Page one",
+    ]  # fmt: skip
+    r = _build(tmp_path / "src", out)
+    assert "no targets are out of date" in r.stdout, r.stdout
