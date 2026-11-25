@@ -12,8 +12,13 @@ subtrees, ``results/spice`` or other docs pages); a tree counts as named when
 ``results/tcad/<tree>`` appears anywhere on the status page as a substring, whatever the
 sentence says about it; and only the phrases in ``STALE`` are caught. A passing test does not
 mean the status is current; the review does (CONTRIBUTING.md, PR checklist).
+
+The verdict table of the status page is checked cell by cell against the calibration and
+validation result files.
 """
 
+import json
+import re
 from pathlib import Path
 
 import pytest
@@ -84,3 +89,66 @@ def test_positive_control_missing_tree_is_found(monkeypatch):
     monkeypatch.setitem(STATUSES, STATUS_PAGE, lambda: "results/tcad/moscap1d only")
     with pytest.raises(AssertionError, match="does not name"):
         test_status_names_every_tcad_tree()
+
+
+# --- the verdict table of the status page against the result files (review of #204) ---------
+
+DEVICES = ("nfet_05v0", "pfet_05v0")
+# Each 2D row label -> the geometry id of each device (the first row is each one's shortest gate).
+TWO_D_ROWS = {
+    "2D, W10/L0.6 or W10/L0.5": ("w10p0_l0p60", "w10p0_l0p50"),
+    "2D, W10/L0.7": ("w10p0_l0p70",) * 2,
+    "2D, W1.6/L0.7": ("w1p6_l0p70",) * 2,
+    "2D, W10/L1": ("w10p0_l1p00",) * 2,
+    "2D, W10/L2": ("w10p0_l2p00",) * 2,
+    "2D, W10/L10": ("w10p0_l10p00",) * 2,
+}
+
+
+def verdict_table(text: str) -> dict[str, tuple[str, ...]]:
+    """{row label: (nfet cell, pfet cell)} of the table under "## The verdicts", with the
+    {term} roles reduced to their text."""
+    section = text.split("## The verdicts", 1)[1].split("\n## ", 1)[0]
+    rows = {}
+    for line in section.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not line.startswith("|") or cells[0] in ("Model", "") or set(cells[0]) <= {"-"}:
+            continue
+        rows[cells[0]] = tuple(
+            re.sub(r"\{term\}`([^`<]+?)\s*(<[^`]*>)?`", r"\1", c) for c in cells[1:]
+        )
+    return rows
+
+
+def expected_verdicts() -> dict[str, tuple[str, ...]]:
+    """The same table from results/tcad/calibration/*.result.json (the fit's overall verdict)
+    and results/tcad/validation/*.json (the held-out 1D verdict and each 2D cell's)."""
+    cal = {
+        d: json.loads((TCAD_RESULTS / "calibration" / f"{d}.result.json").read_text("utf-8"))
+        for d in DEVICES
+    }
+    val = {
+        d: json.loads((TCAD_RESULTS / "validation" / f"{d}.json").read_text("utf-8"))
+        for d in DEVICES
+    }
+
+    def two_d(device: str, geo: str) -> str:
+        cell = val[device]["two_d"][geo]
+        return cell["verdict"] if cell["status"] == "compared" else cell["status"]
+
+    out = {
+        "1D, the fitted geometries": tuple(cal[d]["verdict"] for d in DEVICES),
+        "1D, the held-out geometries": tuple(val[d]["verdict_1d"] for d in DEVICES),
+    }
+    for label, geos in TWO_D_ROWS.items():
+        out[label] = tuple(two_d(d, g) for d, g in zip(DEVICES, geos, strict=True))
+    return out
+
+
+def test_status_verdict_table_is_the_result_files():
+    assert verdict_table(page_text(STATUS_PAGE)) == expected_verdicts()
+
+
+def test_positive_control_verdict_table_mismatch():
+    page = page_text(STATUS_PAGE).replace("| 2D, W10/L1 | Same process |", "| 2D, W10/L1 | Agree |")
+    assert verdict_table(page) != expected_verdicts()
