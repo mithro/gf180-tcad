@@ -39,20 +39,20 @@ PRs but is not a merge blocker.
 ## PR checklist
 
 - The documentation is updated in the same PR as the change, never later. The author updates
-  every status page the change affects: the [status page](docs/limitations/status.md), the
-  "Where it stands" list of [docs/index.md](docs/index.md) and of [README.md](README.md) (the
-  two give the same overview), the task checkboxes of the plan in
-  [docs/superpowers/plans](docs/superpowers/plans) (ticked with the PR number and merge date),
-  the [limitations index](docs/limitations/index.md), and the results and comparison pages
-  whose content it changes. [`tests/test_docs_status.py`](tests/test_docs_status.py) catches
-  only two narrow cases (a top-level results tree the status page does not name, and a few known
-  stale phrases); passing it says nothing about whether the pages are current.
+  every status page the change affects. The first is the [status page](docs/limitations/status.md).
+  Then come the "Where it stands" lists of [docs/index.md](docs/index.md) and [README.md](README.md),
+  and the task checkboxes of the plan in [docs/superpowers/plans](docs/superpowers/plans). The two
+  lists give the same overview, and a checkbox is ticked with the PR number and merge date. The
+  author also updates the [limitations index](docs/limitations/index.md) and the results and
+  comparison pages whose content the change alters. [`tests/test_docs_status.py`](tests/test_docs_status.py)
+  catches two narrow cases: a top-level results tree the status page does not name, and known
+  stale phrases. Passing it says nothing about whether the pages are current.
 - Every review checks that those pages were updated correctly at the same time. A PR whose
   documentation lags behind the change is "needs fixes", like any other finding.
-- Docs pages follow the writing rules of the [design spec, section 10.3](docs/superpowers/specs/2026-10-18-gf180-tcad-design.md):
-  the user's `writing-sourced-docs` and `docs-writing` skills (from the user's
-  [mithro/dot-claude](https://github.com/mithro/dot-claude) repository; `docs-writing` is on its
-  `docs-writing-skill` branch). A reader page states only what a source backs, with the source
+- Docs pages follow the writing rules of the [design spec, section 10.3](docs/superpowers/specs/2026-10-18-gf180-tcad-design.md).
+  Those rules are the user's `writing-sourced-docs` and `docs-writing` skills, from the user's
+  [mithro/dot-claude](https://github.com/mithro/dot-claude) repository. `docs-writing` is on its
+  `docs-writing-skill` branch. A reader page states only what a source backs, with the source
   linked in the sentence. It carries no hedge or unknown word (`not yet`, `unverified`, `not public`,
   `probably`, `likely`, `about` before a number and the others listed in section 10.3). An
   unsourced statement is removed and filed as an issue. Before handing a page over, run
@@ -124,35 +124,15 @@ Needs [uv](https://docs.astral.sh/uv/); lint with [ruff](https://docs.astral.sh/
 with [pytest](https://docs.pytest.org/).
 
 ```
-uv sync --locked
-uv run --locked python tools/install-hooks
+uv sync --locked --group docs
 make lint
 uv run pytest -m "not sandbox"
 ```
 
-`make lint` (ruff check, ruff format --check) is the lint step of the `lint-test` check of
-[CI](.github/workflows/ci.yml), which then runs the tests.
-
-[`tools/install-hooks`](tools/install-hooks) installs the pre-push hook
-[`tools/git-hooks/pre-push`](tools/git-hooks/pre-push) once per clone, for every git worktree of it.
-A failure of either step refuses the push:
-
-- `make pre-push` runs on every push. It runs `make lint`, then every non-sandbox test except the
-  docs build, the generated pages and the calibration fits.
-- `make pre-push-docs` runs the docs build, [`tests/test_doc_links.py`](tests/test_doc_links.py),
-  and the generated pages, [`tests/test_docgen.py`](tests/test_docgen.py). It runs when a pushed
-  commit changes [`docs/`](docs), [`src/`](src), [`results/`](results), [README.md](README.md) or
-  [CONTRIBUTING.md](CONTRIBUTING.md). It also runs when the commit changes one of those two test
-  files, [`tests/conftest.py`](tests/conftest.py) or [`tests/offline_build.py`](tests/offline_build.py).
-- A pushed commit that changes the [`third_party/gplugins`](third_party) pin must pin a commit
-  that a branch of the [gplugins fork](https://github.com/mithro/gplugins) holds. The hook fetches
-  the fork and refuses the push otherwise, or when the fetch fails or the submodule is not
-  initialised. CI's checkout of a pin the fork lacks fails
-  before anything runs.
-
-A push that runs both steps takes many minutes. An agent runs `git push` in the
-background with no timeout, and never with `--no-verify`. The hook skips the calibration fits, so
-run the full `uv run pytest -m "not sandbox"` before asking for review.
+The repository installs no git hooks, so a commit or a push runs no checks. The checks run in
+[CI](.github/workflows/ci.yml) on every pull request. Its `lint-test` check runs `make lint`
+(ruff check, ruff format --check) from the [Makefile](Makefile), then the tests. Its docs check
+builds the docs. The commands above run the same lint and tests by hand.
 
 CI cancels the run of a superseded commit when a newer one is pushed to the same pull request.
 Runs on `main` are never cancelled.
@@ -163,11 +143,12 @@ only times out shows as a warning and does not fail a pull request. The weekly s
 a URL times out in three runs in a row, so a dead site is caught. The checks are in
 [`tools/linkcheck_report.py`](tools/linkcheck_report.py), tested by [`tests/test_linkcheck_report.py`](tests/test_linkcheck_report.py).
 
-By design, the hook also refuses a push of several branches that are not all the checked-out
-one, and, when `push.default` is `matching`, any push of a branch other than the checked-out
-one. That is what a bare `git push` under `push.default=matching` does, and since every worktree
-of a clone shares its branches, it pushes other sessions' unfinished commits (and starts CI on
-them). Push with `git push origin HEAD`, and set `git config push.default simple`.
+Push only the checked-out branch, with `git push origin HEAD`, and set
+`git config push.default simple`. Every worktree of a clone shares its branches. A bare
+`git push` under `push.default=matching` pushes the unfinished branches of other worktrees, and
+CI starts on them. A change to the [`third_party/gplugins`](third_party) pin needs the pinned
+commit on the `main` branch of the [gplugins fork](https://github.com/mithro/gplugins) first.
+[`tests/test_submodule.py`](tests/test_submodule.py) fails in CI otherwise.
 
 The generator registry is [`src/gf180tcad/generators.json`](src/gf180tcad/generators.json)
 (described in [docs/reproduce/index.md](docs/reproduce/index.md)). A module that a [TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD)

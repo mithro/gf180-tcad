@@ -152,14 +152,14 @@ Needs [uv](https://docs.astral.sh/uv/); the checks are [pytest](https://docs.pyt
 [`tools/sandbox-run`](tools/sandbox-run) and are excluded here.
 
 ```
-uv sync --locked
-uv run --locked python tools/install-hooks
+uv sync --locked --group docs
 make lint
 uv run pytest -m "not sandbox"
 ```
 
-`make lint` is the lint step of CI; [`tools/install-hooks`](tools/install-hooks) installs the pre-push hook that
-runs it and the non-sandbox tests before every push ([CONTRIBUTING.md](CONTRIBUTING.md#development)).
+No git hook runs checks at commit or push time. [CI](.github/workflows/ci.yml) runs `make lint`
+and the non-sandbox tests on every pull request, and builds the docs
+([CONTRIBUTING.md](CONTRIBUTING.md#development)).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution rules.
 
