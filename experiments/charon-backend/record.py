@@ -124,7 +124,7 @@ def harmonic_balance(work: Path) -> dict:
     """The analytic checks of the harmonic-balance columns (b4pp.py, b4mg.py)."""
     pp = _json(work / "b4-parallel-plate" / "b4pp.json")
     mg = _json(work / "b4-metal-gate" / "b4mg.json")
-    for rec in (*pp["runs"].values(), *mg.values()):
+    for rec in (*pp["runs"].values(), mg["accumulation"], mg["depletion"]):
         rec.pop("tail", None)
         rec.pop("rows", None)
     return {"parallel_plate": pp, "metal_gate": mg}
