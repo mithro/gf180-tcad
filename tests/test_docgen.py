@@ -480,7 +480,7 @@ def test_moscap_page_per_device_geometry(generated_pages):
                 if not (TCAD / "moscap2d" / name / params / gid / "cv.meta.json").is_file():
                     continue
                 if list((TCAD / "meshes").glob(f"*/{name}/{params}/{gid}/mesh-window.meta.json")):
-                    assert f":name: mesh-{name}-{gid}-{params}" in page
+                    assert f":name: {docgen.figure_label('mesh', name, gid, params)}" in page
                     for palette in ("light", "dark"):
                         assert (root / name / f"{gid}_mesh_{params}-{palette}.svg").is_file()
                 else:

@@ -78,7 +78,8 @@ def _site(src: Path, one: str = _ONE, two: str = _TWO, extensions=("theme_figure
 
 def _build(src: Path, out: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, "-m", "sphinx", "-W", "--keep-going", "-b", "html", str(src), str(out)],
+        [sys.executable, "-m", "sphinx", "-N", "-W", "--keep-going", "-b", "html", str(src),
+         str(out)],
         capture_output=True, text=True, check=False, timeout=300,
     )  # fmt: skip
 
@@ -162,25 +163,33 @@ def test_a_named_dark_twin_fails_the_build(tmp_path):
     assert "the only-dark twin carries the label 'fig-stack-dark'" in r.stderr, r.stderr
 
 
+def _age(src: Path) -> None:
+    """Date every source a minute back. Sphinx treats a page whose source is not older than its
+    output as out of date, so on a fast machine a page built in the same second as its source
+    was written would be rebuilt for that reason alone."""
+    for f in src.iterdir():
+        t = f.stat().st_mtime_ns - 60 * 10**9
+        os.utime(f, ns=(t, t))
+
+
 def test_a_rebuild_with_no_change_writes_no_page(tmp_path):
     """Sphinx rewrites every page whose numbers differ from the last build's; stable_ids puts
     the real numbers back before that comparison, so a second build writes nothing."""
     importorskip("sphinx")
     _site(tmp_path / "src")
+    _age(tmp_path / "src")
     out = tmp_path / "out"
     assert _build(tmp_path / "src", out).returncode == 0
     pages = [out / f"{name}.html" for name in ("index", "one", "two")]  # genindex is always written
     before = {p: p.stat().st_mtime_ns for p in pages}
-    for p in pages:  # an old mtime, so a rewrite is seen even on a coarse clock
-        os.utime(p, ns=(before[p] - 10**9, before[p] - 10**9))
-    before = {p: p.stat().st_mtime_ns for p in pages}
     r = _build(tmp_path / "src", out)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "0 added, 0 changed, 0 removed" in r.stdout, r.stdout
+    assert "no targets are out of date" in r.stdout, r.stdout
     assert {p: p.stat().st_mtime_ns for p in pages} == before, r.stdout
 
 
-def test_a_rebuild_without_the_restore_rewrites_pages(tmp_path, monkeypatch):
+def test_a_rebuild_without_the_restore_rewrites_pages(tmp_path):
     """Positive control of the test above: with restore_numbers switched off, Sphinx sees
     identifiers where it saved numbers and writes the pages again."""
     importorskip("sphinx")
@@ -191,6 +200,7 @@ def test_a_rebuild_without_the_restore_rewrites_pages(tmp_path, monkeypatch):
         + "import stable_ids\nstable_ids.restore_numbers = lambda app, env: []\n",
         "utf-8",
     )
+    _age(tmp_path / "src")
     out = tmp_path / "out"
     assert _build(tmp_path / "src", out).returncode == 0
     r = _build(tmp_path / "src", out)
