@@ -642,10 +642,13 @@ def test_docs_quote_the_committed_results(device):
     text = DOC.read_text(encoding="utf-8")
     res = cv.load_frozen(device)
     val = json.loads((cv.VALIDATION_ROOT / f"{device}.json").read_bytes())
-    other = next(d for d in process.DEVICES if d != device)
-    start = text.index(f"**{device}**\n")
-    end = text.find(f"**{other}**\n", start)
-    section = text[start:] if end < start else text[start:end]
+    # The device's three tables (verdicts, errors, shifts) start at its verdicts table and end
+    # at the other device's verdicts table or the next heading, whichever comes first.
+    short, other = device.split("_")[0], next(d for d in process.DEVICES if d != device)
+    start = text.index(f":name: tab-cv-{short}-verdicts\n")
+    ends = [text.find(f":name: tab-cv-{other.split('_')[0]}-verdicts\n", start),
+            text.find("\n## ", start)]  # fmt: skip
+    section = text[start : min(e for e in ends if e > start)]
     for c in [*res.per_geometry.values(), *val["one_d"].values()]:
         for row in _doc_rows(c):
             assert row in section, row
@@ -656,7 +659,7 @@ def test_docs_quote_the_committed_results(device):
         f"| `n_ch_cm3` | cm⁻³ | {v['n_ch_cm3']:.3e} |".replace("e+", "e"),
         f"| `dv_fb_v` | mV | {1000 * v['dv_fb_v']:+.1f} | −200 | +200 |",
     )
-    fitted = text.split(f"{{term}}`{device}`:\n\n", 1)[1].split("\n\n", 1)[0]
+    fitted = text.split(f":name: tab-cv-fit-{short}\n", 1)[1].split("~~~", 1)[0]
     for row in rows:
         assert row in fitted, row
     assert f"reached | {res.optimiser['nfev']} |" in text
