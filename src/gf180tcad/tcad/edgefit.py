@@ -3,8 +3,9 @@
 
 The fit is made once, by ``python -m gf180tcad.calibrate.edge --device D --out
 results/tcad/edgefit`` (:mod:`gf180tcad.calibrate.edge`), and frozen in
-``results/tcad/edgefit/<device>.json`` with every input it used. This module only reads that file. A calibrated 2D job applies δ when the
-file exists (:func:`apply`). Without it, the job keeps the process file's start value of 0.
+``results/tcad/edgefit/<device>.json`` with every input it used. This module only reads that
+file. A calibrated 2D job applies δ when the file exists (:func:`apply`). Without it, the job
+keeps the process file's start value of 0.
 
 The file stands outside ``results/tcad/calibration``. So the 1D calibration, its
 ``param_sha256``, the 1D jobs and the corner fits do not depend on it.

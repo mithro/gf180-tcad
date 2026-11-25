@@ -1066,19 +1066,20 @@ The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
 
 | results folder | writer | before | after |
 |---|---|---|---|
-| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `1d21285446f13de91f515d663bebe2169ebbef18501482ac443eab5414e6c4f8` |
-| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `1d21285446f13de91f515d663bebe2169ebbef18501482ac443eab5414e6c4f8` |
-| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `1d21285446f13de91f515d663bebe2169ebbef18501482ac443eab5414e6c4f8` |
-| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` | `c9f992d1e1ebc20e3fb5d3b40e007a80635879abb70565f0ed65d6e76080cfeb` |
-| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` | `c9f992d1e1ebc20e3fb5d3b40e007a80635879abb70565f0ed65d6e76080cfeb` |
-| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `748acf7b51df9ec48f9956660d8a7aa1c2c10f196c6349d68900167265279391` | `6f83f87d2914f3069bf24252e37340f502e85a86f5be7b94c89206bb1f59bb73` |
-| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `74ac12581ee2c0e69051887b70c88762ac9e2c7c293945f30bf87a09f2f0637e` | `6bb781301dc6a996c011307f2e1f75de1157610bbde1d2324f90a820ed1132f3` |
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `055faaf25cee53deac4ebb40c1ed78d25c249e0a64c0d2a8f08b1bd6597394c9` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `055faaf25cee53deac4ebb40c1ed78d25c249e0a64c0d2a8f08b1bd6597394c9` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `055faaf25cee53deac4ebb40c1ed78d25c249e0a64c0d2a8f08b1bd6597394c9` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` | `21770cd5fbc277e212064a4236cecf78f942361002691c746b6cae26076be19a` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` | `21770cd5fbc277e212064a4236cecf78f942361002691c746b6cae26076be19a` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `748acf7b51df9ec48f9956660d8a7aa1c2c10f196c6349d68900167265279391` | `40d410358de4522b86685f14005f84096bf4f3a641879002604b7cd36c7ee6b9` |
+| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `74ac12581ee2c0e69051887b70c88762ac9e2c7c293945f30bf87a09f2f0637e` | `e36dfbd2fe7fe3af622f8b7de8ca14d4da733553029ff0b10c9eab57ec0bf33a` |
 ~~~
 
 No data changed. The evidence ran at commit
 [0abab9f](https://github.com/mithro/gf180-tcad/commit/0abab9f6f48b2bf678c7b5bb4d108289af59fbec), the first
-restamp. After it, two docstrings changed in {py:mod}`gf180tcad.tcad.__main__` and
-{py:mod}`gf180tcad.calibrate.edge`, which moved the hashes once more. No other code changed.
+restamp. After it, the docstrings of {py:mod}`gf180tcad.tcad.__main__` and
+{py:mod}`gf180tcad.tcad.edgefit` changed, which moved the hashes once more. No other file that
+a results folder's writer hashes changed.
 
 - The jobs of the `crosscheck-tcad` subset were rerun on the project's host. Their 26 files are
   byte-identical to the committed ones, including {repo}`results/tcad/moscap1d/provenance.json`
