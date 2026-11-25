@@ -1213,6 +1213,7 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
         "lim_ccox_acc": f"{cell['ratio'][np.argmin(cell['u'])]:.{ccox}f}",
         "lim_ccox_inv": f"{cell['ratio'][np.argmax(cell['u'])]:.{ccox}f}",
         **_edge_substitutions(roots),
+        **_charon_substitutions(roots),
     }
 
 
@@ -1439,6 +1440,186 @@ def charon_strip_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         return fig
 
 
+#: The record keys the page's numbers come from: the reference hard-range variant, the B7 study
+#: of a ten times tighter tolerance, and the pair of runs ten times apart in tolerance with the
+#: default lifetime.
+CHARON_REF_VARIANT = "ref_1e-10"
+CHARON_TIGHT_STUDY = "study-nfet-default-1e-11"
+CHARON_LOOSE_PAIR = ("cv-nfet-default-1e-8", "cv-nfet-default-1e-10")
+
+
+def _charon_rel(runs: dict, name: str, ref: str) -> float:
+    """The largest ``abs(C / C_ref - 1)`` of run ``name`` against run ``ref`` on their common
+    biases."""
+    r, b = runs[name], runs[ref]
+    vg = [v for v in r["vg"] if v in b["vg"]]
+    return max(
+        abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)] - 1) for v in vg
+    )
+
+
+def _charon_substitutions(roots: Roots) -> dict[str, str]:
+    """The Charon page's numbers (``lim_charon_*``), each from a committed record."""
+    root = charon_root(roots)
+    cv = charon_record("cv", root)["runs"]
+    hard = charon_record("hard-range", root)
+    probes = charon_record("probes", root)
+    hb = charon_record("harmonic-balance", root)
+    n_ref, p_ref = CHARON_REF["nfet_05v0"], CHARON_REF["pfet_05v0"]
+    ref_runs = (cv[n_ref], cv[p_ref])
+    np_ref = max(r[f"max_abs_np_over_ni2_minus_1_{s}"] for r in ref_runs for s in "AB")
+    b6 = max(r[f"{k}_vs_gate_{s}"] for r in ref_runs for k in ("poly", "body") for s in "AB")
+    variants = hard["variants"]
+    plain = [v for n, v in variants.items() if v["equilibrium_converged"]
+             and not v["sweep_converged"] and "tau" not in v["settings"]]  # fmt: skip
+    ref = variants[CHARON_REF_VARIANT]
+    # the shorter lifetimes that still stop, at the reference tolerance
+    tau_fail = {v["last_converged_v"] for v in variants.values() if "tau" in v["settings"]
+                and v["settings"]["rel"] == ref["settings"]["rel"]
+                and not v["sweep_converged"]}  # fmt: skip
+    (tau_stop,) = tau_fail
+    step = ref["step_v"]
+    inv = sorted(float(v) for v in hard["inversion_side"]["direct"])
+    biases = [f"{v:g}" for v in inv]
+    tri3 = probes["tri3"]
+    pp = max(abs(abs(x) - 1) for run in hb["parallel_plate"]["runs"].values()
+             for c, x in run["ratio"].items() if "CosH1" in c)  # fmt: skip
+    mg = hb["metal_gate"]["depletion"]["ratio"]
+    mg_err = max(abs(abs(x) - 1) for c, x in mg.items() if "CosH1" in c and "Disp" in c
+                 and "gate" in c)  # fmt: skip
+    runs = list(probes["harmonic_balance"].values())
+    amps = [r["amplitude_v"] for r in runs]
+    amp = max(set(amps), key=amps.count)  # the amplitude of the frequency scan
+    b4 = max((r for r in runs if r["amplitude_v"] == amp), key=lambda r: r["f_hz"])
+    hb_cols = {s: b4[s]["c_from_columns_over_c_qs"] for s in ("accumulation", "depletion")}
+    hb_gate = {s: abs(next(x for c, x in v.items() if c.startswith("gate") and "CosH1" in c
+                           and "Disp" in c)) for s, v in hb_cols.items()}  # fmt: skip
+    tight = hard["step_studies"][CHARON_TIGHT_STUDY]
+    rel_tight = next(w.split("=", 1)[1] for w in tight["command"].split()
+                     if w.startswith("CX_REL="))  # fmt: skip
+    doping = probes["doping"]
+    (ni,) = {v["ni_cm3"] for v in doping.values()}
+    sig = STYLE["page_digits"]
+    return {
+        "lim_charon_nodes": f"{cv[n_ref]['boundary_nodes'][-1] + 1}",
+        "lim_charon_points": f"{cv[n_ref]['n']}",
+        "lim_charon_ni": f"{ni!r}",
+        "lim_charon_ref_tau": cv[n_ref]["settings"]["CX_TAU"],
+        "lim_charon_nfet_devsim": _sci(cv[n_ref]["max_abs_rel_vs_devsim"]),
+        "lim_charon_pfet_devsim": _sci(cv[p_ref]["max_abs_rel_vs_devsim"]),
+        "lim_charon_lifetime": _sci(_charon_rel(cv, "cv-nfet-tau14-1e-10", n_ref)),
+        "lim_charon_pfet_lifetime": _sci(_charon_rel(cv, "cv-pfet-tau14-1e-10", p_ref)),
+        "lim_charon_default_lifetime": _sci(_charon_rel(cv, "cv-nfet-default-1e-10", n_ref)),
+        "lim_charon_tol9": _sci(_charon_rel(cv, "cv-nfet-tau15-1e-9", n_ref)),
+        "lim_charon_tol8": _sci(_charon_rel(cv, *CHARON_LOOSE_PAIR)),
+        "lim_charon_np_ref": _sci(np_ref),
+        "lim_charon_b6": _sci(b6),
+        "lim_charon_fail_v": f"{ref['last_converged_v'] + step:.{sig}f}",
+        "lim_charon_stop_lo": f"{min(v['last_converged_v'] for v in plain):.{sig}f}",
+        "lim_charon_stop_hi": f"{max(v['last_converged_v'] for v in plain):.{sig}f}",
+        "lim_charon_tau_stop": f"{tau_stop:.{sig}f}",
+        "lim_charon_ref_fnorm": _sci(ref["failed_fnorm"]),
+        "lim_charon_ref_wrms": f"{ref['failed_wrms']:.0f}",
+        "lim_charon_inv_biases": ", ".join(biases[:-1]) + " and " + biases[-1],
+        "lim_charon_tri3_2d": _sci(abs(tri3["rel_vs_devsim_1d"])),
+        "lim_charon_tri3_strip": _sci(tri3["strip_max_rel_c_tri3_vs_quad4"]),
+        "lim_charon_pp": _sci(pp),
+        "lim_charon_mg": _sci(mg_err),
+        "lim_charon_hb_acc": f"{hb_gate['accumulation']:.{sig}f}",
+        "lim_charon_hb_depl": f"{hb_gate['depletion']:.{sig}f}",
+        "lim_charon_tight": rel_tight,
+    }
+
+
+def _edges(pairs) -> tuple[np.ndarray, np.ndarray]:
+    """One polyline of segments ``(a, b)`` (points ``(x, y)``), a NaN break after each."""
+    pts = np.array([[a, b, (np.nan, np.nan)] for a, b in pairs], float).reshape(-1, 2)
+    return pts[:, 0], pts[:, 1]
+
+
+def charon_structures(roots: Roots = DEFAULT_ROOTS) -> dict:
+    """The structures of B4 and B1. ``plate_nm``: the parallel plate's node depths (nm);
+    ``metal_nm`` and ``metal_oxide_nodes``: the metal-gate stack's node depths and how many of
+    them are oxide nodes (the last oxide node is the first body node); ``width_um``: the strips'
+    width; ``mesh``: per block of the 2D mesh its triangle edges (um) as one polyline;
+    ``sides``: per contact side set its segments (um) as one polyline."""
+    root = charon_root(roots)
+    hb = charon_record("harmonic-balance", root)
+    tri3 = charon_record("probes", root)["tri3"]
+    xy = np.asarray(tri3["mesh2d_xy_um"], float)
+    blocks = {k: np.asarray(v, int) for k, v in tri3["mesh2d_triangles"].items()}
+    mesh = {}
+    for name, tris in blocks.items():
+        edges = sorted({tuple(sorted((int(t[i]), int(t[(i + 1) % 3])))) for t in tris
+                        for i in range(3)})  # fmt: skip
+        mesh[name] = _edges((xy[a], xy[b]) for a, b in edges)
+    tris = np.concatenate(list(blocks.values()))  # Exodus element ids run through the blocks
+    sides = {}
+    for name, ss in tri3["mesh2d_side_sets"].items():
+        segs = []
+        for eid, side in zip(ss["elements"], ss["sides"], strict=True):
+            t = tris[eid - 1]
+            segs.append((xy[t[side - 1]], xy[t[side % 3]]))  # TRI3 side k joins nodes k, k + 1
+        sides[name] = _edges(segs)
+    mg = hb["metal_gate"]
+    return {
+        "plate_nm": np.asarray(hb["parallel_plate"]["x_um"]) * UNITS["nm_per_um"],
+        "metal_nm": np.asarray(mg["x_um"]) * UNITS["nm_per_um"],
+        "metal_oxide_nodes": mg["oxide_nodes"],
+        "width_um": charon_strip_mesh(roots)["width_um"],
+        "mesh": mesh,
+        "sides": sides,
+    }
+
+
+def charon_structures_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Top: the B4 parallel plate, the oxide strip's node pairs between its two contacts.
+    Middle: the B4 metal-gate stack, oxide and body node pairs, the gate contact on the oxide
+    and the body contact at the far end (depth on a symmetric log scale). Bottom: the B1 2D mesh,
+    its triangle edges by block, with the two contacts' sides."""
+    pal = ef.PALETTES[palette]
+    lw = ef.STYLE["edge_width"]
+    k = charon_structures(roots)
+    colours = {"gate_poly": "electron", "oxide": "highlight_oxide", "body": "hole"}
+    contact = {"gate": "highlight", "body_contact": "text", "top": "highlight", "bottom": "text"}
+    segment = [0.0, k["width_um"], np.nan]  # one node pair: bottom, top, a break
+
+    def pairs(ax, x, colour, gid, label=None):
+        ax.plot(np.repeat(x, len(segment)), np.tile(segment, len(x)), color=pal[colour], lw=lw,
+                gid=gid, label=label)  # fmt: skip
+
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(STYLE["tall_in"])
+        top, mid, bottom = fig.subplots(3, 1)
+        x = k["plate_nm"]
+        pairs(top, x, "highlight_oxide", "plate oxide nodes")
+        for name, at in (("top", x[0]), ("bottom", x[-1])):
+            top.axvline(at, color=pal[contact[name]], lw=ef.STYLE["line_width"],
+                        gid=f"plate contact {name}")  # fmt: skip
+        top.set_xlabel("depth in the oxide (nm)")
+        x = k["metal_nm"]
+        n_ox = k["metal_oxide_nodes"]
+        pairs(mid, x[:n_ox], "highlight_oxide", "metal oxide nodes")
+        pairs(mid, x[n_ox - 1 :], "hole", "metal body nodes")
+        for name, at in (("gate", x[0]), ("body_contact", x[-1])):
+            mid.axvline(at, color=pal[contact[name]], lw=ef.STYLE["line_width"],
+                        gid=f"metal contact {name}")  # fmt: skip
+        mid.set_xscale("symlog", linthresh=x[n_ox - 1])
+        mid.set_xlabel("depth from the gate (nm)")
+        for ax in (top, mid):
+            ax.set_ylabel("width (µm)")
+        for name, (xs, ys) in k["mesh"].items():
+            bottom.plot(xs, ys, color=pal[colours[name]], lw=lw, label=f"block {name}",
+                        gid=f"mesh {name}")  # fmt: skip
+        for name, (xs, ys) in k["sides"].items():
+            bottom.plot(xs, ys, color=pal[contact[name]], lw=ef.STYLE["line_width"],
+                        label=f"contact {name}", gid=f"side {name}")  # fmt: skip
+        bottom.set_xlabel("x (µm)")
+        bottom.set_ylabel("y (µm)")
+        fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
+        return fig
+
+
 # --- the registry -------------------------------------------------------------------------------
 
 
@@ -1469,6 +1650,7 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "charon-strip": _svg_of(charon_strip_figure),
     "charon-cv": _svg_of(charon_cv_figure),
     "charon-hard-range": _svg_of(charon_hard_range_figure),
+    "charon-structures": _svg_of(charon_structures_figure),
 }
 
 

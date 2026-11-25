@@ -57,6 +57,7 @@ FIGURES = [
     "charon-strip",
     "charon-cv",
     "charon-hard-range",
+    "charon-structures",
 ]
 
 _RENDER = textwrap.dedent(
@@ -872,6 +873,46 @@ def check_charon_hard_range(fig):
     d.done()
 
 
+def check_charon_structures(fig):
+    hb = _charon("harmonic-balance")
+    tri3 = _charon("probes")["tri3"]
+    w = _charon("cv")["runs"]["cv-nfet-tau15-1e-10"]["strip_width_um"]
+    top, mid, bottom = fig.axes
+    d = Drawn(fig)
+
+    def pairs(gid, x, ax):
+        d.line(gid, np.repeat(x, 3), np.tile([0.0, w, np.nan], len(x)), ax)
+
+    x = np.asarray(hb["parallel_plate"]["x_um"]) * 1e3
+    pairs("plate oxide nodes", x, top)
+    d.vline("plate contact top", x[0], top)
+    d.vline("plate contact bottom", x[-1], top)
+    mg = hb["metal_gate"]
+    x = np.asarray(mg["x_um"]) * 1e3
+    n = mg["oxide_nodes"]
+    pairs("metal oxide nodes", x[:n], mid)
+    pairs("metal body nodes", x[n - 1 :], mid)
+    d.vline("metal contact gate", x[0], mid)
+    d.vline("metal contact body_contact", x[-1], mid)
+    xy = np.asarray(tri3["mesh2d_xy_um"])
+    tris = []
+    for name, blk in tri3["mesh2d_triangles"].items():
+        ln = d(f"mesh {name}", bottom)
+        got = np.column_stack([ln.get_xdata(), ln.get_ydata()]).reshape(-1, 3, 2)
+        assert np.all(np.isnan(got[:, 2])), name
+        got_edges = {frozenset(map(tuple, seg)) for seg in got[:, :2].tolist()}
+        want = {frozenset((tuple(xy[t[i]].tolist()), tuple(xy[t[(i + 1) % 3]].tolist())))
+                for t in blk for i in range(3)}  # fmt: skip
+        assert got_edges == want, name
+        tris += blk
+    for name, ss in tri3["mesh2d_side_sets"].items():
+        segs = [(xy[tris[e - 1][s - 1]], xy[tris[e - 1][s % 3]])
+                for e, s in zip(ss["elements"], ss["sides"], strict=True)]  # fmt: skip
+        want = np.array([[a, b, (np.nan, np.nan)] for a, b in segs]).reshape(-1, 2)
+        d.line(f"side {name}", want[:, 0], want[:, 1], bottom)
+    d.done()
+
+
 CHECKS = {
     "engine-diff": (lf.engine_diff_figure, check_engine_diff),
     "engine-subthreshold": (lf.engine_subthreshold_figure, check_engine_subthreshold),
@@ -890,6 +931,7 @@ CHECKS = {
     "charon-strip": (lf.charon_strip_figure, check_charon_strip),
     "charon-cv": (lf.charon_cv_figure, check_charon_cv),
     "charon-hard-range": (lf.charon_hard_range_figure, check_charon_hard_range),
+    "charon-structures": (lf.charon_structures_figure, check_charon_structures),
 }
 
 
