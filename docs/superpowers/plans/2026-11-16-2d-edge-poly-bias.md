@@ -40,6 +40,42 @@ Design as built (changed from the first draft, which put δ in `process.TUNABLES
 
 ## Task E3: fit δ and rerun
 
+### Design (added 2026-11-26, before E3 started)
+
+**The problem.** δ is fitted from inputs that E3 itself replaces. The E1 records' `base` variant is the committed δ = 0 cell, and the fit's targets come from `comparison_figures.edge_split` over the committed δ = 0 calibrated cells. After the rerun both are gone:
+- a live re-derivation of δ would see the fitted cells and give a different number, near 0;
+- `tests/test_edge_sensitivity.py::test_record_base_is_the_committed_cell` would fail;
+- `::test_record_pins_what_the_runs_used` requires the record's `generator_sha256` to equal today's. So every change to a generator file (E3's own code, or the #203 note in `data/process/pfet_05v0.toml`) makes the records stale and needs a rerun of all 12 variants, about 10 h of 16 GiB jobs. Under that rule E3 would rerun them at least twice.
+
+**Decision: the fit is frozen when it is made.**
+- `results/tcad/calibration/<device>.edge.json` holds:
+  - δ, the slope, the two targets and the two residuals;
+  - the sha256 of the E1 record it read;
+  - the commit it was made at;
+  - the edge split's inputs: per gate length, Cgg per unit width at u = −5 and +5 V of the SPICE curves and of the δ = 0 cells, with each cell's `cv.csv` sha256.
+- The host test re-derives δ from the values in that file and the E1 record alone; it reads no live cell. The docs numbers of the fit come from that file.
+- The E1 records become frozen inputs of the fit:
+  - **Pins.** `test_record_pins_what_the_runs_used` checks each pin against the file at the record's own `commit` (`git show <commit>:<path>`), not against today's file, and checks that the record's sha256 is the one `<device>.edge.json` names.
+  - **Reproduction.** The sandbox rerun test keeps checking that the harness still reproduces the record: it reruns `base` and `bias30` of the nfet at δ = 0 on today's code and compares them with the record. A new variant part, `delta0`, forces `poly_bias_nm` = 0, since `load_params(..., "calibrated")` applies the fitted δ after E3. A physics change still fails this test, and a restamp no longer forces a 10 h rerun.
+  - **The base check.** `test_record_base_is_the_committed_cell` compares the `base` with the δ = 0 cell values frozen in `<device>.edge.json`, not with the live cell.
+- **Check after the rerun (host, no new solve).** At each plateau, the edge gap that the live `edge_split` gives for the fitted cells equals the frozen residual. The tolerance comes from the record's linearity: `bias60` is twice `bias30` within 2 %, so the bound is 2 % of `slope × δ` plus the 2D mesh-selection tolerance of Cgg. The derivation goes in the test docstring.
+
+**Issue #203 joins E3a.** E3a changes the generator files anyway, so the #203 changes share its one restamp:
+- The pfet `sd_peak_cm3` note is corrected.
+- A source/drain sensitivity harness `experiments/sd-sensitivity/` mirrors E1's `run.py` and `record.py` and writes `results/sd-sensitivity/pfet_05v0-<gid>.json`:
+  - for the two pfet W = 10 µm cases of `tests/tcad/moscap2d_driver.py::case_sd`, L = 0.5 and 2 µm;
+  - with peaks 5e19, 1e20 and 2e20 cm⁻³;
+  - with the same pins, frozen to the commit the record was made at.
+- `test_pfet_sd_doping_insensitive`, a 0.1 % bound that no length meets, is replaced by:
+  - a host test that the numbers on `docs/limitations/moscap2d.md` are the record's, rounded;
+  - the driver's sandbox cases comparing their rerun with the record.
+- The records are made after the E3b cells, at the fitted δ, because they describe the committed cells.
+
+**Order.**
+1. **E3a, one PR:** the design, `edge-fit`, the frozen fit files, the pin semantics, `delta0`, the #203 harness and tests, the note fix, and the restamp of every tree. No 2D solve.
+2. **E3b, one PR per pair of cells:** the 10 cells, one 16 GiB job at a time.
+3. **E3c:** the two source/drain records, the validation, the mesh artefacts, the post-rerun check and the docs.
+
 - [ ] `python -m gf180tcad.calibrate edge-fit --device D`: δ from the E1 record and the edge split of the committed calibrated cells at δ = 0, written to its own file, `results/tcad/calibration/<device>.edge.json` (so the 1D calibration's `param_sha256` and the 1D jobs stay as they are). `load_params(..., "calibrated")` applies it for 2D jobs; the 2D job meta records its sha256, and adds δ and its origin to `tunables` with `param_sha256` covering it (E2 leaves them out so the δ = 0 cells stay byte-identical). The test re-derives δ.
 - [ ] Rerun every calibrated 2D cell at the fitted δ, one 16 GiB job at a time: nfet W10/L0.6, W10/L0.7, W10/L1, W10/L2 (QS only) and W1.6/L0.7; pfet W10/L0.5, W10/L0.7, W10/L1, W10/L2 (QS only) and W1.6/L0.7. One PR per cell, or per pair, as the commit-early rule asks.
 - [ ] After the last cell: rerun the validation (it reads the 2D cells) and the reduced mesh artefacts. The 1D jobs, the 1D calibration and the corner fits do not read δ: restamp them. Update the manifest.
