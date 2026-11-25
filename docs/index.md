@@ -1,88 +1,134 @@
 # gf180-tcad
 
-Open-source {term}`TCAD` for the GlobalFoundries {term}`GF180MCU` 5 V transistors
-({{ gf180mcu_pdk }}). It is compared quantitatively, reproducibly and in public against the
-{term}`PDK`'s own {term}`SPICE` models.
+**Can open-source physics simulation, given only public data, reproduce a chip maker's own
+transistor models?**
 
-**The PDK's SPICE models are the {term}`reference <SPICE reference results>`; the TCAD is what is
-being tested.**
+This project tests that for the 5 V transistors of the open
+{term}`GF180MCU` chip process from GlobalFoundries.
 
-The aim is to earn (or fail to earn) confidence in the TCAD setup. Only once
-that confidence exists would TCAD be used, in later work, to improve or create SPICE models.
-Every mismatch is listed with its cause and the evidence for it, not hidden. The documentation
-separates what was calibrated from what was predicted.
+## The question
 
-```{admonition} Status
-:class: warning
-{term}`Phases 0 and 1` (foundations and the SPICE reference dataset) are complete
-({doc}`/_generated/results/index`). {term}`Phase 2` (the {{ gplugins }} {{ DEVSIM }} plugin fix
-and the {term}`MOS capacitor <MOSCAP>`) is in progress. The committed {term}`TCAD` results are
-MOS capacitors only, for {term}`nfet_05v0` and {term}`pfet_05v0`; there is no MOSFET TCAD result:
+Chip designers simulate a circuit before it is made. Each transistor in that simulation is a
+{term}`SPICE` model: equations the chip maker fits to its own measurements. GlobalFoundries
+publishes these models for GF180MCU in an open {term}`process design kit <PDK>`
+({{ gf180mcu_pdk }}).
 
-- the 1D and 2D MOS capacitor {term}`C–V` curves at the start values, in
-  {repo}`results/tcad/moscap1d` and {repo}`results/tcad/moscap2d` ({doc}`limitations/moscap2d`,
-  {numref}`index-cv-figure`);
-- the calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7, in {repo}`results/tcad/moscap2d`;
-- the calibrated 2D pfet cells at W10/L0.5, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7, in the same
-  folder. In every 2D cell the poly is as drawn, its length bias at 0
-  ({ref}`process-data-poly-bias`).
-- the reduced mesh artefact of each calibrated 2D cell, the mesh around its gate, in
-  {repo}`results/tcad/meshes/stable` ({ref}`moscap2d-mesh-artefact`);
-- their {term}`mesh convergence`, 1D and 2D, in {repo}`results/tcad/meshconv`
-  ({doc}`limitations/mesh-convergence`);
-- the 1D calibration against the SPICE {term}`Cgg`–Vg, in {repo}`results/tcad/calibration`.
-  Its validation at the {term}`held-out geometries <held-out geometry>` is in
-  {repo}`results/tcad/validation`, and the calibrated 1D curves are in
-  {repo}`results/tcad/moscap1d` ({doc}`comparison/cv-agreement`). In 1D the nfet is
-  {term}`Agree` at every geometry and the pfet is published as {term}`Disagree`.
-  Both are drawn at the minimum gate length in {numref}`index-cv-figure`, beside the 2D cells.
-- the same 1D fit at the four other SPICE {term}`corners <corner>`, in
-  {repo}`results/tcad/corners`. It gives each fitted number's lower and upper bound and its
-  spread ({ref}`explained-calibration-corners`, {doc}`limitations/corners`).
+{term}`TCAD` takes another route. It simulates the physics inside the transistor: its layers,
+their thickness, their doping, and the electrons and holes that move in them. This project
+builds a TCAD model of the GF180MCU transistors from public sources. It then measures how
+closely the TCAD curves match the PDK's SPICE curves ({numref}`index-flow-figure`).
 
-The generated TCAD pages are {doc}`/_generated/tcad/index`. The 2D validation
-([issue #35](https://github.com/mithro/gf180-tcad/issues/35)) is {term}`Disagree` at five committed cells
-and {term}`Same process` at the others ({ref}`cv-agreement-validation`).
+```{figure} /_generated/explained/project-flow-light.svg
+:figclass: only-light
+:name: index-flow-figure
+:alt: Two columns of boxes joined by arrows. Left, grey: the PDK's SPICE models, a circuit simulator, reference curves. Right, green: public process data and the PDK's layouts, the TCAD, TCAD curves. Both feed one comparison box at the bottom.
 
-Both {{ Charon }} images are built and pinned ({ref}`charon-images`), and no Charon {term}`job` has run.
-Planned work, each item with its issue, is on the {doc}`roadmap`. No measured silicon data
-exists ({doc}`limitations/silicon-validation`). See {doc}`limitations/index`.
+The two routes to the same curves. The grey column is the reference, the green column is what
+is tested, and every pair of curves is compared at the bottom.
 ```
+
+```{figure} /_generated/explained/project-flow-dark.svg
+:figclass: only-dark
+:alt: Two columns of boxes joined by arrows. Left, grey: the PDK's SPICE models, a circuit simulator, reference curves. Right, green: public process data and the PDK's layouts, the TCAD, TCAD curves. Both feed one comparison box at the bottom.
+
+The two routes to the same curves. The grey column is the reference, the green column is what
+is tested, and every pair of curves is compared at the bottom.
+```
+
+## How the comparison works
+
+The PDK's SPICE models are the {term}`reference <SPICE reference results>`, and the TCAD is what
+is tested. A circuit simulator runs the SPICE models to give the reference curves. The TCAD
+simulates a slice through the same transistor ({numref}`index-cell-figure`) to give its own
+curves. Each pair is judged {term}`Agree`, {term}`Same process` or {term}`Disagree`. Same
+process means the TCAD lies inside the range the PDK specifies, not at its typical point.
+
+```{figure} /_generated/explained/parts-cell-light.svg
+:figclass: only-light
+:name: index-cell-figure
+:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below, contacts drawn as dark bars.
+
+The simulated slice of the {term}`nfet_05v0`, 10 µm wide with a 0.7 µm gate, cut along the
+gate's length. Blue parts are n-type and the orange body is p-type.
+{{ x_fig_parts_cell_scale }}
+```
+
+```{figure} /_generated/explained/parts-cell-dark.svg
+:figclass: only-dark
+:alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below, contacts drawn as dark bars.
+
+The simulated slice of the {term}`nfet_05v0`, 10 µm wide with a 0.7 µm gate, cut along the
+gate's length. Blue parts are n-type and the orange body is p-type.
+{{ x_fig_parts_cell_scale }}
+```
+
+## Why it matters
+
+A TCAD model that matches the SPICE models explains them from physics. It can also reach sizes
+and devices the models do not cover, once it has earned confidence here. Every mismatch is
+listed with its cause and the evidence for it. Every input, script and result is in the
+repository, under an open licence. No published comparison of {{ DEVSIM }} or {{ Charon }} with
+the {term}`BSIM` models of any open PDK was found ({doc}`limitations/literature`).
+
+## Where it stands
+
+- **The reference is complete.** The SPICE curves are committed and rebuild byte for byte on a
+  second computer.
+- **The TCAD covers the gate only.** It simulates how much charge the gate holds as its voltage
+  changes, the {term}`C–V` curve. It has no result for the transistor's current.
+- **In 1D the nfet matches and the pfet does not.** The nfet agrees at every size. The pfet
+  disagrees at the sizes it was fitted to ({numref}`index-cv-figure`).
+- **The 2D slices are mixed.** Each calibrated 2D slice is Same process or Disagree.
+- **No chip has been measured.** No silicon data exists to check either model against.
+
+{doc}`limitations/status` lists every committed result, its folder and its verdict.
 
 ```{figure} /_generated/explained/cv-overview-light.svg
 :figclass: only-light
 :name: index-cv-figure
 :alt: Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.
 
-The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
-{term}`pfet_05v0` at the minimum gate length. The solid line is the {term}`SPICE` model at the
-{term}`typical corner`, and the grey band spans its {{ x_corner_count }}
-{term}`corners <corner>`. The dotted and dashed lines are the 1D stack at the start and the
-fitted values. The dash-dot lines are the 2D cell at the start values (orange) and the fitted
-values (blue), with no parasitics added outside the cell.
+The gate's capacitance against its voltage at the shortest gate, nfet above and pfet below. The
+solid line is the SPICE model, inside the grey band of its {{ x_corner_count }}
+{term}`corners <corner>`. The dotted and dashed lines are the 1D TCAD before and after fitting.
+The dash-dot lines are the 2D slice before (orange) and after (blue).
 ```
 
 ```{figure} /_generated/explained/cv-overview-dark.svg
 :figclass: only-dark
 :alt: Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.
 
-The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
-{term}`pfet_05v0` at the minimum gate length. The solid line is the {term}`SPICE` model at the
-{term}`typical corner`, and the grey band spans its {{ x_corner_count }}
-{term}`corners <corner>`. The dotted and dashed lines are the 1D stack at the start and the
-fitted values. The dash-dot lines are the 2D cell at the start values (orange) and the fitted
-values (blue), with no parasitics added outside the cell.
+The gate's capacitance against its voltage at the shortest gate, nfet above and pfet below. The
+solid line is the SPICE model, inside the grey band of its {{ x_corner_count }}
+{term}`corners <corner>`. The dotted and dashed lines are the 1D TCAD before and after fitting.
+The dash-dot lines are the 2D slice before (orange) and after (blue).
 ```
 
-No published {{ DEVSIM }}- or {{ Charon }}-versus-{term}`BSIM` comparison for any open PDK was
-found. No gf180mcu TCAD paper was found either ({doc}`limitations/literature`). So this work is
-novel and should be read with that in mind.
+## Should you read on?
 
-The documentation has five sections, plus a glossary and the API reference. The first,
-{doc}`explained/index`, explains how the parts of a transistor work, with this repo's numbers.
+- **You design circuits on GF180MCU:** {doc}`comparison/index` shows how far the transistor
+  models can be rebuilt from physics.
+- **You work on open-source TCAD:** {doc}`reproduce/index` rebuilds every result, and
+  {doc}`limitations/index` lists what is missing.
+- **You are new to transistors:** {doc}`explained/index` explains each part with this
+  process's numbers.
+
+## The documentation
+
+The documentation has five sections, plus a glossary and the API reference:
+
+- {doc}`explained/index`: how a transistor works, with this project's numbers.
+- {doc}`reproduce/index`: how to rebuild every result.
+- {doc}`results/index`: the SPICE reference and the TCAD results.
+- {doc}`comparison/index`: the TCAD against the PDK, with each verdict.
+- {doc}`limitations/index`: what is missing, and the project status.
+
+Planned work, each item with its issue, is on the {doc}`roadmap`. The {doc}`glossary` defines
+every term.
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
 explained/index
 reproduce/index
