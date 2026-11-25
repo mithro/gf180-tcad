@@ -112,6 +112,11 @@ for cname, extra in CONFIGS.items():
         sweep_ok=ok,
         sweep_time_s=dt,
         newton_steps=len(re.findall(r"-- Nonlinear Solver Step \d+ --", log)),
+        belos_iteration_blocks=log.count("Starting iterations with Belos"),
+        xml_linear_solver_type=re.findall(
+            r'name="Linear Solver Type" type="string" value="(\w+)"',
+            Path(f"{cname}_sw.inp.xml").read_text(),
+        ),
     )
     if ok:
         st = cx.read_states(f"{cname}_sw.exo")

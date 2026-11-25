@@ -77,13 +77,17 @@ def _reached(v: dict) -> dict:
     bias (V; the sweep starts at 0 V with fixed steps) and the iterations per step."""
     sweep = v.get("sweep") or {}
     its = sweep.get("iters", [])
+    stuck = [f for f in sweep.get("final", []) if not f[2]]
     return {"settings": v["settings"], "step_v": v["step"], "end_v": v["vend"],
             "equilibrium_converged": v["eq_ok"], "sweep_converged": bool(v.get("sweep_ok")),
             # LOCA step 0 is the solve at the start bias, 0 V; a sweep that converged throughout
             # ends at its end bias (its last step is the zero-length one onto the bound)
             "last_converged_v": (v["vend"] if v.get("sweep_ok")
                                  else round((len(its) - 1) * v["step"], 12) if its else None),
-            "iterations": its, "failed_at": sweep.get("failed_at", [])}  # fmt: skip
+            "iterations": its, "failed_at": sweep.get("failed_at", []),
+            # the F-norm and WRMS norm of the last Newton iteration of the failed step
+            "failed_fnorm": stuck[-1][0] if stuck else None,
+            "failed_wrms": stuck[-1][1] if stuck else None}  # fmt: skip
 
 
 def hard_range(work: Path) -> dict:
@@ -92,6 +96,14 @@ def hard_range(work: Path) -> dict:
         "variants": {name: _reached(v) for name, v in variants.items()},
         "inversion_side": _json(work / "b2-inversion-side" / "b2d.json"),
         "nlp": _json(work / "b2-nlp" / "b2nlp.json"),
+        "step_studies": {
+            p.name: {
+                "command": _json(p / "done.json")["command"],
+                "b2_exit": int((p / "b2_exit.txt").read_text()),
+                "failed": _json(p / "b2_failed.json") if (p / "b2_failed.json").is_file() else None,
+            }
+            for p in sorted(work.glob("study-*"))
+        },
     }
 
 

@@ -1,8 +1,9 @@
 """B2, the hard range: the zero-current drift-diffusion LOCA sweep of the nfet calibrated strip
-through the depletion-to-inversion transition (device bias 0 V to 1.5 V), under variants of the
-solver settings, to find which (if any) passes and where each one stops.
+through the depletion-to-inversion transition, under variants of the solver settings, to find
+which (if any) passes and where each one stops.
 
-Each variant: equilibrium at 0 V, then a LOCA sweep 0 -> 1.5 V at a fixed step. Records per
+Each variant: equilibrium at 0 V, then a LOCA sweep from 0 V to CX_VEND (default 1.5 V; run.py's
+step b2-hard-range uses 5.0 V) at a fixed step. Records per
 continuation step the Newton iterations and the final F-norm and WRMS norm, and the bias of
 the first failed step. Writes b2h.json.
 

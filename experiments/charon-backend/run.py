@@ -28,9 +28,10 @@ REPO = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 
 # The checkout paths a run reads; any uncommitted change under them is refused. The figure
-# module of the write-up is excluded: no step imports it.
+# module of the write-up and this directory's Markdown are excluded: no step reads them.
 PINNED_PATHS = ("src", ":(exclude)src/gf180tcad/limitations_figures.py",
-                "experiments/charon-backend", "docker", "results/tcad",
+                "experiments/charon-backend", ":(exclude)experiments/charon-backend/*.md",
+                "docker", "results/tcad",
                 "third_party/gplugins", "tools/sandbox-run")  # fmt: skip
 
 # step -> shell command run in the step directory inside the sandbox. The C-V runs (cv-*) are
@@ -72,6 +73,12 @@ STEPS = {
         "python3 b4.py || exit 1; done"
     ),
     "b1-tri3": "python3 b1.py && python3 b1an.py",
+    # Step study: one LOCA step per 50 mV grid step with the secant predictor. It may stop in
+    # inversion; the step records where (b2_failed.json) and exits 0.
+    "study-nfet-tau15-secant-50mV": (
+        "env CX_REL=1e-10 CX_ABS=1e-12 CX_LIN=klu2 CX_TAU=1e-15 CX_VGMAX= CX_SUB=1 "
+        "CX_PRED=secant python3 b2.py nfet_05v0 calibrated ni; echo $? > b2_exit.txt"
+    ),
     "b4-parallel-plate": "python3 b4pp.py",
     "b4-metal-gate": "python3 b4mg.py",
 }
@@ -150,6 +157,7 @@ def main(argv: list[str]) -> int:
     unknown = [s for s in steps if s not in STEPS]
     if unknown:
         raise SystemExit(f"unknown steps {unknown}; known: {list(STEPS)}")
+    pins()  # refuse a dirty checkout before any wait
     rc = 0
     for s in steps:
         rc |= run_step(work, s)

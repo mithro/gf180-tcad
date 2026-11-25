@@ -171,6 +171,10 @@ if "--no2d" not in sys.argv:
     # the plugin writes the gmsh file in cm (mesh_scaling_factor 1e-4); Charon reads um
     xy = xy * 1e4
     cx.write_exodus("mesh2d.exo", xy, blocks, ss)
+    out["mesh2d_xy_um"] = xy.tolist()
+    out["mesh2d_triangles"] = {name: conn.tolist() for name, _etype, conn in blocks}
+    out["mesh2d_side_sets"] = {name: {"elements": list(map(int, el)), "sides": list(map(int, sd))}
+                               for name, el, sd in ss}  # fmt: skip
     job2 = cx.job1d("nfet_05v0", "start")  # process.load gives the start values
     print("2D mesh", info, flush=True)
     # equilibrium and a two-point C at vg = 0 (gate at -dv_fb -+ DV)

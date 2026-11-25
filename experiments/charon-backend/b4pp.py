@@ -24,7 +24,8 @@ xy, blocks, ss = cx.strip_mesh(list(x_ox), ["oxide"] * (len(x_ox) - 1), ["oxide"
 ss = [("top", *ss[0][1:]), ("bottom", *ss[1][1:])]
 cx.write_exodus("pp.exo", xy, blocks, ss)
 W_CM = cx.STRIP_WIDTH_UM * 1e-4
-out = {"c_exact_f_cm2": c_exact, "t_ox_cm": t_ox_cm, "runs": {}}
+out = {"c_exact_f_cm2": c_exact, "t_ox_cm": t_ox_cm, "runs": {}, "x_um": x_ox.tolist(),
+       "blocks": ["oxide"], "side_sets": ["top", "bottom"]}  # fmt: skip
 
 HEAD = """tpetra is on
 lattice temperature = 298.15

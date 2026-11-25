@@ -129,7 +129,8 @@ def dc(name, imp, v, init):
     return c.eps_ox * c.eps0_f_per_cm * (psi[0] - psi[1]) / (xc[1] - xc[0])
 
 
-out = {}
+out = {"x_um": x.tolist(), "oxide_nodes": int(bn[2] - bn[1]) + 1,
+       "blocks": ["oxide", "body"], "side_sets": ["gate", "body_contact"]}  # fmt: skip
 prev, init = "mg.exo", "eq"
 for label, v in (("accumulation", -2.0), ("depletion", -0.5)):
     qa = dc(f"qs_{label}_a", prev, v - DV, init)

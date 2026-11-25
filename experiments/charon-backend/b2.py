@@ -83,6 +83,9 @@ def solve(name, gate_bc, problem, *, mesh, idx=None, init="equilibrium", sweep=N
     )
     if not ok:
         print("failed_at", stats["failed_at"][:5], "iters tail", stats["iters"][-5:])
+        Path("b2_failed.json").write_text(json.dumps({
+            "deck": name, "failed_at": stats["failed_at"], "iterations": stats["iters"],
+            "final": stats["final"]}, indent=1))  # fmt: skip
         raise SystemExit(f"{name} failed")
     return out, dt, stats
 
