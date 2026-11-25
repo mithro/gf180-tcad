@@ -680,8 +680,8 @@ the card's BSIM4 extrinsic terms (dotted, top). Each value is the line through t
 cells at one bias.
 ```
 
-{numref}`tab-cv-edge-per-width` gives the edge capacitance per width on both plateaus: accumulation at
-u = −5 V, inversion at u = +5 V.
+{numref}`tab-cv-edge-per-width` gives the edge capacitance per width on both plateaus:
+accumulation at u = −5 V, inversion at u = +5 V.
 
 ~~~{table} The edge capacitance per width of each device on each plateau.
 :name: tab-cv-edge-per-width
