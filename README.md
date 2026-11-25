@@ -12,8 +12,8 @@ This project tests that for the 5 V transistors of the open
 
 Chip designers simulate a circuit before it is made. Each transistor in that simulation is a
 [SPICE](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE) model: equations the chip maker fits to its own measurements. GlobalFoundries
-publishes these models for GF180MCU in an open [process design kit (PDK)](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-PDK)
-([GF180MCU PDK](https://github.com/fossi-foundation/gf180mcu-pdk)).
+publishes these models in the [GF180MCU PDK](https://github.com/fossi-foundation/gf180mcu-pdk), an open
+[process design kit (PDK)](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-PDK).
 
 [TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD) takes another route. It simulates the physics inside the transistor: its layers,
 their thickness, their doping, and the [electrons](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-electron) and [holes](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-hole) that move in them. This project
@@ -39,7 +39,7 @@ what was fitted stays
 apart from what was predicted.
 
 The TCAD runs in two forms. The 1D form is one column down through the gate, its oxide and the
-body, under the gate in Figure 2. The 2D form is a cross-section along the gate's length. Both run for
+body: the column under the gate in Figure 2. The 2D form is a cross-section along the gate's length. Both run for
 the two kinds of 5 V transistor, the [nfet](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0) and the [pfet](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-pfet_05v0).
 
 Each pair of curves is judged [Agree](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Agree),

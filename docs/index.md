@@ -10,8 +10,8 @@ This project tests that for the 5 V transistors of the open
 
 Chip designers simulate a circuit before it is made. Each transistor in that simulation is a
 {term}`SPICE` model: equations the chip maker fits to its own measurements. GlobalFoundries
-publishes these models for GF180MCU in an open {term}`process design kit (PDK) <PDK>`
-({{ gf180mcu_pdk }}).
+publishes these models in the {{ gf180mcu_pdk }}, an open
+{term}`process design kit (PDK) <PDK>`.
 
 {term}`TCAD` takes another route. It simulates the physics inside the transistor: its layers,
 their thickness, their doping, and the {term}`electrons <electron>` and {term}`holes <hole>` that move in them. This project
@@ -47,7 +47,7 @@ what was fitted stays
 apart from what was predicted.
 
 The TCAD runs in two forms. The 1D form is one column down through the gate, its oxide and the
-body, under the gate in {numref}`index-cell-figure`. The 2D form is a cross-section along the gate's length. Both run for
+body: the column under the gate in {numref}`index-cell-figure`. The 2D form is a cross-section along the gate's length. Both run for
 the two kinds of 5 V transistor, the {term}`nfet <nfet_05v0>` and the {term}`pfet <pfet_05v0>`.
 
 Each pair of curves is judged {term}`Agree`, {term}`Same process` or {term}`Disagree`. Same
