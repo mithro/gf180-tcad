@@ -1265,7 +1265,7 @@ CHARON_REF = {"nfet_05v0": "cv-nfet-tau15-1e-10", "pfet_05v0": "cv-pfet-tau15-1e
 
 #: The runs compared with the reference to show what it does not depend on: another lifetime,
 #: a looser tolerance, and the default lifetime (which converges in accumulation and depletion
-#: only). Each is drawn as |C / C_ref - 1| over the biases both have.
+#: only). Each is drawn as ``abs(C / C_ref - 1)`` over the biases both have.
 CHARON_CHECKS = {
     "cv-nfet-tau14-1e-10": ("nfet_05v0", "another SRH lifetime", "highlight"),
     "cv-pfet-tau14-1e-10": ("pfet_05v0", "another SRH lifetime", "highlight_oxide"),
@@ -1291,7 +1291,8 @@ def _setting(run: dict, key: str) -> str:
 
 def charon_cv_curves(roots: Roots = DEFAULT_ROOTS) -> dict:
     """Per device the reference run's u = polarity * vg, Charon's and DEVSIM's C (fF/um^2) and
-    |C_Charon / C_DEVSIM - 1|; per check run its u and |C / C_ref - 1| on the common biases."""
+    ``abs(C_Charon / C_DEVSIM - 1)``; per check run its u and ``abs(C / C_ref - 1)`` on the
+    common biases."""
     runs = charon_record("cv", charon_root(roots))["runs"]
     out = {"devices": {}, "checks": {}}
     for device, name in CHARON_REF.items():

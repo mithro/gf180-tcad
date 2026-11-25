@@ -365,10 +365,11 @@ TABLES = ("STYLE", "UNITS", "TOOLS")
 
 def _allowed_names() -> set[str]:
     """Names that hold digits but are identifiers, not numbers: the devices and their geometry
-    ids, the plugin-history record files, the figures, the dimensions of the model, the model's
-    name and the text encoding."""
+    ids, the plugin-history record files, the figures, the Charon C-V runs, the dimensions of the
+    model, the model's name and the text encoding."""
     gids = {geometry_id(g) for d in DEVICES.values() for g in d.geometries}
     names = set(DEVICES) | gids | set(lf.PLUGIN_FILES) | set(lf.LATEST_FILES) | set(lf.FIGURES)
+    names |= set(lf.CHARON_REF.values()) | set(lf.CHARON_CHECKS)  # record keys of cv.json
     return names | {"1D", "2D", "BSIM4", "utf-8"}
 
 
