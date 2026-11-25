@@ -64,7 +64,7 @@ where
 {numref}`fig-charon-cv` shows the result for both devices against the committed DEVSIM curves.
 Charon agrees with DEVSIM at every one of the {{ lim_charon_points }} biases. The largest relative
 difference is {{ lim_charon_nfet_devsim }} on the nfet and {{ lim_charon_pfet_devsim }} on the
-pfet, far inside the 1 % comparison {term}`tolerance`.
+pfet. Both are far inside the 1 % comparison {term}`tolerance`.
 
 ```{figure} /_generated/limitations/charon-cv-light.svg
 :name: fig-charon-cv
@@ -89,9 +89,12 @@ The dashed line is the 1 % tolerance.
 
 The reference runs use SRH lifetimes of {{ lim_charon_ref_tau }} s, not the project's 1e-5 s.
 With no current, the steady state is each region's equilibrium, whatever the lifetimes. The short
-lifetimes only let the inversion charge appear quickly during the Newton solve. In the bottom
+lifetimes only let the inversion charge appear quickly during the Newton solve.
+
+In the bottom
 panel of {numref}`fig-charon-cv`, a lifetime of 1e-14 s moves C by at most
-{{ lim_charon_lifetime }} (nfet) and {{ lim_charon_pfet_lifetime }} (pfet). The project's lifetime
+{{ lim_charon_lifetime }} on the nfet. On the pfet it moves C by at most
+{{ lim_charon_pfet_lifetime }}. The project's lifetime
 moves it by at most {{ lim_charon_default_lifetime }} over the biases where it converges.
 
 A ten times looser tolerance moves C by at most {{ lim_charon_tol9 }}, in the same panel. In the
@@ -105,10 +108,12 @@ The design spec's
 {repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`
 asks both backends for the same recombination. The quasi-static decks deviate: their lifetimes
 are {{ lim_charon_ref_tau }} s. The deviation holds for zero-current sweeps only, where the result
-does not depend on the lifetimes ({numref}`fig-charon-cv`). A small-signal AC or
-harmonic-balance deck keeps the project's lifetimes: there the lifetime sets how fast the
-inversion charge follows the signal, so a short one would turn a 1 MHz curve into the
-low-frequency one.
+does not depend on the lifetimes ({numref}`fig-charon-cv`).
+
+A small-signal AC or
+harmonic-balance deck keeps the project's lifetimes. There the lifetime sets how fast the
+inversion charge follows the signal. A short one would turn a 1 MHz curve into the low-frequency
+one.
 
 (charon-hard-range)=
 ## Where the default settings stop
@@ -140,8 +145,8 @@ The last converged device bias of each solver setting, sweeping the nfet strip u
 stopped. Crosses: the equilibrium solve itself failed.
 ```
 
-At the stop of the reference setting, the last Newton iteration leaves the residual at
-{{ lim_charon_ref_fnorm }} and the WRMS norm at {{ lim_charon_ref_wrms }}, above its limit of 1.
+The reference setting stops with a residual of {{ lim_charon_ref_fnorm }} after its last Newton
+iteration. Its WRMS norm is {{ lim_charon_ref_wrms }}, above the limit of 1.
 Solves started on the inversion side fail too, at {{ lim_charon_inv_biases }} V.
 
 (charon-structures)=
