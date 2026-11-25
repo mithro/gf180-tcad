@@ -152,8 +152,10 @@ CASES = [
     *(
         (
             ENGINE_PAGE,
-            rf"^:name: tab-engine-{s.replace('_', '-')}\n\n(?:\|.*\n)*?"
-            rf"\| {re.escape(w)} \| {re.escape(l)} \| {NUM} \| [^|]+ \|$",
+            (
+                rf"^:name: tab-engine-{s.replace('_', '-')}\n\n(?:\|.*\n)*?"
+                rf"\| {re.escape(w)} \| {re.escape(l)} \| {NUM} \| [^|]+ \|$"
+            ),
             lambda w=w, l=l, s=s: [diff(N, s, _gid(w, l))],
         )
         for s in ("idvg_lin", "idvg_sat")
