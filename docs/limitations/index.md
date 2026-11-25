@@ -35,7 +35,7 @@ there.
   for {{ Charon }} in parallel on every {term}`job`, with a per-job cross-comparison
   ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
   Both Charon images are built and pinned. In experiments, Charon's 1D C–V matches DEVSIM's
-  within 3.0e-5 ({doc}`charon`), and no Charon job has run ({ref}`numerical-acceptance`,
+  within {{ lim_charon_nfet_devsim }} (nfet) and {{ lim_charon_pfet_devsim }} (pfet) ({doc}`charon`), and no Charon job has run ({ref}`numerical-acceptance`,
   {ref}`charon-images`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
