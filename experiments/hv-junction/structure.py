@@ -71,7 +71,7 @@ def _lines(p):
         if 0.0 < e < p["width"]:
             xs[e] = fine
     ys = {0.0: surf, p["depth"]: coarse, -p["ox_top"]: coarse}
-    deep = max(w["rp"] + 3 * w["sy"] for w in p["wells"])
+    deep = max(w["rp"] + 3 * w["sy"] for w in p["wells"] if w["peak"] < 1e19)
     ys[min(deep, p["depth"] / 2)] = max(fine, 2 * surf)
     if p.get("sti_depth", 0) > 0:
         ys[p["sti_depth"]] = surf

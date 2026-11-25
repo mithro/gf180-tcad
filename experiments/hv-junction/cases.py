@@ -142,7 +142,27 @@ def calib2():
     return out
 
 
-SETS = {"scan1": scan1, "corners": corners, "meshes": meshes, "calib": calib, "calib2": calib2}
+def calib3():
+    """The two-part wells: the N-well against an abutting P-well, bare, and the deep
+    N-well (P-well 1.5 um away) for several deep N-well strengths."""
+    out = {}
+    for fine in (0.05, 0.02):
+        p = site.section({"term": 5.0}, vmax=30.0)
+        p["vstep"] = 1.0
+        p["mesh"] = {"fine": fine, "surf": min(0.02, fine), "coarse": 0.5}
+        out[f"nw-abut-f{fine}"] = p
+    p = site.section({}, {"pwell": "drawn"})
+    out["nw-bare"] = p
+    for peak in (2e16, 4e16, 8e16):
+        for rp, sy in ((1.5, 0.7), (1.2, 0.5)):
+            proc = {"dnw": [{"peak": peak, "rp": rp, "sy": sy, "sx": 0.7 * sy}]}
+            p = site.section({"kind": "dnw"}, proc, vmax=80.0)
+            p["vstep"] = 2.0
+            out[f"dnw-{peak:.0e}-rp{rp}"] = p
+    return out
+
+
+SETS = {"calib3": calib3, "scan1": scan1, "corners": corners, "meshes": meshes, "calib": calib, "calib2": calib2}
 
 if __name__ == "__main__":
     json.dump(SETS[sys.argv[1]](), open(sys.argv[2], "w"), indent=1)

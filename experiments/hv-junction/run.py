@@ -1,47 +1,74 @@
-"""Run a simulation script of this folder inside a gf180-tcad container image.
+# SPDX-License-Identifier: Apache-2.0
+"""Run one script of this folder in the sandbox (tools/sandbox-run) with a pinned image.
 
-    uv run python docs/high-voltage/sim/run.py [--charon] [--mem 16g] [--cpus 1] OUTDIR SCRIPT [ARGS...]
+    uv run python experiments/hv-junction/run.py [--charon] [--mem 8g] OUTDIR SCRIPT [ARGS...]
 
-The folder is mounted read-only at /sim and OUTDIR read-write at /out (the working
-directory). No network. Output goes to OUTDIR/run.log. Images are the ones gf180-tcad
-pins (docker/TCAD_DEV_IMAGE and docker/CHARON_IMAGE of mithro/gf180-tcad at 4e14465).
+OUTDIR is outside the repository (the sandbox refuses the repository); it is the working
+directory of the script and receives run.log. The DEVSIM image is docker/TCAD_DEV_IMAGE
+and the Charon image docker/CHARON_IMAGE. pins() is what a run uses: the commit, the image
+and the sha256 of every file of this folder.
 """
 
-import os
+from __future__ import annotations
+
+import hashlib
 import pathlib
 import subprocess
 import sys
 
-DEVSIM = "ghcr.io/mithro/gf180-tcad-tcad-dev@sha256:fe34752893b8078bb9053875fd43d4b45b75ca757d75150b2dca4b9ada9c0c44"
-CHARON = "ghcr.io/mithro/gf180-tcad-charon@sha256:b2b981c4606c8b65113add4824c1c449d46d5a4525ad8323d7f2aafa5a7ee4af"
+HERE = pathlib.Path(__file__).resolve().parent
+REPO = HERE.parents[1]
+IN_SANDBOX = "/work/src/experiments/hv-junction"
+
+
+def image(charon=False):
+    name = "CHARON_IMAGE" if charon else "TCAD_DEV_IMAGE"
+    return (REPO / "docker" / name).read_text(encoding="utf-8").split()[0]
+
+
+def _git(*args):
+    return subprocess.run(["git", *args], cwd=REPO, check=True, capture_output=True, text=True).stdout
+
+
+def pins(charon=False, allow_dirty=False):
+    """The commit, image and file hashes of a run (ValueError if this folder has uncommitted
+    changes, unless allow_dirty)."""
+    dirty = _git("status", "--porcelain", "--untracked-files=no", "--",
+                 "experiments/hv-junction", "docker", "tools")  # fmt: skip
+    if dirty and not allow_dirty:
+        raise ValueError(f"uncommitted changes:\n{dirty}")
+    tracked = _git("ls-files", "--", "experiments/hv-junction").split()
+    files = sorted(REPO / t for t in tracked)
+    return {
+        "commit": _git("rev-parse", "HEAD").strip(),
+        "dirty": bool(dirty),
+        "image": image(charon),
+        "files_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in files},
+    }
+
+
+def run(out, script, args=(), charon=False, mem="8g"):
+    out = pathlib.Path(out).expanduser().resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    cmd = [str(REPO / "tools" / "sandbox-run"), "--mem", mem, "--cpus", "1",
+           "--image", image(charon), "--workdir", str(out), "--",
+           "env", f"PYTHONPATH={IN_SANDBOX}", "MPLCONFIGDIR=/tmp/mpl",
+           "python3", f"{IN_SANDBOX}/{script}", *args]  # fmt: skip
+    with open(out / "run.log", "ab") as log:
+        return subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, check=False).returncode
 
 
 def main(argv):
-    image, mem, cpus = DEVSIM, "16g", "1"
+    charon, mem = False, "8g"
     while argv and argv[0].startswith("--"):
         opt = argv.pop(0)
         if opt == "--charon":
-            image = CHARON
+            charon = True
         elif opt == "--mem":
             mem = argv.pop(0)
-        elif opt == "--cpus":
-            cpus = argv.pop(0)
         else:
             sys.exit(f"unknown option {opt}")
-    out = pathlib.Path(argv.pop(0)).resolve()
-    out.mkdir(parents=True, exist_ok=True)
-    sim = pathlib.Path(__file__).resolve().parent
-    cmd = [
-        "docker", "run", "--rm", "--network", "none",
-        "-u", f"{os.getuid()}:{os.getgid()}",
-        "--memory", mem, "--memory-swap", mem, "--cpus", cpus,
-        "-e", "PYTHONPATH=/sim", "-e", "HOME=/out", "-e", "MPLCONFIGDIR=/out/.mpl",
-        "-e", "OMP_NUM_THREADS=1", "-e", "OPENBLAS_NUM_THREADS=1",
-        "-v", f"{sim}:/sim:ro", "-v", f"{out}:/out", "-w", "/out",
-        image, "python", f"/sim/{argv[0]}", *argv[1:],
-    ]
-    with open(out / "run.log", "ab") as log:
-        return subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT).returncode
+    return run(argv[0], argv[1], argv[2:], charon, mem)
 
 
 if __name__ == "__main__":
