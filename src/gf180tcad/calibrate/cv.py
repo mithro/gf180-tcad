@@ -69,7 +69,7 @@ from types import MappingProxyType
 from gf180tcad import io, specwindow
 from gf180tcad.devices import CORNERS, DEVICES, Geometry, geometry_id
 from gf180tcad.sandbox import REPO_ROOT
-from gf180tcad.tcad import CALIBRATION_DIR, calibration, meshconv, moscap1d, process
+from gf180tcad.tcad import CALIBRATION_DIR, calibration, edgefit, meshconv, moscap1d, process
 from gf180tcad.tcad.analytic import cox_f_per_cm2, f_per_cm2_to_ff_per_um2
 
 SPICE_ROOT = REPO_ROOT / "results" / "spice"
@@ -916,13 +916,16 @@ def _check_frozen(device: str, frozen: CalibrationResult, root: Path) -> Path:
 @dataclass(frozen=True)
 class Cv2D:
     """One calibrated 2D C-V result of one geometry, as :func:`validate_cv` compares it: gate bias
-    (V, file order), total Cgg (fF), the ``param_sha256`` of the values it was computed with, and
-    ``source``, where it came from (for messages)."""
+    (V, file order), total Cgg (fF), the ``param_sha256`` of the values it was computed with,
+    ``source``, where it came from (for messages), and ``edge_fit``, the frozen poly length bias
+    the job applied (:mod:`gf180tcad.tcad.edgefit`; None for a job without one)."""
 
     vg: tuple[float, ...]
     cgg_total: tuple[float, ...]
     param_sha256: str | None
     source: str
+    #: The poly length bias fit the job applied (its meta's ``edge_fit``), None without one.
+    edge_fit: dict | None = None
 
 
 class No2DResult(LookupError):
@@ -957,6 +960,7 @@ def devsim_2d_results(root: Path | None = None) -> Simulate2D:
             cgg_total=tuple(float(c) for c in cols["cgg_total"]),
             param_sha256=meta.get("param_sha256"),
             source=str(job),
+            edge_fit=meta.get("edge_fit"),
         )
 
     return simulate_2d
@@ -969,8 +973,13 @@ def _two_d(
     cox: Mapping,
     simulate_2d: Simulate2D,
 ) -> dict[str, dict]:
-    """The 2D checks from the calibrated 2D results ``simulate_2d`` gives."""
+    """The 2D checks from the calibrated 2D results ``simulate_2d`` gives.
+
+    Each result must have been computed with the frozen calibration and with the committed poly
+    length bias fit (:func:`gf180tcad.tcad.edgefit.apply`), or with none while none is
+    committed; else :class:`NotFrozen`."""
     proc = process.load(device)
+    _, edge_fit = edgefit.apply(proc)
     out = {}
     for g in DEVICES[device].geometries:
         gid = geometry_id(g)
@@ -981,11 +990,18 @@ def _two_d(
             continue
         if res.param_sha256 != frozen.param_sha256:
             raise NotFrozen(f"{res.source}: not computed with the frozen calibration")
+        if res.edge_fit != edge_fit:
+            raise NotFrozen(
+                f"{res.source}: poly length bias fit {res.edge_fit}, the committed one is "
+                f"{edge_fit} (results/tcad/edgefit)"
+            )
         comp, _ = compare(
             targets[gid], res.vg, res.cgg_total, _polarity(proc),
             spec_area_um2=g.w_um * g.l_um, parasitic_ff=None, cox=cox,
         )  # fmt: skip
         out[gid] = {**comp, "causes": causes(device, g), "status": "compared"}
+        if edge_fit is not None:
+            out[gid]["edge_fit_sha256"] = edge_fit["sha256"]
     return out
 
 

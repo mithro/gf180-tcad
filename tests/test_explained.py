@@ -1045,7 +1045,8 @@ def test_cell_reads_the_committed_files():
 
 def test_cell_source_and_drain_widths_come_from_the_artefact():
     """The source and drain widths are the reduced mesh artefact's (issue #128): from the body's
-    ends to the gate's edges in the full mesh, and the gate there is the cell's drawn L."""
+    ends to the gate's edges in the full mesh, and the gate there is the cell's meshed gate
+    length (the drawn L plus any fitted poly length bias at each end)."""
     from gf180tcad.explain import model
 
     path = ROOT / model.artefact_meta_path("nfet_05v0", "calibrated", "w10p0_l0p70")
@@ -1057,9 +1058,46 @@ def test_cell_source_and_drain_widths_come_from_the_artefact():
     c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales={})
     assert (c.source_um, c.drain_um) == (gate[0] - body[0], body[1] - gate[1])
     assert c.source_um > 0 and c.drain_um > 0
-    assert gate[1] - gate[0] == pytest.approx(c.l_um)
+    assert gate[1] - gate[0] == pytest.approx(c.gate_um)
     with pytest.raises(ValueError, match="expected one reduced mesh artefact"):
         model.artefact_meta_path("nfet_05v0", "start", "w10p0_l0p70")
+
+
+def test_cell_gate_is_drawn_as_meshed(tmp_path, monkeypatch):
+    """Plan Task E3: a cell whose meta records a fitted poly length bias draws its gate (and the
+    oxide under it) longer by that bias at each end, and the meshcut window around it grows
+    with it; without one, the gate is the drawn L."""
+    import shutil
+
+    from gf180tcad.explain import figures as ef
+    from gf180tcad.explain import model
+
+    args = ("nfet_05v0", "calibrated", "w10p0_l0p70")
+    committed = model.cell(*args, scales={})
+    assert committed.poly_bias_um == 0.0 and committed.gate_um == committed.l_um
+    for rel in (model.cell_meta_path(*args), model.meta_path(*args[:2]),
+                model.artefact_meta_path(*args), f"data/process/{args[0]}.toml"):  # fmt: skip
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / rel, tmp_path / rel)
+    meta_file = tmp_path / model.cell_meta_path(*args)
+    meta = json.loads(meta_file.read_text("utf-8"))
+    meta["edge_fit"] = {"poly_bias_nm": 40.0, "sha256": "0" * 64}
+    meta_file.write_text(json.dumps(meta), "utf-8")
+    monkeypatch.setattr(model, "ROOT", tmp_path)
+    c = model.cell(*args, scales={})
+    assert c.poly_bias_um == pytest.approx(0.04)
+    assert c.gate_um == pytest.approx(committed.l_um + 0.08)
+    ext = ef.cell_extents(c)
+    for part in ("gate", "oxide"):
+        assert ext[part].x1 - ext[part].x0 == pytest.approx(c.gate_um)
+    w = ef.window_box(c)
+    assert (ext["gate"].x0 - w.x0) == pytest.approx(meshcut_kx() * c.gate_um)
+
+
+def meshcut_kx() -> float:
+    from gf180tcad import meshcut
+
+    return meshcut.WINDOW_KX
 
 
 def test_cell_source_and_drain_widths_follow_an_edited_artefact(tmp_path, monkeypatch):

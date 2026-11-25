@@ -116,17 +116,23 @@ def load_params(job_dir: Path, cv_meta: dict):
     """``(proc, geometry)`` of the 2D job ``job_dir``: its device's process description with
     the job's tunable values, and its SPICE geometry, as ``moscap-job --dim 2`` loads them.
 
-    Raises :class:`JobMismatch` unless the values give the job's committed ``param_sha256``
-    and the geometry is the job's.
+    Raises :class:`JobMismatch` unless the values give the job's committed ``param_sha256``,
+    the committed poly length bias fit is the one the job applied (its meta's ``edge_fit``;
+    none on both sides while none is committed) and the geometry is the job's.
     """
     device, params, gid = cv_meta["device"], cv_meta["params"], Path(job_dir).name
-    proc, calibration_sha256 = tcad_cli.load_params(device, params)
+    proc, calibration_sha256, edge_fit = tcad_cli.load_params_2d(device, params)
     origins = tunable_origins(proc, params, calibration_sha256)
     got = param_sha256({n: o["value"] for n, o in origins.items()})
     if got != cv_meta["param_sha256"]:
         raise JobMismatch(
             f"{job_dir}: today's {params} values of {device} give param_sha256 {got}, the job "
             f"recorded {cv_meta['param_sha256']}"
+        )
+    if edge_fit != cv_meta.get("edge_fit"):
+        raise JobMismatch(
+            f"{job_dir}: today's poly length bias fit of {device} is {edge_fit}, the job "
+            f"recorded {cv_meta.get('edge_fit')}"
         )
     geometry = tcad_cli.geometry_of(device, gid)
     if asdict(geometry) != cv_meta["geometry"]:

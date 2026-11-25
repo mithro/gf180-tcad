@@ -16,6 +16,7 @@
       "gf180tcad.tcad",
       "gf180tcad.tcad.analytic",
       "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.edgefit",
       "gf180tcad.tcad.mesh",
       "gf180tcad.tcad.meshconv",
       "gf180tcad.tcad.moscap1d",
@@ -37,6 +38,29 @@
       "gf180tcad.tcad",
       "gf180tcad.tcad.analytic",
       "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.edgefit",
+      "gf180tcad.tcad.mesh",
+      "gf180tcad.tcad.meshconv",
+      "gf180tcad.tcad.moscap1d",
+      "gf180tcad.tcad.moscap2d",
+      "gf180tcad.tcad.process",
+      "gf180tcad.tcad.stack",
+      "gf180tcad.treedigest"
+    ],
+    "gf180tcad.calibrate.edge": [
+      "gf180tcad",
+      "gf180tcad.calibrate",
+      "gf180tcad.calibrate.cv",
+      "gf180tcad.calibrate.edge",
+      "gf180tcad.devices",
+      "gf180tcad.io",
+      "gf180tcad.layout",
+      "gf180tcad.sandbox",
+      "gf180tcad.specwindow",
+      "gf180tcad.tcad",
+      "gf180tcad.tcad.analytic",
+      "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.edgefit",
       "gf180tcad.tcad.mesh",
       "gf180tcad.tcad.meshconv",
       "gf180tcad.tcad.moscap1d",
@@ -62,6 +86,7 @@
       "gf180tcad.tcad.__main__",
       "gf180tcad.tcad.analytic",
       "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.edgefit",
       "gf180tcad.tcad.mesh",
       "gf180tcad.tcad.meshconv",
       "gf180tcad.tcad.moscap1d",
@@ -80,6 +105,7 @@
       "gf180tcad.tcad.__main__",
       "gf180tcad.tcad.analytic",
       "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.edgefit",
       "gf180tcad.tcad.mesh",
       "gf180tcad.tcad.meshconv",
       "gf180tcad.tcad.moscap1d",
@@ -94,6 +120,9 @@
       "data/pdk_elec_spec.json"
     ],
     "gf180tcad.calibrate.corners": [
+      "data/pdk_elec_spec.json"
+    ],
+    "gf180tcad.calibrate.edge": [
       "data/pdk_elec_spec.json"
     ]
   },
@@ -130,6 +159,9 @@
       "gplugins/devsim/backends/charon/*"
     ],
     "gf180tcad.calibrate.corners": [
+      "gplugins/devsim/backends/charon/*"
+    ],
+    "gf180tcad.calibrate.edge": [
       "gplugins/devsim/backends/charon/*"
     ],
     "gf180tcad.meshcut.__main__": [

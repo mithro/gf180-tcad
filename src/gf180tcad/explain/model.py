@@ -151,6 +151,14 @@ class Cell:
     drain_um: float
     scales: Mapping[str, float] = field(default_factory=dict)
     drawn: Mapping[str, float] = field(default_factory=dict)
+    #: The poly length bias at each gate end (µm) the cell was meshed with: the fitted one of
+    #: its meta's ``edge_fit`` (plan Task E3), 0 without one.
+    poly_bias_um: float = 0.0
+
+    @property
+    def gate_um(self) -> float:
+        """The gate's length as meshed (µm): the drawn L plus the poly length bias at each end."""
+        return self.l_um + 2 * self.poly_bias_um
 
     @property
     def sd_dopant(self) -> str:
@@ -262,4 +270,5 @@ def cell(
         drain_um,
         dict(scales),
         dict(drawn or {}),
+        meta.get("edge_fit", {}).get("poly_bias_nm", 0.0) / UNITS["nm_per_um"],
     )
