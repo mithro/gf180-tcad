@@ -35,7 +35,7 @@ $$ (eq-display-dos)
 
 where
 
-- $N$ is the effective density of states of the band (the tables give it per cm³), in m⁻³;
+- $N$ is the effective density of states of the band ({numref}`tab-display-silicon-nc-cm3` and {numref}`tab-display-silicon-nv-cm3` give it per cm³), in m⁻³;
 - $\pi$ is the ratio of a circle's circumference to its diameter, dimensionless;
 - $m^*$ is the density-of-states effective mass (quoted in multiples of $m_0$, the mass of a free
   {term}`electron`), in kg;
