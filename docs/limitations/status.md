@@ -44,8 +44,11 @@ values (blue), with no parasitics added outside the cell.
 
 ## The committed TCAD results
 
-Each row is one kind of result, the folder that holds it and the page that explains it. The
-generated pages of every result are {doc}`/_generated/tcad/index`.
+Each row of {numref}`tab-status-results` is one kind of result, the folder that holds it and the
+page that explains it. The generated pages of every result are {doc}`/_generated/tcad/index`.
+
+~~~{table} Each kind of committed TCAD result, its folder and the page that explains it.
+:name: tab-status-results
 
 | Result | Folder | Page |
 |---|---|---|
@@ -56,8 +59,14 @@ generated pages of every result are {doc}`/_generated/tcad/index`.
 | 1D calibration against the SPICE {term}`Cgg`–Vg | {repo}`results/tcad/calibration` | {doc}`/comparison/cv-agreement` |
 | Validation at the {term}`held-out geometries <held-out geometry>` | {repo}`results/tcad/validation` | {ref}`cv-agreement-validation` |
 | The 1D fit at the four other SPICE {term}`corners <corner>` | {repo}`results/tcad/corners` | {doc}`corners` |
+~~~
 
 ## The verdicts
+
+{numref}`tab-status-verdicts` gives the verdict of each model of each device.
+
+~~~{table} The verdict of each 1D and 2D model of the two devices.
+:name: tab-status-verdicts
 
 | Model | nfet_05v0 | pfet_05v0 |
 |---|---|---|
@@ -69,6 +78,7 @@ generated pages of every result are {doc}`/_generated/tcad/index`.
 | 2D, W10/L1 | Same process | Disagree |
 | 2D, W10/L2 | Same process | Disagree |
 | 2D, W10/L10 | not run | not run |
+~~~
 
 Each 1D row gives the worst verdict of its sizes. The pfet's fitted W10/L0.5 and W10/L10 are
 Disagree, and W10/L2 is Same process. Of its held-out sizes, W10/L1 is Agree and the others are
