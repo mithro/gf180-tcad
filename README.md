@@ -1,142 +1,105 @@
 # gf180-tcad
 
-Open-source [TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD) for the GlobalFoundries
-[GF180MCU](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-GF180MCU) process ([open PDK](https://github.com/fossi-foundation/gf180mcu-pdk)),
-validated against the [PDK](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-PDK)'s own [SPICE](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE) models.
+[![Documentation Status](https://readthedocs.org/projects/gf180-tcad/badge/?version=latest)](https://gf180-tcad.readthedocs.io/en/latest/)
 
-## What and why
+**Can open-source physics simulation, given only public data, reproduce a chip maker's own
+transistor models?**
 
-This project builds a scriptable TCAD flow for GF180MCU transistors. Its 2D cells are cut from
-the [gdsfactory](https://gdsfactory.github.io/gdsfactory/) layouts of the PDK's transistor cells,
-as in Figure 1, and simulated with [DEVSIM](https://devsim.org/). The project measures how closely
-the TCAD agrees with the PDK SPICE models, quantitatively, reproducibly and in public.
+This project tests that for the 5 V transistors of the open
+[GF180MCU](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-GF180MCU) chip process from GlobalFoundries.
+
+## The question
+
+Chip designers simulate a circuit before it is made. Each transistor in that simulation is a
+[SPICE](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE) model: equations the chip maker fits to its own measurements. GlobalFoundries
+publishes these models for GF180MCU in an open [process design kit](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-PDK)
+([GF180MCU PDK](https://github.com/fossi-foundation/gf180mcu-pdk)).
+
+[TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD) takes another route. It simulates the physics inside the transistor: its layers,
+their thickness, their doping, and the electrons and holes that move in them. This project
+builds a TCAD model of the GF180MCU transistors from public sources. It then measures how
+closely the TCAD curves match the PDK's SPICE curves (Figure 1).
+
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/flow-dark.svg">
+<img alt="Two columns of boxes joined by arrows: the PDK's SPICE models give reference curves, public data and the TCAD give TCAD curves; both feed one comparison." src="docs/images/readme/flow-light.svg">
+</picture>
+
+*Figure 1. The two routes to the same curves. The grey column is the reference, the green column
+is what is tested, and every pair of curves is compared at the bottom.*
+
+## How the comparison works
+
+The PDK's SPICE models are the [reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE-reference-results), and the TCAD is what
+is tested. A circuit simulator runs the SPICE models to give the reference curves. The TCAD
+simulates a slice through the same transistor (Figure 2) to give its own
+curves. Each pair is judged [Agree](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Agree),
+[Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) or
+[Disagree](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Disagree). Same
+process means the TCAD lies inside the range the PDK specifies, not at its typical point.
 
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/cell-dark.svg">
 <img alt="Cross-section of the simulated transistor: a gate on a thin oxide in the middle, a source and a drain either side at the surface, a large body below." src="docs/images/readme/cell-light.svg">
 </picture>
 
-*Figure 1. The simulated 2D cell of the [`nfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0) at W = 10 µm and L = 0.7 µm, cut along the
-gate's length. Blue parts are n-type and the orange body is p-type. `make readme-figures` draws
-it from the committed results.*
+*Figure 2. The simulated slice of the [`nfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0), 10 µm wide with a 0.7 µm gate, cut along the
+gate's length. Blue parts are n-type and the orange body is p-type. Oxide thickness ×5, not to
+scale.*
 
-The PDK's SPICE models are the [reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE-reference-results);
-the TCAD is what is being tested. Each mismatch is documented with its cause and the evidence
-for it, not hidden. Only once the
-TCAD has earned confidence will it be used to extend or create SPICE models.
+## Why it matters
 
-## Status
+A TCAD model that matches the SPICE models explains them from physics. It can also reach sizes
+and devices the models do not cover, once it has earned confidence here. Every mismatch is
+listed with its cause and the evidence for it. Every input, script and result is in the
+repository, under an open licence. No published comparison of [DEVSIM](https://devsim.org/) or [Charon](https://charon.sandia.gov/) with
+the [BSIM](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-BSIM) models of any open PDK was found
+([literature search](https://gf180-tcad.readthedocs.io/en/latest/limitations/literature.html)).
 
-[Phases 0 and 1](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Phases-0-and-1) are complete: the foundations and the
-SPICE reference dataset, regenerated byte-identically on a second host
-([check on another computer](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-determinism)).
-[Phase 2](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Phase-2) (the first TCAD
-work) is in progress. The first TCAD results are committed, for the 5 V
-[`nfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0) and
-[`pfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-pfet_05v0) at the
-uncalibrated start values:
+## Where it stands
 
-- the 1D [MOS capacitor](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-MOSCAP)
-  [C–V](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-CV) curves
-  ([`results/tcad/moscap1d`](results/tcad/moscap1d)) and their
-  [mesh convergence](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-mesh-convergence)
-  ([`results/tcad/meshconv/moscap1d`](results/tcad/meshconv/moscap1d),
-  [report](https://gf180-tcad.readthedocs.io/en/latest/limitations/mesh-convergence.html)), made on the
-  [dev-HEAD TCAD image](#images);
-- the 2D MOS capacitor cut from the PDK's [gdsfactory](https://gdsfactory.github.io/gdsfactory/)
-  transistor cells ([`results/tcad/moscap2d`](results/tcad/moscap2d)). It runs at the minimum
-  gate length (nfet 0.60 µm, pfet 0.50 µm) and at L = 2 µm, on the
-  [stable TCAD image](#images). Its own mesh convergence is in
-  [`results/tcad/meshconv/moscap2d`](results/tcad/meshconv/moscap2d).
+- **The reference is complete.** The SPICE curves are committed and rebuild byte for byte on a
+  second computer.
+- **The TCAD covers the gate only.** It simulates how much charge the gate holds as its voltage
+  changes, the [C–V](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-CV) curve. It has no result for the transistor's current.
+- **In 1D the nfet matches and the pfet does not.** The nfet agrees at every size. The pfet
+  disagrees at the sizes it was fitted to (Figure 3).
+- **The 2D slices are mixed.** Each calibrated 2D slice is Same process or Disagree.
+- **No chip has been measured.** No silicon data exists to check either model against.
 
-In 2D the L = 2 µm cell has no small-signal (AC) result: the AC solve fails in the direct solver
-at that size. The L = 10 µm cell is not run in 2D, because its equilibrium solve fails there too;
-see the [2D MOS capacitor page](https://gf180-tcad.readthedocs.io/en/latest/limitations/moscap2d.html).
-
-The 1D MOS capacitor is calibrated against the SPICE
-[Cgg](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Cgg)–Vg
-([plan](docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-12-calibrate-against-spice-cggvg),
-[`results/tcad/calibration`](results/tcad/calibration),
-[`results/tcad/validation`](results/tcad/validation),
-[C–V calibration page](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html)):
-three tunables, 3 of the 8-parameter budget. A 2D poly length bias is the fourth. Every committed 2D cell has it at 0, the poly as drawn. In 1D the nfet agrees with SPICE at every geometry,
-fitted and held out. Figure 2 shows both devices, 1D and 2D, at the minimum gate length.
-
-The pfet is published as a disagreement. The SPICE pfet's
-[depletion](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-depletion) edge
-moves by [0.57 V](https://gf180-tcad.readthedocs.io/en/latest/comparison/cv-agreement.html#cv-agreement-mismatch)
-between L = 10 µm and the minimum length, as Figure 3 shows. One
-length-independent 1D stack cannot follow that. The calibrated 1D curves are in
-[`results/tcad/moscap1d`](results/tcad/moscap1d).
+The [project status](https://gf180-tcad.readthedocs.io/en/latest/limitations/status.html) lists every committed result, its folder and its verdict.
 
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/cv-dark.svg">
 <img alt="Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines." src="docs/images/readme/cv-light.svg">
 </picture>
 
-*Figure 2. Gate capacitance against gate voltage at the minimum gate length. The solid line is the
-SPICE model at the [typical corner](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-typical-corner),
-inside the grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner).
-The 1D TCAD is dotted at the start values and dashed at the fitted ones, the 2D cell dash-dot
-(start orange, fitted blue). `make readme-figures`
-draws it from the committed results.*
+*Figure 3. The gate's capacitance against its voltage at the shortest gate, nfet above and pfet
+below. The solid line is the SPICE model, inside the grey band of its 5
+[corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner). The dotted and dashed lines are the 1D TCAD before and after fitting.
+The dash-dot lines are the 2D slice before (orange) and after (blue).*
 
-<picture>
-<source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/pfet-lengths-dark.svg">
-<img alt="Gate capacitance against gate voltage of the pfet, L = 0.5 µm above and L = 10 µm below: SPICE in a grey band, a dashed 1D line and two dotted edges." src="docs/images/readme/pfet-lengths-light.svg">
-</picture>
+## Should you read on?
 
-*Figure 3. The pfet's gate capacitance at the shortest and the longest gate of the
-calibration, 0.5 µm and 10 µm. The solid line is SPICE at the typical corner inside the
-grey band of its 5 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner),
-and the dashed line the fitted 1D stack. Dotted lines and an arrow mark each length's SPICE
-depletion edge. `make readme-figures` draws it from the committed results.*
+- **You design circuits on GF180MCU:** [Comparison with the PDK](https://gf180-tcad.readthedocs.io/en/latest/comparison/index.html) shows how far the transistor
+  models can be rebuilt from physics.
+- **You work on open-source TCAD:** [Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html) rebuilds every result, and
+  [Limitations and status](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html) lists what is missing.
+- **You are new to transistors:** [How it works](https://gf180-tcad.readthedocs.io/en/latest/explained/index.html) explains each part with this
+  process's numbers.
 
-The same 1D calibration is repeated against the four other SPICE corners: ff, ss, fs and sf
-([`results/tcad/corners`](results/tcad/corners)). Each corner fit takes that corner's model-card
-offsets of the gate area and the overlaps as fixed inputs. Its oxide and threshold offsets move
-the start value and limits of two numbers that stay fitted. Each fitted number thus has a lower and an upper bound, and the spread
-between them
-([bounds and limitations](https://gf180-tcad.readthedocs.io/en/latest/explained/calibration.html#explained-calibration-corners)).
-The Monte Carlo spread has no code (issue #57, on the roadmap).
+## The documentation
 
-Every committed TCAD result has generated
-pages (TCAD-against-SPICE overlays, verdicts, mesh convergence), linked from the
-[results page](https://gf180-tcad.readthedocs.io/en/latest/results/index.html), and
-`make reproduce` includes the TCAD results folders. It has not been run end to end, and its 2D
-files are not expected to match
-([Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#one-command)). The
-calibrated 1D [jobs](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-job) are cross-checked byte for byte on a
-[GitHub-hosted runner](https://docs.github.com/en/actions/concepts/runners/github-hosted-runners)
-([TCAD cross-check](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-tcad)).
+The documentation at [gf180-tcad.readthedocs.io](https://gf180-tcad.readthedocs.io/en/latest/) has five sections, plus a glossary and the API reference:
 
-The 2D validation of the calibrated stack is in progress ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)).
-The calibrated 2D nfet cells at W10/L0.6, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7 are committed. They disagree with SPICE
-at L = 0.6 and 0.7 µm and are
-[Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) at W10/L1 and W10/L2.
-Five calibrated 2D pfet cells are committed. W10/L0.5, W10/L0.7 and W1.6/L0.7 are Same process, and W10/L1 and W10/L2 disagree.
+- [How it works](https://gf180-tcad.readthedocs.io/en/latest/explained/index.html): how a transistor works, with this project's numbers.
+- [Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html): how to rebuild every result.
+- [Results](https://gf180-tcad.readthedocs.io/en/latest/results/index.html): the SPICE reference and the TCAD results.
+- [Comparison with the PDK](https://gf180-tcad.readthedocs.io/en/latest/comparison/index.html): the TCAD against the PDK, with each verdict.
+- [Limitations and status](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html): what is missing, and the project status.
 
-Each calibrated 2D cell also has a committed reduced mesh artefact, the mesh around its gate, in
-[`results/tcad/meshes/stable`](results/tcad/meshes/stable). Its geometry page draws it, and a
-GitHub-hosted runner cuts all ten again byte for byte.
-
-Planned work, each item with its issue, is on the
-[roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html), among it a
-[Charon](https://charon.sandia.gov/) backend beside DEVSIM for cross-comparison
-([issue #44](https://github.com/mithro/gf180-tcad/issues/44)). Both Charon images are built and
-pinned ([Charon images](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#charon-images)),
-and no Charon job has run.
-The current limitations, including the deviations from the design spec, are listed on the
-[limitations page](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html).
-
-## Documentation
-
-[![Documentation Status](https://readthedocs.org/projects/gf180-tcad/badge/?version=latest)](https://gf180-tcad.readthedocs.io/en/latest/)
-
-The documentation is at [gf180-tcad.readthedocs.io](https://gf180-tcad.readthedocs.io/en/latest/). To regenerate the
-SPICE reference and the TCAD results yourself, see [Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html). Its
-[check on another computer](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html#cross-host-determinism)
-section says on which hosts the results are byte-identical.
+Planned work, each item with its issue, is on the [roadmap](https://gf180-tcad.readthedocs.io/en/latest/roadmap.html). The [glossary](https://gf180-tcad.readthedocs.io/en/latest/glossary.html) defines
+every term.
 
 ## Images
 
