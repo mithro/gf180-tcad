@@ -455,7 +455,7 @@ latest stack its depletion widths are **bit-identical** to v0.8.0's
 The v0.8.0 stack has devsim 2.6.3 and Python 3.11; the latest has devsim 2.11.1 and Python 3.13.
 Each difference between them is 0, as {numref}`tab-plugin-history-stacks` shows.
 
-~~~{table} The difference of each PIN waveguide quantity between the v0.8.0 and the latest stack.
+~~~{table} The difference of each PIN waveguide quantity between the two stacks.
 :name: tab-plugin-history-stacks
 
 | Quantity | v0.8.0 and latest |
@@ -490,7 +490,7 @@ both scales
 {numref}`tab-plugin-history-anchor-names` gives the names, which must match exactly at both mesh
 scales.
 
-~~~{table} The region, interface and contact names of the PN slab at v0.8.0 and at the latest stack.
+~~~{table} The region, interface and contact names of the PN slab, at v0.8.0 and as ported.
 :name: tab-plugin-history-anchor-names
 
 | Anchor | v0.8.0 | latest |
@@ -522,7 +522,7 @@ count is reported, not asserted. The v0.8.0 anode − cathode at 0 V is 0.958654
 
 {numref}`tab-plugin-history-anchors-latest` gives the latest values.
 
-~~~{table} The latest-stack anchor values at mesh × 1 and × 0.5.
+~~~{table} The anchor values of the ported PN slab at mesh × 1 and × 0.5.
 :name: tab-plugin-history-anchors-latest
 
 | Anchor | × 1 | × 0.5 |

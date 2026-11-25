@@ -148,11 +148,12 @@ CASES = [
         for s in ("idvg_lin", "idvg_sat", "idvd")
     ),
     # the per-geometry stock column of the idvg_lin and the idvg_sat table (one table per sweep,
-    # each introduced by "The `<sweep>` sweep:"; the row is the one after that line)
+    # each the {table} directive named tab-engine-<sweep>; the row is inside that directive)
     *(
         (
             ENGINE_PAGE,
-            rf"^The `{s}` sweep:\n\n(?:\|.*\n)*?\| {re.escape(w)} \| {re.escape(l)} \| {NUM} \| [^|]+ \|$",
+            rf"^:name: tab-engine-{s.replace('_', '-')}\n\n(?:\|.*\n)*?"
+            rf"\| {re.escape(w)} \| {re.escape(l)} \| {NUM} \| [^|]+ \|$",
             lambda w=w, l=l, s=s: [diff(N, s, _gid(w, l))],
         )
         for s in ("idvg_lin", "idvg_sat")
