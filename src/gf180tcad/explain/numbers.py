@@ -636,7 +636,8 @@ def corner_extremes_table(root: Path = ROOT) -> str:
 
 def corner_bound_hits(root: Path = ROOT) -> str:
     """A sentence on the lowest and highest values of :func:`corner_bounds` that sit on a limit
-    of their fit, which the bounds table gives as that limit."""
+    of their fit, which the bounds table of the device (tab-calibration-corner-bounds-<nfet|pfet> on
+    docs/explained/calibration.md) gives as that limit."""
     hits = []
     for device in FITS:
         for b in corner_bounds(device, root):
@@ -647,7 +648,8 @@ def corner_bound_hits(root: Path = ROOT) -> str:
                 if at is not None:
                     hits.append(
                         f"The {side} {TUNABLES[b.name][0].lower()} of the {device}, at {corner}, "
-                        f"sits on its {BOUND_WORDS[at]}, so the table gives that limit"
+                        f"sits on its {BOUND_WORDS[at]}, so "
+                        f"{{numref}}`tab-calibration-corner-bounds-{device.split('_')[0]}` gives that limit"
                     )
     if not hits:
         return "No lowest or highest value sits on a limit of its fit"

@@ -144,6 +144,6 @@ pfet's SPICE curve leaves {term}`accumulation` at a gate voltage that moves with
 length. One simulated stack has one flat band for every length.
 
 The 2D simulation of a whole cell uses the fitted stack of its transistor
-({ref}`the table of 2D cells <explained-moscap-differs>`). {{ x_two_d_disagree }}
+({numref}`Table %s of The MOS capacitor <tab-mos-capacitor-2d>`). {{ x_two_d_disagree }}
 ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The checks of each 2D cell
 are on {ref}`cv-agreement-validation`.

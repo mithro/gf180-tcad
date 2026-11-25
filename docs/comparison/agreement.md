@@ -268,7 +268,7 @@ is a {term}`Phase 3 entry gate`
   not.
 - *Definition differs:* the body effect ({term}`body_effect_v`) uses the
   {term}`constant-current Vt` only, not also the {term}`max-gm Vt`. The peak gm,
-  {term}`gm_peak_s`, is taken on {term}`idvg_lin`. The table asks for gm at Vgs = Vt + 0.15 V and
+  {term}`gm_peak_s`, is taken on {term}`idvg_lin`. The tolerances of {numref}`tab-agreement-relative-tolerance` ask for gm at Vgs = Vt + 0.15 V and
   at Vgs = 5 V.
 
 Metrics are also reported as an error divided by {term}`σ_mismatch`, to give a physical sense

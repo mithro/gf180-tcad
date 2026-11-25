@@ -170,4 +170,6 @@ For the nfet the largest oxide difference is {{ x_crosscheck_tox_gap_nfet }}, at
 {{ x_crosscheck_vfb_gap_nfet }}, at {{ x_crosscheck_vfb_corner_nfet }}. For the pfet the largest
 oxide difference is {{ x_crosscheck_tox_gap_pfet }}, at {{ x_crosscheck_tox_corner_pfet }}. Its
 largest shift difference is {{ x_crosscheck_vfb_gap_pfet }}, at
-{{ x_crosscheck_vfb_corner_pfet }}. Each corner's values are in the tables on {ref}`cv-agreement-corners`.
+{{ x_crosscheck_vfb_corner_pfet }}. Each corner's values are in
+{numref}`Table %s of C–V calibration of the TCAD MOS capacitor <tab-cv-agreement-nfet-05v0-corner-values>` and
+{numref}`Table %s of C–V calibration of the TCAD MOS capacitor <tab-cv-agreement-pfet-05v0-corner-values>`.

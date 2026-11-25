@@ -191,11 +191,13 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   asks for a second reference with instance parameters extracted from the {{ gdsfactory }}
   cell layout. Only the primary, schematic-default reference exists
   ({ref}`secondary reference <secondary-reference>`).
-- **The metric set is narrower than the {term}`tolerance` table.** Not extracted:
+- **The metric set is narrower than the {term}`tolerance` tables**
+  ({numref}`Table %s of Definition of agreement <tab-agreement-vt-tolerance>` and
+  {numref}`Table %s of Definition of agreement <tab-agreement-relative-tolerance>`). Not extracted:
   {term}`gm` and {term}`gds` at Vgs = {term}`Vt` + 0.15 V, gm/Id, Cgd at Vds = 5 V,
   {term}`Cgg` in depletion, effective {term}`Rsd`, Isub, {term}`Vt roll-off` and the root-mean-square (RMS) error
   of log10(Id). Defined differently: the {term}`body effect` uses the
-  {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of the table. Details
+  {term}`constant-current Vt` only, and {term}`gm_peak_s` is not the gm of those tables. Details
   in {ref}`metrics not extracted, or defined differently <metrics-not-yet-extracted>`.
 - **No mesh pictures of the 2D start cells.** The
   {repo}`design spec, section 10(b) <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#10-documentation-sphinx--read-the-docs>`

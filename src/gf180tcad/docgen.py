@@ -566,7 +566,9 @@ def _summary_page(roots: rf.Roots, spec: dict, out: Path):
             "Both engines run the typical corner at 25 C. The threshold is "
             f"{threshold} % ({{ref}}`comparison-space`). Cases above it that are explained are "
             f"marked known, see {{doc}}`{ENGINE_DOC}`. Anything else above the threshold is "
-            f"flagged unexplained in bold. {numref(ENGINE_LABEL)} draws every value of the tables."
+            f"flagged unexplained in bold. {numref(ENGINE_LABEL)} draws every value of "
+            + " and ".join(numref(table_label("summary", "engine-diff", d)) for d in DEVICES)
+            + "."
         ),
         "",
         *figure_pair(

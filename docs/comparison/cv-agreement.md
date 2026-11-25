@@ -680,8 +680,8 @@ the card's BSIM4 extrinsic terms (dotted, top). Each value is the line through t
 cells at one bias.
 ```
 
-The tables give both lines on the plateaus: accumulation at u = −5 V, inversion at u = +5 V.
-The edge capacitance per width is in {numref}`tab-cv-edge-per-width`.
+{numref}`tab-cv-edge-per-width` gives the edge capacitance per width on both plateaus: accumulation at
+u = −5 V, inversion at u = +5 V.
 
 ~~~{table} The edge capacitance per width of each device on each plateau.
 :name: tab-cv-edge-per-width
@@ -694,7 +694,7 @@ The edge capacitance per width is in {numref}`tab-cv-edge-per-width`.
 | pfet | inversion | 0.424 | 0.148 | 0.400 |
 ~~~
 
-The capacitance per area of the same lines is in {numref}`tab-cv-edge-per-area`.
+{numref}`tab-cv-edge-per-area` gives the capacitance per area of the same lines.
 
 ~~~{table} The capacitance per area of each device on each plateau.
 :name: tab-cv-edge-per-area
@@ -749,8 +749,8 @@ The corner fits repeat this calibration against each of the other four SPICE
 overlap capacitances as fixed inputs. Its TOXE and VTH0 offsets move the start value and limits
 of two numbers that stay fitted ({ref}`reproduce-corners`).
 
-The tables below give each fitted number's lowest and highest value over the corners. The typical
-fit is beside them. {numref}`Figure %s of What the calibration changes <fig-calibration-bounds>`
+The corner tables of each device give each fitted number's lowest and highest value over the
+corners, beside the typical fit. {numref}`Figure %s of What the calibration changes <fig-calibration-bounds>`
 draws the same bounds. What the corner fits cannot see is on {doc}`/limitations/corners`.
 
 **nfet_05v0**

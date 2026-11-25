@@ -88,7 +88,7 @@ limit of {numref}`fig-calibration-limits` is a model-card value, derived from on
 choice. The {term}`process files <process file>` record which
 ({repo}`nfet_05v0.toml <data/process/nfet_05v0.toml>`,
 {repo}`pfet_05v0.toml <data/process/pfet_05v0.toml>`; {ref}`the tunables <process-data-tunables>`).
-The two transistors share {numref}`tab-calibration-limit-kinds`.
+{numref}`tab-calibration-limit-kinds` applies to both transistors.
 
 ~~~{table} Where each start value and limit of the fit comes from.
 :name: tab-calibration-limit-kinds

@@ -287,7 +287,7 @@ and NDEP the body doping under it. The nfet stack drawn at these two values is
 ~~~
 
 {numref}`tab-pdk-versions-spec4` gives the values the {repo}`design spec, §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>`
-quotes, for the parameters it quotes. In the table *none* means no value for that device, and
+quotes, for the parameters it quotes. In {numref}`tab-pdk-versions-spec4` *none* means no value for that device, and
 *set* means the spec says only that it is set. The unit is *not applicable* where no value is
 quoted.
 
