@@ -51,7 +51,7 @@ Design as built (changed from the first draft, which put δ in `process.TUNABLES
 - `data/process/*.toml` is part of every generator hash (`gf180tcad.tcad.PROCESS_GLOB`), and so is `gf180tcad.tcad.__main__`. So E3's code and the #203 note each make the records stale under today's pin rule: 12 variants, about 10 h of 16 GiB jobs, per change.
 
 **Decision 1: the fit is frozen when it is made, in its own tree.**
-- `uv run --locked python -m gf180tcad.calibrate edge-fit --device D --out results/tcad/edgefit` writes `results/tcad/edgefit/<device>.json` and the tree's `provenance.json`. The file holds:
+- `uv run --locked python -m gf180tcad.calibrate.edge --device D --out results/tcad/edgefit` (its own registered entry point) writes `results/tcad/edgefit/<device>.json` and the tree's `provenance.json`. The file holds:
   - δ, the slope, the two targets and the two residuals;
   - the E1 record's sha256;
   - the commit the fit was made at. The command refuses a dirty checkout, as `run.py` does.
@@ -82,7 +82,7 @@ Design as built (changed from the first draft, which put δ in `process.TUNABLES
     - `test_committed_validation`;
     - the explainer's gate drawing, from the meshed poly length;
     - the edge-fit command and its tests, run against a fixture tree.
-  - The #203 note fix and the `case_sd` change (below) go in here too.
+  - The #203 note fix goes in here too. The `case_sd` change moves to E3c, which runs it.
   - The strict expected failures of `test_pfet_sd_doping_insensitive` stay until the source/drain records land.
 - **E3b: one PR, pushed cell by cell, merged once.**
   - The first commit writes the two `edgefit` files from the δ = 0 cells on `main`.
@@ -118,7 +118,16 @@ Design as built (changed from the first draft, which put δ in `process.TUNABLES
 
 E4 follows E3b.
 
-- [ ] **E3a** (code, dormant until the fit file exists): `edge-fit` and the `edgefit` tree; the shared line-fit module; `load_params` and `meshcut` apply δ to 2D jobs when the file exists; validation checks δ and the fit's sha256; `variant.py` from δ = 0; the record pin rules; the explainer gate drawing; `case_sd` at calibrated values; the #203 note; restamp with evidence. One reviewed PR.
+- [ ] **E3a** (code, dormant until the fit file exists): one reviewed PR.
+  - [x] `gf180tcad.calibrate.edge`, its own entry point. The `tcad/edgefit` tree row is added in E3b, with the tree.
+  - [x] `gf180tcad.tcad.edgefit`. `load_params_2d` and `meshcut` apply δ to calibrated 2D jobs when the file exists. A job's meta gets an `edge_fit` key (δ and the file's sha256) only then, so the δ = 0 cells keep their bytes.
+  - [x] The 1D `param_sha256` stays the 1D calibration's. δ is recorded and checked separately, which deviates from the first draft's "δ in `tunables`".
+  - [x] The validation checks each 2D cell's `edge_fit` against the committed fit, or against none.
+  - [x] `variant.py` from δ = 0, and the record pin rules (record's own commit, ancestry, sandbox rerun of both records).
+  - [x] The explainer draws the gate as meshed.
+  - [x] The #203 note.
+  - [x] The CONTRIBUTING no-rebase rule.
+  - [ ] The restamp, with its evidence.
 - [ ] **E3b** (one PR, cell by cell): the two `edgefit` files; the 10 calibrated 2D cells at the fitted δ, one 16 GiB job at a time (nfet W10/L0.6, W10/L0.7, W10/L1, W10/L2 QS only, W1.6/L0.7; pfet W10/L0.5, W10/L0.7, W10/L1, W10/L2 QS only, W1.6/L0.7); the Lmin mesh-convergence check; the validation; the recut mesh artefacts; the post-rerun checks; `MANIFEST`; the docs. The new residual at each plateau is tagged `spice-fit` (the card's bias-dependent overlap).
 - [ ] **E3c** (#203): the source/drain harness and records at the fitted δ; the measured-value tests replace the 0.1 % bound; the pages' numbers from the records.
 
