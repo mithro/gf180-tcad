@@ -46,7 +46,7 @@ def run(na, vmax, length_um):
         volts.append(v)
         ints.append(i_n)
 
-    dd.ramp(dev, "n", vmax, vmax / 60, point)
+    dd.ramp(dev, ["n"], vmax, vmax / 60, point)
     return ionize.breakdown_voltage(volts, ints), volts[-1]
 
 

@@ -77,6 +77,13 @@ def add_interface_charge(device, region, qf_cm2):
     mc.CreateNodeModel(device, region, "QfDensity", "Qf*SurfaceArea/NodeVolume")
 
 
+def undamp_oxide(device, ox_regions):
+    """Plain Newton updates in the dielectric once the equilibrium solve is done."""
+    for r in ox_regions:
+        ds.equation(device=device, region=r, name="PotentialEquation", variable_name="Potential",
+                    edge_model="PotentialEdgeFlux", variable_update="default")
+
+
 def drift_diffusion(device, si_regions, si_contacts, with_qf=False, update="default"):
     """update: Newton update of the potential. "log_damp" limits each update to a few
     kT/q, which needs hundreds of iterations for a reverse-bias step of volts."""
@@ -102,29 +109,36 @@ def solve(rel=1e-8, abs_=1e10, iters=30):
     ds.solve(type="dc", absolute_error=abs_, relative_error=rel, maximum_iterations=iters)
 
 
-def ramp(device, contact, target, step, on_point, min_step=None, v0=None):
-    """Raise the bias of `contact` to `target`, halving the step when a solve fails.
+def ramp(device, contacts, target, step, on_point, min_step=None):
+    """Raise the bias of every contact in `contacts` together from its present value to
+    `target`, halving the step when a solve fails.
 
-    on_point(v) is called after each converged point. Returns the last voltage reached.
+    on_point(v) is called after each converged point; it may return True to stop the ramp.
+    Returns the last voltage reached.
     """
-    name = sp.GetContactBiasName(contact)
-    v = ds.get_parameter(device=device, name=name) if v0 is None else v0
+    names = [sp.GetContactBiasName(c) for c in contacts]
+    v = ds.get_parameter(device=device, name=names[0])
     min_step = min_step if min_step is not None else abs(step) / 64
-    sign = 1.0 if target >= v else -1.0
     dv = abs(step)
-    while sign * (target - v) > 1e-9:
-        nxt = v + sign * min(dv, abs(target - v))
-        ds.set_parameter(device=device, name=name, value=nxt)
+
+    def put(val):
+        for n in names:
+            ds.set_parameter(device=device, name=n, value=val)
+
+    while target - v > 1e-9:
+        nxt = v + min(dv, target - v)
+        put(nxt)
         try:
             solve()
         except ds.error as exc:
-            ds.set_parameter(device=device, name=name, value=v)
+            put(v)
             dv /= 2
             if dv < min_step:
                 print(f"ramp: gave up at {v:.3f} V ({str(exc)[:80]})", flush=True)
                 return v
             continue
         v = nxt
-        on_point(v)
+        if on_point(v):
+            return v
         dv = min(dv * 1.5, abs(step))
     return v
