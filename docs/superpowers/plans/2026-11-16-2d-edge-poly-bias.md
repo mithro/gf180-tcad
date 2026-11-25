@@ -69,7 +69,8 @@ Design as built (changed from the first draft, which put δ in `process.TUNABLES
   - `git merge-base --is-ancestor <commit> HEAD` must hold.
   A branch holding a pinned commit is never rebased; a merge from main is used instead. This rule goes in CONTRIBUTING.
 - **`variant.py` builds from δ = 0 always.** The `base` it solves is the cross-section of `poly_bias_nm` = 0, and `bias<nm>` is measured from there. It cannot add δ twice, and the variant names keep their meaning.
-- **Reproduction.** The sandbox rerun test reruns `base` and `bias30` of both the nfet and the pfet, and compares Cgg with the record. Of the pins it still compares the image, the plugin commit and the calibration values. The generator and `variant.py` hashes are compared with the record's commit, as above. This rerun is required evidence of every restamp, recorded in `docs/reproduce/index.md`, as E2's was. So drift in the physics is still caught at the moment it would be certified.
+- **Reproduction.** The sandbox rerun test reruns `base` and `bias30` of both records and compares Cgg with them. Of the pins it compares the image, the plugin commit and the calibration; the two hashes are checked at the record's commit, as above.
+- **Evidence.** That rerun is required evidence of every restamp, recorded in `docs/reproduce/index.md` as E2's was, so drift in the physics is caught when it would be certified.
 - `test_record_base_is_the_committed_cell` compares `base` with the δ = 0 cell from `git show <fit commit>:…/cv.csv`, as in the fit test.
 
 **Decision 3: PR boundaries keep `main` standing on its own.**
@@ -119,7 +120,8 @@ E4 follows E3b.
   - [x] The validation and the explainer: each 2D cell's `edge_fit` is checked against the committed fit (or none), and the cell's gate is drawn as meshed.
   - [x] `variant.py` from δ = 0, the record pin rules (record's own commit, ancestry, sandbox rerun of both records), the CONTRIBUTING no-rebase rule, and the #203 note.
   - [ ] The restamp, with its evidence.
-- [ ] **E3b** (one PR, cell by cell): the two `edgefit` files; the 10 calibrated 2D cells at the fitted δ, one 16 GiB job at a time (nfet W10/L0.6, W10/L0.7, W10/L1, W10/L2 QS only, W1.6/L0.7; pfet W10/L0.5, W10/L0.7, W10/L1, W10/L2 QS only, W1.6/L0.7); the Lmin mesh-convergence check; the validation; the recut mesh artefacts; the post-rerun checks; `MANIFEST`; the docs. The new residual at each plateau is tagged `spice-fit` (the card's bias-dependent overlap).
+- [ ] **E3b** (one PR, cell by cell): the two `edgefit` files, then the 10 calibrated 2D cells at the fitted δ, one 16 GiB job at a time (W10 at each calibrated L and W1.6/L0.7, per device; the L2 cells QS only).
+  - Then the Lmin mesh-convergence check, the validation, the recut mesh artefacts, the post-rerun checks, `MANIFEST` and the docs. The residual at each plateau is tagged `spice-fit` (the card's bias-dependent overlap).
 - [ ] **E3c** (#203): the source/drain harness and records at the fitted δ; the measured-value tests replace the 0.1 % bound; the pages' numbers from the records.
 
 ## Task E4: check the depletion crossing

@@ -27,12 +27,9 @@ A [Trilinos](https://github.com/trilinos/Trilinos) patch has
 - Every PR is reviewed, and findings are fixed, before merge.
 - Merge with [`gh pr merge --merge`](https://cli.github.com/manual/gh_pr_merge) (a real merge
   commit). No squash or rebase merges.
-  (Rebasing a branch while you are still working on it is fine, unless the branch holds a commit
-  that a results record pins as its `commit`, such as the records of
-  [`experiments/edge-sensitivity/`](experiments/edge-sensitivity/README.md). Merge `main` into
-  such a branch instead: a rebase drops the pinned commit, and
-  [`tests/test_edge_sensitivity.py`](tests/test_edge_sensitivity.py) checks that it is on the
-  history.)
+  Rebasing a branch while you are still working on it is fine, unless a results record pins one
+  of its commits. Then merge `main` in: a rebase drops the pinned commit, which
+  [`tests/test_edge_sensitivity.py`](tests/test_edge_sensitivity.py) checks.
 - `main` is the latest stable state.
 
 ## Review process
