@@ -7,10 +7,10 @@ The 25–62 MB {repo}`mesh.msh <.gitignore#L15>` of each 2D {term}`job` is one (
 {{ output_cache }}, is a separate plain git repository that holds such files so that anyone can
 fetch them instead of rerunning the job. It is effectively a shared cache for everyone
 ({repo}`design spec, section 9.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#91-output-cache-for-large-regenerable-artefacts>`).
-A file goes in with `push` and comes back with `pull`, as {numref}`output-cache-flow` shows.
+A file goes in with `push` and comes back with `pull`, as {numref}`fig-output-cache-flow` shows.
 
 ```{figure} /_generated/reproduce/output-cache-flow-light.svg
-:name: output-cache-flow
+:name: fig-output-cache-flow
 :figclass: only-light
 :alt: Four boxes. Left, a job's git-ignored mesh file above its committed record that names the mesh's sha256. Right, the cache's compressed object above the cache's index. Arrows: push from the file to the object, pull back, the record checking the pull, the index listing the object.
 
@@ -64,7 +64,7 @@ They have to be regenerated before they can be pushed ({ref}`first population <o
   `tools/output-cache pull` writes a file only if its sha256 is that hash.
 - **Using the cache changes no result and no provenance.** {py:mod}`gf180tcad.outcache` is not
   a generator module. So it is in no {term}`generator_sha256`. The hash check of
-  `pull` is the lower arrow of {numref}`output-cache-flow`.
+  `pull` is the lower arrow of {numref}`fig-output-cache-flow`.
 - **One generator reads it.** The `cut` command of {py:mod}`gf180tcad.meshcut.__main__` cuts
   the reduced mesh artefact of a 2D job. It fetches the job's mesh with a `tools/output-cache pull`
   subprocess, before its sandboxed run, which has no network. The `crosscheck-tcad` job runs it
@@ -85,11 +85,11 @@ They have to be regenerated before they can be pushed ({ref}`first population <o
 - a README: the contract, written by `tools/output-cache init`, so the whole repository can
   be recreated from nothing.
 
-The files of the cache repository are drawn in {numref}`output-cache-tree`.
+The files of the cache repository are drawn in {numref}`fig-output-cache-tree`.
 The cacheable files, the repository URLs and the size cap are in {repo}`data/output-cache.json`.
 
 ```{figure} /_generated/reproduce/output-cache-tree-light.svg
-:name: output-cache-tree
+:name: fig-output-cache-tree
 :figclass: only-light
 :alt: A file tree: the cache repository holds a README, a git attributes file, the index, and under objects/sha256 one compressed mesh file per distinct mesh, each in a folder named by the first two hex digits of its hash.
 
@@ -117,7 +117,7 @@ tools/output-cache pull 8dad0ca787dc3d805661e6262725bb833ba33edf1b46bf7b4a3ce69a
 tools/output-cache pull results/tcad/moscap2d/<device>/<params>/<geometry>/mesh.msh
 ```
 
-Both are the `pull` arrow of {numref}`output-cache-flow`. The first `pull` fetches the one cached mesh by its sha256. The second form writes a
+Both are the `pull` arrow of {numref}`fig-output-cache-flow`. The first `pull` fetches the one cached mesh by its sha256. The second form writes a
 committed job's mesh into place by the `mesh_sha256` its {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>` names. The committed
 start meshes are not in the cache, so for them it fails.
 

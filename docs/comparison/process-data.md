@@ -220,10 +220,10 @@ data, so they carry the role `reference-bookkeeping`. They are used only in the 
 where the 1D structure has no source or drain. In 2D, the source/drain geometry gives the overlap
 physically. They are fixed and are not part of the {term}`parameter budget`.
 
-{numref}`process-data-split-figure` shows the two parts for the fitted nfet at its shortest gate.
+{numref}`fig-process-data-split` shows the two parts for the fitted nfet at its shortest gate.
 
 ```{figure} /_generated/comparison/cgg-split-light.svg
-:name: process-data-split-figure
+:name: fig-process-data-split
 :figclass: only-light
 :alt: Gate capacitance against voltage: a solid total, a dashed intrinsic part with a deep dip, and a low, flatter dotted part.
 
@@ -251,10 +251,10 @@ tagged `calibrated`, never `spice-card`. Instead of a `source`, each has a `star
 `bounds_source`, and a structured `start_kind` and `bounds_kind` (one kind per bound). A kind is
 `card`, `derived` or `project-choice`
 ({py:data}`gf180tcad.tcad.process.KINDS`). Their starts and bounds are written into the files
-before any fit. {numref}`process-data-stack-figure` shows the nfet stack at the start values.
+before any fit. {numref}`fig-process-data-stack` shows the nfet stack at the start values.
 
 ```{figure} /_generated/comparison/start-stack-light.svg
-:name: process-data-stack-figure
+:name: fig-process-data-stack
 :figclass: only-light
 :alt: Three stacked layers: a muted gate on top, a thin shaded oxide and a tall shaded body, each labelled with its material, thickness and doping.
 
@@ -333,10 +333,10 @@ This window is {py:data}`gf180tcad.tcad.process.PLATEAU_V`, the ±2 V plateau co
 calibration, and each file records it in its `[centroid_allowance]` table. The window leaves out {term}`depletion`.
 There the accumulation formula saturates near Ldebye/3, and the centroid says nothing about the
 oxide-capacitance plateaus. Counting it would widen the fit's freedom for no physical reason.
-{numref}`process-data-centroid-figure` shows X_DC over the sweep and the two windows.
+{numref}`fig-process-data-centroid` shows X_DC over the sweep and the two windows.
 
 ```{figure} /_generated/comparison/centroid-light.svg
-:name: process-data-centroid-figure
+:name: fig-process-data-centroid
 :figclass: only-light
 :alt: Charge-centroid depth against voltage, nfet and pfet: two rising lines on the left with a dot each at -2 V, two short dotted lines on the right.
 
@@ -448,10 +448,10 @@ The fourth tunable, `poly_bias_nm`, is read only by the 2D cross-section
 ({py:func}`gf180tcad.tcad.stack.build`, {py:data}`gf180tcad.tcad.process.TUNABLES_2D`). Its role is
 `tunable-2d`. The poly, the {term}`gate oxide` and the gate electrode are longer by it at each end, and the
 source/drain doping stays aligned to them. The drawn L still divides Cgg into C per area.
-The 1D MOS capacitor never reads it. {numref}`process-data-poly-bias-figure` shows one gate end.
+The 1D MOS capacitor never reads it. {numref}`fig-process-data-poly-bias` shows one gate end.
 
 ```{figure} /_generated/comparison/poly-bias-light.svg
-:name: process-data-poly-bias-figure
+:name: fig-process-data-poly-bias
 :figclass: only-light
 :alt: The drain-side end of the gate, to scale: the drawn poly and thin oxide end at a dashed line; a highlighted strip of poly and oxide 100 nm wide continues past it; the drain starts at the strip's end, beside the channel.
 

@@ -15,10 +15,10 @@ for every gate length and width. It must match the {term}`typical corner <TT>`
 used to tune it**. Every remaining mismatch is listed with its
 physical or modelling cause and the evidence that shows it.
 
-{numref}`agreement-cell-figure` shows the parts of the device that the process description sets.
+{numref}`fig-agreement-cell` shows the parts of the device that the process description sets.
 
 ```{figure} /_generated/comparison/process-cell-light.svg
-:name: agreement-cell-figure
+:name: fig-agreement-cell
 :figclass: only-light
 :alt: Cross-section of the transistor: gate on a thin oxide, source left, drain right, body below, each with its doping, an arrow marking the channel.
 
@@ -84,10 +84,10 @@ instantiate it from a schematic, with the PDK's default instance parameters:
 - SA, SB, SCA and SCB, the default layout distances used by the stress and well-proximity models;
 - nf = 1 and m = 1.
 
-{numref}`agreement-instance-figure` shows the source and drain that AS, AD, PS and PD describe.
+{numref}`fig-agreement-instance` shows the source and drain that AS, AD, PS and PD describe.
 
 ```{figure} /_generated/comparison/instance-plan-light.svg
-:name: agreement-instance-figure
+:name: fig-agreement-instance
 :figclass: only-light
 :alt: A transistor seen from above: a grey gate strip with a dashed source on its left and a dashed drain on its right, W, L and the source length marked.
 
@@ -139,11 +139,11 @@ To stop the TCAD from being tuned to the answer, the targets are split.
   are validation evidence, and Idsat, gm, gds and DIBL are validation at every
   geometry.
 
-The oxide and the channel doping are parts of the cell in {numref}`agreement-cell-figure`.
-{numref}`agreement-geometries-figure` shows the calibration and held-out geometries of each device.
+The oxide and the channel doping are parts of the cell in {numref}`fig-agreement-cell`.
+{numref}`fig-agreement-geometries` shows the calibration and held-out geometries of each device.
 
 ```{figure} /_generated/comparison/geometries-light.svg
-:name: agreement-geometries-figure
+:name: fig-agreement-geometries
 :figclass: only-light
 :alt: Two panels of width against gate length, nfet above and pfet below: filled circles for the calibration geometries, open for the held-out ones.
 
@@ -240,7 +240,7 @@ bias or no stretch goal for that metric.
 
 The Cgg-Vg {term}`sweep` covers {term}`accumulation`, {term}`depletion` and {term}`inversion`, left to right
 along the curve of
-{numref}`Figure %s of C–V calibration of the TCAD MOS capacitor <cv-metric-figure>`.
+{numref}`Figure %s of C–V calibration of the TCAD MOS capacitor <fig-cv-metric>`.
 The effective Rsd is extracted from 1/Id versus L.
 
 The other metrics:
@@ -287,11 +287,11 @@ in µm. So par_vth is A_Vt in the Pelgrom convention for the Vt difference of a 
 ### Numerical acceptance
 
 These are prerequisites: no comparison counts unless they pass.
-{numref}`agreement-meshconv-figure` shows the {term}`mesh convergence` of the
+{numref}`fig-agreement-meshconv` shows the {term}`mesh convergence` of the
 {term}`MOS capacitors <MOSCAP>`.
 
 ```{figure} /_generated/comparison/meshconv-light.svg
-:name: agreement-meshconv-figure
+:name: fig-agreement-meshconv
 :figclass: only-light
 :alt: Log-log plot of the largest change against mesh nodes: four short falling lines, 1D on the left and 2D on the right, below a dotted 1 % line.
 
@@ -352,7 +352,7 @@ literature references.
 ~~~
 
 The cause behind each tag, in three groups. The channel is the body's surface under the
-{term}`gate oxide` in {numref}`agreement-cell-figure`. The process and structure of the device:
+{term}`gate oxide` in {numref}`fig-agreement-cell`. The process and structure of the device:
 
 - `doping`: the channel, {term}`LDD`, {term}`S/D` and well profiles are unknown, and analytic
   stand-ins replace them.

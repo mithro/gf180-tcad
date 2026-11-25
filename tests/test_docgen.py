@@ -732,8 +732,8 @@ def test_mesh_figure_from_committed_artefact(tmp_path):
     lines = docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir)
     text = "\n".join(lines)
     assert text.count("```{figure}") == 2  # a light and a dark twin
-    assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
-    assert "{numref}`mesh-nfet_05v0-w1p0_l0p50-calibrated` shows the mesh" in text
+    assert ":name: fig-mesh-nfet-05v0-w1p0-l0p50-calibrated" in text
+    assert "{numref}`fig-mesh-nfet-05v0-w1p0-l0p50-calibrated` shows the mesh" in text
     assert ":figclass: only-light" in text and ":figclass: only-dark" in text
     assert f"{meta['triangle_count']} of the full mesh's 40 triangles" in text
     assert "results/tcad/meshes/stable/nfet_05v0/calibrated/w1p0_l0p50" in text
@@ -759,7 +759,7 @@ def test_mesh_figure_absent_states_why(tmp_path):
     assert docgen._no_artefact("start") in text
     # the start cell's sentence links mesh.msh to its .gitignore line (spec §10.3 file links)
     assert "{repo}`mesh.msh <.gitignore#L" in text and "MESH" not in text
-    assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
+    assert ":name: fig-mesh-nfet-05v0-w1p0-l0p50-calibrated" in text
     assert not list(ddir.glob("*_mesh_start-*.svg"))
     # a geometry with no 2D cell gets no mesh section: its 2D section already says why
     assert docgen._mesh_section(_fake_device(tcad), "w9p9_l9p90", ddir) == []

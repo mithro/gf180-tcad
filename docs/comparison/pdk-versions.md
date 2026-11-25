@@ -19,10 +19,10 @@ geometries, 5 {term}`sweep` comma-separated value (CSV) files and
 So every metric delta is exactly 0. The two PDKs' model libraries differ in one `.lib` section only,
 [`res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571), which the transistors never load.
 
-One sweep of each device from both PDKs is in {numref}`pdk-versions-sweeps-figure`.
+One sweep of each device from both PDKs is in {numref}`fig-pdk-versions-sweeps`.
 
 ```{figure} /_generated/comparison/pdk-sweeps-light.svg
-:name: pdk-versions-sweeps-figure
+:name: fig-pdk-versions-sweeps
 :figclass: only-light
 :alt: Two log plots of drain current against gate voltage, nfet and pfet, three curves each; every dashed curve lies on a solid one.
 
@@ -170,12 +170,12 @@ TT value is the leading number.
 
 Two of the entries below describe the gate stack. TOXE is the thickness of the {term}`gate oxide`
 and NDEP the body doping under it. The nfet stack drawn at these two values is
-{numref}`Figure %s of Process data for the MOS capacitors <process-data-stack-figure>`.
+{numref}`Figure %s of Process data for the MOS capacitors <fig-process-data-stack>`.
 
-{numref}`tab-pdk-versions-nfet-0` gives the `nfet_06v0.0` entries.
+{numref}`tab-pdk-versions-card-nfet-06v0-0` gives the `nfet_06v0.0` entries.
 
 ~~~{table} The re-checked entries of the nfet_06v0.0 card.
-:name: tab-pdk-versions-nfet-0
+:name: tab-pdk-versions-card-nfet-06v0-0
 
 | Parameter | Value | Card line |
 |---|---|---|
@@ -210,10 +210,10 @@ and NDEP the body doping under it. The nfet stack drawn at these two values is
 | {term}`XJ` | `1.5e-007` | [37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377) |
 ~~~
 
-{numref}`tab-pdk-versions-nfet-1` gives the `nfet_06v0.1` entries.
+{numref}`tab-pdk-versions-card-nfet-06v0-1` gives the `nfet_06v0.1` entries.
 
 ~~~{table} The re-checked entries of the nfet_06v0.1 card.
-:name: tab-pdk-versions-nfet-1
+:name: tab-pdk-versions-card-nfet-06v0-1
 
 | Parameter | Value | Card line |
 |---|---|---|
@@ -248,10 +248,10 @@ and NDEP the body doping under it. The nfet stack drawn at these two values is
 | {term}`XJ` | `1.5e-007` | [37715](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37715) |
 ~~~
 
-{numref}`tab-pdk-versions-pfet-0` gives the `pfet_06v0.0` entries.
+{numref}`tab-pdk-versions-card-pfet-06v0-0` gives the `pfet_06v0.0` entries.
 
 ~~~{table} The re-checked entries of the pfet_06v0.0 card.
-:name: tab-pdk-versions-pfet-0
+:name: tab-pdk-versions-card-pfet-06v0-0
 
 | Parameter | Value | Card line |
 |---|---|---|
@@ -286,13 +286,13 @@ and NDEP the body doping under it. The nfet stack drawn at these two values is
 | {term}`XJ` | `1.5e-7` | [38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291) |
 ~~~
 
-{numref}`tab-pdk-versions-spec4` gives the values the {repo}`design spec, §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>`
-quotes, for the parameters it quotes. In {numref}`tab-pdk-versions-spec4` *none* means no value for that device, and
+{numref}`tab-pdk-versions-spec-values` gives the values the {repo}`design spec, §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>`
+quotes, for the parameters it quotes. In {numref}`tab-pdk-versions-spec-values` *none* means no value for that device, and
 *set* means the spec says only that it is set. The unit is *not applicable* where no value is
 quoted.
 
 ~~~{table} The card values that the design spec, §4, quotes.
-:name: tab-pdk-versions-spec4
+:name: tab-pdk-versions-spec-values
 
 | Parameter | Spec §4, nfet | Spec §4, pfet | Unit |
 |---|---|---|---|
