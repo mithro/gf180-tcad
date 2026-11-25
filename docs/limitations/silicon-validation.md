@@ -42,5 +42,5 @@ The structures of each design, and what to note about them:
 - **Priority 5, ISHI.** Probe-padded inverters (`05v0` and `06v0`). Check that
   {term}`Dualgate` is over each device: some "5 V" devices are built thin-oxide.
 
-An {term}`nfet_05v0` of TRID's W and L is drawn from above, to scale, in {numref}`Figure %s of Definition of agreement <agreement-instance-figure>`.
+An {term}`nfet_05v0` of TRID's W and L is drawn from above, to scale, in {numref}`Figure %s of Definition of agreement <fig-agreement-instance>`.
 Its source and drain are those of the SPICE reference's netlist, not TRID's layout.

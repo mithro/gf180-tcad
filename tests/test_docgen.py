@@ -260,6 +260,66 @@ def test_concurrent_docs_generation_does_not_race(tmp_path):
     assert not list(DOCS.glob("_generated.*")), "temporary directories left behind"
 
 
+def test_unchanged_generated_files_keep_their_mtime(tmp_path):
+    """docs/conf.py regenerates docs/_generated on every build; a file whose bytes did not
+    change keeps the old copy's modification time, so Sphinx reads and writes no page for it
+    and a rebuild with no change writes no page. A changed or new file keeps its new time."""
+    import os
+    import runpy
+
+    keep = runpy.run_path(str(DOCS / "conf.py"))["_keep_unchanged_mtimes"]
+    old, new = tmp_path / "old", tmp_path / "new"
+    for d in (old, new):
+        (d / "sub").mkdir(parents=True)
+    (old / "sub" / "same.md").write_text("same", "utf-8")
+    (new / "sub" / "same.md").write_text("same", "utf-8")
+    (old / "changed.md").write_text("before", "utf-8")
+    (new / "changed.md").write_text("after", "utf-8")
+    (new / "added.md").write_text("new", "utf-8")
+    for f in old.rglob("*.md"):
+        os.utime(f, ns=(10**18, 10**18))
+    keep(new, old)
+    assert (new / "sub" / "same.md").stat().st_mtime_ns == 10**18
+    assert (new / "changed.md").stat().st_mtime_ns != 10**18
+    assert (new / "added.md").stat().st_mtime_ns != 10**18
+
+
+def test_regenerating_keeps_the_mtime_of_unchanged_files(tmp_path, monkeypatch):
+    """The whole generate-and-swap step of docs/conf.py (``_generate_results``) on a small fake
+    tree: after a second build, a file with the same bytes keeps the first build's modification
+    time and a changed file gets a new one. Fails if ``_generate_results`` stops calling
+    ``_keep_unchanged_mtimes``."""
+    import os
+    import runpy
+
+    conf = runpy.run_path(str(DOCS / "conf.py"))
+    generate, release = conf["_generate_results"], conf["_release_lock"]
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    monkeypatch.setitem(generate.__globals__, "_generated", docs / "_generated")
+    monkeypatch.setitem(generate.__globals__, "_lock_path", docs / ".generated.lock")
+    content = {"same.md": "same", "sub/changed.md": "before"}
+
+    def fake_generate(out):
+        for name, text in content.items():
+            (out / name).parent.mkdir(parents=True, exist_ok=True)
+            (out / name).write_text(text, "utf-8")
+
+    monkeypatch.setattr(docgen, "generate", fake_generate)
+    generate(None)
+    release(None)
+    old = 10**18
+    for name in content:
+        os.utime(docs / "_generated" / name, ns=(old, old))
+    content["sub/changed.md"] = "after"
+    generate(None)
+    release(None)
+    assert (docs / "_generated" / "same.md").stat().st_mtime_ns == old
+    assert (docs / "_generated" / "sub" / "changed.md").read_text("utf-8") == "after"
+    assert (docs / "_generated" / "sub" / "changed.md").stat().st_mtime_ns != old
+    assert not list(docs.glob("_generated.*")), "temporary directories left behind"
+
+
 def test_known_diffs_single_source():
     assert docgen.KNOWN_DIFFS is KNOWN_ENGINE_DIFFS
     assert KNOWN_ENGINE_DIFFS == {("nfet_05v0", "idvg_sat"), ("nfet_05v0", "idvg_lin")}
@@ -456,7 +516,7 @@ def test_moscap_page_per_device_geometry(generated_pages):
                 if not (TCAD / "moscap2d" / name / params / gid / "cv.meta.json").is_file():
                     continue
                 if list((TCAD / "meshes").glob(f"*/{name}/{params}/{gid}/mesh-window.meta.json")):
-                    assert f":name: mesh-{name}-{gid}-{params}" in page
+                    assert f":name: {docgen.figure_label('mesh', name, gid, params)}" in page
                     for palette in ("light", "dark"):
                         assert (root / name / f"{gid}_mesh_{params}-{palette}.svg").is_file()
                 else:
@@ -732,8 +792,8 @@ def test_mesh_figure_from_committed_artefact(tmp_path):
     lines = docgen._mesh_section(_fake_device(tcad), "w1p0_l0p50", ddir)
     text = "\n".join(lines)
     assert text.count("```{figure}") == 2  # a light and a dark twin
-    assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
-    assert "{numref}`mesh-nfet_05v0-w1p0_l0p50-calibrated` shows the mesh" in text
+    assert ":name: fig-mesh-nfet-05v0-w1p0-l0p50-calibrated" in text
+    assert "{numref}`fig-mesh-nfet-05v0-w1p0-l0p50-calibrated` shows the mesh" in text
     assert ":figclass: only-light" in text and ":figclass: only-dark" in text
     assert f"{meta['triangle_count']} of the full mesh's 40 triangles" in text
     assert "results/tcad/meshes/stable/nfet_05v0/calibrated/w1p0_l0p50" in text
@@ -759,7 +819,7 @@ def test_mesh_figure_absent_states_why(tmp_path):
     assert docgen._no_artefact("start") in text
     # the start cell's sentence links mesh.msh to its .gitignore line (spec §10.3 file links)
     assert "{repo}`mesh.msh <.gitignore#L" in text and "MESH" not in text
-    assert ":name: mesh-nfet_05v0-w1p0_l0p50-calibrated" in text
+    assert ":name: fig-mesh-nfet-05v0-w1p0-l0p50-calibrated" in text
     assert not list(ddir.glob("*_mesh_start-*.svg"))
     # a geometry with no 2D cell gets no mesh section: its 2D section already says why
     assert docgen._mesh_section(_fake_device(tcad), "w9p9_l9p90", ddir) == []

@@ -48,11 +48,11 @@ Its keys, read entries first:
 An entry with the role `geometry` or `axis` always has a `scale`. An entry whose scale is not 1
 always has a `label`. Its exaggeration statement, such as "oxide thickness ×40, not to scale", is
 in the file's `exaggeration` list. The two geometry entries of the synthetic example are drawn
-in {numref}`render-exaggeration`, at true scale and at their scales. The canonical JSON is compact, with sorted keys and
+in {numref}`fig-render-exaggeration`, at true scale and at their scales. The canonical JSON is compact, with sorted keys and
 shortest round-trip floats ({py:func}`gf180tcad.quantity.canonical_json`).
 
 ```{figure} /_generated/reproduce/render-exaggeration-light.svg
-:name: render-exaggeration
+:name: fig-render-exaggeration
 :figclass: only-light
 :alt: Two stacked bars of height in nanometres. Left, at true scale, a thin oxide layer under a much thicker poly layer. Right, as the render draws it, the oxide layer is taller than the poly layer.
 
@@ -98,7 +98,7 @@ render never recomputes what a simulation computed.
 
 The file {repo}`data/render/display.toml` holds the {term}`band gaps <band gap>` of silicon and
 of the oxide, and the two Si–SiO₂ band offsets. A band diagram is drawn with silicon's band gap and
-the two offsets, as the file's `drawing` entry says. {numref}`render-band-offsets` draws those three.
+the two offsets, as the file's `drawing` entry says. {numref}`fig-render-band-offsets` draws those three.
 
 No simulation reads the file. Each value has a unit and a source in the
 {ref}`literature list <lit-alkauskas>`. The file's `mismatch` text compares the band gap the simulation
@@ -109,7 +109,7 @@ Every number the public sources give for the six values, and which one the file 
 {doc}`display-values`.
 
 ```{figure} /_generated/reproduce/render-band-offsets-light.svg
-:name: render-band-offsets
+:name: fig-render-band-offsets
 :figclass: only-light
 :alt: Band edges against energy. On the left, the oxide's conduction band edge high above and its valence band edge far below. On the right, silicon's two band edges close together. Arrows mark the silicon band gap and the two offsets.
 

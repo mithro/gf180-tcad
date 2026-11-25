@@ -1759,7 +1759,7 @@ def test_mesh_window_figure_draws_the_window_rule():
     text = REPRODUCE_PAGE.read_text(encoding="utf-8")
     for palette in figures.PALETTES:
         assert f"/_generated/explained/mesh-window-{palette}.svg" in text, palette
-    assert "{numref}`mesh-window-figure`" in text
+    assert "{numref}`fig-mesh-window`" in text
 
 
 # --- the C-V curve page (task E2c) -----------------------------------------------------------

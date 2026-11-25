@@ -11,7 +11,7 @@ doping. {py:func}`gf180tcad.tcad.moscap2d.simulate` meshes the cross-section wit
 {term}`QS <C–V>` (the counterpart of the {term}`SPICE` {term}`Cgg` of {term}`BSIM4`
 `capMod=2`) and 1 MHz AC with every non-gate contact's charge response.
 
-The cell, cut along its length, is drawn in {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`.
+The cell, cut along its length, is drawn in {numref}`Figure %s of Definition of agreement <fig-agreement-cell>`.
 
 ## The structure
 
@@ -38,7 +38,7 @@ The cell, cut along its length, is drawn in {numref}`Figure %s of Definition of 
   and the BSIM4 parasitics are never applied in 2D: the cross-section has its own overlap and
   fringe.
 
-The parts and their doping are drawn in {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`. The source/drain profile is in {numref}`moscap2d-sd-figure`.
+The parts and their doping are drawn in {numref}`Figure %s of Definition of agreement <fig-agreement-cell>`. The source/drain profile is in {numref}`fig-moscap2d-sd`.
 
 (moscap2d-artefact)=
 
@@ -56,11 +56,11 @@ over the whole domain, no source or drain and zero-flux sides
 (accumulation) and the 2D/1D ratio minus 1 at the worst of five biases (−5, −1, 0.65, +2, +5 V);
 the 1D reference is the converged 1D stack, C/Cox = 0.98099. Interfaces at 0.5 nm, grading 1.2.
 
-Each mesh change adds to the ones above it in {numref}`tab-moscap2d-mesh-15p2` and
-{numref}`tab-moscap2d-mesh-16`; the last row of each is the vertex-grid fix. These rows use a 2 nm oxide spacing; the 2D start mesh, `DEFAULT_2D`, uses 1 nm (see below).
+Each mesh change adds to the ones above it in {numref}`tab-moscap2d-mesh-oxide-15p2nm` and
+{numref}`tab-moscap2d-mesh-oxide-16nm`; the last row of each is the vertex-grid fix. These rows use a 2 nm oxide spacing; the 2D start mesh, `DEFAULT_2D`, uses 1 nm (see below).
 
 ~~~{table} The uniform stack with a 15.2 nm oxide, one mesh change per row.
-:name: tab-moscap2d-mesh-15p2
+:name: tab-moscap2d-mesh-oxide-15p2nm
 
 | Mesh | C/Cox | Worst 2D/1D − 1 (%) |
 |---|---|---|
@@ -70,7 +70,7 @@ Each mesh change adds to the ones above it in {numref}`tab-moscap2d-mesh-15p2` a
 ~~~
 
 ~~~{table} The uniform stack with a 16 nm oxide, one mesh change per row.
-:name: tab-moscap2d-mesh-16
+:name: tab-moscap2d-mesh-oxide-16nm
 
 | Mesh | C/Cox | Worst 2D/1D − 1 (%) |
 |---|---|---|
@@ -87,10 +87,10 @@ leaves it at the default unless it is passed in. At the default, a 15.2 nm oxide
 **15.0 nm** thick (its nodes span y = 0 to 0.015 µm). That makes {term}`Cox` 1.3 % too large.
 It turns the 1D C/Cox of 0.981 into 1.0013 (and, in the prototype, into 1.0039).
 
-The meshed and drawn oxide are compared in {numref}`moscap2d-vertex-figure`.
+The meshed and drawn oxide are compared in {numref}`fig-moscap2d-vertex`.
 
 ```{figure} /_generated/limitations/vertex-grid-light.svg
-:name: moscap2d-vertex-figure
+:name: fig-moscap2d-vertex
 :figclass: only-light
 :alt: Two bars of oxide seen from the side, top few nanometres only. On the left, grey grid lines 1 nm apart and the filled oxide stopping at 15 nm, below a dashed line at 15.2 nm. On the right the filled oxide reaches the dashed line.
 
@@ -233,7 +233,7 @@ does this with `refine_grading=True`, and the 2D study uses it
 ({py:data}`gf180tcad.tcad.meshconv.REFINE_GRADING`). 1D keeps the grading, since there it only
 caps the ratio of neighbouring spacings.
 
-The mesh size of both kinds of refinement is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-grading-figure>`.
+The mesh size of both kinds of refinement is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <fig-meshconv-grading>`.
 
 (moscap2d-solver)=
 
@@ -265,10 +265,10 @@ The mesh size of both kinds of refinement is in {numref}`Figure %s of Mesh conve
   {py:mod}`meshconv <gf180tcad.tcad.meshconv>` level-2 acceptances (at −0.601 V and −0.599 V)
   are unchecked.
 
-The accepted solves of the mesh-convergence study sit where the criterion asks for less than the round-off, as {numref}`moscap2d-roundoff-figure` shows.
+The accepted solves of the mesh-convergence study sit where the criterion asks for less than the round-off, as {numref}`fig-moscap2d-roundoff` shows.
 
 ```{figure} /_generated/limitations/roundoff-light.svg
-:name: moscap2d-roundoff-figure
+:name: fig-moscap2d-roundoff
 :figclass: only-light
 :alt: A log-log plot: a line rising from 1e-20 V at small potentials, three dots above it at 3e-8 to 3e-7 V of potential and 1.5e-16 V of update, and a dashed level line above the dots.
 
@@ -298,10 +298,10 @@ With the junction depth {term}`XJ` fixed, the peak also sets the straggle (44.5,
 for 5e19, 1e20 and 2e20 cm⁻³), and so how far the p⁺ edge reaches under the gate: fixing XJ is a
 modelling choice that couples the two.
 
-The three profiles are in {numref}`moscap2d-sd-figure`.
+The three profiles are in {numref}`fig-moscap2d-sd`.
 
 ```{figure} /_generated/limitations/sd-profile-light.svg
-:name: moscap2d-sd-figure
+:name: fig-moscap2d-sd
 :figclass: only-light
 :alt: Two plots of doping on a log axis. Top: three Gaussian curves against depth that all cross a dashed body-doping line at the same depth, XJ. Bottom: the same three along the surface, falling under the gate and reaching the body doping at slightly different distances.
 
@@ -367,7 +367,7 @@ bound, as a {term}`strict expected failure` at both lengths on the sensitivity a
   dielectric region), or memory-allocator fragmentation at large node counts. The resume
   mechanism works around it; the cause is open (issue #59).
 
-The resumed start cells are the dotted QS curves of {numref}`moscap2d-ccox-figure`, with no AC points.
+The resumed start cells are the dotted QS curves of {numref}`fig-moscap2d-ccox`, with no AC points.
 
 (moscap2d-reproduce)=
 
@@ -398,7 +398,7 @@ No end-to-end
 run of a full `make reproduce` is recorded. All the 1D results are reproduced byte for byte locally, and the calibrated 1D
 results on GitHub-hosted runners ({ref}`cross-host-tcad`).
 
-The resumed sweeps are the dotted curves of {numref}`moscap2d-ccox-figure`.
+The resumed sweeps are the dotted curves of {numref}`fig-moscap2d-ccox`.
 
 (moscap2d-meshes)=
 
@@ -433,7 +433,7 @@ rerun of a job with `python -m gf180tcad.tcad moscap --device nfet_05v0 --dim 2 
 --geometry w10p0_l0p60 --out <tree root>` writes the mesh too, and the
 {py:func}`~gf180tcad.tcad.moscap2d.simulate` it runs takes hours.
 
-The mesh size the selected file sets is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-grading-figure>`. The window a reduced mesh artefact keeps is in {numref}`Figure %s of Reproduce <mesh-window-figure>`.
+The mesh size the selected file sets is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <fig-meshconv-grading>`. The window a reduced mesh artefact keeps is in {numref}`Figure %s of Reproduce <fig-mesh-window>`.
 
 **Output cache.** Instead of regenerating it, a mesh can be fetched from the shared
 {ref}`output cache <output-cache>` ({repo}`tools/output-cache`), keyed by its `mesh_sha256`.
@@ -450,10 +450,10 @@ committed {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60
 
 The mesh pictures come from a committed reduced mesh artefact per 2D cell, not from the full mesh.
 The window rule and the file format are in {ref}`mesh-artefact`. The artefact of the calibrated
-nfet at W10/L0.6 is in {numref}`mesh-artefact-l0p60`.
+nfet at W10/L0.6 is in {numref}`fig-mesh-artefact-l0p60`.
 
 ```{figure} /_generated/tcad/nfet_05v0/w10p0_l0p60_mesh_calibrated-light.svg
-:name: mesh-artefact-l0p60
+:name: fig-mesh-artefact-l0p60
 :figclass: only-light
 :alt: The mesh around the gate of the calibrated nfet W10/L0.6 cell: small triangles, densest in a thin band at the silicon surface under the gate, coloured by region: the gate on top, the gate oxide under it, the insulator beside the gate and the silicon body below.
 
@@ -518,10 +518,10 @@ committed `mesh_sha256`.
 The calibrated 2D jobs ({ref}`cv-agreement-validation`, issue #35) run the committed
 cells with `--params calibrated`, one 16 GiB {term}`job` at a time.
 
-Two of them are compared with SPICE in {numref}`moscap2d-validation-figure`. Every compared cell's crossing shift and plateau difference is in {numref}`moscap2d-metrics-figure`.
+Two of them are compared with SPICE in {numref}`fig-moscap2d-validation`. Every compared cell's crossing shift and plateau difference is in {numref}`fig-moscap2d-metrics`.
 
 ```{figure} /_generated/limitations/twod-validation-light.svg
-:name: moscap2d-validation-figure
+:name: fig-moscap2d-validation
 :figclass: only-light
 :alt: Two panels of gate capacitance against voltage. In each a dashed 2D curve lies below a black SPICE curve inside a grey band on both plateaus, and a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
 
@@ -544,7 +544,7 @@ and of the 2D cell at the level C_mid (dotted), labelled with their shift
 ```
 
 ```{figure} /_generated/limitations/twod-metrics-light.svg
-:name: moscap2d-metrics-figure
+:name: fig-moscap2d-metrics
 :figclass: only-light
 :alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV, four of those markers hollow. Bottom: every plateau difference lies below zero, most below a grey band of ±5 %, all of those hollow.
 
@@ -690,7 +690,7 @@ committed cell's cross-section. It then solves {term}`QS <C–V>` at u = −5 V 
 plateaus. Its base variant reproduces the committed cell's Cgg to 1e-9
 ({test}`tests/test_edge_sensitivity.py::test_record_base_is_the_committed_cell`).
 
-Each variant's gain over the base is in {numref}`moscap2d-edge-figure`, in fF/µm of Cgg per unit width:
+Each variant's gain over the base is in {numref}`fig-moscap2d-edge`, in fF/µm of Cgg per unit width:
 
 - **Contact plugs.** Source and drain electrodes {{ lim_edge_plug_um }} µm tall change Cgg by
   {{ lim_edge_plugs_acc }} and {{ lim_edge_plugs_inv }}. That height is the contact's in the PDK's
@@ -708,7 +708,7 @@ straggle of 0.2 times their vertical one. No variant adds as much as 0.001 fF/µ
 The card's bias-dependent overlap (CGSL with CKAPPA) therefore has no counterpart in these cross-sections.
 
 ```{figure} /_generated/limitations/edge-sensitivity-light.svg
-:name: moscap2d-edge-figure
+:name: fig-moscap2d-edge
 :figclass: only-light
 :alt: Two panels, nfet and pfet, each plotting a point's gain at +5 V against its gain at −5 V. A diagonal line of equal gain runs from the origin. The longer-poly circles lie on it, the contact-plug triangle sits just below the origin, and the nfet's extension squares lie just below the line. A star marks the target, off the line for the nfet, near it for the pfet, and an open ring on the line marks the fitted bias.
 
@@ -775,10 +775,10 @@ and inter-layer dielectric, and 0.987 and 0.977 when that dielectric is replaced
 boundaries. The difference, 0.121 Cox at −5 V and 0.115 Cox at +5 V, is the outer fringe.
 It runs from the poly sidewalls to the silicon outside the gate.
 
-The committed cells with source and drain lie above 1 at Lmin in {numref}`moscap2d-ccox-figure`.
+The committed cells with source and drain lie above 1 at Lmin in {numref}`fig-moscap2d-ccox`.
 
 ```{figure} /_generated/limitations/c-over-cox-light.svg
-:name: moscap2d-ccox-figure
+:name: fig-moscap2d-ccox
 :figclass: only-light
 :alt: Two panels, nfet and pfet, of C/Cox against gate voltage. A solid 1D curve stays below the line at 1. A dashed Lmin curve with dots on it rises above 1 on both plateaus. A dotted L = 2 µm curve without dots lies near 1.
 
@@ -822,4 +822,4 @@ checks C/Cox ≤ 1 where the gate oxide is the only path, and the fringe is repo
   The pfet cells are W10/L0.5, W10/L0.7, W10/L1, W10/L2 and W1.6/L0.7.
 - **The pfet source/drain peak is uncertain** and matters at the gate edges, most at Lmin ({ref}`moscap2d-sd`).
 
-The modelled cell is in {numref}`Figure %s of Definition of agreement <agreement-cell-figure>`. Its fringe and plateaus are in {numref}`moscap2d-ccox-figure`.
+The modelled cell is in {numref}`Figure %s of Definition of agreement <fig-agreement-cell>`. Its fringe and plateaus are in {numref}`fig-moscap2d-ccox`.
