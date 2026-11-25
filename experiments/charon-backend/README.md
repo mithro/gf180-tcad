@@ -11,7 +11,7 @@ write-up is [`docs/limitations/charon.md`](../../docs/limitations/charon.md).
 | File | What it is |
 |---|---|
 | [`run.py`](run.py) | Runs the steps one at a time (2 GiB, one CPU, no network). It refuses uncommitted changes and writes each step's pins. |
-| [`record.py`](record.py) | Writes the three records from the run directories. |
+| [`record.py`](record.py) | Writes the four records from the run directories. |
 | [`cx.py`](cx.py) | The Exodus II writer, the strip mesh, the runner and the readers. |
 | [`decks.py`](decks.py) | The interpreter decks of the MOS capacitor. |
 | [`opts.py`](opts.py) | The solver tolerances and the KLU2 lines, from the environment. |
@@ -21,7 +21,8 @@ write-up is [`docs/limitations/charon.md`](../../docs/limitations/charon.md).
 | [`b2d.py`](b2d.py) | B2: solves started on the inversion side. |
 | [`b2nlp.py`](b2nlp.py) | B2: the nonlinear-Poisson solve with a biased poly gate. |
 | [`b3.py`](b3.py) | B3: Belos against Amesos2 KLU2. |
-| [`b4.py`](b4.py) | B4: the harmonic-balance current columns. |
+| [`b4.py`](b4.py) | B4: the harmonic-balance current columns on the poly-gate stack. |
+| [`b4pp.py`](b4pp.py), [`b4mg.py`](b4mg.py) | B4: the same columns on an oxide-only parallel plate and on a metal-gate MOS capacitor. |
 | [`b5.py`](b5.py) | B5: the nodal doping and the intrinsic density. |
 | [`diag.py`](diag.py), [`ncdump.py`](ncdump.py) | Diagnostics: one solve's profiles, a netCDF header dump. |
 
