@@ -31,6 +31,9 @@ PROCESSES = {
     "Aq": {"pwell": "everywhere", "qf": 1e11},
     "Bq": {"pwell": "drawn", "qf": 1e11},
 }
+# An: as A, but no P-well in the strip between an N-well and a NAT region. It differs from
+# A only for the structures with NAT at a positive distance.
+NAT_ONLY = {"An": {"pwell": "everywhere", "nat_strip": False}}
 FAMILY = {
     "Blo": {"pwell": "drawn", "sub": 2e15},
     "Bhi": {"pwell": "drawn", "sub": 5e15},
@@ -40,13 +43,13 @@ FAMILY = {
     "Bdp": {"pwell": "drawn", "deep_p": [{"peak": 4e16, "rp": 5.0, "sy": 0.8, "sx": 0.8}]},
     "Bq3": {"pwell": "drawn", "qf": 3e11},
 }
-KEY = ["NT20", "NC0", "NA0p6", "NAM1_6", "NW3", "NR3_2", "NM1_6", "DT20", "DM1_6", "DW6"]
+KEY = ["NT20", "NC0", "NA0p6", "NAM1_6", "NW3", "NR3_2", "NM1_6", "DT20", "DM1_6", "DAo1"]
 MIN_CORNER = 2.0  # a drawn sharp corner still has about this radius after diffusion
 
 
 def structures():
     data = json.loads((HERE / "structures.json").read_text())
-    return {k: v for k, v in data.items() if v["kind"] != "open" and v.get("block", True)}
+    return {k: v for k, v in data.items() if v["kind"] != "open" and v["half"] < 40}
 
 
 def cases(names, processes):
@@ -58,7 +61,8 @@ def cases(names, processes):
             variants = [("@g0", st), ("@gw", st)]
         for tag, s in variants:
             for pname, proc in processes.items():
-                a_like = proc["pwell"] == "everywhere" and s["nat_gap"] is None
+                strip = s["nat_gap"] is not None and s["nat_gap"] > 0 and proc.get("nat_strip", True)
+                a_like = proc["pwell"] == "everywhere" and (s["nat_gap"] is None or strip)
                 shapes = [("edge", None)]
                 if not a_like:  # next to an abutting P-well the corner radius hardly matters
                     shapes.append(("corner", max(s["corner"], MIN_CORNER)))
@@ -82,6 +86,11 @@ STRUCTS = structures()
 
 if __name__ == "__main__":
     which = sys.argv[2] if len(sys.argv) > 2 else "main"
-    got = cases(sorted(STRUCTS), PROCESSES) if which == "main" else cases(KEY, FAMILY)
+    if which == "main":
+        got = cases(sorted(STRUCTS), PROCESSES)
+        nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
+        got.update(cases(sorted(nat), NAT_ONLY))
+    else:
+        got = cases(KEY, FAMILY)
     json.dump(got, open(sys.argv[1], "w"), indent=1)
     print(f"{len(got)} cases")

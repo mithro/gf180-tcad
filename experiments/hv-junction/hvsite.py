@@ -43,6 +43,8 @@ DEFAULT_PROCESS = {
     # extra acceptors spanning the whole section, for a substrate whose doping rises with
     # depth (the deep N-well capacitance model suggests it; the N-well one does not)
     "deep_p": [],
+    # whether the generated P-well fills the strip between an N-well and a NAT region
+    "nat_strip": True,
     # "everywhere": the foundry generates P-well wherever there is no N-well, deep N-well
     # (kept 1.5 um away, rule LPW.11) or NAT. "drawn": only where the layout draws it.
     "pwell": "everywhere",
@@ -74,12 +76,13 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0):
     ring0 = edge + term
     pfield = _boxes(ring0, ring0 + s["ncomp_w"], pr["pplus"])
     far = width + 10.0
-    if s["pwell_gap"] is not None:
+    if s["pwell_gap"] is not None:  # a drawn P-well exists under either assumption
         pfield += _boxes(edge + s["pwell_gap"], far, pr["pw"])
-    elif pr["pwell"] == "everywhere":
+    if pr["pwell"] == "everywhere":
         if s["nat_gap"] is not None:
             start = ring0 - 0.5  # P-well only beyond the NAT region
-            if s["nat_gap"] > 0.01:  # and in the strip between the well and the NAT layer
+            if s["nat_gap"] > 0.01 and pr["nat_strip"]:
+                # and in the strip that rule NAT.3 leaves between an N-well and the NAT layer
                 pfield += _boxes(edge, edge + s["nat_gap"], pr["pw"])
         else:
             start = edge + (1.5 if s["kind"] == "dnw" else 0.0)
@@ -98,6 +101,8 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0):
         top = max(top, -y0 + 1.5)
     c0, c1 = edge - inset - w, edge - inset
     wells += _boxes(c0, c1, pr["nplus"])  # the N+ contact ring
+    if s["kind"] == "dnw":  # the N-well drawn under the contact ring of a deep N-well
+        wells += _boxes(c0 - 0.3, c1 + 0.3, pr["nw"])
     sti = [[c1, ring0], [ring0 + s["ncomp_w"], width]]
     if c0 > 0.3:
         sti.insert(0, [0.0, c0])

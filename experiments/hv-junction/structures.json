@@ -59,6 +59,83 @@
   "sense": false,
   "term": 6.0
  },
+ "CVNA": {
+  "block": "ring",
+  "corner": 20.0,
+  "gate": false,
+  "half": 50.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DAo1": {
+  "block": true,
+  "corner": 8.0,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "nat_gap": -1.0,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DAo1C0": {
+  "block": true,
+  "corner": 0.0,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "nat_gap": -1.0,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DAo1M1_6": {
+  "block": true,
+  "corner": 8.0,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "nat_gap": -1.0,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DAo1T35": {
+  "block": true,
+  "corner": 8.0,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "nat_gap": -1.0,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 35.0
+ },
  "DC0": {
   "block": true,
   "corner": 0.0,
@@ -168,23 +245,6 @@
   "ncomp_w": 2.0,
   "plates": {
    "m2": 8.0
-  },
-  "pwell_gap": null,
-  "rings": [],
-  "sense": false,
-  "term": 20.0
- },
- "DP2": {
-  "block": true,
-  "corner": 8.0,
-  "gate": false,
-  "half": 15.0,
-  "inset": 2.0,
-  "kind": "dnw",
-  "nat_gap": null,
-  "ncomp_w": 2.0,
-  "plates": {
-   "poly": 2.0
   },
   "pwell_gap": null,
   "rings": [],
@@ -359,21 +419,6 @@
   "rings": [],
   "sense": false,
   "term": 20.0
- },
- "NA0p6T10": {
-  "block": true,
-  "corner": 8.0,
-  "gate": false,
-  "half": 15.0,
-  "inset": 2.0,
-  "kind": "nw",
-  "nat_gap": 0.6,
-  "ncomp_w": 2.0,
-  "plates": {},
-  "pwell_gap": null,
-  "rings": [],
-  "sense": false,
-  "term": 10.0
  },
  "NA0p6T35": {
   "block": true,
@@ -889,26 +934,6 @@
   "sense": false,
   "term": 20.0
  },
- "NR1_4p5": {
-  "block": true,
-  "corner": 8.0,
-  "gate": false,
-  "half": 15.0,
-  "inset": 2.0,
-  "kind": "nw",
-  "nat_gap": null,
-  "ncomp_w": 2.0,
-  "plates": {},
-  "pwell_gap": null,
-  "rings": [
-   [
-    4.5,
-    2.0
-   ]
-  ],
-  "sense": false,
-  "term": 20.0
- },
  "NR3M1": {
   "block": true,
   "corner": 8.0,
@@ -1171,21 +1196,6 @@
   "term": 10.0
  },
  "NT20": {
-  "block": true,
-  "corner": 8.0,
-  "gate": false,
-  "half": 15.0,
-  "inset": 2.0,
-  "kind": "nw",
-  "nat_gap": null,
-  "ncomp_w": 2.0,
-  "plates": {},
-  "pwell_gap": null,
-  "rings": [],
-  "sense": false,
-  "term": 20.0
- },
- "NT20b": {
   "block": true,
   "corner": 8.0,
   "gate": false,

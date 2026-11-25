@@ -53,3 +53,15 @@ def test_plates_and_rings_follow_the_layout():
     ring_boxes = [w for w in p["wells"] if w["x0"] > 8.0]
     assert sorted({w["x0"] for w in ring_boxes}) == [10.0, 14.5]
     assert len(p["probes"]) == 2
+
+
+def test_a_drawn_pwell_adds_nothing_when_pwell_is_generated_everywhere():
+    plain = hvsite.section({}, {"pwell": "everywhere"})
+    drawn = hvsite.section({"pwell_gap": 6.0}, {"pwell": "everywhere"})
+    assert _acceptor_starts(drawn)[0] == _acceptor_starts(plain)[0] == 8.0
+    assert _acceptor_starts(hvsite.section({"pwell_gap": 6.0}, {"pwell": "drawn"})) == [14.0, 14.0]
+
+
+def test_nat_overlapping_a_deep_nwell_leaves_no_pwell_beside_it():
+    p = hvsite.section({"kind": "dnw", "nat_gap": -1.0}, {"pwell": "everywhere"})
+    assert min(_acceptor_starts(p)) == 8.0 + 20.0 - 0.5
