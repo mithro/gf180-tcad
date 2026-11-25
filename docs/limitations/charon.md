@@ -97,8 +97,8 @@ n·p equals n_i² within 2e-6 at every node and state, so each state is an equil
 (charon-hard-range)=
 ## Where the default settings stop
 
-With the project's lifetimes, the nfet sweep stops at the onset of inversion. That is a device
-bias of 0.35 V. {numref}`fig-charon-hard-range` shows the last bias each solver setting reached,
+With the project's lifetimes, the nfet sweep fails at the onset of inversion, a device bias of
+0.35 V. {numref}`fig-charon-hard-range` shows the last bias each solver setting reached,
 sweeping up from 0 V. Looser tolerances, another concentration scaling, 5 mV steps and the FEM
 discretisation all stop between 0.05 V and 0.45 V. Only lifetimes of 1e-14 s or shorter reach
 5 V.
@@ -123,8 +123,8 @@ stopped. Crosses: the equilibrium solve itself failed.
 ```
 
 At the stop the residual stays near 2e-6 while the Newton update does not shrink. Charon 2.2
-computes in double precision only; DEVSIM's quasi-static sweep uses its 128-bit solver for the same
-range. Solves started on the inversion side fail too, at every bias from 0.5 V to 5 V.
+computes in double precision only. Solves started on the inversion side fail too, at every bias
+from 0.5 V to 5 V.
 
 ## What else the experiments settled
 
@@ -151,13 +151,13 @@ range. Solves started on the inversion side fail too, at every bias from 0.5 V t
 
 ## Deck rules the backend follows
 
-Four behaviours of Charon 2.2 fail silently, so the backend guards each one. The side sets
-and blocks they name are those of {numref}`fig-charon-strip`:
+Four behaviours of Charon 2.2 fail silently, and the experiment scripts guard each one. The
+side sets and blocks they name are those of {numref}`fig-charon-strip`:
 
 - A side set named like an element block aborts the run with MPI error 14 and no message. The
-  backend names the side sets after the contacts, distinct from the regions.
+  scripts name the body's side set `body_contact`.
 - A uniform doping block counts only when named `Function1`, `Function2` and so on. Any other name
   passes the interpreter and leaves the doping at zero.
 - The tpetra block offers no direct solver. Three `Direct input` lines rooted at
   `Charon->Solution Control` select Amesos2 KLU2.
-- The plugin writes its gmsh file in cm, and Charon reads µm. The 2D writer scales by 1e4.
+- The plugin writes its gmsh file in cm, and Charon reads µm. The 2D experiment scales by 1e4.
