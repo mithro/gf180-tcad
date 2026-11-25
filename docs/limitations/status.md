@@ -8,7 +8,7 @@ on the other pages of this section.
 
 ## What is finished
 
-{term}`Phases 0 and 1` are complete. They built the foundations and the SPICE reference
+{term}`Phases 0 and 1` are complete. They built the foundations and the {term}`SPICE` reference
 dataset ({doc}`/_generated/results/index`). The SPICE reference rebuilds byte for byte on a second
 computer ({ref}`cross-host-determinism`). Work on {term}`Phase 2` (the {{ gplugins }} {{ DEVSIM }}
 plugin fix and the {term}`MOS capacitor <MOSCAP>`) is in progress.

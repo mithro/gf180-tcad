@@ -12,11 +12,11 @@ This project tests that for the 5 V transistors of the open
 
 Chip designers simulate a circuit before it is made. Each transistor in that simulation is a
 [SPICE](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE) model: equations the chip maker fits to its own measurements. GlobalFoundries
-publishes these models for GF180MCU in an open [process design kit](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-PDK)
+publishes these models for GF180MCU in an open [process design kit (PDK)](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-PDK)
 ([GF180MCU PDK](https://github.com/fossi-foundation/gf180mcu-pdk)).
 
 [TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD) takes another route. It simulates the physics inside the transistor: its layers,
-their thickness, their doping, and the electrons and holes that move in them. This project
+their thickness, their doping, and the [electrons](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-electron) and [holes](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-hole) that move in them. This project
 builds a TCAD model of the GF180MCU transistors from public sources. It then measures how
 closely the TCAD curves match the PDK's SPICE curves (Figure 1).
 
@@ -39,7 +39,7 @@ what was fitted stays
 apart from what was predicted.
 
 The TCAD runs in two forms. The 1D form is one column down through the gate, its oxide and the
-body, under the gate in Figure 2. The 2D form is a slice along the gate's length (Figure 2). Both run for
+body, under the gate in Figure 2. The 2D form is a cross-section along the gate's length. Both run for
 the two kinds of 5 V transistor, the [nfet](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0) and the [pfet](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-pfet_05v0).
 
 Each pair of curves is judged [Agree](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Agree),
@@ -52,7 +52,7 @@ process means the TCAD lies inside the range the PDK specifies, not at its typic
 <img alt="Cross-section of the simulated transistor: a gate on a thin oxide in the middle, a source and a drain either side at the surface, a large body below." src="docs/images/readme/cell-light.svg">
 </picture>
 
-*Figure 2. The simulated slice of the [`nfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0), 10 µm wide with a 0.7 µm gate, cut along the
+*Figure 2. The simulated cross-section of the [`nfet_05v0`](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0), 10 µm wide with a 0.7 µm gate, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type. Oxide thickness ×5, not to
 scale.*
 
@@ -72,7 +72,8 @@ under an open licence, and every input is pinned to an exact version.
 - **In 1D the nfet matches and the pfet only in part.** The nfet agrees at every size. The
   pfet disagrees at two of its three fitted sizes (Figure 3) and is Same
   process or Agree at the rest.
-- **The 2D slices are mixed.** Each calibrated 2D slice is Same process or Disagree.
+- **The 2D cross-sections are mixed.** Each calibrated 2D cross-section is Same process or
+  Disagree.
 - **No chip has been measured.** No silicon data exists to check either model against.
 
 The [project status](https://gf180-tcad.readthedocs.io/en/latest/limitations/status.html) lists every committed result, its folder and its verdict.
@@ -85,7 +86,7 @@ The [project status](https://gf180-tcad.readthedocs.io/en/latest/limitations/sta
 *Figure 3. The gate's capacitance against its voltage at the shortest gate, nfet above and pfet
 below. The solid line is the SPICE model, inside the grey band of its 5
 [corners](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-corner). The dotted and dashed lines are the 1D TCAD before and after fitting.
-The dash-dot lines are the 2D slice before (orange) and after (blue).*
+The dash-dot lines are the 2D cross-section before (orange) and after (blue).*
 
 ## Should you read on?
 
@@ -124,7 +125,7 @@ checks that a from-scratch rebuild gives the same digests:
 | [`ghcr.io/mithro/gf180-tcad-base`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-base) | [`docker/IMAGE`](docker/IMAGE) | the SPICE reference |
 | [`ghcr.io/mithro/gf180-tcad-tcad`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-tcad) | [`docker/TCAD_IMAGE`](docker/TCAD_IMAGE) | the [stable TCAD image](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#tcad-image) |
 | [`ghcr.io/mithro/gf180-tcad-tcad-dev`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-tcad-dev) | [`docker/TCAD_DEV_IMAGE`](docker/TCAD_DEV_IMAGE) | the [dev-HEAD TCAD image](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#tcad-dev-image) |
-| [`ghcr.io/mithro/gf180-tcad-charon-libs`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-charon-libs) | [`docker/CHARON_LIBS_IMAGE`](docker/CHARON_LIBS_IMAGE) | Charon built from source |
+| [`ghcr.io/mithro/gf180-tcad-charon-libs`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-charon-libs) | [`docker/CHARON_LIBS_IMAGE`](docker/CHARON_LIBS_IMAGE) | [Charon](https://charon.sandia.gov/) built from source |
 | [`ghcr.io/mithro/gf180-tcad-charon`](https://github.com/mithro/gf180-tcad/pkgs/container/gf180-tcad-charon) | [`docker/CHARON_IMAGE`](docker/CHARON_IMAGE) | the [charon image](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#charon-image) |
 
 What each holds:
@@ -133,7 +134,7 @@ What each holds:
   [ngspice](https://ngspice.sourceforge.io/) and [Xyce](https://xyce.sandia.gov/).
 - **stable TCAD**: the TCAD stack at its latest releases.
 - **dev-HEAD TCAD**: the TCAD stack at development HEAD (the newest commit), pinned by commit,
-  with DEVSIM built from source.
+  with [DEVSIM](https://devsim.org/) built from source.
 - **charon-libs**: the base image with Charon 2.2.0 and [Trilinos](https://github.com/trilinos/Trilinos) built from source in `/opt/charon`.
 - **charon**: the [dev-HEAD TCAD image](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-dev-HEAD-TCAD-image) with that `/opt/charon` and [netCDF4](https://github.com/Unidata/netcdf4-python).
 

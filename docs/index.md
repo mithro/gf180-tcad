@@ -10,11 +10,11 @@ This project tests that for the 5 V transistors of the open
 
 Chip designers simulate a circuit before it is made. Each transistor in that simulation is a
 {term}`SPICE` model: equations the chip maker fits to its own measurements. GlobalFoundries
-publishes these models for GF180MCU in an open {term}`process design kit <PDK>`
+publishes these models for GF180MCU in an open {term}`process design kit (PDK) <PDK>`
 ({{ gf180mcu_pdk }}).
 
 {term}`TCAD` takes another route. It simulates the physics inside the transistor: its layers,
-their thickness, their doping, and the electrons and holes that move in them. This project
+their thickness, their doping, and the {term}`electrons <electron>` and {term}`holes <hole>` that move in them. This project
 builds a TCAD model of the GF180MCU transistors from public sources. It then measures how
 closely the TCAD curves match the PDK's SPICE curves ({numref}`index-flow-figure`).
 
@@ -47,7 +47,7 @@ what was fitted stays
 apart from what was predicted.
 
 The TCAD runs in two forms. The 1D form is one column down through the gate, its oxide and the
-body, under the gate in {numref}`index-cell-figure`. The 2D form is a slice along the gate's length ({numref}`index-cell-figure`). Both run for
+body, under the gate in {numref}`index-cell-figure`. The 2D form is a cross-section along the gate's length. Both run for
 the two kinds of 5 V transistor, the {term}`nfet <nfet_05v0>` and the {term}`pfet <pfet_05v0>`.
 
 Each pair of curves is judged {term}`Agree`, {term}`Same process` or {term}`Disagree`. Same
@@ -58,7 +58,7 @@ process means the TCAD lies inside the range the PDK specifies, not at its typic
 :name: index-cell-figure
 :alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below, contacts drawn as dark bars.
 
-The simulated slice of the {term}`nfet_05v0`, 10 µm wide with a 0.7 µm gate, cut along the
+The simulated cross-section of the {term}`nfet_05v0`, 10 µm wide with a 0.7 µm gate, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type.
 {{ x_fig_parts_cell_scale }}
 ```
@@ -67,7 +67,7 @@ gate's length. Blue parts are n-type and the orange body is p-type.
 :figclass: only-dark
 :alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below, contacts drawn as dark bars.
 
-The simulated slice of the {term}`nfet_05v0`, 10 µm wide with a 0.7 µm gate, cut along the
+The simulated cross-section of the {term}`nfet_05v0`, 10 µm wide with a 0.7 µm gate, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type.
 {{ x_fig_parts_cell_scale }}
 ```
@@ -88,7 +88,8 @@ under an open licence, and every input is pinned to an exact version.
 - **In 1D the nfet matches and the pfet only in part.** The nfet agrees at every size. The
   pfet disagrees at two of its three fitted sizes ({numref}`index-cv-figure`) and is Same
   process or Agree at the rest.
-- **The 2D slices are mixed.** Each calibrated 2D slice is Same process or Disagree.
+- **The 2D cross-sections are mixed.** Each calibrated 2D cross-section is Same process or
+  Disagree.
 - **No chip has been measured.** No silicon data exists to check either model against.
 
 {doc}`limitations/status` lists every committed result, its folder and its verdict.
@@ -101,7 +102,7 @@ under an open licence, and every input is pinned to an exact version.
 The gate's capacitance against its voltage at the shortest gate, nfet above and pfet below. The
 solid line is the SPICE model, inside the grey band of its {{ x_corner_count }}
 {term}`corners <corner>`. The dotted and dashed lines are the 1D TCAD before and after fitting.
-The dash-dot lines are the 2D slice before (orange) and after (blue).
+The dash-dot lines are the 2D cross-section before (orange) and after (blue).
 ```
 
 ```{figure} /_generated/explained/cv-overview-dark.svg
@@ -111,7 +112,7 @@ The dash-dot lines are the 2D slice before (orange) and after (blue).
 The gate's capacitance against its voltage at the shortest gate, nfet above and pfet below. The
 solid line is the SPICE model, inside the grey band of its {{ x_corner_count }}
 {term}`corners <corner>`. The dotted and dashed lines are the 1D TCAD before and after fitting.
-The dash-dot lines are the 2D slice before (orange) and after (blue).
+The dash-dot lines are the 2D cross-section before (orange) and after (blue).
 ```
 
 ## Should you read on?

@@ -2071,8 +2071,8 @@ def corner_limits(palette: str) -> bytes:
         return svg_bytes(corner_limits_figure(palette))
 
 
-# The project's flow: (column heading, the three boxes top to bottom) of the reference and of
-# what is tested, then the comparison box both feed.
+#: The project's flow: (column heading, the three boxes top to bottom) of the reference and of
+#: what is tested.
 FLOW = (
     (
         "The reference",
@@ -2091,8 +2091,10 @@ FLOW = (
         ),
     ),
 )
+#: The comparison box both columns of :data:`FLOW` feed.
 FLOW_COMPARE = "Compare each pair of curves:\nAgree, Same process or Disagree"
-# The dashed arrow from the reference curves into the TCAD: its fitted numbers come from them.
+#: The label of the dashed arrow from the reference curves into the TCAD: its fitted numbers
+#: come from them.
 FLOW_FIT = "fit"
 
 
