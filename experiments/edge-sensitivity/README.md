@@ -46,8 +46,9 @@ commit, the TCAD image and the gplugins commit. They also include the sha256 of
 values. [`record.py`](record.py) refuses runs whose pins differ.
 
 The records are frozen inputs of the fitted poly length bias (plan Task E3). A record's pins are
-checked against the files at its own commit, which must stay on `main`'s history, so a branch
-that holds a pinned commit is merged, never rebased. Every variant is built from the poly as
-drawn (δ = 0), whatever fit is committed. A sandbox rerun of `base` and `bias30` of both records,
-`tests/test_edge_sensitivity.py::test_rerun_reproduces_the_record`, shows that today's code
-still computes them; it is part of the evidence of every restamp.
+checked against the files at its own commit. That commit must stay on `main`'s history, so a
+branch that holds it is merged, never rebased. Every variant is built from the poly as drawn
+(δ = 0), whatever fit is committed. The sandbox test `test_rerun_reproduces_the_record` in
+[`tests/test_edge_sensitivity.py`](../../tests/test_edge_sensitivity.py) reruns `base` and
+`bias30` of both records. It shows that today's code still computes them, and it is part of
+the evidence of every restamp.

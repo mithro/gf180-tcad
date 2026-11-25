@@ -117,11 +117,14 @@ E4 follows E3b.
   - [x] `gf180tcad.calibrate.edge`, its own entry point. The `tcad/edgefit` tree row is added in E3b, with the tree.
   - [x] `gf180tcad.tcad.edgefit`. `load_params_2d` and `meshcut` apply δ to calibrated 2D jobs when the file exists. A job's meta gets an `edge_fit` key (δ and the file's sha256) only then, so the δ = 0 cells keep their bytes.
   - [x] The 1D `param_sha256` stays the 1D calibration's. δ is recorded and checked separately, which deviates from the first draft's "δ in `tunables`".
+  - [x] Deviation: `gf180tcad.calibrate.edge` computes the line fit itself and does not share a module with `comparison_figures`, so its closure holds no figure code. `tests/test_calibrate_edge.py` pins it equal to `limitations_figures.edge_fit` to 1e-12.
   - [x] The validation and the explainer: each 2D cell's `edge_fit` is checked against the committed fit (or none), and the cell's gate is drawn as meshed.
   - [x] `variant.py` from δ = 0, the record pin rules (record's own commit, ancestry, sandbox rerun of both records), the CONTRIBUTING no-rebase rule, and the #203 note.
   - [x] The restamp, with its evidence (docs/reproduce/index.md, "The poly length bias fit, dormant").
 - [ ] **E3b** (one PR, cell by cell): the two `edgefit` files, then the 10 calibrated 2D cells at the fitted δ, one 16 GiB job at a time (W10 at each calibrated L and W1.6/L0.7, per device; the L2 cells QS only).
   - Then the Lmin mesh-convergence check, the validation, the recut mesh artefacts, the post-rerun checks, `MANIFEST` and the docs. The residual at each plateau is tagged `spice-fit` (the card's bias-dependent overlap).
+  - The tests that need the committed fit: the host test of the fit from `git show <fit commit>:…/cv.csv` (each sha256 checked, then `edge_split(tcad_root=…)`), and `test_record_base_is_the_committed_cell` against the frozen δ = 0 cell instead of the live one.
+  - The registry: the `tcad/edgefit` tree row, and `tcad/edgefit` in the validation's input trees.
 - [ ] **E3c** (#203): the source/drain harness and records at the fitted δ; the measured-value tests replace the 0.1 % bound; the pages' numbers from the records.
 
 ## Task E4: check the depletion crossing
