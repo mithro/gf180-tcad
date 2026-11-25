@@ -26,6 +26,9 @@ extensions = [
     "api_links",
     "table_cells",
     "theme_figures",
+    # docs/_ext/stable_ids.py: each figure and table is identified by its label, less the
+    # "fig-" or "tab-" prefix ("Table poe-pairs"), not by a running number.
+    "stable_ids",
     "unit_join",
     # docs/_ext/wrapper_ids.py: Furo copies a table's or equation's ids onto its scroll wrapper;
     # this removes them from the wrapper, so each id is on one element (issue #150).
@@ -153,9 +156,10 @@ _TOOLS = {
 }
 myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.items()}
 
-# Captioned figures are numbered, so a page can point at one with {numref}. theme_figures
-# (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure with one number,
-# and numbers each page's figures from 1.
+# Captioned figures and tables are numbered, so a page can point at one with {numref}.
+# theme_figures (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure,
+# and stable_ids (docs/_ext/stable_ids.py) shows each item's label in place of its number:
+# "%s" below becomes "poe-pairs" for the table labelled tab-poe-pairs.
 numfig = True
 numfig_format = {"figure": "Figure %s", "table": "Table %s"}
 

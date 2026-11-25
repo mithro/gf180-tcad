@@ -28,13 +28,13 @@ def _section(*children: nodes.Node) -> nodes.section:
 
 
 def test_twins_merge_into_one_figure():
-    light = _figure("a-light.svg", "only-light", "The cell.", ["mesh-window-figure"])
+    light = _figure("a-light.svg", "only-light", "The cell.", ["fig-mesh-window"])
     dark = _figure("a-dark.svg", "only-dark", "The cell.", ["id1"])
     doc = _section(nodes.paragraph(text="before"), light, dark, nodes.paragraph(text="after"))
     assert theme_figures.merge_twins(doc) == 1
     figures = list(doc.findall(nodes.figure))
     assert figures == [light]
-    assert light["ids"] == ["mesh-window-figure"] and "only-light" not in light["classes"]
+    assert light["ids"] == ["fig-mesh-window"] and "only-light" not in light["classes"]
     images = list(light.findall(nodes.image))
     assert [(i["uri"], i["classes"]) for i in images] == [
         ("a-light.svg", ["only-light"]),
@@ -94,7 +94,7 @@ def _site(src: Path) -> None:
     src.mkdir()
     (src / "conf.py").write_text(
         f"import sys\nsys.path.insert(0, {str(Path(theme_figures.__file__).parent)!r})\n"
-        'extensions = ["theme_figures"]\nnumfig = True\n'
+        'extensions = ["theme_figures", "stable_ids"]\nnumfig = True\n'
         'numfig_format = {"figure": "Figure %s"}\n'
     )
     (src / "index.rst").write_text("Site\n====\n\n.. toctree::\n\n   one\n   two\n")
@@ -104,22 +104,23 @@ def _site(src: Path) -> None:
             (src / f"{prefix}-{kind}.svg").write_text(_SVG)
 
 
-def test_each_page_numbers_its_figures_from_one(tmp_path):
-    """Two pages with a twin pair and a plain figure each: both pages show Figure 1 and Figure 2,
-    and the pair, merged, takes one number (built by Sphinx with -W)."""
+def test_a_merged_pair_has_one_figure_and_one_identifier(tmp_path):
+    """Two pages with a twin pair and a plain figure each: the pair, merged, is one figure with
+    the light twin's label as its identifier (docs/_ext/stable_ids.py), and the dark twin adds
+    no figure, number or warning (built by Sphinx with -W)."""
     build_main = importorskip("sphinx.cmd.build").build_main
     src, out = tmp_path / "src", tmp_path / "out"
     _site(src)
     assert build_main(["-W", "-q", "-b", "html", str(src), str(out)]) == 0
     for prefix in ("one", "two"):
         html = (out / f"{prefix}.html").read_text()
-        numbers = re.findall(r'<span class="caption-number">(Figure \d+) </span>', html)
-        assert numbers == ["Figure 1", "Figure 2"], prefix
+        numbers = re.findall(r'<span class="caption-number">([^<]*)</span>', html)
+        assert numbers == [f"Figure {prefix}-pair: ", f"Figure {prefix}-plain: "], prefix
         assert html.count("<figure") == 2, prefix  # the twins are one figure
         assert f'src="_images/{prefix}-light.svg"' in html
         assert f'src="_images/{prefix}-dark.svg"' in html
-        cited = re.findall(r'<span class="std std-numref">(Figure \d+)</span>', html)
-        assert cited == ["Figure 1", "Figure 2"], prefix
+        cited = re.findall(r'<span class="std std-numref">([^<]*)</span>', html)
+        assert cited == [f"Figure {prefix}-pair", f"Figure {prefix}-plain"], prefix
 
 
 def _warnings(doc: nodes.Node) -> list[str]:
@@ -173,3 +174,13 @@ def test_an_unmerged_pair_fails_the_build_under_w(tmp_path):
     assert "The other pair" in page
     (src / "one.rst").write_text(page)
     assert build_main(["-W", "-q", "-b", "html", str(src), str(out)]) != 0
+
+
+def test_a_named_dark_twin_warns():
+    """Positive control: the dark twin is dropped in the merge, so a label on it would name
+    nothing; only the light twin may carry the pair's label."""
+    light = _figure("a-light.svg", "only-light", "The cell.", ["x"])
+    dark = _figure("a-dark.svg", "only-dark", "The cell.", ["x-dark"])
+    dark["names"].append("x-dark")
+    (msg,) = _warnings(_section(light, dark))
+    assert "only-dark twin carries the label 'x-dark'" in msg
