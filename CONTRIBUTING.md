@@ -116,7 +116,7 @@ Needs [uv](https://docs.astral.sh/uv/); lint with [ruff](https://docs.astral.sh/
 with [pytest](https://docs.pytest.org/).
 
 ```
-uv sync --locked
+uv sync --locked --group docs
 make lint
 uv run pytest -m "not sandbox"
 ```
@@ -139,8 +139,8 @@ Push only the checked-out branch, with `git push origin HEAD`, and set
 `git config push.default simple`. Every worktree of a clone shares its branches. A bare
 `git push` under `push.default=matching` pushes the unfinished branches of other worktrees, and
 CI starts on them. A change to the [`third_party/gplugins`](third_party) pin needs the pinned
-commit on a branch of the [gplugins fork](https://github.com/mithro/gplugins) first, or CI's
-checkout fails.
+commit on the `main` branch of the [gplugins fork](https://github.com/mithro/gplugins) first.
+[`tests/test_submodule.py`](tests/test_submodule.py) fails in CI otherwise.
 
 The generator registry is [`src/gf180tcad/generators.json`](src/gf180tcad/generators.json)
 (described in [docs/reproduce/index.md](docs/reproduce/index.md)). A module that a [TCAD](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-TCAD)

@@ -152,7 +152,7 @@ Needs [uv](https://docs.astral.sh/uv/); the checks are [pytest](https://docs.pyt
 [`tools/sandbox-run`](tools/sandbox-run) and are excluded here.
 
 ```
-uv sync --locked
+uv sync --locked --group docs
 make lint
 uv run pytest -m "not sandbox"
 ```
