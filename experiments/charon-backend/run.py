@@ -79,6 +79,12 @@ STEPS = {
         "env CX_REL=1e-10 CX_ABS=1e-12 CX_LIN=klu2 CX_TAU=1e-15 CX_VGMAX= CX_SUB=1 "
         "CX_PRED=secant python3 b2.py nfet_05v0 calibrated ni; echo $? > b2_exit.txt"
     ),
+    # Step study (B7): a ten times tighter WRMS tolerance than the reference, where the default
+    # lifetime converges. It may fail; the step records where and exits 0.
+    "study-nfet-default-1e-11": (
+        "env CX_REL=1e-11 CX_ABS=1e-13 CX_LIN=klu2 CX_TAU= CX_VGMAX=0.35 CX_SUB= "
+        "CX_PRED= python3 b2.py nfet_05v0 calibrated ni; echo $? > b2_exit.txt"
+    ),
     "b4-parallel-plate": "python3 b4pp.py",
     "b4-metal-gate": "python3 b4mg.py",
 }
