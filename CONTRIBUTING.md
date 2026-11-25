@@ -28,6 +28,11 @@ A [Trilinos](https://github.com/trilinos/Trilinos) patch has
 - Merge with [`gh pr merge --merge`](https://cli.github.com/manual/gh_pr_merge) (a real merge
   commit). No squash or rebase merges.
   (Rebasing a branch while you are still working on it is fine.)
+- Never rebase a branch that holds a commit a results record pins as its `commit`, such as the
+  records of [`experiments/edge-sensitivity/`](experiments/edge-sensitivity/README.md). Merge
+  `main` into it instead. A rebase drops the pinned commit, and
+  [`tests/test_edge_sensitivity.py`](tests/test_edge_sensitivity.py) checks that it is on the
+  history.
 - `main` is the latest stable state.
 
 ## Review process
