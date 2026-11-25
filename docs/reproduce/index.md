@@ -1051,6 +1051,47 @@ No data changed. The evidence, all at commit
 - The other folders were not rerun. Their writers' hashes moved only through the process files
   and the code above, which compute the same at δ = 0.
 
+**The poly length bias fit, dormant ([issue #189](https://github.com/mithro/gf180-tcad/issues/189)).**
+The change adds the code that applies a fitted poly length bias δ to the calibrated 2D jobs.
+It applies δ only once a fit file is committed, which this change does not do. The modules are
+{py:mod}`gf180tcad.tcad.edgefit` and {py:mod}`gf180tcad.calibrate.edge`.
+
+The validation and the mesh artefact jobs check a cell's fit against the committed one. The
+change also rewords the `sd_peak_cm3` note of the pfet process file
+([issue #203](https://github.com/mithro/gf180-tcad/issues/203)). Every writer's hash moved.
+
+The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
+`generator_sha256`. The hashes before and after are in {numref}`tab-restamp-edge-fit`.
+
+~~~{table} The generator hashes before and after the restamp for the dormant poly length bias fit.
+:name: tab-restamp-edge-fit
+
+| results folder | writer | before | after |
+|---|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `1d21285446f13de91f515d663bebe2169ebbef18501482ac443eab5414e6c4f8` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `1d21285446f13de91f515d663bebe2169ebbef18501482ac443eab5414e6c4f8` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `1d21285446f13de91f515d663bebe2169ebbef18501482ac443eab5414e6c4f8` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` | `c9f992d1e1ebc20e3fb5d3b40e007a80635879abb70565f0ed65d6e76080cfeb` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` | `c9f992d1e1ebc20e3fb5d3b40e007a80635879abb70565f0ed65d6e76080cfeb` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `748acf7b51df9ec48f9956660d8a7aa1c2c10f196c6349d68900167265279391` | `6f83f87d2914f3069bf24252e37340f502e85a86f5be7b94c89206bb1f59bb73` |
+| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `74ac12581ee2c0e69051887b70c88762ac9e2c7c293945f30bf87a09f2f0637e` | `6bb781301dc6a996c011307f2e1f75de1157610bbde1d2324f90a820ed1132f3` |
+~~~
+
+No data changed. The evidence ran at commit
+[0abab9f](https://github.com/mithro/gf180-tcad/commit/0abab9f6f48b2bf678c7b5bb4d108289af59fbec), the first
+restamp. After it, two docstrings changed in {py:mod}`gf180tcad.tcad.__main__` and
+{py:mod}`gf180tcad.calibrate.edge`, which moved the hashes once more. No other code changed.
+
+- The jobs of the `crosscheck-tcad` subset were rerun on the project's host. Their 26 files are
+  byte-identical to the committed ones, including {repo}`results/tcad/moscap1d/provenance.json`
+  and {repo}`results/tcad/meshes/stable/provenance.json`.
+- The 1D sandbox tests passed, 12 of them.
+- {test}`tests/test_edge_sensitivity.py::test_rerun_reproduces_the_record` reran the `base` and
+  `bias30` variants of both edge-sensitivity records. Every Cgg and node count is the one recorded.
+  The records are pinned to the commit they ran at, so they were not rerun in full.
+- The other folders were not rerun. No fit file is committed, so every 2D job computes what it
+  computed before.
+
 (cross-host-determinism)=
 
 ## The same bytes on another computer
