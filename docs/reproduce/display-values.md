@@ -58,15 +58,23 @@ Wikipedia's table gives the hole mass as
 zero and room temperature ({ref}`Wikipedia <lit-wikipedia-effective-mass>`). The file takes
 Wikipedia's 300 K masses, which its table cites to Green (1990) among others.
 
-N_c, with m* the electron mass each number goes with:
+{numref}`tab-display-silicon-nc-cm3` gives N_c, with m* the electron mass each number goes with.
+
+~~~{table} The sources of the N_c of silicon, with the value each gives and whether the display file takes it.
+:name: tab-display-silicon-nc-cm3
 
 ```{include} /_generated/reproduce/display-sources-silicon-nc-cm3.inc.md
 ```
+~~~
 
-N_v, with m* the hole mass:
+{numref}`tab-display-silicon-nv-cm3` gives N_v, with m* the hole mass.
+
+~~~{table} The sources of the N_v of silicon, with the value each gives and whether the display file takes it.
+:name: tab-display-silicon-nv-cm3
 
 ```{include} /_generated/reproduce/display-sources-silicon-nv-cm3.inc.md
 ```
+~~~
 
 ```{figure} /_generated/reproduce/display-dos-masses-light.svg
 :name: display-dos-masses
@@ -112,10 +120,15 @@ at 302 K, where the formula gives 1.1240 eV (this repo's arithmetic). The two pa
 give 1.1 eV and 1.2 eV, to one decimal.
 
 The file takes Ioffe's 1.12 eV. {numref}`display-silicon-gap` draws the formula and the three
-numbers that state a temperature. T is the temperature a source gives with its number:
+numbers that state a temperature. Its sources are in
+{numref}`tab-display-silicon-band-gap-ev`, where T is the temperature a source gives with its number.
+
+~~~{table} The sources of the silicon band gap, with the value each gives and whether the display file takes it.
+:name: tab-display-silicon-band-gap-ev
 
 ```{include} /_generated/reproduce/display-sources-silicon-band-gap-ev.inc.md
 ```
+~~~
 
 ```{figure} /_generated/reproduce/display-silicon-gap-light.svg
 :name: display-silicon-gap
@@ -155,20 +168,32 @@ The file takes the three numbers of Alkauskas et al. A band diagram's oxide gap 
 gap plus both offsets. That is 1.12 + 3.4 + 4.4 = 8.92 eV (this repo's arithmetic). {numref}`display-oxide-sources` draws each
 source's number.
 
-The SiO₂ band gap:
+{numref}`tab-display-sio2-band-gap-ev` gives the SiO₂ band gap.
+
+~~~{table} The sources of the SiO₂ band gap, with the value each gives and whether the display file takes it.
+:name: tab-display-sio2-band-gap-ev
 
 ```{include} /_generated/reproduce/display-sources-sio2-band-gap-ev.inc.md
 ```
+~~~
 
-The conduction band offset:
+{numref}`tab-display-sio2-conduction-offset-ev` gives the conduction band offset.
+
+~~~{table} The sources of the Si/SiO₂ conduction band offset, with the value each gives and whether the display file takes it.
+:name: tab-display-sio2-conduction-offset-ev
 
 ```{include} /_generated/reproduce/display-sources-sio2-conduction-offset-ev.inc.md
 ```
+~~~
 
-The valence band offset:
+{numref}`tab-display-sio2-valence-offset-ev` gives the valence band offset.
+
+~~~{table} The sources of the Si/SiO₂ valence band offset, with the value each gives and whether the display file takes it.
+:name: tab-display-sio2-valence-offset-ev
 
 ```{include} /_generated/reproduce/display-sources-sio2-valence-offset-ev.inc.md
 ```
+~~~
 
 ```{figure} /_generated/reproduce/display-oxide-sources-light.svg
 :name: display-oxide-sources
