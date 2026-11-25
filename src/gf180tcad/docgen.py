@@ -277,7 +277,7 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
             ["Metric", "Window min", "Window max", "Set by"],
             windows,
             name=t_windows,
-            caption="The Same process window of each metric and what sets it.",
+            caption="The window of each metric and what sets it.",
         ),
     ]
 
@@ -1370,7 +1370,7 @@ def corner_tables(name: str, summary: dict, page: str = "tcad") -> list[str]:
     )
     lines = [
         (
-            f"{numref(t_bounds)}, from {src}, gives each fitted number at the "
+            f"{numref(t_bounds)}, from {src}, gives each {{term}}`{name}` fitted number at the "
             "{term}`typical corner` (the committed calibration) and the lowest and highest value "
             "over the five {term}`corners <corner>`. The spread is the highest minus the lowest. "
             "A lowest or highest value on a limit of its fit is reported as that limit "

@@ -73,7 +73,8 @@ PRs but is not a merge blocker.
   - After each HTML build, [`docs/_ext/html_checks.py`](docs/_ext/html_checks.py) reads the
     whole site. A numbered figure or table that no link cites is a warning. So is a figure
     or table with no caption, an image without alt text, or an error box. `sphinx-build -W`
-    then fails, in CI, on Read the Docs and in the pre-push hook.
+    then fails, in CI, on [Read the Docs](https://about.readthedocs.com/) and in the pre-push
+    hook.
   - A section whose noun is not a physical thing carries
     `<!-- figure-ok: a reason of six words or more -->`. The check lists each one, and the
     baseline counts them, so each one shows in the PR's diff for the reviewer.
