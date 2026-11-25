@@ -84,10 +84,10 @@ lists them. Each box names the results folders its target writes. The last box i
 {term}`manifest` check.
 ```
 
-{numref}`tab-reproduce-targets` lists the same targets, what each runs and what it writes.
+{numref}`tab-reproduce-target-steps` lists the same targets, what each runs and what it writes.
 
 ~~~{table} The targets of make reproduce, what each runs and the folders it writes.
-:name: tab-reproduce-targets
+:name: tab-reproduce-target-steps
 
 | target | runs | writes |
 |---|---|---|

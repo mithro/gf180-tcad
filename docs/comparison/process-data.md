@@ -470,14 +470,14 @@ the gate's end.
 ```
 
 ~~~{table} The start value and bounds of the 2D poly length bias.
-:name: tab-process-data-poly-bias
+:name: tab-process-data-poly-bias-bounds
 
 | Name | Unit | Start | Min | Max |
 |---|---|---|---|---|
 | `poly_bias_nm` | nm | 0 | 0 | 100 |
 ~~~
 
-{numref}`tab-process-data-poly-bias` gives the start and the bounds. The start, both bounds and
+{numref}`tab-process-data-poly-bias-bounds` gives the start and the bounds. The start, both bounds and
 their sources are project choices, the same for both devices. The start
 is the poly as drawn. Why the 2D cells need it is in {ref}`moscap2d-edge`.
 

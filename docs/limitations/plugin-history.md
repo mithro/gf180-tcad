@@ -202,10 +202,10 @@ at half mesh.
 ```
 
 
-{numref}`tab-plugin-history-pin` gives the depletion width of the PIN waveguide.
+{numref}`tab-plugin-history-pin-widths` gives the depletion width of the PIN waveguide.
 
 ~~~{table} The depletion width of the PIN waveguide at each bias, in µm.
-:name: tab-plugin-history-pin
+:name: tab-plugin-history-pin-widths
 
 | Bias (V) | v0.8.0 | v0.8.0 × 0.5 |
 |---|---|---|
