@@ -410,8 +410,8 @@ def _spec_status(root, spec: dict) -> list[str]:
         lines += [
             "",
             (
-                f"{numref(t_group)} gives {{term}}`{device}` at geometry "
-                f"{{doc}}`{gid} <{device}/{gid}>`."
+                f"{numref(t_group)} gives the {{term}}`TT` value of each metric of {{term}}`{device}` "
+                f"at geometry {{doc}}`{gid} <{device}/{gid}>` against its spec window."
             ),
             "",
             *_table(
@@ -471,7 +471,10 @@ def _engine_table(root) -> list[str]:
         t_engine = table_label("summary", "engine-diff", device.name)
         lines += [
             "",
-            f"{numref(t_engine)} gives {{term}}`{device.name}`.",
+            (
+                f"{numref(t_engine)} gives the engine difference of each sweep at each "
+                f"{{term}}`{device.name}` geometry."
+            ),
             "",
             *_table(
                 ["Geometry", *(f"{{term}}`{s}` (%)" for s in DIFF_SWEEPS)],
