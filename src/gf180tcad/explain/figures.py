@@ -2072,10 +2072,22 @@ def corner_limits(palette: str) -> bytes:
 # The project's flow: (column heading, the three boxes top to bottom) of the reference and of
 # what is tested, then the comparison box both feed.
 FLOW = (
-    ("The reference", ("The PDK's SPICE models\n(from the foundry)", "Circuit simulator\n(ngspice, Xyce)",
-                       "Reference curves")),
-    ("What is tested", ("Public process data\nand the PDK's layouts", "TCAD device physics\n(DEVSIM)",
-                        "TCAD curves")),
+    (
+        "The reference",
+        (
+            "The PDK's SPICE models\n(from the foundry)",
+            "Circuit simulator\n(ngspice, Xyce)",
+            "Reference curves",
+        ),
+    ),
+    (
+        "What is tested",
+        (
+            "Public process data\nand the PDK's layouts",
+            "TCAD device physics\n(DEVSIM)",
+            "TCAD curves",
+        ),
+    ),
 )
 FLOW_COMPARE = "Compare each pair of curves:\nAgree, Same process or Disagree"
 
@@ -2112,7 +2124,9 @@ def project_flow_figure(palette: str) -> Figure:
 
     rows = STYLE["flow_rows"]
     compare_y = rows[-1]
-    for x, (heading, texts), fill, edge in zip(STYLE["flow_columns"], FLOW, fills, edges, strict=True):
+    for x, (heading, texts), fill, edge in zip(
+        STYLE["flow_columns"], FLOW, fills, edges, strict=True
+    ):
         ax.text(x, STYLE["flow_heading_y"], heading, ha="center", va="center", weight="bold",
                 color=pal["text"])  # fmt: skip
         for i, (y, text) in enumerate(zip(rows, texts, strict=False)):

@@ -110,7 +110,7 @@ The dash-dot lines are the 2D slice before (orange) and after (blue).
   models can be rebuilt from physics.
 - **You work on open-source TCAD:** {doc}`reproduce/index` rebuilds every result, and
   {doc}`limitations/index` lists what is missing.
-- **You are new to transistors:** {doc}`explained/index` explains each part with this
+- **You are learning how transistors work:** {doc}`explained/index` explains each part with this
   process's numbers.
 
 ## The documentation

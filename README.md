@@ -85,7 +85,7 @@ The dash-dot lines are the 2D slice before (orange) and after (blue).*
   models can be rebuilt from physics.
 - **You work on open-source TCAD:** [Reproduce](https://gf180-tcad.readthedocs.io/en/latest/reproduce/index.html) rebuilds every result, and
   [Limitations and status](https://gf180-tcad.readthedocs.io/en/latest/limitations/index.html) lists what is missing.
-- **You are new to transistors:** [How it works](https://gf180-tcad.readthedocs.io/en/latest/explained/index.html) explains each part with this
+- **You are learning how transistors work:** [How it works](https://gf180-tcad.readthedocs.io/en/latest/explained/index.html) explains each part with this
   process's numbers.
 
 ## The documentation
