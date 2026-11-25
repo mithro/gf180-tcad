@@ -84,3 +84,51 @@ def test_hard_range_reached_biases():
             assert v["last_converged_v"] < v["end_v"] and v["failed_at"], name
         else:
             assert v["last_converged_v"] is None, name
+
+
+def _shown(text: str, value: float) -> bool:
+    """Whether ``text`` (a number as the page prints it) is ``value`` at the digits shown."""
+    mantissa = text.split("e")[0].replace(".", "").lstrip("0")
+    return float(text) == float(f"{value:.{max(len(mantissa), 1) - 1}e}")
+
+
+def test_page_numbers_are_the_records():
+    """The Charon page and the status pages print their numbers by substitution
+    (``lim_charon_*``); each is recomputed here from the records, and no hand-typed copy of the
+    headline numbers is left on the pages."""
+    from gf180tcad import limitations_figures as lf
+
+    subs = {k: v for k, v in lf.substitutions().items() if k.startswith("lim_charon_")}
+    runs = _record("cv")["runs"]
+    for dev, name in (("nfet", "cv-nfet-tau15-1e-10"), ("pfet", "cv-pfet-tau15-1e-10")):
+        c, dv = np.asarray(runs[name]["c_ff_um2"]), np.asarray(runs[name]["c_devsim"])
+        assert _shown(subs[f"lim_charon_{dev}_devsim"], np.max(np.abs(c / dv - 1))), dev
+    assert subs["lim_charon_points"] == str(len(runs["cv-nfet-tau15-1e-10"]["vg"]))
+    ref = _record("hard-range")["variants"]["ref_1e-10"]
+    assert float(subs["lim_charon_fail_v"]) == float(ref["failed_at"][0])
+    assert _shown(subs["lim_charon_ref_fnorm"], ref["failed_fnorm"])
+    assert float(subs["lim_charon_ref_wrms"]) > 1
+    b6 = max(runs[n][f"{k}_vs_gate_{s}"] for n in ("cv-nfet-tau15-1e-10", "cv-pfet-tau15-1e-10")
+             for k in ("poly", "body") for s in "AB")  # fmt: skip
+    assert _shown(subs["lim_charon_b6"], b6)
+    tri3 = _record("probes")["tri3"]
+    assert _shown(subs["lim_charon_tri3_strip"], tri3["strip_max_rel_c_tri3_vs_quad4"])
+    assert _shown(subs["lim_charon_tri3_2d"], abs(tri3["rel_vs_devsim_1d"]))
+    pages = {p: (REPO_ROOT / "docs" / p).read_text("utf-8") for p in
+             ("limitations/charon.md", "limitations/index.md", "limitations/status.md",
+              "roadmap.md")}  # fmt: skip
+    for key in subs:
+        assert f"{{{{ {key} }}}}" in pages["limitations/charon.md"], key
+    for page in ("limitations/index.md", "limitations/status.md", "roadmap.md"):
+        for dev in ("nfet", "pfet"):
+            assert f"{{{{ lim_charon_{dev}_devsim }}}}" in pages[page], (page, dev)
+    for old in ("3.0e-5", "5.4e-5", "1.1e-9", "8.2e-13", "2.6e-4", "2.1e-9", "1.3e-9"):
+        assert old not in pages["limitations/charon.md"], old
+
+
+def test_step_studies_are_recorded():
+    """The plan's step and tolerance studies ran as committed steps and recorded their outcome."""
+    studies = _record("hard-range")["step_studies"]
+    assert set(studies) == {"study-nfet-tau15-secant-50mV", "study-nfet-default-1e-11"}
+    for name, s in studies.items():
+        assert (s["b2_exit"] == 0) == (s["failed"] is None), name
