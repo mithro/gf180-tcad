@@ -20,8 +20,11 @@ Parameter dictionary (all lengths in um, dopings in cm^-3):
   sti_depth             depth of that recess (0 for none)
   contacts              {"well": [x0, x1], "sub": [x0, x1]} on the silicon surface
   plates                list of {x0, x1, y0, y1, tie} conductors in the dielectric,
-                        y0 < y1 <= 0, tie is "well" or "sub"
+                        y0 < y1 <= 0, tie is "well", "sub" or "gate" (held at
+                        the "gate_v" parameter while the well is swept)
   qf                    fixed oxide charge, cm^-2
+  cyl                   true for cylindrical coordinates about x = 0 (a round corner of
+                        radius equal to the well edge position)
   mesh                  {fine, surf, coarse} spacings
 """
 
@@ -119,6 +122,23 @@ def build(p, device="hv"):
         interfaces.append(f"ox_{r}")
     ds.finalize_mesh(mesh=mesh)
     ds.create_device(mesh=mesh, device=device)
+    if p.get("cyl"):
+        # x becomes the radius about the axis x = 0: the cross-section of a round corner
+        ds.set_parameter(name="raxis_variable", value="x")
+        ds.set_parameter(name="raxis_zero", value=0.0)
+        for r in ds.get_region_list(device=device):
+            ds.cylindrical_edge_couple(device=device, region=r)
+            ds.cylindrical_node_volume(device=device, region=r)
+            ds.cylindrical_surface_area(device=device, region=r)
+        for name, value in (
+            ("node_volume_model", "CylindricalNodeVolume"),
+            ("edge_couple_model", "CylindricalEdgeCouple"),
+            ("element_edge_couple_model", "ElementCylindricalEdgeCouple"),
+            ("element_node0_volume_model", "ElementCylindricalNodeVolume@en0"),
+            ("element_node1_volume_model", "ElementCylindricalNodeVolume@en1"),
+            ("surface_area_model", "CylindricalSurfaceArea"),
+        ):
+            ds.set_parameter(name=name, value=value)
     have = set(ds.get_contact_list(device=device))
     missing = (set(si_contacts) | set(ox_contacts)) - have
     if missing:

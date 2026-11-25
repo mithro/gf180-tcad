@@ -59,8 +59,12 @@ def main(params_path, result_path):
         rec["eox_max"].append(eox)
         print(f"POINT v={v:.2f} I_n={i_n:.4f} Emax={emax:.3e} Eox={eox:.3e} I={cur:.3e} "
               f"t={time.time() - t0:.0f}s", flush=True)  # fmt: skip
-        return i_n > p.get("stop_at", 1.3)
+        return i_n > p.get("stop_at", 1.05)
 
+    gates = [f"plate{k}" for k, pl in enumerate(p.get("plates", [])) if pl["tie"] == "gate"]
+    if gates and p.get("gate_v", 0.0):
+        got = dd.ramp(dev, gates, p["gate_v"], 2.0, lambda v: False)
+        print(f"GATE at {got:.2f} V", flush=True)
     point(0.0)
     reached = dd.ramp(dev, tied, p["vmax"], p["vstep"], point)
     out = {

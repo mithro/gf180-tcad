@@ -110,8 +110,8 @@ def solve(rel=1e-8, abs_=1e10, iters=30):
 
 
 def ramp(device, contacts, target, step, on_point, min_step=None):
-    """Raise the bias of every contact in `contacts` together from its present value to
-    `target`, halving the step when a solve fails.
+    """Move the bias of every contact in `contacts` together from its present value to
+    `target` (up or down), halving the step when a solve fails.
 
     on_point(v) is called after each converged point; it may return True to stop the ramp.
     Returns the last voltage reached.
@@ -120,13 +120,14 @@ def ramp(device, contacts, target, step, on_point, min_step=None):
     v = ds.get_parameter(device=device, name=names[0])
     min_step = min_step if min_step is not None else abs(step) / 64
     dv = abs(step)
+    sign = 1.0 if target >= v else -1.0
 
     def put(val):
         for n in names:
             ds.set_parameter(device=device, name=n, value=val)
 
-    while target - v > 1e-9:
-        nxt = v + min(dv, target - v)
+    while sign * (target - v) > 1e-9:
+        nxt = v + sign * min(dv, abs(target - v))
         put(nxt)
         try:
             solve()
