@@ -86,6 +86,7 @@ from gf180tcad.tcad import (
     calibration,
     calibration_file,
     check_same_image,
+    edgefit,
     gplugins_commit,
     image_ref,
     meshconv,
@@ -170,6 +171,21 @@ def load_params(device: str, params: str) -> tuple[process.ProcessDescription, s
     return proc.with_values(calibration.read(path, device)), calibration.sha256_file(path)
 
 
+def load_params_2d(
+    device: str, params: str
+) -> tuple[process.ProcessDescription, str | None, dict | None]:
+    """:func:`load_params` for a 2D job: ``calibrated`` also applies the frozen poly length bias
+    of :mod:`gf180tcad.tcad.edgefit` when one is committed (issue #189, plan Task E3).
+
+    Returns ``(proc, calibration_sha256, edge_fit)``; ``edge_fit`` is None for ``start`` and
+    while no fit is committed, and otherwise the record :func:`edgefit.apply` gives."""
+    proc, calibration_sha256 = load_params(device, params)
+    if params != "calibrated":
+        return proc, calibration_sha256, None
+    proc, edge_fit = edgefit.apply(proc)
+    return proc, calibration_sha256, edge_fit
+
+
 def job_vg(proc: process.ProcessDescription) -> tuple[float, ...]:
     """The gate biases (V) of the SPICE ``cv`` sweep in its order: polarity times ``CV_VG``.
 
@@ -204,7 +220,7 @@ def run_job_2d(device: str, params: str, gid: str, out: Path, method: str = "bot
     """
     if method not in METHODS:
         raise ValueError(f"method must be one of {METHODS}, got {method!r}")
-    proc, calibration_sha256 = load_params(device, params)
+    proc, calibration_sha256, edge_fit = load_params_2d(device, params)
     geometry = geometry_of(device, gid)
     mesh = meshconv.selected_spec(device, 2)
     vg = job_vg(proc)
@@ -244,7 +260,7 @@ def run_job_2d(device: str, params: str, gid: str, out: Path, method: str = "bot
     qs = cvs["qs"]
     moscap2d.write(
         qs, cvs.get("ac"), out, proc=proc, params=params, mesh_source=mesh_source(device, 2),
-        calibration_sha256=calibration_sha256,
+        calibration_sha256=calibration_sha256, edge_fit=edge_fit,
         resumed={m: moscap2d.resume_count(out / f"state_{m}") for m in sweeps_done},
     )  # fmt: skip
     print(f"{tag}: {len(qs.vg)} points", flush=True)
