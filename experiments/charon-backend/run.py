@@ -27,8 +27,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 
-# The checkout paths a run reads; any uncommitted change under them is refused.
-PINNED_PATHS = ("src", "experiments/charon-backend", "docker", "results/tcad",
+# The checkout paths a run reads; any uncommitted change under them is refused. The figure
+# module of the write-up is excluded: no step imports it.
+PINNED_PATHS = ("src", ":(exclude)src/gf180tcad/limitations_figures.py",
+                "experiments/charon-backend", "docker", "results/tcad",
                 "third_party/gplugins", "tools/sandbox-run")  # fmt: skip
 
 # step -> shell command run in the step directory inside the sandbox. The C-V runs (cv-*) are
