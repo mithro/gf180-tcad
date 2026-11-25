@@ -371,6 +371,7 @@ def _allowed_names() -> set[str]:
     gids = {geometry_id(g) for d in DEVICES.values() for g in d.geometries}
     names = set(DEVICES) | gids | set(lf.PLUGIN_FILES) | set(lf.LATEST_FILES) | set(lf.FIGURES)
     names |= set(lf.CHARON_REF.values()) | set(lf.CHARON_CHECKS)  # record keys of cv.json
+    names |= {lf.CHARON_REF_VARIANT, lf.CHARON_TIGHT_STUDY, *lf.CHARON_LOOSE_PAIR}  # record keys
     return names | {"1D", "2D", "BSIM4", "utf-8"}
 
 
@@ -1048,7 +1049,8 @@ def test_page_numbers_are_the_committed_files():
     assert subs["lim_ccox_acc"] == f"{ratio[np.argmin(qs['vg'])]:.3f}" == "1.068"
     assert subs["lim_ccox_inv"] == f"{ratio[np.argmax(qs['vg'])]:.3f}" == "1.087"
     page = (REPO_ROOT / "docs/limitations/moscap2d.md").read_text("utf-8")
-    for key in subs:
+    # the Charon page's numbers: tests/test_charon_experiments.py::test_page_numbers_are_the_records
+    for key in (k for k in subs if not k.startswith("lim_charon_")):
         assert f"{{{{ {key} }}}}" in page, key
     for old in ("2.7e-8", "1.071", "1.090"):
         assert old not in page, old

@@ -1448,6 +1448,12 @@ CHARON_TIGHT_STUDY = "study-nfet-default-1e-11"
 CHARON_LOOSE_PAIR = ("cv-nfet-default-1e-8", "cv-nfet-default-1e-10")
 
 
+def _sci_full(v: float) -> str:
+    """``v`` with every digit of its shortest repr, as ``8.265841554853887e9``."""
+    mantissa, exponent = np.format_float_scientific(v, unique=True).split("e")
+    return f"{mantissa}e{int(exponent)}"
+
+
 def _charon_rel(runs: dict, name: str, ref: str) -> float:
     """The largest ``abs(C / C_ref - 1)`` of run ``name`` against run ``ref`` on their common
     biases."""
@@ -1503,7 +1509,7 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
     return {
         "lim_charon_nodes": f"{cv[n_ref]['boundary_nodes'][-1] + 1}",
         "lim_charon_points": f"{cv[n_ref]['n']}",
-        "lim_charon_ni": f"{ni:.15e}".replace("e+0", "e"),  # all the digits the deck writes
+        "lim_charon_ni": _sci_full(ni),
         "lim_charon_ref_tau": cv[n_ref]["settings"]["CX_TAU"],
         "lim_charon_nfet_devsim": _sci(cv[n_ref]["max_abs_rel_vs_devsim"]),
         "lim_charon_pfet_devsim": _sci(cv[p_ref]["max_abs_rel_vs_devsim"]),
@@ -1550,8 +1556,8 @@ def charon_structures(roots: Roots = DEFAULT_ROOTS) -> dict:
     blocks = {k: np.asarray(v, int) for k, v in tri3["mesh2d_triangles"].items()}
     mesh = {}
     for name, tris in blocks.items():
-        edges = sorted({tuple(sorted((int(t[i]), int(t[(i + 1) % 3])))) for t in tris
-                        for i in range(3)})  # fmt: skip
+        edges = sorted({tuple(sorted((int(a), int(b)))) for t in tris
+                        for a, b in zip(t, np.roll(t, -1), strict=True)})  # fmt: skip
         mesh[name] = _edges((xy[a], xy[b]) for a, b in edges)
     tris = np.concatenate(list(blocks.values()))  # Exodus element ids run through the blocks
     sides = {}
@@ -1559,7 +1565,8 @@ def charon_structures(roots: Roots = DEFAULT_ROOTS) -> dict:
         segs = []
         for eid, side in zip(ss["elements"], ss["sides"], strict=True):
             t = tris[eid - 1]
-            segs.append((xy[t[side - 1]], xy[t[side % 3]]))  # TRI3 side k joins nodes k, k + 1
+            ring = np.roll(t, -(side - 1))  # TRI3 side k joins nodes k and k + 1 (1-based)
+            segs.append((xy[ring[0]], xy[ring[1]]))
         sides[name] = _edges(segs)
     mg = hb["metal_gate"]
     return {
@@ -1570,6 +1577,10 @@ def charon_structures(roots: Roots = DEFAULT_ROOTS) -> dict:
         "mesh": mesh,
         "sides": sides,
     }
+
+
+#: The panels of :func:`charon_structures_figure`, top to bottom.
+STRUCTURE_PANELS = ("parallel plate", "metal-gate stack", "2D mesh")
 
 
 def charon_structures_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
@@ -1590,7 +1601,7 @@ def charon_structures_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
     with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
-        top, mid, bottom = fig.subplots(3, 1)
+        top, mid, bottom = fig.subplots(len(STRUCTURE_PANELS), 1)
         x = k["plate_nm"]
         pairs(top, x, "highlight_oxide", "plate oxide nodes")
         for name, at in (("top", x[0]), ("bottom", x[-1])):

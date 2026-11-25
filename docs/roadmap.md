@@ -88,8 +88,8 @@ Its curves at the minimum gate length are in {numref}`fig-roadmap-cv`, beside SP
   ({repo}`Phase 4 plan <docs/superpowers/plans/2026-10-27-phase4-charon-backend.md>`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)). No Charon job has run.
   The charon-libs image, built from {repo}`docker/charon-libs/`, and the `charon` image, built
-  from {repo}`docker/charon/`, are pinned ({ref}`charon-images`). Experiments B1 to B7 fixed the
-  backend's method; their 1D {term}`C–V` matches DEVSIM's within {{ lim_charon_nfet_devsim }} (nfet) and
+  from {repo}`docker/charon/`, are pinned ({ref}`charon-images`). The 1D {term}`C–V`
+  of experiments B1 to B7 matches DEVSIM's within {{ lim_charon_nfet_devsim }} (nfet) and
   {{ lim_charon_pfet_devsim }} (pfet) ({doc}`/limitations/charon`).
   The Charon backend comes next.
 
