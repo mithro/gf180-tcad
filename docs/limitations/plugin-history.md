@@ -453,9 +453,9 @@ latest stack its depletion widths are **bit-identical** to v0.8.0's
 ([`test_pin_depletion_width_match_v080`](https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/test_devsim.py#L134)):
 
 The v0.8.0 stack has devsim 2.6.3 and Python 3.11; the latest has devsim 2.11.1 and Python 3.13.
-Each difference between them is 0, as {numref}`tab-plugin-history-stacks` shows.
+Each value is the same on both stacks, as {numref}`tab-plugin-history-stacks` shows.
 
-~~~{table} The difference of each PIN waveguide quantity between the two stacks.
+~~~{table} The value of each PIN waveguide quantity, the same on both stacks.
 :name: tab-plugin-history-stacks
 
 | Quantity | v0.8.0 and latest |

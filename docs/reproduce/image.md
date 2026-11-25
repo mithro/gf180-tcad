@@ -689,7 +689,7 @@ The five other patches change no computation:
 ### Licence
 
 Charon is licensed GPL-3.0-or-later. Each patch keeps the licence of the files it changes, as
-the table above lists; {repo}`docker/charon-libs/README.md` names them. Every other file of the
+{numref}`tab-charon-libs-patches` lists; {repo}`docker/charon-libs/README.md` names them. Every other file of the
 project stays Apache-2.0.
 
 ### Build steps
@@ -879,7 +879,7 @@ The image's ENV keeps the dev image's settings, `OMP_NUM_THREADS=1` among them. 
 dev image's probe, both pinned image references, the charon-libs keys and the versions of
 {numref}`tab-charon-image-versions`.
 
-~~~{table} The Python packages the charon image adds, and the C libraries inside the netCDF4 wheel. Values from {repo}`docker/charon/versions.json`.
+~~~{table} The Python packages the charon image adds, and the C libraries inside the netCDF4 wheel. The values come from {repo}`docker/charon/versions.json`.
 :name: tab-charon-image-versions
 
 | Component | Version |
