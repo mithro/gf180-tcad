@@ -59,10 +59,18 @@ def cases(names, processes):
         for tag, s in variants:
             for pname, proc in processes.items():
                 a_like = proc["pwell"] == "everywhere" and s["nat_gap"] is None
-                for shape, corner in (("edge", None), ("corner", max(s["corner"], MIN_CORNER))):
+                shapes = [("edge", None)]
+                if not a_like:  # next to an abutting P-well the corner radius hardly matters
+                    shapes.append(("corner", max(s["corner"], MIN_CORNER)))
+                for shape, corner in shapes:
                     p = hvsite.section(s, proc, corner=corner)
                     p["vstep"] = 1.5 if a_like else 3.0
                     p["vmax"] = 60.0 if a_like else 150.0
+                    p["depth"] = 14.0
+                    # mesh spacings: the 0.1 um mesh gives a bare edge within 0.5 % of the 0.05 um one
+                    # (73.84 V against 73.51 V), far inside the spread of the doping family
+                    p["mesh"] = ({"fine": 0.07, "surf": 0.03, "coarse": 0.6} if a_like
+                                 else {"fine": 0.1, "surf": 0.04, "coarse": 0.6})
                     if tag == "@gw":  # the gate pad connected to the well pad
                         for pl in p["plates"]:
                             pl["tie"] = "well"
