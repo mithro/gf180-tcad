@@ -203,10 +203,12 @@ STYLE = {
     "flow_columns": (0.25, 0.75),
     "flow_heading_y": 0.95,
     "flow_rows": (0.80, 0.565, 0.33, 0.095),
-    "flow_box": (0.46, 0.15),
+    "flow_box": (0.40, 0.15),
     "flow_compare_width": 0.62,
     "flow_round": 0.02,
     "flow_arrow_gap": 0.01,
+    # The fit arrow's label sits on a background patch this many points wider than its text.
+    "flow_label_pad": 2.0,
 }
 
 #: Unit conversions of the junction panels (cm to µm, V/cm to kV/cm), the SPICE sweeps (A to
@@ -2090,13 +2092,16 @@ FLOW = (
     ),
 )
 FLOW_COMPARE = "Compare each pair of curves:\nAgree, Same process or Disagree"
+# The dashed arrow from the reference curves into the TCAD: its fitted numbers come from them.
+FLOW_FIT = "fit"
 
 
-def project_flow_figure(palette: str) -> Figure:
-    """The project's flow (:data:`FLOW`): the PDK's SPICE models through a circuit simulator
-    give the reference curves; public process data and the PDK's layouts through the TCAD give
-    the tested curves; both feed one comparison. The reference column is grey, the tested one in
-    the highlight colour."""
+def project_flow_figure(palette: str):
+    """The project's flow (``FLOW``): the PDK's SPICE models through a circuit simulator give
+    the reference curves; public process data and the PDK's layouts through the TCAD give the
+    tested curves; both feed one comparison. A dashed arrow from the reference curves into the
+    TCAD marks the fit of its numbers. The reference column is grey, the tested one in the
+    highlight colour."""
     pal = PALETTES[palette]
     fig = Figure(figsize=STYLE["flow_size_in"])
     FigureCanvasAgg(fig)
@@ -2136,6 +2141,15 @@ def project_flow_figure(palette: str) -> Figure:
         arrow(x, rows[len(texts) - 1] - height / 2 - gap, x, compare_y + height / 2 + gap)
     box(sum(STYLE["flow_columns"]) / 2, compare_y, STYLE["flow_compare_width"], FLOW_COMPARE,
         pal["background"], pal["text"])  # fmt: skip
+    left, right = STYLE["flow_columns"]
+    x0, y0 = left + width / 2 + gap, rows[2]
+    x1, y1 = right - width / 2 - gap, rows[1]
+    ax.annotate("", xy=(x1, y1), xytext=(x0, y0),
+                arrowprops={"arrowstyle": "-|>", "color": pal["highlight"], "linestyle": "--",
+                            "lw": STYLE["edge_width"] * 2})  # fmt: skip
+    ax.text((x0 + x1) / 2, (y0 + y1) / 2, FLOW_FIT, ha="center", va="center", color=pal["text"],
+            bbox={"facecolor": pal["background"], "edgecolor": "none",
+                  "pad": STYLE["flow_label_pad"]})  # fmt: skip
     return fig
 
 
