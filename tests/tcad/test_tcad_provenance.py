@@ -41,7 +41,10 @@ MESHCUT_MAIN = "gf180tcad.meshcut.__main__"
 # The corner fits (Phase 2 plan, Task 16a): an entry point of the registry that writes the tree
 # tcad/corners once its results are committed.
 CORNERS_MAIN = "gf180tcad.calibrate.corners"
-ENTRY_POINTS = (*ROOTS, MESHCUT_MAIN, CORNERS_MAIN)
+# The frozen poly length bias fit (2D edge plan, Task E3): an entry point of the registry that
+# writes the tree tcad/edgefit once its fits are committed (E3b).
+EDGE_MAIN = "gf180tcad.calibrate.edge"
+ENTRY_POINTS = (*ROOTS, MESHCUT_MAIN, CORNERS_MAIN, EDGE_MAIN)
 # The entry point that writes each tree root, by its path relative to results/
 # (docs/reproduce/index.md, tcad-provenance).
 WRITERS = {
@@ -383,10 +386,12 @@ def test_meshcut_hash_is_its_own(monkeypatch):
     target = "src/gf180tcad/meshcut/job.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: True, CORNERS_MAIN: False,
+        EDGE_MAIN: False,
     }  # fmt: skip
     target = "src/gf180tcad/tcad/__main__.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: True, CALIBRATE_MAIN: False, MESHCUT_MAIN: True, CORNERS_MAIN: False,
+        EDGE_MAIN: False,
     }  # fmt: skip
 
 
@@ -427,11 +432,44 @@ def test_corners_hash_is_its_own(monkeypatch):
     target = "src/gf180tcad/calibrate/corners.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: False, CORNERS_MAIN: True,
+        EDGE_MAIN: False,
     }  # fmt: skip
     target = "src/gf180tcad/calibrate/cv.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: False, CALIBRATE_MAIN: True, MESHCUT_MAIN: False, CORNERS_MAIN: True,
+        EDGE_MAIN: True,
     }  # fmt: skip
+
+
+def test_edge_hash_is_its_own(monkeypatch):
+    """A change to the edge fit module moves only its own hash; a change to the edgefit reader
+    moves it and the TCAD and meshcut entry points', which apply the fit, never the calibration's
+    or the corners'."""
+    before = {e: tcad.generator_sha256(e) for e in ENTRY_POINTS}
+    real = tcad._sha256
+    target = ""
+
+    def changed(path):
+        return "0" * 64 if path.as_posix().endswith(target) else real(path)
+
+    monkeypatch.setattr(tcad, "_sha256", changed)
+    target = "src/gf180tcad/calibrate/edge.py"
+    assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
+        TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: False, CORNERS_MAIN: False,
+        EDGE_MAIN: True,
+    }  # fmt: skip
+    target = "src/gf180tcad/tcad/edgefit.py"
+    assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
+        TCAD_MAIN: True, CALIBRATE_MAIN: False, MESHCUT_MAIN: True, CORNERS_MAIN: False,
+        EDGE_MAIN: True,
+    }  # fmt: skip
+
+
+def test_no_other_entry_point_imports_the_edge_fit():
+    """Only its own closure holds the fit module, so no committed tree's hash moves with it."""
+    for entry in (*ROOTS, MESHCUT_MAIN, CORNERS_MAIN):
+        assert EDGE_MAIN not in tcad.TCAD_GENERATORS[entry]
+        assert EDGE_MAIN not in _ast_import_closure((entry,))
 
 
 CORNERS = TCAD_RESULTS / "corners"
@@ -535,7 +573,8 @@ def test_the_spec_file_is_hashed_by_the_calibration_entry_points_only(monkeypatc
     entry points copy into their results, is in their hashed files and in no other's, and a
     change to it moves only their hashes."""
     spec = "data/pdk_elec_spec.json"
-    readers = {CALIBRATE_MAIN, "gf180tcad.calibrate.corners"}
+    # the edge fit imports the calibration package, whose cv module reads the spec
+    readers = {CALIBRATE_MAIN, "gf180tcad.calibrate.corners", EDGE_MAIN}
     for entry in tcad.TCAD_GENERATORS:
         assert (spec in tcad.generator_files(entry)) == (entry in readers), entry
     before = {e: tcad.generator_sha256(e) for e in tcad.TCAD_GENERATORS}
