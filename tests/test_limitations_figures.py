@@ -54,6 +54,9 @@ FIGURES = [
     "pn-slab",
     "pin-depletion",
     "edge-sensitivity",
+    "charon-strip",
+    "charon-cv",
+    "charon-hard-range",
 ]
 
 _RENDER = textwrap.dedent(
@@ -803,6 +806,71 @@ def check_edge_sensitivity(fig):
     d.done()
 
 
+def _charon(name: str) -> dict:
+    return _json("charon-experiments", f"{name}.json")
+
+
+def check_charon_strip(fig):
+    run = _charon("cv")["runs"]["cv-nfet-tau15-1e-10"]
+    x = np.asarray(run["x_um"]) * 1e3
+    bn = run["boundary_nodes"]
+    lo, hi = lf.STYLE["strip_span_nm"]
+    d = Drawn(fig)
+    for i, layer in enumerate(run["layers"]):
+        xs = x[bn[i]: bn[i + 1] + 1] - x[bn[1]]
+        keep = xs[(xs >= lo) & (xs <= hi)]
+        ln = d(f"nodes {layer}")
+        assert _close(ln.get_xdata(), np.repeat(keep, 3)), layer
+        want_y = np.tile([0.0, run["strip_width_um"], np.nan], len(keep))
+        assert _close(ln.get_ydata(), want_y), layer
+        r = d(f"block {layer}")
+        assert _close([r.get_x(), r.get_x() + r.get_width()],
+                      [max(xs[0], lo), min(xs[-1], hi)]), layer  # fmt: skip
+        assert _close([r.get_y(), r.get_height()], [0, 1]), layer
+    d.done()
+
+
+def check_charon_cv(fig):
+    runs = _charon("cv")["runs"]
+    d = Drawn(fig)
+    refs = {"nfet_05v0": "cv-nfet-tau15-1e-10", "pfet_05v0": "cv-pfet-tau15-1e-10"}
+    for device, name in refs.items():
+        r = runs[name]
+        u = DEVICES[device].polarity * np.asarray(r["vg"])
+        c, dv = np.asarray(r["c_ff_um2"]), np.asarray(r["c_devsim"])
+        d.line(f"{device} DEVSIM", u, dv)
+        d.line(f"{device} Charon", u, c)
+        d.line(f"{device} against DEVSIM", u, np.abs(c / dv - 1))
+        assert np.all(np.abs(c / dv - 1) < meshconv.CRITERION), device
+    for name, (device, *_rest) in lf.CHARON_CHECKS.items():
+        r, ref = runs[name], runs[refs[device]]
+        vg = [v for v in r["vg"] if v in ref["vg"]]
+        rel = [abs(r["c_ff_um2"][r["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
+               for v in vg]  # fmt: skip
+        d.line(name, DEVICES[device].polarity * np.asarray(vg), rel)
+    d.hline("tolerance", meshconv.CRITERION)
+    d.done()
+
+
+def check_charon_hard_range(fig):
+    variants = _charon("hard-range")["variants"]
+    names = list(variants)
+    d = Drawn(fig)
+    groups = {
+        "reached the sweep end": [n for n in names if variants[n]["sweep_converged"]],
+        "stopped": [n for n in names if not variants[n]["sweep_converged"]
+                    and variants[n]["equilibrium_converged"]],
+        "equilibrium failed": [n for n in names if not variants[n]["equilibrium_converged"]],
+    }  # fmt: skip
+    for gid, picked in groups.items():
+        xs = [variants[n]["last_converged_v"] if variants[n]["equilibrium_converged"] else 0.0
+              for n in picked]  # fmt: skip
+        d.points(gid, xs, [names.index(n) for n in picked])
+    (ax,) = fig.axes
+    assert [t.get_text() for t in ax.get_yticklabels()] == names
+    d.done()
+
+
 CHECKS = {
     "engine-diff": (lf.engine_diff_figure, check_engine_diff),
     "engine-subthreshold": (lf.engine_subthreshold_figure, check_engine_subthreshold),
@@ -818,6 +886,9 @@ CHECKS = {
     "pn-slab": (lf.pn_slab_figure, check_pn_slab),
     "pin-depletion": (lf.pin_depletion_figure, check_pin_depletion),
     "edge-sensitivity": (lf.edge_sensitivity_figure, check_edge_sensitivity),
+    "charon-strip": (lf.charon_strip_figure, check_charon_strip),
+    "charon-cv": (lf.charon_cv_figure, check_charon_cv),
+    "charon-hard-range": (lf.charon_hard_range_figure, check_charon_hard_range),
 }
 
 

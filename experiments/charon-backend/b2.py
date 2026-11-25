@@ -72,8 +72,8 @@ solve("eq", "fixed at 0.0", "steady state", mesh="strip.exo")
 va0 = job.vg[0] - job.dv_fb - DV
 vb0 = job.vg[0] - job.dv_fb + DV
 # ramp 0 -> va0 (and vb0) with LOCA, then sweeps A and B with the grid step
-ramp_opts = [f"initial step size = {step!r}", f"minimum step size = {1e-4!r}",
-             f"maximum step size = {step!r}", "hit continuation bound = true",
+ramp_opts = [f"initial step size = {abs(step)!r}", f"minimum step size = {1e-4!r}",
+             f"maximum step size = {abs(step)!r}", "hit continuation bound = true",
              "predictor method is constant"]
 for side, v0 in (("A", va0), ("B", vb0)):
     solve(f"ramp{side}", f"swept from 0.0 to {v0!r}", "parameter sweep", mesh="eq.exo",
@@ -84,7 +84,7 @@ for side, v0 in (("A", va0), ("B", vb0)):
     res[f"ramp{side}_last_v"] = rows[-1][head.index("gate_Voltage")]
     v1 = v0 + (n - 1) * step
     sub = int(os.environ.get("CX_SUB") or 1)  # LOCA steps per grid step (every sub-th state is a grid point)
-    h = step / sub
+    h = abs(step) / sub  # LOCA takes the direction from the bounds
     sw_opts = [f"initial step size = {h!r}", f"minimum step size = {h!r}",
                f"maximum step size = {h!r}", f"maximum number of steps = {(n - 1) * sub + 5}",
                "hit continuation bound = false", "step size aggressiveness = 0.0",

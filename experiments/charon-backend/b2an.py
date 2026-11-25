@@ -90,6 +90,15 @@ for side, sgn in (("A", -1), ("B", 1)):
 cc = (sides["B"] - sides["A"]) / (2 * DV) * 1e7
 dv = np.array(job.c_devsim)
 rel = (cc - dv) / dv
+res["vg"] = list(job.vg)
+res["x_um"] = xs.tolist()
+res["boundary_nodes"] = list(bn)
+res["layers"] = [layer.name for layer in job.stack.layers]
+res["contacts"] = job.stack.contact_ends()
+res["dv_fb_v"] = job.dv_fb
+res["polarity"] = job.meta["stack"]["polarity"]
+res["strip_width_um"] = cx.STRIP_WIDTH_UM
+res["c_devsim"] = list(job.c_devsim)
 res["c_ff_um2"] = cc.tolist()
 res["rel_vs_devsim"] = rel.tolist()
 res["max_abs_rel_vs_devsim"] = float(np.max(np.abs(rel)))

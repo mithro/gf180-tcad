@@ -78,6 +78,7 @@ for name in sys.argv[1:]:
                                            "steady state", "equilibrium", kw))
     ok, log, dt = cx.run(f"{name}_eq.inp")
     rec = {"eq_ok": ok, "settings": {k: v for k, v in kw.items() if k != "extra"}, "step": step,
+           "vend": VEND,
            "eq": steps(log)}
     if ok:
         nsteps = int(round(VEND / step))

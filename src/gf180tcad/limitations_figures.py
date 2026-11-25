@@ -39,7 +39,7 @@ from gf180tcad.explain import data
 from gf180tcad.explain import figures as ef
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.spice import xyce
-from gf180tcad.tcad import analytic, moscap1d, moscap2d, process, stack
+from gf180tcad.tcad import analytic, meshconv, moscap1d, moscap2d, process, stack
 from gf180tcad.tcad.mesh import MeshSpec
 
 STYLE = {
@@ -102,6 +102,8 @@ STYLE = {
     "edge_headroom": 1.15,
     # The digits the page prints: gains and residuals (fF/µm), the slope (fF/µm per nm), δ (nm).
     "edge_digits": 3,
+    # The Charon strip figure: the span (nm) shown around the poly/oxide interface.
+    "strip_span_nm": (-20.0, 40.0),
     "edge_slope_digits": 5,
     "edge_delta_digits": 1,
 }
@@ -1251,6 +1253,184 @@ def _edge_substitutions(roots: Roots) -> dict[str, str]:
     return out
 
 
+# --- the Charon backend experiments ---------------------------------------------------------------
+
+#: The committed Charon experiment records (``experiments/charon-backend/record.py``): the C-V
+#: runs (``cv.json``), the solver variants through the onset of inversion (``hard-range.json``)
+#: and the other probes (``probes.json``).
+CHARON_ROOT = REPO_ROOT / "results" / "charon-experiments"
+
+#: The reference C-V run of each device: short SRH lifetimes, LOCA sub-steps, WRMS 1e-10.
+CHARON_REF = {"nfet_05v0": "cv-nfet-tau15-1e-10", "pfet_05v0": "cv-pfet-tau15-1e-10"}
+
+#: The runs compared with the reference to show what it does not depend on: another lifetime,
+#: a looser tolerance, and the default lifetime (which converges in accumulation and depletion
+#: only). Each is drawn as |C / C_ref - 1| over the biases both have.
+CHARON_CHECKS = {
+    "cv-nfet-tau14-1e-10": ("nfet_05v0", "another SRH lifetime", "highlight"),
+    "cv-pfet-tau14-1e-10": ("pfet_05v0", "another SRH lifetime", "highlight_oxide"),
+    "cv-nfet-tau15-1e-9": ("nfet_05v0", "WRMS tolerance ten times looser", "intrinsic"),
+    "cv-nfet-default-1e-10": ("nfet_05v0", "the default SRH lifetime", "muted"),
+}
+
+
+def charon_root(roots: Roots = DEFAULT_ROOTS) -> Path:
+    """The Charon experiment records of ``roots``: ``charon-experiments`` beside its SPICE tree,
+    so the committed :data:`CHARON_ROOT` for the committed trees."""
+    return Path(roots.spice).parent / "charon-experiments"
+
+
+def charon_record(name: str, root: Path = CHARON_ROOT) -> dict:
+    """The committed record ``name`` (``cv``, ``hard-range`` or ``probes``)."""
+    return json.loads((Path(root) / f"{name}.json").read_text("utf-8"))
+
+
+def _setting(run: dict, key: str) -> str:
+    return run["settings"][key] or "default"
+
+
+def charon_cv_curves(roots: Roots = DEFAULT_ROOTS) -> dict:
+    """Per device the reference run's u = polarity * vg, Charon's and DEVSIM's C (fF/um^2) and
+    |C_Charon / C_DEVSIM - 1|; per check run its u and |C / C_ref - 1| on the common biases."""
+    runs = charon_record("cv", charon_root(roots))["runs"]
+    out = {"devices": {}, "checks": {}}
+    for device, name in CHARON_REF.items():
+        r = runs[name]
+        pol = DEVICES[device].polarity
+        c, dv = np.asarray(r["c_ff_um2"]), np.asarray(r["c_devsim"])
+        out["devices"][device] = {"u": pol * np.asarray(r["vg"]), "c": c, "devsim": dv,
+                                  "rel": np.abs(c / dv - 1), "run": name}  # fmt: skip
+    for name, (device, what, colour) in CHARON_CHECKS.items():
+        r, ref = runs[name], runs[CHARON_REF[device]]
+        vg = [v for v in r["vg"] if v in ref["vg"]]
+        c = np.asarray([r["c_ff_um2"][r["vg"].index(v)] for v in vg])
+        c_ref = np.asarray([ref["c_ff_um2"][ref["vg"].index(v)] for v in vg])
+        out["checks"][name] = {"device": device, "what": what, "colour": colour,
+                               "u": DEVICES[device].polarity * np.asarray(vg),
+                               "rel": np.abs(c / c_ref - 1),
+                               "tau": _setting(r, "CX_TAU"), "rel_tol": _setting(r, "CX_REL")}
+    return out
+
+
+def charon_cv_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Top: the 1D C-V of both devices from Charon (points) and DEVSIM (lines). Bottom, log:
+    Charon's relative difference from DEVSIM, and from Charon's reference run of each run that
+    changes one setting, against the 1 % comparison tolerance."""
+    pal = ef.PALETTES[palette]
+    lw = ef.STYLE["line_width"]
+    k = charon_cv_curves(roots)
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(STYLE["tall_in"])
+        top, bottom = fig.subplots(2, 1, sharex=True)
+        for device, d in k["devices"].items():
+            short, colour = _SHORT[device], pal[_CARRIER[device]]
+            top.plot(d["u"], d["devsim"], color=colour, lw=lw, label=f"{short} DEVSIM",
+                     gid=f"{device} DEVSIM")  # fmt: skip
+            top.plot(d["u"], d["c"], ls="none", marker="o", ms=STYLE["small_marker_pt"],
+                     mfc="none", color=colour, label=f"{short} Charon",
+                     gid=f"{device} Charon")  # fmt: skip
+            bottom.plot(d["u"], d["rel"], color=colour, lw=lw,
+                        label=f"{short}: Charon against DEVSIM",
+                        gid=f"{device} against DEVSIM")  # fmt: skip
+        for name, c in k["checks"].items():
+            bottom.plot(c["u"], c["rel"], color=pal[c["colour"]], lw=ef.STYLE["edge_width"],
+                        label=f"{_SHORT[c['device']]}: {c['what']} (tau {c['tau']} s, "
+                        f"WRMS {c['rel_tol']}) against the reference", gid=name)  # fmt: skip
+        bottom.axhline(meshconv.CRITERION, color=pal["text"], ls="--", lw=ef.STYLE["edge_width"],
+                       label="comparison tolerance", gid="tolerance")  # fmt: skip
+        bottom.set_yscale("log")
+        top.set_ylabel("C per area (fF/µm²)")
+        bottom.set_ylabel("relative difference")
+        bottom.set_xlabel("u = polarity × Vg (V)")
+        top.grid(True)
+        bottom.grid(True)
+        fig.legend(loc="outside lower center", ncols=1, frameon=False,
+                   fontsize=STYLE["legend_scale"] * ef.STYLE["text_pt"])  # fmt: skip
+        return fig
+
+
+def charon_hard_range_points(roots: Roots = DEFAULT_ROOTS) -> dict:
+    """Per solver variant of the hard-range record (in the record's order): the last converged
+    device bias (V; the sweep end when it converged throughout) and whether it did."""
+    rec = charon_record("hard-range", charon_root(roots))
+    out = {}
+    for name, v in rec["variants"].items():
+        out[name] = {"reached_v": v["last_converged_v"] if v["equilibrium_converged"] else None,
+                     "passed": v["sweep_converged"], "end_v": v["end_v"]}  # fmt: skip
+    return out
+
+
+def charon_hard_range_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """The last device bias each solver variant converged at, sweeping up from 0 V: filled where
+    the sweep reached its end, hollow where it stopped; variants whose equilibrium failed sit at
+    0 V as crosses."""
+    pal = ef.PALETTES[palette]
+    k = charon_hard_range_points(roots)
+    names = list(k)
+    y = np.arange(len(names))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(STYLE["tall_in"])
+        ax = fig.subplots()
+        groups = (("reached the sweep end", lambda p: p["passed"], "o", pal["highlight"]),
+                  ("stopped", lambda p: not p["passed"] and p["reached_v"] is not None, "o",
+                   "none"),
+                  ("equilibrium failed", lambda p: p["reached_v"] is None, "x", pal["text"]))
+        for label, pick, marker, face in groups:
+            idx = [i for i, n in enumerate(names) if pick(k[n])]
+            xs = [k[names[i]]["reached_v"] or 0.0 for i in idx]
+            ax.scatter(xs, y[idx], marker=marker, s=STYLE["marker_pt"] ** 2,
+                       facecolors=face if marker == "o" else pal["text"],
+                       edgecolors=pal["highlight"] if marker == "o" else None,
+                       label=label, gid=label)  # fmt: skip
+        ax.set_yticks(y, names)
+        ax.invert_yaxis()
+        ax.set_xlabel("last converged gate bias of the device (V)")
+        ax.grid(True, axis="x")
+        fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
+        return fig
+
+
+def charon_strip_mesh(roots: Roots = DEFAULT_ROOTS) -> dict:
+    """The nfet reference run's strip near the oxide: per layer its node positions (nm from the
+    poly/oxide interface) within :data:`STYLE` ``strip_span_nm``, and the strip width (um)."""
+    run = charon_record("cv", charon_root(roots))["runs"][CHARON_REF["nfet_05v0"]]
+    x = np.asarray(run["x_um"]) * UNITS["nm_per_um"]
+    bn = run["boundary_nodes"]
+    x0 = x[bn[1]]
+    lo, hi = STYLE["strip_span_nm"]
+    out = {"layers": {}, "width_um": run["strip_width_um"]}
+    for i, layer in enumerate(run["layers"]):
+        xs = x[bn[i]: bn[i + 1] + 1] - x0
+        keep = xs[(xs >= lo) & (xs <= hi)]
+        out["layers"][layer] = {"x_nm": keep, "span": (max(xs[0], lo), min(xs[-1], hi))}
+    return out
+
+
+def charon_strip_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """The 1D stack as Charon reads it: the description's nodes extruded into a strip one element
+    wide, shown near the oxide. Each vertical line is a node pair (x, 0) and (x, w); the shading
+    marks the element blocks."""
+    pal = ef.PALETTES[palette]
+    k = charon_strip_mesh(roots)
+    colours = {"gate_poly": "electron", "oxide": "highlight_oxide", "body": "hole"}
+    w = k["width_um"]
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(ef.STYLE["size_in"])
+        ax = fig.subplots()
+        for layer, d in k["layers"].items():
+            lo, hi = d["span"]
+            ax.axvspan(lo, hi, color=pal[colours[layer]], alpha=ef.STYLE["fill_alpha"], lw=0,
+                       label=f"block {layer}", gid=f"block {layer}")  # fmt: skip
+            xs = np.repeat(d["x_nm"], 3)
+            ys = np.tile([0.0, w, np.nan], len(d["x_nm"]))
+            ax.plot(xs, ys, color=pal[colours[layer]], lw=ef.STYLE["edge_width"],
+                    gid=f"nodes {layer}")  # fmt: skip
+        ax.set_xlabel("distance from the poly/oxide interface (nm)")
+        ax.set_ylabel("strip width (µm)")
+        fig.legend(loc="outside lower center", ncols=len(k["layers"]), frameon=False)
+        return fig
+
+
 # --- the registry -------------------------------------------------------------------------------
 
 
@@ -1278,6 +1458,9 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "pn-slab": _svg_of(pn_slab_figure),
     "pin-depletion": _svg_of(pin_depletion_figure),
     "edge-sensitivity": _svg_of(edge_sensitivity_figure),
+    "charon-strip": _svg_of(charon_strip_figure),
+    "charon-cv": _svg_of(charon_cv_figure),
+    "charon-hard-range": _svg_of(charon_hard_range_figure),
 }
 
 

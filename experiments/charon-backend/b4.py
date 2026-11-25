@@ -7,6 +7,7 @@ current of a 1e-4 V gate excitation at 1 MHz is read from currents-loca.dat. C f
 difference of the oxide-flux gate charge at the same bias (+-1 mV steady-state solves).
 """
 import json
+import os
 import math
 import re
 
@@ -23,7 +24,9 @@ cx.write_exodus("strip.exo", xy, blocks, ss)
 xs1d = np.array(job.stack.node_positions_um()[0])
 bn = job.stack.node_positions_um()[1]
 c = job.stack.constants
-F, AMP, DV, W_CM = 1e6, 1e-4, 1e-3, 1e-4
+F = float(os.environ.get("CX_F") or 1e6)
+AMP = float(os.environ.get("CX_AMP") or 1e-4)
+DV, W_CM = 1e-3, 1e-4
 HB = """      apply harmonic balance for large signal analysis
       start harmonic balance parameters
           truncation order = 1
@@ -96,4 +99,4 @@ end Harmonic Balance BC for gate on gate_poly
     out[label] = rec
     print(label, {k: v for k, v in rec.items() if k not in ("rows", "tail", "columns")},
           flush=True)
-json.dump(out, open("b4.json", "w"), indent=1, default=float)
+json.dump(out, open(f"b4_{F:g}_{AMP:g}.json", "w"), indent=1, default=float)

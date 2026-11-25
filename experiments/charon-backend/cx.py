@@ -161,7 +161,10 @@ def write_exodus(path, xy_um, blocks, sidesets, title="gf180tcad"):
         ds.close()
 
 
-def strip_mesh(x_um, layer_of_interval, layer_names, w_um=1.0, *, tri=False):
+STRIP_WIDTH_UM = 1.0  # the strip width (um) the 1D nodes are extruded to
+
+
+def strip_mesh(x_um, layer_of_interval, layer_names, w_um=STRIP_WIDTH_UM, *, tri=False):
     """A 1D node list extruded into a strip of width w_um: (xy, blocks, sidesets).
 
     Node i of the 1D list is node 2*i (y = 0) and 2*i + 1 (y = w). Interval j between nodes j
@@ -197,7 +200,7 @@ def strip_mesh(x_um, layer_of_interval, layer_names, w_um=1.0, *, tri=False):
     return xy, blocks, sidesets
 
 
-def stack_strip(stack, w_um=1.0, *, tri=False):
+def stack_strip(stack, w_um=STRIP_WIDTH_UM, *, tri=False):
     """The strip of a Stack1D: blocks named as layers, side sets named as the two contacts."""
     xs, bnodes = stack.node_positions_um()
     layer_of = []
