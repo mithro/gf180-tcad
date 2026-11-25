@@ -64,9 +64,10 @@ PRs but is not a merge blocker.
 - Three more rules hold on every reader page, set by the owner on 2026-11-03 (spec section 10.3):
   - A section may describe a physical thing: a cross section, a band diagram, a curve, a
     process step, a stack or a mesh. It then shows that thing in a figure. The figure has a
-    caption and a `:name:`, and the text cites it with `{numref}`. Of a light/dark pair, the
-    light twin carries the `:name:`; the dark twin follows it with the same caption. A
-    `:name:` on the dark twin fails the build, because the merge drops that twin.
+    caption and a `:name:`, and the text cites it with `{numref}`.
+  - Of a light/dark pair, the light twin carries the `:name:`; the dark twin follows it with
+    the same caption. A `:name:` on the dark twin fails the build, because the merge drops
+    that twin.
   - Every figure and table has a `:name:`, and its label is its identifier. A figure's label
     starts `fig-`, a table's `tab-`. The caption and every `{numref}` show the label without
     that prefix, never a running number: `tab-poe-pairs` reads "Table poe-pairs". So adding a
