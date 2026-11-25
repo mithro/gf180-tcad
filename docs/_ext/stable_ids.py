@@ -20,8 +20,9 @@ How it works:
   with no change writes no page.
 * :class:`CaptionColonTranslator` adds a colon after the identifier in a caption only
   ("Table poe-pairs: The two pair sets"); a ``{numref}`` has none ("Table poe-pairs lists").
-* A numbered item with no label (Sphinx gave it an id such as ``id3``) and two labels that
-  give the same identifier are Sphinx warnings, so ``sphinx-build -W`` fails.
+* A numbered item with no label (Sphinx gave it an id such as ``id3``), a label without the
+  prefix of its kind (``fig-`` for a figure, ``tab-`` for a table, :data:`KIND_PREFIXES`) and
+  two labels that give the same identifier are Sphinx warnings, so ``sphinx-build -W`` fails.
 
 theme_figures (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure on
 ``doctree-read``, before any number is assigned, so a pair has the light twin's label and one
@@ -96,6 +97,18 @@ def replace_numbers(app, env) -> list[str]:
                     )
                     continue
                 label = label or element_id
+                prefixes = KIND_PREFIXES.get(kind, ())
+                if prefixes and not label.startswith(prefixes):
+                    logger.warning(
+                        "the %s label '%s' does not start with %s; a %s label starts with its "
+                        "kind, so the identifier reads as a name of the item",
+                        kind,
+                        label,
+                        " or ".join(repr(x) for x in prefixes),
+                        kind,
+                        location=docname,
+                        type="stable_ids",
+                    )
                 identifier = stable_id(kind, label)
                 first = seen.setdefault((kind, identifier), (docname, label))
                 if first != (docname, label):

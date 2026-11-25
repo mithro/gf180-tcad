@@ -70,11 +70,11 @@ def _page(title: str, prefix: str) -> str:
 {title}
 {"=" * len(title)}
 
-See :numref:`{prefix}-pair` and :numref:`{prefix}-plain`.
+See :numref:`fig-{prefix}-pair` and :numref:`fig-{prefix}-plain`.
 
 .. figure:: {prefix}-light.svg
    :figclass: only-light
-   :name: {prefix}-pair
+   :name: fig-{prefix}-pair
 
    The pair on {title}.
 
@@ -84,7 +84,7 @@ See :numref:`{prefix}-pair` and :numref:`{prefix}-plain`.
    The pair on {title}.
 
 .. figure:: {prefix}-plain.svg
-   :name: {prefix}-plain
+   :name: fig-{prefix}-plain
 
    The plain figure on {title}.
 """

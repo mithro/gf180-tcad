@@ -206,3 +206,16 @@ def test_a_rebuild_without_the_restore_rewrites_pages(tmp_path):
     r = _build(tmp_path / "src", out)
     assert r.returncode == 0, r.stdout + r.stderr
     assert re.search(r"writing output\.\.\. \[\s*\d+%\] one", r.stdout), r.stdout
+
+
+def test_a_label_without_its_kind_prefix_fails_the_build(tmp_path):
+    """Positive control: a figure label without "fig-" and a table label without "tab-" are
+    warnings, so -W fails (CONTRIBUTING: a label starts with its kind)."""
+    importorskip("sphinx")
+    one = _ONE.replace("fig-under_score", "under_score").replace("tab-values", "values")
+    two = _TWO.replace("<tab-values>", "<values>")
+    _site(tmp_path / "src", one=one, two=two)
+    r = _build(tmp_path / "src", tmp_path / "out")
+    assert r.returncode != 0
+    assert "the figure label 'under_score' does not start with 'fig-'" in r.stderr, r.stderr
+    assert "the table label 'values' does not start with 'tab-' or 'tbl-'" in r.stderr, r.stderr
