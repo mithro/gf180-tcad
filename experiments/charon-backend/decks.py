@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 
-def silicon_block(name, *, eps, dopant, conc, ni=None, nc_nv_eg=None, mun, mup, taun, taup,
-                  affinity=4.05):
+def silicon_block(
+    name, *, eps, dopant, conc, ni=None, nc_nv_eg=None, mun, mup, taun, taup, affinity=4.05
+):
     """A Silicon material block with every model parameter set explicitly."""
     lines = [
         f"start Material Block {name}",
@@ -31,22 +32,24 @@ def silicon_block(name, *, eps, dopant, conc, ni=None, nc_nv_eg=None, mun, mup, 
         f"    electron lifetime is constant = {taun!r}",
         f"    hole lifetime is constant = {taup!r}",
         "  end Carrier Lifetime Block",
-        f"  start uniform doping named Function1",
+        "  start uniform doping named Function1",
         f"    concentration = {conc!r}",
         f"    type is {dopant}",
-        f"  end uniform doping named Function1",
+        "  end uniform doping named Function1",
         f"end Material Block {name}",
     ]
     return "\n".join(lines)
 
 
 def oxide_block(name, eps):
-    return "\n".join([
-        f"start Material Block {name}",
-        "  material name is SiO2",
-        f"  relative permittivity = {eps!r}",
-        f"end Material Block {name}",
-    ])
+    return "\n".join(
+        [
+            f"start Material Block {name}",
+            "  material name is SiO2",
+            f"  relative permittivity = {eps!r}",
+            f"end Material Block {name}",
+        ]
+    )
 
 
 def physics(block, disc, material, *, srh=True):
@@ -62,48 +65,75 @@ def physics(block, disc, material, *, srh=True):
     return "\n".join(lines)
 
 
-def solver(problem, *, rel=1e-10, abs_=1e-12, lin_tol=1e-12, maxit=50, linear="belos",
-           extra=()):
-    return "\n".join([
-        "start solver block",
-        "  start tpetra block",
-        f"    problem type is {problem}",
-        f"    linear solver is {linear}",
-        f"    linear solver tolerance = {lin_tol!r}",
-        f"    maximum number nonlinear iterations = {maxit}",
-        "    verbosity level is high",
-        *extra,
-        "    start nonlinear solver wrms block",
-        f"      relative tolerance = {rel!r}",
-        f"      absolute tolerance = {abs_!r}",
-        "    end nonlinear solver wrms block",
-        "  end tpetra block",
-        "end solver block",
-    ])
+def solver(problem, *, rel=1e-10, abs_=1e-12, lin_tol=1e-12, maxit=50, linear="belos", extra=()):
+    return "\n".join(
+        [
+            "start solver block",
+            "  start tpetra block",
+            f"    problem type is {problem}",
+            f"    linear solver is {linear}",
+            f"    linear solver tolerance = {lin_tol!r}",
+            f"    maximum number nonlinear iterations = {maxit}",
+            "    verbosity level is high",
+            *extra,
+            "    start nonlinear solver wrms block",
+            f"      relative tolerance = {rel!r}",
+            f"      absolute tolerance = {abs_!r}",
+            "    end nonlinear solver wrms block",
+            "  end tpetra block",
+            "end solver block",
+        ]
+    )
 
 
-def moscap_deck(job, *, mesh, out, disc="drift diffusion cvfem", ox_disc="laplace cvfem",
-                gate_bc="fixed at 0.0", ni_mode="ni", problem="steady state", sweep=None,
-                init="equilibrium", srh=True, rel=1e-10, abs_=1e-12, lin_tol=1e-12,
-                linear="belos", extra_solver=(), import_index=None, extra=(),
-                conc_scaling=None, nodal_out=None, tau=None):
+def moscap_deck(
+    job,
+    *,
+    mesh,
+    out,
+    disc="drift diffusion cvfem",
+    ox_disc="laplace cvfem",
+    gate_bc="fixed at 0.0",
+    ni_mode="ni",
+    problem="steady state",
+    sweep=None,
+    init="equilibrium",
+    srh=True,
+    rel=1e-10,
+    abs_=1e-12,
+    lin_tol=1e-12,
+    linear="belos",
+    extra_solver=(),
+    import_index=None,
+    extra=(),
+    conc_scaling=None,
+    nodal_out=None,
+    tau=None,
+):
     """The 1D MOS capacitor deck of a Job1D (strip mesh file `mesh`)."""
     st = job.meta["stack"]
     c = job.meta["constants"]
     pol = st["polarity"]
     ni = c["n_i_cm3"]
-    kw = dict(eps=c["eps_si"], mun=c["mu_n_cm2_per_vs"], mup=c["mu_p_cm2_per_vs"],
-              taun=tau or c["tau_n_s"], taup=tau or c["tau_p_s"])
+    kw = {
+        "eps": c["eps_si"],
+        "mun": c["mu_n_cm2_per_vs"],
+        "mup": c["mu_p_cm2_per_vs"],
+        "taun": tau or c["tau_n_s"],
+        "taup": tau or c["tau_p_s"],
+    }
     if ni_mode == "ni":
         kw["ni"] = ni
     elif ni_mode == "dos":
         import math
+
         eg = 1.12
         vt = c["vt_v"]
         nc = ni * math.exp(eg / (2 * vt))
         kw["nc_nv_eg"] = (nc, nc, eg)
     elif ni_mode == "both":
         import math
+
         eg = 1.12
         vt = c["vt_v"]
         nc = ni * math.exp(eg / (2 * vt))
@@ -138,9 +168,13 @@ def moscap_deck(job, *, mesh, out, disc="drift diffusion cvfem", ox_disc="laplac
     ]
     if init == "equilibrium":
         for b in ("gate_poly", "body"):
-            lines.append(f"initial conditions for ELECTRIC_POTENTIAL in {b} is equilibrium potential")
+            lines.append(
+                f"initial conditions for ELECTRIC_POTENTIAL in {b} is equilibrium potential"
+            )
             if "drift" in disc:
-                lines.append(f"initial conditions for ELECTRON_DENSITY in {b} is equilibrium density")
+                lines.append(
+                    f"initial conditions for ELECTRON_DENSITY in {b} is equilibrium density"
+                )
                 lines.append(f"initial conditions for HOLE_DENSITY in {b} is equilibrium density")
         lines.append("initial conditions for ELECTRIC_POTENTIAL in oxide is uninitialized")
     elif init == "exodus":
@@ -157,6 +191,7 @@ def moscap_deck(job, *, mesh, out, disc="drift diffusion cvfem", ox_disc="laplac
     if sweep:
         lines += ["start sweep options", *[f"  {s}" for s in sweep], "end sweep options"]
     lines += list(extra)
-    lines.append(solver(problem, rel=rel, abs_=abs_, lin_tol=lin_tol, linear=linear,
-                        extra=extra_solver))
+    lines.append(
+        solver(problem, rel=rel, abs_=abs_, lin_tol=lin_tol, linear=linear, extra=extra_solver)
+    )
     return "\n".join(lines) + "\n"

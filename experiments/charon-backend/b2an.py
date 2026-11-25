@@ -2,13 +2,14 @@
 
 usage: python3 b2an.py DEVICE PARAMS TAG
 """
+
 import json
 import os
 import sys
-
-import numpy as np
+from pathlib import Path
 
 import cx
+import numpy as np
 
 dev, params, tag = sys.argv[1], sys.argv[2], sys.argv[3]
 job = cx.truncate_grid(cx.job1d(dev, params))
@@ -30,7 +31,7 @@ for side, sgn in (("A", -1), ("B", 1)):
     v = rows[:, head.index("gate_Voltage")]
     want = np.array(job.vg) - job.dv_fb + sgn * DV
     # LOCA ends with a tiny step onto the exact bound when the accumulated value falls short
-    extra = v[(n - 1) * SUB + 1:]
+    extra = v[(n - 1) * SUB + 1 :]
     res[f"extra_states_{side}"] = len(extra)
     res[f"extra_max_dev_{side}"] = float(np.max(np.abs(extra - want[-1]))) if len(extra) else 0.0
     res[f"align_{side}"] = float(np.max(np.abs(v[IDX] - want)))
@@ -45,12 +46,13 @@ for side, sgn in (("A", -1), ("B", 1)):
     pp = st.nodal["HOLE_DENSITY"][IDX, 0::2] if has_np else None
     res[f"nodal_vars_{side}"] = sorted(st.nodal)
     # y = w nodes must equal y = 0 nodes (a 1D solution on the strip)
-    res[f"strip_y_asym_{side}"] = float(np.max(np.abs(
-        st.nodal["ELECTRIC_POTENTIAL"][IDX, 1::2] - psi)))
+    res[f"strip_y_asym_{side}"] = float(
+        np.max(np.abs(st.nodal["ELECTRIC_POTENTIAL"][IDX, 1::2] - psi))
+    )
     x = xs * 1e-4
     i0, i1 = bn[1], bn[2]  # oxide nodes i0..i1
     # flux through each oxide interval (C/cm^2), positive for the gate charge
-    e = c.eps_ox * eps0 * (psi[:, i0:i1] - psi[:, i0 + 1:i1 + 1]) / np.diff(x[i0:i1 + 1])
+    e = c.eps_ox * eps0 * (psi[:, i0:i1] - psi[:, i0 + 1 : i1 + 1]) / np.diff(x[i0 : i1 + 1])
     q_gate = e[:, 0]
     res[f"oxide_flux_spread_{side}"] = float(np.max(np.abs(e - e[:, :1]) / np.max(np.abs(e))))
     # space charge over the CVFEM control volumes (1D median dual: half of each neighbour interval)
@@ -60,12 +62,12 @@ for side, sgn in (("A", -1), ("B", 1)):
     gate_net = st_["ngate_cm3"] if pol == "n" else -st_["ngate_cm3"]
     body_net = -st_["n_ch_cm3"] if pol == "n" else st_["n_ch_cm3"]
 
-    def region_charge(lo, hi, dnet):
-        h = np.diff(x[lo:hi + 1])
+    def region_charge(lo, hi, dnet, x=x, pp=pp, nn=nn):
+        h = np.diff(x[lo : hi + 1])
         vol = np.zeros(hi - lo + 1)
         vol[:-1] += h / 2
         vol[1:] += h / 2
-        rho = q_e * (pp[:, lo:hi + 1] - nn[:, lo:hi + 1] + dnet)
+        rho = q_e * (pp[:, lo : hi + 1] - nn[:, lo : hi + 1] + dnet)
         return rho @ vol
 
     if not has_np:
@@ -78,14 +80,18 @@ for side, sgn in (("A", -1), ("B", 1)):
     res[f"body_vs_gate_{side}"] = float(np.max(np.abs(q_body + q_gate)) / scale)
     # n*p/ni^2 in the neutral bulk (last body node and first poly node)
     ni = c.n_i_cm3
-    res[f"np_over_ni2_body_{side}"] = [float(nn[0, -1] * pp[0, -1] / ni**2),
-                                       float(nn[-1, -1] * pp[-1, -1] / ni**2)]
-    semi = np.r_[0: i0 + 1, i1: len(xs)]
+    res[f"np_over_ni2_body_{side}"] = [
+        float(nn[0, -1] * pp[0, -1] / ni**2),
+        float(nn[-1, -1] * pp[-1, -1] / ni**2),
+    ]
+    semi = np.r_[0 : i0 + 1, i1 : len(xs)]
     dev_np = np.abs(nn[:, semi] * pp[:, semi] / ni**2 - 1)
     res[f"max_abs_np_over_ni2_minus_1_{side}"] = float(np.max(dev_np))
     res[f"np_dev_per_state_{side}"] = np.max(dev_np, axis=1).tolist()
-    res[f"np_over_ni2_poly_{side}"] = [float(nn[0, 0] * pp[0, 0] / ni**2),
-                                       float(nn[-1, 0] * pp[-1, 0] / ni**2)]
+    res[f"np_over_ni2_poly_{side}"] = [
+        float(nn[0, 0] * pp[0, 0] / ni**2),
+        float(nn[-1, 0] * pp[-1, 0] / ni**2),
+    ]
     sides[side] = q_gate
 cc = (sides["B"] - sides["A"]) / (2 * DV) * 1e7
 dv = np.array(job.c_devsim)
@@ -108,4 +114,4 @@ for k, val in res.items():
         print(k, val)
 for i in range(0, n, 10):
     print(f"vg={job.vg[i]:+.2f} C={cc[i]:.7f} devsim={dv[i]:.7f} rel={rel[i]:+.3e}")
-json.dump(res, open(f"b2an_{tag}.json", "w"), indent=1)
+Path(f"b2an_{tag}.json").write_text(json.dumps(res, indent=1))

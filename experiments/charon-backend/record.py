@@ -63,7 +63,7 @@ def cv(work: Path) -> dict:
         raw = _json(raw_path)
         cmd = _json(d / "done.json")["command"]
         words = cmd.split()
-        settings = dict(kv.split("=", 1) for kv in words[1:words.index("python3")])
+        settings = dict(kv.split("=", 1) for kv in words[1 : words.index("python3")])
         rec = {k: an[k] for k in CV_KEEP}
         rec["settings"] = settings
         rec["iterations_A"] = raw["statsA"]["iters"]

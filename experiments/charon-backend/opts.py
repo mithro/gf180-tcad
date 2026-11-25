@@ -1,5 +1,7 @@
 """Shared solver options for the experiments, from the environment."""
+
 import os
+
 REL = float(os.environ.get("CX_REL", "1e-10"))
 ABS = float(os.environ.get("CX_ABS", "1e-12"))
 LIN = os.environ.get("CX_LIN", "klu2")

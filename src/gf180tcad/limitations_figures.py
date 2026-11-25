@@ -1305,10 +1305,15 @@ def charon_cv_curves(roots: Roots = DEFAULT_ROOTS) -> dict:
         vg = [v for v in r["vg"] if v in ref["vg"]]
         c = np.asarray([r["c_ff_um2"][r["vg"].index(v)] for v in vg])
         c_ref = np.asarray([ref["c_ff_um2"][ref["vg"].index(v)] for v in vg])
-        out["checks"][name] = {"device": device, "what": what, "colour": colour,
-                               "u": DEVICES[device].polarity * np.asarray(vg),
-                               "rel": np.abs(c / c_ref - 1),
-                               "tau": _setting(r, "CX_TAU"), "rel_tol": _setting(r, "CX_REL")}
+        out["checks"][name] = {
+            "device": device,
+            "what": what,
+            "colour": colour,
+            "u": DEVICES[device].polarity * np.asarray(vg),
+            "rel": np.abs(c / c_ref - 1),
+            "tau": _setting(r, "CX_TAU"),
+            "rel_tol": _setting(r, "CX_REL"),
+        }
     return out
 
 
@@ -1371,10 +1376,11 @@ def charon_hard_range_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         ax = fig.subplots()
-        groups = (("reached the sweep end", lambda p: p["passed"], "o", pal["highlight"]),
-                  ("stopped", lambda p: not p["passed"] and p["reached_v"] is not None, "o",
-                   "none"),
-                  ("equilibrium failed", lambda p: p["reached_v"] is None, "x", pal["text"]))
+        groups = (
+            ("reached the sweep end", lambda p: p["passed"], "o", pal["highlight"]),
+            ("stopped", lambda p: not p["passed"] and p["reached_v"] is not None, "o", "none"),
+            ("equilibrium failed", lambda p: p["reached_v"] is None, "x", pal["text"]),
+        )
         for label, pick, marker, face in groups:
             idx = [i for i, n in enumerate(names) if pick(k[n])]
             xs = [k[names[i]]["reached_v"] or 0.0 for i in idx]
@@ -1400,7 +1406,7 @@ def charon_strip_mesh(roots: Roots = DEFAULT_ROOTS) -> dict:
     lo, hi = STYLE["strip_span_nm"]
     out = {"layers": {}, "width_um": run["strip_width_um"]}
     for i, layer in enumerate(run["layers"]):
-        xs = x[bn[i]: bn[i + 1] + 1] - x0
+        xs = x[bn[i] : bn[i + 1] + 1] - x0
         keep = xs[(xs >= lo) & (xs <= hi)]
         out["layers"][layer] = {"x_nm": keep, "span": (max(xs[0], lo), min(xs[-1], hi))}
     return out

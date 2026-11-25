@@ -5,11 +5,12 @@ eps_ox * (psi at the poly/oxide interface - psi at the oxide/body interface) / t
 interface potential averaged over its nodes (and the spread across them reported). Writes
 b1an.json; compares with the DEVSIM 1D C at vg = 0 V.
 """
-import json
 
-import numpy as np
+import json
+from pathlib import Path
 
 import cx
+import numpy as np
 
 job = cx.job1d("nfet_05v0", "start")  # the 2D mesh of b1.py is the start stack
 c = job.stack.constants
@@ -29,8 +30,12 @@ for side in ("A", "B"):
     spread[side] = [float(np.ptp(psi[top])), float(np.ptp(psi[bot]))]
 cc = (q["B"] - q["A"]) / (2 * DV) * 1e7
 i = job.vg.index(0.0)
-out = {"c_2d_ff_um2": cc, "t_ox_mesh_nm": t_cm * 1e7, "c_devsim_1d": job.c_devsim[i],
-       "rel_vs_devsim_1d": (cc - job.c_devsim[i]) / job.c_devsim[i],
-       "interface_potential_spread_v": spread}
+out = {
+    "c_2d_ff_um2": cc,
+    "t_ox_mesh_nm": t_cm * 1e7,
+    "c_devsim_1d": job.c_devsim[i],
+    "rel_vs_devsim_1d": (cc - job.c_devsim[i]) / job.c_devsim[i],
+    "interface_potential_spread_v": spread,
+}
 print(out)
-json.dump(out, open("b1an.json", "w"), indent=1)
+Path("b1an.json").write_text(json.dumps(out, indent=1))

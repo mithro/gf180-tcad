@@ -1,6 +1,9 @@
 """Print the header (dimensions, variables, attributes) of a netCDF/Exodus file."""
+
 import sys
+
 import netCDF4
+
 ds = netCDF4.Dataset(sys.argv[1])
 print("format", ds.data_model, ds.file_format)
 for k in ds.ncattrs():

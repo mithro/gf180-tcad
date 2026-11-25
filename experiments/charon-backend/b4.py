@@ -6,15 +6,16 @@ current of a 1e-4 V gate excitation at 1 MHz is read from currents-loca.dat. C f
 (cos/sin, conduction/displacement, gate/body) as I/(2 pi f A) is compared with the QS central
 difference of the oxide-flux gate charge at the same bias (+-1 mV steady-state solves).
 """
-import json
-import os
-import math
-import re
 
-import numpy as np
+import json
+import math
+import os
+import re
+from pathlib import Path
 
 import cx
 import decks
+import numpy as np
 import opts
 
 job = cx.job1d("nfet_05v0", "calibrated")
@@ -37,15 +38,24 @@ HB = """      apply harmonic balance for large signal analysis
 
 
 def base(name, mesh, gate_bc, problem, init, extra=(), sweep=None):
-    d = decks.moscap_deck(job, mesh=mesh, out=f"{name}.exo", gate_bc=gate_bc, problem=problem,
-                          init=init, rel=opts.REL, abs_=opts.ABS, extra=list(opts.EXTRA) + list(extra),
-                          sweep=sweep)
+    d = decks.moscap_deck(
+        job,
+        mesh=mesh,
+        out=f"{name}.exo",
+        gate_bc=gate_bc,
+        problem=problem,
+        init=init,
+        rel=opts.REL,
+        abs_=opts.ABS,
+        extra=list(opts.EXTRA) + list(extra),
+        sweep=sweep,
+    )
     return d.replace("BC is ohmic for body on body", "BC is ohmic for body_contact on body")
 
 
 def qs_charge(name, mesh, v, init):
-    open(f"{name}.inp", "w").write(base(name, mesh, f"fixed at {v!r}", "steady state", init))
-    ok, log, dt = cx.run(f"{name}.inp")
+    Path(f"{name}.inp").write_text(base(name, mesh, f"fixed at {v!r}", "steady state", init))
+    ok, _log, _dt = cx.run(f"{name}.inp")
     if not ok:
         raise SystemExit(f"{name} failed")
     st = cx.read_states(f"{name}.exo")
@@ -63,15 +73,28 @@ for label, vg in (("accumulation", -2.0), ("depletion", 0.0)):
     qs_charge(f"dc_{label}", f"qs_{label}_b.exo", v, "exodus")
     prev, init = f"dc_{label}.exo", "exodus"
     # HB deck: DC state imported, one LOCA step from v to v + 0.05 V with the small signal on
-    d = base(f"hb_{label}", f"dc_{label}.exo", "fixed at 0.0", "parameter sweep", "exodus",
-             sweep=["initial step size = 0.05", "minimum step size = 0.05",
-                    "maximum step size = 0.05", "step size aggressiveness = 0.0",
-                    "predictor method is secant"])
-    d = d.replace(f"BC is ohmic for gate on gate_poly fixed at 0.0\n", "")
+    d = base(
+        f"hb_{label}",
+        f"dc_{label}.exo",
+        "fixed at 0.0",
+        "parameter sweep",
+        "exodus",
+        sweep=[
+            "initial step size = 0.05",
+            "minimum step size = 0.05",
+            "maximum step size = 0.05",
+            "step size aggressiveness = 0.0",
+            "predictor method is secant",
+        ],
+    )
+    d = d.replace("BC is ohmic for gate on gate_poly fixed at 0.0\n", "")
     d = d.replace("BC is ohmic for body_contact on body fixed at 0.0\n", "")
     d = re.sub(r"(  standard discretization type is [^\n]*\n)", r"\1" + HB.format(f=F) + "\n", d)
-    d = re.sub(r"initial conditions for (\w+) in (\w+) is exodus file",
-               r"Harmonic Balance initial conditions for \1 in \2 is DC remapped", d)
+    d = re.sub(
+        r"initial conditions for (\w+) in (\w+) is exodus file",
+        r"Harmonic Balance initial conditions for \1 in \2 is DC remapped",
+        d,
+    )
     d += f"""start Harmonic Balance BC for body_contact on body
   type is ohmic
   frequencies  "0"
@@ -83,7 +106,7 @@ start Harmonic Balance BC for gate on gate_poly
   small signal sweep from {v!r} to {v + 0.05!r} with amplitude {AMP!r}
 end Harmonic Balance BC for gate on gate_poly
 """
-    open(f"hb_{label}.inp", "w").write(d)
+    Path(f"hb_{label}.inp").write_text(d)
     ok, log, dt = cx.run(f"hb_{label}.inp")
     rec = {"vg": vg, "v_device": v, "c_qs_f_cm2": c_qs, "hb_ok": ok, "hb_time_s": dt}
     if ok:
@@ -93,10 +116,10 @@ end Harmonic Balance BC for gate on gate_poly
         # 2D currents are per cm of depth; the strip is W_CM wide -> per cm^2 divide by W_CM
         k = 2 * math.pi * F * AMP * W_CM
         rec["c_from_columns_over_c_qs"] = {
-            h: float(rows[0, i] / k / c_qs) for i, h in enumerate(head) if "H1" in h}
+            h: float(rows[0, i] / k / c_qs) for i, h in enumerate(head) if "H1" in h
+        }
     else:
         rec["tail"] = log[-3000:]
     out[label] = rec
-    print(label, {k: v for k, v in rec.items() if k not in ("rows", "tail", "columns")},
-          flush=True)
-json.dump(out, open(f"b4_{F:g}_{AMP:g}.json", "w"), indent=1, default=float)
+    print(label, {k: v for k, v in rec.items() if k not in ("rows", "tail", "columns")}, flush=True)
+Path(f"b4_{F:g}_{AMP:g}.json").write_text(json.dumps(out, indent=1, default=float))

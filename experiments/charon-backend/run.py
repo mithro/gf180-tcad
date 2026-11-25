@@ -35,16 +35,21 @@ PINNED_PATHS = ("src", ":(exclude)src/gf180tcad/limitations_figures.py",
 
 # step -> shell command run in the step directory inside the sandbox. The C-V runs (cv-*) are
 # b2.py then b2an.py with their settings in the environment (see b2.py).
-_HARD = ("ref_1e-10 tol_1e-8 tol_1e-6 tol_1e-4 scale_1e20 scale_1e10 step_5mV gfem belos nosrh "
-         "tau_1e-12 tau_1e-13 tau_1e-14 tau_1e-15 tau_1e-15_step_5mV tau_1e-12_tol_1e-8")
+_HARD = (
+    "ref_1e-10 tol_1e-8 tol_1e-6 tol_1e-4 scale_1e20 scale_1e10 step_5mV gfem belos nosrh "
+    "tau_1e-12 tau_1e-13 tau_1e-14 tau_1e-15 tau_1e-15_step_5mV tau_1e-12_tol_1e-8"
+)
 
 
-def _cv(dev: str, rel: str, abs_: str, *, tau: str = "", vgmax: str = "", sub: str = "",
-        pred: str = "") -> str:
+def _cv(
+    dev: str, rel: str, abs_: str, *, tau: str = "", vgmax: str = "", sub: str = "", pred: str = ""
+) -> str:
     env = (f"CX_REL={rel} CX_ABS={abs_} CX_LIN=klu2 CX_TAU={tau} CX_VGMAX={vgmax} "
            f"CX_SUB={sub} CX_PRED={pred}")  # fmt: skip
-    return (f"env {env} python3 b2.py {dev} calibrated ni && "
-            f"env {env} python3 b2an.py {dev} calibrated result")
+    return (
+        f"env {env} python3 b2.py {dev} calibrated ni && "
+        f"env {env} python3 b2an.py {dev} calibrated result"
+    )
 
 
 STEPS = {
@@ -61,9 +66,11 @@ STEPS = {
     "cv-nfet-tau15-constant": _cv("nfet_05v0", "1e-10", "1e-12", tau="1e-15", pred="constant"),
     "cv-pfet-tau15-1e-10": _cv("pfet_05v0", "1e-10", "1e-12", tau="1e-15", sub="5"),
     "cv-pfet-tau14-1e-10": _cv("pfet_05v0", "1e-10", "1e-12", tau="1e-14", sub="5"),
-    "b4-harmonic-balance": ("for fa in '1e6 1e-4' '1e3 1e-4' '1e0 1e-4' '1e6 1e-3' '1e6 1e-5'; do "
-                            "set -- $fa; env CX_REL=1e-8 CX_ABS=1e-10 CX_F=$1 CX_AMP=$2 "
-                            "python3 b4.py || exit 1; done"),  # fmt: skip
+    "b4-harmonic-balance": (
+        "for fa in '1e6 1e-4' '1e3 1e-4' '1e0 1e-4' '1e6 1e-3' '1e6 1e-5'; do "
+        "set -- $fa; env CX_REL=1e-8 CX_ABS=1e-10 CX_F=$1 CX_AMP=$2 "
+        "python3 b4.py || exit 1; done"
+    ),
     "b1-tri3": "python3 b1.py && python3 b1an.py",
     "b4-parallel-plate": "python3 b4pp.py",
     "b4-metal-gate": "python3 b4mg.py",
@@ -116,14 +123,20 @@ def run_step(work: Path, step: str) -> int:
            "bash", "-o", "pipefail", "-c", STEPS[step]]  # fmt: skip
     t0 = time.time()
     with open(out / "run.log", "wb") as log:
-        rc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT).returncode
+        rc = subprocess.run(cmd, check=False, stdout=log, stderr=subprocess.STDOUT).returncode
     after = pins()
     if after != before:
         raise RuntimeError(f"{step}: the pins changed during the run")
-    (out / "done.json").write_text(json.dumps({"exit": rc, "wall_s": round(time.time() - t0, 1),
-                                               "command": STEPS[step]}, indent=1) + "\n")
-    print(f"{step}: exit {rc} ({time.time() - t0:.0f} s), log {shlex.quote(str(out / 'run.log'))}",
-          flush=True)
+    (out / "done.json").write_text(
+        json.dumps(
+            {"exit": rc, "wall_s": round(time.time() - t0, 1), "command": STEPS[step]}, indent=1
+        )
+        + "\n"
+    )
+    print(
+        f"{step}: exit {rc} ({time.time() - t0:.0f} s), log {shlex.quote(str(out / 'run.log'))}",
+        flush=True,
+    )
     return rc
 
 

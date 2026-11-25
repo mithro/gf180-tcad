@@ -6,9 +6,7 @@ Runs inside the Charon image (numpy, netCDF4, gplugins and gf180tcad on the path
 from __future__ import annotations
 
 import json
-import math
 import os
-import re
 import subprocess
 import time
 from dataclasses import dataclass
@@ -49,7 +47,9 @@ def job1d(device: str, params: str, *, mesh_spacing: dict | None = None) -> Job1
     body_dopant = "acceptor" if st["polarity"] == "n" else "donor"
     gate_dopant = "donor" if st["polarity"] == "n" else "acceptor"
     layers = [
-        Layer1D("gate_poly", "silicon", st["poly_um"], doping.constant(st["ngate_cm3"]), gate_dopant),
+        Layer1D(
+            "gate_poly", "silicon", st["poly_um"], doping.constant(st["ngate_cm3"]), gate_dopant
+        ),
         Layer1D("oxide", "oxide", st["t_ox_nm"] * 1e-3, None),
         Layer1D("body", "silicon", st["body_um"], doping.constant(st["n_ch_cm3"]), body_dopant),
     ]
@@ -61,12 +61,15 @@ def job1d(device: str, params: str, *, mesh_spacing: dict | None = None) -> Job1
     c = {k: v for k, v in meta["constants"].items() if k not in ("n_i_cm3", "vt_v")}
     consts = Constants(**c, eps_ox=st["eps_ox"])
     stack = Stack1D(
-        f"moscap1d_{device}", layers, contacts,
-        Mesh1D(spacing, max_ratio=meta["mesh"]["grading"]), consts,
+        f"moscap1d_{device}",
+        layers,
+        contacts,
+        Mesh1D(spacing, max_ratio=meta["mesh"]["grading"]),
+        consts,
     )
     vg, cs = [], []
     for line in (d / "per_area.csv").read_text().splitlines():
-        if line.startswith("#") or line.startswith("vg"):
+        if line.startswith(("#", "vg")):
             continue
         f = line.split(",")
         vg.append(float(f[0]))
@@ -222,14 +225,17 @@ def run(inp: str, *, current=True, log=None, timeout=3600):
     """charonInterpreter.py -i inp (writes inp.xml), then charon_mp.exe --i=inp.xml [--current]."""
     Path("currents-loca.dat").unlink(missing_ok=True)
     t0 = time.time()
-    r = subprocess.run(
-        ["python3", "-W", "ignore", INTERP, "-i", inp], capture_output=True, text=True
+    r = subprocess.run(  # the interpreter exit code is checked below
+        check=False,
+        args=["python3", "-W", "ignore", INTERP, "-i", inp],
+        capture_output=True,
+        text=True,
     )
     out = r.stdout + r.stderr
     if r.returncode != 0 or not Path(inp + ".xml").exists():
         raise RuntimeError(f"interpreter failed ({r.returncode}):\n{out}")
     cmd = [CHARON, f"--i={inp}.xml"] + (["--current"] if current else [])
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    r = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout)
     out = r.stdout + r.stderr
     Path(log or (inp + ".log")).write_text(out)
     ok = "Charon run completed." in out
@@ -333,30 +339,34 @@ def read_msh22(path):
             i += 2
         elif s == "$PhysicalNames":
             n = int(lines[i + 1])
-            for line in lines[i + 2: i + 2 + n]:
+            for line in lines[i + 2 : i + 2 + n]:
                 d, t, name = line.split(maxsplit=2)
                 phys[(int(d), int(t))] = name.strip('"')
             i += 2 + n
         elif s == "$Nodes":
             n = int(lines[i + 1])
-            for line in lines[i + 2: i + 2 + n]:
+            for line in lines[i + 2 : i + 2 + n]:
                 f = line.split()
                 nodes[int(f[0])] = (float(f[1]), float(f[2]))
             i += 2 + n
         elif s == "$Elements":
             n = int(lines[i + 1])
-            for line in lines[i + 2: i + 2 + n]:
+            for line in lines[i + 2 : i + 2 + n]:
                 f = [int(v) for v in line.split()]
                 etype, ntags = f[1], f[2]
-                tags = f[3: 3 + ntags]
-                elems.append((etype, tags[0], f[3 + ntags:]))
+                tags = f[3 : 3 + ntags]
+                elems.append((etype, tags[0], f[3 + ntags :]))
             i += 2 + n
         else:
             i += 1
     if fmt != "2.2":
         raise ValueError(f"MSH format {fmt}, want 2.2")
-    return {"nodes": nodes, "physical": {f"{d}:{t}": n for (d, t), n in phys.items()},
-            "phys": phys, "elems": elems}
+    return {
+        "nodes": nodes,
+        "physical": {f"{d}:{t}": n for (d, t), n in phys.items()},
+        "phys": phys,
+        "elems": elems,
+    }
 
 
 TRI_SIDES = {(0, 1): 1, (1, 2): 2, (2, 0): 3}
@@ -387,8 +397,9 @@ def msh_to_exodus_parts(m, *, regions, contacts):
         conn = np.array([[index[n] for n in t] for t in tris[r]])
         # orient counter-clockwise
         p = xy[conn]
-        area = ((p[:, 1, 0] - p[:, 0, 0]) * (p[:, 2, 1] - p[:, 0, 1])
-                - (p[:, 2, 0] - p[:, 0, 0]) * (p[:, 1, 1] - p[:, 0, 1]))
+        area = (p[:, 1, 0] - p[:, 0, 0]) * (p[:, 2, 1] - p[:, 0, 1]) - (p[:, 2, 0] - p[:, 0, 0]) * (
+            p[:, 1, 1] - p[:, 0, 1]
+        )
         flip = area < 0
         conn[flip] = conn[flip][:, [0, 2, 1]]
         for k, tri in enumerate(conn):
@@ -396,8 +407,12 @@ def msh_to_exodus_parts(m, *, regions, contacts):
         eid0 += len(conn)
         blocks.append((r, "TRI3", conn))
     sidesets = []
-    info = {"nodes": len(xy), "triangles": {r: len(tris[r]) for r in regions},
-            "dropped_nodes": len(m["nodes"]) - len(used), "contacts": {}}
+    info = {
+        "nodes": len(xy),
+        "triangles": {r: len(tris[r]) for r in regions},
+        "dropped_nodes": len(m["nodes"]) - len(used),
+        "contacts": {},
+    }
     for ss_name, (electrode, region) in contacts.items():
         names = {f"{electrode}___{region}", f"{region}___{electrode}"}
         segs = [ns for etype, ptag, ns in m["elems"] if etype == 1 and phys.get((1, ptag)) in names]

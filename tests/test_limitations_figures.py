@@ -817,7 +817,7 @@ def check_charon_strip(fig):
     lo, hi = lf.STYLE["strip_span_nm"]
     d = Drawn(fig)
     for i, layer in enumerate(run["layers"]):
-        xs = x[bn[i]: bn[i + 1] + 1] - x[bn[1]]
+        xs = x[bn[i] : bn[i + 1] + 1] - x[bn[1]]
         keep = xs[(xs >= lo) & (xs <= hi)]
         ln = d(f"nodes {layer}")
         assert _close(ln.get_xdata(), np.repeat(keep, 3)), layer

@@ -3,16 +3,17 @@ calibrated; also n*p/n_i^2 in the neutral bulk (the n_i check of B2) and the sca
 
 Charon writes non-DOF nodal fields scaled by its concentration scaling C0 (read from the log).
 """
+
 import json
 import re
-
-import numpy as np
+from pathlib import Path
 
 import cx
 import decks
+import numpy as np
 import opts
 
-names = ("Doping,Acceptor Concentration,Donor Concentration,Intrinsic Concentration")
+names = "Doping,Acceptor Concentration,Donor Concentration,Intrinsic Concentration"
 out = {}
 for dev in ("nfet_05v0", "pfet_05v0"):
     for params in ("start", "calibrated"):
@@ -21,11 +22,18 @@ for dev in ("nfet_05v0", "pfet_05v0"):
         ss = [("gate", *ss[0][1:]), ("body_contact", *ss[1][1:])]
         cx.write_exodus("strip.exo", xy, blocks, ss)
         tag = f"{dev}_{params}"
-        d = decks.moscap_deck(job, mesh="strip.exo", out=f"{tag}.exo", gate_bc="fixed at 0.0",
-                              nodal_out=[("gate_poly", names), ("body", names)],
-                              rel=opts.REL, abs_=opts.ABS, extra=opts.EXTRA)
+        d = decks.moscap_deck(
+            job,
+            mesh="strip.exo",
+            out=f"{tag}.exo",
+            gate_bc="fixed at 0.0",
+            nodal_out=[("gate_poly", names), ("body", names)],
+            rel=opts.REL,
+            abs_=opts.ABS,
+            extra=opts.EXTRA,
+        )
         d = d.replace("BC is ohmic for body on body", "BC is ohmic for body_contact on body")
-        open(f"{tag}.inp", "w").write(d)
+        Path(f"{tag}.inp").write_text(d)
         ok, log, dt = cx.run(f"{tag}.inp")
         rec = {"ok": ok}
         if not ok:
@@ -43,15 +51,19 @@ for dev in ("nfet_05v0", "pfet_05v0"):
         dop = st.nodal["Doping"][0, 0::2] * c0
         want = np.zeros(len(xs))
         want[: bn[1] + 1] = gate_net
-        want[bn[2]:] = body_net
-        semi = np.r_[0: bn[1] + 1, bn[2]: len(xs)]
+        want[bn[2] :] = body_net
+        semi = np.r_[0 : bn[1] + 1, bn[2] : len(xs)]
         rel = np.abs(dop[semi] - want[semi]) / np.abs(want[semi])
         # the oxide nodes: interface nodes belong to two blocks
-        rec.update(c0=c0, max_rel_doping=float(np.max(rel)),
-                   poly_doping_cm3=float(dop[0]), body_doping_cm3=float(dop[-1]),
-                   interface_doping_cm3=[float(dop[bn[1]]), float(dop[bn[2]])],
-                   ni_cm3=float(st.nodal["Intrinsic Concentration"][0, 0] * c0),
-                   ni_want=job.meta["constants"]["n_i_cm3"])
+        rec.update(
+            c0=c0,
+            max_rel_doping=float(np.max(rel)),
+            poly_doping_cm3=float(dop[0]),
+            body_doping_cm3=float(dop[-1]),
+            interface_doping_cm3=[float(dop[bn[1]]), float(dop[bn[2]])],
+            ni_cm3=float(st.nodal["Intrinsic Concentration"][0, 0] * c0),
+            ni_want=job.meta["constants"]["n_i_cm3"],
+        )
         nn = st.nodal["ELECTRON_DENSITY"][0, 0::2]
         pp = st.nodal["HOLE_DENSITY"][0, 0::2]
         ni = job.meta["constants"]["n_i_cm3"]
@@ -60,4 +72,4 @@ for dev in ("nfet_05v0", "pfet_05v0"):
         rec["max_abs_np_over_ni2_minus_1"] = float(np.max(np.abs(nn[semi] * pp[semi] / ni**2 - 1)))
         out[tag] = rec
         print(tag, rec, flush=True)
-json.dump(out, open("b5.json", "w"), indent=1)
+Path("b5.json").write_text(json.dumps(out, indent=1))
