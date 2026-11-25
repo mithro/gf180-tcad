@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="460.8pt" height="460.8pt" viewBox="0 0 460.8 460.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>gf180tcad</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 460.8 
+L 460.8 460.8 
+L 460.8 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 18.432 126.72 
+L 211.968 126.72 
+Q 221.184 126.72 221.184 117.504 
+L 221.184 66.816 
+Q 221.184 57.6 211.968 57.6 
+L 18.432 57.6 
+Q 9.216 57.6 9.216 66.816 
+L 9.216 117.504 
+Q 9.216 126.72 18.432 126.72 
+z
+" clip-path="url(#p99a82d1906)" style="fill: #e4e4e4; stroke: #8c8c8c; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 18.432 235.008 
+L 211.968 235.008 
+Q 221.184 235.008 221.184 225.792 
+L 221.184 175.104 
+Q 221.184 165.888 211.968 165.888 
+L 18.432 165.888 
+Q 9.216 165.888 9.216 175.104 
+L 9.216 225.792 
+Q 9.216 235.008 18.432 235.008 
+z
+" clip-path="url(#p99a82d1906)" style="fill: #e4e4e4; stroke: #8c8c8c; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 18.432 343.296 
+L 211.968 343.296 
+Q 221.184 343.296 221.184 334.08 
+L 221.184 283.392 
+Q 221.184 274.176 211.968 274.176 
+L 18.432 274.176 
+Q 9.216 274.176 9.216 283.392 
+L 9.216 334.08 
+Q 9.216 343.296 18.432 343.296 
+z
+" clip-path="url(#p99a82d1906)" style="fill: #e4e4e4; stroke: #8c8c8c; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 248.832 126.72 
+L 442.368 126.72 
+Q 451.584 126.72 451.584 117.504 
+L 451.584 66.816 
+Q 451.584 57.6 442.368 57.6 
+L 248.832 57.6 
+Q 239.616 57.6 239.616 66.816 
+L 239.616 117.504 
+Q 239.616 126.72 248.832 126.72 
+z
+" clip-path="url(#p99a82d1906)" style="fill: #009e73; fill-opacity: 0.32; stroke: #009e73; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 248.832 235.008 
+L 442.368 235.008 
+Q 451.584 235.008 451.584 225.792 
+L 451.584 175.104 
+Q 451.584 165.888 442.368 165.888 
+L 248.832 165.888 
+Q 239.616 165.888 239.616 175.104 
+L 239.616 225.792 
+Q 239.616 235.008 248.832 235.008 
+z
+" clip-path="url(#p99a82d1906)" style="fill: #009e73; fill-opacity: 0.32; stroke: #009e73; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 248.832 343.296 
+L 442.368 343.296 
+Q 451.584 343.296 451.584 334.08 
+L 451.584 283.392 
+Q 451.584 274.176 442.368 274.176 
+L 248.832 274.176 
+Q 239.616 274.176 239.616 283.392 
+L 239.616 334.08 
+Q 239.616 343.296 248.832 343.296 
+z
+" clip-path="url(#p99a82d1906)" style="fill: #009e73; fill-opacity: 0.32; stroke: #009e73; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 96.768 451.584 
+L 364.032 451.584 
+Q 373.248 451.584 373.248 442.368 
+L 373.248 391.68 
+Q 373.248 382.464 364.032 382.464 
+L 96.768 382.464 
+Q 87.552 382.464 87.552 391.68 
+L 87.552 442.368 
+Q 87.552 451.584 96.768 451.584 
+z
+" clip-path="url(#p99a82d1906)" style="fill: #ffffff; stroke: #222222; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 12px; font-family: 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #222222" x="115.2" y="26.157656" transform="rotate(-0 115.2 26.157656)">The reference</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(42.38625 88.076016)">The PDK's SPICE models</text>
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(59.680313 102.479297)">(from the foundry)</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(65.708438 196.364016)">Circuit simulator</text>
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(68.848125 210.767297)">(ngspice, Xyce)</text>
+   </g>
+   <g id="patch_9">
+    <path d="M 115.2 133.327969 
+Q 115.2 146.302529 115.2 157.488235 
+" style="fill: none; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 117.6 152.688235 
+L 115.2 157.488235 
+L 112.8 152.688235 
+z
+" style="fill: #222222; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #222222" x="115.2" y="311.853656" transform="rotate(-0 115.2 311.853656)">Reference curves</text>
+   </g>
+   <g id="patch_10">
+    <path d="M 115.2 241.615969 
+Q 115.2 254.590529 115.2 265.776235 
+" style="fill: none; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 117.6 260.976235 
+L 115.2 265.776235 
+L 112.8 260.976235 
+z
+" style="fill: #222222; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 115.2 349.903969 
+Q 115.2 362.878529 115.2 374.064235 
+" style="fill: none; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 117.6 369.264235 
+L 115.2 374.064235 
+L 112.8 369.264235 
+z
+" style="fill: #222222; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 12px; font-family: 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #222222" x="345.6" y="26.157656" transform="rotate(-0 345.6 26.157656)">What is tested</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(287.457188 88.076016)">Public process data</text>
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(279.950625 102.479297)">and the PDK's layouts</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(283.469063 196.364484)">TCAD device physics</text>
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(317.646563 210.766828)">(DEVSIM)</text>
+   </g>
+   <g id="patch_12">
+    <path d="M 345.6 133.327969 
+Q 345.6 146.302529 345.6 157.488235 
+" style="fill: none; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 348 152.688235 
+L 345.6 157.488235 
+L 343.2 152.688235 
+z
+" style="fill: #222222; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #222222" x="345.6" y="311.853187" transform="rotate(-0 345.6 311.853187)">TCAD curves</text>
+   </g>
+   <g id="patch_13">
+    <path d="M 345.6 241.615969 
+Q 345.6 254.590529 345.6 265.776235 
+" style="fill: none; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 348 260.976235 
+L 345.6 265.776235 
+L 343.2 260.976235 
+z
+" style="fill: #222222; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 345.6 349.903969 
+Q 345.6 362.878529 345.6 374.064235 
+" style="fill: none; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 348 369.264235 
+L 345.6 374.064235 
+L 343.2 369.264235 
+z
+" style="fill: #222222; stroke: #222222; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(141.72375 412.940016)">Compare each pair of curves:</text>
+    <text style="font-size: 12px; font-family: 'DejaVu Sans', sans-serif; fill: #222222" transform="translate(130.400625 427.343297)">Agree, Same process or Disagree</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p99a82d1906">
+   <rect x="0" y="0" width="460.8" height="460.8"/>
+  </clipPath>
+ </defs>
+</svg>
