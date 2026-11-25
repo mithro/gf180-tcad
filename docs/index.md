@@ -42,11 +42,12 @@ TCAD's numbers are fitted to the reference curves.
 The PDK's SPICE models are the {term}`reference <SPICE reference results>`, and the TCAD is what
 is tested. A circuit simulator runs the SPICE models to give the reference curves. Three TCAD
 numbers are fitted to those curves at three gate sizes: the oxide thickness, the body doping and
-a voltage shift. The fitted TCAD is then tested at sizes it never saw. So what was fitted stays
+a voltage shift. The fitted TCAD is then tested in 1D at three sizes it never saw, and in 2D. So
+what was fitted stays
 apart from what was predicted.
 
 The TCAD runs in two forms. The 1D form is one column down through the gate, its oxide and the
-body. The 2D form is a slice along the gate's length ({numref}`index-cell-figure`). Both run for
+body, under the gate in {numref}`index-cell-figure`. The 2D form is a slice along the gate's length ({numref}`index-cell-figure`). Both run for
 the two kinds of 5 V transistor, the {term}`nfet <nfet_05v0>` and the {term}`pfet <pfet_05v0>`.
 
 Each pair of curves is judged {term}`Agree`, {term}`Same process` or {term}`Disagree`. Same
@@ -86,7 +87,7 @@ under an open licence, and every input is pinned to an exact version.
   changes, the {term}`C–V` curve. It has no result for the transistor's current.
 - **In 1D the nfet matches and the pfet only in part.** The nfet agrees at every size. The
   pfet disagrees at two of its three fitted sizes ({numref}`index-cv-figure`) and is Same
-  process at the rest.
+  process or Agree at the rest.
 - **The 2D slices are mixed.** Each calibrated 2D slice is Same process or Disagree.
 - **No chip has been measured.** No silicon data exists to check either model against.
 

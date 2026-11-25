@@ -70,8 +70,9 @@ generated pages of every result are {doc}`/_generated/tcad/index`.
 | 2D, W10/L2 | Same process | Disagree |
 | 2D, W10/L10 | not run | not run |
 
-The pfet's 1D row gives its worst fitted size: W10/L0.5 and W10/L10 are Disagree, and
-W10/L2 is Same process. The W10/L10 cell has no 2D result, because its equilibrium solve fails
+Each 1D row gives the worst verdict of its sizes. The pfet's fitted W10/L0.5 and W10/L10 are
+Disagree, and W10/L2 is Same process. Of its held-out sizes, W10/L1 is Agree and the others are
+Same process. The W10/L10 cell has no 2D result, because its equilibrium solve fails
 ({ref}`moscap2d-l10`).
 
 The first 2D row holds the shortest gates ({numref}`status-cv-figure`): 0.6 µm for the nfet,
