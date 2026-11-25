@@ -80,6 +80,13 @@ def test_record_pins_what_the_runs_used(device, gid):
     assert rec["variant_py_sha256"] == hashlib.sha256(variant).hexdigest()
     assert rec["calibration_file_sha256"] == _sha256(calibration_file(device))
     assert rec["calibration_values"] == calibration.read(calibration_file(device), device)
+    # once the fit is committed (plan Task E3b), it names this record as its input
+    from gf180tcad.tcad import edgefit
+
+    fit = edgefit.read(device)
+    if fit is not None:
+        path = lf.EDGE_ROOT / f"{device}-{gid}.json"
+        assert fit["record"] == {"cell": gid, "file": path.name, "sha256": _sha256(path)}
 
 
 @pytest.mark.parametrize(("device", "gid"), CELLS)

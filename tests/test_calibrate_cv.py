@@ -619,6 +619,16 @@ def test_committed_validation(device):
     for gid, c in data["one_d"].items():
         g = next(x for x in DEVICES[device].geometries if geometry_id(x) == gid)
         assert c["causes"] == cv.causes(device, g)
+    # every compared 2D geometry records the committed poly length bias fit, and none records one
+    # while none is committed (plan Task E3)
+    from gf180tcad.tcad import edgefit
+
+    fit_sha = edgefit.sha256(device)
+    for gid, c in data["two_d"].items():
+        if c["status"] == "compared":
+            assert c.get("edge_fit_sha256") == fit_sha, gid
+        else:
+            assert "edge_fit_sha256" not in c, gid
 
 
 def _doc_rows(c: dict) -> tuple[str, str, str]:
