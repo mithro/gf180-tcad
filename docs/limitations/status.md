@@ -94,6 +94,7 @@ The corner fits give each fitted number a lower and an upper bound and its sprea
 
 ## Other engines and measurements
 
-Both {{ Charon }} images are built and pinned ({ref}`charon-images`), and no Charon {term}`job`
-has run. No measured silicon data exists ({doc}`silicon-validation`). Planned work, each item
+Both {{ Charon }} images are built and pinned ({ref}`charon-images`). In experiments, the Charon 1D
+C–V matches DEVSIM's within 3.0e-5 ({doc}`charon`). No Charon {term}`job` of the
+results trees has run. No measured silicon data exists ({doc}`silicon-validation`). Planned work, each item
 with its issue, is on the {doc}`/roadmap`.

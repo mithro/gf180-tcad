@@ -1,0 +1,979 @@
+{
+  "commit": "18b0a2d92ccf7817b02f8623eea0595fa1687ec4",
+  "doping": {
+    "nfet_05v0_calibrated": {
+      "body_doping_cm3": -8.813323306821749e+16,
+      "c0": 1e+16,
+      "interface_doping_cm3": [
+        1e+20,
+        -8.813323306821749e+16
+      ],
+      "max_abs_np_over_ni2_minus_1": 3.1370461783808423e-12,
+      "max_rel_doping": 0.0,
+      "ni_cm3": 8265841554.853887,
+      "ni_want": 8265841554.853887,
+      "np_over_ni2_body_bulk": 1.0000000000000002,
+      "np_over_ni2_poly_bulk": 1.0,
+      "ok": true,
+      "poly_doping_cm3": 1e+20
+    },
+    "nfet_05v0_start": {
+      "body_doping_cm3": -1.7e+17,
+      "c0": 1e+16,
+      "interface_doping_cm3": [
+        1e+20,
+        -1.7e+17
+      ],
+      "max_abs_np_over_ni2_minus_1": 3.361241396326875e-09,
+      "max_rel_doping": 0.0,
+      "ni_cm3": 8265841554.853887,
+      "ni_want": 8265841554.853887,
+      "np_over_ni2_body_bulk": 1.0,
+      "np_over_ni2_poly_bulk": 1.0,
+      "ok": true,
+      "poly_doping_cm3": 1e+20
+    },
+    "pfet_05v0_calibrated": {
+      "body_doping_cm3": 2.14664982697726e+17,
+      "c0": 1e+16,
+      "interface_doping_cm3": [
+        -3.6e+19,
+        2.14664982697726e+17
+      ],
+      "max_abs_np_over_ni2_minus_1": 1.0331291377951857e-11,
+      "max_rel_doping": 0.0,
+      "ni_cm3": 8265841554.853887,
+      "ni_want": 8265841554.853887,
+      "np_over_ni2_body_bulk": 1.0,
+      "np_over_ni2_poly_bulk": 1.0,
+      "ok": true,
+      "poly_doping_cm3": -3.6e+19
+    },
+    "pfet_05v0_start": {
+      "body_doping_cm3": 1.7e+17,
+      "c0": 1e+16,
+      "interface_doping_cm3": [
+        -3.6e+19,
+        1.7e+17
+      ],
+      "max_abs_np_over_ni2_minus_1": 1.0764278357555668e-11,
+      "max_rel_doping": 0.0,
+      "ni_cm3": 8265841554.853887,
+      "ni_want": 8265841554.853887,
+      "np_over_ni2_body_bulk": 1.0,
+      "np_over_ni2_poly_bulk": 1.0,
+      "ok": true,
+      "poly_doping_cm3": -3.6e+19
+    }
+  },
+  "gplugins_commit": "0715c81c4439533512621a97358d9d779411ebf6",
+  "harmonic_balance": {
+    "b4_1000_0.0001": {
+      "accumulation": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": 0.20309582564279713,
+          "body_contact_body_CosH1.000000__DispCurrent": -2.127628917042129e-12,
+          "body_contact_body_SinH1.000000__Current": -2.1375260216046536e-14,
+          "body_contact_body_SinH1.000000__DispCurrent": -1.9791489387169298e-10,
+          "gate_gate_poly_CosH1.000000__Current": 1.189331350745973e-11,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.203145675254255,
+          "gate_gate_poly_SinH1.000000__Current": 1.8633644647646338e-11,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -7.808377420617374e-10
+        },
+        "c_qs_f_cm2": 2.0355070180250638e-07,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 17.04576063156128,
+        "rows": [
+          [
+            -2.09874753,
+            0.0,
+            2.15523359e-15,
+            1.80500207e-32,
+            2.59748752e-12,
+            -2.72112415e-23,
+            1.5210915e-22,
+            -2.59812507e-12,
+            -2.73378202e-25,
+            -2.53122616e-21,
+            2.38314398e-22,
+            -9.98649915e-21
+          ],
+          [
+            -2.04874753,
+            0.0,
+            -7.3277942e-15,
+            6.1080155e-08,
+            2.59231496e-12,
+            4.85269357e-25,
+            1.51518346e-22,
+            -2.59700379e-12,
+            8.62093433e-16,
+            -2.53619882e-21,
+            2.39198536e-22,
+            -9.90175691e-21
+          ],
+          [
+            -2.04874753,
+            0.0,
+            -1.29314015e-14,
+            -1.72295649e-31,
+            2.60610846e-12,
+            4.37082478e-22,
+            1.56367721e-22,
+            -2.59700379e-12,
+            4.2414997e-13,
+            -2.54197611e-21,
+            2.3844997e-22,
+            -9.92007956e-21
+          ]
+        ],
+        "v_device": -2.098747531469644,
+        "vg": -2.0
+      },
+      "amplitude_v": 0.0001,
+      "depletion": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": 0.38282255894155703,
+          "body_contact_body_CosH1.000000__DispCurrent": -5.63579314918423e-13,
+          "body_contact_body_SinH1.000000__Current": -0.00016430152773310366,
+          "body_contact_body_SinH1.000000__DispCurrent": -3.7261646520588037e-10,
+          "gate_gate_poly_CosH1.000000__Current": 3.012827623245027e-11,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.38332273807174516,
+          "gate_gate_poly_SinH1.000000__Current": 4.512875802809107e-11,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -1.0712735505363733e-09
+        },
+        "c_qs_f_cm2": 8.350892014236399e-08,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 17.305140733718872,
+        "rows": [
+          [
+            -0.0987475315,
+            0.0,
+            -1.72418687e-15,
+            -4.25618235e-08,
+            2.0086777e-12,
+            -2.95711205e-24,
+            1.58083674e-22,
+            -2.01130215e-12,
+            -8.62093435e-16,
+            -1.95512612e-21,
+            2.36791505e-22,
+            -5.62099396e-21
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            9.48302779e-14,
+            -2.9536397e-32,
+            1.99057374e-12,
+            -3.40977335e-22,
+            1.57070432e-22,
+            -1.99330071e-12,
+            -1.9828149e-13,
+            -1.94167419e-21,
+            2.3865465e-22,
+            -5.53187926e-21
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            -3.44837374e-15,
+            -4.43238072e-08,
+            1.98712537e-12,
+            5.53437844e-23,
+            1.58083688e-22,
+            -1.99330071e-12,
+            -1.78761033e-24,
+            -1.94762813e-21,
+            2.36899395e-22,
+            -5.5260905e-21
+          ]
+        ],
+        "v_device": -0.09874753146964436,
+        "vg": 0.0
+      },
+      "f_hz": 1000.0
+    },
+    "b4_1_0.0001": {
+      "accumulation": {
+        "c_qs_f_cm2": 2.0355070180250638e-07,
+        "hb_ok": false,
+        "hb_time_s": 40.225247621536255,
+        "v_device": -2.098747531469644,
+        "vg": -2.0
+      },
+      "amplitude_v": 0.0001,
+      "depletion": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": -0.16430152792368805,
+          "body_contact_body_CosH1.000000__DispCurrent": 1.4310669757256175e-12,
+          "body_contact_body_SinH1.000000__Current": -1.0713928696882098e-13,
+          "body_contact_body_SinH1.000000__DispCurrent": -6.146327147073038e-13,
+          "gate_gate_poly_CosH1.000000__Current": 3.8599692064845365e-10,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.38332273807174516,
+          "gate_gate_poly_SinH1.000000__Current": 6.214115088876922e-11,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -3.3411144477960544e-11
+        },
+        "c_qs_f_cm2": 8.350892014236399e-08,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 19.55874538421631,
+        "rows": [
+          [
+            -0.0987475315,
+            0.0,
+            1.51067041e-24,
+            2.78954861e-32,
+            -8.62093436e-16,
+            7.50883733e-27,
+            2.02533364e-24,
+            -2.01130215e-15,
+            -5.62162003e-28,
+            -3.22499027e-27,
+            3.26055874e-25,
+            -1.7530895e-25
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            2.5862803e-15,
+            -4.43296415e-08,
+            2.58628031e-15,
+            8.51304266e-27,
+            2.34230338e-24,
+            -1.99330071e-15,
+            6.55296893e-28,
+            -2.44950834e-27,
+            -1.42366609e-24,
+            2.42357895e-25
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            1.61879595e-12,
+            2.62545751e-32,
+            1.5823725e-12,
+            -2.22853456e-25,
+            1.04058601e-24,
+            -1.99330071e-15,
+            -2.43972442e-13,
+            -1.44557186e-24,
+            3.20269086e-25,
+            -1.80734788e-24
+          ]
+        ],
+        "v_device": -0.09874753146964436,
+        "vg": 0.0
+      },
+      "f_hz": 1.0
+    },
+    "b4_1e+06_0.0001": {
+      "accumulation": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": 0.20314712175697944,
+          "body_contact_body_CosH1.000000__DispCurrent": 8.707401812430159e-10,
+          "body_contact_body_SinH1.000000__Current": 0.0008896311706101201,
+          "body_contact_body_SinH1.000000__DispCurrent": -1.9902741319114414e-07,
+          "gate_gate_poly_CosH1.000000__Current": 1.218932261922735e-11,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.2031456744723616,
+          "gate_gate_poly_SinH1.000000__Current": 1.865298329442146e-11,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -7.775830835654685e-07
+        },
+        "c_qs_f_cm2": 2.0355070180250638e-07,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 16.22869324684143,
+        "rows": [
+          [
+            -2.09874753,
+            0.0,
+            4.05183915e-14,
+            -3.87254983e-31,
+            2.59814357e-09,
+            1.11363035e-17,
+            1.55894949e-19,
+            -2.59812506e-09,
+            1.13779092e-11,
+            -2.54545469e-15,
+            2.38561729e-19,
+            -9.9448738e-15
+          ],
+          [
+            -2.04874753,
+            0.0,
+            -4.31046718e-15,
+            -1.14863765e-32,
+            2.5970082e-09,
+            2.25339023e-20,
+            1.55894058e-19,
+            -2.59700379e-09,
+            -8.62094234e-16,
+            -2.54434743e-15,
+            2.38561845e-19,
+            -9.93688881e-15
+          ],
+          [
+            -2.04874753,
+            0.0,
+            9.48302779e-15,
+            6.19844843e-08,
+            2.59699699e-09,
+            1.11228562e-17,
+            1.55890548e-19,
+            -2.59700377e-09,
+            1.13623915e-11,
+            -2.54433901e-15,
+            2.38562561e-19,
+            -9.93689411e-15
+          ]
+        ],
+        "v_device": -2.098747531469644,
+        "vg": -2.0
+      },
+      "amplitude_v": 0.0001,
+      "depletion": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": 0.3833240073635995,
+          "body_contact_body_CosH1.000000__DispCurrent": 1.0699984210830363e-09,
+          "body_contact_body_SinH1.000000__Current": 0.001093590969857018,
+          "body_contact_body_SinH1.000000__DispCurrent": -3.7554934890210286e-07,
+          "gate_gate_poly_CosH1.000000__Current": 2.971164299750241e-11,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.38332273807174516,
+          "gate_gate_poly_SinH1.000000__Current": 4.546584611473653e-11,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -1.0729034299103984e-06
+        },
+        "c_qs_f_cm2": 8.350892014236399e-08,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 17.189411401748657,
+        "rows": [
+          [
+            -0.0987475315,
+            0.0,
+            -5.60360734e-15,
+            -4.26201673e-08,
+            2.01130881e-09,
+            5.61430333e-18,
+            1.55897591e-19,
+            -2.01130215e-09,
+            5.73809391e-12,
+            -1.97051502e-15,
+            2.38560213e-19,
+            -5.62954597e-15
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            6.03465402e-15,
+            -4.38132987e-08,
+            1.99329365e-09,
+            1.53320738e-20,
+            1.55897606e-19,
+            -1.99330071e-09,
+            -1.20830932e-21,
+            -1.95287686e-15,
+            2.38560286e-19,
+            -5.51178648e-15
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            1.09916913e-14,
+            -4.26636845e-32,
+            1.99329537e-09,
+            5.45104891e-18,
+            1.55900583e-19,
+            -1.99330071e-09,
+            5.56007161e-12,
+            -1.95288167e-15,
+            2.38562065e-19,
+            -5.51176464e-15
+          ]
+        ],
+        "v_device": -0.09874753146964436,
+        "vg": 0.0
+      },
+      "f_hz": 1000000.0
+    },
+    "b4_1e+06_0.001": {
+      "accumulation": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": 0.20314571982217677,
+          "body_contact_body_CosH1.000000__DispCurrent": 8.785342663175385e-10,
+          "body_contact_body_SinH1.000000__Current": 0.0008975716573982238,
+          "body_contact_body_SinH1.000000__DispCurrent": -1.9902709808811825e-07,
+          "gate_gate_poly_CosH1.000000__Current": 1.2187546235692395e-12,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.20314567447236165,
+          "gate_gate_poly_SinH1.000000__Current": 1.8652984310882832e-12,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -7.775814627005237e-07
+        },
+        "c_qs_f_cm2": 2.0355070180250638e-07,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 16.481418132781982,
+        "rows": [
+          [
+            -2.09874753,
+            0.0,
+            -6.89674748e-15,
+            9.56651078e-31,
+            2.59812564e-08,
+            1.12359857e-16,
+            1.5587223e-19,
+            -2.59812506e-08,
+            1.14794638e-10,
+            -2.54545066e-14,
+            2.38561742e-19,
+            -9.94485307e-14
+          ],
+          [
+            -2.04874753,
+            0.0,
+            7.00450916e-14,
+            -1.14863757e-32,
+            2.59700238e-08,
+            2.32737271e-19,
+            1.55879185e-19,
+            -2.59700379e-08,
+            1.02589116e-13,
+            -2.54435185e-14,
+            2.38561863e-19,
+            -9.93691542e-14
+          ],
+          [
+            -2.04874753,
+            0.0,
+            -1.29788167e-12,
+            6.50650385e-08,
+            2.59700531e-08,
+            1.56480999e-17,
+            1.55871342e-19,
+            -2.59700378e-08,
+            1.44629105e-11,
+            -2.54435263e-14,
+            2.38562371e-19,
+            -9.93691182e-14
+          ]
+        ],
+        "v_device": -2.098747531469644,
+        "vg": -2.0
+      },
+      "amplitude_v": 0.001,
+      "depletion": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": 0.38332248840623023,
+          "body_contact_body_CosH1.000000__DispCurrent": 1.06022295271445e-09,
+          "body_contact_body_SinH1.000000__Current": 0.0010834535646314337,
+          "body_contact_body_SinH1.000000__DispCurrent": -3.755511041840816e-07,
+          "gate_gate_poly_CosH1.000000__Current": 2.9708803290501026e-12,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.38332273807174516,
+          "gate_gate_poly_SinH1.000000__Current": 4.546584992642378e-12,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -1.0729003081385405e-06
+        },
+        "c_qs_f_cm2": 8.350892014236399e-08,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 17.510934352874756,
+        "rows": [
+          [
+            -0.0987475315,
+            0.0,
+            -2.56472798e-14,
+            -4.29643959e-08,
+            2.01130084e-08,
+            5.56301125e-17,
+            1.55882691e-19,
+            -2.01130215e-08,
+            5.68490274e-11,
+            -1.97052423e-14,
+            2.38560233e-19,
+            -5.62952959e-14
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            -6.03465403e-15,
+            -2.84296597e-23,
+            1.99329934e-08,
+            8.26798951e-20,
+            1.55880588e-19,
+            -1.99330072e-08,
+            4.31046802e-15,
+            -1.95288726e-14,
+            2.38562011e-19,
+            -5.51174199e-14
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            -1.03451212e-14,
+            -1.45276135e-08,
+            1.99330227e-08,
+            5.31258177e-17,
+            1.55881134e-19,
+            -1.99330071e-08,
+            5.42937825e-11,
+            -1.95288875e-14,
+            2.38561775e-19,
+            -5.51174172e-14
+          ]
+        ],
+        "v_device": -0.09874753146964436,
+        "vg": 0.0
+      },
+      "f_hz": 1000000.0
+    },
+    "b4_1e+06_1e-05": {
+      "accumulation": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": 0.20315042525644475,
+          "body_contact_body_CosH1.000000__DispCurrent": 8.868195055279459e-10,
+          "body_contact_body_SinH1.000000__Current": 0.0008863956567728826,
+          "body_contact_body_SinH1.000000__DispCurrent": -1.99022402818464e-07,
+          "gate_gate_poly_CosH1.000000__Current": 1.218988065652164e-10,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.20314567447236165,
+          "gate_gate_poly_SinH1.000000__Current": 1.8652983607178804e-10,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -7.776045645218732e-07
+        },
+        "c_qs_f_cm2": 2.0355070180250638e-07,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 16.492576599121094,
+        "rows": [
+          [
+            -2.09874753,
+            0.0,
+            -8.18988764e-15,
+            -2.13318423e-31,
+            2.59818582e-10,
+            1.13419495e-18,
+            1.55902086e-19,
+            -2.59812506e-10,
+            1.13365287e-12,
+            -2.54539061e-16,
+            2.38561733e-19,
+            -9.94514853e-16
+          ],
+          [
+            -2.04874753,
+            0.0,
+            8.62093436e-16,
+            1.96909313e-32,
+            2.59698751e-10,
+            1.52175776e-18,
+            1.55901016e-19,
+            -2.59700376e-10,
+            1.56469959e-12,
+            -2.54418817e-16,
+            2.38561839e-19,
+            -9.93701881e-16
+          ],
+          [
+            -2.04874753,
+            0.0,
+            -1.3793495e-14,
+            6.05142198e-08,
+            2.59696164e-10,
+            -1.59358575e-21,
+            1.55893563e-19,
+            -2.59700379e-10,
+            -7.75884153e-15,
+            -2.54423301e-16,
+            2.38562652e-19,
+            -9.93642487e-16
+          ]
+        ],
+        "v_device": -2.098747531469644,
+        "vg": -2.0
+      },
+      "amplitude_v": 1e-05,
+      "depletion": {
+        "c_from_columns_over_c_qs": {
+          "body_contact_body_CosH1.000000__Current": 0.3833409312549903,
+          "body_contact_body_CosH1.000000__DispCurrent": 1.3034005089703887e-09,
+          "body_contact_body_SinH1.000000__Current": 0.0013029111150092752,
+          "body_contact_body_SinH1.000000__DispCurrent": -3.755344223348311e-07,
+          "gate_gate_poly_CosH1.000000__Current": 2.9711926968202553e-10,
+          "gate_gate_poly_CosH1.000000__DispCurrent": -0.38332273616590146,
+          "gate_gate_poly_SinH1.000000__Current": 4.5465852975773583e-10,
+          "gate_gate_poly_SinH1.000000__DispCurrent": -1.0729338891032145e-06
+        },
+        "c_qs_f_cm2": 8.350892014236399e-08,
+        "columns": [
+          "gate_Voltage",
+          "body_contact_Voltage",
+          "body_contact_body_CosH0.000000__Current",
+          "gate_gate_poly_CosH0.000000__Current",
+          "body_contact_body_CosH1.000000__Current",
+          "body_contact_body_CosH1.000000__DispCurrent",
+          "gate_gate_poly_CosH1.000000__Current",
+          "gate_gate_poly_CosH1.000000__DispCurrent",
+          "body_contact_body_SinH1.000000__Current",
+          "body_contact_body_SinH1.000000__DispCurrent",
+          "gate_gate_poly_SinH1.000000__Current",
+          "gate_gate_poly_SinH1.000000__DispCurrent"
+        ],
+        "hb_ok": true,
+        "hb_time_s": 16.59321093559265,
+        "rows": [
+          [
+            -0.0987475315,
+            0.0,
+            2.15523359e-16,
+            -4.31919369e-08,
+            2.01139761e-10,
+            6.8389688e-19,
+            1.55899081e-19,
+            -2.01130214e-10,
+            6.83640094e-13,
+            -1.9704367e-16,
+            2.38560249e-19,
+            -5.62970579e-16
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            1.3793495e-14,
+            -4.29002177e-08,
+            1.99334106e-10,
+            2.19890264e-21,
+            1.55899083e-19,
+            -1.99330071e-10,
+            -2.58628194e-15,
+            -1.95285906e-16,
+            2.38560231e-19,
+            -5.51202664e-16
+          ],
+          [
+            -0.0487475315,
+            0.0,
+            -5.17256061e-15,
+            2.62545751e-32,
+            1.99325485e-10,
+            2.21304849e-19,
+            1.55895604e-19,
+            -1.99330071e-10,
+            1.18561203e-23,
+            -1.95277277e-16,
+            2.38562062e-19,
+            -5.51175781e-16
+          ]
+        ],
+        "v_device": -0.09874753146964436,
+        "vg": 0.0
+      },
+      "f_hz": 1000000.0
+    }
+  },
+  "image": "ghcr.io/mithro/gf180-tcad-charon@sha256:b2b981c4606c8b65113add4824c1c449d46d5a4525ad8323d7f2aafa5a7ee4af",
+  "schema": 1,
+  "scripts_sha256": {
+    "b1.py": "bcab7fba1fda731108c165e3a394ee14acaf9f3d2ed2d3c81b516a6da046e4d6",
+    "b1an.py": "c7a8631fc955decd799454b64a49bb898ec9afacc4987fea046ab6a39b64e5f4",
+    "b2.py": "786cf9e8e32085575887f13511953bce6b0ed5b3276d9a034bc29883342220a9",
+    "b2an.py": "ef2ae9e49912355b7967eaad8c2b037bd8c4573475a6abd188868906a2e7b7d2",
+    "b2d.py": "6819c0f97eeaf3596cd1c9bf3741709f6642f74a9066b20ff57778305c1ec6f4",
+    "b2h.py": "dd067f1afc39a4fed41149d11147ed7c434b1826431da9f986e954aff96d67ca",
+    "b2nlp.py": "f580a3c762aa774984f4ad162d78ab268340397aae9f296dd10aa342dd55aea5",
+    "b3.py": "46a453a3c513e8cb7a22ded3c10eeb10ef040d9b347e10dbf32642654ffd90b3",
+    "b4.py": "a475834710ffb7e7c37228ca6398cc646a4974f825879529a835860c4db9ad0e",
+    "b5.py": "5f26bfae2614c5957c5a0d1cf106bee5fb514b697deebe0349641ea3a61ec7ac",
+    "cx.py": "383dc16850d1c634e9a0cfa2561675f417ab94158b2642f59f0c0bad689a8316",
+    "decks.py": "f781f97dbd928b0fbd72bbec6150735368b62a6bced68ee55215e872fe997397",
+    "diag.py": "3d99de3347df23cd704414b7c66fe98c384557653dbab6184b1a194c44f37f4d",
+    "ncdump.py": "5c121d2de278394eaeef2f9a3b92c04cdf8d535a97fa5a7dbf1e66e4f56b330f",
+    "opts.py": "68f48844892b8f1c57a76a9ca5c6d4a55a0a12c5674944a951453c74202c03be",
+    "record.py": "89cf43966b4246e359c591cbc60453cc3b40b6156ea7f1b8c75ea1b1947f22a7",
+    "run.py": "9d8e80071c444749e9aed1740557906ba174fcf0d77e75eb8eb7042084088963"
+  },
+  "solvers": {
+    "Amesos2_config.h": [
+      "#define AMESOS2_VERSION \"0.3d\"",
+      "#define AMESOS2_RELEASE_DATE \"07/28/2011\"",
+      "/* #undef HAVE_AMESOS2_DEBUG */",
+      "/* #undef HAVE_AMESOS2_VERBOSE_DEBUG */",
+      "/* #undef HAVE_AMESOS2_TIMERS */",
+      "#define HAVE_AMESOS2_EXPLICIT_INSTANTIATION",
+      "#define HAVE_AMESOS2_MPI",
+      "#define HAVE_AMESOS2_EPETRAEXT",
+      "#define HAVE_AMESOS2_EPETRA",
+      "#define HAVE_AMESOS2_KLU2",
+      "/* #undef HAVE_AMESOS2_UMFPACK */",
+      "/* #undef HAVE_AMESOS2_TACHO */",
+      "/* #undef HAVE_AMESOS2_SUPERLU */",
+      "/* #undef HAVE_AMESOS2_SUPERLUMT */",
+      "/* #undef HAVE_AMESOS2_SUPERLUDIST */",
+      "/* #undef HAVE_AMESOS2_PARDISO_MKL */",
+      "/* #undef HAVE_AMESOS2_LAPACK */",
+      "/* #undef HAVE_AMESOS2_CHOLMOD */",
+      "/* #undef HAVE_AMESOS2_TRIANGULAR_SOLVES */",
+      "/* #undef HAVE_AMESOS2_EXPERIMENTAL */",
+      "/* #undef HAVE_AMESOS2_BASKER */",
+      "/* #undef HAVE_AMESOS2_SHYLUBASKER */",
+      "/* #undef HAVE_AMESOS2_MUMPS */",
+      "/* #undef HAVE_AMESOS2_STRUMPACK */",
+      "/* #undef HAVE_AMESOS2_CUSPARSE */",
+      "/* #undef HAVE_AMESOS2_CUSOLVER */",
+      "/* #undef HAVE_AMESOS2_METIS */",
+      "#define HAVE_AMESOS2_KOKKOS",
+      "/* #undef HAVE_AMESOS2_SUPERLU5_API */"
+    ],
+    "Stratimikos_Config.h": [],
+    "amesos2_klu2": {
+      "eq_ok": true,
+      "eq_time_s": 8.331148624420166,
+      "newton_steps": 172,
+      "solver_lines": [
+        "Amesos2   [unused]",
+        "Amesos2 -> ",
+        "KLU2   [unused]"
+      ],
+      "states": 27,
+      "sweep_ok": true,
+      "sweep_time_s": 22.945169687271118
+    },
+    "belos": {
+      "eq_ok": true,
+      "eq_time_s": 8.299678802490234,
+      "newton_steps": 264,
+      "solver_lines": [
+        "Using iterative solver = \"Belos::BlockGmresSolMgr\":"
+      ],
+      "sweep_ok": false,
+      "sweep_time_s": 34.330230474472046,
+      "tail": "e>\n     OP: Thyra::LinearOpBase<double>\n    Flexible: false\n    Num Blocks: 100\n    Maximum Iterations: 300\n    Maximum Restarts: 20\n    Convergence Tolerance: 1e-06\n  With #Eqns=2832, #RHSs=1 ...\n  \n  *******************************************************\n  ***** Belos Iterative Solver:  Block Gmres \n  ***** Maximum Iterations: 300\n  ***** Block Size: 1\n  ***** Residual Test: \n  *****   Test 1 : Belos::StatusTestImpResNorm<>: (2-Norm Res Vec) / (2-Norm Res0), tol = 1e-12\n  *******************************************************\n  Iter   0, [ 1] :    1.000000e+00\n  Iter   7, [ 1] :    1.799740e-13\n  Belos::BlockGmresSolMgr::solve(): Warning! Solver has experienced a loss of accuracy!\n \n The Belos solver of type \"\"Belos::BlockGmresSolMgr\": {Flexible: false, Num Blocks: 100, Maximum Iterations: 300, Maximum Restarts: 20, Convergence Tolerance: 1e-12}\" returned a solve status of \"SOLVE_STATUS_UNCONVERGED\" in 7 iterations with total CPU time of 0.00416974 sec\nWARNING: LOCA::BorderedSolver::LowerTriangularBlockElimination::solve() - \nReturn Type = NotConverged\nWARNING: LOCA::MultiContinuation::ConstrainedGroup::applyJacobianInverseMultiVector() - \nReturn Type = NotConverged\nWARNING: LOCA::MultiContinuation::ConstrainedGroup::computeNewton() - \nReturn Type = NotConverged\nWARNING: NOX::Direction::Newton::compute() - Linear solve failed to achieve convergence - using the step anyway since \"Rescue Bad Newton Solve\" is true \n\n************************************************************************\n-- Nonlinear Solver Step 50 -- \n||F|| = 4.821e-03  step = 1.000e+00  dx = 4.694e-01 (Failed!)\n************************************************************************\n\n************************************************************************\n-- Final Status Test Results --\nFailed.......OR Combination -> \n  **...........AND Combination -> \n    **...........F-Norm = 4.821e-03 < 1.000e-04\n                 (Unscaled Two-Norm, Absolute Tolerance)\n    ??...........WRMS-Norm = 1.000e+12 < 1\n                 (Min Step Size:  1.000e+00 >= 0)\n  Failed.......Number of Iterations = 50 < 50\n  ??...........Finite Number Check (Two-Norm F) = Unknown\n************************************************************************\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nContinuation Step Number 24 experienced a convergence failure in\nthe nonlinear solver after 50 Iterations\nValue of continuation parameter at failed step = 2.000e-01 from 1.500e-01\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\tStep size reached minimum step size bound\n--------------------------------------------------------------------------\nMPI_ABORT was invoked on rank 0 in communicator MPI_COMM_WORLD\nwith errorcode 14.\n\nNOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.\nYou may or may not see output from other processes, depending on\nexactly when Open MPI kills them.\n--------------------------------------------------------------------------\n"
+    },
+    "libs": [
+      "libamesos2.so",
+      "libamesos2.so.2",
+      "libamesos2.so.2.2.0",
+      "libamesos.so",
+      "libamesos.so.2",
+      "libamesos.so.2.2.0",
+      "libbelosepetra.so",
+      "libbelosepetra.so.2",
+      "libbelosepetra.so.2.2.0",
+      "libbelos.so",
+      "libbelos.so.2",
+      "libbelos.so.2.2.0",
+      "libbelostpetra.so",
+      "libbelostpetra.so.2",
+      "libbelostpetra.so.2.2.0",
+      "libbelosxpetra.so",
+      "libbelosxpetra.so.2",
+      "libbelosxpetra.so.2.2.0",
+      "libstratimikosamesos2.so",
+      "libstratimikosamesos2.so.2",
+      "libstratimikosamesos2.so.2.2.0",
+      "libstratimikosamesos.so",
+      "libstratimikosamesos.so.2",
+      "libstratimikosamesos.so.2.2.0",
+      "libstratimikosaztecoo.so",
+      "libstratimikosaztecoo.so.2",
+      "libstratimikosaztecoo.so.2.2.0",
+      "libstratimikosbelos.so",
+      "libstratimikosbelos.so.2",
+      "libstratimikosbelos.so.2.2.0",
+      "libstratimikosifpack.so",
+      "libstratimikosifpack.so.2",
+      "libstratimikosifpack.so.2.2.0",
+      "libstratimikosml.so",
+      "libstratimikosml.so.2",
+      "libstratimikosml.so.2.2.0",
+      "libstratimikos.so",
+      "libstratimikos.so.2",
+      "libstratimikos.so.2.2.0"
+    ]
+  },
+  "tri3": {
+    "c_2d_ff_um2": 1.0486534863824486,
+    "c_devsim_1d": 1.0489274841334317,
+    "interface_potential_spread_v": {
+      "A": [
+        0.0016639106190287078,
+        0.0004884398625269529
+      ],
+      "B": [
+        0.0016665350512297117,
+        0.0004898990824247287
+      ]
+    },
+    "mesh2d": {
+      "contacts": {
+        "body_contact": 97,
+        "gate": 97
+      },
+      "dropped_nodes": 758,
+      "nodes": 2472,
+      "triangles": {
+        "body": 1864,
+        "gate_poly": 1744,
+        "oxide": 1032
+      }
+    },
+    "mesh2d_A_ok": true,
+    "mesh2d_A_time_s": 34.70850872993469,
+    "mesh2d_B_ok": true,
+    "mesh2d_B_time_s": 34.08294105529785,
+    "msh_physical": {
+      "1:1": "body___body_contact",
+      "1:2": "body___oxide",
+      "1:3": "gate_contact___gate_poly",
+      "1:4": "gate_poly___oxide",
+      "1:5": "body___None",
+      "1:6": "body_contact___None",
+      "1:7": "gate_contact___None",
+      "1:8": "gate_poly___None",
+      "1:9": "oxide___None",
+      "2:1": "body",
+      "2:2": "body_contact",
+      "2:3": "gate_contact",
+      "2:4": "gate_poly",
+      "2:5": "oxide"
+    },
+    "rel_vs_devsim_1d": -0.0002612170575447332,
+    "strip_c_quad4": [
+      2.0355070177173524,
+      2.0094038896896134,
+      1.9676006920603415,
+      1.8931160791800705,
+      1.7445635696886297,
+      1.4627312835397905,
+      1.1523174296849987,
+      0.956921556647611,
+      0.835089201673647,
+      0.7504202590184318
+    ],
+    "strip_c_tri3": [
+      2.035405984455776,
+      2.0093141821856455,
+      1.9675425268493592,
+      1.8931460370961415,
+      1.7448450404969698,
+      1.4635275051571657,
+      1.1534194058036862,
+      0.9580294195152491,
+      0.8361444648582207,
+      0.751416838935423
+    ],
+    "strip_max_rel_c_tri3_vs_quad4": 0.0013280290677316652,
+    "strip_max_rel_q_tri3_vs_quad4": 0.0005526104438338627,
+    "strip_quad4": "ok",
+    "strip_quad4_A_failed_steps": [],
+    "strip_quad4_A_time_s": 11.64473557472229,
+    "strip_quad4_B_failed_steps": [],
+    "strip_quad4_B_time_s": 11.551758766174316,
+    "strip_tri3": "ok",
+    "strip_tri3_A_failed_steps": [],
+    "strip_tri3_A_time_s": 18.624080657958984,
+    "strip_tri3_B_failed_steps": [],
+    "strip_tri3_B_time_s": 18.618791818618774,
+    "t_ox_mesh_nm": 15.200000000000001
+  }
+}
