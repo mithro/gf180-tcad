@@ -309,6 +309,8 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             prints PATH:LINE: NOTE FIGURE-OK reason.
             A {numref} to a table (a {table} named on the page, or a name starting "tab-")
             is not a figure. A {table} directive's caption and cells are read as a table's.
+  TABLE-REF  (with figure) a table named by its place in prose or a caption: "the table
+            below", "tables above", "the following table", "this table". Cite it with {numref}.
   FIGURE-FORM  a {figure} with no :name:, no caption, or no {numref} on the page citing it.
             The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
             A {numref} to a target not on the page needs the page's title in its text
@@ -825,6 +827,27 @@ def _bare_prose(line):
     return line
 
 
+_TABLE_REF = re.compile(
+    r"\b(tables?\s+(?:above|below)|(?:the|these)\s+(?:following|next|previous)\s+tables?"
+    r"|this\s+table)\b",
+    flags=re.I,
+)
+
+
+def table_ref_findings(lines):
+    """TABLE-REF: a table named by its place ("the table below", "the following table", "this
+    table") instead of a {numref}, whose number stays right when tables move."""
+    out = []
+    for i, line, kind in lines:
+        if kind not in ("prose", "caption"):
+            continue
+        m = _TABLE_REF.search(_visible(line))
+        if m:
+            out.append((i, "TABLE-REF", f"'{m.group(1)}': cite the table with {{numref}} "
+                                        "(give it a {table} directive with a :name:)"))
+    return out
+
+
 def rule_findings(text, rules=RULES, sphinx=True):
     """(line, CHECK, message) of each finding of the house rules in a page's text. With
     sphinx=False (README.md, CONTRIBUTING.md: read on GitHub) a Markdown image is a figure."""
@@ -833,6 +856,7 @@ def rule_findings(text, rules=RULES, sphinx=True):
     if "figure" in rules:
         out += figure_findings(lines, sphinx)
         out += figure_form_findings(lines)
+        out += table_ref_findings(lines)
     if "equation" in rules:
         out += equation_findings(lines)
     if "filelink" in rules:

@@ -827,3 +827,29 @@ def test_measure_docs_reads_table_directive_caption_and_cells():
     got = list(mod.blocks(_TABLE + "\nAfter the table.\n"))
     assert ("paragraph", 1, "The oxide thickness of each device.") in got
     assert ("cell", 6, "nfet") in got and ("paragraph", 9, "After the table.") in got
+
+
+# --- TABLE-REF: a table cited by its place instead of {numref} --------------------------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["The table below lists them.", "As the tables above show, it holds.",
+     "The following table gives the values.", "In this table none means no value.",
+     "See the next table.", "The values are in the figure, and the table below repeats them."],
+)  # fmt: skip
+def test_table_ref_fires_on_a_place_reference(line):
+    """Positive control: a table named by its place, in prose or in a figure caption."""
+    assert [c for _, c, _ in lint().rule_findings(f"# T\n\n{line}\n") if c == "TABLE-REF"]
+    caption = f"# T\n\nSee {{numref}}`fig-a`.\n\n```{{figure}} a.svg\n:name: fig-a\n:alt: a\n\n{line}\n```\n"
+    assert [c for _, c, _ in lint().rule_findings(caption) if c == "TABLE-REF"]
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["{numref}`tab-a` lists them.", "The tolerance table of the design spec sets it.",
+     "Wikipedia's table gives 1.14 eV.", "Never write `the table below`.",
+     "The tables give one value per cell."],
+)  # fmt: skip
+def test_table_ref_quiet_on_citations_and_other_tables(line):
+    assert not [c for _, c, _ in lint().rule_findings(f"# T\n\n{line}\n") if c == "TABLE-REF"]
