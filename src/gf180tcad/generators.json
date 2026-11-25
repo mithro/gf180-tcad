@@ -69,6 +69,28 @@
       "gf180tcad.tcad.stack",
       "gf180tcad.treedigest"
     ],
+    "gf180tcad.charon.__main__": [
+      "gf180tcad",
+      "gf180tcad.charon",
+      "gf180tcad.charon.__main__",
+      "gf180tcad.charon.moscap",
+      "gf180tcad.devices",
+      "gf180tcad.io",
+      "gf180tcad.layout",
+      "gf180tcad.sandbox",
+      "gf180tcad.tcad",
+      "gf180tcad.tcad.__main__",
+      "gf180tcad.tcad.analytic",
+      "gf180tcad.tcad.calibration",
+      "gf180tcad.tcad.edgefit",
+      "gf180tcad.tcad.mesh",
+      "gf180tcad.tcad.meshconv",
+      "gf180tcad.tcad.moscap1d",
+      "gf180tcad.tcad.moscap2d",
+      "gf180tcad.tcad.process",
+      "gf180tcad.tcad.stack",
+      "gf180tcad.treedigest"
+    ],
     "gf180tcad.meshcut.__main__": [
       "gf180tcad",
       "gf180tcad.devices",
@@ -127,6 +149,10 @@
     ]
   },
   "images": {
+    "charon": {
+      "pin": "docker/CHARON_IMAGE",
+      "versions": "docker/charon/versions.json"
+    },
     "dev": {
       "pin": "docker/TCAD_DEV_IMAGE",
       "versions": "docker/tcad-dev/versions.json"

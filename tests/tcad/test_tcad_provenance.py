@@ -44,7 +44,10 @@ CORNERS_MAIN = "gf180tcad.calibrate.corners"
 # The frozen poly length bias fit (2D edge plan, Task E3): an entry point of the registry that
 # writes the tree tcad/edgefit once its fits are committed (E3b).
 EDGE_MAIN = "gf180tcad.calibrate.edge"
-ENTRY_POINTS = (*ROOTS, MESHCUT_MAIN, CORNERS_MAIN, EDGE_MAIN)
+# The Charon jobs (Charon plan, Task B): an entry point of the registry that writes the trees
+# tcad-charon/<tree> once their results are committed (Task D).
+CHARON_MAIN = "gf180tcad.charon.__main__"
+ENTRY_POINTS = (*ROOTS, MESHCUT_MAIN, CORNERS_MAIN, EDGE_MAIN, CHARON_MAIN)
 # The entry point that writes each tree root, by its path relative to results/
 # (docs/reproduce/index.md, tcad-provenance).
 WRITERS = {
@@ -386,12 +389,12 @@ def test_meshcut_hash_is_its_own(monkeypatch):
     target = "src/gf180tcad/meshcut/job.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: True, CORNERS_MAIN: False,
-        EDGE_MAIN: False,
+        EDGE_MAIN: False, CHARON_MAIN: False,
     }  # fmt: skip
     target = "src/gf180tcad/tcad/__main__.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: True, CALIBRATE_MAIN: False, MESHCUT_MAIN: True, CORNERS_MAIN: False,
-        EDGE_MAIN: False,
+        EDGE_MAIN: False, CHARON_MAIN: True,
     }  # fmt: skip
 
 
@@ -432,12 +435,12 @@ def test_corners_hash_is_its_own(monkeypatch):
     target = "src/gf180tcad/calibrate/corners.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: False, CORNERS_MAIN: True,
-        EDGE_MAIN: False,
+        EDGE_MAIN: False, CHARON_MAIN: False,
     }  # fmt: skip
     target = "src/gf180tcad/calibrate/cv.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: False, CALIBRATE_MAIN: True, MESHCUT_MAIN: False, CORNERS_MAIN: True,
-        EDGE_MAIN: True,
+        EDGE_MAIN: True, CHARON_MAIN: False,
     }  # fmt: skip
 
 
@@ -456,12 +459,12 @@ def test_edge_hash_is_its_own(monkeypatch):
     target = "src/gf180tcad/calibrate/edge.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: False, CALIBRATE_MAIN: False, MESHCUT_MAIN: False, CORNERS_MAIN: False,
-        EDGE_MAIN: True,
+        EDGE_MAIN: True, CHARON_MAIN: False,
     }  # fmt: skip
     target = "src/gf180tcad/tcad/edgefit.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
         TCAD_MAIN: True, CALIBRATE_MAIN: True, MESHCUT_MAIN: True, CORNERS_MAIN: True,
-        EDGE_MAIN: True,
+        EDGE_MAIN: True, CHARON_MAIN: True,
     }  # fmt: skip
 
 
@@ -1017,3 +1020,64 @@ def test_manifest_covers_the_tcad_results():
             assert entries.get(rel) == hashlib.sha256(p.read_bytes()).hexdigest(), (
                 f"results/MANIFEST.sha256 does not match results/{rel}; run `make manifest`"
             )
+
+
+# --- the Charon entry point (Charon plan, Task B) ---------------------------------------------
+
+DEVSIM_ENTRY_POINTS = tuple(e for e in ENTRY_POINTS if e != CHARON_MAIN)
+
+
+def test_no_devsim_entry_point_imports_the_charon_package():
+    """A Charon change can never change a DEVSIM tree's hash: no DEVSIM entry point's closure
+    holds a gf180tcad.charon module, and the Charon closure holds the DEVSIM job modules it
+    reuses."""
+    for entry in DEVSIM_ENTRY_POINTS:
+        assert not any(m.split(".")[:2] == ["gf180tcad", "charon"]
+                       for m in tcad.TCAD_GENERATORS[entry]), entry  # fmt: skip
+    charon = set(tcad.TCAD_GENERATORS[CHARON_MAIN])
+    assert {"gf180tcad.charon", "gf180tcad.charon.moscap", "gf180tcad.tcad.moscap1d"} <= charon
+
+
+def test_devsim_generators_exclude_the_charon_backend_files():
+    """Every DEVSIM entry point leaves gplugins/devsim/backends/charon/ out of its hash; the
+    Charon entry point hashes all of gplugins/devsim."""
+    for entry in DEVSIM_ENTRY_POINTS:
+        assert tuple(tcad.PLUGIN_EXCLUDES.get(entry, ())) == (
+            "gplugins/devsim/backends/charon/*",
+        ), entry
+    assert CHARON_MAIN not in tcad.PLUGIN_EXCLUDES
+
+
+def test_charon_change_leaves_devsim_hash_alone(tmp_path, monkeypatch):
+    """Editing a gf180tcad.charon module and a backends/charon/ file in a scratch copy changes
+    the Charon hash and leaves every DEVSIM entry point's hash as it was."""
+    import shutil
+
+    copy = tmp_path / "repo"
+    shutil.copytree(REPO / "src", copy / "src")
+    shutil.copytree(REPO / "data" / "process", copy / "data" / "process")
+    for entry in ENTRY_POINTS:
+        for f in tcad.generator_files(entry, REPO):
+            dst = copy / f
+            if not dst.exists():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(REPO / f, dst)
+    tracked = [f for f in tcad.generator_files(CHARON_MAIN, REPO)
+               if f.startswith(tcad.GPLUGINS_SUBMODULE + "/")]  # fmt: skip
+
+    def listing(args, cwd):
+        if args[:2] == ["ls-files", "-z"]:
+            pre = tcad.GPLUGINS_SUBMODULE + "/"
+            return "".join(f.removeprefix(pre) + "\0" for f in tracked)
+        raise AssertionError(args)
+
+    monkeypatch.setattr(tcad, "_git", listing)
+    before = {e: tcad.generator_sha256(e, copy) for e in ENTRY_POINTS}
+    moscap = copy / "src/gf180tcad/charon/moscap.py"
+    moscap.write_text(moscap.read_text() + "\n# edited\n")
+    backend = copy / tcad.GPLUGINS_SUBMODULE / "gplugins/devsim/backends/charon/__init__.py"
+    backend.write_text(backend.read_text() + "\n# edited\n")
+    after = {e: tcad.generator_sha256(e, copy) for e in ENTRY_POINTS}
+    assert after[CHARON_MAIN] != before[CHARON_MAIN]
+    for entry in DEVSIM_ENTRY_POINTS:
+        assert after[entry] == before[entry], entry
