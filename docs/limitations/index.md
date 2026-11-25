@@ -217,6 +217,7 @@ The schematic-default instance of the reference is drawn in {numref}`Figure %s o
 ```{toctree}
 :maxdepth: 1
 
+status
 silicon-validation
 literature
 engine-cross-check
