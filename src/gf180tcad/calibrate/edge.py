@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Fit the poly length bias δ of the 2D cells and freeze it (issue #189, plan Task E3).
 
+Run as::
+
     uv run --locked python -m gf180tcad.calibrate.edge --device nfet_05v0 --out results/tcad/edgefit
 
 Over the widest calibrated 2D cells, Cgg per unit width is a line in the gate length L,
@@ -12,10 +14,12 @@ edge-sensitivity record's ``bias<nm>`` variants (``results/edge-sensitivity``). 
 squared misses of the two targets, so ``slope · δ`` is their mean.
 
 The file written, ``<out>/<device>.json``, holds δ and every input it was made from:
+
 - the record's sha256;
 - per length, the SPICE and 2D Cgg per unit width at both plateaus, and the 2D cell's
   ``cv.csv`` sha256;
 - the commit.
+
 So the fit can be re-derived after the cells it read are replaced. The command refuses a
 checkout with uncommitted changes under the paths it reads.
 """

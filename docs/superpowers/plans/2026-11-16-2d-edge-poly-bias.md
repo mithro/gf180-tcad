@@ -104,17 +104,11 @@ Design as built (changed from the first draft, which put δ in `process.TUNABLES
 
 **Decision 5: 2D mesh convergence at the fitted δ (E3b).** One 2D mesh-convergence run per device at its Lmin cell, at the fitted δ, recorded on `docs/limitations/mesh-convergence.md`. The selected level must still meet `CRITERION`; if it does not, E3b stops and the mesh is reselected.
 
-**Docs named (E3b unless noted).**
-- `docs/comparison/cv-agreement.md`: the 2D tables and "The 2D cells' edge capacitance".
-- `docs/limitations/moscap2d.md`, "What the 2D edge needs": its numbers come from `edgefit`.
-- `docs/limitations/mesh-convergence.md`.
-- The explained pages that draw the cell.
-- The results figures.
-- `docs/limitations/status.md`, the README and `docs/index.md` "Where it stands".
-- The limitations index.
-- The restamp record in `docs/reproduce/index.md` (E3a and E3b).
-- The plan checkboxes.
-- E3c: `docs/comparison/process-data.md` and the source/drain section of `docs/limitations/moscap2d.md`.
+**Docs named.**
+- **E3b, the result pages:** `docs/comparison/cv-agreement.md` (the 2D tables and "The 2D cells' edge capacitance"), `docs/limitations/moscap2d.md` ("What the 2D edge needs", its numbers from `edgefit`), `docs/limitations/mesh-convergence.md`, the explained pages that draw the cell, and the results figures.
+- **E3b, the status pages:** `docs/limitations/status.md`, the README and `docs/index.md` "Where it stands", and the limitations index.
+- **E3a and E3b:** the restamp record in `docs/reproduce/index.md` and the plan checkboxes.
+- **E3c:** `docs/comparison/process-data.md` and the source/drain section of `docs/limitations/moscap2d.md`.
 
 E4 follows E3b.
 
@@ -122,11 +116,8 @@ E4 follows E3b.
   - [x] `gf180tcad.calibrate.edge`, its own entry point. The `tcad/edgefit` tree row is added in E3b, with the tree.
   - [x] `gf180tcad.tcad.edgefit`. `load_params_2d` and `meshcut` apply δ to calibrated 2D jobs when the file exists. A job's meta gets an `edge_fit` key (δ and the file's sha256) only then, so the δ = 0 cells keep their bytes.
   - [x] The 1D `param_sha256` stays the 1D calibration's. δ is recorded and checked separately, which deviates from the first draft's "δ in `tunables`".
-  - [x] The validation checks each 2D cell's `edge_fit` against the committed fit, or against none.
-  - [x] `variant.py` from δ = 0, and the record pin rules (record's own commit, ancestry, sandbox rerun of both records).
-  - [x] The explainer draws the gate as meshed.
-  - [x] The #203 note.
-  - [x] The CONTRIBUTING no-rebase rule.
+  - [x] The validation and the explainer: each 2D cell's `edge_fit` is checked against the committed fit (or none), and the cell's gate is drawn as meshed.
+  - [x] `variant.py` from δ = 0, the record pin rules (record's own commit, ancestry, sandbox rerun of both records), the CONTRIBUTING no-rebase rule, and the #203 note.
   - [ ] The restamp, with its evidence.
 - [ ] **E3b** (one PR, cell by cell): the two `edgefit` files; the 10 calibrated 2D cells at the fitted δ, one 16 GiB job at a time (nfet W10/L0.6, W10/L0.7, W10/L1, W10/L2 QS only, W1.6/L0.7; pfet W10/L0.5, W10/L0.7, W10/L1, W10/L2 QS only, W1.6/L0.7); the Lmin mesh-convergence check; the validation; the recut mesh artefacts; the post-rerun checks; `MANIFEST`; the docs. The new residual at each plateau is tagged `spice-fit` (the card's bias-dependent overlap).
 - [ ] **E3c** (#203): the source/drain harness and records at the fitted δ; the measured-value tests replace the 0.1 % bound; the pages' numbers from the records.

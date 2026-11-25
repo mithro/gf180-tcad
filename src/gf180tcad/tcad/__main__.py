@@ -178,7 +178,8 @@ def load_params_2d(
     of :mod:`gf180tcad.tcad.edgefit` when one is committed (issue #189, plan Task E3).
 
     Returns ``(proc, calibration_sha256, edge_fit)``; ``edge_fit`` is None for ``start`` and
-    while no fit is committed, and otherwise the record :func:`edgefit.apply` gives."""
+    while no fit is committed, and otherwise the record that
+    :func:`gf180tcad.tcad.edgefit.apply` gives."""
     proc, calibration_sha256 = load_params(device, params)
     if params != "calibrated":
         return proc, calibration_sha256, None
