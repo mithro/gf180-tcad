@@ -310,9 +310,11 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             prints PATH:LINE: NOTE FIGURE-OK reason.
             A {numref} to a table (a {table} named on the page, or a name starting "tab-")
             is not a figure. A {table} directive's caption and cells are read as a table's.
-  TABLE-REF  (with figure) a table named by its place in prose or a caption: "the table
-            below", "tables above", "the following table", "this table", "these tables", "in the
-            table", or a sentence that starts "The table(s) gives". Cite it with {numref}.
+  TABLE-REF  (with figure) a table named without a {numref}, in prose or a caption: "the
+            table below", "the following table", "this/these/those table(s)", "in/see the table",
+            "both tables", "the second table", "the table gives/has/lists/...". Each paragraph
+            is read with its lines joined. Another document's table ("the tables of the PDK
+            manual") and "table-driven" are left alone. Cite the table with {numref}.
   FIGURE-FORM  a {figure} with no :name:, no caption, or no {numref} on the page citing it.
             The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
             A {numref} to a target not on the page needs the page's title in its text
@@ -865,27 +867,63 @@ def _bare_prose(line):
     return line
 
 
+# A table named without a {numref}: by its place, by "the table" doing something, by ordinal.
+# "tables?(?!-)" leaves "table-driven" alone; "(?!\s+of\b)" leaves another document's table
+# ("in the tables of the PDK manual", "these tables of Green's paper") alone.
+_TABLE = r"tables?\b(?!-)"
+_TABLE_VERBS = (r"(?:gives?|lists?|shows?|holds?|asks?|says?|repeats?|has|have|contains?|records?"
+                r"|compares?|sums?|covers?|sets?)")
 _TABLE_REF = re.compile(
-    r"(\btables?\s+(?:above|below)|\b(?:the|these)\s+(?:following|next|previous)\s+tables?"
-    r"|\b(?:this|these|those)\s+tables?|\bin\s+the\s+tables?"
-    # "The table gives ...": a sentence that starts by naming a table it does not cite.
-    r"|(?:^\s*|(?<=[.!?;:]\s))(?-i:The)\s+tables?\s+(?:give|list|show|hold|ask|say|repeat)s?)\b",
+    "(" + "|".join([
+        rf"\b{_TABLE}\s+(?:above|below)\b",
+        rf"\b(?:the|these)\s+(?:following|next|previous)\s+{_TABLE}",
+        rf"\b(?:this|these|those)\s+{_TABLE}(?!\s+of\b)",
+        rf"\b(?:in|see)\s+the\s+{_TABLE}(?!\s+of\b)",
+        rf"\bboth\s+{_TABLE}",
+        rf"\bthe\s+(?:first|second|third|fourth|fifth|last|other)\s+{_TABLE}",
+        rf"\bthe\s+{_TABLE}\s+{_TABLE_VERBS}\b",
+    ]) + ")",
     flags=re.I,
 )
 
 
-def table_ref_findings(lines):
-    """TABLE-REF: a table named by its place or as "the table" ("the table below", "the following
-    table", "this table", "these tables", "in the table", a sentence starting "The table gives")
-    instead of a {numref}, whose number stays right when tables move."""
-    out = []
+def _paragraphs(lines, kinds=("prose", "caption")):
+    """Runs of consecutive non-blank lines of ``kinds``, each as (text, starts): the visible
+    text of the lines joined by single spaces, and the (offset, line number) where each line
+    starts in it, so a match across a line wrap maps back to its first line."""
+    out, text, starts, last = [], "", [], None
     for i, line, kind in lines:
-        if kind not in ("prose", "caption"):
+        if kind in kinds and line.strip() and (last is None or i == last + 1):
+            vis = _visible(line).strip()
+            if text:
+                text += " "
+            starts.append((len(text), i))
+            text += vis
+            last = i
             continue
-        m = _TABLE_REF.search(_visible(line))
-        if m:
-            out.append((i, "TABLE-REF", f"'{m.group(1)}': cite the table with {{numref}} "
-                                        "(give it a {table} directive with a :name:)"))
+        if text:
+            out.append((text, starts))
+        text, starts, last = "", [], None
+        if kind in kinds and line.strip():
+            starts.append((0, i))
+            text, last = _visible(line).strip(), i
+    if text:
+        out.append((text, starts))
+    return out
+
+
+def table_ref_findings(lines):
+    """TABLE-REF: a table named without a {numref}: by its place ("the table below", "the
+    following table"), as "this/these/those table(s)", "in/see the table", "both tables", "the
+    second table", or "the table gives/has/lists/...". Each paragraph is read with its wrapped
+    lines joined, so a phrase split across a line break is found too."""
+    out = []
+    for text, starts in _paragraphs(lines):
+        for m in _TABLE_REF.finditer(text):
+            line = max((n for off, n in starts if off <= m.start()), default=starts[0][1])
+            phrase = " ".join(m.group(1).split())
+            out.append((line, "TABLE-REF", f"'{phrase}': cite the table with {{numref}} "
+                                           "(give it a {table} directive with a :name:)"))
     return out
 
 
