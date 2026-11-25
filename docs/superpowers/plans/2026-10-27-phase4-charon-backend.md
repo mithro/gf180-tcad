@@ -214,7 +214,8 @@ The checks:
 - **Gate charge (B6):** the oxide displacement flux; on the strip it equals the poly charge within 2.8e-13 and minus the body charge within 4.4e-13, and every oxide interval carries the same flux within 1.0e-12.
 - **Result (B2):** Charon against the committed DEVSIM 1D C at the calibrated values, every bias: within 3.0e-5 relative (nfet) and 5.4e-5 (pfet).
 - **Deck traps:** a side set may not share a block's name (silent MPI abort, code 14); a uniform doping block must be named `Function<i>` (otherwise zero doping, silently); the plugin's gmsh file is in cm and Charon reads µm (the 2D writer scales by 1e4).
-- **B1:** TRI3 blocks are accepted (a 2D gmsh mesh of the uniform stack solves), so the 2D comparison on the identical mesh stays possible.
+- **B1:** TRI3 blocks are accepted (a 2D gmsh mesh of the uniform stack, 2472 nodes, solves; C at 0 V within 2.6e-4 of DEVSIM's 1D), so the 2D comparison on the identical mesh stays possible. The run at `DEFAULT_2D` and B5/B6 in 2D wait for Task E: [issue #215](https://github.com/mithro/gf180-tcad/issues/215).
+- **Grid alignment:** `currents-loca.dat` prints voltages to nine significant digits and the Exodus `time_whole` holds the step index, not the bias, so the alignment check is against the file's resolution (the backend allows 1e-7 V; achieved 1.5e-9 V nfet, 2.8e-9 V pfet), not the 1e-12 V written above.
 - **B4, partly settled:** the harmonic-balance C is the cosine current of a non-driven contact over 2π·f·A·w (oxide-only parallel plate: exact within 2.1e-9 at 1 Hz to 1 MHz and 1e-5 to 1e-3 V; metal-gate MOS in depletion: QS C within 3.4e-7). With the project's ohmic poly gate it gives 0.20 (accumulation) to 0.38 (depletion) of the QS C at every frequency and amplitude, and HB converges only at WRMS 1e-8: [issue #213](https://github.com/mithro/gf180-tcad/issues/213). Task E's AC path waits for it.
 
 **Decision: mesh and regions.**
