@@ -22,18 +22,26 @@ closely the TCAD curves match the PDK's SPICE curves (Figure 1).
 
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/flow-dark.svg">
-<img alt="Two columns of boxes joined by arrows: the PDK's SPICE models give reference curves, public data and the TCAD give TCAD curves; both feed one comparison." src="docs/images/readme/flow-light.svg">
+<img alt="Boxes: SPICE models give reference curves, public data and TCAD give TCAD curves, a dashed arrow fits the TCAD, and both feed one comparison." src="docs/images/readme/flow-light.svg">
 </picture>
 
 *Figure 1. The two routes to the same curves. The grey column is the reference, the green column
-is what is tested, and every pair of curves is compared at the bottom.*
+is what is tested, and every pair of curves is compared at the bottom. The dashed arrow is the
+fit: the TCAD's numbers are fitted to the reference curves.*
 
 ## How the comparison works
 
 The PDK's SPICE models are the [reference](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-SPICE-reference-results), and the TCAD is what
-is tested. A circuit simulator runs the SPICE models to give the reference curves. The TCAD
-simulates a slice through the same transistor (Figure 2) to give its own
-curves. Each pair is judged [Agree](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Agree),
+is tested. A circuit simulator runs the SPICE models to give the reference curves. Three TCAD
+numbers are fitted to those curves at three gate sizes: the oxide thickness, the body doping and
+a voltage shift. The fitted TCAD is then tested at sizes it never saw. So what was fitted stays
+apart from what was predicted.
+
+The TCAD runs in two forms. The 1D form is one column down through the gate, its oxide and the
+body. The 2D form is a slice along the gate's length (Figure 2). Both run for
+the two kinds of 5 V transistor, the [nfet](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-nfet_05v0) and the [pfet](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-pfet_05v0).
+
+Each pair of curves is judged [Agree](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Agree),
 [Same process](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Same-process) or
 [Disagree](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-Disagree). Same
 process means the TCAD lies inside the range the PDK specifies, not at its typical point.
@@ -51,10 +59,8 @@ scale.*
 
 A TCAD model that matches the SPICE models explains them from physics. It can also reach sizes
 and devices the models do not cover, once it has earned confidence here. Every mismatch is
-listed with its cause and the evidence for it. Every input, script and result is in the
-repository, under an open licence. No published comparison of [DEVSIM](https://devsim.org/) or [Charon](https://charon.sandia.gov/) with
-the [BSIM](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-BSIM) models of any open PDK was found
-([literature search](https://gf180-tcad.readthedocs.io/en/latest/limitations/literature.html)).
+listed with its cause and the evidence for it. Every script and result is in the repository,
+under an open licence, and every input is pinned to an exact version.
 
 ## Where it stands
 
@@ -62,8 +68,9 @@ the [BSIM](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-BSIM) 
   second computer.
 - **The TCAD covers the gate only.** It simulates how much charge the gate holds as its voltage
   changes, the [C–V](https://gf180-tcad.readthedocs.io/en/latest/glossary.html#term-CV) curve. It has no result for the transistor's current.
-- **In 1D the nfet matches and the pfet does not.** The nfet agrees at every size. The pfet
-  disagrees at the sizes it was fitted to (Figure 3).
+- **In 1D the nfet matches and the pfet only in part.** The nfet agrees at every size. The
+  pfet disagrees at two of its three fitted sizes (Figure 3) and is Same
+  process at the rest.
 - **The 2D slices are mixed.** Each calibrated 2D slice is Same process or Disagree.
 - **No chip has been measured.** No silicon data exists to check either model against.
 
@@ -132,9 +139,8 @@ What each holds:
 The exact versions in each image are listed in one JSON file per image:
 [base](docker/base/versions.json), [stable](docker/tcad/versions.json),
 [dev HEAD](docker/tcad-dev/versions.json), [charon-libs](docker/charon-libs/versions.json) and
-[charon](docker/charon/versions.json). The final results are to come from the dev-HEAD
-image; the stable one is kept for checking how the released versions behave. Which results come
-from which image today
+[charon](docker/charon/versions.json). The stable image is kept for checking how the released
+versions behave. Which results come from which image
 is on the [image page](https://gf180-tcad.readthedocs.io/en/latest/reproduce/image.html#tcad-results-image).
 
 ## Development

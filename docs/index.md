@@ -21,26 +21,35 @@ closely the TCAD curves match the PDK's SPICE curves ({numref}`index-flow-figure
 ```{figure} /_generated/explained/project-flow-light.svg
 :figclass: only-light
 :name: index-flow-figure
-:alt: Two columns of boxes joined by arrows. Left, grey: the PDK's SPICE models, a circuit simulator, reference curves. Right, green: public process data and the PDK's layouts, the TCAD, TCAD curves. Both feed one comparison box at the bottom.
+:alt: Two columns of boxes joined by arrows. Left, grey: the PDK's SPICE models, a circuit simulator, reference curves. Right, green: public process data and the PDK's layouts, the TCAD, TCAD curves. A dashed arrow labelled fit runs from the reference curves into the TCAD. Both columns feed one comparison box at the bottom.
 
 The two routes to the same curves. The grey column is the reference, the green column is what
-is tested, and every pair of curves is compared at the bottom.
+is tested, and every pair of curves is compared at the bottom. The dashed arrow is the fit: the
+TCAD's numbers are fitted to the reference curves.
 ```
 
 ```{figure} /_generated/explained/project-flow-dark.svg
 :figclass: only-dark
-:alt: Two columns of boxes joined by arrows. Left, grey: the PDK's SPICE models, a circuit simulator, reference curves. Right, green: public process data and the PDK's layouts, the TCAD, TCAD curves. Both feed one comparison box at the bottom.
+:alt: Two columns of boxes joined by arrows. Left, grey: the PDK's SPICE models, a circuit simulator, reference curves. Right, green: public process data and the PDK's layouts, the TCAD, TCAD curves. A dashed arrow labelled fit runs from the reference curves into the TCAD. Both columns feed one comparison box at the bottom.
 
 The two routes to the same curves. The grey column is the reference, the green column is what
-is tested, and every pair of curves is compared at the bottom.
+is tested, and every pair of curves is compared at the bottom. The dashed arrow is the fit: the
+TCAD's numbers are fitted to the reference curves.
 ```
 
 ## How the comparison works
 
 The PDK's SPICE models are the {term}`reference <SPICE reference results>`, and the TCAD is what
-is tested. A circuit simulator runs the SPICE models to give the reference curves. The TCAD
-simulates a slice through the same transistor ({numref}`index-cell-figure`) to give its own
-curves. Each pair is judged {term}`Agree`, {term}`Same process` or {term}`Disagree`. Same
+is tested. A circuit simulator runs the SPICE models to give the reference curves. Three TCAD
+numbers are fitted to those curves at three gate sizes: the oxide thickness, the body doping and
+a voltage shift. The fitted TCAD is then tested at sizes it never saw. So what was fitted stays
+apart from what was predicted.
+
+The TCAD runs in two forms. The 1D form is one column down through the gate, its oxide and the
+body. The 2D form is a slice along the gate's length ({numref}`index-cell-figure`). Both run for
+the two kinds of 5 V transistor, the {term}`nfet <nfet_05v0>` and the {term}`pfet <pfet_05v0>`.
+
+Each pair of curves is judged {term}`Agree`, {term}`Same process` or {term}`Disagree`. Same
 process means the TCAD lies inside the range the PDK specifies, not at its typical point.
 
 ```{figure} /_generated/explained/parts-cell-light.svg
@@ -66,9 +75,8 @@ gate's length. Blue parts are n-type and the orange body is p-type.
 
 A TCAD model that matches the SPICE models explains them from physics. It can also reach sizes
 and devices the models do not cover, once it has earned confidence here. Every mismatch is
-listed with its cause and the evidence for it. Every input, script and result is in the
-repository, under an open licence. No published comparison of {{ DEVSIM }} or {{ Charon }} with
-the {term}`BSIM` models of any open PDK was found ({doc}`limitations/literature`).
+listed with its cause and the evidence for it. Every script and result is in the repository,
+under an open licence, and every input is pinned to an exact version.
 
 ## Where it stands
 
@@ -76,8 +84,9 @@ the {term}`BSIM` models of any open PDK was found ({doc}`limitations/literature`
   second computer.
 - **The TCAD covers the gate only.** It simulates how much charge the gate holds as its voltage
   changes, the {term}`C–V` curve. It has no result for the transistor's current.
-- **In 1D the nfet matches and the pfet does not.** The nfet agrees at every size. The pfet
-  disagrees at the sizes it was fitted to ({numref}`index-cv-figure`).
+- **In 1D the nfet matches and the pfet only in part.** The nfet agrees at every size. The
+  pfet disagrees at two of its three fitted sizes ({numref}`index-cv-figure`) and is Same
+  process at the rest.
 - **The 2D slices are mixed.** Each calibrated 2D slice is Same process or Disagree.
 - **No chip has been measured.** No silicon data exists to check either model against.
 
