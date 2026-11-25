@@ -45,7 +45,10 @@ for both devices.
 ## TT against the spec
 
 All six compared values are inside the published spec window. NE2 is W/L 10/0.6 µm and PE2
-is W/L 10/0.5 µm. The spec as published:
+is W/L 10/0.5 µm. {numref}`tab-spec-published` gives the spec as published.
+
+~~~{table} The published spec of the NE2 and PE2 devices.
+:name: tab-spec-published
 
 | Device | Parameter | Spec min | Spec typ | Spec max |
 |---|---|---|---|---|
@@ -55,8 +58,13 @@ is W/L 10/0.5 µm. The spec as published:
 | PE2 `pfet_05v0` | VT0 (V) | -0.96 | -0.83 | -0.70 |
 | PE2 `pfet_05v0` | Idsat (uA/um) | -280 | -240 | -200 |
 | PE2 `pfet_05v0` | Ioff (pA/um) | -10 | -1 | none |
+~~~
 
-Our TT values, and whether the window is applied to the signed value or to the magnitude:
+{numref}`tab-spec-our-tt` gives our TT values, and whether the window is applied to the signed
+value or to the magnitude.
+
+~~~{table} Our TT values and how each is compared with the spec.
+:name: tab-spec-our-tt
 
 | Device | Parameter | Our metric | Our TT value | Compared as |
 |---|---|---|---|---|
@@ -66,8 +74,13 @@ Our TT values, and whether the window is applied to the signed value or to the m
 | PE2 `pfet_05v0` | VT0 (V) | `vt_lin_maxgm` | -0.8421 | signed value |
 | PE2 `pfet_05v0` | Idsat (uA/um) | `idsat_ua_per_um` | 234.78 | magnitude |
 | PE2 `pfet_05v0` | Ioff (pA/um) | `ioff_pa_per_um` | 0.6963 | magnitude |
+~~~
 
-The window each is checked against; every value is inside its window:
+{numref}`tab-spec-windows` gives the window each is checked against; every value is inside its
+window.
+
+~~~{table} The window each TT value is checked against.
+:name: tab-spec-windows
 
 | Device | Parameter | Window min | Window max |
 |---|---|---|---|
@@ -77,6 +90,7 @@ The window each is checked against; every value is inside its window:
 | PE2 `pfet_05v0` | VT0 (V) | -0.96 | -0.70 |
 | PE2 `pfet_05v0` | Idsat (uA/um) | 200 | 280 |
 | PE2 `pfet_05v0` | Ioff (pA/um) | 0 | 10 |
+~~~
 
 The NE2 values agree with the typical column to within 3 % (VT0 0.718 vs 0.70 V, Idsat 500.3
 vs 500 uA/um). Ioff is below the typical 1 pA/um for both devices, well inside the limit.
