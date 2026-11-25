@@ -11,7 +11,7 @@ steps are listed in STEPS; ``all`` runs every one in order.
 
 The sandbox imports the checkout's sources (gf180tcad and the gplugins submodule), so a run is
 pinned to them: run.py refuses a checkout with uncommitted changes under PINNED_PATHS, and
-pins.json holds the commit, the Charon image, the plugin commit and the sha256 of every script.
+pins.json holds the last commit that changed a pinned path, the Charon image, the plugin commit and the sha256 of every script.
 The pins are taken before and after a step and must agree. Before each step it waits while two
 or more gf180-tcad containers run, so it never adds a third job to the host.
 """
@@ -79,7 +79,8 @@ def pins() -> dict:
         raise ValueError(f"uncommitted changes under {PINNED_PATHS}:\n{dirty}")
     scripts = sorted(p for p in HERE.iterdir() if p.suffix in (".py", ".sh"))
     return {
-        "commit": _git("rev-parse", "HEAD").strip(),
+        # the last commit that changed a pinned path: later commits elsewhere (docs) leave it
+        "commit": _git("log", "-1", "--format=%H", "--", *PINNED_PATHS).strip(),
         "image": (REPO / "docker" / "CHARON_IMAGE").read_text(encoding="utf-8").strip(),
         "gplugins_commit": _git("rev-parse", "HEAD:third_party/gplugins").strip(),
         "scripts_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in scripts},
