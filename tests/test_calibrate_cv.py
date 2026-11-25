@@ -861,6 +861,43 @@ def test_simulate_is_injectable_and_defaults_to_devsim(fit, tmp_path, monkeypatc
             NFET, frozen, simulate=Recorder(), simulate_2d=stale, targets=targets,
             calibration_root=tmp_path / "cal",
         )  # fmt: skip
+    # with a committed poly length bias fit, every 2D result must have applied that fit
+    from gf180tcad.tcad import edgefit
+
+    fit_root = tmp_path / "edgefit"
+    fit_root.mkdir()
+    edgefit.fit_file(NFET, fit_root).write_text(
+        json.dumps({"device": NFET, "poly_bias_nm": 40.0, "schema": edgefit.SCHEMA}), "utf-8"
+    )
+    monkeypatch.setattr(edgefit, "TREE_ROOT", fit_root)
+    want = {"poly_bias_nm": 40.0, "sha256": edgefit.sha256(NFET, fit_root)}
+    with pytest.raises(cv.NotFrozen, match="poly length bias fit None"):
+        cv.validate_cv(
+            NFET, frozen, simulate=Recorder(), simulate_2d=simulate_2d, targets=targets,
+            calibration_root=tmp_path / "cal",
+        )  # fmt: skip
+
+    def fitted(device, g):
+        t = targets[geometry_id(g)]
+        return cv.Cv2D(t.tt.vg, t.tt.cgg_ff, frozen.param_sha256, "injected", edge_fit=want)
+
+    out = cv.validate_cv(
+        NFET, frozen, simulate=Recorder(), simulate_2d=fitted, targets=targets,
+        calibration_root=tmp_path / "cal",
+    )  # fmt: skip
+    assert {e["edge_fit_sha256"] for e in out.two_d.values()} == {want["sha256"]}
+
+    def other_fit(device, g):
+        t = targets[geometry_id(g)]
+        return cv.Cv2D(t.tt.vg, t.tt.cgg_ff, frozen.param_sha256, "injected",
+                       edge_fit={**want, "sha256": "f" * 64})  # fmt: skip
+
+    with pytest.raises(cv.NotFrozen, match="poly length bias fit"):
+        cv.validate_cv(
+            NFET, frozen, simulate=Recorder(), simulate_2d=other_fit, targets=targets,
+            calibration_root=tmp_path / "cal",
+        )  # fmt: skip
+    monkeypatch.setattr(edgefit, "TREE_ROOT", tmp_path / "no-fit")
     with pytest.raises(ValueError, match="not both"):
         cv.validate_cv(
             NFET, frozen, simulate=Recorder(), simulate_2d=stale, targets=targets,

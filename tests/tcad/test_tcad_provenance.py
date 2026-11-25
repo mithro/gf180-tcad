@@ -442,9 +442,9 @@ def test_corners_hash_is_its_own(monkeypatch):
 
 
 def test_edge_hash_is_its_own(monkeypatch):
-    """A change to the edge fit module moves only its own hash; a change to the edgefit reader
-    moves it and the TCAD and meshcut entry points', which apply the fit, never the calibration's
-    or the corners'."""
+    """A change to the edge fit module moves only its own hash. A change to the edgefit reader
+    moves every hash: the TCAD and meshcut entry points apply the fit, and the calibration code
+    (which the corners reuse) checks the 2D cells against it in the validation."""
     before = {e: tcad.generator_sha256(e) for e in ENTRY_POINTS}
     real = tcad._sha256
     target = ""
@@ -460,7 +460,7 @@ def test_edge_hash_is_its_own(monkeypatch):
     }  # fmt: skip
     target = "src/gf180tcad/tcad/edgefit.py"
     assert {e: tcad.generator_sha256(e) != before[e] for e in ENTRY_POINTS} == {
-        TCAD_MAIN: True, CALIBRATE_MAIN: False, MESHCUT_MAIN: True, CORNERS_MAIN: False,
+        TCAD_MAIN: True, CALIBRATE_MAIN: True, MESHCUT_MAIN: True, CORNERS_MAIN: True,
         EDGE_MAIN: True,
     }  # fmt: skip
 
