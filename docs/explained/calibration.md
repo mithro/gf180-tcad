@@ -44,8 +44,8 @@ limits, set before the fit. {numref}`fig-calibration-limits` shows each number w
 
 Each fitted number of both transistors on its own axis. The bar runs between the two limits.
 The open circle is the start value. The diamond is the value fitted to the SPICE model at the
-{term}`typical corner`. The starts and limits are model-card values or project choices, as the
-table in the next section says.
+{term}`typical corner`. The starts and limits are model-card values or project choices, as
+{numref}`tab-calibration-limit-kinds` says.
 ```
 
 ```{figure} /_generated/explained/calibration-limits-dark.svg
@@ -54,19 +54,27 @@ table in the next section says.
 
 Each fitted number of both transistors on its own axis. The bar runs between the two limits.
 The open circle is the start value. The diamond is the value fitted to the SPICE model at the
-{term}`typical corner`. The starts and limits are model-card values or project choices, as the
-table in the next section says.
+{term}`typical corner`. The starts and limits are model-card values or project choices, as
+{numref}`tab-calibration-limit-kinds` says.
 ```
 
-The nfet's numbers
-({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`):
+{numref}`tab-calibration-fit-nfet` gives the nfet's numbers
+({repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`).
+
+~~~{table} The nfet's fitted numbers within their limits.
+:name: tab-calibration-fit-nfet
 
 {{ x_fit_table_nfet }}
+~~~
 
-The pfet's numbers
-({repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json>`):
+{numref}`tab-calibration-fit-pfet` gives the pfet's numbers
+({repo}`pfet_05v0.result.json <results/tcad/calibration/pfet_05v0.result.json>`).
+
+~~~{table} The pfet's fitted numbers within their limits.
+:name: tab-calibration-fit-pfet
 
 {{ x_fit_table_pfet }}
+~~~
 
 {{ x_bound_hits }}. A value on its limit would show the fit pressing against that limit
 ({ref}`cv-agreement`).
@@ -80,9 +88,13 @@ limit of {numref}`fig-calibration-limits` is a model-card value, derived from on
 choice. The {term}`process files <process file>` record which
 ({repo}`nfet_05v0.toml <data/process/nfet_05v0.toml>`,
 {repo}`pfet_05v0.toml <data/process/pfet_05v0.toml>`; {ref}`the tunables <process-data-tunables>`).
-The two transistors share this table:
+The two transistors share {numref}`tab-calibration-limit-kinds`.
+
+~~~{table} Where each start value and limit of the fit comes from.
+:name: tab-calibration-limit-kinds
 
 {{ x_limit_kinds_table }}
+~~~
 
 - The oxide starts at its lower limit, the card's electrical oxide thickness. That is the
   thickness most of the model's equations use ({ref}`BSIM4.5.0 manual, §1.1 <lit-bsim4>`).
@@ -258,22 +270,34 @@ diamond is the typical fit. Read from the corner summaries
 {repo}`pfet_05v0 <results/tcad/corners/pfet_05v0/summary.json>`).
 ```
 
-The nfet's bounds and spread
-({repo}`summary.json <results/tcad/corners/nfet_05v0/summary.json>`):
+{numref}`tab-calibration-corner-bounds-nfet` gives the nfet's bounds and spread
+({repo}`summary.json <results/tcad/corners/nfet_05v0/summary.json>`).
+
+~~~{table} The lowest and highest value of each nfet fitted number over the corners, and its spread.
+:name: tab-calibration-corner-bounds-nfet
 
 {{ x_corner_bounds_table_nfet }}
+~~~
 
-The pfet's bounds and spread
-({repo}`summary.json <results/tcad/corners/pfet_05v0/summary.json>`):
+{numref}`tab-calibration-corner-bounds-pfet` gives the pfet's bounds and spread
+({repo}`summary.json <results/tcad/corners/pfet_05v0/summary.json>`).
+
+~~~{table} The lowest and highest value of each pfet fitted number over the corners, and its spread.
+:name: tab-calibration-corner-bounds-pfet
 
 {{ x_corner_bounds_table_pfet }}
+~~~
 
 The body doping has no card offset, so its corner range shows the fit trading doping against the
 other two numbers, not a process spread.
 
-The corner of each lowest and highest value:
+{numref}`tab-calibration-corner-extremes` gives the corner of each lowest and highest value.
+
+~~~{table} The corner at which each fitted number is lowest and highest.
+:name: tab-calibration-corner-extremes
 
 {{ x_corner_extremes_table }}
+~~~
 
 {{ x_corner_bound_hits }}. What the corner fits leave out is on {doc}`/limitations/corners`.
 
@@ -302,11 +326,15 @@ typical corner.
 ```
 
 Over the corners, the curve's flat parts in {term}`accumulation` and {term}`inversion` and its
-crossings span these values. The flat parts come from
+crossings span the values of {numref}`tab-calibration-corner-spread`. The flat parts come from
 {repo}`envelope.json <results/spice/envelope.json>`, the crossings from
-{repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`:
+{repo}`nfet_05v0.result.json <results/tcad/calibration/nfet_05v0.result.json>`.
+
+~~~{table} The span over the corners of the flat parts and the crossings of the curve.
+:name: tab-calibration-corner-spread
 
 {{ x_corner_table }}
+~~~
 
 The flat parts follow the oxide, and the crossings follow the doping and the shift
 ({ref}`explained-cv-curve`). A simulated crossing that misses the allowed gap but lies inside
@@ -317,9 +345,13 @@ this spread is {term}`Same process` ({ref}`the windows <cv-agreement-windows>`).
 ## Where this repo's results differ
 
 The fit tunes {{ x_budget_used }} numbers of one 1D stack, the same for every gate length. Each
-fit gate length gets its own {ref}`verdict <agreement-verdicts>`:
+fit gate length gets its own {ref}`verdict <agreement-verdicts>`, in {numref}`tab-calibration-verdicts`.
+
+~~~{table} The verdict of the fit at each fit gate length.
+:name: tab-calibration-verdicts
 
 {{ x_fit_verdict_table }}
+~~~
 
 The pfet's whole fit is {{ x_verdict_pfet_1d_term }}. {numref}`fig-calibration-pfet` shows the pfet
 at its shortest and longest fit gates.
