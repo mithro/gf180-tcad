@@ -1,8 +1,8 @@
 """B3: which linear solvers the tpetra block can use, and whether a direct solver (Amesos2 KLU2)
 runs and changes the result.
 
-Runs the nfet calibrated strip: an equilibrium solve, then a 41-point LOCA sweep from -1 V to
-+1 V (0.05 V steps) with (a) the interpreter's Belos GMRES at tolerance 1e-12 and (b) Amesos2
+Runs the nfet calibrated strip: an equilibrium solve, then a 27-point LOCA sweep from -1 V to
++0.3 V (0.05 V steps; inversion does not converge, B2) with (a) the interpreter's Belos GMRES at tolerance 1e-12 and (b) Amesos2
 KLU2 set through 'Direct input'. Compares the oxide-flux gate charge of every state.
 """
 import json
@@ -65,7 +65,7 @@ for cname, extra in CONFIGS.items():
         out[cname] = rec
         print(cname, "equilibrium failed")
         continue
-    Path(f"{cname}_sw.inp").write_text(deck(f"{cname}_sw", "swept from -1.0 to 1.0",
+    Path(f"{cname}_sw.inp").write_text(deck(f"{cname}_sw", "swept from -1.0 to 0.3",
                                             "parameter sweep", f"{cname}_eq.exo", "exodus",
                                             extra, sweep))
     ok, log, dt = cx.run(f"{cname}_sw.inp")

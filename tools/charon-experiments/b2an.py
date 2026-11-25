@@ -10,7 +10,7 @@ import numpy as np
 import cx
 
 dev, params, tag = sys.argv[1], sys.argv[2], sys.argv[3]
-job = cx.job1d(dev, params)
+job = cx.truncate_grid(cx.job1d(dev, params))
 DV = 1e-3
 n = len(job.vg)
 xs = np.array(job.stack.node_positions_um()[0])

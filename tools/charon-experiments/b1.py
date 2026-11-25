@@ -21,7 +21,7 @@ import opts
 job = cx.job1d("nfet_05v0", "calibrated")
 DV = 1e-3
 STEP = 0.25
-V0, V1 = -2.0, 2.0
+V0, V1 = -2.0, 0.25  # inversion (device bias above 0.30 V) does not converge (B2)
 NPTS = int(round((V1 - V0) / STEP)) + 1
 out = {}
 

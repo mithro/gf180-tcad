@@ -410,3 +410,14 @@ def msh_to_exodus_parts(m, *, regions, contacts):
         sidesets.append((ss_name, el, sd))
         info["contacts"][ss_name] = len(el)
     return xy, blocks, sidesets, info
+
+
+def truncate_grid(job, vgmax=None):
+    """Keep only the grid points with vg <= vgmax (env CX_VGMAX when vgmax is None)."""
+    if vgmax is None:
+        v = os.environ.get("CX_VGMAX")
+        vgmax = float(v) if v else None
+    if vgmax is not None:
+        k = sum(1 for v in job.vg if v <= vgmax + 1e-12)
+        job.vg, job.c_devsim = job.vg[:k], job.c_devsim[:k]
+    return job

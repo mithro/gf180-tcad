@@ -19,7 +19,7 @@ ni_mode = sys.argv[3] if len(sys.argv) > 3 else "ni"
 disc = sys.argv[4] if len(sys.argv) > 4 else "drift diffusion cvfem"
 oxd = "laplace cvfem" if "cvfem" in disc else "laplace gfem"
 tag = f"{dev}_{params}_{ni_mode}_{opts.LIN}_{opts.REL:g}"
-job = cx.job1d(dev, params)
+job = cx.truncate_grid(cx.job1d(dev, params))
 xs, xy, blocks, ss = cx.stack_strip(job.stack)
 ss = [("gate", *ss[0][1:]), ("body_contact", *ss[1][1:])]
 cx.write_exodus("strip.exo", xy, blocks, ss)
