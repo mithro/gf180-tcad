@@ -84,6 +84,11 @@ lists them. Each box names the results folders its target writes. The last box i
 {term}`manifest` check.
 ```
 
+{numref}`tab-reproduce-targets` lists the same targets, what each runs and what it writes.
+
+~~~{table} The targets of make reproduce, what each runs and the folders it writes.
+:name: tab-reproduce-targets
+
 | target | runs | writes |
 |---|---|---|
 | `spice-reference` | `python -m gf180tcad spice-reference --engine both --jobs $(JOBS)`: the {term}`SPICE reference <SPICE reference results>` for both engines ({{ ngspice }} and {{ Xyce }}), all {term}`corners <corner>`, both devices and every geometry | {repo}`results/spice` |
@@ -94,6 +99,7 @@ lists them. Each box names the results folders its target writes. The last box i
 | `tcad-validate` | `python -m gf180tcad.calibrate validate` for both devices, which refuses unless the calibration files are committed and unchanged | {repo}`results/tcad/validation` |
 | `tcad-meshes` | `python -m gf180tcad.meshcut cut` for each calibrated 2D cell, from its full mesh in the output cache ({ref}`mesh-artefact`) | {repo}`results/tcad/meshes/stable` |
 | `tcad-corners` | `python -m gf180tcad.calibrate.corners run` for both devices at ff, ss, fs and sf, four 2 GiB {term}`jobs <job>` at a time, then `summary` for each device ({ref}`reproduce-corners`) | {repo}`results/tcad/corners` |
+~~~
 
 In `tcad-start`, the L = 2 µm cells run `--method qs`, then `--method combine-qs`. Both use the
 same `--resume` directory under `~/.cache/gf180-tcad/reproduce-scratch` (`TCAD_SCRATCH=`), so a
@@ -108,8 +114,8 @@ Then run its `--method combine-qs` line.
 It exits non-zero if any job fails or if any file differs from, is missing from, or is not
 listed in the {term}`manifest`, {repo}`results/MANIFEST.sha256`. It needs {{ Docker }}, the sandbox
 (see {doc}`sandbox`), the pinned images (see {doc}`image`) and the plugin submodule
-({ref}`getting-the-source`), so clone with `--recurse-submodules`. The commands are those of the
-{ref}`TCAD provenance table <tcad-provenance>`;
+({ref}`getting-the-source`), so clone with `--recurse-submodules`. The commands are those of
+{numref}`tab-results-writers`;
 {test}`tests/test_makefile.py::test_reproduce_runs_in_dependency_order` and the other tests of
 {repo}`tests/test_makefile.py` parse every command `make -n reproduce` prints with the argument
 parser of the command line it calls, and compare the jobs with the committed job directories.
@@ -310,7 +316,7 @@ against −1 nm at ff and +1 nm at ss ({repo}`data/pdk_corners.json`).
 **What a corner fit changes.** Its targets are the corner's ngspice curves at the three
 calibration geometries, as {numref}`fig-corner-cv` shows. Its fixed inputs come from the
 corner's section of the {term}`model card`, read into {repo}`data/pdk_corners.json` with each
-line number. The table also holds the card's second nfet {term}`bin`, `nfet_06v0.1`, which has
+line number. The file also holds the card's second nfet {term}`bin`, `nfet_06v0.1`, which has
 the shortest calibration gate. Its lines for these inputs equal the first bin's. The 1D stack is the same; the residuals and the optimiser settings are the typical
 fit's ({py:mod}`gf180tcad.calibrate.corners`).
 
@@ -538,7 +544,10 @@ exclusions or extra files adds or removes a hashed file, which changes the hash.
 
 A change to its input folders changes the `inputs` that the provenance records. A renamed results folder
 changes the manifest. A changed image or calibration folder changes the image digest or the
-calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>` records. Its keys:
+calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>` records. Its keys are in {numref}`tab-provenance-keys`.
+
+~~~{table} The keys of the provenance record of a TCAD results folder.
+:name: tab-provenance-keys
 
 | key | holds |
 |---|---|
@@ -549,6 +558,7 @@ calibration that {repo}`provenance.json <results/tcad/moscap1d/provenance.json>`
 | `calibration_dirs` | each backend's calibration folder |
 | `extra_files` | each entry point's data files hashed beyond the shared inputs |
 | `input_trees` | each results folder's input results folders ({ref}`input results folders <tcad-input-trees>`) |
+~~~
 
 Every entry point leaves the plugin's `gplugins/devsim/backends/charon/` out of its hash
 ({py:data}`gf180tcad.tcad.PLUGIN_EXCLUDES`), and
@@ -573,7 +583,10 @@ the closure of {py:mod}`gf180tcad.tcad.__main__`. The job command line
 {py:mod}`gf180tcad.calibrate.__main__`. A change to a shared module (for example
 {py:mod}`gf180tcad.tcad`, {py:mod}`gf180tcad.tcad.moscap1d`) or a shared input still changes
 every hash. The results folders, their writers and the commands that regenerate them (then
-`make manifest`):
+`make manifest`) are in {numref}`tab-results-writers`.
+
+~~~{table} The TCAD results folders, their writers and the commands that regenerate them.
+:name: tab-results-writers
 
 | results folder | written by | regenerate |
 |---|---|---|
@@ -584,6 +597,7 @@ every hash. The results folders, their writers and the commands that regenerate 
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `python -m gf180tcad.calibrate validate --device D --out results/tcad/validation` |
 | {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `python -m gf180tcad.meshcut cut --job results/tcad/moscap2d/D/calibrated/GID --out results/tcad/meshes/stable` |
 | {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `python -m gf180tcad.calibrate.corners run --device D --corner C --out results/tcad/corners`, then `summary --device D --out results/tcad/corners` |
+~~~
 
 The 2D jobs run one 16 GiB job at a time, hours each; the L = 2 µm cells run `--method qs`,
 then `--method combine-qs`. The validation is regenerated after the calibration is committed.
@@ -687,7 +701,11 @@ python -m gf180tcad.tcad moscap --device D --dim 2 --params calibrated --geometr
 ```
 
 It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that command's; the peak memory is the container's {term}`cgroup`
-`memory.peak`, sampled every 15 s.
+`memory.peak`, sampled every 15 s. The wall times are in {numref}`tab-2d-run-times`.
+The peak memory, exit code and finish time of each run are in {numref}`tab-2d-run-memory`.
+
+~~~{table} The wall time of each calibrated 2D run.
+:name: tab-2d-run-times
 
 | Device | Geometry | Method | Wall time (s) |
 |---|---|---|---|
@@ -703,6 +721,10 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w10p0_l2p00` | qs | 14176 |
 | `pfet_05v0` | `w10p0_l2p00` | combine-qs | 3 |
 | `pfet_05v0` | `w1p6_l0p70` | both | 11602 |
+~~~
+
+~~~{table} The peak memory, exit code and finish time of each calibrated 2D run.
+:name: tab-2d-run-memory
 
 | Device | Geometry | Peak memory (GiB) | Exit code | Finished (ACDT) |
 |---|---|---|---|---|
@@ -716,6 +738,7 @@ It runs alone on the host in a 16 GiB {term}`sandbox` job. The wall time is that
 | `pfet_05v0` | `w10p0_l1p00` | 7.75 | 0 | 2026-10-28 10:55 |
 | `pfet_05v0` | `w10p0_l2p00` | 9.83 | 0 | 2026-10-28 14:59 |
 | `pfet_05v0` | `w1p6_l0p70` | 5.35 | 0 | 2026-10-28 21:45 |
+~~~
 
 All of them ran in the {term}`stable TCAD image`, `ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8`.
 
@@ -728,7 +751,11 @@ python -m gf180tcad.meshcut cut --job results/tcad/moscap2d/D/calibrated/GID \
 ```
 
 The command pulls the full mesh from the {ref}`output cache <output-cache>`, then cuts it in a
-4 GiB sandbox with one CPU and no network. The wall time is the host command's, pull included.
+4 GiB sandbox with one CPU and no network. The wall time is the host command's, pull included. The wall times and exit codes are in
+{numref}`tab-mesh-cut-times`.
+
+~~~{table} The wall time and exit code of the cut of each reduced mesh artefact.
+:name: tab-mesh-cut-times
 
 | Device | Geometry | Wall time (s) | Exit code |
 |---|---|---|---|
@@ -742,6 +769,7 @@ The command pulls the full mesh from the {ref}`output cache <output-cache>`, the
 | `pfet_05v0` | `w10p0_l1p00` | 28.2 | 0 |
 | `pfet_05v0` | `w10p0_l2p00` | 40.4 | 0 |
 | `pfet_05v0` | `w1p6_l0p70` | 28.9 | 0 |
+~~~
 
 {ref}`moscap2d-mesh-artefact` gives each artefact's node count and size. The logs of these ten
 cuts hold the wall time and the exit code; the peak memory was measured on one cut, below.
@@ -750,7 +778,10 @@ cuts hold the wall time and the exit code; the peak memory was measured on one c
 
 **Memory of a cut.** The nfet `w10p0_l0p60` cut ran once more on 2026-11-03, alone in the same
 4 GiB sandbox with one CPU, under `/usr/bin/time -v`. The peak resident memory and the job's
-wall time are from `/usr/bin/time -v`; `memory.peak` is the container's {term}`cgroup` peak.
+wall time are from `/usr/bin/time -v`; `memory.peak` is the container's {term}`cgroup` peak. The values are in {numref}`tab-mesh-cut-memory`.
+
+~~~{table} The memory and time of one cut, nfet w10p0_l0p60.
+:name: tab-mesh-cut-memory
 
 | Quantity | Value |
 |---|---|
@@ -762,6 +793,7 @@ wall time are from `/usr/bin/time -v`; `memory.peak` is the container's {term}`c
 | Peak resident memory (kB) | 479624 |
 | `memory.peak` (bytes) | 479981568 |
 | Exit code | 0 |
+~~~
 
 Its `.npz` sha256, node count, triangle count and `size_bytes` equal those in the committed
 {repo}`results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p60/mesh-window.meta.json`.
@@ -819,6 +851,10 @@ the merge of [mithro/gplugins#13](https://github.com/mithro/gplugins/pull/13).
 That merge moves and adds hashed `gplugins/devsim` files without changing what the solver computes.
 Every results folder records `gplugins_commit` `0715c81…` instead of `1c071d0…`.
 {repo}`tools/restamp-tcad-provenance` then set each `generator_sha256`.
+The hashes before and after are in {numref}`tab-restamp-backend-seam`.
+
+~~~{table} The generator hashes before and after the restamp for the plugin's backend seam.
+:name: tab-restamp-backend-seam
 
 | results folder | writer | before | after |
 |---|---|---|---|
@@ -827,6 +863,7 @@ Every results folder records `gplugins_commit` `0715c81…` instead of `1c071d0�
 | {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `b30e8944…` | `3f1ac6bd…` |
 | {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `5265e5fe…` | `51a0a009…` |
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `5265e5fe…` | `51a0a009…` |
+~~~
 
 The representative rerun came first, as design spec §9 requires.
 On 2026-10-27, at this pin, `make reproduce-quick` printed
@@ -856,7 +893,10 @@ tracked file [`gplugins/devsim/backends/charon/__init__.py`](https://github.com/
 computes a result changed.
 
 {repo}`tools/restamp-tcad-provenance` then set each `generator_sha256`, starting from the
-backend-seam record above.
+backend-seam record above. The hashes before and after are in {numref}`tab-restamp-registry`.
+
+~~~{table} The generator hashes before and after the restamp for the generator registry.
+:name: tab-restamp-registry
 
 | results folder | writer | before | after |
 |---|---|---|---|
@@ -865,6 +905,7 @@ backend-seam record above.
 | {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `3f1ac6bd…` | `bf8f2dcc…` |
 | {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `51a0a009…` | `c8cf20b5…` |
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `51a0a009…` | `c8cf20b5…` |
+~~~
 
 The full hashes are `bf8f2dcc6ab044aa5044da9b71689b305418f09fee23659097ee04bf32fad72a` and
 `c8cf20b562088612489bf71c2f0ea2270c2489c337da4cb0bda3aaad4595daea`.
@@ -899,7 +940,10 @@ entry point imports, so every results folder's hash moved. The edits are bookkee
 hashed files and the module docstring, nothing that computes a result.
 
 The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
-`generator_sha256`.
+`generator_sha256`. The hashes before and after are in {numref}`tab-restamp-spec-file`.
+
+~~~{table} The generator hashes before and after the restamp for the spec file in the calibration hash.
+:name: tab-restamp-spec-file
 
 | results folder | writer | before | after |
 |---|---|---|---|
@@ -910,6 +954,7 @@ The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `c8cf20b562088612489bf71c2f0ea2270c2489c337da4cb0bda3aaad4595daea` | `54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268` |
 | {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `115cd158dc2676db3d94d30a8f896a4b84846e9416a7a3ecec8f2190bbfaaaa4` | `b3f9f92c1462a3f8e6cc5b75f4261284f408829ab89e5acec7eda7e6dbc6f483` |
 | {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `cade71acad8a433171828cf0f286cfc06be278bdf03cc51f52a1f6d034633ec7` | `c817a025c70d65accc3df9c8b98b195855cdfbd32113c85d9f97a7a9353c8305` |
+~~~
 
 No data changed. The evidence differs by folder:
 
@@ -932,7 +977,11 @@ digests and compute nothing that a result holds.
 
 The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
 `generator_sha256`. With `--record-inputs` it also wrote the `inputs` of the calibration, the
-validation and the corner fits.
+validation and the corner fits. The hashes before and after are in
+{numref}`tab-restamp-input-folders`.
+
+~~~{table} The generator hashes before and after the restamp for the input folders in the provenance.
+:name: tab-restamp-input-folders
 
 | results folder | writer | before | after |
 |---|---|---|---|
@@ -943,6 +992,7 @@ validation and the corner fits.
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `54a408708b36db18c471eda97fa6e1bc6a47a874caf3b261d159b1cef85eb268` | `6b1812a9a65a84f9917c24d5230830fa94bc3e46024465181d43eb33a403fbd3` |
 | {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `b3f9f92c1462a3f8e6cc5b75f4261284f408829ab89e5acec7eda7e6dbc6f483` | `c02af793644ac0df687363c1dc2d7381bd751cd7573dc432df6a4fc2ec12dc75` |
 | {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `c817a025c70d65accc3df9c8b98b195855cdfbd32113c85d9f97a7a9353c8305` | `716311ee6abc6ba36dcc80423fe504102f64e9c575fb14adb9d177627fe6f998` |
+~~~
 
 No data changed. The evidence differs by folder:
 
@@ -966,7 +1016,10 @@ note on them.
 process files, so every results folder's hash moved. At δ = 0 the cross-section is the one built before.
 
 The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
-`generator_sha256`.
+`generator_sha256`. The hashes before and after are in {numref}`tab-restamp-poly-bias`.
+
+~~~{table} The generator hashes before and after the restamp for the 2D poly length bias.
+:name: tab-restamp-poly-bias
 
 | results folder | writer | before | after |
 |---|---|---|---|
@@ -977,6 +1030,7 @@ The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
 | {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `6b1812a9a65a84f9917c24d5230830fa94bc3e46024465181d43eb33a403fbd3` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` |
 | {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `c02af793644ac0df687363c1dc2d7381bd751cd7573dc432df6a4fc2ec12dc75` | `748acf7b51df9ec48f9956660d8a7aa1c2c10f196c6349d68900167265279391` |
 | {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `716311ee6abc6ba36dcc80423fe504102f64e9c575fb14adb9d177627fe6f998` | `74ac12581ee2c0e69051887b70c88762ac9e2c7c293945f30bf87a09f2f0637e` |
+~~~
 
 No data changed. The evidence, all at commit
 [0e7a2e3](https://github.com/mithro/gf180-tcad/commit/0e7a2e3f78795014a7055884f41adf97ef60994f):

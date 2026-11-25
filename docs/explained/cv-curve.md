@@ -49,14 +49,18 @@ The simulated stack has three free numbers: the oxide thickness, the body doping
 gate voltage ({ref}`cv-agreement`). The stack is in
 {numref}`Figure %s of What the calibration changes <fig-calibration-stack>`, and the curves before
 and after the fit are in {numref}`fig-cv-parts`. The fit searches for the values that bring the
-simulated curve closest to the SPICE one. It starts from the values below and stays within limits
+simulated curve closest to the SPICE one. It starts from the values of {numref}`tab-cv-curve-fit` and stays within limits
 set beforehand ({doc}`/comparison/process-data`).
+
+~~~{table} The start and fitted values of the three nfet fit parameters.
+:name: tab-cv-curve-fit
 
 | Parameter | Start | Fitted |
 |---|---|---|
 | Oxide thickness | {{ x_t_ox_nfet_start }} | {{ x_t_ox_nfet_cal }} |
 | Body doping | {{ x_n_ch_nfet_start }} | {{ x_n_ch_nfet_cal }} |
 | Gate voltage shift | {{ x_dv_fb_nfet_start }} | {{ x_dv_fb_nfet_cal }} |
+~~~
 
 The start thickness and doping are the model card's own. The start shift is a project choice
 ({repo}`nfet_05v0.toml <data/process/nfet_05v0.toml>`). The fit compares the curves at
@@ -140,6 +144,6 @@ pfet's SPICE curve leaves {term}`accumulation` at a gate voltage that moves with
 length. One simulated stack has one flat band for every length.
 
 The 2D simulation of a whole cell uses the fitted stack of its transistor
-({ref}`the table of 2D cells <explained-moscap-differs>`). {{ x_two_d_disagree }}
+({numref}`Table %s of The MOS capacitor <tab-mos-capacitor-2d>`). {{ x_two_d_disagree }}
 ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The checks of each 2D cell
 are on {ref}`cv-agreement-validation`.

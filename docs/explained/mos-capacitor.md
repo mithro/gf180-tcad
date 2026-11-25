@@ -133,10 +133,14 @@ worst of them ({ref}`the verdict rule <cv-agreement-windows>`).
 The 1D fit is {{ x_verdict_nfet_1d }} for the nfet and {{ x_verdict_pfet_1d }} for the
 {term}`pfet_05v0` ({ref}`the pfet mismatch <cv-agreement-mismatch>`).
 
-The 2D simulation of a whole cell uses the fitted stack of its transistor. The table lists every
+The 2D simulation of a whole cell uses the fitted stack of its transistor. {numref}`tab-mos-capacitor-2d` lists every
 2D cell with a verdict ({ref}`cv-agreement-validation`).
 
+~~~{table} The verdict of each calibrated 2D cell.
+:name: tab-mos-capacitor-2d
+
 {{ x_two_d_table }}
+~~~
 
 {{ x_two_d_disagree }} ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The halfway level is
 defined with {ref}`the dip <explained-regions-dip>`. The 2D cell and its other

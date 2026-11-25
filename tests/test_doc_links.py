@@ -1238,9 +1238,10 @@ _TITLE = re.compile(r"<title>(?P<title>[^<]*?) - gf180-tcad</title>")
 
 def numref_findings(pages: dict[str, str]) -> list[str]:
     """The {numref} citations of ``pages`` (page path relative to the site -> its HTML) that do not
-    read "Figure N" for a figure on the same page, or "Figure N of <title>" for one on another
-    page, <title> being the title of the page the link leads to (numbers restart on each page,
-    so a citation across pages names the page: the FIGURE-FORM rule of tools/docs_lint.py)."""
+    read "Figure N" or "Table N" for a figure or table on the same page, or "Figure N of <title>"
+    ("Table N of <title>") for one on another page, <title> being the title of the page the link
+    leads to (numbers restart on each page, so a citation across pages names the page: the
+    FIGURE-FORM rule of tools/docs_lint.py)."""
     titles = {
         path: html_lib.unescape(m.group("title"))
         for path, html in pages.items()
@@ -1254,10 +1255,10 @@ def numref_findings(pages: dict[str, str]) -> list[str]:
             # "../explained/x.html" from "comparison/y.html" is "explained/x.html".
             dest = posixpath.normpath(posixpath.join(posixpath.dirname(path), target))
             if not target or dest == path:
-                if not re.fullmatch(r"Figure \d+", text):
+                if not re.fullmatch(r"(Figure|Table) \d+", text):
                     bad.append(f"{path}: {text!r} (a figure on the same page)")
                 continue
-            other = re.fullmatch(r"Figure \d+ of (?P<title>.+)", text)
+            other = re.fullmatch(r"(Figure|Table) \d+ of (?P<title>.+)", text)
             if not other or other.group("title") != titles.get(dest):
                 bad.append(f"{path}: {text!r} (a figure on {dest}, title {titles.get(dest)!r})")
     return bad
@@ -1294,7 +1295,9 @@ def test_positive_control_numref_titles():
     ok = {
         "explained/calibration.html": target,
         "explained/cv-curve.html": head.format("C-V", _numref_html("#fig-a", "Figure 1")
-            + _numref_html("calibration.html#fig-b", "Figure 2 of What the calibration changes")),
+            + _numref_html("calibration.html#fig-b", "Figure 2 of What the calibration changes")
+            + _numref_html("#tab-a", "Table 1")
+            + _numref_html("calibration.html#tab-b", "Table 3 of What the calibration changes")),
     }  # fmt: skip
     assert numref_findings(ok) == []
     # From another directory, through "../", and with the title HTML-escaped on both sides.

@@ -33,7 +33,10 @@ lines. {test}`tests/tcad/test_process.py::test_card_values_and_lines` re-reads e
 from the card in the image. It checks that each line lies inside the right `.model` block, and
 that the value is right. The `crosscheck` workflow runs it ({repo}`.github/workflows/crosscheck.yml`).
 
-The nfet values:
+{numref}`tab-process-data-nfet` gives the nfet values.
+
+~~~{table} The nfet_06v0 card values at TT, with their card lines.
+:name: tab-process-data-nfet
 
 | Parameter | Unit | Value | Card line |
 |---|---|---|---|
@@ -65,8 +68,12 @@ The nfet values:
 | {term}`DWC` | nm | 0 | [37120](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37120) |
 | {term}`XL` | nm | 0 | [37380](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37380) |
 | {term}`XW` | nm | 0 | [37392](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37392) |
+~~~
 
-The pfet values:
+{numref}`tab-process-data-pfet` gives the pfet values.
+
+~~~{table} The pfet_06v0 card values at TT, with their card lines.
+:name: tab-process-data-pfet
 
 | Parameter | Unit | Value | Card line |
 |---|---|---|---|
@@ -98,12 +105,16 @@ The pfet values:
 | {term}`DWC` | nm | 49 | [38278](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38278) |
 | {term}`XL` | nm | 0 | [38294](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38294) |
 | {term}`XW` | nm | 0 | [38299](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38299) |
+~~~
 
 On the pfet card TOXP is not set, so it equals TOXE. The pfet card sets no DWC; its DWC is
 WINT, 49 nm, on the line given. The pfet `sd_peak_cm3` is a `literature` value (below). VFB on
 the nfet card and CF on both cards are not set; their values are derived.
 
-What each parameter is used for:
+{numref}`tab-process-data-roles` gives what each parameter is used for.
+
+~~~{table} What each card parameter is used for.
+:name: tab-process-data-roles
 
 | Parameter | Role |
 |---|---|
@@ -135,6 +146,7 @@ What each parameter is used for:
 | {term}`DWC` | 1D bookkeeping, fixed |
 | {term}`XL` | 1D bookkeeping, fixed |
 | {term}`XW` | 1D bookkeeping, fixed |
+~~~
 
 CF is not on either card, so {term}`BSIM4` uses its default, 2·EPSROX·ε0/π·ln(1 + 4e-7/TOXE)
 ([BSIM4.5.0 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), `doc/BSIM450_Manu.tar`, eq. 7.5.1).
@@ -159,7 +171,10 @@ a length inside a bin or within 1e-9 m of either bound (`in_range` in
 [`inpgmod.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/parser/inpgmod.c)), so L = 0.7 µm lies in both nfet bins and ngspice takes the
 first in its model table ({py:func}`gf180tcad.tcad.process.card_bins`):
 
-The nfet {term}`SPICE` geometries (L = 0.6 µm is the nfet {term}`Lmin`; *both* means `nfet_06v0.0` and `nfet_06v0.1`, at their boundary):
+{numref}`tab-process-data-nfet-bins` gives the nfet {term}`SPICE` geometries (L = 0.6 µm is the nfet {term}`Lmin`; *both* means `nfet_06v0.0` and `nfet_06v0.1`, at their boundary).
+
+~~~{table} The bin of each nfet SPICE geometry.
+:name: tab-process-data-nfet-bins
 
 | W (µm) | L (µm) | Bin |
 |---|---|---|
@@ -169,8 +184,12 @@ The nfet {term}`SPICE` geometries (L = 0.6 µm is the nfet {term}`Lmin`; *both* 
 | 10 | 1 | `nfet_06v0.0` |
 | 10 | 2 | `nfet_06v0.0` |
 | 10 | 10 | `nfet_06v0.0` |
+~~~
 
-The pfet geometries (L = 0.5 µm is the pfet Lmin):
+{numref}`tab-process-data-pfet-bins` gives the pfet geometries (L = 0.5 µm is the pfet Lmin).
+
+~~~{table} The bin of each pfet SPICE geometry.
+:name: tab-process-data-pfet-bins
 
 | W (µm) | L (µm) | Bin |
 |---|---|---|
@@ -180,6 +199,7 @@ The pfet geometries (L = 0.5 µm is the pfet Lmin):
 | 10 | 1 | `pfet_06v0.0` |
 | 10 | 2 | `pfet_06v0.0` |
 | 10 | 10 | `pfet_06v0.0` |
+~~~
 
 Every card key the nfet file uses has the same {term}`TT` value in both nfet bins, so the
 process data does not depend on the bin
@@ -250,23 +270,28 @@ The 1D stack of the {term}`nfet_05v0` at the start values, gate on top. The oxid
 body doping, shaded, are two of the three tunables. {{ x_fig_oxide_stack_scale }}
 ```
 
-The start values and bounds:
+The start values and bounds of the nfet are in {numref}`tab-process-data-nfet-bounds`, and those
+of the pfet in {numref}`tab-process-data-pfet-bounds`.
 
-The nfet:
+~~~{table} The start values and bounds of the nfet tunables.
+:name: tab-process-data-nfet-bounds
 
 | Name | Unit | Start | Min | Max |
 |---|---|---|---|---|
 | `t_ox_eff_nm` | nm | 15.2 | 15.2 | 16.95 |
 | `n_ch_cm3` | cm⁻³ | 1.7e17 | 6.297e16 | 3.4e17 |
 | `dv_fb_v` | V | 0 | −0.2 | +0.2 |
+~~~
 
-The pfet:
+~~~{table} The start values and bounds of the pfet tunables.
+:name: tab-process-data-pfet-bounds
 
 | Name | Unit | Start | Min | Max |
 |---|---|---|---|---|
 | `t_ox_eff_nm` | nm | 15.6 | 15.6 | 16.39 |
 | `n_ch_cm3` | cm⁻³ | 1.7e17 | 6.785e16 | 3.4e17 |
 | `dv_fb_v` | V | 0 | −0.2 | +0.2 |
+~~~
 
 Where each comes from (the same for both devices):
 
@@ -354,7 +379,10 @@ this code. Each difference is settled by the code:
   with the manual's δx its X_DC would be 2.845 nm instead of 2.841 nm. Δ is 0.95 nm either way.
 
 The gate bias is used in place of Vgse, so the poly-depletion drop is ignored. That only makes
-Δ larger.
+Δ larger. The inputs and Δ of each device are in {numref}`tab-process-data-delta`.
+
+~~~{table} The inputs and the result of the charge-centroid allowance Δ of each device.
+:name: tab-process-data-delta
 
 | Quantity | nfet | pfet |
 |---|---|---|
@@ -368,6 +396,7 @@ The gate bias is used in place of Vgse, so the poly-depletion drop is ignored. T
 | `t_ox_eff_nm` upper bound, TOXP + Δ (nm) | **16.95** | **16.39** |
 | X_DC at the {term}`depletion` end (not used) (nm) | 3.278 | 3.291 |
 | Δ if the whole sweep counted (not used) (nm) | 1.10 | 1.10 |
+~~~
 
 The pfet Vfbzb is given with the NMOS-equivalent sign. The last two rows show what Δ would be if
 the whole sweep, depletion included, counted; it does not.
@@ -383,7 +412,11 @@ term, evaluated at Vbs = 0, with the short-channel terms of Vfbzb dropped. The t
 - K3, the narrow-width term ([37150](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37150) and [38164](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38164)), with W = 10 µm;
 - the DVT short-channel terms.
 
-Here is the rough effect of each on Δ, estimated through Vfbzb (and Φs for LPHIN):
+{numref}`tab-process-data-terms` gives the effect of each on Δ, estimated through Vfbzb (and Φs
+for LPHIN).
+
+~~~{table} The estimated effect on Δ of each card term that Δ leaves out.
+:name: tab-process-data-terms
 
 | Term | At L = 10 µm (nm) | At L = 2 µm (nm) | At L = {term}`Lmin` (nm) |
 |---|---|---|---|
@@ -391,6 +424,7 @@ Here is the rough effect of each on Δ, estimated through Vfbzb (and Φs for LPH
 | pfet LPE0 | +0.0004 | +0.002 | +0.008 |
 | nfet LPE0 | −0.0006 | −0.003 | −0.009 |
 | K3 (both) | ≤ 0.0002 | ≤ 0.0002 | ≤ 0.0002 |
+~~~
 
 Lmin is 0.5 µm for the pfet and 0.6 µm for the nfet.
 
@@ -435,11 +469,16 @@ bias at its upper bound. The highlighted poly and oxide are the bias. The drain 
 the gate's end.
 ```
 
+~~~{table} The start value and bounds of the 2D poly length bias.
+:name: tab-process-data-poly-bias
+
 | Name | Unit | Start | Min | Max |
 |---|---|---|---|---|
 | `poly_bias_nm` | nm | 0 | 0 | 100 |
+~~~
 
-The start, both bounds and their sources are project choices, the same for both devices. The start
+{numref}`tab-process-data-poly-bias` gives the start and the bounds. The start, both bounds and
+their sources are project choices, the same for both devices. The start
 is the poly as drawn. Why the 2D cells need it is in {ref}`moscap2d-edge`.
 
 ## No calibrated values in the files

@@ -83,6 +83,11 @@ computer ({ref}`cross-host-determinism`) and {py:func}`gf180tcad.manifest.verify
 
 ## Which model files differ
 
+{numref}`tab-pdk-versions-files` lists the model files and what differs in each.
+
+~~~{table} The model files of the two PDK versions and what differs in each.
+:name: tab-pdk-versions-files
+
 | File | What differs | Diff file |
 |---|---|---|
 | ngspice main library ([latest](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice), and `.spice` copy) | [`.lib res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571) only | {repo}`diff <results/spice-pdk-d658698/sm141064.ngspice.diff>` |
@@ -90,6 +95,7 @@ computer ({ref}`cross-host-determinism`) and {py:func}`gf180tcad.manifest.verify
 | Design files (ngspice, Xyce) | nothing: identical | none |
 | Metal-insulator-metal capacitor and bipolar transistor libraries | nothing: identical | none |
 | Build record (listed in {repo}`data/pdk-d658698.sha256`) | versions and commits | none |
+~~~
 
 The capacitor and bipolar transistor libraries are compared for both ngspice and Xyce.
 
@@ -110,7 +116,10 @@ The delta is latest − d658698, for every metric and geometry ({term}`geometry 
 {test}`tests/test_pdkdiff.py::test_committed_comparison_is_current`.
 
 At each of these geometries 13 metrics are compared. The largest |Δ| and the largest |Δ|/|a|
-are both 0.0, and 6 of 6 files are byte-identical:
+are both 0.0, and 6 of 6 files are byte-identical. The geometries are in {numref}`tab-pdk-versions-geometries`.
+
+~~~{table} The geometries compared between the two PDK versions.
+:name: tab-pdk-versions-geometries
 
 | Device | Geometry |
 |---|---|
@@ -126,8 +135,12 @@ are both 0.0, and 6 of 6 files are byte-identical:
 | {term}`pfet_05v0` | `w10p0_l1p00` |
 | {term}`pfet_05v0` | `w10p0_l2p00` |
 | {term}`pfet_05v0` | `w1p6_l0p70` |
+~~~
 
-Per metric, over the 12 geometries:
+{numref}`tab-pdk-versions-metrics` gives the result per metric, over the 12 geometries.
+
+~~~{table} The largest difference of each metric between the two PDK versions, over the 12 geometries.
+:name: tab-pdk-versions-metrics
 
 | Metric | Largest \|Δ\| | Largest \|Δ\|/\|a\| | Geometries with Δ = 0 (of 12) |
 |---|---|---|---|
@@ -144,6 +157,7 @@ Per metric, over the 12 geometries:
 | {term}`vt_lin_cc` | 0.0 | 0.0 | 12 |
 | {term}`vt_lin_maxgm` | 0.0 | 0.0 | 12 |
 | {term}`vt_sat_cc` | 0.0 | 0.0 | 12 |
+~~~
 
 ## Card values re-checked
 
@@ -158,7 +172,10 @@ Two of the entries below describe the gate stack. TOXE is the thickness of the {
 and NDEP the body doping under it. The nfet stack drawn at these two values is
 {numref}`Figure %s of Process data for the MOS capacitors <process-data-stack-figure>`.
 
-`nfet_06v0.0`:
+{numref}`tab-pdk-versions-nfet-0` gives the `nfet_06v0.0` entries.
+
+~~~{table} The re-checked entries of the nfet_06v0.0 card.
+:name: tab-pdk-versions-nfet-0
 
 | Parameter | Value | Card line |
 |---|---|---|
@@ -191,8 +208,12 @@ and NDEP the body doping under it. The nfet stack drawn at these two values is
 | VSAT | `103999.98*nfet_06v0_vsat` | [37336](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37336) |
 | VTH0 | `0.67314+nfet_06v0_vth0` | [37337](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37337) |
 | {term}`XJ` | `1.5e-007` | [37377](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37377) |
+~~~
 
-`nfet_06v0.1`:
+{numref}`tab-pdk-versions-nfet-1` gives the `nfet_06v0.1` entries.
+
+~~~{table} The re-checked entries of the nfet_06v0.1 card.
+:name: tab-pdk-versions-nfet-1
 
 | Parameter | Value | Card line |
 |---|---|---|
@@ -225,8 +246,12 @@ and NDEP the body doping under it. The nfet stack drawn at these two values is
 | VSAT | `64848.09*nfet_06v0_vsat` | [37674](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37674) |
 | VTH0 | `0.67314+nfet_06v0_vth0` | [37675](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37675) |
 | {term}`XJ` | `1.5e-007` | [37715](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37715) |
+~~~
 
-`pfet_06v0.0`:
+{numref}`tab-pdk-versions-pfet-0` gives the `pfet_06v0.0` entries.
+
+~~~{table} The re-checked entries of the pfet_06v0.0 card.
+:name: tab-pdk-versions-pfet-0
 
 | Parameter | Value | Card line |
 |---|---|---|
@@ -259,11 +284,15 @@ and NDEP the body doping under it. The nfet stack drawn at these two values is
 | VSAT | `8.55e4` | [38273](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38273) |
 | VTH0 | `-0.8978+pfet_06v0_dvth0` | [38274](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38274) |
 | {term}`XJ` | `1.5e-7` | [38291](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38291) |
+~~~
 
-The values the {repo}`design spec, §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>`
-quotes, for the parameters it quotes. In the table *none* means no value for that device, and
+{numref}`tab-pdk-versions-spec4` gives the values the {repo}`design spec, §4 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md>`
+quotes, for the parameters it quotes. In {numref}`tab-pdk-versions-spec4` *none* means no value for that device, and
 *set* means the spec says only that it is set. The unit is *not applicable* where no value is
-quoted:
+quoted.
+
+~~~{table} The card values that the design spec, §4, quotes.
+:name: tab-pdk-versions-spec4
 
 | Parameter | Spec §4, nfet | Spec §4, pfet | Unit |
 |---|---|---|---|
@@ -285,6 +314,7 @@ quoted:
 | VSAT | 1.04e5 | none | m/s |
 | VTH0 | 0.673 | none | V |
 | {term}`XJ` | 0.15 | none | µm |
+~~~
 
 For the nfet L limits the spec gives one value per {term}`bin`. LMIN is 0.6 µm and 0.7 µm, and
 LMAX is 0.7 µm and 50 µm.

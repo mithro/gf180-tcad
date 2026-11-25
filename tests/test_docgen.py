@@ -132,6 +132,30 @@ def test_table_numbers_do_not_break_at_the_exponent():
     assert docgen.unit_text("fF/um^2") == "fF/µm²" and docgen.unit_text("um") == "µm"
 
 
+def test_table_is_a_captioned_named_directive():
+    """Every generated table is a {table} directive with its caption and label, so Sphinx
+    numbers it and docs/_ext/html_checks.py finds the {numref} that cites it."""
+    lines = docgen._table(["A", "B"], [["1", "2"]], name="tab-x", caption="The values.")
+    assert lines == ["~~~{table} The values.", ":name: tab-x", "", "| A | B |", "|---|---|",
+                     "| 1 | 2 |", "~~~"]  # fmt: skip
+    assert docgen.table_label("tcad", "nfet_05v0", "w10p0_l0.6") == "tab-tcad-nfet-05v0-w10p0-l0-6"
+
+
+def test_every_generated_table_is_cited_on_its_page(generated_pages):
+    """Each {table} label of a generated page is cited by a {numref} on the same page, and no
+    page holds a bare pipe table. The display-source tables are the exception: the page
+    docs/reproduce/display-values.md wraps each in its {table} directive and cites it."""
+    for p in generated_pages.rglob("*.md"):
+        if p.name.startswith("display-sources-"):
+            continue
+        text = p.read_text(encoding="utf-8")
+        names = re.findall(r"^~~~\{table\}.*\n:name: (\S+)$", text, flags=re.MULTILINE)
+        for name in names:
+            assert f"{{numref}}`{name}`" in text, f"{p.name}: {name} is not cited"
+        bare = [ln for ln in text.splitlines() if re.match(r"^\|[-|]+\|$", ln.strip())]
+        assert len(bare) == len(names), f"{p.name}: a pipe table outside a {{table}} directive"
+
+
 def test_geometry_links_name_the_geometry(generated_pages):
     """S7: a link to a geometry page shows the geometry id, never a bare W that links to
     different pages; each page with such links says how to read the id."""

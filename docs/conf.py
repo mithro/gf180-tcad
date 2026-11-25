@@ -30,6 +30,10 @@ extensions = [
     # docs/_ext/wrapper_ids.py: Furo copies a table's or equation's ids onto its scroll wrapper;
     # this removes them from the wrapper, so each id is on one element (issue #150).
     "wrapper_ids",
+    # docs/_ext/html_checks.py: after the build, every numbered figure and table is cited from
+    # some page, every figure and table has a caption, every image has alt text, and no page
+    # shows an error box; each miss is a warning, so -W fails.
+    "html_checks",
 ]
 myst_enable_extensions = ["colon_fence", "dollarmath", "substitution"]
 source_suffix = {".md": "markdown"}
@@ -37,18 +41,23 @@ root_doc = "index"
 
 # Internal design spec and plans are not reader-facing; _build is output; _ext is code.
 # The corner fragments of the TCAD device pages (docgen.CORNER_FRAGMENT) are included by
-# docs/comparison/cv-agreement.md, never pages of their own.
+# docs/comparison/cv-agreement.md, never pages of their own. So are the display-source tables
+# (gf180tcad.display_sources.table_name), which docs/reproduce/display-values.md includes, each
+# in its captioned {table} directive.
 exclude_patterns = [
     "_build",
     "_ext",
     "superpowers",
     "superpowers/**",
     "_generated/tcad/*/corners.inc.md",
+    "_generated/reproduce/display-sources-*.inc.md",
 ]
 
 html_theme = "furo"
 # docs/_static/narrow.css: tables at phone width (docs/_ext/table_cells.py adds it).
+# docs/_static/captions.css: figure and table captions set apart from the body text.
 html_static_path = ["_static"]
+html_css_files = ["captions.css"]
 html_title = "gf180-tcad"
 # Keep build dates out of pages so two builds are identical.
 html_last_updated_fmt = None

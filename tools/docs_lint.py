@@ -91,7 +91,8 @@ class Page:
         self.counts(prose)
         outside_sphinx = self.name in ("README.md", "CONTRIBUTING.md")  # LOCAL
         rules = getattr(self.args, "rules", ())  # LOCAL
-        for line, check, msg in rule_findings(self.text, rules, not outside_sphinx):  # LOCAL
+        reader = include_reader(self.path)  # LOCAL
+        for line, check, msg in rule_findings(self.text, rules, not outside_sphinx, reader):  # LOCAL
             self.failed = True  # LOCAL
             print(f"{self.path}:{line}: FAIL {check} {msg}")  # LOCAL
         if "figure" in rules:  # LOCAL
@@ -117,6 +118,7 @@ class Page:
         out = []
         in_fm = False
         fence = None          # the fence string that opened a skipped block
+        table_fence = None    # LOCAL (gf180-tcad): the fence of an open {table} directive
         in_callout = 0
         callout_fence = []
         for i, line in enumerate(self.lines, 1):
@@ -131,7 +133,21 @@ class Page:
                 if line.startswith(fence[:3]) and line.strip() == fence.strip():
                     fence = None
                 continue
+            # LOCAL (gf180-tcad): a {table} directive holds a pipe table and its caption, which
+            # are checked like any table and sentence; only its fences and options are skipped.
+            if table_fence:
+                if line.strip() == table_fence:
+                    table_fence = None
+                    continue
+                if re.match(r"^\s*:[\w-]+:", line):
+                    continue
             d = DIRECTIVE.match(line)
+            if d and d.group(2).lower() == "table" and not table_fence:
+                table_fence = d.group(1)
+                caption = line[d.end():].strip()
+                if caption:
+                    out.append((i, caption, "prose"))
+                continue
             if d:
                 mark, name = d.group(1), d.group(2).lower()
                 if name in CALLOUT_DIRECTIVES:
@@ -292,10 +308,19 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             section whose noun is not a physical thing (a mesh file, a sweep command):
             <!-- figure-ok: a reason of six words or more --> in the section. Each opt-out
             prints PATH:LINE: NOTE FIGURE-OK reason.
+            A {numref} to a table (a {table} named on the page, or a name starting "tab-")
+            is not a figure. A {table} directive's caption and cells are read as a table's.
+  TABLE-REF  (with figure) a table named without a {numref}, in prose or a caption: "the
+            table below", "the following table", "this/these/those table(s)", "in/see the table",
+            "both tables", "the second table", "the table gives/has/lists/...". Each paragraph
+            is read with its lines joined. Another document's table ("the tables of the PDK
+            manual") and "table-driven" are left alone. Cite the table with {numref}.
   FIGURE-FORM  a {figure} with no :name:, no caption, or no {numref} on the page citing it.
             The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
             A {numref} to a target not on the page needs the page's title in its text
             ({numref}`Figure %s of <title> <name>`): numbers restart on each page.
+            Labels of a file the page {include}s count as on the page (docs/_generated after a
+            build); a "tab-" target is reported as a table ("Table %s of <title>").
   EQUATION  a display math block that is not in the house form: $$ ... $$ (label), then a line
             "where", then a list with one item per symbol, each starting with the symbol in
             $...$ and ending with ", in <SI unit symbols>" (F/m², cm⁻³) or ", dimensionless".
@@ -473,6 +498,9 @@ def _rule_lines(text):
             if kind == "figure" and re.match(r"^\s*:[\w-]+:", line):
                 out.append((i, line, "option"))
                 continue
+            if kind == "tabledir" and re.match(r"^\s*:[\w-]+:", line):
+                out.append((i, line, "tableopt"))
+                continue
         if in_comment:
             out.append((i, line, "comment"))
             in_comment = "-->" not in line
@@ -490,12 +518,16 @@ def _rule_lines(text):
                 kind = "figure"
             elif name == "math":
                 kind = "mathdir"
+            elif name == "table":
+                kind = "tabledir"
             elif name in _PROSE_DIRECTIVES:
                 kind = "callout"
             else:
                 kind = "code"
             stack.append((f.group(2), kind))
-            out.append((i, line, kind if kind in ("figure", "mathdir") else "fence"))
+            # A {table}'s opening line holds its caption, checked as a caption is.
+            shown = {"figure": "figure", "mathdir": "mathdir", "tabledir": "caption"}
+            out.append((i, line, shown.get(kind, "fence")))
             continue
         context = stack[-1][1] if stack else None
         if s.startswith("<!--"):
@@ -545,14 +577,32 @@ _FIGURE_OK = re.compile(r"<!--\s*figure-ok:\s*(?P<reason>[^>]*?)\s*-->")
 _IMAGE_LINE = re.compile(r"^\s*(!\[[^\]]+\]\([^)]+\)|<img\s[^>]*\balt=\"[^\"]+\"[^>]*\bsrc=)")
 
 
+_NUMREF = re.compile(r"\{numref\}`(?:([^`<]*)<)?\s*([^`<>]+?)\s*>?`")
+
+
+def _table_names(lines):
+    """The :name: of each {table} directive on the page."""
+    return {m.group(1) for _, ln, k in lines if k == "tableopt"
+            for m in [re.match(r"^\s*:name:\s*(\S+)", ln)] if m}
+
+
+def _cites_a_figure(line, tables):
+    """Whether the line has a {numref} to something other than a table: a {table} named on the
+    page, or a "tab-" name (the label prefix of every table)."""
+    return any(m.group(2) not in tables and not m.group(2).startswith("tab-")
+               for m in _NUMREF.finditer(line))
+
+
 def figure_findings(lines, sphinx=True):
     out, sections = [], [[]]
     for row in lines:
         if row[2] == "heading":
             sections.append([])
         sections[-1].append(row)
+    # A {numref} to a table is not a figure: a table named on the page, or any "tab-" name.
+    tables = _table_names(lines)
     for sec in sections:
-        has_figure = any(k == "figure" or "{numref}" in ln for _, ln, k in sec)
+        has_figure = any(k == "figure" or _cites_a_figure(ln, tables) for _, ln, k in sec)
         if not sphinx:
             has_figure = has_figure or any(_IMAGE_LINE.match(ln) for _, ln, _k in sec)
         opt_out = any(len((m.group("reason") or "").split()) >= OPT_OUT_WORDS
@@ -613,9 +663,33 @@ def _figure_blocks(lines):
     return out
 
 
-def figure_form_findings(lines):
+_INCLUDE = re.compile(r"^\s*(?:`{3,}|~{3,}|:{3,})\s*\{include\}\s+(\S+)")
+
+
+def _included_names(lines, include_text):
+    """(labels, unread): the :name: labels of the files the page pulls in with {include}, which
+    land on the page, so a {numref} to one cites the same page; and the include paths that could
+    not be read. ``include_text(path)`` gives a file's text (the path as the directive writes
+    it) or None when it cannot be read."""
+    names, unread = set(), []
+    if include_text is None:
+        return names, unread
+    for _, ln, _ in lines:
+        m = _INCLUDE.match(ln)
+        if not m:
+            continue
+        text = include_text(m.group(1))
+        if text is None:
+            unread.append(m.group(1))
+        else:
+            names |= set(re.findall(r"^\s*:name:\s*(\S+)\s*$", text, flags=re.M))
+    return names, unread
+
+
+def figure_form_findings(lines, include_text=None):
     """FIGURE-FORM: a {figure} needs a :name:, a caption and a {numref} on the page that cites
-    it. The dark twin of a light/dark pair (:figclass: only-dark) carries no name and is exempt."""
+    it. The dark twin of a light/dark pair (:figclass: only-dark) carries no name and is exempt.
+    Labels in an {include}d file are on the page (``include_text``, see _included_names)."""
     cited, refs = set(), []
     for i, line, kind in lines:
         if kind in ("prose", "table", "caption", "heading"):
@@ -627,14 +701,25 @@ def figure_form_findings(lines):
     targets = {opts["name"] for _, opts, _ in _figure_blocks(lines) if opts.get("name")}
     targets |= {re.match(r"^\s*\(([\w.:-]+)\)=", ln).group(1) for _, ln, k in lines if k == "label"
                 and re.match(r"^\s*\(([\w.:-]+)\)=", ln)}
+    targets |= _table_names(lines)
+    included, unread = _included_names(lines, include_text)
+    targets |= included
     for i, text, target in refs:
         if target in targets:
             continue
-        words = re.sub(r"%s|\{number\}|\{name\}|\bFig(ure)?\b\.?", " ", text or "").split()
-        if len(words) < 2:
-            out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', a figure on another page: "
+        words = re.sub(r"%s|\{number\}|\{name\}|\bFig(ure)?\b\.?|\bTable\b", " ", text or "").split()
+        if len(words) < 2 and unread:
+            # The target may be in a file the page includes but that cannot be read yet: say
+            # that, not that it is on another page.
+            out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', not on the page as read: "
+                                          f"cannot read included {', '.join(unread)}; run a docs "
+                                          "build first (it writes docs/_generated), then lint "
+                                          "again"))
+        elif len(words) < 2:
+            what = ("a table", "Table") if target.startswith("tab-") else ("a figure", "Figure")
+            out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', {what[0]} on another page: "
                                           "numbers restart on each page, so write the page's "
-                                          f"title in the text, {{numref}}`Figure %s of <title> "
+                                          f"title in the text, {{numref}}`{what[1]} %s of <title> "
                                           f"<{target}>`"))
     for i, opts, caption in _figure_blocks(lines):
         if "only-dark" in opts.get("figclass", "").split():
@@ -782,14 +867,102 @@ def _bare_prose(line):
     return line
 
 
-def rule_findings(text, rules=RULES, sphinx=True):
+# A table named without a {numref}: by its place, by "the table" doing something, by ordinal.
+# "tables?(?!-)" leaves "table-driven" alone; "(?!\s+of\b)" leaves another document's table
+# ("in the tables of the PDK manual", "these tables of Green's paper") alone.
+_TABLE = r"tables?\b(?!-)"
+_TABLE_VERBS = (r"(?:gives?|lists?|shows?|holds?|asks?|says?|repeats?|has|have|contains?|records?"
+                r"|compares?|sums?|covers?|sets?)")
+_TABLE_REF = re.compile(
+    "(" + "|".join([
+        rf"\b{_TABLE}\s+(?:above|below)\b",
+        rf"\b(?:the|these)\s+(?:following|next|previous)\s+{_TABLE}",
+        rf"\b(?:this|these|those)\s+{_TABLE}(?!\s+of\b)",
+        rf"\b(?:in|see)\s+the\s+{_TABLE}(?!\s+of\b)",
+        rf"\bboth\s+{_TABLE}",
+        rf"\bthe\s+(?:first|second|third|fourth|fifth|last|other)\s+{_TABLE}",
+        rf"\bthe\s+{_TABLE}\s+{_TABLE_VERBS}\b",
+    ]) + ")",
+    flags=re.I,
+)
+
+
+def _paragraphs(lines, kinds=("prose", "caption")):
+    """Runs of consecutive non-blank lines of ``kinds``, each as (text, starts): the visible
+    text of the lines joined by single spaces, and the (offset, line number) where each line
+    starts in it, so a match across a line wrap maps back to its first line."""
+    out, text, starts, last = [], "", [], None
+    for i, line, kind in lines:
+        if kind in kinds and line.strip() and (last is None or i == last + 1):
+            vis = _visible(line).strip()
+            if text:
+                text += " "
+            starts.append((len(text), i))
+            text += vis
+            last = i
+            continue
+        if text:
+            out.append((text, starts))
+        text, starts, last = "", [], None
+        if kind in kinds and line.strip():
+            starts.append((0, i))
+            text, last = _visible(line).strip(), i
+    if text:
+        out.append((text, starts))
+    return out
+
+
+def table_ref_findings(lines):
+    """TABLE-REF: a table named without a {numref}: by its place ("the table below", "the
+    following table"), as "this/these/those table(s)", "in/see the table", "both tables", "the
+    second table", or "the table gives/has/lists/...". Each paragraph is read with its wrapped
+    lines joined, so a phrase split across a line break is found too."""
+    out = []
+    for text, starts in _paragraphs(lines):
+        for m in _TABLE_REF.finditer(text):
+            line = max((n for off, n in starts if off <= m.start()), default=starts[0][1])
+            phrase = " ".join(m.group(1).split())
+            out.append((line, "TABLE-REF", f"'{phrase}': cite the table with {{numref}} "
+                                           "(give it a {table} directive with a :name:)"))
+    return out
+
+
+def include_reader(page, generated=None):
+    """A function that reads a file ``page`` {include}s, by the path the directive writes:
+    "/x" from the docs source folder (the nearest folder above ``page`` that holds conf.py),
+    "x" from the page's folder. ``generated`` stands in for the docs folder's _generated, for
+    docgen output written elsewhere (the tests' docgen.generate). It returns None for a file it
+    cannot read: docs/_generated exists only after a docs build or docgen.generate."""
+    page = pathlib.Path(page).resolve()
+    root = next((p for p in page.parents if (p / "conf.py").is_file()), page.parent)
+
+    def read(target):
+        if target.startswith("/"):
+            rel = target.lstrip("/")
+            if generated is not None and rel.startswith("_generated/"):
+                path = pathlib.Path(generated) / rel[len("_generated/"):]
+            else:
+                path = root / rel
+        else:
+            path = page.parent / target
+        try:
+            return path.read_text(encoding="utf-8")
+        except OSError:
+            return None
+
+    return read
+
+
+def rule_findings(text, rules=RULES, sphinx=True, include_text=None):
     """(line, CHECK, message) of each finding of the house rules in a page's text. With
-    sphinx=False (README.md, CONTRIBUTING.md: read on GitHub) a Markdown image is a figure."""
+    sphinx=False (README.md, CONTRIBUTING.md: read on GitHub) a Markdown image is a figure.
+    ``include_text(path)`` reads a file the page {include}s (see include_reader)."""
     lines = _rule_lines(text)
     out = []
     if "figure" in rules:
         out += figure_findings(lines, sphinx)
-        out += figure_form_findings(lines)
+        out += figure_form_findings(lines, include_text)
+        out += table_ref_findings(lines)
     if "equation" in rules:
         out += equation_findings(lines)
     if "filelink" in rules:

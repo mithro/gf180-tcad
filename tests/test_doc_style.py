@@ -265,11 +265,14 @@ def _docs_lint():
 
 
 def rule_counts(
-    generated: Path | None = None, pages: list[tuple[str, Path]] | None = None
+    generated: Path | None = None,
+    pages: list[tuple[str, Path]] | None = None,
+    includes: Path | None = None,
 ) -> dict[str, dict[str, int]]:
     """{page: {check: count}} of the docs_lint --rules findings and FIGURE-OK opt-outs: the
     reader pages (or ``pages``, as (name, path)), and the pages docgen writes when
-    ``generated`` is given."""
+    ``generated`` is given. An {include} of docs/_generated is read from ``includes`` (or
+    ``generated``): docgen output, which docs/_generated holds only after a docs build."""
     lint = _docs_lint()
     if pages is None:
         pages = [(p.relative_to(ROOT).as_posix(), p) for p in source_pages()]
@@ -281,7 +284,8 @@ def rule_counts(
     out = {}
     for rel, p in pages:
         text = p.read_text(encoding="utf-8")
-        found = lint.rule_findings(text, sphinx=p.name not in OUTSIDE_SPHINX)
+        reader = lint.include_reader(p, includes or generated)
+        found = lint.rule_findings(text, sphinx=p.name not in OUTSIDE_SPHINX, include_text=reader)
         counts = Counter(check for _, check, _ in found)
         counts["FIGURE-OK"] += len(lint.figure_opt_outs(text))
         counts = +counts
@@ -317,7 +321,7 @@ def write_rules_baseline(path: Path, counts: dict, allow_raise: bool = False) ->
     return raised
 
 
-def test_house_rules_do_not_grow():
+def test_house_rules_do_not_grow(generated):
     """A figure for each described situation, every equation explained, every file a link
     (spec §10.3). The baseline lists the findings the pages had when the rules came in; a count
     may only fall, FIGURE-OK (the opt-outs) included. Lower it when pages are fixed:
@@ -325,7 +329,7 @@ def test_house_rules_do_not_grow():
     (it refuses to raise a count; ``--allow-raise`` does, and the commit says why).
     Each finding: ``uv run --no-project python -I tools/docs_lint.py --no-front-matter --rules
     all <page>``."""
-    grown = _rules_grown(rule_counts(), "")
+    grown = _rules_grown(rule_counts(includes=generated), "")
     assert not grown, "house-rule findings grew (see spec §10.3):\n" + "\n".join(grown)
 
 

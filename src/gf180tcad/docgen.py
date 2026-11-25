@@ -93,14 +93,23 @@ _GEOMETRY_ID_TEXT = (
 )
 
 
-def _table(header: list[str], rows: list[list[str]]) -> list[str]:
-    """A pipe table; every cell must hold text (a blank cell is a bug, not a gap)."""
+def table_label(*parts: str) -> str:
+    """The ``:name:`` of a generated table: ``tab-`` and the parts, each ``_`` and ``.`` made
+    ``-``. Labels are site-wide, so the parts name the page (device, geometry) and the table."""
+    return "tab-" + "-".join(p.replace("_", "-").replace(".", "-") for p in parts)
+
+
+def _table(header: list[str], rows: list[list[str]], *, name: str, caption: str) -> list[str]:
+    """A pipe table in a ``{table}`` directive with ``caption`` and the label ``name``, so it is
+    numbered and the page cites it with :func:`numref`; every cell must hold text (a blank cell
+    is a bug, not a gap)."""
     for r in rows:
         if len(r) != len(header) or any(not str(c).strip() or str(c).strip() == "-" for c in r):
             raise ValueError(f"table row {r} does not fill the columns {header}")
-    out = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
+    out = [f"~~~{{table}} {caption}", f":name: {name}", ""]
+    out += ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
     out += ["| " + " | ".join(str(c) for c in r) + " |" for r in rows]
-    return out
+    return [*out, "~~~"]
 
 
 def _unit(metric: str) -> str:
@@ -218,32 +227,45 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
             raise KeyError(f"xyce {TT} {device.name} {gid} metrics.json has no {name}")
         values.append([key, _unit(name) or "none", num(tt[name]), x])
         corners.append([key, num(lo), num(hi)])
+    t_values, t_corners, t_windows = (
+        table_label("spice", device.name, gid, part) for part in ("values", "envelope", "window")
+    )
     return [
         "### Values",
         "",
         (
-            "The {term}`TT` value of each metric from both engines. Xyce has no C-V sweep, so "
-            f"its {{term}}`Cgg` cells are not applicable ({numref(spice_label(device.name, gid, 'cv'))} "
-            "draws ngspice alone)."
+            f"{numref(t_values)} gives the {{term}}`TT` value of each metric from both engines. "
+            "Xyce has no C-V sweep, so its {term}`Cgg` cells are not applicable "
+            f"({numref(spice_label(device.name, gid, 'cv'))} draws ngspice alone)."
         ),
         "",
-        *_table(["Metric", "Unit", "TT ngspice", "TT Xyce"], values),
+        *_table(
+            ["Metric", "Unit", "TT ngspice", "TT Xyce"],
+            values,
+            name=t_values,
+            caption="The typical-corner value of each metric from ngspice and Xyce.",
+        ),
         "",
         "### Corner envelope",
         "",
         (
-            "The {term}`corner envelope`: min and max over the five corners (ngspice), in the "
-            "unit of the values table."
+            f"{numref(t_corners)} gives the {{term}}`corner envelope`: min and max over the five "
+            f"corners (ngspice), in the unit of {numref(t_values)}."
         ),
         "",
-        *_table(["Metric", "Corner min", "Corner max"], corners),
+        *_table(
+            ["Metric", "Corner min", "Corner max"],
+            corners,
+            name=t_corners,
+            caption="The lowest and highest value of each metric over the five corners.",
+        ),
         "",
         "### Same process window",
         "",
         (
-            'The {term}`"Same process" window`: the {term}`combined range` of the {term}`PDK` '
-            "{term}`spec window` and the corner envelope. The last column says which sets it "
-            "({ref}`pdk-same-process-window`)."
+            f'{numref(t_windows)} gives the {{term}}`"Same process" window`: the '
+            "{term}`combined range` of the {term}`PDK` {term}`spec window` and the corner "
+            "envelope. The last column says which sets it ({ref}`pdk-same-process-window`)."
         ),
         "",
         (
@@ -251,7 +273,12 @@ def _metrics_table(root: Path, device: Device, gid: str, spec: dict, envelope: d
             "corner envelope alone."
         ),
         "",
-        *_table(["Metric", "Window min", "Window max", "Set by"], windows),
+        *_table(
+            ["Metric", "Window min", "Window max", "Set by"],
+            windows,
+            name=t_windows,
+            caption="The window of each metric and what sets it.",
+        ),
     ]
 
 
@@ -359,12 +386,15 @@ def _spec_status(root, spec: dict) -> list[str]:
     names = {}
     for e in compared:
         names.setdefault((e["symbol"], e["metric"]), None)
+    t_names = table_label("summary", "spec-parameters")
     lines = [
-        "The PDK parameter each metric stands for:",
+        f"{numref(t_names)} gives the PDK parameter each metric stands for.",
         "",
         *_table(
             ["PDK parameter", "Metric"],
             [[f"{{term}}`{s}`", f"{{term}}`{m}`"] for s, m in names],
+            name=t_names,
+            caption="The PDK parameter each compared metric stands for.",
         ),
     ]
     groups: dict[tuple[str, str], list[list[str]]] = {}
@@ -376,11 +406,20 @@ def _spec_status(root, spec: dict) -> list[str]:
             [f"{{term}}`{e['metric']}`", num(v), num(lo), num(hi), status]
         )
     for (device, gid), rows in groups.items():
+        t_group = table_label("summary", "spec", device, gid)
         lines += [
             "",
-            f"{{term}}`{device}` at geometry {{doc}}`{gid} <{device}/{gid}>`:",
+            (
+                f"{numref(t_group)} gives the {{term}}`TT` value of each metric of {{term}}`{device}` "
+                f"at geometry {{doc}}`{gid} <{device}/{gid}>` against its spec window."
+            ),
             "",
-            *_table(["Metric", "TT ngspice", "Spec min", "Spec max", "Status"], rows),
+            *_table(
+                ["Metric", "TT ngspice", "Spec min", "Spec max", "Status"],
+                rows,
+                name=t_group,
+                caption=f"The typical-corner values of {device} `{gid}` against the PDK spec.",
+            ),
         ]
     return lines
 
@@ -400,7 +439,13 @@ def _tcad_only_rows(spec: dict) -> list[str]:
              num(float(e["min"])), num(float(e["max"]))]
             for e in entries
         ],
+        name=TCAD_ONLY_TABLE,
+        caption="The per-area PDK specs that only the TCAD is compared with.",
     )  # fmt: skip
+
+
+#: The label of the summary page's "TCAD only" table.
+TCAD_ONLY_TABLE = table_label("summary", "tcad-only")
 
 
 def _engine_table(root) -> list[str]:
@@ -423,11 +468,20 @@ def _engine_table(root) -> list[str]:
                         cell += f" **unexplained** ({{doc}}`{ENGINE_DOC}`)"
                 cells.append(cell)
             rows.append(cells)
+        t_engine = table_label("summary", "engine-diff", device.name)
         lines += [
             "",
-            f"{{term}}`{device.name}`:",
+            (
+                f"{numref(t_engine)} gives the engine difference of each sweep at each "
+                f"{{term}}`{device.name}` geometry."
+            ),
             "",
-            *_table(["Geometry", *(f"{{term}}`{s}` (%)" for s in DIFF_SWEEPS)], rows),
+            *_table(
+                ["Geometry", *(f"{{term}}`{s}` (%)" for s in DIFF_SWEEPS)],
+                rows,
+                name=t_engine,
+                caption=f"The engine difference of each sweep at each {device.name} geometry.",
+            ),
         ]
     return lines[1:]
 
@@ -479,7 +533,10 @@ def _summary_page(roots: rf.Roots, spec: dict, out: Path):
             "({doc}`/comparison/cv-agreement`)."
         ),
         "",
-        'The status of every row is "TCAD only": these specs have no SPICE value.',
+        (
+            f'{numref(TCAD_ONLY_TABLE)} lists them. The status of every row is "TCAD only": '
+            "these specs have no SPICE value."
+        ),
         "",
         *_tcad_only_rows(spec),
         "",
@@ -509,7 +566,9 @@ def _summary_page(roots: rf.Roots, spec: dict, out: Path):
             "Both engines run the typical corner at 25 C. The threshold is "
             f"{threshold} % ({{ref}}`comparison-space`). Cases above it that are explained are "
             f"marked known, see {{doc}}`{ENGINE_DOC}`. Anything else above the threshold is "
-            f"flagged unexplained in bold. {numref(ENGINE_LABEL)} draws every value of the tables."
+            f"flagged unexplained in bold. {numref(ENGINE_LABEL)} draws every value of "
+            + " and ".join(numref(table_label("summary", "engine-diff", d)) for d in DEVICES)
+            + "."
         ),
         "",
         *figure_pair(
@@ -773,21 +832,43 @@ def _check_rows(rec: dict, overlay: str) -> list[str]:
                 [label, num(tc[which]), num(reg[which]),
                  num(w["lo"]) if w else na, num(w["hi"]) if w else na]
             )  # fmt: skip
+    t_plateau, t_p_window, t_p_tight, t_crossing, t_c_window = (
+        table_label(overlay, part)
+        for part in (
+            "plateaus",
+            "plateau-window",
+            "plateau-tightest",
+            "crossings",
+            "crossing-window",
+        )
+    )
     return [
         "### Plateaus",
         "",
-        *_table(["Plateau", "max \\|ΔCgg\\|/Cgg (%)", "Points", f"{tol} (%)", "Verdict"], plateau),
+        f"{numref(t_plateau)} gives the plateau checks and their verdicts.",
         "",
-        (
-            "The window that decides {term}`Same process`, and whether the TCAD is inside it "
-            "at every plateau bias:"
+        *_table(
+            ["Plateau", "max \\|ΔCgg\\|/Cgg (%)", "Points", f"{tol} (%)", "Verdict"],
+            plateau,
+            name=t_plateau,
+            caption="The largest Cgg error on each plateau, its tolerance and its verdict.",
         ),
         "",
-        *_table(["Plateau", "Window set by", "Inside at every bias"], p_window),
+        (
+            f"{numref(t_p_window)} gives the window that decides {{term}}`Same process`, and "
+            "whether the TCAD is inside it at every plateau bias."
+        ),
+        "",
+        *_table(
+            ["Plateau", "Window set by", "Inside at every bias"],
+            p_window,
+            name=t_p_window,
+            caption="The Same process window of each plateau and whether the TCAD stays inside it.",
+        ),
         "",
         (
             "The tightest bias u is where the TCAD value is closest to, or furthest past, a "
-            "window edge; the window there:"
+            f"window edge; {numref(t_p_tight)} gives the window there."
         ),
         "",
         *_table(
@@ -799,20 +880,31 @@ def _check_rows(rec: dict, overlay: str) -> list[str]:
                 "Window max (fF)",
             ],
             p_tight,
+            name=t_p_tight,
+            caption="The window of each plateau at its tightest bias.",
         ),
         "",
         "### Crossings",
         "",
-        *_table(["Crossing", "ΔV (mV)", f"{tol} (mV)", "Window set by", "Verdict"], crossing),
+        f"{numref(t_crossing)} gives the crossing checks and their verdicts.",
+        "",
+        *_table(
+            ["Crossing", "ΔV (mV)", f"{tol} (mV)", "Window set by", "Verdict"],
+            crossing,
+            name=t_crossing,
+            caption="The shift of each crossing from SPICE, its tolerance and its verdict.",
+        ),
         "",
         (
-            f"The crossing biases of the TCAD and the SPICE curves of {numref(overlay)}, and the "
-            "window of the crossing:"
+            f"{numref(t_c_window)} gives the crossing biases of the TCAD and the SPICE curves of "
+            f"{numref(overlay)}, and the window of the crossing."
         ),
         "",
         *_table(
             ["Crossing", "TCAD u (V)", "SPICE u (V)", "Window min (V)", "Window max (V)"],
             c_window,
+            name=t_c_window,
+            caption="The TCAD and SPICE bias of each crossing and the window of the crossing.",
         ),
         "",
         (
@@ -823,8 +915,9 @@ def _check_rows(rec: dict, overlay: str) -> list[str]:
     ]
 
 
-def _regions_rows(rec: dict) -> list[str]:
-    """The SPICE regions of one geometry, as the comparison record holds them."""
+def _regions_rows(rec: dict, name: str) -> list[str]:
+    """The SPICE regions of one geometry, as the comparison record holds them, in the table
+    labelled ``name``."""
     r = rec["spice_regions"]
     rows = [
         ["u_fb (V)", fmt(r["u_fb"])],
@@ -836,9 +929,14 @@ def _regions_rows(rec: dict) -> list[str]:
         ["C_mid (fF)", fmt(r["c_mid"])],
     ]
     return [
-        "The SPICE regions of this geometry, from the result file:",
+        f"{numref(name)} gives the SPICE regions of this geometry, from the result file.",
         "",
-        *_table(["Quantity", "Value"], rows),
+        *_table(
+            ["Quantity", "Value"],
+            rows,
+            name=name,
+            caption="The SPICE regions of this geometry, from its result file.",
+        ),
     ]
 
 
@@ -931,7 +1029,7 @@ def _tcad_geometry_page(roots: rf.Roots, d: _Device, g: Geometry, out: Path) -> 
         "",
         *_check_rows(rec, cgg),
         "",
-        *_regions_rows(rec),
+        *_regions_rows(rec, table_label("tcad", name, gid, "regions")),
         "",
         "## Intrinsic and parasitic parts (1D)",
         "",
@@ -1087,16 +1185,40 @@ def _param_rows(d: _Device) -> list[str]:
         )
         bounds.append([key, num(lo), num(hi), f"`{par.provenance}`"])
         kinds.append([key, par.start_kind or "not recorded", lo_kind, hi_kind])
+    name = d.device.name
+    t_values, t_bounds, t_kinds = (
+        table_label("tcad", name, part) for part in ("fit", "bounds", "bound-kinds")
+    )
     return [
-        *_table(["Parameter", "Unit", "Start", "Fitted", "Bound hit"], values),
+        f"{numref(t_values)} gives the start and fitted value of each tunable.",
         "",
-        "The bounds, in the unit of the table above, and the {term}`provenance tag`:",
+        *_table(
+            ["Parameter", "Unit", "Start", "Fitted", "Bound hit"],
+            values,
+            name=t_values,
+            caption=f"The start and fitted value of each {name} tunable.",
+        ),
         "",
-        *_table(["Parameter", "Lower bound", "Upper bound", "Tag"], bounds),
+        (
+            f"{numref(t_bounds)} gives the bounds, in the unit of {numref(t_values)}, and the "
+            "{term}`provenance tag`."
+        ),
         "",
-        "Where the start value and each bound come from:",
+        *_table(
+            ["Parameter", "Lower bound", "Upper bound", "Tag"],
+            bounds,
+            name=t_bounds,
+            caption=f"The bounds and provenance tag of each {name} tunable.",
+        ),
         "",
-        *_table(["Parameter", "Start from", "Lower bound from", "Upper bound from"], kinds),
+        f"{numref(t_kinds)} gives where the start value and each bound come from.",
+        "",
+        *_table(
+            ["Parameter", "Start from", "Lower bound from", "Upper bound from"],
+            kinds,
+            name=t_kinds,
+            caption=f"Where the start value and each bound of each {name} tunable come from.",
+        ),
     ]
 
 
@@ -1109,17 +1231,32 @@ def _bookkeeping_rows(d: _Device) -> list[str]:
             continue
         rows.append([f"`{n}`", num(p.value, 6), unit_text(p.unit), f"`{p.provenance}`"])
         sources += [[f"`{n}`", _source_text(s)] for s in p.source]
+    name = d.device.name
+    t_rows, t_sources = (table_label("tcad", name, part) for part in ("bookkeeping", "sources"))
     return [
-        *_table(["Parameter", "Value", "Unit", "Tag"], rows),
+        f"{numref(t_rows)} gives the values.",
         "",
-        "The card line or document each value comes from:",
+        *_table(
+            ["Parameter", "Value", "Unit", "Tag"],
+            rows,
+            name=t_rows,
+            caption=f"The fixed reference bookkeeping values of {name}.",
+        ),
         "",
-        *_table(["Parameter", "Source"], sources),
+        f"{numref(t_sources)} gives the card line or document each value comes from.",
+        "",
+        *_table(
+            ["Parameter", "Source"],
+            sources,
+            name=t_sources,
+            caption=f"The card line or document each {name} bookkeeping value comes from.",
+        ),
     ]
 
 
-def _meshconv_rows(report: dict) -> list[str]:
-    """The levels of one mesh-convergence report; the selected level is named below the table."""
+def _meshconv_rows(report: dict, name: str) -> list[str]:
+    """The levels of one mesh-convergence report, in the table labelled ``name``; the selected
+    level is named below the table."""
     sel = report["selected"]["level"]
     two_d = report["dim"] == 2
     header = ["Level", "Scale", "Nodes", "max change to next finer"]
@@ -1133,7 +1270,19 @@ def _meshconv_rows(report: dict) -> list[str]:
             a = lv["agreement_1d"]
             row.append("not applicable" if a is None else num(a, 3))
         rows.append(row)
-    return [*_table(header, rows), "", f"Level {sel} is the selected mesh."]
+    dim = f"{report['dim']}D"
+    return [
+        f"{numref(name)} gives each level.",
+        "",
+        *_table(
+            header,
+            rows,
+            name=name,
+            caption=f"The {dim} mesh levels, their size and their change against the next finer level.",
+        ),
+        "",
+        f"Level {sel} is the selected mesh.",
+    ]
 
 
 # The corner bounds of the three tunables (Task 16a): read from results/tcad/corners/<device>/
@@ -1183,13 +1332,15 @@ def _with_note(table: list[str]) -> list[str]:
     return [*table, "", LIMIT_NOTE] if any(LIMIT_MARK in r for r in table) else table
 
 
-def corner_tables(name: str, summary: dict) -> list[str]:
+def corner_tables(name: str, summary: dict, page: str = "tcad") -> list[str]:
     """The corner tables of one device from its corner ``summary``
     (:func:`gf180tcad.calibrate.corners.summary`): the bounds and spread of each tunable, the
     corner of each bound and whether it sits on a limit of its fit, the value at each corner, the
     card cross-check of the oxide and the flat band, and the verdicts at each corner. One value
     per cell; the unit is in the row label or the header. A value on a limit of its fit carries
-    :data:`LIMIT_MARK`, and :data:`LIMIT_NOTE` follows its table."""
+    :data:`LIMIT_MARK`, and :data:`LIMIT_NOTE` follows its table. ``page`` starts the table
+    labels, so the device page ("tcad") and the corner fragment that
+    docs/comparison/cv-agreement.md includes ("cv-agreement") each have their own."""
     from gf180tcad.calibrate import cv
     from gf180tcad.calibrate.corners import FIT_CORNERS
 
@@ -1218,23 +1369,51 @@ def corner_tables(name: str, summary: dict) -> list[str]:
         held = cv.worst(e["held_out"].values()) if "held_out" in e else "not applicable"
         verdicts.append([c, _verdict_term(e["verdict"]), _verdict_term(held)])
         hits += [f"`{k}` at {c} is on its {v} limit" for k, v in sorted(e["bound_hits"].items())]
+    t_bounds, t_where, t_per, t_verdicts = (
+        table_label(page, name, "corner", part)
+        for part in ("bounds", "extremes", "values", "verdicts")
+    )
     lines = [
         (
-            f"From {src}: each fitted number at the {{term}}`typical corner` (the committed "
-            "calibration) and the lowest and highest value over the five {term}`corners <corner>`. "
-            "The spread is the highest minus the lowest. A lowest or highest value on a limit of "
-            "its fit is reported as that limit ({ref}`reproduce-corners`)."
+            f"{numref(t_bounds)}, from {src}, gives each {{term}}`{name}` fitted number at the "
+            "{term}`typical corner` (the committed calibration) and the lowest and highest value "
+            "over the five {term}`corners <corner>`. The spread is the highest minus the lowest. "
+            "A lowest or highest value on a limit of its fit is reported as that limit "
+            "({ref}`reproduce-corners`)."
         ),
         "",
-        *_with_note(_table(["Number", "Typical", "Lowest", "Highest", "Spread"], bounds)),
+        *_with_note(
+            _table(
+                ["Number", "Typical", "Lowest", "Highest", "Spread"],
+                bounds,
+                name=t_bounds,
+                caption=f"Each {name} fitted number at the typical corner, its lowest and highest "
+                "value over the corners, and its spread.",
+            )
+        ),
         "",
-        "The corner of the lowest and the highest value, and whether it sits on a limit of its fit:",
+        (
+            f"{numref(t_where)} gives the corner of the lowest and the highest value, and whether "
+            "it sits on a limit of its fit."
+        ),
         "",
-        *_table(["Number", "Lowest at", "On a limit", "Highest at", "On a limit"], where),
+        *_table(
+            ["Number", "Lowest at", "On a limit", "Highest at", "On a limit"],
+            where,
+            name=t_where,
+            caption=f"The corner of the lowest and highest value of each {name} fitted number.",
+        ),
         "",
-        "The fitted value at each corner:",
+        f"{numref(t_per)} gives the fitted value at each corner.",
         "",
-        *_with_note(_table(["Corner", *(_corner_label(n) for n in tun)], per)),
+        *_with_note(
+            _table(
+                ["Corner", *(_corner_label(n) for n in tun)],
+                per,
+                name=t_per,
+                caption=f"The {name} fitted values at each corner.",
+            )
+        ),
         "",
     ]
     for n in CORNER_SHIFT_TUNABLES:
@@ -1246,26 +1425,37 @@ def corner_tables(name: str, summary: dict) -> list[str]:
              _corner_value(n, row["shift_difference"][c], n in on[c])]
             for c in FIT_CORNERS
         ]  # fmt: skip
+        t_shift = table_label(page, name, "corner", "card", n)
         lines += [
             (
-                f"Card cross-check of `{n}`. The table gives the {{term}}`model card`'s shift of "
-                "it at each corner, the fit's shift from the typical value, and their difference:"
+                f"Card cross-check of `{n}`. {numref(t_shift)} gives the {{term}}`model card`'s "
+                "shift of it at each corner, the fit's shift from the typical value, and their "
+                "difference."
             ),
             "",
             *_with_note(
                 _table(
-                    ["Corner", f"Card ({unit})", f"Fit ({unit})", f"Difference ({unit})"], shifts
+                    ["Corner", f"Card ({unit})", f"Fit ({unit})", f"Difference ({unit})"],
+                    shifts,
+                    name=t_shift,
+                    caption=f"The card's and the fit's shift of the {name} `{n}` at each corner.",
                 )
             ),
             "",
         ]
     lines += [
         (
-            "The verdict at each corner against that corner's {term}`SPICE` reference: at the "
-            "calibration geometries, and the worst at the held-out geometries (1D):"
+            f"{numref(t_verdicts)} gives the verdict at each corner against that corner's "
+            "{term}`SPICE` reference: at the calibration geometries, and the worst at the "
+            "held-out geometries (1D)."
         ),
         "",
-        *_table(["Corner", "Calibration", "Held out (1D)"], verdicts),
+        *_table(
+            ["Corner", "Calibration", "Held out (1D)"],
+            verdicts,
+            name=t_verdicts,
+            caption=f"The {name} verdict at each corner.",
+        ),
         "",
         (
             "Limit hits: " + "; ".join(hits) + "."
@@ -1386,7 +1576,9 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
         _GEOMETRY_ID_TEXT,
         "",
     ]
-    (ddir / CORNER_FRAGMENT).write_bytes("\n".join(corner_tables(name, d.corners) + [""]).encode())
+    (ddir / CORNER_FRAGMENT).write_bytes(
+        "\n".join(corner_tables(name, d.corners, "cv-agreement") + [""]).encode()
+    )
     verdicts, errors, shifts = [], [], []
     for g in d.device.geometries:
         gid = geometry_id(g)
@@ -1399,27 +1591,44 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
              _pct_num(m["depletion_max_rel"])]
         )  # fmt: skip
         shifts.append([key, _mv_num(m["dv_dep_v"]), _mv_num(m["dv_inv_v"])])
+    t_verdicts, t_errors, t_shifts = (
+        table_label("tcad", name, part) for part in ("verdicts", "errors", "shifts")
+    )
     lines += [
-        *_table(["Geometry", "Role", "Verdict (1D)", "2D (calibrated)"], verdicts),
+        f"{numref(t_verdicts)} gives the role and the verdicts of each geometry.",
+        "",
+        *_table(
+            ["Geometry", "Role", "Verdict (1D)", "2D (calibrated)"],
+            verdicts,
+            name=t_verdicts,
+            caption=f"The role and the 1D and 2D verdicts of each {name} geometry.",
+        ),
         "",
         f"Validation reasons for the 2D column are in {{repo}}`results/tcad/validation/{name}.json`.",
         "",
         (
-            "The largest relative error max |ΔCgg|/Cgg in each region; "
-            f"{numref(REGIONS_PAGE[1], REGIONS_PAGE[0])} shades the three regions:"
+            f"{numref(t_errors)} gives the largest relative error max |ΔCgg|/Cgg in each region; "
+            f"{numref(REGIONS_PAGE[1], REGIONS_PAGE[0])} shades the three regions."
         ),
         "",
         *_table(
             ["Geometry", "Accumulation (%)", "Inversion (%)", "{term}`Depletion <depletion>` (%)"],
             errors,
+            name=t_errors,
+            caption=f"The largest relative Cgg error in each region at each {name} geometry.",
         ),
         "",
         (
-            "ΔV is the shift of the TCAD mid-capacitance crossing from the SPICE one "
-            "({ref}`the agreement metric <cv-agreement-metric>`):"
+            f"{numref(t_shifts)} gives ΔV, the shift of the TCAD mid-capacitance crossing from "
+            "the SPICE one ({ref}`the agreement metric <cv-agreement-metric>`)."
         ),
         "",
-        *_table(["Geometry", "ΔV_dep (mV)", "ΔV_inv (mV)"], shifts),
+        *_table(
+            ["Geometry", "ΔV_dep (mV)", "ΔV_inv (mV)"],
+            shifts,
+            name=t_shifts,
+            caption=f"The crossing shifts at each {name} geometry.",
+        ),
         "",
         "## Mesh convergence",
         "",
@@ -1453,7 +1662,7 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
                 "(top) and the change against the next finer level (bottom).",
                 roots,
             ),
-            *_meshconv_rows(report),
+            *_meshconv_rows(report, table_label("tcad", name, "meshconv", dim)),
             "",
         ]
         for ex in report.get("excluded_levels", []):
@@ -1524,7 +1733,17 @@ def _tcad_summary_page(devices: list[_Device], out: Path) -> None:
                 [f"{{term}}`{name}`", f"{{doc}}`{gid} <{name}/{gid}>`", g.role, rec["verdict"],
                  _two_d_status(d, gid)]
             )  # fmt: skip
-    lines += _table(["Device", "Geometry", "Role", "Verdict (1D)", "2D (calibrated)"], rows)
+    t_summary = table_label("tcad", "summary", "verdicts")
+    lines += [
+        f"{numref(t_summary)} gives the verdicts of every geometry.",
+        "",
+        *_table(
+            ["Device", "Geometry", "Role", "Verdict (1D)", "2D (calibrated)"],
+            rows,
+            name=t_summary,
+            caption="The role and the 1D and 2D verdicts of every geometry of both devices.",
+        ),
+    ]
     statuses = {_two_d_status(d, geometry_id(g)) for d in devices for g in d.device.geometries}
     if _TWO_D_PENDING in statuses:
         two_d_text = (

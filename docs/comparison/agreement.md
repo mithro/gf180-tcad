@@ -206,16 +206,25 @@ the TCAD and the SPICE value; the stretch goal is a tighter one to aim for.
 
 Threshold voltages are extracted by {term}`max-gm extrapolation <max-gm Vt>` and by
 {term}`constant current <constant-current Vt>` (100 nA·W/L), both at Vds = 0.1 V
-({py:mod}`gf180tcad.metrics`):
+({py:mod}`gf180tcad.metrics`). Their tolerances are in
+{numref}`tab-agreement-vt-tolerance`.
+
+~~~{table} The tolerance and stretch goal of each threshold voltage metric.
+:name: tab-agreement-vt-tolerance
 
 | Metric | Tolerance (mV) | Stretch (mV) |
 |---|---|---|
 | Vt_lin | 10 | 7 |
 | Vt roll-off, Vt(Lmin) - Vt(10 µm) | 10 | none |
 | Body effect, ΔVt(Vbs = -2 V) | 10 | none |
+~~~
 
-Currents, conductances and capacitances are compared as a relative error. In this table "none"
-means that the design spec sets no bias or no stretch goal for that metric:
+Currents, conductances and capacitances are compared as a relative error, with the tolerances of
+{numref}`tab-agreement-relative-tolerance`. There "none" means that the design spec sets no
+bias or no stretch goal for that metric.
+
+~~~{table} The bias, tolerance and stretch goal of each metric compared as a relative error.
+:name: tab-agreement-relative-tolerance
 
 | Metric | Vgs (V) | Vds (V) | Tolerance (%) | Stretch (%) |
 |---|---|---|---|---|
@@ -227,6 +236,7 @@ means that the design spec sets no bias or no stretch goal for that metric:
 | Cgg | swept | 0 | 5 | none |
 | Cgd | none | 5 | 5 | none |
 | Effective {term}`Rsd` | none | none | 10 | none |
+~~~
 
 The Cgg-Vg {term}`sweep` covers {term}`accumulation`, {term}`depletion` and {term}`inversion`, left to right
 along the curve of
@@ -258,7 +268,7 @@ is a {term}`Phase 3 entry gate`
   not.
 - *Definition differs:* the body effect ({term}`body_effect_v`) uses the
   {term}`constant-current Vt` only, not also the {term}`max-gm Vt`. The peak gm,
-  {term}`gm_peak_s`, is taken on {term}`idvg_lin`. The table asks for gm at Vgs = Vt + 0.15 V and
+  {term}`gm_peak_s`, is taken on {term}`idvg_lin`. The tolerances of {numref}`tab-agreement-relative-tolerance` ask for gm at Vgs = Vt + 0.15 V and
   at Vgs = 5 V.
 
 Metrics are also reported as an error divided by {term}`σ_mismatch`, to give a physical sense
@@ -321,7 +331,10 @@ estimated magnitude where possible. Each is documented at two depths: a
 plain-language sentence, and a technical note with equations, magnitudes and
 literature references.
 
-The tags and the metrics each one is expected to show up in:
+{numref}`tab-agreement-tags` lists the tags and the metrics each one is expected to show up in.
+
+~~~{table} The cause tags and the metrics each one is expected to show up in.
+:name: tab-agreement-tags
 
 | Tag | Expected signature |
 |---|---|
@@ -336,6 +349,7 @@ The tags and the metrics each one is expected to show up in:
 | `ii` | Isub, gds at high Vds |
 | `thermal` | Idsat at high power |
 | `numerics` | fails the {ref}`numerical acceptance checks <numerical-acceptance>` |
+~~~
 
 The cause behind each tag, in three groups. The channel is the body's surface under the
 {term}`gate oxide` in {numref}`agreement-cell-figure`. The process and structure of the device:

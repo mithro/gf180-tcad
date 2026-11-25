@@ -766,3 +766,158 @@ def test_cross_page_numref_without_the_page_title_fires(cite):
 )
 def test_numref_with_a_target_on_the_page_or_a_title_passes(page):
     assert found(page, "FIGURE-FORM") == []
+
+
+# --- {table}: a captioned, named table is checked like any table, and is not a figure --------
+
+_TABLE = (
+    "~~~{table} The oxide thickness of each device.\n:name: tab-tox\n\n"
+    "| Device | t_ox (nm) |\n|---|---|\n| nfet | 15 |\n~~~\n"
+)
+
+
+def test_table_caption_is_checked_for_banned_words(tmp_path):
+    """Positive control: the upstream checks read a {table}'s caption (a banned word fires) and
+    go on reading the page after the table (the closing fence does not open a code block)."""
+    page = tmp_path / "page.md"
+    page.write_text(
+        "# T\n\n" + _TABLE.replace("The oxide", "Simply the oxide") + "\nThis is just text.\n",
+        encoding="utf-8",
+    )
+    out = _run("--no-front-matter", str(page)).stdout
+    assert "page.md:3: FAIL banned word 'simply'" in out, out
+    assert "page.md:11: FAIL banned word 'just'" in out, out
+    page.write_text("# T\n\n{numref}`tab-tox` lists them.\n\n" + _TABLE, encoding="utf-8")
+    assert _run("--no-front-matter", "--rules", "all", str(page)).returncode == 0
+
+
+def test_table_caption_is_checked_for_file_links():
+    page = "# T\n\n{numref}`tab-tox` lists them.\n\n" + _TABLE.replace(
+        "each device.", "each device, from `results/a.json`."
+    )
+    assert [c for _, c, _ in lint().rule_findings(page)] == ["FILELINK"]
+
+
+def test_numref_to_a_table_is_not_a_figure():
+    """Positive control: a section that describes the oxide and cites only a table still has
+    no figure; a {numref} to a table on the page needs no page title."""
+    page = "# T\n\nThe oxide is 15 nm thick; {numref}`tab-tox` lists it.\n\n" + _TABLE
+    assert [c for _, c, _ in lint().rule_findings(page)] == ["FIGURE"]
+    other = "# T\n\nThe oxide is 15 nm thick, {numref}`Table %s of Process data <tab-x>`.\n"
+    assert [c for _, c, _ in lint().rule_findings(other)] == ["FIGURE"]
+
+
+def test_table_cells_in_a_table_directive_are_checked():
+    """tests/doc_style.py reads the cells of a {table} (a prose cell fires) and the text after
+    its closing fence is not a code block (a later table is read too)."""
+    from doc_style import tables
+
+    prose = _TABLE.replace("| nfet | 15 |", "| nfet | " + "word " * 30 + "|")
+    text = prose + "\n| A | B |\n|---|---|\n| 1 | 2 |\n"
+    found = tables(text, "x")
+    assert len(found) == 2 and found[0].problems and not found[1].problems
+
+
+def test_measure_docs_reads_table_directive_caption_and_cells():
+    spec = importlib.util.spec_from_file_location(
+        "measure_docs", ROOT / "tools" / "measure_docs.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    got = list(mod.blocks(_TABLE + "\nAfter the table.\n"))
+    assert ("paragraph", 1, "The oxide thickness of each device.") in got
+    assert ("cell", 6, "nfet") in got and ("paragraph", 9, "After the table.") in got
+
+
+# --- TABLE-REF: a table cited by its place instead of {numref} --------------------------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["The table below lists them.", "As the tables above show, it holds.",
+     "The following table gives the values.", "In this table none means no value.",
+     "See the next table.", "The values are in the figure, and the table below repeats them.",
+     "The rows of these tables hold one value.", "In the table none means no value.",
+     "The gm is not the gm of those tables.", "The table gives both lines.",
+     "The tables give one value per cell.", "It is fitted. The tables list the values.",
+     "The table shows the verdicts.", "The table holds the card.", "The table asks for gm.",
+     "The table has one row per cell.", "The table contains the card.",
+     "The table records each run.", "The tables compare both engines.",
+     "See the table for the values.", "Both tables give the bounds.",
+     "The second table gives the pfet.", "It is fitted, and the table gives the values.",
+     "The table\nbelow lists them.", "The values of\nthese tables are fitted."],
+)  # fmt: skip
+def test_table_ref_fires_on_a_place_reference(line):
+    """Positive control: a table named by its place, in prose or in a figure caption."""
+    assert [c for _, c, _ in lint().rule_findings(f"# T\n\n{line}\n") if c == "TABLE-REF"]
+    caption = f"# T\n\nSee {{numref}}`fig-a`.\n\n```{{figure}} a.svg\n:name: fig-a\n:alt: a\n\n{line}\n```\n"
+    assert [c for _, c, _ in lint().rule_findings(caption) if c == "TABLE-REF"]
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["{numref}`tab-a` lists them.", "The tolerance table of the design spec sets it.",
+     "Wikipedia's table gives 1.14 eV.", "Never write `the table below`.",
+     "Wikipedia's table of band gaps at 302 K gives it.", "Each table gives one value per cell.",
+     "The values are in the tables of the PDK manual.",
+     "These tables of Green's paper give 1.12 eV.", "In the table of the standard, Vt is 0.7 V.",
+     "This table-driven fit converges."],
+)  # fmt: skip
+def test_table_ref_quiet_on_citations_and_other_tables(line):
+    assert not [c for _, c, _ in lint().rule_findings(f"# T\n\n{line}\n") if c == "TABLE-REF"]
+
+
+# --- FIGURE-FORM: labels in an {include}d file are on the page -------------------------------
+
+_INCLUDING = (
+    "# T\n\n{numref}`tab-frag` gives the values.\n\n```{include} /_generated/frag.inc.md\n```\n"
+)
+_FRAGMENT = "~~~{table} The values.\n:name: tab-frag\n\n| A |\n|---|\n| 1 |\n~~~\n"
+
+
+def test_figure_form_follows_includes(tmp_path):
+    """A {numref} to a table that an {include}d fragment holds cites the same page; read from
+    the docs folder (the nearest folder with conf.py) or from docgen output elsewhere."""
+    docs = tmp_path / "docs"
+    (docs / "comparison").mkdir(parents=True)
+    (docs / "conf.py").write_text("", "utf-8")
+    page = docs / "comparison" / "p.md"
+    page.write_text(_INCLUDING, "utf-8")
+    form = [m for _, c, m in lint().rule_findings(_INCLUDING, include_text=lint().include_reader(page))
+            if c == "FIGURE-FORM"]  # fmt: skip
+    # Positive control: the fragment is not there yet. The message names the unread include and
+    # says to build first; it does not send the reader to another page.
+    assert len(form) == 1, form
+    assert "cannot read included /_generated/frag.inc.md" in form[0], form
+    assert "run a docs build first" in form[0] and "another page" not in form[0], form
+    (docs / "_generated").mkdir()
+    (docs / "_generated" / "frag.inc.md").write_text(_FRAGMENT, "utf-8")
+    reader = lint().include_reader(page)
+    assert not [c for _, c, _ in lint().rule_findings(_INCLUDING, include_text=reader)
+                if c == "FIGURE-FORM"]  # fmt: skip
+    elsewhere = tmp_path / "gen"
+    elsewhere.mkdir()
+    (elsewhere / "frag.inc.md").write_text(_FRAGMENT, "utf-8")
+    (docs / "_generated" / "frag.inc.md").unlink()
+    reader = lint().include_reader(page, generated=elsewhere)
+    assert not [c for _, c, _ in lint().rule_findings(_INCLUDING, include_text=reader)
+                if c == "FIGURE-FORM"]  # fmt: skip
+
+
+def test_figure_form_names_a_table_as_a_table():
+    """An unknown "tab-" target is reported as a table on another page, with "Table %s of"."""
+    msgs = [m for _, c, m in lint().rule_findings(_INCLUDING) if c == "FIGURE-FORM"]
+    assert len(msgs) == 1 and "a table on another page" in msgs[0], msgs
+    assert "{numref}`Table %s of <title> <tab-frag>`" in msgs[0], msgs
+    fig = [m for _, c, m in lint().rule_findings("# T\n\nSee {numref}`fig-x`.\n")
+           if c == "FIGURE-FORM"]  # fmt: skip
+    assert "a figure on another page" in fig[0] and "Figure %s of" in fig[0], fig
+
+
+def test_table_ref_across_a_line_wrap_reports_its_first_line():
+    """The paragraph is read with its lines joined; the finding names the line the phrase
+    starts on, and a phrase in a later paragraph keeps its own line."""
+    page = "# T\n\nThe values are fitted. The table\nbelow lists them.\n\nOther text.\nSee this table.\n"
+    hits = [(n, m) for n, c, m in lint().rule_findings(page) if c == "TABLE-REF"]
+    assert [n for n, _ in hits] == [3, 7], hits
+    assert "'table below'" in hits[0][1], hits
