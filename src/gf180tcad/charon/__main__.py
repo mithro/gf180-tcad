@@ -29,8 +29,11 @@ from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.tcad import gplugins_commit, image_ref, meshconv, moscap1d, process, tree_provenance
 from gf180tcad.tcad.__main__ import MissingCalibration, job_vg, load_params, mesh_source
 
+#: The parameter sets of a job, as for the DEVSIM jobs.
 PARAMS = ("start", "calibrated")
+#: The sandbox memory of a 1D Charon job (experiments B1 to B7 ran at 2 GiB).
 JOB_MEM = "2g"
+#: The CPUs of a job: Charon runs single rank, single thread.
 JOB_CPUS = 1
 #: The scratch directory of a job's Charon run (the mesh, decks, logs and Exodus states).
 RUN_DIR = "charon_run"

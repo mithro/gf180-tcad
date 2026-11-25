@@ -14,6 +14,9 @@ gf180tcad.calibrate.__main__
 gf180tcad.calibrate.corners
 gf180tcad.calibrate.cv
 gf180tcad.calibrate.edge
+gf180tcad.charon
+gf180tcad.charon.__main__
+gf180tcad.charon.moscap
 gf180tcad.comparison_figures
 gf180tcad.derive
 gf180tcad.devices

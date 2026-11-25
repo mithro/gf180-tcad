@@ -34,12 +34,15 @@ from gf180tcad.tcad.calibration import param_sha256
 from gf180tcad.tcad.mesh import MeshSpec
 from gf180tcad.tcad.process import CONSTANTS, Constants, ProcessDescription
 
-# The DEVSIM job's names and half step (one definition, in moscap1d).
+# The DEVSIM job's names (one definition, in moscap1d).
 POLY, OXIDE, BODY = moscap1d.POLY, moscap1d.OXIDE, moscap1d.BODY
 GATE_CONTACT, BODY_CONTACT = moscap1d.GATE_CONTACT, moscap1d.BODY_CONTACT
+#: The central-difference half step (V): the DEVSIM job's.
 DV_QS = moscap1d.DV_QS
 
+#: The units line of per_area.csv (``abs_error`` is dimensionless NaN here).
 CSV_UNITS = "vg=V c_per_area=fF/um^2 rel_error=1 abs_error=1 iterations=1"
+#: The meaning of the convergence columns, recorded in the meta.
 CONVERGENCE_NOTE = (
     "rel_error: Charon's WRMS norm of the last Newton update of the two LOCA steps on "
     "vg -+ dv_qs (the larger); abs_error: NaN (Charon reports no potential update); "
@@ -113,14 +116,21 @@ def simulate(
     stack = moscap1d.stack_of(proc)
     desc = stack_1d(stack, mesh, constants)
     sweep = CVSweep(GATE_CONTACT, tuple(v - dv_fb for v in vg), "qs", dv_qs=DV_QS)
-    res = charon.run_cv(desc, sweep, workdir=workdir)
+    dev = charon.create_1d_device(desc, workdir=workdir)
+    try:
+        res = charon.run_cv_sweep(dev, sweep)
+        checks = dev.checks
+    finally:
+        dev.delete_device()
     if res.unit != "F/cm^2" or len(res.cgg) != len(vg):
         raise RuntimeError(f"a 1D Charon sweep gives {len(vg)} points in F/cm^2, got {res.unit}")
     tol = charon_deck.Tolerances()
     xs, _ = desc.node_positions_um()
     settings = {
         "srh_lifetime_s": charon_deck.SRH_LIFETIME_S,
-        "substeps": charon.SUBSTEPS,
+        "loca_step_v": charon.LOCA_STEP_V,
+        "substeps": charon.substeps_for(vg[1] - vg[0]),
+        "charge_checks": checks,
         "linear_solver": "Amesos2 KLU2",
         "discretization": "drift diffusion cvfem (silicon), laplace cvfem (oxide)",
         "wrms_rel_tol": tol.rel,
