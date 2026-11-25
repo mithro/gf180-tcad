@@ -11,7 +11,8 @@ Over the widest calibrated 2D cells, Cgg per unit width is a line in the gate le
 is the SPICE ``C_edge`` minus the 2D ``C_edge``. A poly longer by δ at each end adds
 ``slope · δ`` on both plateaus. The slope is the least-squares line through the origin of the
 edge-sensitivity record's ``bias<nm>`` variants (``results/edge-sensitivity``). δ minimises the
-squared misses of the two targets, so ``slope · δ`` is their mean.
+squared misses of the two targets, so ``slope · δ`` is their mean. The δ applied is that value
+rounded to the layout grid (:data:`LAYOUT_GRID_NM`), and the file keeps both.
 
 The file written, ``<out>/<device>.json``, holds δ and every input it was made from:
 
@@ -62,6 +63,10 @@ RECORD_CELLS = {"nfet_05v0": "w10p0_l0p60", "pfet_05v0": "w10p0_l0p50"}
 READ_PATHS = ("src", "data", "results/spice", "results/tcad/moscap2d", "results/edge-sensitivity")
 #: fF per F.
 FF_PER_F = 1e15
+#: The layout's database grid (nm). The 2D cross-section is drawn with gdsfactory polygons, whose
+#: coordinates sit on this grid, so a poly length bias between grid points cannot be meshed: the
+#: 2D job refuses the snapped gate (``moscap2d.GeometryError``). The fit applies δ rounded to it.
+LAYOUT_GRID_NM = 1
 
 
 class DirtyCheckout(RuntimeError):
@@ -165,14 +170,20 @@ def fit(device: str, record: dict, rows: Sequence[dict]) -> dict:
     spice, two_d = intercepts(rows, "spice"), intercepts(rows, "two_d")
     targets = [s - t for s, t in zip(spice, two_d, strict=True)]
     slope = record_slope(record, device)
-    delta = float(np.mean(targets)) / slope
+    least_squares = float(np.mean(targets)) / slope
+    # The gate is drawn on the layout's database grid, so δ is applied on it.
+    delta = round(least_squares / LAYOUT_GRID_NM) * LAYOUT_GRID_NM
     return {
+        "least_squares": {
+            edgefit.PARAM: least_squares,
+            "residual_ff_per_um": [t - slope * least_squares for t in targets],
+        },
         "residual_ff_per_um": [t - slope * delta for t in targets],
         "slope_ff_per_um_per_nm": slope,
         "spice_edge_ff_per_um": spice,
         "targets_ff_per_um": targets,
         "two_d_edge_ff_per_um": two_d,
-        edgefit.PARAM: delta,
+        edgefit.PARAM: float(delta),
     }
 
 

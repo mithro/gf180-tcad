@@ -21,12 +21,21 @@ def test_fit_is_the_edge_study_s_least_squares(device):
     limitations_figures.edge_fit (the numbers the docs print), to round-off."""
     d = edge.build(device, commit="0" * 40)
     ref = lf.edge_fit(device, edge.RECORD_CELLS[device])
-    assert math.isclose(d[edgefit.PARAM], ref["delta_nm"], rel_tol=1e-12)
+    ls = d["least_squares"]
+    assert math.isclose(ls[edgefit.PARAM], ref["delta_nm"], rel_tol=1e-12)
+    # the applied δ is the least-squares one on the layout grid
+    assert d[edgefit.PARAM] == round(ref["delta_nm"] / edge.LAYOUT_GRID_NM) * edge.LAYOUT_GRID_NM
+    assert abs(d[edgefit.PARAM] - ref["delta_nm"]) <= edge.LAYOUT_GRID_NM / 2
     assert math.isclose(d["slope_ff_per_um_per_nm"], ref["slope"], rel_tol=1e-12)
     for got, want in zip(d["targets_ff_per_um"], ref["targets"], strict=True):
         assert math.isclose(got, want, rel_tol=1e-9, abs_tol=1e-12)
-    for got, want in zip(d["residual_ff_per_um"], ref["residual"], strict=True):
+    for got, want in zip(ls["residual_ff_per_um"], ref["residual"], strict=True):
         assert math.isclose(got, want, rel_tol=1e-9, abs_tol=1e-12)
+    # the residual at the applied δ moves by slope × the rounding, at most half a grid step
+    slope = d["slope_ff_per_um_per_nm"]
+    for got, want in zip(d["residual_ff_per_um"], ls["residual_ff_per_um"], strict=True):
+        assert math.isclose(got - want, slope * (ls[edgefit.PARAM] - d[edgefit.PARAM]),
+                            rel_tol=1e-9, abs_tol=1e-15)  # fmt: skip
 
 
 @pytest.mark.parametrize("device", DEVICES)
