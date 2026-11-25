@@ -184,10 +184,8 @@ def _site(src: Path, page: str) -> None:
     finally:
         sys.path.remove(str(ROOT / "tests"))
     site = _site_conf()
-    extensions = [
-        *site["extensions"],
-        *(["html_checks"] * ("html_checks" not in site["extensions"])),
-    ]
+    assert "html_checks" in site["extensions"], "docs/conf.py does not load html_checks"
+    extensions = site["extensions"]
     src.mkdir()
     (src / "conf.py").write_text(
         "import sys\n"
