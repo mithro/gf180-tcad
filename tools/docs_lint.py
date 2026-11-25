@@ -91,7 +91,8 @@ class Page:
         self.counts(prose)
         outside_sphinx = self.name in ("README.md", "CONTRIBUTING.md")  # LOCAL
         rules = getattr(self.args, "rules", ())  # LOCAL
-        for line, check, msg in rule_findings(self.text, rules, not outside_sphinx):  # LOCAL
+        reader = include_reader(self.path)  # LOCAL
+        for line, check, msg in rule_findings(self.text, rules, not outside_sphinx, reader):  # LOCAL
             self.failed = True  # LOCAL
             print(f"{self.path}:{line}: FAIL {check} {msg}")  # LOCAL
         if "figure" in rules:  # LOCAL
@@ -316,6 +317,8 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
             A {numref} to a target not on the page needs the page's title in its text
             ({numref}`Figure %s of <title> <name>`): numbers restart on each page.
+            Labels of a file the page {include}s count as on the page (docs/_generated after a
+            build); a "tab-" target is reported as a table ("Table %s of <title>").
   EQUATION  a display math block that is not in the house form: $$ ... $$ (label), then a line
             "where", then a list with one item per symbol, each starting with the symbol in
             $...$ and ending with ", in <SI unit symbols>" (F/m², cm⁻³) or ", dimensionless".
@@ -658,9 +661,28 @@ def _figure_blocks(lines):
     return out
 
 
-def figure_form_findings(lines):
+_INCLUDE = re.compile(r"^\s*(?:`{3,}|~{3,}|:{3,})\s*\{include\}\s+(\S+)")
+
+
+def _included_names(lines, include_text):
+    """The :name: labels of the files the page pulls in with {include}: they land on the page,
+    so a {numref} to one cites the same page. ``include_text(path)`` gives a file's text (the
+    path as the directive writes it) or None when it cannot be read."""
+    names = set()
+    if include_text is None:
+        return names
+    for _, ln, _ in lines:
+        m = _INCLUDE.match(ln)
+        text = include_text(m.group(1)) if m else None
+        if text:
+            names |= set(re.findall(r"^\s*:name:\s*(\S+)\s*$", text, flags=re.M))
+    return names
+
+
+def figure_form_findings(lines, include_text=None):
     """FIGURE-FORM: a {figure} needs a :name:, a caption and a {numref} on the page that cites
-    it. The dark twin of a light/dark pair (:figclass: only-dark) carries no name and is exempt."""
+    it. The dark twin of a light/dark pair (:figclass: only-dark) carries no name and is exempt.
+    Labels in an {include}d file are on the page (``include_text``, see _included_names)."""
     cited, refs = set(), []
     for i, line, kind in lines:
         if kind in ("prose", "table", "caption", "heading"):
@@ -673,14 +695,16 @@ def figure_form_findings(lines):
     targets |= {re.match(r"^\s*\(([\w.:-]+)\)=", ln).group(1) for _, ln, k in lines if k == "label"
                 and re.match(r"^\s*\(([\w.:-]+)\)=", ln)}
     targets |= _table_names(lines)
+    targets |= _included_names(lines, include_text)
     for i, text, target in refs:
         if target in targets:
             continue
-        words = re.sub(r"%s|\{number\}|\{name\}|\bFig(ure)?\b\.?", " ", text or "").split()
+        words = re.sub(r"%s|\{number\}|\{name\}|\bFig(ure)?\b\.?|\bTable\b", " ", text or "").split()
         if len(words) < 2:
-            out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', a figure on another page: "
+            what = ("a table", "Table") if target.startswith("tab-") else ("a figure", "Figure")
+            out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', {what[0]} on another page: "
                                           "numbers restart on each page, so write the page's "
-                                          f"title in the text, {{numref}}`Figure %s of <title> "
+                                          f"title in the text, {{numref}}`{what[1]} %s of <title> "
                                           f"<{target}>`"))
     for i, opts, caption in _figure_blocks(lines):
         if "only-dark" in opts.get("figclass", "").split():
@@ -852,14 +876,41 @@ def table_ref_findings(lines):
     return out
 
 
-def rule_findings(text, rules=RULES, sphinx=True):
+def include_reader(page, generated=None):
+    """A function that reads a file ``page`` {include}s, by the path the directive writes:
+    "/x" from the docs source folder (the nearest folder above ``page`` that holds conf.py),
+    "x" from the page's folder. ``generated`` stands in for the docs folder's _generated, for
+    docgen output written elsewhere (the tests' docgen.generate). It returns None for a file it
+    cannot read: docs/_generated exists only after a docs build or docgen.generate."""
+    page = pathlib.Path(page).resolve()
+    root = next((p for p in page.parents if (p / "conf.py").is_file()), page.parent)
+
+    def read(target):
+        if target.startswith("/"):
+            rel = target.lstrip("/")
+            if generated is not None and rel.startswith("_generated/"):
+                path = pathlib.Path(generated) / rel[len("_generated/"):]
+            else:
+                path = root / rel
+        else:
+            path = page.parent / target
+        try:
+            return path.read_text(encoding="utf-8")
+        except OSError:
+            return None
+
+    return read
+
+
+def rule_findings(text, rules=RULES, sphinx=True, include_text=None):
     """(line, CHECK, message) of each finding of the house rules in a page's text. With
-    sphinx=False (README.md, CONTRIBUTING.md: read on GitHub) a Markdown image is a figure."""
+    sphinx=False (README.md, CONTRIBUTING.md: read on GitHub) a Markdown image is a figure.
+    ``include_text(path)`` reads a file the page {include}s (see include_reader)."""
     lines = _rule_lines(text)
     out = []
     if "figure" in rules:
         out += figure_findings(lines, sphinx)
-        out += figure_form_findings(lines)
+        out += figure_form_findings(lines, include_text)
         out += table_ref_findings(lines)
     if "equation" in rules:
         out += equation_findings(lines)

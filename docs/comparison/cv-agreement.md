@@ -749,8 +749,8 @@ The corner fits repeat this calibration against each of the other four SPICE
 overlap capacitances as fixed inputs. Its TOXE and VTH0 offsets move the start value and limits
 of two numbers that stay fitted ({ref}`reproduce-corners`).
 
-The corner tables of each device give each fitted number's lowest and highest value over the
-corners, beside the typical fit. The same bounds are drawn in
+{numref}`tab-cv-agreement-nfet-05v0-corner-bounds` and {numref}`tab-cv-agreement-pfet-05v0-corner-bounds`
+give each fitted number's lowest and highest value over the corners, beside the typical fit. The same bounds are drawn in
 {numref}`Figure %s of What the calibration changes <fig-calibration-bounds>`. What the corner fits cannot see is on {doc}`/limitations/corners`.
 
 **nfet_05v0**

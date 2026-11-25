@@ -857,3 +857,46 @@ def test_table_ref_fires_on_a_place_reference(line):
 )  # fmt: skip
 def test_table_ref_quiet_on_citations_and_other_tables(line):
     assert not [c for _, c, _ in lint().rule_findings(f"# T\n\n{line}\n") if c == "TABLE-REF"]
+
+
+# --- FIGURE-FORM: labels in an {include}d file are on the page -------------------------------
+
+_INCLUDING = (
+    "# T\n\n{numref}`tab-frag` gives the values.\n\n```{include} /_generated/frag.inc.md\n```\n"
+)
+_FRAGMENT = "~~~{table} The values.\n:name: tab-frag\n\n| A |\n|---|\n| 1 |\n~~~\n"
+
+
+def test_figure_form_follows_includes(tmp_path):
+    """A {numref} to a table that an {include}d fragment holds cites the same page; read from
+    the docs folder (the nearest folder with conf.py) or from docgen output elsewhere."""
+    docs = tmp_path / "docs"
+    (docs / "comparison").mkdir(parents=True)
+    (docs / "conf.py").write_text("", "utf-8")
+    page = docs / "comparison" / "p.md"
+    page.write_text(_INCLUDING, "utf-8")
+    form = [c for _, c, _ in lint().rule_findings(_INCLUDING, include_text=lint().include_reader(page))
+            if c == "FIGURE-FORM"]  # fmt: skip
+    assert form, "positive control: the fragment is not there yet"
+    (docs / "_generated").mkdir()
+    (docs / "_generated" / "frag.inc.md").write_text(_FRAGMENT, "utf-8")
+    reader = lint().include_reader(page)
+    assert not [c for _, c, _ in lint().rule_findings(_INCLUDING, include_text=reader)
+                if c == "FIGURE-FORM"]  # fmt: skip
+    elsewhere = tmp_path / "gen"
+    elsewhere.mkdir()
+    (elsewhere / "frag.inc.md").write_text(_FRAGMENT, "utf-8")
+    (docs / "_generated" / "frag.inc.md").unlink()
+    reader = lint().include_reader(page, generated=elsewhere)
+    assert not [c for _, c, _ in lint().rule_findings(_INCLUDING, include_text=reader)
+                if c == "FIGURE-FORM"]  # fmt: skip
+
+
+def test_figure_form_names_a_table_as_a_table():
+    """An unknown "tab-" target is reported as a table on another page, with "Table %s of"."""
+    msgs = [m for _, c, m in lint().rule_findings(_INCLUDING) if c == "FIGURE-FORM"]
+    assert len(msgs) == 1 and "a table on another page" in msgs[0], msgs
+    assert "{numref}`Table %s of <title> <tab-frag>`" in msgs[0], msgs
+    fig = [m for _, c, m in lint().rule_findings("# T\n\nSee {numref}`fig-x`.\n")
+           if c == "FIGURE-FORM"]  # fmt: skip
+    assert "a figure on another page" in fig[0] and "Figure %s of" in fig[0], fig
