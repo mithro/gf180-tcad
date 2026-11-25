@@ -29,7 +29,7 @@ HB = """      apply harmonic balance for large signal analysis
           truncation order = 1
           truncation scheme is box
           fundamental harmonics = {f!r}
-          remapped fundamental harmonics = {f!r}
+          remapped fundamental harmonics = 1.0
       end harmonic balance parameters"""
 
 

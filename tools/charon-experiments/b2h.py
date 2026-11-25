@@ -9,6 +9,7 @@ the first failed step. Writes b2h.json.
 usage: python3 b2h.py VARIANT [VARIANT ...]   (names in VARIANTS below)
 """
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -34,7 +35,14 @@ VARIANTS = {
     "gfem": (dict(rel=1e-10, abs_=1e-12, disc="drift diffusion gfem", ox_disc="laplace gfem"), 0.05),
     "belos": (dict(rel=1e-10, abs_=1e-12, linear="belos", extra=[]), 0.05),
     "nosrh": (dict(rel=1e-10, abs_=1e-12, srh=False), 0.05),
+    "tau_1e-12": (dict(rel=1e-10, abs_=1e-12, tau=1e-12), 0.05),
+    "tau_1e-13": (dict(rel=1e-10, abs_=1e-12, tau=1e-13), 0.05),
+    "tau_1e-15": (dict(rel=1e-10, abs_=1e-12, tau=1e-15), 0.05),
+    "tau_1e-14": (dict(rel=1e-10, abs_=1e-12, tau=1e-14), 0.05),
+    "tau_1e-15_step_5mV": (dict(rel=1e-10, abs_=1e-12, tau=1e-15), 0.005),
+    "tau_1e-12_tol_1e-8": (dict(rel=1e-8, abs_=1e-10, tau=1e-12), 0.05),
 }
+VEND = float(os.environ.get("CX_VEND", "1.5"))
 
 
 def deck(name, mesh, gate_bc, problem, init, kw, sweep=None):
@@ -72,17 +80,17 @@ for name in sys.argv[1:]:
     rec = {"eq_ok": ok, "settings": {k: v for k, v in kw.items() if k != "extra"}, "step": step,
            "eq": steps(log)}
     if ok:
-        nsteps = int(round(1.5 / step))
+        nsteps = int(round(VEND / step))
         sweep = [f"initial step size = {step!r}", f"minimum step size = {step!r}",
                  f"maximum step size = {step!r}", f"maximum number of steps = {nsteps + 5}",
                  "hit continuation bound = false", "step size aggressiveness = 0.0",
                  "predictor method is secant"]
-        Path(f"{name}.inp").write_text(deck(name, f"{name}_eq.exo", "swept from 0.0 to 1.5",
+        Path(f"{name}.inp").write_text(deck(name, f"{name}_eq.exo", f"swept from 0.0 to {VEND!r}",
                                             "parameter sweep", "exodus", kw, sweep))
         ok2, log2, dt2 = cx.run(f"{name}.inp")
         s = steps(log2)
         rec.update(sweep_ok=ok2, sweep_time_s=dt2, sweep=s,
-                   last_converged_bias=(s["biases"][len(s["iters"])] if s["iters"] else None))
+                   failing_bias=(s["biases"][len(s["iters"])] if len(s["biases"]) > len(s["iters"]) else None))
     results[name] = rec
     print(name, "eq_ok", ok, "sweep_ok", rec.get("sweep_ok"), "failed_at",
           rec.get("sweep", {}).get("failed_at", [])[:2], "iters",

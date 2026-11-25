@@ -3,13 +3,13 @@
 set -uo pipefail
 E="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; OUT="${CX_OUT:?set CX_OUT to a directory outside the repo}"
 dev=$1 params=$2 rel=$3 abs=$4 lin=$5 ni=${6:-ni}
-d=$OUT/b2/${dev}_${params}_${ni}_${lin}_${rel}
+d=$OUT/b2/${dev}_${params}_${ni}_${lin}_${rel}_tau${CX_TAU:-default}_sub${CX_SUB:-1}${CX_PRED:+_$CX_PRED}
 rm -rf "$d"; mkdir -p "$d"
-"$E/sbx.sh" "$d" "$d/run.log" -- env CX_REL=$rel CX_ABS=$abs CX_LIN=$lin CX_VGMAX=${CX_VGMAX:-} python3 b2.py $dev $params $ni
+"$E/sbx.sh" "$d" "$d/run.log" -- env CX_REL=$rel CX_ABS=$abs CX_LIN=$lin CX_VGMAX=${CX_VGMAX:-} CX_TAU=${CX_TAU:-} CX_SUB=${CX_SUB:-} CX_PRED=${CX_PRED:-} python3 b2.py $dev $params $ni
 rc=$?
 echo "b2 exit=$rc" >> "$d/run.log"
 if [ $rc -eq 0 ]; then
-  "$E/sbx.sh" "$d" "$d/an.log" -- env CX_VGMAX=${CX_VGMAX:-} python3 b2an.py $dev $params $(basename $d)
+  "$E/sbx.sh" "$d" "$d/an.log" -- env CX_VGMAX=${CX_VGMAX:-} CX_SUB=${CX_SUB:-} python3 b2an.py $dev $params $(basename $d)
   echo "an exit=$?" >> "$d/an.log"
 fi
 echo "done $d rc=$rc"

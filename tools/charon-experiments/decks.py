@@ -86,14 +86,14 @@ def moscap_deck(job, *, mesh, out, disc="drift diffusion cvfem", ox_disc="laplac
                 gate_bc="fixed at 0.0", ni_mode="ni", problem="steady state", sweep=None,
                 init="equilibrium", srh=True, rel=1e-10, abs_=1e-12, lin_tol=1e-12,
                 linear="belos", extra_solver=(), import_index=None, extra=(),
-                conc_scaling=None, nodal_out=None):
+                conc_scaling=None, nodal_out=None, tau=None):
     """The 1D MOS capacitor deck of a Job1D (strip mesh file `mesh`)."""
     st = job.meta["stack"]
     c = job.meta["constants"]
     pol = st["polarity"]
     ni = c["n_i_cm3"]
     kw = dict(eps=c["eps_si"], mun=c["mu_n_cm2_per_vs"], mup=c["mu_p_cm2_per_vs"],
-              taun=c["tau_n_s"], taup=c["tau_p_s"])
+              taun=tau or c["tau_n_s"], taup=tau or c["tau_p_s"])
     if ni_mode == "ni":
         kw["ni"] = ni
     elif ni_mode == "dos":

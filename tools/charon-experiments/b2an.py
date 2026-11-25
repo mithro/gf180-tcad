@@ -3,6 +3,7 @@
 usage: python3 b2an.py DEVICE PARAMS TAG
 """
 import json
+import os
 import sys
 
 import numpy as np
@@ -20,29 +21,32 @@ q_e = c.q_c
 eps0 = c.eps0_f_per_cm
 res = {"device": dev, "params": params, "tag": tag, "n": n}
 
+SUB = int(os.environ.get("CX_SUB") or 1)
+IDX = np.arange(n) * SUB
+
 sides = {}
 for side, sgn in (("A", -1), ("B", 1)):
     head, rows = cx.read_currents(f"currents-sweep{side}.dat")
     v = rows[:, head.index("gate_Voltage")]
     want = np.array(job.vg) - job.dv_fb + sgn * DV
     # LOCA ends with a tiny step onto the exact bound when the accumulated value falls short
-    extra = v[n:]
+    extra = v[(n - 1) * SUB + 1:]
     res[f"extra_states_{side}"] = len(extra)
     res[f"extra_max_dev_{side}"] = float(np.max(np.abs(extra - want[-1]))) if len(extra) else 0.0
-    res[f"align_{side}"] = float(np.max(np.abs(v[:n] - want)))
+    res[f"align_{side}"] = float(np.max(np.abs(v[IDX] - want)))
     st = cx.read_states(f"sweep{side}.exo")
     res[f"exo_times_first_{side}"] = [float(t) for t in st.times[:3]]
     res[f"exo_globals_{side}"] = sorted(st.globals_)
-    if len(st.times) >= n:
-        res[f"align_exo_time_{side}"] = float(np.max(np.abs(np.asarray(st.times[:n]) - want)))
-    psi = st.nodal["ELECTRIC_POTENTIAL"][:n, 0::2]
+    if len(st.times) > IDX[-1]:
+        res[f"align_exo_time_{side}"] = float(np.max(np.abs(np.asarray(st.times[IDX]) - want)))
+    psi = st.nodal["ELECTRIC_POTENTIAL"][IDX, 0::2]
     has_np = "ELECTRON_DENSITY" in st.nodal
-    nn = st.nodal["ELECTRON_DENSITY"][:n, 0::2] if has_np else None
-    pp = st.nodal["HOLE_DENSITY"][:n, 0::2] if has_np else None
+    nn = st.nodal["ELECTRON_DENSITY"][IDX, 0::2] if has_np else None
+    pp = st.nodal["HOLE_DENSITY"][IDX, 0::2] if has_np else None
     res[f"nodal_vars_{side}"] = sorted(st.nodal)
     # y = w nodes must equal y = 0 nodes (a 1D solution on the strip)
     res[f"strip_y_asym_{side}"] = float(np.max(np.abs(
-        st.nodal["ELECTRIC_POTENTIAL"][:n, 1::2] - psi)))
+        st.nodal["ELECTRIC_POTENTIAL"][IDX, 1::2] - psi)))
     x = xs * 1e-4
     i0, i1 = bn[1], bn[2]  # oxide nodes i0..i1
     # flux through each oxide interval (C/cm^2), positive for the gate charge
@@ -76,6 +80,10 @@ for side, sgn in (("A", -1), ("B", 1)):
     ni = c.n_i_cm3
     res[f"np_over_ni2_body_{side}"] = [float(nn[0, -1] * pp[0, -1] / ni**2),
                                        float(nn[-1, -1] * pp[-1, -1] / ni**2)]
+    semi = np.r_[0: i0 + 1, i1: len(xs)]
+    dev_np = np.abs(nn[:, semi] * pp[:, semi] / ni**2 - 1)
+    res[f"max_abs_np_over_ni2_minus_1_{side}"] = float(np.max(dev_np))
+    res[f"np_dev_per_state_{side}"] = np.max(dev_np, axis=1).tolist()
     res[f"np_over_ni2_poly_{side}"] = [float(nn[0, 0] * pp[0, 0] / ni**2),
                                        float(nn[-1, 0] * pp[-1, 0] / ni**2)]
     sides[side] = q_gate

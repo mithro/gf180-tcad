@@ -26,7 +26,8 @@ NPTS = int(round((V1 - V0) / STEP)) + 1
 out = {}
 
 
-def deck(mesh, name, gate_bc, problem, init, sweep=None, gate_ss="gate", body_ss="body_contact"):
+def deck(mesh, name, gate_bc, problem, init, sweep=None, gate_ss="gate", body_ss="body_contact",
+         job=job):
     d = decks.moscap_deck(job, mesh=mesh, out=f"{name}.exo", gate_bc=gate_bc, problem=problem,
                           init=init, sweep=sweep, rel=opts.REL, abs_=opts.ABS, extra=opts.EXTRA)
     d = d.replace("BC is ohmic for body on body", f"BC is ohmic for {body_ss} on body")
@@ -76,7 +77,7 @@ xs1d = np.array(job.stack.node_positions_um()[0])
 bn = job.stack.node_positions_um()[1]
 c = job.stack.constants
 charges = {}
-for kind, tri in (("quad4", False), ("tri3", True)):
+for kind, tri in (() if "--only2d" in sys.argv else (("quad4", False), ("tri3", True))):
     _, xy, blocks, ss = cx.stack_strip(job.stack, tri=tri)
     ss = [("gate", *ss[0][1:]), ("body_contact", *ss[1][1:])]
     cx.write_exodus(f"strip_{kind}.exo", xy, blocks, ss)
@@ -122,14 +123,17 @@ if "--no2d" not in sys.argv:
         m, regions=["gate_poly", "oxide", "body"],
         contacts={"gate": ("gate_contact", "gate_poly"), "body_contact": ("body_contact", "body")})
     out["mesh2d"] = info
+    # the plugin writes the gmsh file in cm (mesh_scaling_factor 1e-4); Charon reads um
+    xy = xy * 1e4
     cx.write_exodus("mesh2d.exo", xy, blocks, ss)
+    job2 = cx.job1d("nfet_05v0", "start")  # process.load gives the start values
     print("2D mesh", info, flush=True)
     # equilibrium and a two-point C at vg = 0 (gate at -dv_fb -+ DV)
     vals = {}
     for side, sgn in (("A", -1), ("B", 1)):
-        v = 0.0 - job.dv_fb + sgn * DV
+        v = 0.0 - job2.dv_fb + sgn * DV
         open(f"m2d_{side}.inp", "w").write(deck("mesh2d.exo", f"m2d_{side}", f"fixed at {v!r}",
-                                                "steady state", "equilibrium"))
+                                                "steady state", "equilibrium", job=job2))
         ok, log, dt = cx.run(f"m2d_{side}.inp")
         out[f"mesh2d_{side}_ok"] = ok
         out[f"mesh2d_{side}_time_s"] = dt

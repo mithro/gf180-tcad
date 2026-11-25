@@ -4,6 +4,7 @@ usage: python3 b2.py DEVICE PARAMS [ni|dos] [disc]
 Writes b2_<device>_<params>.json with C (fF/um^2) per vg, DEVSIM C, and per-step solver data.
 """
 import json
+import os
 import re
 import sys
 import time
@@ -18,7 +19,8 @@ dev, params = sys.argv[1], sys.argv[2]
 ni_mode = sys.argv[3] if len(sys.argv) > 3 else "ni"
 disc = sys.argv[4] if len(sys.argv) > 4 else "drift diffusion cvfem"
 oxd = "laplace cvfem" if "cvfem" in disc else "laplace gfem"
-tag = f"{dev}_{params}_{ni_mode}_{opts.LIN}_{opts.REL:g}"
+TAU = float(os.environ["CX_TAU"]) if os.environ.get("CX_TAU") else None
+tag = f"{dev}_{params}_{ni_mode}_{opts.LIN}_{opts.REL:g}_tau{TAU}"
 job = cx.truncate_grid(cx.job1d(dev, params))
 xs, xy, blocks, ss = cx.stack_strip(job.stack)
 ss = [("gate", *ss[0][1:]), ("body_contact", *ss[1][1:])]
@@ -31,7 +33,7 @@ n = len(job.vg)
 def deck(**kw):
     d = decks.moscap_deck(job, mesh=kw.pop("mesh"), out=kw.pop("out"), ni_mode=ni_mode,
                           disc=disc, ox_disc=oxd, rel=opts.REL, abs_=opts.ABS,
-                          extra=opts.EXTRA, **kw)
+                          extra=opts.EXTRA, tau=TAU, **kw)
     return d.replace("BC is ohmic for body on body", "BC is ohmic for body_contact on body")
 
 
@@ -81,9 +83,13 @@ for side, v0 in (("A", va0), ("B", vb0)):
     shutil.copy("currents-loca.dat", f"currents-ramp{side}.dat")
     res[f"ramp{side}_last_v"] = rows[-1][head.index("gate_Voltage")]
     v1 = v0 + (n - 1) * step
-    sw_opts = [f"initial step size = {step!r}", f"minimum step size = {step!r}",
-            f"maximum step size = {step!r}", f"maximum number of steps = {n + 5}", "hit continuation bound = false",
-            "step size aggressiveness = 0.0", "predictor method is secant"]
+    sub = int(os.environ.get("CX_SUB") or 1)  # LOCA steps per grid step (every sub-th state is a grid point)
+    h = step / sub
+    sw_opts = [f"initial step size = {h!r}", f"minimum step size = {h!r}",
+               f"maximum step size = {h!r}", f"maximum number of steps = {(n - 1) * sub + 5}",
+               "hit continuation bound = false", "step size aggressiveness = 0.0",
+               f"predictor method is {os.environ.get('CX_PRED') or 'secant'}"]
+    res["sub"] = sub
     out, dt, stats = solve(f"sweep{side}", f"swept from {v0!r} to {v1!r}", "parameter sweep",
                            mesh=f"ramp{side}.exo", idx=-1, init="exodus", sweep=sw_opts)
     shutil.copy("currents-loca.dat", f"currents-sweep{side}.dat")
@@ -102,17 +108,5 @@ for side, sgn in (("A", -1), ("B", 1)):
     got = np.array(res[f"v{side}"])
     res[f"align{side}"] = float(np.max(np.abs(got - want))) if len(got) == len(want) else None
     print(side, "states", len(got), "max |v - grid|", res[f"align{side}"])
-qa = np.array([a for a, b in res["qA"]])
-qb = np.array([a for a, b in res["qB"]])
-m = min(len(qa), len(qb))
-c = (qb[:m] - qa[:m]) / (2 * DV) * 1e7  # F/cm^2 -> fF/um^2
-res["c_ff_um2"] = list(c)
-res["c_devsim"] = job.c_devsim
-res["vg"] = job.vg
-res["wall_s"] = time.time() - t0
-rel = (c - np.array(job.c_devsim[:m])) / np.array(job.c_devsim[:m])
-res["rel_vs_devsim"] = list(rel)
-print("states A/B", len(qa), len(qb), "max |rel| vs DEVSIM", float(np.max(np.abs(rel))))
-for i in range(0, m, 10):
-    print(f"vg={job.vg[i]:+.2f} C={c[i]:.6f} devsim={job.c_devsim[i]:.6f} rel={rel[i]:+.3e}")
+res["wall_s"] = time.time() - t0  # C, alignment and charge checks: b2an.py
 json.dump(res, open(f"b2_{tag}.json", "w"), indent=1, default=float)
