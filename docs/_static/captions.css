@@ -1,0 +1,36 @@
+/* Captions (loaded after Furo's stylesheet by html_css_files in docs/conf.py, so rules of equal
+ * specificity win). Furo styles table captions but leaves figure captions in body text, so a
+ * long figure caption reads like the paragraph after it. Both are set smaller and in the
+ * secondary text colour, with the number bold in the primary colour. A figure caption shrinks
+ * to fit a short line, so it stays centred under the figure, and wraps a long one as
+ * left-aligned lines in a block no wider than 48em. The space below the figure separates the
+ * caption from the next paragraph; it goes on the figure because Furo's
+ * "article figure :last-child" rule zeroes the caption's bottom margin. Furo's colour variables
+ * change with the theme, so light and dark mode need no rules of their own. */
+article figure {
+  margin-bottom: 1.75rem;
+}
+
+article figcaption {
+  font-size: var(--font-size--small);
+  line-height: 1.5;
+  color: var(--color-foreground-secondary);
+  width: fit-content;
+  max-width: min(100%, 48em);
+  margin: 0.75rem auto 0;
+  text-align: left;
+}
+
+article figcaption p {
+  margin: 0;
+}
+
+article table > caption {
+  color: var(--color-foreground-secondary);
+}
+
+article figcaption .caption-number,
+article table > caption .caption-number {
+  font-weight: 600;
+  color: var(--color-foreground-primary);
+}

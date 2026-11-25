@@ -48,7 +48,9 @@ exclude_patterns = [
 
 html_theme = "furo"
 # docs/_static/narrow.css: tables at phone width (docs/_ext/table_cells.py adds it).
+# docs/_static/captions.css: figure and table captions set apart from the body text.
 html_static_path = ["_static"]
+html_css_files = ["captions.css"]
 html_title = "gf180-tcad"
 # Keep build dates out of pages so two builds are identical.
 html_last_updated_fmt = None
