@@ -665,18 +665,23 @@ _INCLUDE = re.compile(r"^\s*(?:`{3,}|~{3,}|:{3,})\s*\{include\}\s+(\S+)")
 
 
 def _included_names(lines, include_text):
-    """The :name: labels of the files the page pulls in with {include}: they land on the page,
-    so a {numref} to one cites the same page. ``include_text(path)`` gives a file's text (the
-    path as the directive writes it) or None when it cannot be read."""
-    names = set()
+    """(labels, unread): the :name: labels of the files the page pulls in with {include}, which
+    land on the page, so a {numref} to one cites the same page; and the include paths that could
+    not be read. ``include_text(path)`` gives a file's text (the path as the directive writes
+    it) or None when it cannot be read."""
+    names, unread = set(), []
     if include_text is None:
-        return names
+        return names, unread
     for _, ln, _ in lines:
         m = _INCLUDE.match(ln)
-        text = include_text(m.group(1)) if m else None
-        if text:
+        if not m:
+            continue
+        text = include_text(m.group(1))
+        if text is None:
+            unread.append(m.group(1))
+        else:
             names |= set(re.findall(r"^\s*:name:\s*(\S+)\s*$", text, flags=re.M))
-    return names
+    return names, unread
 
 
 def figure_form_findings(lines, include_text=None):
@@ -695,12 +700,20 @@ def figure_form_findings(lines, include_text=None):
     targets |= {re.match(r"^\s*\(([\w.:-]+)\)=", ln).group(1) for _, ln, k in lines if k == "label"
                 and re.match(r"^\s*\(([\w.:-]+)\)=", ln)}
     targets |= _table_names(lines)
-    targets |= _included_names(lines, include_text)
+    included, unread = _included_names(lines, include_text)
+    targets |= included
     for i, text, target in refs:
         if target in targets:
             continue
         words = re.sub(r"%s|\{number\}|\{name\}|\bFig(ure)?\b\.?|\bTable\b", " ", text or "").split()
-        if len(words) < 2:
+        if len(words) < 2 and unread:
+            # The target may be in a file the page includes but that cannot be read yet: say
+            # that, not that it is on another page.
+            out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', not on the page as read: "
+                                          f"cannot read included {', '.join(unread)}; run a docs "
+                                          "build first (it writes docs/_generated), then lint "
+                                          "again"))
+        elif len(words) < 2:
             what = ("a table", "Table") if target.startswith("tab-") else ("a figure", "Figure")
             out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', {what[0]} on another page: "
                                           "numbers restart on each page, so write the page's "

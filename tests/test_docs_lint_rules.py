@@ -875,9 +875,13 @@ def test_figure_form_follows_includes(tmp_path):
     (docs / "conf.py").write_text("", "utf-8")
     page = docs / "comparison" / "p.md"
     page.write_text(_INCLUDING, "utf-8")
-    form = [c for _, c, _ in lint().rule_findings(_INCLUDING, include_text=lint().include_reader(page))
+    form = [m for _, c, m in lint().rule_findings(_INCLUDING, include_text=lint().include_reader(page))
             if c == "FIGURE-FORM"]  # fmt: skip
-    assert form, "positive control: the fragment is not there yet"
+    # Positive control: the fragment is not there yet. The message names the unread include and
+    # says to build first; it does not send the reader to another page.
+    assert len(form) == 1, form
+    assert "cannot read included /_generated/frag.inc.md" in form[0], form
+    assert "run a docs build first" in form[0] and "another page" not in form[0], form
     (docs / "_generated").mkdir()
     (docs / "_generated" / "frag.inc.md").write_text(_FRAGMENT, "utf-8")
     reader = lint().include_reader(page)
