@@ -40,6 +40,9 @@ DEFAULT_PROCESS = {
     "pplus": [{"peak": 5e19, "rp": 0.0, "sy": 0.08, "sx": 0.08}],
     "nplus": [{"peak": 1e20, "rp": 0.0, "sy": 0.08, "sx": 0.08}],
     "qf": 0.0,
+    # extra acceptors spanning the whole section, for a substrate whose doping rises with
+    # depth (the deep N-well capacitance model suggests it; the N-well one does not)
+    "deep_p": [],
     # "everywhere": the foundry generates P-well wherever there is no N-well, deep N-well
     # (kept 1.5 um away, rule LPW.11) or NAT. "drawn": only where the layout draws it.
     "pwell": "everywhere",
@@ -81,6 +84,7 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0):
         else:
             start = edge + (1.5 if s["kind"] == "dnw" else 0.0)
         pfield += _boxes(start, far, pr["pw"])
+    pfield += _boxes(-10.0, far, pr["deep_p"])
     plates = []
     top = 1.5
     for layer, length in s["plates"].items():

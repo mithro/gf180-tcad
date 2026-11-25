@@ -36,6 +36,9 @@ FAMILY = {
     "Bhi": {"pwell": "drawn", "sub": 5e15},
     "Alo": {"pwell": "everywhere", "sub": 2e15},
     "Ahi": {"pwell": "everywhere", "sub": 5e15},
+    # substrate doping rising to 4e16 cm^-3 about 5 um down
+    "Bdp": {"pwell": "drawn", "deep_p": [{"peak": 4e16, "rp": 5.0, "sy": 0.8, "sx": 0.8}]},
+    "Bq3": {"pwell": "drawn", "qf": 3e11},
 }
 KEY = ["NT20", "NC0", "NA0p6", "NAM1_6", "NW3", "NR3_2", "NM1_6", "DT20", "DM1_6", "DW6"]
 MIN_CORNER = 2.0  # a drawn sharp corner still has about this radius after diffusion
