@@ -1584,7 +1584,7 @@ def generate_tcad(out_dir: Path, tcad_root: Path = TCAD_RESULTS, spice_root: Pat
 README_FIGURES_DIR = REPO_ROOT / "docs" / "images" / "readme"
 #: README figure name -> the explainer figure (:data:`gf180tcad.explain.figures.FIGURES`); each is
 #: written as ``<name>-light.svg`` and ``<name>-dark.svg``.
-README_FIGURES = {"cell": "parts-cell", "cv": "cv-overview", "pfet-lengths": "calibration-pfet"}
+README_FIGURES = {"flow": "project-flow", "cell": "parts-cell", "cv": "cv-overview"}
 
 
 def readme_figures() -> dict[str, bytes]:

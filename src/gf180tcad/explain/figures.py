@@ -27,7 +27,7 @@ from matplotlib.collections import PolyCollection
 from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
-from matplotlib.patches import Circle, Patch
+from matplotlib.patches import Circle, FancyBboxPatch, Patch
 from matplotlib.ticker import FixedFormatter, FixedLocator, NullFormatter
 
 from gf180tcad import meshcut, plots
@@ -195,6 +195,20 @@ STYLE = {
     "device_markers": {"nfet_05v0": "o", "pfet_05v0": "s"},
     # The corner limits figure: one row per fit (two transistors by five corners), so taller.
     "corner_limits_size_in": (6.4, 7.2),
+    # The project's flow (the landing page): a figure this size, in axes units 0 to 1. The two
+    # columns' centres, the heading row and each box row's centre height, the boxes' width and
+    # height, the comparison box's width, the corner rounding, and the gap left between an
+    # arrow's ends and the boxes.
+    "flow_size_in": (6.4, 6.4),
+    "flow_columns": (0.25, 0.75),
+    "flow_heading_y": 0.95,
+    "flow_rows": (0.80, 0.565, 0.33, 0.095),
+    "flow_box": (0.40, 0.15),
+    "flow_compare_width": 0.62,
+    "flow_round": 0.02,
+    "flow_arrow_gap": 0.01,
+    # The fit arrow's label sits on a background patch this many points wider than its text.
+    "flow_label_pad": 2.0,
 }
 
 #: Unit conversions of the junction panels (cm to µm, V/cm to kV/cm), the SPICE sweeps (A to
@@ -2057,6 +2071,96 @@ def corner_limits(palette: str) -> bytes:
         return svg_bytes(corner_limits_figure(palette))
 
 
+#: The project's flow: (column heading, the three boxes top to bottom) of the reference and of
+#: what is tested.
+FLOW = (
+    (
+        "The reference",
+        (
+            "The PDK's SPICE models\n(from the foundry)",
+            "Circuit simulator\n(ngspice, Xyce)",
+            "Reference curves",
+        ),
+    ),
+    (
+        "What is tested",
+        (
+            "Public process data\nand the PDK's layouts",
+            "TCAD device physics\n(DEVSIM)",
+            "TCAD curves",
+        ),
+    ),
+)
+#: The comparison box both columns of :data:`FLOW` feed.
+FLOW_COMPARE = "Compare each pair of curves:\nAgree, Same process or Disagree"
+#: The label of the dashed arrow from the reference curves into the TCAD: its fitted numbers
+#: come from them.
+FLOW_FIT = "fit"
+
+
+def project_flow_figure(palette: str):
+    """The project's flow (``FLOW``): the PDK's SPICE models through a circuit simulator give
+    the reference curves; public process data and the PDK's layouts through the TCAD give the
+    tested curves; both feed one comparison. A dashed arrow from the reference curves into the
+    TCAD marks the fit of its numbers. The reference column is grey, the tested one in the
+    highlight colour."""
+    pal = PALETTES[palette]
+    fig = Figure(figsize=STYLE["flow_size_in"])
+    FigureCanvasAgg(fig)
+    ax = fig.add_axes((0, 0, 1, 1))
+    ax.set_axis_off()
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    width, height = STYLE["flow_box"]
+    gap = STYLE["flow_arrow_gap"]
+    fills = (pal["band"], to_rgba(pal["highlight"], STYLE["band_alpha"]["highlight"]))
+    edges = (pal["muted"], pal["highlight"])
+
+    def box(x, y, w, text, fill, edge):
+        ax.add_patch(FancyBboxPatch(
+            (x - w / 2, y - height / 2), w, height,
+            boxstyle=f"round,pad=0,rounding_size={STYLE['flow_round']}",
+            facecolor=fill, edgecolor=edge, linewidth=STYLE["edge_width"] * 2,
+        ))  # fmt: skip
+        ax.text(x, y, text, ha="center", va="center", color=pal["text"])
+
+    def arrow(x0, y0, x1, y1):
+        ax.annotate("", xy=(x1, y1), xytext=(x0, y0),
+                    arrowprops={"arrowstyle": "-|>", "color": pal["text"],
+                                "lw": STYLE["edge_width"] * 2})  # fmt: skip
+
+    rows = STYLE["flow_rows"]
+    compare_y = rows[-1]
+    for x, (heading, texts), fill, edge in zip(
+        STYLE["flow_columns"], FLOW, fills, edges, strict=True
+    ):
+        ax.text(x, STYLE["flow_heading_y"], heading, ha="center", va="center", weight="bold",
+                color=pal["text"])  # fmt: skip
+        for i, (y, text) in enumerate(zip(rows, texts, strict=False)):
+            box(x, y, width, text, fill, edge)
+            if i:
+                arrow(x, rows[i - 1] - height / 2 - gap, x, y + height / 2 + gap)
+        arrow(x, rows[len(texts) - 1] - height / 2 - gap, x, compare_y + height / 2 + gap)
+    box(sum(STYLE["flow_columns"]) / 2, compare_y, STYLE["flow_compare_width"], FLOW_COMPARE,
+        pal["background"], pal["text"])  # fmt: skip
+    left, right = STYLE["flow_columns"]
+    x0, y0 = left + width / 2 + gap, rows[2]
+    x1, y1 = right - width / 2 - gap, rows[1]
+    ax.annotate("", xy=(x1, y1), xytext=(x0, y0),
+                arrowprops={"arrowstyle": "-|>", "color": pal["highlight"], "linestyle": "--",
+                            "lw": STYLE["edge_width"] * 2})  # fmt: skip
+    ax.text((x0 + x1) / 2, (y0 + y1) / 2, FLOW_FIT, ha="center", va="center", color=pal["text"],
+            bbox={"facecolor": pal["background"], "edgecolor": "none",
+                  "pad": STYLE["flow_label_pad"]})  # fmt: skip
+    return fig
+
+
+def project_flow(palette: str) -> bytes:
+    """The project's flow (:func:`project_flow_figure`) as SVG bytes."""
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(project_flow_figure(palette))
+
+
 # name -> function of the palette name; each is written in both palettes by write_all.
 FIGURES: dict[str, Callable[[str], bytes]] = {
     "silicon-doping": _silicon_doping,
@@ -2088,6 +2192,7 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "corner-crosscheck": corner_crosscheck,
     "corner-crossing": corner_crossing,
     "corner-limits": corner_limits,
+    "project-flow": project_flow,
 }
 
 
@@ -2115,6 +2220,7 @@ _PLOTS = (
     "corner-crosscheck",
     "corner-crossing",
     "corner-limits",
+    "project-flow",
 )
 
 
