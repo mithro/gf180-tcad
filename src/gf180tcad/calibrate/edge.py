@@ -40,7 +40,7 @@ from gf180tcad import io
 from gf180tcad.devices import DEVICES, Geometry, geometry_id
 from gf180tcad.layout import PROVENANCE_NAME
 from gf180tcad.sandbox import REPO_ROOT
-from gf180tcad.tcad import edgefit, process, provenance
+from gf180tcad.tcad import ProvenanceError, edgefit, process, provenance
 
 #: This module, the generator of the ``tcad/edgefit`` tree.
 EDGE_MAIN = "gf180tcad.calibrate.edge"
@@ -230,10 +230,13 @@ def run(device: str, out_root: Path) -> Path:
     tree's ``provenance.json``."""
     out_root = Path(out_root)
     data = build(device, commit=clean_commit())
+    # The provenance first: it refuses an unclean or unpinned plugin submodule (ProvenanceError)
+    # before anything is written, so a refused run leaves no fit without provenance.
+    prov = provenance(images={}, generator=EDGE_MAIN)
     out_root.mkdir(parents=True, exist_ok=True)
     path = edgefit.fit_file(device, out_root)
     io.write_json(path, data)
-    io.write_json(out_root / PROVENANCE_NAME, provenance(images={}, generator=EDGE_MAIN))
+    io.write_json(out_root / PROVENANCE_NAME, prov)
     return path
 
 
@@ -248,7 +251,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     a = _parser().parse_args(argv)
     try:
         path = run(a.device, a.out)
-    except (DirtyCheckout, FileNotFoundError, ValueError) as e:
+    except (DirtyCheckout, ProvenanceError, FileNotFoundError, ValueError) as e:
         print(f"edge fit: {e}", file=sys.stderr)
         return 2
     print(f"{a.device}: wrote {path}", flush=True)

@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """The fitted poly length bias δ of the 2D cells (issue #189, plan Task E3).
 
-The fit is made once, by ``python -m gf180tcad.calibrate edge-fit``
-(:mod:`gf180tcad.calibrate.edge`), and frozen in ``results/tcad/edgefit/<device>.json`` with
-every input it used. This module only reads that file. A calibrated 2D job applies δ when the
+The fit is made once, by ``python -m gf180tcad.calibrate.edge --device D --out
+results/tcad/edgefit`` (:mod:`gf180tcad.calibrate.edge`), and frozen in
+``results/tcad/edgefit/<device>.json`` with every input it used. This module only reads that file. A calibrated 2D job applies δ when the
 file exists (:func:`apply`). Without it, the job keeps the process file's start value of 0.
 
 The file stands outside ``results/tcad/calibration``. So the 1D calibration, its
