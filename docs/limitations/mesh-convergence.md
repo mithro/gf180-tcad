@@ -10,7 +10,7 @@ Convergence is therefore checked, not assumed.
 This page shows how much the simulated capacitance changes as the mesh is made finer, and which
 mesh the results use.
 
-The change of each level is plotted in {numref}`meshconv-1d-figure` (1D) and {numref}`meshconv-2d-figure` (2D).
+The change of each level is plotted in {numref}`fig-meshconv-1d` (1D) and {numref}`fig-meshconv-2d` (2D).
 
 ## Method
 
@@ -35,10 +35,10 @@ it. The `moscap` command ({py:mod}`gf180tcad.tcad.__main__`) reads its mesh from
 {repo}`results/tcad/meshconv/moscap1d`
 ({py:func}`gf180tcad.tcad.meshconv.selected_spec`).
 
-In 2D the refinement scales the mesh size at every distance from the interface, as {numref}`meshconv-grading-figure` shows.
+In 2D the refinement scales the mesh size at every distance from the interface, as {numref}`fig-meshconv-grading` shows.
 
 ```{figure} /_generated/limitations/mesh-grading-light.svg
-:name: meshconv-grading-figure
+:name: fig-meshconv-grading
 :figclass: only-light
 :alt: Mesh size against distance from the interface: three solid lines of falling slope for levels 0, 1 and 2, and three dashed lines that follow the level-0 slope and stop at lower ceilings.
 
@@ -83,10 +83,10 @@ with the start values of the {term}`process files <process file>`. The start spe
 in the bulk, grading 1.1). Each level is in {numref}`tab-meshconv-1d-levels`, where "Max change" is the largest relative change against the next finer
 level over all biases.
 
-{numref}`meshconv-1d-figure` shows the change at every bias.
+{numref}`fig-meshconv-1d` shows the change at every bias.
 
 ```{figure} /_generated/limitations/meshconv-1d-light.svg
-:name: meshconv-1d-figure
+:name: fig-meshconv-1d
 :figclass: only-light
 :alt: Two panels, nfet and pfet, of the relative change on a log axis against gate voltage: three level curves between 1e-6 and 1e-4 with a small peak near threshold, far below a dashed 1 % line.
 
@@ -175,7 +175,7 @@ An early 2D prototype gave a C/Cox of 1.0039 at −5 V (see the
 A C/Cox above 1 at −5 V is therefore not physics of the stack. It comes from the 2D structure
 ({ref}`moscap2d-artefact`).
 
-The solid 1D curves of {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-ccox-figure>` stay below 1 at every bias.
+The solid 1D curves of {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-ccox>` stay below 1 at every bias.
 
 (mesh-convergence-2d)=
 
@@ -246,10 +246,10 @@ Level 0 meets the 1 % convergence criterion but not the 0.5 % 2D-equals-1D one, 
 (nfet) and 205,327 (pfet) nodes. The nfet level-1 and level-2 sweeps each needed round-off
 acceptances at the −0.6 V point ({ref}`moscap2d-solver`); the pfet needed none.
 
-Both criteria are plotted at every bias in {numref}`meshconv-2d-figure`.
+Both criteria are plotted at every bias in {numref}`fig-meshconv-2d`.
 
 ```{figure} /_generated/limitations/meshconv-2d-light.svg
-:name: meshconv-2d-figure
+:name: fig-meshconv-2d
 :figclass: only-light
 :alt: Four panels on log axes. Left: the change of levels 0 and 1 to the next level, at most 0.26 %, below a dashed 1 % line. Right: the 2D-against-1D difference of levels 0 to 2, level 0 crossing a dashed 0.5 % line near 0 V.
 
@@ -277,4 +277,4 @@ Against u = polarity × Vg, nfet above and pfet below ({repo}`results/tcad/meshc
   are from the stable image: {{ gmsh }} 5 in the dev image meshes the 2D cells differently, so 2D
   needs its own mesh convergence there; see {ref}`tcad-results-image`.
 
-The 2D study of {numref}`meshconv-2d-figure` ran on the stable image.
+The 2D study of {numref}`fig-meshconv-2d` ran on the stable image.

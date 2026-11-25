@@ -26,6 +26,9 @@ extensions = [
     "api_links",
     "table_cells",
     "theme_figures",
+    # docs/_ext/stable_ids.py: each figure and table is identified by its label, less the
+    # "fig-" or "tab-" prefix ("Table poe-pairs"), not by a running number.
+    "stable_ids",
     "unit_join",
     # docs/_ext/wrapper_ids.py: Furo copies a table's or equation's ids onto its scroll wrapper;
     # this removes them from the wrapper, so each id is on one element (issue #150).
@@ -153,9 +156,10 @@ _TOOLS = {
 }
 myst_substitutions = {key: f"[{text}]({url})" for key, (text, url) in _TOOLS.items()}
 
-# Captioned figures are numbered, so a page can point at one with {numref}. theme_figures
-# (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure with one number,
-# and numbers each page's figures from 1.
+# Captioned figures and tables are numbered, so a page can point at one with {numref}.
+# theme_figures (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure,
+# and stable_ids (docs/_ext/stable_ids.py) shows each item's label in place of its number:
+# "%s" below becomes "poe-pairs" for the table labelled tab-poe-pairs.
 numfig = True
 numfig_format = {"figure": "Figure %s", "table": "Table %s"}
 
@@ -290,6 +294,17 @@ def _release_lock(app, exception=None):
         _lock_file = None
 
 
+def _keep_unchanged_mtimes(new: Path, old: Path) -> None:
+    """Give each file of the freshly generated tree ``new`` whose bytes equal its copy in the
+    previous tree ``old`` that copy's modification time. Sphinx decides what to read again by
+    modification time, so a rebuild with no change then reads and writes no page."""
+    for path in new.rglob("*"):
+        prev = old / path.relative_to(new)
+        if path.is_file() and prev.is_file() and path.read_bytes() == prev.read_bytes():
+            st = prev.stat()
+            os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns))
+
+
 def _generate_results(app):
     """Regenerate docs/_generated (committed files in, only docs/_generated out).
 
@@ -307,6 +322,7 @@ def _generate_results(app):
     try:
         tmp.mkdir()
         docgen.generate(tmp)
+        _keep_unchanged_mtimes(tmp, _generated)
         old = _generated.with_name(f"_generated.old-{os.getpid()}")
         if _generated.exists():  # also drops stale pages from older builds
             os.replace(_generated, old)

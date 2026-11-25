@@ -14,12 +14,12 @@ computer ({ref}`cross-host-determinism`). Work on {term}`Phase 2` (the {{ gplugi
 plugin fix and the {term}`MOS capacitor <MOSCAP>`) is in progress.
 
 The committed {term}`TCAD` results are MOS capacitors only, for {term}`nfet_05v0` and
-{term}`pfet_05v0`. There is no MOSFET TCAD result. {numref}`status-cv-figure` draws both
+{term}`pfet_05v0`. There is no MOSFET TCAD result. {numref}`fig-status-cv` draws both
 devices at the minimum gate length.
 
 ```{figure} /_generated/explained/cv-overview-light.svg
 :figclass: only-light
-:name: status-cv-figure
+:name: fig-status-cv
 :alt: Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.
 
 The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
@@ -85,7 +85,7 @@ Disagree, and W10/L2 is Same process. Of its held-out sizes, W10/L1 is Agree and
 Same process. The W10/L10 cell has no 2D result, because its equilibrium solve fails
 ({ref}`moscap2d-l10`).
 
-The first 2D row holds the shortest gates ({numref}`status-cv-figure`): 0.6 µm for the nfet,
+The first 2D row holds the shortest gates ({numref}`fig-status-cv`): 0.6 µm for the nfet,
 0.5 µm for the pfet. The 2D rows are the calibrated cells of the 2D validation
 ([issue #35](https://github.com/mithro/gf180-tcad/issues/35), {ref}`cv-agreement-validation`).
 In every 2D cell the poly is as drawn, its length bias at 0 ({ref}`process-data-poly-bias`).

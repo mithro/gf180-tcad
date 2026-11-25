@@ -68,11 +68,11 @@ def test_charon_stages_match_the_dockerfile():
 @pytest.mark.parametrize("name", list(imagefig.FIGURES))
 def test_image_page_embeds_both_twins_and_cites_the_figure(name):
     page = PAGE.read_text(encoding="utf-8")
-    light = f"```{{figure}} /_generated/reproduce/{name}-light.svg\n:name: {name}\n:figclass: only-light\n"
+    light = f"```{{figure}} /_generated/reproduce/{name}-light.svg\n:name: fig-{name}\n:figclass: only-light\n"
     dark = f"```{{figure}} /_generated/reproduce/{name}-dark.svg\n:figclass: only-dark\n"
     assert light in page and dark in page
     assert page.index(light) < page.index(dark)
-    assert f"{{numref}}`{name}`" in page
+    assert f"{{numref}}`fig-{name}`" in page
 
 
 @pytest.mark.parametrize("palette", list(imagefig.PALETTES))

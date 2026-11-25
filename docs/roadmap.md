@@ -10,7 +10,7 @@ the issue says what is open and what settles it. The phases are those of the
 
 - **2D validation of the calibrated stack** ([issue #35](https://github.com/mithro/gf180-tcad/issues/35)): every calibrated 2D cell that solves
   is committed. Two 2D solves fail; the next two items name them.
-  The 2D plateaus lie below {term}`SPICE` (issue #77, {numref}`roadmap-cv-figure`). The 2D {term}`depletion` crossing lies below 1D
+  The 2D plateaus lie below {term}`SPICE` (issue #77, {numref}`fig-roadmap-cv`). The 2D {term}`depletion` crossing lies below 1D
   (issue #108, {ref}`cv-agreement-validation`). The memory grows with every 2D point (issue #78).
 - **2D {term}`MOS capacitor <MOSCAP>` at L = 2 µm**: its small-signal (AC) solve fails
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59)).
@@ -26,7 +26,7 @@ the issue says what is open and what settles it. The phases are those of the
 
 ```{figure} /_generated/explained/moscap-cell-light.svg
 :figclass: only-light
-:name: roadmap-cell-figure
+:name: fig-roadmap-cell
 :alt: Cross-section of the transistor: the gate, the thin gate oxide and the tall body below them in colour, the source and the drain either side in grey.
 
 The 2D cell `w10p0_l0p70` of the {term}`nfet_05v0`, cut along the gate's length. The 1D
@@ -47,7 +47,7 @@ The source and the drain, muted, are the parts the MOS capacitor leaves out.
 
 ```{figure} /_generated/explained/cv-overview-light.svg
 :figclass: only-light
-:name: roadmap-cv-figure
+:name: fig-roadmap-cv
 :alt: Gate capacitance against gate voltage, nfet above and pfet below: SPICE curves in a grey band, with dotted and dashed 1D lines and dash-dot 2D lines.
 
 The gate capacitance against the gate voltage of the {term}`nfet_05v0` and the
@@ -70,8 +70,8 @@ fitted values. The dash-dot lines are the 2D cell at the start values (orange) a
 values (blue), with no parasitics added outside the cell.
 ```
 
-The 2D validation runs the calibrated stack in cells like the one in {numref}`roadmap-cell-figure`.
-Its curves at the minimum gate length are in {numref}`roadmap-cv-figure`, beside SPICE and the 1D stack.
+The 2D validation runs the calibrated stack in cells like the one in {numref}`fig-roadmap-cell`.
+Its curves at the minimum gate length are in {numref}`fig-roadmap-cv`, beside SPICE and the 1D stack.
 
 ## Phase 3: the MOSFET
 
