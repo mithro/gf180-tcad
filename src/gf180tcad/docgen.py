@@ -155,8 +155,9 @@ def figure_label(*parts: str) -> str:
 
 
 def numref(label: str, page_title: str | None = None) -> str:
-    """A ``{numref}`` citation of figure ``label``: "Figure N" on its own page, "Figure N of
-    <title>" from another page (``page_title``), as tests/test_doc_links.py requires."""
+    """A ``{numref}`` citation of figure ``label``: "Figure <id>" on its own page, "Figure <id> of
+    <title>" from another page (``page_title``), as tests/test_doc_links.py requires; <id> is
+    the label less its "fig-" prefix (docs/_ext/stable_ids.py)."""
     if page_title is None:
         return f"{{numref}}`{label}`"
     return f"{{numref}}`Figure %s of {page_title} <{label}>`"

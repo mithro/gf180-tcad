@@ -1236,12 +1236,26 @@ _NUMREF = re.compile(
 _TITLE = re.compile(r"<title>(?P<title>[^<]*?) - gf180-tcad</title>")
 
 
+def _identifier(fragment: str) -> str:
+    """The identifier docs/_ext/stable_ids.py shows for the item whose id is ``fragment``: the
+    label less its "fig-" or "tab-" prefix. A label with an underscore has an id with a hyphen
+    there, so either character is accepted (see :func:`_same_identifier`)."""
+    for prefix in ("fig-", "tab-", "tbl-"):
+        if fragment.startswith(prefix):
+            return fragment[len(prefix) :]
+    return fragment
+
+
+def _same_identifier(text: str, fragment: str) -> bool:
+    return text.replace("_", "-") == _identifier(fragment)
+
+
 def numref_findings(pages: dict[str, str]) -> list[str]:
     """The {numref} citations of ``pages`` (page path relative to the site -> its HTML) that do not
-    read "Figure N" or "Table N" for a figure or table on the same page, or "Figure N of <title>"
-    ("Table N of <title>") for one on another page, <title> being the title of the page the link
-    leads to (numbers restart on each page, so a citation across pages names the page: the
-    FIGURE-FORM rule of tools/docs_lint.py)."""
+    read "Figure <id>" or "Table <id>" for a figure or table on the same page, or "Figure <id> of
+    <title>" ("Table <id> of <title>") for one on another page. <id> is the identifier of the
+    item the link leads to (its label less the "fig-" or "tab-" prefix, docs/_ext/stable_ids.py)
+    and <title> the title of the page it is on: the FIGURE-FORM rule of tools/docs_lint.py."""
     titles = {
         path: html_lib.unescape(m.group("title"))
         for path, html in pages.items()
@@ -1251,35 +1265,57 @@ def numref_findings(pages: dict[str, str]) -> list[str]:
     for path, html in pages.items():
         for m in _NUMREF.finditer(html):
             href, text = m.group("href"), html_lib.unescape(m.group("text")).strip()
-            target = href.split("#", 1)[0]
+            target, _, fragment = href.partition("#")
             # "../explained/x.html" from "comparison/y.html" is "explained/x.html".
             dest = posixpath.normpath(posixpath.join(posixpath.dirname(path), target))
             if not target or dest == path:
-                if not re.fullmatch(r"(Figure|Table) \d+", text):
-                    bad.append(f"{path}: {text!r} (a figure on the same page)")
+                same = re.fullmatch(r"(Figure|Table) (?P<id>\S+)", text)
+                if not same or not _same_identifier(same.group("id"), fragment):
+                    bad.append(f"{path}: {text!r} (#{fragment}, on the same page)")
                 continue
-            other = re.fullmatch(r"(Figure|Table) \d+ of (?P<title>.+)", text)
-            if not other or other.group("title") != titles.get(dest):
-                bad.append(f"{path}: {text!r} (a figure on {dest}, title {titles.get(dest)!r})")
+            other = re.fullmatch(r"(Figure|Table) (?P<id>\S+) of (?P<title>.+)", text)
+            if (
+                not other
+                or not _same_identifier(other.group("id"), fragment)
+                or other.group("title") != titles.get(dest)
+            ):
+                bad.append(f"{path}: {text!r} (#{fragment} on {dest}, title {titles.get(dest)!r})")
     return bad
 
 
-def test_site_figures_are_numbered_as_figure_n(built_html):
-    """numfig is on and numfig_format is "Figure %s" and "Table %s" in docs/conf.py: every
-    numbered figure of the built site reads "Figure N" and every numbered table "Table N", and
-    every {numref} citation names a figure the same way, with the other page's title when it
-    cites a figure on another page."""
+def test_site_figures_are_identified_by_label(built_html):
+    """numfig is on, numfig_format is "Figure %s" and "Table %s" in docs/conf.py, and
+    docs/_ext/stable_ids.py puts each item's label in place of its number: every numbered
+    figure of the built site is captioned "Figure <id>: " and every table "Table <id>: ", <id>
+    being the label of that figure or table less its prefix, never a number; and every {numref}
+    citation names the item the same way, with the other page's title when it cites one on
+    another page."""
     captions, pages = [], {}
     for page in _html_pages(built_html):
         html = page.read_text(encoding="utf-8")
-        captions += re.findall(r'<span class="caption-number">([^<]*)</span>', html)
+        captions += re.findall(_CAPTION, html)
         pages[page.relative_to(built_html).as_posix()] = html
     assert captions, "no numbered figure in the built site: is numfig on in docs/conf.py?"
     assert any(_NUMREF.search(html) for html in pages.values()), "no {numref} in the built site"
-    bad = [c for c in captions if not re.fullmatch(r"(Figure|Table) \d+\s*", c)]
-    assert not bad, f"numbers not in the form 'Figure N' or 'Table N': {sorted(set(bad))}"
+    bad = [
+        f"{fragment}: {number!r}"
+        for fragment, number in captions
+        if not re.fullmatch(r"(Figure|Table) (?P<id>\S+): ", number)
+        or not _same_identifier(number.split()[1][:-1], fragment)
+        or re.fullmatch(r"[\d.]+", number.split()[1][:-1])
+    ]
+    assert not bad, f"captions not in the form 'Figure <label>: ': {sorted(set(bad))}"
     bad = numref_findings(pages)
     assert not bad, "\n".join(bad)
+
+
+# The id of a numbered figure or table and its caption number: Sphinx writes the id on the
+# <figure> or <table> and the caption inside it.
+_CAPTION = re.compile(
+    r'<(?:figure|table)[^>]* id="(?P<id>[^"]+)"[^>]*>(?:(?!</figure>|</table>).)*?'
+    r'<span class="caption-number">(?P<number>[^<]*)</span>',
+    flags=re.DOTALL,
+)
 
 
 def _numref_html(href: str, text: str) -> str:
@@ -1288,16 +1324,17 @@ def _numref_html(href: str, text: str) -> str:
 
 
 def test_positive_control_numref_titles():
-    """A citation across pages passes only with the target page's own title; one on the same
-    page only as "Figure N"."""
+    """A citation across pages passes only with the target's identifier and its page's own
+    title; one on the same page only as "Figure <id>"."""
     head = "<html><head><title>{} - gf180-tcad</title></head><body>{}</body></html>"
     target = head.format("What the calibration changes", "")
     ok = {
         "explained/calibration.html": target,
-        "explained/cv-curve.html": head.format("C-V", _numref_html("#fig-a", "Figure 1")
-            + _numref_html("calibration.html#fig-b", "Figure 2 of What the calibration changes")
-            + _numref_html("#tab-a", "Table 1")
-            + _numref_html("calibration.html#tab-b", "Table 3 of What the calibration changes")),
+        "explained/cv-curve.html": head.format("C-V", _numref_html("#fig-a", "Figure a")
+            + _numref_html("calibration.html#fig-b", "Figure b of What the calibration changes")
+            + _numref_html("#tab-a", "Table a")
+            + _numref_html("#mesh-x-y", "Figure mesh-x_y")
+            + _numref_html("calibration.html#tab-b", "Table b of What the calibration changes")),
     }  # fmt: skip
     assert numref_findings(ok) == []
     # From another directory, through "../", and with the title HTML-escaped on both sides.
@@ -1306,20 +1343,35 @@ def test_positive_control_numref_titles():
         "explained/cv-curve.html": head.format("What sets each part of the C&#8211;V curve", ""),
         "comparison/cv-agreement.html": head.format("C-V agreement",
             _numref_html("../explained/calibration.html#fig-b",
-                         "Figure 1 of What the calibration changes")
+                         "Figure b of What the calibration changes")
             + _numref_html("../explained/cv-curve.html#fig-c",
-                           "Figure 1 of What sets each part of the C&#8211;V curve")),
+                           "Figure c of What sets each part of the C&#8211;V curve")),
     }  # fmt: skip
     assert numref_findings(across) == []
     for href, text in (
-        ("calibration.html#fig-b", "Figure 2"),
-        ("calibration.html#fig-b", "Figure 2 of The MOS capacitor"),
-        ("#fig-a", "Figure 1 of C-V"),
-        ("#fig-a", "Fig. 1"),
-        ("../explained/calibration.html#fig-b", "Figure 2 of C-V"),
+        ("calibration.html#fig-b", "Figure b"),
+        ("calibration.html#fig-b", "Figure b of The MOS capacitor"),
+        ("calibration.html#fig-b", "Figure 2 of What the calibration changes"),
+        ("#fig-a", "Figure a of C-V"),
+        ("#fig-a", "Fig. a"),
+        ("#fig-a", "Figure 1"),
+        ("#fig-a", "Figure fig-a"),
+        ("#fig-a", "Figure b"),
+        ("../explained/calibration.html#fig-b", "Figure b of C-V"),
     ):
         bad = {**ok, "explained/x.html": head.format("X", _numref_html(href, text))}
         assert numref_findings(bad), (href, text)
+
+
+def test_positive_control_caption_form():
+    """The caption pattern reads the id and the caption number of a figure and a table."""
+    html = (
+        '<figure class="align-default" id="fig-a"><img alt="a" src="a.svg" /><figcaption><p>'
+        '<span class="caption-number">Figure 1 </span></p></figcaption></figure>'
+        '<table class="docutils" id="tab-b"><caption><span class="caption-number">Table b: '
+        "</span></caption></table>"
+    )
+    assert re.findall(_CAPTION, html) == [("fig-a", "Figure 1 "), ("tab-b", "Table b: ")]
 
 
 def test_every_id_is_on_one_element(built_html):
