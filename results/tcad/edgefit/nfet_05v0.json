@@ -58,7 +58,7 @@
       "w_um": 10
     }
   ],
-  "commit": "99beaeee241f2aefedd7951259257eb858f49086",
+  "commit": "61cc8864be611ddc4be93986cf8cec360d9ffc67",
   "device": "nfet_05v0",
   "edge_u_v": [
     -5.0,
@@ -70,15 +70,22 @@
     0.31568228105906315,
     -0.5600814663951118
   ],
-  "poly_bias_nm": 40.21144762490158,
+  "least_squares": {
+    "poly_bias_nm": 40.21144762490158,
+    "residual_ff_per_um": [
+      -0.10851180199229658,
+      0.1085118019922966
+    ]
+  },
+  "poly_bias_nm": 40.0,
   "record": {
     "cell": "w10p0_l0p60",
     "file": "nfet_05v0-w10p0_l0p60.json",
     "sha256": "96d0d5bd7bb05a948cce3ebc710907d3bfc8141372e347957ab1cc602455e1e6"
   },
   "residual_ff_per_um": [
-    -0.10851180199229658,
-    0.1085118019922966
+    -0.10766874093870725,
+    0.10935486304588593
   ],
   "schema": 1,
   "slope_ff_per_um_per_nm": 0.003987091621302263,

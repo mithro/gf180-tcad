@@ -58,7 +58,7 @@
       "w_um": 10
     }
   ],
-  "commit": "99beaeee241f2aefedd7951259257eb858f49086",
+  "commit": "61cc8864be611ddc4be93986cf8cec360d9ffc67",
   "device": "pfet_05v0",
   "edge_u_v": [
     -5.0,
@@ -70,15 +70,22 @@
     0.28947368421052627,
     -0.5000000000000001
   ],
-  "poly_bias_nm": 61.46775508305969,
+  "least_squares": {
+    "poly_bias_nm": 61.46775508305969,
+    "residual_ff_per_um": [
+      -0.029820556224525424,
+      0.029820556224525396
+    ]
+  },
+  "poly_bias_nm": 61.0,
   "record": {
     "cell": "w10p0_l0p50",
     "file": "pfet_05v0-w10p0_l0p50.json",
     "sha256": "22b939d653a37bd6b0494e9e6a73f7ff11bbf5592bf598a1bfea4fb563eaea8c"
   },
   "residual_ff_per_um": [
-    -0.029820556224525424,
-    0.029820556224525396
+    -0.027942471243837086,
+    0.031698641205213735
   ],
   "schema": 1,
   "slope_ff_per_um_per_nm": 0.004015103306635062,
