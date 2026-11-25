@@ -4,14 +4,16 @@
     uv run --locked python experiments/charon-backend/record.py WORKDIR results/charon-experiments
 
 Every step of run.py must have run with the same pins (the commit, the Charon image, the plugin
-commit and the scripts); each record holds them once. Three records:
+commit and the scripts); each record holds them once. The records:
 
 - ``cv.json``: the C-V runs (``cv-*`` steps): their settings, the gate biases, Charon's and
   DEVSIM's C per area (fF/um^2) and the per-state checks of b2an.py;
 - ``hard-range.json``: the solver variants through the onset of inversion (b2h.py), the solves
   from the inversion side (b2d.py) and the nonlinear-Poisson check (b2nlp.py);
 - ``probes.json``: the nodal doping (b5.py), the linear solvers (b3.py), the harmonic-balance
-  columns (b4.py) and the TRI3 meshes (b1.py, b1an.py).
+  columns (b4.py) and the TRI3 meshes (b1.py, b1an.py);
+- ``harmonic-balance.json``: the harmonic-balance columns on an oxide-only parallel plate
+  (b4pp.py) and on a metal-gate MOS capacitor (b4mg.py), from a work directory of their own.
 """
 
 import json
@@ -104,13 +106,36 @@ def probes(work: Path) -> dict:
     }
 
 
+def harmonic_balance(work: Path) -> dict:
+    """The analytic checks of the harmonic-balance columns (b4pp.py, b4mg.py)."""
+    pp = _json(work / "b4-parallel-plate" / "b4pp.json")
+    mg = _json(work / "b4-metal-gate" / "b4mg.json")
+    for rec in (*pp["runs"].values(), *mg.values()):
+        rec.pop("tail", None)
+        rec.pop("rows", None)
+    return {"parallel_plate": pp, "metal_gate": mg}
+
+
+#: record name -> (the steps it reads, its builder). A work directory holds the steps of the
+#: records it is used for; run.py runs the harmonic-balance checks in a work directory of their
+#: own, so each record's steps share one set of pins.
+RECORDS = {
+    "cv": ("cv-", cv),
+    "hard-range": ("b2-", hard_range),
+    "probes": ("b5-doping", probes),
+    "harmonic-balance": ("b4-parallel-plate", harmonic_balance),
+}
+
+
 def main(argv: list[str]) -> int:
     work, out = (Path(a).expanduser().resolve() for a in argv)
     pins = _pins(work)
     out.mkdir(parents=True, exist_ok=True)
-    for name, body in (("cv", cv(work)), ("hard-range", hard_range(work)),
-                       ("probes", probes(work))):  # fmt: skip
-        io.write_json(out / f"{name}.json", {"schema": 1, **pins, **body})
+    steps = [p.name for p in work.iterdir() if p.is_dir()]
+    for name, (prefix, build) in RECORDS.items():
+        if not any(s.startswith(prefix) for s in steps):
+            continue
+        io.write_json(out / f"{name}.json", {"schema": 1, **pins, **build(work)})
         print(f"wrote {out / name}.json", flush=True)
     return 0
 

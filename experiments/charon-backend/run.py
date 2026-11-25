@@ -65,6 +65,8 @@ STEPS = {
                             "set -- $fa; env CX_REL=1e-8 CX_ABS=1e-10 CX_F=$1 CX_AMP=$2 "
                             "python3 b4.py || exit 1; done"),  # fmt: skip
     "b1-tri3": "python3 b1.py && python3 b1an.py",
+    "b4-parallel-plate": "python3 b4pp.py",
+    "b4-metal-gate": "python3 b4mg.py",
 }
 
 
