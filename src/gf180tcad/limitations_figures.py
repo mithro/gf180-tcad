@@ -1427,8 +1427,9 @@ def charon_strip_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             lo, hi = d["span"]
             ax.axvspan(lo, hi, color=pal[colours[layer]], alpha=ef.STYLE["fill_alpha"], lw=0,
                        label=f"block {layer}", gid=f"block {layer}")  # fmt: skip
-            xs = np.repeat(d["x_nm"], 3)
-            ys = np.tile([0.0, w, np.nan], len(d["x_nm"]))
+            segment = [0.0, w, np.nan]  # one node pair: bottom, top, a break
+            xs = np.repeat(d["x_nm"], len(segment))
+            ys = np.tile(segment, len(d["x_nm"]))
             ax.plot(xs, ys, color=pal[colours[layer]], lw=ef.STYLE["edge_width"],
                     gid=f"nodes {layer}")  # fmt: skip
         ax.set_xlabel("distance from the poly/oxide interface (nm)")
