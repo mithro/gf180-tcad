@@ -790,6 +790,8 @@ def test_load_params_refuses_a_job_from_another_edge_fit(tmp_path, monkeypatch):
     d = tmp_path / "nfet_05v0" / "calibrated" / "w10p0_l0p60"
     d.mkdir(parents=True)
     cv_meta = json.loads((L0P60 / "cv.meta.json").read_bytes())
+    cv_meta.pop("edge_fit", None)
+    monkeypatch.setattr(edgefit, "TREE_ROOT", tmp_path / "no-fit")
     job.load_params(d, cv_meta)  # the control: no fit committed, none recorded
     with pytest.raises(job.JobMismatch, match="poly length bias fit"):
         job.load_params(d, {**cv_meta, "edge_fit": {"poly_bias_nm": 40.0, "sha256": "f" * 64}})

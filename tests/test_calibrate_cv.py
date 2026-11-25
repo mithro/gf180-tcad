@@ -304,9 +304,13 @@ def _write_2d(root, device, geometry, vg, cgg, param_sha256):
     io.write_json(job / moscap2d.META_JSON, {"device": device, "param_sha256": param_sha256})
 
 
-def test_validate_two_d(fit, tmp_path):
+def test_validate_two_d(fit, tmp_path, monkeypatch):
     """cv._two_d compares the committed calibrated 2D results it finds (drawn-area Cox window, no
-    parasitic term), refuses one computed with other values, and lists the rest as not run."""
+    parasitic term), refuses one computed with other values, and lists the rest as not run.
+    The synthetic results carry no poly length bias fit, so the committed fit is hidden."""
+    from gf180tcad.tcad import edgefit
+
+    monkeypatch.setattr(edgefit, "TREE_ROOT", tmp_path / "no-fit")
     res, _, _ = fit
     res.write(tmp_path / "cal")
     frozen = cv.load_frozen(NFET, tmp_path / "cal")
@@ -815,6 +819,10 @@ def test_pfet_w1p6_l0p70_two_d():
 def test_simulate_is_injectable_and_defaults_to_devsim(fit, tmp_path, monkeypatch):
     """Charon plan Task B0: both simulators are parameters, so another backend calibrates and
     validates without editing calibrate.cv; omitted, they are the DEVSIM ones."""
+    from gf180tcad.tcad import edgefit as _edgefit
+
+    # the synthetic 2D results carry no poly length bias fit: hide the committed one
+    monkeypatch.setattr(_edgefit, "TREE_ROOT", tmp_path / "no-fit")
     import inspect
 
     for fn in (cv.calibrate_cv, cv.validate_cv):
