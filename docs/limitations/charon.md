@@ -98,8 +98,10 @@ n·p equals n_i² within 2e-6 at every node and state, so each state is an equil
 ## Where the default settings stop
 
 With the project's lifetimes, the nfet sweep fails at the onset of inversion, a device bias of
-0.35 V. {numref}`fig-charon-hard-range` shows the last bias each solver setting reached,
-sweeping up from 0 V. Looser tolerances, another concentration scaling, 5 mV steps and the FEM
+0.35 V.
+
+{numref}`fig-charon-hard-range` shows the last bias each solver setting reached, sweeping up from
+0 V. Looser tolerances, another concentration scaling, 5 mV steps and the FEM
 discretisation all stop between 0.05 V and 0.45 V. Only lifetimes of 1e-14 s or shorter reach
 5 V.
 
