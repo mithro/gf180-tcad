@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """The prediction cases: every structure of the test die under each process assumption.
 
-    uv run python experiments/hv-junction/predict.py OUT.json [SET]
+    uv run python experiments/hv-junction/predict.py OUT.json [SET] [RECORD.json]
 
 structures.json is the structure list exported by mithro/evampire
 (silicon/hvtest/export.py). Each structure is simulated as a straight edge and as a round
@@ -9,7 +9,9 @@ corner of its corner radius, under the process assumptions of PROCESSES. Case na
 <structure>|<process>|<edge or corner>, with @g0 or @gw for a gated plate held at 0 V or
 tied to the well.
 
-SET "main" is every structure under the four main assumptions; "family" is a few key
+SET "rest RECORD.json" is every case of "main" that RECORD.json does not hold (the first
+batch of "main" left the multi-ring sections and some oxide-charge sections unfinished; they
+were rerun with a solver that gives up a diverging step early). SET "main" is every structure under the four main assumptions; "family" is a few key
 structures under the lighter and heavier substrate.
 """
 
@@ -100,6 +102,13 @@ if __name__ == "__main__":
         got = cases(sorted(STRUCTS), PROCESSES)
         nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
         got.update(cases(sorted(nat), NAT_ONLY))
+    elif which == "rest":
+        # the cases of "main" that the record named after the set does not hold
+        got = cases(sorted(STRUCTS), PROCESSES)
+        nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
+        got.update(cases(sorted(nat), NAT_ONLY))
+        have = json.loads(pathlib.Path(sys.argv[3]).read_text())["cases"]
+        got = {n: p for n, p in got.items() if n not in have}
     else:
         got = cases([k for k in KEY if k in STRUCTS], FAMILY)
     json.dump(got, open(sys.argv[1], "w"), indent=1)

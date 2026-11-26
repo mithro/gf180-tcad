@@ -165,10 +165,19 @@ def setup_physics(p, names):
     dd.undamp_oxide(dev, names["ox"])
     dd.drift_diffusion(dev, names["si"], names["si_contacts"], with_qf=bool(qf))
     dd.solve(iters=60)
-    # the oxide charge is switched on in steps: at full strength the equilibrium solve of a
-    # section with floating rings does not converge from the charge-free start
-    for k in range(1, 9):
-        if not qf:
-            break
-        ds.set_parameter(device=dev, region="si", name="Qf", value=qf * k / 8)
-        dd.solve(iters=60)
+    # the oxide charge is switched on in steps, halved when a step does not converge: at
+    # full strength the equilibrium solve does not converge from the charge-free start
+    done, step = 0.0, qf / 8
+    while qf and done < qf * (1 - 1e-9):
+        nxt = min(qf, done + step)
+        ds.set_parameter(device=dev, region="si", name="Qf", value=nxt)
+        try:
+            dd.solve(iters=40)
+        except ds.error:
+            ds.set_parameter(device=dev, region="si", name="Qf", value=done)
+            step /= 2
+            if step < qf / 4096:
+                raise
+            continue
+        done = nxt
+        step = min(step * 1.5, qf / 8)

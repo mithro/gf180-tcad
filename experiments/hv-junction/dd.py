@@ -109,7 +109,11 @@ def solve(rel=1e-6, abs_=1e10, iters=30):
     """rel is DEVSIM's relative update limit for every equation. In double precision the
     continuity equations of a depleted region stall near 3e-7 while the potential is
     converged to 1e-13, so a limit of 1e-8 stopped sweeps that had not broken down."""
-    ds.solve(type="dc", absolute_error=abs_, relative_error=rel, maximum_iterations=iters)
+    # maximum_divergence: give up after the error has grown this many times. A diverging
+    # Newton iteration is very slow to factorise, and the default of 20 kept a step that
+    # was going to be halved anyway busy for an hour.
+    ds.solve(type="dc", absolute_error=abs_, relative_error=rel, maximum_iterations=iters,
+             maximum_divergence=4)
 
 
 def ramp(device, contacts, target, step, on_point, min_step=None):
@@ -122,7 +126,7 @@ def ramp(device, contacts, target, step, on_point, min_step=None):
     names = [sp.GetContactBiasName(c) for c in contacts]
     v = ds.get_parameter(device=device, name=names[0])
     min_step = min_step if min_step is not None else abs(step) / 64
-    dv = abs(step)
+    dv = abs(step) / 8  # a small first step, growing to `step`: floating rings need it
     sign = 1.0 if target >= v else -1.0
 
     def put(val):
