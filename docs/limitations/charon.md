@@ -186,12 +186,13 @@ from above.
 At 1e-10 the pfet start sweep stops at {{ lim_charon_stall_v }} V on its way down from 5 V. Its
 last Newton step leaves the residual at {{ lim_charon_stall_fnorm }}. The WRMS norm stays at
 {{ lim_charon_stall_wrms }}, above its limit of 1, after {{ lim_charon_stall_iters }}
-iterations, the most allowed. The experiment decks leave NOX's rescue on.
+iterations, the most allowed.
 
 The bottom panel of {numref}`fig-charon-tolerance` shows what changes the outcome. NOX's rescue off,
 steps of 5 mV and a lifetime of 1e-16 s stop at the same bias. Loosening either tolerance alone, the relative
-to 1e-9 or the absolute to 1e-11, passes. A ten times tighter relative tolerance, 1e-11, stops
-earlier, at {{ lim_charon_stall_ramp_v }} V on the ramp from equilibrium.
+to 1e-9 or the absolute to 1e-11, passes. Tightening both tolerances ten times, to 1e-11
+relative and 1e-13 absolute, stops earlier. It stops at {{ lim_charon_stall_ramp_v }} V on the
+ramp from equilibrium.
 
 So a smaller step does not pass the stall, and a looser tolerance does. At 1e-11 the nfet
 calibrated ramp, with the project's lifetimes, stops at {{ lim_charon_tight_ramp_v }} V. What
@@ -280,24 +281,28 @@ residual turns NaN. Charon then aborts with MPI error 14.
 ```{figure} /_generated/limitations/charon-checks-light.svg
 :name: fig-charon-checks
 :figclass: only-light
-:alt: Four panels: each linear solver's sweep as a bar, the nonlinear-Poisson C at each bias with crosses where it diverged, the charge-check mismatches per state, and the C change at a looser tolerance with dotted lines where tighter studies stopped.
+:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state; the C change a hundred times looser on a log axis, triangles at its floor where it is exactly zero, and one dashed line where the ten times tighter nfet study stopped.
 
-Top to bottom: B3, each linear solver's sweep from its start to where it stopped; B2, the
-nonlinear-Poisson C, crosses where Newton diverged; B6, the oxide-flux spread and the poly and body charge
-mismatches per state, as the legend names them, nfet solid and pfet dashed; B7, the C
-change a hundred times looser, and dotted where the ten times tighter studies stopped
+Top to bottom: B3, each linear solver's sweep from its start to where it stopped. B2, the
+nonlinear-Poisson C (circles) and DEVSIM's C at the same bias (squares); a dotted line, "Newton
+diverged, no C", at each bias where the solve diverged. B6, the oxide-flux spread and the poly
+and body charge mismatches per state, nfet solid and pfet dashed. B7, the nfet C change a
+hundred times looser with the project's lifetimes, triangles where it is exactly zero, and a
+dashed line where the ten times tighter study of the same case stopped
 ({repo}`results/charon-experiments/probes.json`, {repo}`results/charon-experiments/hard-range.json`,
 {repo}`results/charon-experiments/cv.json`).
 ```
 
 ```{figure} /_generated/limitations/charon-checks-dark.svg
 :figclass: only-dark
-:alt: Four panels: each linear solver's sweep as a bar, the nonlinear-Poisson C at each bias with crosses where it diverged, the charge-check mismatches per state, and the C change at a looser tolerance with dotted lines where tighter studies stopped.
+:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state; the C change a hundred times looser on a log axis, triangles at its floor where it is exactly zero, and one dashed line where the ten times tighter nfet study stopped.
 
-Top to bottom: B3, each linear solver's sweep from its start to where it stopped; B2, the
-nonlinear-Poisson C, crosses where Newton diverged; B6, the oxide-flux spread and the poly and body charge
-mismatches per state, as the legend names them, nfet solid and pfet dashed; B7, the C
-change a hundred times looser, and dotted where the ten times tighter studies stopped
+Top to bottom: B3, each linear solver's sweep from its start to where it stopped. B2, the
+nonlinear-Poisson C (circles) and DEVSIM's C at the same bias (squares); a dotted line, "Newton
+diverged, no C", at each bias where the solve diverged. B6, the oxide-flux spread and the poly
+and body charge mismatches per state, nfet solid and pfet dashed. B7, the nfet C change a
+hundred times looser with the project's lifetimes, triangles where it is exactly zero, and a
+dashed line where the ten times tighter study of the same case stopped
 ({repo}`results/charon-experiments/probes.json`, {repo}`results/charon-experiments/hard-range.json`,
 {repo}`results/charon-experiments/cv.json`).
 ```
@@ -322,11 +327,12 @@ change a hundred times looser, and dotted where the ten times tighter studies st
 
 ## Deck rules the backend follows
 
-The experiment scripts and the backend write four things into every deck. The side sets and
+The experiment scripts and the backend follow four rules in their decks; the cm-to-µm one
+applies to the 2D mesh only. The side sets and
 blocks they name are those of {numref}`fig-charon-strip`:
 
-- The body's side set is named `body_contact`, never `body`, the name of its element block
-  ({repo}`cx.py <experiments/charon-backend/cx.py>`).
+- The body's side set is named `body_contact`, never `body`, the name of its element block.
+  Each script renames it, as {repo}`b2.py <experiments/charon-backend/b2.py>` does.
 - Each uniform doping block is named `Function1`, `Function2` and so on
   ({repo}`decks.py <experiments/charon-backend/decks.py>`). With that naming the nodal doping
   matches the description (B5, {numref}`fig-charon-doping`).
