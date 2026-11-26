@@ -15,6 +15,7 @@ gplugins sources come from the tags of [our fork](https://github.com/mithro/gplu
 | [`checks_v080.py`](checks_v080.py) | The check driver for v0.8.0. It runs in the v0.8.0 venv inside the sandbox. |
 | [`checks_v142.py`](checks_v142.py) | The check driver for v1.4.2. It runs only the `import` check. |
 | [`checks_latest.py`](checks_latest.py) | The check driver for the latest stack: the fork's PN-slab solve at the submodule pin, in the stable TCAD image. |
+| [`abrupt_junction.py`](abrupt_junction.py) | The ideal abrupt-junction depletion width of the v0.8.0 rib (host-side arithmetic, no simulator). It writes [`abrupt-junction.json`](../../results/plugin-history/abrupt-junction.json). |
 | [`harness.py`](harness.py) | Helpers shared by the drivers (standard library only): check recording, versions, currents, contact potentials, depletion width, the MSH 2.2 physical names and the junction probe. |
 | [`v080.in`](v080.in) | The input of `v080.lock`. |
 | [`v080.lock`](v080.lock) | The resolved, hashed v0.8.0 package set. It keeps the record re-runnable after PyPI yanks. |
@@ -29,6 +30,7 @@ uv run --locked python -m gf180tcad.history --version v0.8.0 --mesh-scale 0.5 --
 uv run --locked python -m gf180tcad.history --version v1.4.2 --out results/plugin-history
 uv run --locked python -m gf180tcad.history --version latest --out results/plugin-history
 uv run --locked python -m gf180tcad.history --version latest --mesh-scale 0.5 --out results/plugin-history
+uv run --locked python experiments/plugin-history/abrupt_junction.py --out results/plugin-history
 make manifest
 ```
 
