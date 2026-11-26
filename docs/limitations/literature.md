@@ -278,8 +278,8 @@ the question:
 - **devphys.** Its [README](https://github.com/joaln27/devphys/blob/bcae3beebcaaeb15a1937af996f43e0bc15bcdb4/README.md)
   compares DEVSIM simulations of SKY130 `nfet_01v8` with measured silicon at 300 K and 77 K. It
   sets its 77 K error beside the error the dataset's authors give for their own BSIM4 fits. It
-  compares its own extracted `toxe` with the card's value. It makes no comparison of DEVSIM drain
-  current or capacitance with the {term}`PDK` SPICE models.
+  compares its extracted `toxe` with the card's. It compares no DEVSIM current or capacitance
+  with the {term}`PDK` SPICE models.
 - **The 2021 request.** [DEVSIM issue 74](https://github.com/devsim/devsim/issues/74) asked in
   August 2021 for an open TCAD flow matched to the SKY130 PDK. It was closed in April 2022 with
   no comments.
