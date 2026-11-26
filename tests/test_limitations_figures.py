@@ -923,11 +923,18 @@ def check_charon_structures(fig):
 
 def _check_log_with_zeros(d, gid, x, rel, floor, ax):
     """A relative change drawn on a log axis: the line breaks at exact zeros, which are markers
-    at ``floor`` (gid + " zeros")."""
+    at ``floor`` (gid + " zeros"), and every nonzero point is visible: the line marks each of
+    its points, so a point between two zeros is drawn though no segment reaches it."""
     x, rel = np.asarray(x, float), np.asarray(rel, float)
     d.line(gid, x, np.where(rel == 0, np.nan, rel), ax)
+    ln = d(gid, ax)
+    assert ln.get_marker() not in (None, "", "None", " ") and ln.get_markersize() > 0, gid
+    assert ln.get_markevery() is None, gid  # every point
     zero = rel == 0
-    d.points(f"{gid} zeros", x[zero], np.full(int(zero.sum()), floor), ax)
+    if zero.any():
+        d.points(f"{gid} zeros", x[zero], np.full(int(zero.sum()), floor), ax)
+    else:
+        assert not [a for a in ax.collections if a.get_gid() == f"{gid} zeros"], gid
 
 
 def check_charon_tolerance(fig):
@@ -956,9 +963,19 @@ def check_charon_tolerance(fig):
     names = [*lf.CHARON_STALL_STUDIES, "default"]
     stopped = {n: studies[n]["failed"] is not None for n in lf.CHARON_STALL_STUDIES}
     stopped["default"] = False
-    for gid, pick in (("reached the grid end", False), ("stopped", True)):
-        picked = [n for n in names if stopped[n] is pick]
-        xs = [float(studies[n]["failed"]["failed_at"][0]) if pick else default["vg"][-1]
+    on_ramp = {n: bool(studies[n]["failed"]) and studies[n]["failed"]["deck"].startswith("ramp")
+               for n in lf.CHARON_STALL_STUDIES}  # fmt: skip
+    on_ramp["default"] = False
+    assert any(on_ramp.values())  # the 1e-11 study failed before its sweep began
+    groups = {
+        "reached the grid end": [n for n in names if not stopped[n]],
+        "failed in the sweep": [n for n in names if stopped[n] and not on_ramp[n]],
+        "failed on the ramp up from equilibrium,\nsweep never started": [
+            n for n in names if on_ramp[n]
+        ],
+    }
+    for gid, picked in groups.items():
+        xs = [float(studies[n]["failed"]["failed_at"][0]) if stopped[n] else default["vg"][-1]
               for n in picked]  # fmt: skip
         d.points(gid, xs, [names.index(n) for n in picked], bottom)
     d.done()
@@ -999,12 +1016,18 @@ def check_charon_checks(fig):
     for i, p in enumerate(bad):  # a diverged point carries no value: a line at its bias only
         assert p["nan_residual"], p["vg"]
         d.vline(f"nlp diverged {i}", p["vg"], b2)
+    keys = ("oxide_flux_spread", "poly_vs_gate", "body_vs_gate")
+    allv = np.asarray([v for name in lf.CHARON_REF.values() for key in keys for s in "AB"
+                       for v in runs[name][f"{key}_per_state_{s}"]], float)  # fmt: skip
+    assert np.sum(allv == 0) > 0  # an exact zero in the records: drawn at the floor
+    b6_floor = np.min(allv[allv > 0]) / lf.STYLE["zero_floor_factor"]
     for device, name in lf.CHARON_REF.items():
         r = runs[name]
         u = DEVICES[device].polarity * np.asarray(r["vg"])
-        for key in ("oxide_flux_spread", "poly_vs_gate", "body_vs_gate"):
+        for key in keys:
             for s in "AB":
-                d.line(f"charge check {device} {key} {s}", u, r[f"{key}_per_state_{s}"], b6)
+                _check_log_with_zeros(d, f"charge check {device} {key} {s}", u,
+                                      r[f"{key}_per_state_{s}"], b6_floor, b6)  # fmt: skip
     loose, ref = (runs[n] for n in lf.CHARON_LOOSE_PAIR)
     vg = [v for v in loose["vg"] if v in ref["vg"]]
     rel = [abs(loose["c_ff_um2"][loose["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)

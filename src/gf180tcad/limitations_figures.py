@@ -55,6 +55,8 @@ STYLE = {
     "tolerance_rows": (1.0, 1.4),
     # exact zeros of a relative change are drawn this factor below its smallest nonzero value
     "zero_floor_factor": 3.0,
+    # the small marker on every point of a relative-change line (pt)
+    "point_ms": 2.5,
     # Ring round a marked point, this size (pt).
     "ring_pt": 16.0,
     # Label lift above a point or line, as a fraction of the axis span.
@@ -1679,11 +1681,14 @@ def charon_tolerance(roots: Roots = DEFAULT_ROOTS) -> dict:
         stall[name] = {
             "label": _study_label(_study_env(s["command"]), reference),
             "stopped": failed is not None,
+            # a failure on the ramp from 0 V to the sweep's first bias: the sweep never started
+            "on_ramp": failed is not None and failed["deck"].startswith("ramp"),
             "bias_v": float(failed["failed_at"][0]) if failed else default["vg"][-1],
         }
     stall["default"] = {
         "label": "backend default: " + _study_label(default["settings"], reference),
         "stopped": False,
+        "on_ramp": False,
         "bias_v": default["vg"][-1],
     }
     return {"pairs": pairs, "stall": stall}
@@ -1704,12 +1709,15 @@ def _zero_handle(colour: str):
 
 def _log_with_zeros(ax, x, rel, floor: float, colour: str, gid: str, **line) -> None:
     """``rel`` against ``x`` on a log axis: the line breaks at exact zeros, which are drawn as
-    markers at ``floor`` (gid ``gid + " zeros"``)."""
+    markers at ``floor`` (gid ``gid + " zeros"``). Every nonzero point carries a small marker,
+    so a point between two zeros stays visible."""
     x, rel = np.asarray(x, float), np.asarray(rel, float)
-    ax.plot(x, np.where(rel == 0, np.nan, rel), color=colour, gid=gid, **line)
+    ax.plot(x, np.where(rel == 0, np.nan, rel), color=colour, gid=gid, marker="o",
+            ms=STYLE["point_ms"], **line)  # fmt: skip
     zero = rel == 0
-    ax.scatter(x[zero], np.full(int(zero.sum()), floor), marker="v", s=STYLE["marker_pt"] ** 2,
-               color=colour, gid=f"{gid} zeros")  # fmt: skip
+    if zero.any():
+        ax.scatter(x[zero], np.full(int(zero.sum()), floor), marker="v",
+                   s=STYLE["marker_pt"] ** 2, color=colour, gid=f"{gid} zeros")  # fmt: skip
 
 
 def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
@@ -1739,15 +1747,21 @@ def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         top.set_ylabel("relative change of C")
         names = list(k["stall"])
         y = np.arange(len(names))
-        for gid, pick, face in (("reached the grid end", False, pal["highlight"]),
-                                ("stopped", True, "none")):  # fmt: skip
-            idx = [i for i, n in enumerate(names) if k["stall"][n]["stopped"] is pick]
+        groups = (
+            ("reached the grid end", lambda d: not d["stopped"], "o", pal["highlight"]),
+            ("failed in the sweep", lambda d: d["stopped"] and not d["on_ramp"], "o", "none"),
+            ("failed on the ramp up from equilibrium,\nsweep never started", lambda d: d["on_ramp"], "x",
+             pal["highlight"]),
+        )  # fmt: skip
+        for gid, pick, marker, face in groups:
+            idx = [i for i, n in enumerate(names) if pick(k["stall"][n])]
             bottom.scatter([k["stall"][names[i]]["bias_v"] for i in idx], y[idx],
-                           s=STYLE["marker_pt"] ** 2, facecolors=face,
-                           edgecolors=pal["highlight"], label=gid, gid=gid)  # fmt: skip
+                           marker=marker, s=STYLE["marker_pt"] ** 2, facecolors=face,
+                           edgecolors=pal["highlight"] if marker == "o" else None,
+                           label=gid, gid=gid)  # fmt: skip
         bottom.set_yticks(y, [k["stall"][n]["label"] for n in names])
         bottom.invert_yaxis()
-        bottom.set_xlabel("pfet start: gate bias of the device\nwhere the sweep stopped (V)")
+        bottom.set_xlabel("pfet start: gate bias of the device\nwhere the solve failed (V)")
         bottom.grid(True, axis="x")
         handles = [*top.get_legend_handles_labels()[0], _zero_handle(pal["text"]),
                    *bottom.get_legend_handles_labels()[0]]  # fmt: skip
@@ -1852,9 +1866,10 @@ CHARON_CHECK_PANELS = ("B3 linear solvers", "B2 nonlinear Poisson", "B6 charge c
 
 def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """B3: each linear solver's sweep, as the range it covered. B2: the nonlinear-Poisson C at
-    each bias, crosses where the solve diverged. B6: the per-state charge checks of both
-    reference runs. B7: the C change a hundred times looser, and where the ten times tighter
-    studies stopped."""
+    the biases where it converged, DEVSIM's C there, and a dotted line at each bias where Newton
+    diverged. B6: the per-state charge checks of both reference runs, exact zeros at the axis
+    floor. B7: the nfet C change a hundred times looser, exact zeros at the floor, and a dashed
+    line where the ten times tighter study of the same case failed on its ramp."""
     pal = ef.PALETTES[palette]
     k = charon_checks(roots)
     lw = ef.STYLE["line_width"]
@@ -1888,30 +1903,33 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                    "poly_vs_gate": ("electron", "poly charge mismatch"),
                    "body_vs_gate": ("hole", "body charge mismatch")}  # fmt: skip
         first = next(iter(k["b6"]))
+        b6_floor = _zero_floor([v for d in k["b6"].values() for key in b6_keys
+                                for s in "AB" for v in d[f"{key}_{s}"]])  # fmt: skip
         for device, d in k["b6"].items():
             for key, (colour, label) in b6_keys.items():
                 for s in "AB":
-                    b6.plot(d["u"], d[f"{key}_{s}"], color=pal[colour], lw=lw,
-                            ls=STYLE["device_ls"][device],
-                            label=label if (device, s) == (first, "A") else None,
-                            gid=f"charge check {device} {key} {s}")  # fmt: skip
+                    _log_with_zeros(b6, d["u"], d[f"{key}_{s}"], b6_floor, pal[colour],
+                                    f"charge check {device} {key} {s}", lw=lw,
+                                    ls=STYLE["device_ls"][device],
+                                    label=label if (device, s) == (first, "A") else None)  # fmt: skip
         b6.set_yscale("log")
         b6.set_xlabel(f"{p_b6}: u = polarity × vg (V)")
         b6.set_ylabel("relative mismatch")
+        b6.set_ylim(bottom=b6_floor / STYLE["zero_floor_factor"])
         floor = _zero_floor(k["b7"]["rel"])
         _log_with_zeros(b7, k["b7"]["device_v"], k["b7"]["rel"], floor, pal["highlight"],
                         "tolerance looser", lw=lw,
                         label="a hundred times looser\n(nfet, project lifetimes)")  # fmt: skip
         for n, v in k["b7"]["tight"].items():
             b7.axvline(v, color=pal["hole"], lw=lw, ls="--",
-                       label="ten times tighter:\nwhere it stopped",
+                       label="ten times tighter:\nfailed on its ramp",
                        gid=f"tighter {n}")  # fmt: skip
         b7.set_yscale("log")
         b7.set_xlabel(f"{p_b7}: gate bias of the device, vg − dv_fb (V)")
         b7.set_ylabel("relative change of C")
         b7.set_ylim(bottom=floor / STYLE["zero_floor_factor"])
         # each panel's own legend, beside it: one figure legend would not fit
-        extra = {b7: [_zero_handle(pal["highlight"])]}
+        extra = {b6: [_zero_handle(pal["text"])], b7: [_zero_handle(pal["highlight"])]}
         for ax in (b2, b6, b7):
             handles = ax.get_legend_handles_labels()[0] + extra.get(ax, [])
             ax.legend(handles=handles, loc="upper left", bbox_to_anchor=STYLE["legend_beside"],
