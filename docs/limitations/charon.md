@@ -203,8 +203,11 @@ relative and 1e-13 absolute, fails before the sweep. The ramp up from equilibriu
 at {{ lim_charon_stall_ramp_v }} V, so the sweep never starts.
 
 So a smaller step does not pass the stall, and a looser tolerance does. At 1e-11 the nfet
-calibrated ramp, with the project's lifetimes, last converged at {{ lim_charon_tight_ramp_v }} V. What
-limits Newton at these biases is open
+calibrated ramp, with the project's lifetimes, runs down from 0 V towards
+{{ lim_charon_tight_ramp_to }} V. It last converged at {{ lim_charon_tight_ramp_v }} V. Both are
+device biases, vg − dv_fb, with dv_fb = {{ lim_charon_nfet_dv_fb }} V.
+
+What limits Newton at these biases is open
 ([issue #223](https://github.com/mithro/gf180-tcad/issues/223)). The backend's 1e-9 passes on
 all four cases and gives the same C as 1e-10 within {{ lim_charon_b7_max }}. That is far below Charon's difference from
 DEVSIM, {{ lim_charon_pfet_start_devsim }} for the pfet start case.
