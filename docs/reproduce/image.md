@@ -422,7 +422,7 @@ a different order. Drawn from {repo}`data/images/meshwell-square.json`, which
   - **Fix.** The test now checks the mesh-independent invariant. Between bias steps only the slab
     moves. So the signed core − slab jump at the rib's right bottom vertex changes by exactly the
     step of the contact potential difference (−0.1 V). At the left one it changes by 0.
-  - **Tolerance.** Both hold to
+  - **Both jumps.** Both hold to
     1e-3 V at mesh ×1 and ×0.5; the fork test records them as measured to 1e-15 V
     ([`RIB_JUMP_TOL_V`](https://github.com/mithro/gplugins/blob/1c071d0565ef4917b48ff907b9426e879ccca7fc/gplugins/devsim/tests/test_mesh.py#L48)). This is a
     stronger check: it fails for a coupled rib.
