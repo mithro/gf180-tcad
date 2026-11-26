@@ -1653,10 +1653,12 @@ def junction_profile(palette: str) -> bytes:
 def resistivity_curve() -> dict[str, np.ndarray | float]:
     """The resistivity of n-type silicon against its donor density, an idealised example: the
     donor densities ``n_cm3`` from the mobility fit's lower limit (``n_min_fit``) to the nfet's
-    source and drain peak (``sd_peak_nfet``), their mobility (:func:`~gf180tcad.explain.idealised.doping_mobility`)
-    and resistivity ``rho_ohm_cm`` (:func:`~gf180tcad.explain.idealised.resistivity`); the peak's own value
-    (``rho_sd``); and the smallest resistivity of pure silicon (``rho_intrinsic``,
-    :func:`~gf180tcad.explain.idealised.intrinsic_resistivity`)."""
+    source and drain peak (``sd_peak_nfet``), their mobility
+    (:func:`~gf180tcad.explain.idealised.doping_mobility`) and resistivity ``rho_ohm_cm``
+    (:func:`~gf180tcad.explain.idealised.resistivity`); the peak's own value (``rho_sd``); and
+    the resistivity of pure silicon with the simulation's n_i and constant mobilities
+    (``rho_intrinsic``, :func:`~gf180tcad.explain.idealised.intrinsic_resistivity`) at its
+    temperature ``t_k``."""
     v = numbers.value
     n = np.geomspace(v("n_min_fit"), v("sd_peak_nfet"), STYLE["regime_points"])
     mu = idealised.doping_mobility(v("mu0_n_fit"), v("mu1_n_fit"), v("nref_n_fit"),
@@ -1666,32 +1668,42 @@ def resistivity_curve() -> dict[str, np.ndarray | float]:
         "rho_ohm_cm": idealised.resistivity(v("q_tcad"), n, mu),
         "n_sd": v("sd_peak_nfet"),
         "rho_sd": v("rho_sd_nfet"),
-        "rho_intrinsic": v("rho_intrinsic_min"),
+        "rho_intrinsic": v("rho_intrinsic_tcad"),
+        "t_k": v("t_tcad"),
     }
 
 
 def silicon_resistivity_figure(palette: str):
-    """The matplotlib figure of :func:`silicon_resistivity`, for the tests to read its lines."""
+    """The matplotlib figure of :func:`silicon_resistivity`, for the tests to read its lines and
+    bars: on top the doped curve on its own axis range, below the two resistivities side by
+    side on a log axis."""
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     k = resistivity_curve()
     n = k["n_cm3"]
     with matplotlib.rc_context(palette_rc(palette)):
-        fig = Figure(figsize=STYLE["size_in"], layout="constrained")
+        fig = Figure(figsize=STYLE["profile_size_in"], layout="constrained")
         FigureCanvasAgg(fig)
-        ax = fig.subplots()
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        ax.plot(n, k["rho_ohm_cm"], color=pal["electron"], lw=lw, gid="doped",
-                label="n-type silicon, from the mobility fit")  # fmt: skip
-        ax.plot([k["n_sd"]], [k["rho_sd"]], color=pal["electron"], marker="o", ls="none",
-                gid="sd-peak", label="nfet source and drain peak")  # fmt: skip
-        ax.plot([n[0], n[-1]], [k["rho_intrinsic"]] * 2, color=pal["intrinsic"], lw=lw, ls="--",
-                gid="intrinsic", label="pure silicon, smallest possible")  # fmt: skip
-        ax.grid(True)
-        ax.set_xlabel("donor density (cm⁻³)")
-        ax.set_ylabel("resistivity (Ω·cm)")
-        fig.legend(loc="outside lower center", ncols=1, frameon=False)
+        top, bottom = fig.subplots(2, 1)
+        top.set_xscale("log")
+        top.set_yscale("log")
+        top.plot(n, k["rho_ohm_cm"], color=pal["electron"], lw=lw, gid="doped",
+                 label="n-type silicon, from the mobility fit")  # fmt: skip
+        top.plot([k["n_sd"]], [k["rho_sd"]], color=pal["electron"], marker="o", ls="none",
+                 gid="sd-peak", label="nfet source and drain peak")  # fmt: skip
+        top.grid(True)
+        top.set_xlabel("donor density (cm⁻³)")
+        top.set_ylabel("resistivity (Ω·cm)")
+        top.legend(loc="lower left", frameon=False)
+        labels = ["nfet source and drain peak", f"pure silicon, $n_i$ at {k['t_k']:g} K"]
+        bars = bottom.barh(labels, [k["rho_sd"], k["rho_intrinsic"]],
+                           color=[pal["electron"], pal["intrinsic"]])  # fmt: skip
+        for bar, gid in zip(bars, ("bar-sd-peak", "bar-intrinsic"), strict=True):
+            bar.set_gid(gid)
+        bottom.set_xscale("log")
+        bottom.invert_yaxis()
+        bottom.grid(True, axis="x")
+        bottom.set_xlabel("resistivity (Ω·cm)")
         return fig
 
 

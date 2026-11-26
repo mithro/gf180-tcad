@@ -6,18 +6,12 @@
 
 [silicon]
 atom_density_cm3 = 5e22
-mobility_n_max_cm2_per_vs = 1400.0
-mobility_p_max_cm2_per_vs = 450.0
 
 [silicon.units]
 atom_density_cm3 = "cm^-3"
-mobility_n_max_cm2_per_vs = "cm^2/(V s)"
-mobility_p_max_cm2_per_vs = "cm^2/(V s)"
 
 [silicon.sources]
 atom_density_cm3 = "Ioffe NSM archive (lit-ioffe-basic), Si, Basic Parameters at 300 K: 'Number of atoms in 1 cm3: 5·10^22'"
-mobility_n_max_cm2_per_vs = "Wikipedia, Electron mobility (lit-wikipedia-mobility), table 'List of highest measured mobilities': crystalline silicon, electron 1,400 cm2/(V s), citing the NSM archive"
-mobility_p_max_cm2_per_vs = "Wikipedia, Electron mobility (lit-wikipedia-mobility), table 'List of highest measured mobilities': crystalline silicon, hole 450 cm2/(V s), citing the NSM archive"
 
 # The majority-carrier mobility of heavily doped silicon (10^18 cm^-3 and up) at room
 # temperature, mu = mu_0 + mu_1 / (1 + (N / N_ref)^alpha), with N the donor density, for

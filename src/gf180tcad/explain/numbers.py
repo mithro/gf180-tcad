@@ -157,8 +157,8 @@ _ENTRIES = (
         "atoms_per_dopant_body", "idealised", "", 2,
         formula="atoms_per_dopant", inputs=("atom_density_si", "n_ch_nfet_cal"),
     ),
-    Number("mu_n_max_si", "textbook", _MOB, 4, TEXTBOOK, {"toml": ["silicon", "mobility_n_max_cm2_per_vs"]}),
-    Number("mu_p_max_si", "textbook", _MOB, 3, TEXTBOOK, {"toml": ["silicon", "mobility_p_max_cm2_per_vs"]}),
+    Number("mu_n_tcad", "committed", _MOB, 4, _meta("nfet_05v0"), {"json": ["constants", "mu_n_cm2_per_vs"]}),
+    Number("mu_p_tcad", "committed", _MOB, 4, _meta("nfet_05v0"), {"json": ["constants", "mu_p_cm2_per_vs"]}),
     Number("mu0_n_fit", "textbook", _MOB, 2, TEXTBOOK, {"toml": ["mobility_fit", "electron_mu0_cm2_per_vs"]}),
     Number("mu1_n_fit", "textbook", _MOB, 4, TEXTBOOK, {"toml": ["mobility_fit", "electron_mu1_cm2_per_vs"]}),
     Number("nref_n_fit", "textbook", _CM3, 2, TEXTBOOK, {"toml": ["mobility_fit", "electron_nref_cm3"]}),
@@ -174,8 +174,8 @@ _ENTRIES = (
         formula="resistivity", inputs=("q_tcad", "sd_peak_nfet", "mu_n_sd_nfet"),
     ),
     Number(
-        "rho_intrinsic_min", "idealised", _RHO, 2,
-        formula="intrinsic_resistivity", inputs=("q_tcad", "n_i_tcad", "mu_n_max_si", "mu_p_max_si"),
+        "rho_intrinsic_tcad", "idealised", _RHO, 2,
+        formula="intrinsic_resistivity", inputs=("q_tcad", "n_i_tcad", "mu_n_tcad", "mu_p_tcad"),
     ),
     # The transistor's parts (transistor-parts.md): the calibrated nfet 2D cell w10p0_l0p70.
     Number("l_cell", "committed", "µm", 1, _CELL, {"json": ["geometry", "l_um"]}),

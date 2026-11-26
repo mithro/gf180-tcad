@@ -285,9 +285,8 @@ def resistivity(q_c, n_cm3, mobility):
     f"{_MOBILITY}, relation to conductivity, σ = q·(n·μ_n + p·μ_p)",
 )
 def intrinsic_resistivity(q_c, n_i_cm3, mu_n, mu_p):
-    """The resistivity of pure silicon, where n = p = n_i, ρ_i = 1 / (q·n_i·(μ_n + μ_p)) (Ω·cm).
-    With the largest mobilities of pure silicon it is the smallest resistivity pure silicon can
-    have.
+    """The resistivity of pure silicon, where n = p = n_i, ρ_i = 1 / (q·n_i·(μ_n + μ_p)) (Ω·cm),
+    with the electron and hole mobilities μ_n and μ_p.
 
     Reference: Wikipedia, Electron mobility (lit-wikipedia-mobility), relation to conductivity,
     σ = q·(n·μ_n + p·μ_p).

@@ -2892,17 +2892,18 @@ def test_conduction_formulas_against_hand_values():
 
 
 def test_silicon_resistivity_figure_draws_the_numbers():
-    """The resistivity figure: the solid line is the fit's resistivity over its stated range up
-    to the nfet's source and drain peak, the dot is the page's rho_sd_nfet at that peak, and the
-    dashed line is the page's rho_intrinsic_min, all from the registry."""
+    """The resistivity figure: on top the fit's resistivity over its stated range up to the
+    nfet's source and drain peak, and the dot of the page's rho_sd_nfet there; below, the bars
+    of rho_sd_nfet and of pure silicon's rho_intrinsic_tcad, labelled with the simulations'
+    temperature; all from the registry."""
     from gf180tcad.explain import figures, idealised
 
     numbers = _numbers()
     v = numbers.value
     fig = figures.silicon_resistivity_figure("light")
-    (ax,) = fig.axes
-    lines = {ln.get_gid(): ln for ln in ax.get_lines()}
-    assert set(lines) == {"doped", "sd-peak", "intrinsic"}
+    top, bottom = fig.axes
+    lines = {ln.get_gid(): ln for ln in top.get_lines()}
+    assert set(lines) == {"doped", "sd-peak"}
     n = lines["doped"].get_xdata()
     assert n[0] == pytest.approx(v("n_min_fit")) and n[-1] == pytest.approx(v("sd_peak_nfet"))
     mu = idealised.doping_mobility(
@@ -2912,19 +2913,33 @@ def test_silicon_resistivity_figure_draws_the_numbers():
     assert list(lines["sd-peak"].get_xdata()) == [pytest.approx(v("sd_peak_nfet"))]
     assert list(lines["sd-peak"].get_ydata()) == [pytest.approx(v("rho_sd_nfet"))]
     assert lines["doped"].get_ydata()[-1] == pytest.approx(v("rho_sd_nfet"), rel=1e-12)
-    assert list(lines["intrinsic"].get_ydata()) == [pytest.approx(v("rho_intrinsic_min"))] * 2
+    bars = {b.get_gid(): b for b in bottom.patches if b.get_gid()}
+    assert bars["bar-sd-peak"].get_width() == pytest.approx(v("rho_sd_nfet"))
+    assert bars["bar-intrinsic"].get_width() == pytest.approx(v("rho_intrinsic_tcad"))
+    labels = [t.get_text() for t in bottom.get_yticklabels()]
+    assert f"{v('t_tcad'):g} K" in labels[1]
     assert "x_fig_silicon_resistivity_scale" not in figures.substitutions()
     light = figures.FIGURES["silicon-resistivity"]("light")
     assert light.startswith(b"<?xml") and light != figures.FIGURES["silicon-resistivity"]("dark")
 
 
+def test_pure_silicon_uses_the_simulation_constants():
+    """Pure silicon's resistivity on the page uses the committed n_i and constant mobilities
+    of the simulation (review of #228), not textbook mobilities at another temperature."""
+    numbers = _numbers()
+    assert numbers.REGISTRY["rho_intrinsic_tcad"].inputs == (
+        "q_tcad", "n_i_tcad", "mu_n_tcad", "mu_p_tcad")  # fmt: skip
+    meta = json.loads((ROOT / numbers.REGISTRY["mu_n_tcad"].source).read_text("utf-8"))
+    c = meta["constants"]
+    want = 1 / (c["q_c"] * c["n_i_cm3"] * (c["mu_n_cm2_per_vs"] + c["mu_p_cm2_per_vs"]))
+    assert numbers.value("rho_intrinsic_tcad") == pytest.approx(want, rel=1e-12)
+
+
 def test_textbook_toml_values_are_the_fetched_ones():
     """data/explain/textbook.toml holds the values of the fetched sources (issue #99): the Ioffe
-    archive's atom density, and Wikipedia's crystalline-silicon mobilities and electron fit."""
+    archive's atom density, and Wikipedia's electron mobility fit."""
     data = tomllib.loads(TEXTBOOK.read_text(encoding="utf-8"))
     assert data["silicon"]["atom_density_cm3"] == 5e22
-    assert (data["silicon"]["mobility_n_max_cm2_per_vs"],
-            data["silicon"]["mobility_p_max_cm2_per_vs"]) == (1400.0, 450.0)  # fmt: skip
     fit = data["mobility_fit"]
     assert (fit["electron_mu0_cm2_per_vs"], fit["electron_mu1_cm2_per_vs"],
             fit["electron_nref_cm3"], fit["electron_alpha"], fit["n_min_cm3"]) == (
