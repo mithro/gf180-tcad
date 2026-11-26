@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+"""One 2D cell meshed in each TCAD image: gmsh 4.15.2 (stable) beside gmsh 5 (dev-HEAD) (issue #157).
+
+The cell is the calibrated nfet_05v0 2D job ``w10p0_l0p70`` (:data:`JOB`). In each image the
+probe rebuilds the job's cross-section and meshes it with the job's own mesh spec through
+:func:`gf180tcad.tcad.moscap2d.build_device`, the function the 2D job meshes with. The probe
+stops it after the mesh is written, before the equilibrium solve, so a run fits in 2 GiB.
+
+  tools/gmsh-cell-mesh probe     inside an image: write the full mesh and the box's mesh to
+                                 /work/out and print the image's record as JSON on stdout
+  tools/gmsh-cell-mesh record    on the host: run the probe in the stable and the dev-HEAD
+                                 image through the sandbox (2 GiB, one CPU, no network, one at
+                                 a time), compare the two full meshes (:func:`compare`) and
+                                 write data/images/cell-mesh/
+
+The record (:data:`RECORD`) holds the job, its committed ``cv.meta.json`` sha256 and
+``mesh_sha256``, this tool's sha256, per image its pin, the gmsh version, the full mesh's
+sha256 and counts and the box's npz (``<image>.npz``, cut by
+:func:`gf180tcad.meshcut.window.cut`, which keeps whole triangles) with its sha256, and the
+comparison of the two full meshes. The box (:data:`BOX_CENTRE_UM`, :data:`BOX_HALF_UM`) is
+set where the comparison of 2026-11-27 found points that the two gmsh versions place
+differently; the record lists those points, and a test checks the box holds one. The image
+page's ``cell-mesh`` figure (:func:`gf180tcad.reproduce_figures.cell_mesh_figure`) draws the
+two boxes.
+"""
+
+import hashlib
+import json
+import shutil
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+OUT = REPO / "data" / "images" / "cell-mesh"
+RECORD = OUT / "record.json"
+PINS = {"stable": REPO / "docker" / "TCAD_IMAGE", "dev": REPO / "docker" / "TCAD_DEV_IMAGE"}
+JOB = "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70"
+BOX_CENTRE_UM = (0.771, 0.0068)
+"""The box's centre (x, y in um), in the gate oxide, beside two of the points that gmsh
+4.15.2 and gmsh 5 place differently (the record's ``comparison.moved``)."""
+BOX_HALF_UM = 0.001
+"""Half the box's side (um)."""
+MESH_NAME = "mesh.msh"
+BOX_NAME = "box.npz"
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+class _Meshed(Exception):
+    """Raised in place of the equilibrium solve: the mesh is written, the device is not needed."""
+
+
+def probe(out: Path) -> dict:
+    """Mesh :data:`JOB`'s cross-section in this image into ``out``, cut the box, return its record."""
+    import gmsh
+    from gplugins.devsim.get_solver import DDComponent
+
+    from gf180tcad.meshcut import job, msh, npz, window
+    from gf180tcad.tcad import moscap2d
+    from gf180tcad.tcad.mesh import MeshSpec
+
+    job_dir = REPO / JOB
+    cv_meta, _ = job.load_job(job_dir)
+    xs = job.cross_section(job_dir, cv_meta)
+    mesh_path = out / MESH_NAME
+
+    def stop(*args, **kwargs):
+        raise _Meshed
+
+    DDComponent.from_device = stop
+    try:
+        moscap2d.build_device(xs, MeshSpec(**cv_meta["mesh"]), mesh_file=mesh_path)
+    except _Meshed:
+        pass
+    else:
+        raise RuntimeError("build_device returned without reaching DDComponent.from_device")
+    mesh = msh.read(mesh_path)
+    job.check_gate(mesh, xs)
+    (cx, cy), r = BOX_CENTRE_UM, BOX_HALF_UM
+    x_um, y_um = (cx - r, cx + r), (cy - r, cy + r)
+    win = window.cut(mesh, x_um=x_um, y_um=y_um)
+    npz.write_npz(out / BOX_NAME, win.arrays())
+    return {
+        "box_npz_sha256": _sha256(out / BOX_NAME),
+        "box_x_um": list(x_um),
+        "box_y_um": list(y_um),
+        "box_node_count": len(win.node_id),
+        "box_triangle_count": len(win.triangles),
+        "full_mesh_node_count": len(mesh.node_id),
+        "full_mesh_sha256": _sha256(mesh_path),
+        "full_mesh_triangle_count": len(mesh.triangles),
+        "gmsh": gmsh.__version__,
+    }
+
+
+def compare(stable_msh: Path, dev_msh: Path) -> dict:
+    """The two full meshes compared point by point (coordinates in the file's unit, cm).
+
+    - ``same_number``: the points that have the same number and the same coordinates in both;
+    - ``moved``: each point of the stable mesh whose coordinates are not in the dev mesh, with
+      the dev mesh's point nearest it, as ``[[x, y], [x, y]]``;
+    - ``largest_relative_move``: the largest coordinate difference of a ``moved`` pair over
+      that coordinate;
+    - ``same_triangles``: with each stable point matched to the dev point at the same place in
+      the coordinate-sorted order, every triangle of one mesh is a triangle of the other.
+    """
+    import numpy as np
+
+    sys.path.insert(0, str(REPO / "src"))
+    from gf180tcad.meshcut import msh
+
+    a, b = msh.read(stable_msh), msh.read(dev_msh)
+    if len(a.nodes) != len(b.nodes):
+        return {"node_counts": [len(a.nodes), len(b.nodes)], "same_triangles": False}
+    same_number = int(np.sum(np.all(a.nodes == b.nodes, axis=1) & (a.node_id == b.node_id)))
+    order_a, order_b = np.lexsort(a.nodes.T[::-1]), np.lexsort(b.nodes.T[::-1])
+    pa, pb = a.nodes[order_a], b.nodes[order_b]
+    differs = np.any(pa != pb, axis=1)
+    moved = [[pa[i].tolist(), pb[i].tolist()] for i in np.flatnonzero(differs)]
+    rel = np.abs(pa - pb) / np.maximum(np.abs(pa), np.finfo(float).tiny)
+    match = np.empty(len(a.nodes), dtype=np.int64)
+    match[order_a] = order_b
+    tri_a = {tuple(t) for t in np.sort(match[a.triangles], axis=1).tolist()}
+    tri_b = {tuple(t) for t in np.sort(b.triangles, axis=1).tolist()}
+    return {
+        "largest_relative_move": float(rel.max()),
+        "moved": moved,
+        "node_count": len(a.nodes),
+        "same_number": same_number,
+        "same_triangles": tri_a == tri_b,
+    }
+
+
+def record() -> None:
+    """Run the probe in both images through the sandbox, one at a time, compare the two full
+    meshes and write the record."""
+    import tempfile
+
+    sys.path.insert(0, str(REPO / "src"))
+    from gf180tcad import sandbox
+
+    cv_meta_path = REPO / JOB / "cv.meta.json"
+    out = {
+        "job": JOB,
+        "cv_meta_sha256": _sha256(cv_meta_path),
+        "mesh_sha256": json.loads(cv_meta_path.read_bytes())["mesh_sha256"],
+        "tool_sha256": _sha256(Path(__file__)),
+        "images": {},
+    }
+    OUT.mkdir(parents=True, exist_ok=True)
+    scratch = Path.home() / ".cache" / "gf180-tcad"
+    scratch.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=scratch) as tmp:
+        for name, pin_file in PINS.items():
+            pin = pin_file.read_text(encoding="utf-8").strip()
+            work = Path(tmp) / name
+            work.mkdir()
+            res = sandbox.run(
+                ["python3", "/work/src/tools/gmsh-cell-mesh", "probe"],
+                out_dir=work,
+                mem="2g",
+                cpus=1,
+                image=pin,
+            )
+            sys.stderr.write(res.stderr)
+            shutil.copyfile(work / BOX_NAME, OUT / f"{name}.npz")
+            out["images"][name] = {"image": pin, **json.loads(res.stdout.splitlines()[-1])}
+        out["comparison"] = compare(Path(tmp) / "stable" / MESH_NAME, Path(tmp) / "dev" / MESH_NAME)
+    RECORD.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"wrote {RECORD.relative_to(REPO)}")
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["probe"]:
+        print(json.dumps(probe(Path.cwd()), sort_keys=True))
+    elif sys.argv[1:] == ["record"]:
+        record()
+    else:
+        raise SystemExit(__doc__)

@@ -1,0 +1,112 @@
+{
+  "comparison": {
+    "largest_relative_move": 2.687481043047733e-16,
+    "moved": [
+      [
+        [
+          7.710627174687354e-05,
+          6.773697616715209e-07
+        ],
+        [
+          7.710627174687354e-05,
+          6.77369761671521e-07
+        ]
+      ],
+      [
+        [
+          7.717276489867502e-05,
+          7.014248928035636e-07
+        ],
+        [
+          7.717276489867502e-05,
+          7.014248928035637e-07
+        ]
+      ],
+      [
+        [
+          7.996633245639595e-05,
+          6.701076788976353e-07
+        ],
+        [
+          7.996633245639595e-05,
+          6.701076788976354e-07
+        ]
+      ],
+      [
+        [
+          9.185961368540566e-05,
+          7.398329087987415e-07
+        ],
+        [
+          9.185961368540566e-05,
+          7.398329087987416e-07
+        ]
+      ],
+      [
+        [
+          9.196777164084597e-05,
+          6.487183837494407e-07
+        ],
+        [
+          9.196777164084597e-05,
+          6.487183837494408e-07
+        ]
+      ],
+      [
+        [
+          9.199260015647231e-05,
+          7.879431833068152e-07
+        ],
+        [
+          9.199260015647231e-05,
+          7.879431833068154e-07
+        ]
+      ]
+    ],
+    "node_count": 245515,
+    "same_number": 14715,
+    "same_triangles": true
+  },
+  "cv_meta_sha256": "062d435e11adccac4fd8e75bd055cae1c3bcd69c52f1b9b857f90464d0386745",
+  "images": {
+    "dev": {
+      "box_node_count": 18,
+      "box_npz_sha256": "1974a129ef66ca3d8e0af7c31d015149c4629d1c9ac9ad3bb41a88fc4e8a0ede",
+      "box_triangle_count": 18,
+      "box_x_um": [
+        0.77,
+        0.772
+      ],
+      "box_y_um": [
+        0.0058,
+        0.0078
+      ],
+      "full_mesh_node_count": 245515,
+      "full_mesh_sha256": "049693a1725c60bf3f6532ffdd8659094389e4c13172f920b2e9c8adf80c09c7",
+      "full_mesh_triangle_count": 490416,
+      "gmsh": "5.0.0",
+      "image": "ghcr.io/mithro/gf180-tcad-tcad-dev@sha256:fe34752893b8078bb9053875fd43d4b45b75ca757d75150b2dca4b9ada9c0c44"
+    },
+    "stable": {
+      "box_node_count": 18,
+      "box_npz_sha256": "57ab186d36067ee72710a31c44b4ed77d293d31ee47c2bf629d6f70927f7c141",
+      "box_triangle_count": 18,
+      "box_x_um": [
+        0.77,
+        0.772
+      ],
+      "box_y_um": [
+        0.0058,
+        0.0078
+      ],
+      "full_mesh_node_count": 245515,
+      "full_mesh_sha256": "e0437cde0b288e4a5eeeb52ba9ae52db3fd816027200a032f43da53a89129a32",
+      "full_mesh_triangle_count": 490416,
+      "gmsh": "4.15.2",
+      "image": "ghcr.io/mithro/gf180-tcad-tcad@sha256:5d8a681220fed79000f0aeecd0aa979452d919decdd3e7604cc17415a733e9a8"
+    }
+  },
+  "job": "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70",
+  "mesh_sha256": "e0437cde0b288e4a5eeeb52ba9ae52db3fd816027200a032f43da53a89129a32",
+  "tool_sha256": "7cf70d170ca8e7e02eeafca9b2532a9820783248db14770bdf4ed61ae413d2cc"
+}
