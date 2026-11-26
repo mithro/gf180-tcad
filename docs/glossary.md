@@ -698,4 +698,40 @@ SIMD dispatch
 ulp
   Unit in the last place: the spacing between adjacent floating-point numbers, so the smallest
   possible difference between two floats. See {ref}`cross-host-determinism`.
+
+breakdown voltage
+  The reverse bias at which a junction starts to conduct by avalanche. In the high-voltage
+  junction study it is the bias at which the {term}`ionisation integral` reaches 1. See
+  {ref}`hvj-method`.
+
+ionisation integral
+  The number of electron-hole pairs that one carrier creates by impact ionisation while it
+  crosses the depleted silicon along a field line. Avalanche sets in when it reaches 1
+  ({ref}`Sze and Ng 2006, ch. 2 <lit-sze>`). See {ref}`hvj-method`.
+
+deep N-well
+  The DNWELL layer of {term}`GF180MCU`: an n-type well deeper and lighter than the
+  {term}`n-well`, drawn to isolate a P-well from the substrate. See {doc}`results/hv-junction`.
+
+generated P-well
+  The LVPWELL implant of {term}`GF180MCU` where the foundry derives it from the drawn layers
+  instead of the designer drawing it. Where it lies beside an N-well is an assumption of the
+  high-voltage junction study. See {ref}`hvj-process`.
+
+NAT
+  The native-threshold marker layer of {term}`GF180MCU`. No P-well is implanted under it, so
+  the silicon there stays at the substrate doping. See {ref}`hvj-process`.
+
+field plate
+  A conductor over the oxide beyond a junction's edge, tied to one side of the junction. It
+  spreads the depletion region along the surface and lowers the peak field. See
+  {ref}`hvj-results`.
+
+floating ring
+  A ring of the well's doping around a junction, with no contact. It takes a potential between
+  the two sides and divides the surface field into steps. See {ref}`hvj-results`.
+
+fixed oxide charge
+  Positive charge held in the oxide at the silicon surface, here a sheet density in cm⁻² on
+  the surface nodes of the silicon. See {ref}`hvj-method`.
 ```

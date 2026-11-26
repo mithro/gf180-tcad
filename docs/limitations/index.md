@@ -37,6 +37,10 @@ there.
   Both Charon images are built and pinned, and no Charon job has run ({ref}`numerical-acceptance`,
   {ref}`charon-images`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
+- **The high-voltage junction predictions rest on assumptions.** Their well doping is a family
+  set against three published values, the foundry's P-well generation is assumed, and each
+  value is a 2D section ({ref}`hvj-limits`,
+  {numref}`Figure %s of High-voltage junction terminations <hvj-section-figure>`).
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
   open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
 
