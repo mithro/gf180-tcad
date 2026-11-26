@@ -88,6 +88,10 @@ def compute() -> dict:
     total = N_A_CM3 + N_D_CM3
     # n (or p) falls below FRACTION of the doping where the potential is V_t ln(1/FRACTION)
     # inside the depletion edge: the depth of that bending in the depletion approximation.
+    # depletion_depth is documented for the MIS depth of a p-type body, sqrt(2 eps psi / (q N)).
+    # The same parabola holds on either side of a step junction: inside a uniformly charged
+    # layer of density q N, a potential drop psi from its edge is reached at that depth, so it
+    # is called with N_D for the n side and N_A for the p side.
     psi_f = vt * math.log(1 / FRACTION)
     tail_n = idealised.depletion_depth(psi_f, N_D_CM3, eps_r, eps0, q)
     tail_p = idealised.depletion_depth(psi_f, N_A_CM3, eps_r, eps0, q)

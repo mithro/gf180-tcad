@@ -334,11 +334,15 @@ where
 The formula gives cm. In µm, W = {{ lim_abrupt_w }} µm, and x_n = x_p = {{ lim_abrupt_xn }} µm.
 
 The recorded width counts only nodes where n and p are both below {{ lim_abrupt_pct }} %
-|NetDoping|. In the depletion approximation that span is narrower than W. The tail is the
-distance inside each edge of the {term}`depletion` region where n or p is still above f·N.
-Inside each edge the potential is parabolic. Let Δψ be its drop from the neutral side, in V.
-Then n = N·exp(−Δψ/V_t). So n falls below f·N once Δψ > V_t ln(1/f). {math:numref}`eq-plugin-history-tail` gives the tail of this symmetric
-junction:
+|NetDoping|. Call that threshold $f$ and the doping of each side $N$, in cm⁻³. In the
+approximation above, that span is narrower than W.
+
+The tail is the distance inside each edge of the
+{term}`depletion` region where the {term}`majority carrier` density is still above $f N$. Inside each
+edge the potential is parabolic. Let $\Delta\psi$ be its drop from the neutral side, in V.
+The majority carrier density there is $n = N \exp(-\Delta\psi / V_t)$, in cm⁻³. So $n$ falls
+below $f N$ once $\Delta\psi > V_t \ln(1/f)$. {math:numref}`eq-plugin-history-tail` gives the
+tail of this symmetric junction:
 
 $$
 L_f = \sqrt{\frac{2 \varepsilon_{si} \varepsilon_0 V_t \ln(1/f)}{q N}}
@@ -374,7 +378,7 @@ At mesh × 0.5 the recorded width, {{ lim_abrupt_measured }} µm, exceeds W_f by
 {{ lim_abrupt_delta }} µm. Its {{ lim_abrupt_half_nodes }} depleted nodes are
 {{ lim_abrupt_spacing }} µm apart on average. The recorded width spans the outermost depleted
 nodes, so it can only under-read the continuous span. A recorded width above W_f means the
-solved junction is wider than the depletion approximation. At full mesh only
+solved junction is wider than W_f. At full mesh only
 {{ lim_abrupt_full_nodes }} nodes are depleted, so that width is set by the mesh, not by the
 junction.
 
