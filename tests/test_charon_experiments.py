@@ -158,6 +158,7 @@ def _expected_page_numbers() -> dict:
         "lim_charon_nodes": f"{len(ref_n['x_um'])}",
         "lim_charon_points": f"{len(ref_n['vg'])}",
         "lim_charon_ni": ni,
+        "lim_charon_doping_rel": f"{max(d['max_rel_doping'] for d in probes['doping'].values()):g}",
         "lim_charon_ref_tau": ref_n["settings"]["CX_TAU"],
         "lim_charon_nfet_devsim": np.max(
             np.abs(np.asarray(ref_n["c_ff_um2"]) / np.asarray(ref_n["c_devsim"]) - 1)
@@ -246,10 +247,16 @@ def test_page_numbers_are_the_records():
     settings = {"lim_charon_ref_tau", "lim_charon_tight"}  # deck settings, typed where named
     typed = {t for k, t in subs.items() if "e-" in t and k not in settings}
     typed |= {t.replace("e-", "e-0") for t in typed}
+    # and every measured decimal (0.569, 1.238, 0.45 ...), with an ASCII minus too
+    # and on the Charon page every measured decimal (0.569, 1.238, 0.45 ...), ASCII minus too;
+    # the other pages use such decimals for their own numbers
+    decimals = {t for t in subs.values() if re.fullmatch("\u2212?[0-9]+[.][0-9]+", t)}
+    decimals |= {t.replace("\u2212", "-") for t in decimals}
     for page, text in pages.items():
         prose = re.sub(r"\{\{[^}]*\}\}", "", text)
-        for t in typed:
-            assert not re.search(rf"(?<![\w.]){re.escape(t)}(?![\w])", prose), (page, t)
+        for t in typed | (decimals if page == "limitations/charon.md" else set()):
+            assert not re.search(rf"(?<![\w.\-\u2212]){re.escape(t)}(?![\w.]?[0-9])", prose), (
+                page, t)  # fmt: skip
 
 
 def test_step_studies_are_recorded():
@@ -315,3 +322,22 @@ def test_readme_charon_numbers_are_the_records():
     want = (f"within {subs['lim_charon_nfet_devsim']} (nfet) and "
             f"{subs['lim_charon_pfet_devsim']} (pfet) of DEVSIM's")  # fmt: skip
     assert want in " ".join(readme.split()), want
+
+
+def test_plan_charon_numbers_are_the_records():
+    """The plan is read on GitHub without substitutions: the numbers its Task B amendment types
+    are the page's substitutions, so a changed record fails here until the plan follows."""
+    from gf180tcad import limitations_figures as lf
+
+    subs = lf.substitutions()
+    plan = (REPO_ROOT / "docs/superpowers/plans/2026-10-27-phase4-charon-backend.md").read_text(
+        "utf-8"
+    )
+    amendment = plan[plan.index("**Amended by experiments B1–B7"):plan.index(
+        "**Decision: mesh and regions.**")]  # fmt: skip
+    for key in ("stall_v", "stall_wrms", "stall_ramp_v", "tight_ramp_v", "b7_nfet_calibrated",
+                "b7_pfet_calibrated", "b7_nfet_start", "b7_pfet_start", "nfet_devsim",
+                "pfet_devsim", "lifetime", "pfet_lifetime", "default_lifetime", "tol8",
+                "tri3_2d", "tri3_strip", "pp", "mg", "hb_acc", "hb_depl",
+                "pfet_start_up_to", "belos_stop", "fail_v", "pfet_start_points"):  # fmt: skip
+        assert subs[f"lim_charon_{key}"] in amendment, (key, subs[f"lim_charon_{key}"])
