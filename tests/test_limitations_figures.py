@@ -981,14 +981,14 @@ def check_charon_checks(fig):
         u = DEVICES[device].polarity * np.asarray(r["vg"])
         for key in ("oxide_flux_spread", "poly_vs_gate", "body_vs_gate"):
             for s in "AB":
-                d.line(f"b6 {device} {key} {s}", u, r[f"{key}_per_state_{s}"], b6)
+                d.line(f"charge check {device} {key} {s}", u, r[f"{key}_per_state_{s}"], b6)
     loose, ref = (runs[n] for n in lf.CHARON_LOOSE_PAIR)
     vg = [v for v in loose["vg"] if v in ref["vg"]]
     rel = [abs(loose["c_ff_um2"][loose["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
            for v in vg]  # fmt: skip
-    d.line("b7 looser", vg, rel, b7)
+    d.line("tolerance looser", vg, rel, b7)
     for n in lf.CHARON_TIGHT:
-        d.vline(f"b7 {n}", float(hard["step_studies"][n]["failed"]["failed_at"][0]), b7)
+        d.vline(f"tighter {n}", float(hard["step_studies"][n]["failed"]["failed_at"][0]), b7)
     d.done()
 
 

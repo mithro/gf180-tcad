@@ -1722,8 +1722,8 @@ def charon_doping(roots: Roots = DEFAULT_ROOTS) -> dict:
 
 
 def charon_doping_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
-    """B5: |net doping| against depth from the gate end, the description as a line and Charon's
-    nodal values as markers, one panel per device, both parameter sets."""
+    """B5: the magnitude of the net doping against depth from the gate end, the description as a
+    line and Charon's nodal values as markers, one panel per device, both parameter sets."""
     pal = ef.PALETTES[palette]
     k = charon_doping(roots)
     colours = {"start": "highlight", "calibrated": "electron"}
@@ -1800,6 +1800,7 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
         b3, b2, b6, b7 = fig.subplots(len(CHARON_CHECK_PANELS), 1)
+        p_b3, p_b2, p_b6, p_b7 = CHARON_CHECK_PANELS
         names = list(k["solvers"])
         for i, n in enumerate(names):
             lo, hi = k["solvers"][n]["sweep_v"]
@@ -1807,14 +1808,14 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             b3.plot([lo, hi if stop is None else stop], [i, i], color=pal["highlight"], lw=lw,
                     gid=f"solver {n}")  # fmt: skip
         b3.set_yticks(range(len(names)), names)
-        b3.set_xlabel("B3: gate bias of the device reached (V)")
+        b3.set_xlabel(f"{p_b3}: gate bias of the device reached (V)")
         ok = {v: c for v, c in k["nlp"].items() if c is not None}
         bad = [v for v, c in k["nlp"].items() if c is None]
         b2.scatter(list(ok), list(ok.values()), s=STYLE["marker_pt"] ** 2, color=pal["highlight"],
                    label="nonlinear Poisson converged", gid="nlp converged")  # fmt: skip
         b2.scatter(bad, np.zeros(len(bad)), marker="x", s=STYLE["marker_pt"] ** 2,
                    color=pal["text"], label="Newton diverged (NaN)", gid="nlp diverged")  # fmt: skip
-        b2.set_xlabel("B2: gate bias vg (V)")
+        b2.set_xlabel(f"{p_b2}: gate bias vg (V)")
         b2.set_ylabel("C (fF/µm²)")
         b6_keys = {"oxide_flux_spread": ("highlight", "oxide-flux spread"),
                    "poly_vs_gate": ("electron", "poly charge mismatch"),
@@ -1826,16 +1827,16 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                     b6.plot(d["u"], d[f"{key}_{s}"], color=pal[colour], lw=lw,
                             ls=STYLE["device_ls"][device],
                             label=label if (device, s) == (first, "A") else None,
-                            gid=f"b6 {device} {key} {s}")  # fmt: skip
+                            gid=f"charge check {device} {key} {s}")  # fmt: skip
         b6.set_yscale("log")
-        b6.set_xlabel("B6: u = polarity × vg (V)")
+        b6.set_xlabel(f"{p_b6}: u = polarity × vg (V)")
         b6.set_ylabel("relative mismatch")
         b7.plot(k["b7"]["u"], k["b7"]["rel"], color=pal["highlight"], lw=lw,
-                label="a hundred times looser", gid="b7 looser")  # fmt: skip
+                label="a hundred times looser", gid="tolerance looser")  # fmt: skip
         for n, v in k["b7"]["tight"].items():
-            b7.axvline(v, color=pal["text"], lw=lw, ls=":", gid=f"b7 {n}")
+            b7.axvline(v, color=pal["text"], lw=lw, ls=":", gid=f"tighter {n}")
         b7.set_yscale("log")
-        b7.set_xlabel("B7: gate bias of the device (V); dotted: where the tighter studies stopped")
+        b7.set_xlabel(f"{p_b7}: gate bias of the device (V); dotted: the tighter studies' stops")
         b7.set_ylabel("relative change of C")
         fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
         return fig
