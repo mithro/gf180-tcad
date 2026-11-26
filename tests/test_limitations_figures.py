@@ -61,6 +61,8 @@ FIGURES = [
     "charon-tolerance",
     "charon-doping",
     "charon-checks",
+    "charon-newton",
+    "charon-traps",
 ]
 
 _RENDER = textwrap.dedent(
@@ -1044,6 +1046,58 @@ def check_charon_checks(fig):
     d.done()
 
 
+def check_charon_newton(fig):
+    """Issue #223: each stalled case's WRMS norms per iteration at the looser re-solve, and per
+    case row the smallest WRMS norms, floor_x, the last residual and its round-off scale and the
+    condition numbers, from hard-range.json; the limit lines at NOX's tolerance and 1/eps."""
+    newton = _charon("hard-range")["newton"]
+    its, wr, res, cond = fig.axes
+    d = Drawn(fig)
+    stalled = {n: r for n, r in newton.items() if r["stalled"]}
+    tols = sorted({t for r in stalled.values() for t in r["solves"]}, key=float)
+    tight, loose = tols[0], tols[-1]
+    rows = np.arange(len(stalled))
+
+    def last(r, tol, key):
+        return r["solves"][tol]["iterations"][-1][key]
+
+    for name, r in stalled.items():
+        sv = r["solves"][loose]["iterations"]
+        d.line(f"wrms {name}", [it["iteration"] for it in sv], [it["wrms"] for it in sv], its)
+    d.hline("wrms limit", 1.0, its)
+    for tol in (loose, tight):
+        d.points(f"smallest wrms {tol}", [min(it["wrms"] for it in r["solves"][tol]["iterations"])
+                                          for r in stalled.values()], rows, wr)  # fmt: skip
+    d.points(f"floor_x {loose}", [r["solves"][loose]["last"]["floor_x"] for r in stalled.values()],
+             rows, wr)  # fmt: skip
+    d.vline("wrms limit rows", 1.0, wr)
+    d.points("residual", [last(r, loose, "f_2") for r in stalled.values()], rows, res)
+    d.points("residual round-off", [r["solves"][loose]["last"]["f_roundoff_2"]
+                                    for r in stalled.values()], rows, res)  # fmt: skip
+    d.points("condition", [last(r, loose, "cond1") for r in stalled.values()], rows, cond)
+    d.points("condition row scaled", [last(r, loose, "cond1_row_scaled") for r in stalled.values()],
+             rows, cond)  # fmt: skip
+    d.vline("inverse eps", 1 / np.finfo(float).eps, cond)
+    d.done()
+
+
+def check_charon_traps(fig):
+    """Issue #224: the misnamed doping block's nodal doping, poly and body interior nodes, against
+    the description's value of each block."""
+    rec = _charon("probes")["deck_traps"]["doping_block_misnamed"]["doping"]
+    bn = _charon("cv")["runs"]["cv-nfet-tau15-1e-10"]["boundary_nodes"]
+    x, dop = np.asarray(rec["x_um"]), np.asarray(rec["doping_cm3"])
+    poly, body = fig.axes
+    d = Drawn(fig)
+    for ax, block, sl, want in ((poly, "gate_poly", slice(0, bn[1]), rec["poly_description_cm3"]),
+                                (body, "body", slice(bn[2] + 1, len(x)),
+                                 rec["body_description_cm3"])):  # fmt: skip
+        d.line(f"{block} description", x[sl], np.full(len(x[sl]), want), ax)
+        d.line(f"{block} charon", x[sl], dop[sl], ax)
+    assert np.all(dop[bn[2] + 1 :] == 0.0)  # the page: the body is undoped
+    d.done()
+
+
 CHECKS = {
     "engine-diff": (lf.engine_diff_figure, check_engine_diff),
     "engine-subthreshold": (lf.engine_subthreshold_figure, check_engine_subthreshold),
@@ -1066,6 +1120,8 @@ CHECKS = {
     "charon-tolerance": (lf.charon_tolerance_figure, check_charon_tolerance),
     "charon-doping": (lf.charon_doping_figure, check_charon_doping),
     "charon-checks": (lf.charon_checks_figure, check_charon_checks),
+    "charon-newton": (lf.charon_newton_figure, check_charon_newton),
+    "charon-traps": (lf.charon_traps_figure, check_charon_traps),
 }
 
 
