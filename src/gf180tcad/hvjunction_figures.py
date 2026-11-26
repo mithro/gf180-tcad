@@ -404,7 +404,9 @@ def integral_figure(palette: str, root: Path = ROOT):
     ax.set_xlabel("reverse bias of the well (V)")
     ax.set_ylabel("largest ionisation integral")
     ax.grid(True)
-    fig.legend(loc="outside lower center", ncols=2, frameon=False, fontsize=STYLE["legend_pt"])
+    if ax.get_legend_handles_labels()[0]:
+        fig.legend(loc="outside lower center", ncols=2, frameon=False,
+                   fontsize=STYLE["legend_pt"])  # fmt: skip
     return fig
 
 
