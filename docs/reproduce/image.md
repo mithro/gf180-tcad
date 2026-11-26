@@ -167,7 +167,8 @@ the base image updates both images in **one** pull request:
 3. CI pushes the TCAD image; commit {repo}`docker/TCAD_IMAGE` (its manifest digest).
 4. Re-record meshwell's square: run `record` of {repo}`tools/meshwell-square` with no other
    sandbox job running, and commit {repo}`data/images/meshwell-square.json`. The record names both TCAD pins, and
-   `lint-test` fails until it matches them.
+   `lint-test` fails until it matches them. Re-record the 2D cell the same way with
+   {repo}`tools/gmsh-cell-mesh` and commit {repo}`data/images/cell-mesh/record.json` and its two boxes.
 5. Regenerate any TCAD results in the new image and commit them.
 6. Merge only when every check is green.
 
@@ -480,12 +481,39 @@ result kind in it: the image's name, its reference and its probe record. That re
   item). The 2D results of
   {repo}`Task 11 <docs/superpowers/plans/2026-10-18-phase2-gplugins-devsim-moscap.md#task-11-2d-moscap-from-gdsfactory-geometry-and-the-ccox--1-artefact>`
   are therefore made on the stable image, explicitly, as {numref}`fig-results-images` shows.
+- **One 2D cell in both images.** {repo}`tools/gmsh-cell-mesh` meshes the nfet cell
+  `w10p0_l0p70` in each image with the cell's own mesh spec. The two meshes have the same
+  triangles. In gmsh 5, most points get other numbers, and rounding moves a few points by
+  a tiny amount, as {numref}`fig-cell-mesh` shows. So the mesh file's sha256 differs between the images.
 - **No 2D mesh convergence on dev.** The 2D mesh convergence has not been rerun on the dev
   image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
 - **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, has the laxer
   builder check. Unlike {repo}`docker/tcad-dev/build`, it does not verify an existing builder's
   driver and BuildKit image before using it
   ([issue #81](https://github.com/mithro/gf180-tcad/issues/81)).
+
+```{figure} /_generated/reproduce/cell-mesh-light.svg
+:name: fig-cell-mesh
+:figclass: only-light
+:alt: Two panels of the same small patch of triangles in the gate oxide, each point labelled with a six-digit number. The numbers differ between the panels; two points are ringed in each.
+
+The mesh of the nfet cell `w10p0_l0p70` in a small box in the gate oxide: the stable image
+(left) and the dev-HEAD image (right). Each point carries its number in that image's mesh. The
+ringed points differ between the two images by rounding. The title compares the two
+full meshes. Drawn from {repo}`data/images/cell-mesh/record.json` and its two boxes, which
+{repo}`tools/gmsh-cell-mesh` records in both images.
+```
+
+```{figure} /_generated/reproduce/cell-mesh-dark.svg
+:figclass: only-dark
+:alt: Two panels of the same small patch of triangles in the gate oxide, each point labelled with a six-digit number. The numbers differ between the panels; two points are ringed in each.
+
+The mesh of the nfet cell `w10p0_l0p70` in a small box in the gate oxide: the stable image
+(left) and the dev-HEAD image (right). Each point carries its number in that image's mesh. The
+ringed points differ between the two images by rounding. The title compares the two
+full meshes. Drawn from {repo}`data/images/cell-mesh/record.json` and its two boxes, which
+{repo}`tools/gmsh-cell-mesh` records in both images.
+```
 
 (tcad-dev-mirror)=
 
@@ -589,7 +617,8 @@ The build script refuses a builder in which any node lacks the pinned {{ BuildKi
    {repo}`docker/tcad-dev/versions.json`, then {repo}`docker/TCAD_DEV_IMAGE` once CI has pushed it.
 5. Re-record meshwell's square: run `record` of {repo}`tools/meshwell-square` with no other
    sandbox job running, and commit {repo}`data/images/meshwell-square.json`. `lint-test` fails until the record names the
-   pin in {repo}`docker/TCAD_DEV_IMAGE`.
+   pin in {repo}`docker/TCAD_DEV_IMAGE`. Re-record the 2D cell the same way with
+   {repo}`tools/gmsh-cell-mesh` and commit {repo}`data/images/cell-mesh/record.json` and its two boxes.
 
 (charon-images)=
 
