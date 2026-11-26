@@ -703,7 +703,7 @@ test.
 - Caughey & Thomas 1967; Masetti 1983; Lombardi 1988; Darwish (CVT) 1997 [verify]; Ancona & Iafrate 1989 (density-gradient) — physics models.
 - Pelgrom 1989 [verify] — mismatch scale.
 - Khalil/Selberherr 1995 [verify]; Lee/McIlrath/Antoniadis 1999 [verify] — inverse modelling of doping from I-V/C-V (the calibration method).
-- Sanchez, DEVSIM, JOSS 2022; Charon User Manual v2.2 (SAND 2022); Hoekstra et al. SAND2007-7157; Bochev et al. 2013 [verify] — simulator references.
+- Sanchez, DEVSIM, JOSS 2022; Charon User Manual v2.2 (SAND 2022); Shadid, Hoekstra et al. SAND2007-7157 (doi:10.2172/934581; OSTI names Shadid first, #76); Bochev et al. 2013 [verify] — simulator references.
 - SemiMod DMT-core (JOSS 2022) — tooling.
 
 ## 12. Architecture and reuse

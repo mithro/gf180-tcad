@@ -68,6 +68,25 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
   temperature dependence and the band-edge densities of states with their masses
   ({ref}`display-values`).
 
+(lit-ioffe-basic)=
+
+- Ioffe Physico-Technical Institute, NSM archive of semiconductor properties, silicon,
+  [basic parameters](https://web.archive.org/web/20260930073143/https://www.ioffe.ru/SVA/NSM/Semicond/Si/basic.html)
+  (archived copy of 2026-09-30). Its table "Basic Parameters at 300 K" gives the number of atoms
+  in 1 cm³ of silicon, 5·10²², that the explainer compares with the doping
+  ({ref}`explained-dopants`).
+
+(lit-wikipedia-mobility)=
+
+- Wikipedia, "[Electron mobility](https://en.wikipedia.org/w/index.php?title=Electron_mobility&oldid=1383366442)".
+  Its section "Relation to conductivity" gives the conductivity from the carrier densities and
+  their mobilities. The explainer uses it for the resistivity of doped and pure silicon
+  ({ref}`explained-conduction`).
+- The same article gives a majority-carrier mobility fit for silicon doped 10¹⁸ cm⁻³ and up.
+  It cites that range and the fit's form to Anderson and Anderson, *Fundamentals of
+  Semiconductor Devices*, 2005. It cites the fit's parameters to
+  {ref}`Caughey and Thomas <lit-caughey>`.
+
 (lit-colorado-constants)=
 
 - University of Colorado Boulder, Electrical, Computer and Energy Engineering, constants sheet
@@ -80,18 +99,18 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
 - Wikipedia, "[Band gap](https://en.wikipedia.org/w/index.php?title=Band_gap&oldid=1380816580)",
   the table of band gaps at 302 K. It gives 1.14 eV for silicon. For that value it cites Streetman
   and Banerjee, *Solid State Electronic Devices*, 5th ed., p. 524. It also cites Pankove,
-  *Optical Processes in Semiconductors*, 1971. It gives 9 eV for SiO₂, citing Vella et al.,
-  "[Unraveling exciton dynamics in amorphous silicon dioxide](https://doi.org/10.1103/PhysRevB.83.174201)",
-  Phys. Rev. B 83, 174201, 2011 ({ref}`display-values`).
+  *Optical Processes in Semiconductors*, 1971 ({ref}`display-values`).
+- The same table gives 9 eV for SiO₂. It cites Vella et al., Phys. Rev. B 83, 174201, 2011,
+  {doi}`10.1103/PhysRevB.83.174201`. Its title is "Unraveling exciton dynamics in amorphous
+  silicon dioxide: Interpretation of the optical features from 8 to 11 eV".
 
 (lit-wikipedia-effective-mass)=
 
 - Wikipedia, "[Effective mass (solid-state physics)](https://en.wikipedia.org/w/index.php?title=Effective_mass_%28solid-state_physics%29&oldid=1383927910)",
   table "Density of states effective mass in various semiconductors". It
   gives silicon's masses at 300 K, 1.09 for {term}`electrons <electron>` and 1.15 for {term}`holes <hole>`, in units of the free
-  electron mass. The table cites four references. One of them is Green, "[Intrinsic
-  concentration, effective densities of states, and effective mass in silicon](https://doi.org/10.1063/1.345414)",
-  J. Appl. Phys. 67(6), 2944-2954, 1990. The two masses set the band-edge densities of states
+  electron mass. The table cites four references. One of them is Green, "Intrinsic concentration, effective densities of states, and effective mass in
+  silicon", J. Appl. Phys. 67(6), 2944-2954, 1990, {doi}`10.1063/1.345414`. The two masses set the band-edge densities of states
   N_c and N_v in {repo}`data/render/display.toml`.
 
 (lit-alkauskas)=
@@ -139,8 +158,9 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
 
 (lit-caughey)=
 
-- Caughey and Thomas, Proc. IEEE 55(12), 1967, {doi}`10.1109/PROC.1967.6123`: velocity
-  saturation.
+- Caughey and Thomas, "Carrier mobilities in silicon empirically related to doping and
+  field", Proc. IEEE 55(12), 2192-2193, 1967, {doi}`10.1109/PROC.1967.6123`: velocity
+  saturation, and mobility against doping ({ref}`explained-conduction`).
 
 (lit-masetti)=
 
@@ -216,6 +236,13 @@ The doping of each part of the simulated cell is in {numref}`Figure %s of Defini
 (lit-charon)=
 
 - {{ Charon }} User Manual v2.2 (SAND 2022), {doi}`10.2172/1871374`.
+
+(lit-shadid)=
+
+- Shadid, Hoekstra, Hennigan, Castro and Fixel, "Simulation of neutron radiation damage in
+  silicon semiconductor devices", Sandia National Laboratories report SAND2007-7157, 2007,
+  {doi}`10.2172/934581`. It describes the {{ Charon }} code: a stabilized finite-element
+  discretization of the {term}`drift-diffusion` equations.
 
 (lit-bochev)=
 
@@ -312,7 +339,7 @@ lists and the papers they lead to:
 - **Charon's list of publications.** The [Charon publications page](https://charon.sandia.gov/publications-and-documents/)
   held 16 items on 2026-11-26. No title names a compact model, SPICE or BSIM.
 - **Charon and compact models.** Huang et al.,
-  [SAND2021-2473C](https://www.osti.gov/servlets/purl/1854316), fit a graph-network compact
+  SAND2021-2473C, {doi}`10.2172/1854316`, fit a graph-network compact
   model of a p-n diode to Charon results. BSIM appears in their software list only. Gao et al.,
   ACM TODAES 2026, {doi}`10.1145/3766551`, calibrate Charon to measured dose effects in a
   commercial SiC power MOSFET. Their abstract names no BSIM card.

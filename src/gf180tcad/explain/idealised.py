@@ -237,4 +237,61 @@ def surface_bending(x_cm, psi_s_v, n_a_cm3, eps_r, eps0_f_per_cm, q_c):
     return np.where(x < w, psi_s_v * (1 - np.minimum(x, w) / w) ** 2, 0.0)
 
 
+_MOBILITY = "Wikipedia, Electron mobility (lit-wikipedia-mobility)"
+_IOFFE_BASIC = "Ioffe NSM archive, Si, Basic Parameters (lit-ioffe-basic)"
+
+
+@_formula("atoms per dopant = N_Si / N", f"{_IOFFE_BASIC}, the number of atoms in 1 cm³")
+def atoms_per_dopant(atom_density_cm3, n_cm3):
+    """How many silicon atoms there are for each dopant atom at the doping N,
+    atoms per dopant = N_Si / N (dimensionless), with N_Si the atom density of the crystal (cm⁻³).
+
+    Reference: Ioffe NSM archive, Si, Basic Parameters (lit-ioffe-basic), the number of atoms
+    in 1 cm³.
+    """
+    return atom_density_cm3 / n_cm3
+
+
+@_formula(
+    "μ = μ_0 + μ_1 / (1 + (N/N_ref)^α)",
+    f"{_MOBILITY}, doping dependence in heavily doped silicon, citing Caughey and Thomas 1967",
+)
+def doping_mobility(mu0, mu1, nref_cm3, alpha, n_cm3):
+    """The majority-carrier mobility of heavily doped silicon at room temperature,
+    μ = μ_0 + μ_1 / (1 + (N/N_ref)^α) (cm²/(V·s)), with N the donor density for electrons and
+    the acceptor density for holes, and the fitting parameters μ_0, μ_1, N_ref and α. The
+    source states it for 10¹⁸ cm⁻³ and up.
+
+    Reference: Wikipedia, Electron mobility (lit-wikipedia-mobility), doping dependence in heavily
+    doped silicon, citing Caughey and Thomas 1967.
+    """
+    return mu0 + mu1 / (1 + (np.asarray(n_cm3, dtype=float) / nref_cm3) ** alpha)
+
+
+@_formula("ρ = 1 / (q·N·μ)", f"{_MOBILITY}, relation to conductivity, σ = q·(n·μ_n + p·μ_p)")
+def resistivity(q_c, n_cm3, mobility):
+    """The resistivity of doped silicon whose majority carriers, of density N, carry the
+    current, ρ = 1 / (q·N·μ) (Ω·cm): the conductivity σ = q·(n·μ_n + p·μ_p) with the minority
+    term left out.
+
+    Reference: Wikipedia, Electron mobility (lit-wikipedia-mobility), relation to conductivity,
+    σ = q·(n·μ_n + p·μ_p).
+    """
+    return 1 / (q_c * np.asarray(n_cm3, dtype=float) * mobility)
+
+
+@_formula(
+    "ρ_i = 1 / (q·n_i·(μ_n + μ_p))",
+    f"{_MOBILITY}, relation to conductivity, σ = q·(n·μ_n + p·μ_p)",
+)
+def intrinsic_resistivity(q_c, n_i_cm3, mu_n, mu_p):
+    """The resistivity of pure silicon, where n = p = n_i, ρ_i = 1 / (q·n_i·(μ_n + μ_p)) (Ω·cm),
+    with the electron and hole mobilities μ_n and μ_p.
+
+    Reference: Wikipedia, Electron mobility (lit-wikipedia-mobility), relation to conductivity,
+    σ = q·(n·μ_n + p·μ_p).
+    """
+    return 1 / (q_c * n_i_cm3 * (mu_n + mu_p))
+
+
 FORMULAS: Mapping[str, Formula] = MappingProxyType(dict(sorted(_TABLE.items())))
