@@ -173,6 +173,9 @@ SQUARE_PANELS = (("stable", "stable image"), ("dev", "dev-HEAD image"))
 #: one npz per image, of the triangles in a box in the gate oxide (``BOX_CENTRE_UM`` of the tool).
 CELL_MESH = REPO_ROOT / "data" / "images" / "cell-mesh"
 
+#: The legend entry of the cell-mesh figure's rings.
+CELL_RING_LABEL = "a point the other image places differently (rounding)"
+
 #: The example of a partial run on the reproduce page: one engine, one corner, one device.
 EXAMPLE_RUN = {"engine": "ngspice", "corner": "typical", "device": "nfet_05v0"}
 
@@ -894,25 +897,29 @@ def _loops(xy: np.ndarray, cells: np.ndarray) -> np.ndarray:
 
 
 def cell_mesh_moved(record: dict, key: str) -> np.ndarray:
-    """The points (µm) of image ``key``'s box that the other image places differently: the
+    """The points (nm) of image ``key``'s box that the other image places differently: the
     record's ``comparison.moved`` points of that image inside the box."""
-    from gf180tcad.meshcut import UM_PER_MSH_UNIT
-
     entry = record["images"][key]
     side = [k for k, _ in SQUARE_PANELS].index(key)
-    pts = np.array([pair[side] for pair in record["comparison"]["moved"]]) * UM_PER_MSH_UNIT
-    (x0, x1), (y0, y1) = entry["box_x_um"], entry["box_y_um"]
+    pts = np.array([pair[side] for pair in record["comparison"]["moved"]]) * _nm_per_mesh_unit()
+    nm = UNITS["nm_per"]["um"]
+    (x0, x1), (y0, y1) = (np.array(entry["box_x_um"]) * nm), (np.array(entry["box_y_um"]) * nm)
     inside = (pts[:, 0] >= x0) & (pts[:, 0] <= x1) & (pts[:, 1] >= y0) & (pts[:, 1] <= y1)
     return pts[inside]
+
+
+def _nm_per_mesh_unit() -> float:
+    """nm per unit of the mesh files' coordinates (cm)."""
+    from gf180tcad.meshcut import UM_PER_MSH_UNIT
+
+    return UM_PER_MSH_UNIT * UNITS["nm_per"]["um"]
 
 
 def cell_mesh_figure(palette: str):
     """The 2D cell's mesh in a box in the gate oxide, in the stable image (left) and the
     dev-HEAD image (right): each triangle's edges, each point at its place with its number in
     that image's mesh, and the points the other image places differently ringed. The title
-    gives the comparison of the two full meshes."""
-    from gf180tcad.meshcut import UM_PER_MSH_UNIT
-
+    gives the comparison of the two full meshes. Lengths in nm."""
     pal = ef.PALETTES[palette]
     record = cell_mesh()
     cmp = record["comparison"]
@@ -923,14 +930,14 @@ def cell_mesh_figure(palette: str):
         for ax, (key, name) in zip(axes, SQUARE_PANELS, strict=True):
             entry = record["images"][key]
             box = entry["box"]
-            xy = box["nodes_cm"] * UM_PER_MSH_UNIT
+            xy = box["nodes_cm"] * _nm_per_mesh_unit()
             tri = _loops(xy, box["triangles"])
             ax.plot(tri[:, 0], tri[:, 1], color=pal["muted"], lw=STYLE["cell_edge_width"],
                     gid=f"{key} triangles")  # fmt: skip
             moved = cell_mesh_moved(record, key)
             ax.scatter(moved[:, 0], moved[:, 1], s=STYLE["cell_ring_area"], facecolors="none",
                        edgecolors=pal["highlight"], linewidths=STYLE["cell_boundary_width"],
-                       gid=f"{key} moved")  # fmt: skip
+                       gid=f"{key} moved", label=CELL_RING_LABEL)  # fmt: skip
             for (x, y), number in zip(xy, box["node_id"], strict=True):
                 ax.text(x, y, f"{number}", ha="center", va="center", gid=f"{key} point {number}",
                         fontsize=STYLE["cell_label_pt"],
@@ -943,15 +950,35 @@ def cell_mesh_figure(palette: str):
             ax.set_xlim(x0 - pad, x1 + pad)
             ax.set_ylim(y0 - pad, y1 + pad)
             ax.set_aspect("equal")
-            ax.set_xlabel("position across the cell (µm)")
-        axes[0].set_ylabel("height (µm)")
+            ax.set_xlabel("position across the cell (nm)")
+        axes[0].set_ylabel("height (nm)")
+        handle = [c for c in axes[0].collections if c.get_gid() == f"{SQUARE_PANELS[0][0]} moved"]
+        fig.legend(handles=handle, loc="outside lower center", frameon=False)
         same = "the same triangles" if cmp["same_triangles"] else "different triangles"
         fig.suptitle(
             f"Full meshes: {same};\n{cmp['same_number']} of {cmp['node_count']} points keep "
             f"their number;\n{len(cmp['moved'])} points differ, by at most "
-            f"{cmp['largest_relative_move']:.0e} of a coordinate"
+            f"{cmp['largest_relative_move']:.2g} of a coordinate"
         )
     return fig
+
+
+def substitutions(root: Path = CELL_MESH) -> dict[str, str]:
+    """``{"repro_<name>": text}``: the numbers the image page prints beside the cell-mesh figure,
+    from the record it draws. ``repro_cell_gmsh_stable`` and ``repro_cell_gmsh_dev``: each
+    image's gmsh version; ``repro_cell_node_count``: the points of each full mesh;
+    ``repro_cell_same_number``: the points that keep their number; ``repro_cell_moved``: the
+    points placed differently; ``repro_cell_largest_move``: their largest relative move."""
+    record = json.loads((root / "record.json").read_text(encoding="utf-8"))
+    cmp = record["comparison"]
+    return {
+        "repro_cell_gmsh_stable": record["images"]["stable"]["gmsh"],
+        "repro_cell_gmsh_dev": record["images"]["dev"]["gmsh"],
+        "repro_cell_node_count": f"{cmp['node_count']}",
+        "repro_cell_same_number": f"{cmp['same_number']}",
+        "repro_cell_moved": f"{len(cmp['moved'])}",
+        "repro_cell_largest_move": f"{cmp['largest_relative_move']:.2g}",
+    }
 
 
 def _svg_of(draw: Callable) -> Callable[[str], bytes]:

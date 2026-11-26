@@ -608,6 +608,36 @@ def check_meshwell_square(fig):
     assert record["stable"]["triangles"] != record["dev"]["triangles"]
 
 
+def _check_cell_mesh_record(record):
+    """The record's comparison and per-image fields against what they must agree with: the
+    full meshes' counts, the moved pairs, the tool's own bytes, the stable job's committed
+    reduced artefact and each image's probed gmsh version (docker/tcad*/versions.json)."""
+    cmp, images = record["comparison"], record["images"]
+    assert cmp["node_count"] == images["stable"]["full_mesh_node_count"]
+    assert cmp["node_count"] == images["dev"]["full_mesh_node_count"]
+    assert images["stable"]["full_mesh_triangle_count"] == images["dev"]["full_mesh_triangle_count"]
+    artefact = json.loads(
+        (REPO_ROOT / "results" / "tcad" / "meshes" / "stable" / "nfet_05v0" / "calibrated"
+         / "w10p0_l0p70" / "mesh-window.meta.json").read_text("utf-8")
+    )  # fmt: skip
+    assert artefact["full_mesh_sha256"] == images["stable"]["full_mesh_sha256"]
+    assert artefact["full_mesh_triangle_count"] == images["stable"]["full_mesh_triangle_count"]
+    assert 0 <= cmp["same_number"] <= cmp["node_count"]
+    tool = REPO_ROOT / "tools" / "gmsh-cell-mesh"
+    assert record["tool_sha256"] == hashlib.sha256(tool.read_bytes()).hexdigest()
+    pairs = np.array(cmp["moved"], dtype=float)  # (n, 2 images, 2 coordinates)
+    a, b = pairs[:, 0], pairs[:, 1]
+    assert np.all(np.any(a != b, axis=1)), "a moved pair that does not move"
+    # rounding: each coordinate within two units in the last place of the stable value
+    assert np.all(np.abs(a - b) <= 2 * np.spacing(np.abs(a))), "a move larger than rounding"
+    rel = np.abs(a - b) / np.maximum(np.abs(a), np.finfo(float).tiny)
+    assert cmp["largest_relative_move"] == float(rel.max())
+    assert images["stable"]["full_mesh_sha256"] != images["dev"]["full_mesh_sha256"]
+    for key, sub in (("stable", "tcad"), ("dev", "tcad-dev")):
+        versions = json.loads((REPO_ROOT / "docker" / sub / "versions.json").read_text("utf-8"))
+        assert images[key]["gmsh"] == ".".join(versions["gmsh"].split(".")[:3]), key
+
+
 def check_cell_mesh(fig):
     """Each panel draws its image's box from data/images/cell-mesh/: every triangle's edges in
     µm, every point at its place with its number, the points the other image places
@@ -616,6 +646,9 @@ def check_cell_mesh(fig):
     job and its mesh, the stable image's mesh is that mesh, and the box holds a moved point."""
     from gf180tcad.meshcut import UM_PER_MSH_UNIT
     from gf180tcad.meshcut.npz import read_npz
+
+    nm_per_um = 1e3
+    nm = UM_PER_MSH_UNIT * nm_per_um  # nm per mesh-file unit (cm)
 
     root = REPO_ROOT / "data" / "images" / "cell-mesh"
     record = json.loads((root / "record.json").read_text("utf-8"))
@@ -639,7 +672,7 @@ def check_cell_mesh(fig):
         box = read_npz(path)
         assert len(box["triangles"]) == entry["box_triangle_count"]
         assert len(box["node_id"]) == entry["box_node_count"]
-        xy = box["nodes_cm"] * UM_PER_MSH_UNIT
+        xy = box["nodes_cm"] * nm
         lines = {ln.get_gid(): ln for ln in ax.get_lines()}
         assert set(lines) == {f"{key} triangles"}
         ln = lines[f"{key} triangles"]
@@ -653,8 +686,9 @@ def check_cell_mesh(fig):
             k += 1
         assert k == len(got_x) == len(got_y), key
         # the moved points of this image inside its box: ringed, and at least one
-        pts = np.array([pair[side] for pair in cmp["moved"]]) * UM_PER_MSH_UNIT
-        (bx0, bx1), (by0, by1) = entry["box_x_um"], entry["box_y_um"]
+        pts = np.array([pair[side] for pair in cmp["moved"]]) * nm
+        (bx0, bx1) = np.array(entry["box_x_um"]) * nm_per_um
+        (by0, by1) = np.array(entry["box_y_um"]) * nm_per_um
         inside = pts[
             (pts[:, 0] >= bx0) & (pts[:, 0] <= bx1) & (pts[:, 1] >= by0) & (pts[:, 1] <= by1)
         ]
@@ -671,16 +705,20 @@ def check_cell_mesh(fig):
         pad = rf.STYLE["cell_margin"] * max(x1 - x0, y1 - y0)
         assert ax.get_xlim() == (x0 - pad, x1 + pad), key
         assert ax.get_ylim() == (y0 - pad, y1 + pad), key
-        assert ax.get_xlabel() == "position across the cell (µm)"
+        assert ax.get_xlabel() == "position across the cell (nm)"
     assert_texts(fig, want)
-    assert fig.axes[0].get_ylabel() == "height (µm)"
+    assert fig.axes[0].get_ylabel() == "height (nm)"
+    (legend,) = fig.legends
+    assert [t.get_text() for t in legend.get_texts()] == [rf.CELL_RING_LABEL]
+    assert rf.CELL_RING_LABEL == "a point the other image places differently (rounding)"
+    _check_cell_mesh_record(record)
     assert fig.axes[1].get_ylabel() == ""
     assert cmp["same_triangles"] is True
     same = "the same triangles"
     assert fig.get_suptitle() == (
         f"Full meshes: {same};\n{cmp['same_number']} of {cmp['node_count']} points keep their "
         f"number;\n{len(cmp['moved'])} points differ, by at most "
-        f"{cmp['largest_relative_move']:.0e} of a coordinate"
+        f"{cmp['largest_relative_move']:.2g} of a coordinate"
     )
 
 
