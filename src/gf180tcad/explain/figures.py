@@ -89,14 +89,19 @@ STYLE = {
         "gate_poly": ("#56B4E9", "gate (polysilicon)"),
         "ild": ("#F0E442", "insulator around the gate"),
         "oxide": ("#CC79A7", "gate oxide"),
+        # every contact in one grey, under one legend entry
+        "body_contact": ("#999999", "contact"),
+        "drain_contact": ("#999999", "contact"),
+        "gate_contact": ("#999999", "contact"),
+        "source_contact": ("#999999", "contact"),
     },
     "mesh_alpha": 0.55,
     "mesh_edge_pt": 0.2,
     "mesh_dpi": 150,
     "mesh_height_in": (1.2, 3.6),
-    "mesh_room_in": 1.3,
+    "mesh_room_in": 1.6,
     # The axes' margins (in): fixed, so the figure is drawn once (no layout pass over the mesh).
-    "mesh_margin_in": {"left": 0.9, "right": 0.2, "bottom": 1.05, "top": 0.15},
+    "mesh_margin_in": {"left": 0.9, "right": 0.2, "bottom": 1.35, "top": 0.15},
     # The junction panels: positions from (1 + pad) widths into the body to pad widths into the
     # source, on this many points; the charge axis spans the dopings with headroom.
     "junction_pad": 0.25,
@@ -826,8 +831,10 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
         ax.set_xlabel("position across the cell (µm)")
         ax.set_ylabel("height (µm)")
         present = sorted({win.regions[r] for r in np.unique(win.region)})
-        keys = [Patch(facecolor=colours[n][0], alpha=STYLE["mesh_alpha"], label=colours[n][1])
-                for n in present]  # fmt: skip
+        # one legend entry per label (the contacts share one), in the order of first use
+        labels = dict.fromkeys(colours[n] for n in present)
+        keys = [Patch(facecolor=colour, alpha=STYLE["mesh_alpha"], label=label)
+                for colour, label in labels]  # fmt: skip
         fig.legend(handles=keys, loc="lower center", ncols=2, frameon=False)
         buf = BytesIO()
         fig.savefig(buf, format="svg", metadata=plots.METADATA, dpi=STYLE["mesh_dpi"])
@@ -837,6 +844,14 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
 def _parts_cell(palette: str) -> bytes:
     c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, (), palette)
+
+
+# The parts page's cell's reduced mesh artefact (transistor-parts.md, "The contacts").
+PARTS_MESH = (numbers.ROOT / numbers.CELL_MESH).parent
+
+
+def _parts_mesh(palette: str) -> bytes:
+    return mesh_artefact(PARTS_MESH, palette)
 
 
 def _mesh_window(palette: str) -> bytes:
@@ -2170,6 +2185,7 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "bands-stack": _bands_stack,
     "bands-flat": _bands_flat,
     "parts-cell": _parts_cell,
+    "parts-mesh": _parts_mesh,
     "junction-cell": _junction_cell,
     "junction-panels": junction_panels,
     "moscap-cell": _moscap_cell,
@@ -2202,6 +2218,8 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
 # widths of every cell come from its artefact, so no other cell names any); the plots of computed
 # curves and the drawings of the crystal (not drawings of the device) carry no statement.
 _DRAWN = {"ldd-cell": STYLE["ldd_drawn_um"]}
+# The drawings of a committed mesh: its node coordinates, so drawn to scale.
+_TO_SCALE = ("parts-mesh",)
 _PLOTS = (
     "bands-flat",
     "junction-panels",
@@ -2231,6 +2249,8 @@ def _statement(name: str) -> str:
     and chooses its sizes for the drawing; the others use the layer scale factors."""
     if name == "corner-area":
         return model.exaggeration({}, STYLE["area_drawn"])
+    if name in _TO_SCALE:
+        return model.exaggeration({})
     return model.exaggeration(STYLE["scales"], _DRAWN.get(name))
 
 

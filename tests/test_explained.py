@@ -2864,3 +2864,15 @@ def test_positive_control_text_outside():
     FigureCanvasAgg(fig)
     fig.subplots().set_title("short")
     assert not text_outside(fig)
+
+
+def test_parts_mesh_is_the_parts_cell_s_mesh():
+    """The parts page's mesh figure draws the artefact cut from the mesh of the cell whose
+    cv.meta.json the page cites: a recut of that cell without a new artefact is caught here."""
+    from gf180tcad.explain import figures, numbers
+
+    meta = json.loads((figures.PARTS_MESH / "mesh-window.meta.json").read_bytes())
+    cv_meta = json.loads((ROOT / numbers._CELL).read_bytes())
+    assert meta["full_mesh_sha256"] == cv_meta["mesh_sha256"]
+    assert meta["full_mesh_node_count"] == cv_meta["node_count"]
+    assert Path(numbers._CELL).parent.parts[-3:] == figures.PARTS_MESH.parts[-3:]
