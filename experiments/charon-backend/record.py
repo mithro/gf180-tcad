@@ -19,6 +19,7 @@ commit and the scripts); each record holds them once. The records:
 import hashlib
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -106,11 +107,41 @@ def hard_range(work: Path) -> dict:
             p.name: {
                 "command": _json(p / "done.json")["command"],
                 "b2_exit": int((p / "b2_exit.txt").read_text()),
-                "failed": _json(p / "b2_failed.json") if (p / "b2_failed.json").is_file() else None,
+                "failed": _failed(p) if (p / "b2_failed.json").is_file() else None,
             }
             for p in sorted(work.glob("study-*"))
         },
     }
+
+
+#: NOX's message for a LOCA step that failed: the bias it stepped to and the converged bias it
+#: stepped from.
+LOCA_FAILED = re.compile(r"Value of continuation parameter at failed step = (\S+) from (\S+)")
+
+
+def _loca_failures(log: Path) -> list[list[float]]:
+    """Every failed LOCA step of a run's log, ``[failed at, stepped from]`` in V. After a failure
+    LOCA retries with a smaller step down to its minimum, so the last entry's "from" is the last
+    bias the run converged at."""
+    return [[float(a), float(b)] for a, b in LOCA_FAILED.findall(log.read_text(errors="replace"))]
+
+
+def _failed(step: Path) -> dict:
+    """b2_failed.json with the failed deck's LOCA failures and its last converged bias."""
+    rec = _json(step / "b2_failed.json")
+    rec["loca_failures"] = _loca_failures(step / f"{rec['deck']}.inp.log")
+    rec["last_converged_v"] = rec["loca_failures"][-1][1]
+    return rec
+
+
+def _solvers(d: Path) -> dict:
+    """b3.json with each failed sweep's LOCA failures and its last converged bias."""
+    rec = _json(d / "b3.json")
+    for name, v in rec.items():
+        if isinstance(v, dict) and v.get("failed_at"):
+            v["loca_failures"] = _loca_failures(d / f"{name}_sw.inp.log")
+            v["last_converged_v"] = v["loca_failures"][-1][1]
+    return rec
 
 
 def probes(work: Path) -> dict:
@@ -120,7 +151,7 @@ def probes(work: Path) -> dict:
             v[side].pop("tail", None)
     return {
         "doping": _json(work / "b5-doping" / "b5.json"),
-        "solvers": _json(work / "b3-solvers" / "b3.json"),
+        "solvers": _solvers(work / "b3-solvers"),
         "harmonic_balance": b4,
         "tri3": {**_json(work / "b1-tri3" / "b1.json"), **_json(work / "b1-tri3" / "b1an.json")},
     }
