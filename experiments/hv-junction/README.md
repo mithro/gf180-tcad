@@ -64,6 +64,9 @@ uv run --locked python experiments/hv-junction/record.py $W/rest $W/rest-cases.j
 uv run --locked python experiments/hv-junction/batch.py $W/mem $W/mem-cases.json --jobs 8 --mem 24g
 uv run --locked python experiments/hv-junction/record.py $W/mem $W/mem-cases.json \
     results/hv-junction/mem.json --allow-missing
+# gaps: cases of the main set that still had no breakdown value (a case file of those cases)
+# sharp: the sharp-corner sections, which predict.py runs in 128-bit precision; take them
+# from `predict.py OUT.json rest RECORD.json ...` (the cases whose parameters changed)
 
 # family: the key structures under the lighter and heavier substrate and a higher oxide charge
 uv run --locked python experiments/hv-junction/predict.py $W/family-cases.json family
@@ -116,7 +119,7 @@ case only when the record's `params_sha256` of that case is the hash of the para
 result, prints as a dash. So a record made before a change of the structures or the process
 never prints a superseded number, and the dashes show what a `rest` round has to cover.
 
-The order of the prediction records is `main`, `rest`, `rest2`, `rest3`, `mem`, `family`: a
+The order of the prediction records is `main`, `rest`, `rest2`, `rest3`, `mem`, `gaps`, `sharp`, `family`: a
 case takes the row of the last of them that holds it. A further round needs its name added
 to `PREDICTION_RECORDS` in
 [`src/gf180tcad/hvjunction_figures.py`](../../src/gf180tcad/hvjunction_figures.py) and in
