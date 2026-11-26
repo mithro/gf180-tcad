@@ -116,6 +116,15 @@ STYLE = {
     "strip_span_nm": (-20.0, 40.0),
     "edge_slope_digits": 5,
     "edge_delta_digits": 1,
+    # The abrupt-junction figure and numbers: significant digits of a width (µm) and of V_t,
+    # of V_bi (as the page's junction drops), of a width difference, and the x span past the
+    # widest bar (fraction) that leaves room for its value.
+    "width_digits": 4,
+    "vbi_digits": 6,
+    "delta_digits": 2,
+    "width_pad": 0.25,
+    # Enough significant digits to print every input of that record as the record holds it.
+    "input_digits": 10,
 }
 
 # Unit conversions: fraction to per cent, µm to nm, V to mV, A to pA, Hz to MHz.
@@ -1188,6 +1197,90 @@ def pin_depletion_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         return fig
 
 
+#: The record of the ideal abrupt-junction depletion width of the v0.8.0 rib (issue #80),
+#: written by ``experiments/plugin-history/abrupt_junction.py``.
+ABRUPT_FILE = "abrupt-junction.json"
+
+
+def abrupt_junction(root: Path = PLUGIN_ROOT) -> dict:
+    """The record :data:`ABRUPT_FILE` under ``root``."""
+    return json.loads((Path(root) / ABRUPT_FILE).read_text("utf-8"))
+
+
+def abrupt_widths(root: Path = PLUGIN_ROOT) -> list[tuple[str, float, str]]:
+    """``[(label, width µm, palette colour), ...]``: the PN slab's recorded equilibrium depletion
+    width in each v0.8.0 record (n and p below the record's fraction of |NetDoping| on the bottom
+    edge), then the two widths of the depletion approximation of :func:`abrupt_junction`: the
+    span where n and p are below that fraction, and the full width x_n + x_p."""
+    rec = abrupt_junction(root)
+    pct = f"{rec['fraction'] * UNITS['percent']:g} %"
+    out = [(f"{name}, recorded", r["ddcomponent"]["equilibrium"]["depletion_width_um"], colour)
+           for (name, r), colour in zip(plugin_records(root).items(), ("electron", "hole"),
+                                        strict=True)]  # fmt: skip
+    out.append((f"approximation, n and p < {pct} |N|", rec["inner_width_um"], "highlight"))
+    out.append(("approximation, x_n + x_p", rec["width_um"], "muted"))
+    return out
+
+
+def abrupt_junction_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """The depletion width of the PN slab's rib junction: the two v0.8.0 records' measured widths
+    against the depletion approximation of the same junction (:func:`abrupt_widths`), one
+    horizontal bar each, its value written at its end."""
+    pal = ef.PALETTES[palette]
+    rows = abrupt_widths(plugin_root(roots))
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(ef.STYLE["size_in"])
+        ax = fig.subplots()
+        span = max(w for _, w, _ in rows)
+        for i, (label, width, colour) in enumerate(rows):
+            ax.barh(i, width, color=pal[colour], gid=label)
+            ax.text(width + span * STYLE["label_lift"], i, f"{width:.{STYLE['width_digits']}g}",
+                    va="center", color=pal["text"])  # fmt: skip
+        ax.set_yticks(range(len(rows)), [label for label, _, _ in rows])
+        ax.invert_yaxis()
+        ax.set_xlim(0, span * (1 + STYLE["width_pad"]))
+        ax.set_xlabel("depletion width (µm)")
+        ax.grid(True, axis="x")
+        return fig
+
+
+def _plain(v: float) -> str:
+    """``v`` as the record holds it, in the pages' e-notation (1e17, not 1e+17)."""
+    return f"{v:.{STYLE['input_digits']}g}".replace("e+", "e")
+
+
+def _abrupt_substitutions(roots: Roots) -> dict[str, str]:
+    """The plugin-history page's abrupt-junction numbers (``lim_abrupt_*``), from
+    :func:`abrupt_junction` and the v0.8.0 records: the inputs (dopings, temperature, constants),
+    V_t and V_bi, the widths, the half-mesh record's width minus the approximation's span, and
+    the own-mesh record's count of depleted nodes."""
+    root = plugin_root(roots)
+    rec = abrupt_junction(root)
+    c = rec["constants"]
+    d = STYLE["width_digits"]
+    full, *_, half = plugin_records(root).values()  # PLUGIN_FILES order: own mesh, then half
+    measured = half["ddcomponent"]["equilibrium"]["depletion_width_um"]
+    return {
+        "lim_abrupt_full_nodes": str(full["ddcomponent"]["equilibrium"]["depleted_nodes"]),
+        "lim_abrupt_na": _plain(rec["doping"]["n_a_cm3"]),
+        "lim_abrupt_nd": _plain(rec["doping"]["n_d_cm3"]),
+        "lim_abrupt_ni": _plain(c["n_i_cm3"]),
+        "lim_abrupt_eps_si": _plain(c["eps_si"]),
+        "lim_abrupt_eps0": _plain(c["eps_0_f_per_cm"]),
+        "lim_abrupt_q": _plain(c["q_c"]),
+        "lim_abrupt_k": _plain(c["k_j_per_k"]),
+        "lim_abrupt_t": _plain(rec["t_k"]),
+        "lim_abrupt_pct": f"{rec['fraction'] * UNITS['percent']:g}",
+        "lim_abrupt_vt": f"{rec['v_t_v']:.{d}g}",
+        "lim_abrupt_vbi": f"{rec['v_bi_v']:.{STYLE['vbi_digits']}g}",
+        "lim_abrupt_w": f"{rec['width_um']:.{d}g}",
+        "lim_abrupt_xn": f"{rec['x_n_um']:.{d}g}",
+        "lim_abrupt_inner": f"{rec['inner_width_um']:.{d}g}",
+        "lim_abrupt_measured": f"{measured:.{d}g}",
+        "lim_abrupt_delta": f"{measured - rec['inner_width_um']:.{STYLE['delta_digits']}g}",
+    }
+
+
 # --- the numbers the pages print ----------------------------------------------------------------
 
 # The level of the nfet 2D mesh-convergence study whose round-off acceptance the moscap2d page
@@ -1224,6 +1317,7 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
         "lim_ccox_inv": f"{cell['ratio'][np.argmax(cell['u'])]:.{ccox}f}",
         **_edge_substitutions(roots),
         **_charon_substitutions(roots),
+        **_abrupt_substitutions(roots),
     }
 
 
@@ -2076,6 +2170,7 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "meshconv-2d": _svg_of(meshconv_2d_figure),
     "pn-slab": _svg_of(pn_slab_figure),
     "pin-depletion": _svg_of(pin_depletion_figure),
+    "abrupt-junction": _svg_of(abrupt_junction_figure),
     "edge-sensitivity": _svg_of(edge_sensitivity_figure),
     "charon-strip": _svg_of(charon_strip_figure),
     "charon-cv": _svg_of(charon_cv_figure),

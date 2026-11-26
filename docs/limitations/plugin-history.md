@@ -275,6 +275,116 @@ The PN-slab depletion width is limited by the mesh. At full mesh it rests on 2 d
 and at mesh × 0.5 on 8. So the re-verification compared it at mesh × 0.5
 ({ref}`plugin-history-latest-pn`).
 
+(plugin-history-abrupt)=
+
+**The ideal abrupt junction.** The rib's junction is a step of two dopings. Its donor side has
+N_D = {{ lim_abrupt_nd }} cm⁻³ and its acceptor side N_A = {{ lim_abrupt_na }} cm⁻³. These are the
+defaults of v0.8.0's
+[`get_doping_info_generic`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/doping.py#L29-L33).
+{repo}`experiments/plugin-history/abrupt_junction.py` applies the {term}`depletion approximation`
+to this junction. It writes {repo}`results/plugin-history/abrupt-junction.json`, and
+{numref}`fig-plugin-history-abrupt` compares its widths with the recorded ones.
+
+The constants are those of DEVSIM's
+[`simple_physics`](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/python_packages/simple_physics.py#L34-L41).
+v0.8.0's `DDComponent` solves with them at 300 K.
+{math:numref}`eq-plugin-history-vt` gives the thermal voltage:
+
+$$
+V_t = \frac{k T}{q}
+$$ (eq-plugin-history-vt)
+
+where
+
+- $V_t$ is the thermal voltage, {{ lim_abrupt_vt }} here, in V;
+- $k$ is Boltzmann's constant, {{ lim_abrupt_k }}, in J/K;
+- $T$ is the temperature, {{ lim_abrupt_t }}, in K;
+- $q$ is the elementary charge, {{ lim_abrupt_q }}, in C.
+
+{math:numref}`eq-plugin-history-vbi` gives the {term}`built-in potential`:
+
+$$
+V_{bi} = V_t \ln\frac{N_A N_D}{n_i^2}
+$$ (eq-plugin-history-vbi)
+
+where
+
+- $V_{bi}$ is the built-in potential, {{ lim_abrupt_vbi }} here, in V;
+- $V_t$ is the thermal voltage of {math:numref}`eq-plugin-history-vt`, in V;
+- $N_A$ and $N_D$ are the acceptor and donor densities, in cm⁻³;
+- $n_i$ is the intrinsic carrier density, {{ lim_abrupt_ni }}, in cm⁻³.
+
+{math:numref}`eq-plugin-history-w` gives the total depletion width:
+
+$$
+W = x_n + x_p = \sqrt{\frac{2 \varepsilon_{si} \varepsilon_0 V_{bi} (N_A + N_D)}{q N_A N_D}}
+$$ (eq-plugin-history-w)
+
+where
+
+- $W$ is the total depletion width, {{ lim_abrupt_w }} µm here, in cm;
+- $x_n$ and $x_p$ are its n-side and p-side parts, {{ lim_abrupt_xn }} µm each here, in cm;
+- $\varepsilon_{si}$ is silicon's relative permittivity, {{ lim_abrupt_eps_si }}, dimensionless;
+- $\varepsilon_0$ is the vacuum permittivity, {{ lim_abrupt_eps0 }}, in F/cm;
+- $V_{bi}$ is the built-in potential of {math:numref}`eq-plugin-history-vbi`, in V;
+- $N_A$ and $N_D$ are the acceptor and donor densities, in cm⁻³;
+- $q$ is the elementary charge, in C.
+
+The recorded width counts only nodes where n and p are both below {{ lim_abrupt_pct }} %
+|NetDoping|. In the depletion approximation that span is narrower than W. Each depletion edge
+loses a tail, given by {math:numref}`eq-plugin-history-tail` for this symmetric junction:
+
+$$
+L_f = \sqrt{\frac{2 \varepsilon_{si} \varepsilon_0 V_t \ln(1/f)}{q N}}
+$$ (eq-plugin-history-tail)
+
+where
+
+- $L_f$ is the tail at each edge, in cm;
+- $f$ is the recorded width's threshold, {{ lim_abrupt_pct }} %, dimensionless;
+- $N$ is the doping of each side, N_A = N_D, in cm⁻³;
+- $\varepsilon_{si}$ is silicon's relative permittivity, dimensionless;
+- $\varepsilon_0$ is the vacuum permittivity, in F/cm;
+- $V_t$ is the thermal voltage of {math:numref}`eq-plugin-history-vt`, in V;
+- $q$ is the elementary charge, in C.
+
+{math:numref}`eq-plugin-history-wf` gives the span the recorded width compares with:
+
+$$
+W_f = W - 2 L_f
+$$ (eq-plugin-history-wf)
+
+where
+
+- $W_f$ is the span where n and p are both below f |N|, {{ lim_abrupt_inner }} µm here, in cm;
+- $W$ is the total depletion width of {math:numref}`eq-plugin-history-w`, in cm;
+- $L_f$ is the tail of {math:numref}`eq-plugin-history-tail`, in cm.
+
+The fork's test `_analytic_inner_width_um` uses the same definition.
+
+At mesh × 0.5 the recorded width, {{ lim_abrupt_measured }} µm, exceeds W_f by
+{{ lim_abrupt_delta }} µm. At full mesh only {{ lim_abrupt_full_nodes }} nodes are depleted, so
+that width is set by the mesh, not by the junction.
+
+```{figure} /_generated/limitations/abrupt-junction-light.svg
+:name: fig-plugin-history-abrupt
+:figclass: only-light
+:alt: Four horizontal bars of depletion width: the two v0.8.0 recorded widths, the approximation's span where n and p are below 1 % of the doping, and its full width x_n + x_p, the longest.
+
+The depletion width of the PN slab's rib junction at equilibrium. The two v0.8.0 records'
+widths against the depletion approximation of the same junction: the span where n and p are
+below 1 % |N|, and the full width x_n + x_p.
+```
+
+```{figure} /_generated/limitations/abrupt-junction-dark.svg
+:figclass: only-dark
+:alt: Four horizontal bars of depletion width: the two v0.8.0 recorded widths, the approximation's span where n and p are below 1 % of the doping, and its full width x_n + x_p, the longest.
+
+The depletion width of the PN slab's rib junction at equilibrium. The two v0.8.0 records'
+widths against the depletion approximation of the same junction: the span where n and p are
+below 1 % |N|, and the full width x_n + x_p.
+```
+
 The record's **junction probe** holds the mesh physical groups, the junction drop, ψ(x_j) and the
 rib/slab jump. Its code is {repo}`pn_junction <experiments/plugin-history/checks_v080.py#L202>`, with
 {repo}`junction_probe <experiments/plugin-history/harness.py#L145>` and
@@ -294,11 +404,10 @@ leading hypothesis, and the junction probe confirms it:
   the rib (`core`), which holds the whole {term}`pn junction`, and the slab (`slab90`). So the DEVSIM
   device has no interface there, and the rib is a region with no path to either contact. The
   contacts are on the slab, so the bias moves the slab and the contact potentials only.
-- **The junction drop never changes with bias.** It stays at 0.83450 V, the {term}`built-in potential`
-  V_t ln(N_A N_D / n_i²) = 0.834503 V of the rib's own 1e17 / 1e17 cm⁻³ junction, with
-  {term}`Boltzmann statistics` and the constants of DEVSIM's
-  [`simple_physics`](https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/python_packages/simple_physics.py)
-  (300 K).
+- **The junction drop never changes with bias.** It stays at 0.83450 V. That is the rib's
+  {term}`built-in potential`, {{ lim_abrupt_vbi }} V by {math:numref}`eq-plugin-history-vbi`, with
+  {term}`Boltzmann statistics` and the constants of DEVSIM's `simple_physics`
+  ({ref}`plugin-history-abrupt`).
 - **The Potential is discontinuous at the rib's bottom vertices**, by 0.46 V at equilibrium (0.73 V at
   mesh × 0.5). The jump grows by the applied bias, because only the slab moves.
 - **The rib's absolute Potential depends on the mesh** (ψ(x_j) is −0.47002 V at full mesh and
@@ -558,7 +667,7 @@ count is reported, not asserted. The v0.8.0 anode − cathode at 0 V is 0.958654
   self-difference (× 1 against × 0.5) is 0.
 - **depletion width, bottom edge:** compared at × 0.5. The allowed difference is v0.8.0's
   self-difference, 0.0302 µm; the port differs from v0.8.0 by Δ = 0.0088 µm.
-- **depletion width against the depletion approximation:** the approximation gives 0.06664 µm.
+- **depletion width against the depletion approximation:** the approximation gives W_f = {{ lim_abrupt_inner }} µm ({ref}`plugin-history-abrupt`).
   The allowed difference is one bottom-edge node spacing, 0.0100 µm; Δ = 0.0066 µm at × 0.5.
 
 The anode − cathode potential is a boundary-condition check, not a mesh check: it is the
