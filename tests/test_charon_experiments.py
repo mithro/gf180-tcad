@@ -574,3 +574,82 @@ def test_last_converged_must_be_the_last_failures_from(tmp_path):
                    + "\tStep size reached minimum step size bound\n")  # fmt: skip
     with pytest.raises(ValueError, match="is not the last failure's"):
         rec._loca_failures(log)
+
+
+#: The Newton diagnostics of issue #223 (``newton-*`` steps of run.py): one factor at a time.
+NEWTON_STEPS = {
+    f"newton-{dev}-start-{tau}-{rel}"
+    for dev in ("nfet", "pfet")
+    for tau in ("default", "tau15")
+    for rel in ("1e-10", "1e-11")
+}
+
+
+#: The decks' Newton limit (decks.solver) and NOX's F-norm test tolerance (the generated XML).
+NEWTON_MAX_ITERATIONS = 50
+NEWTON_FNORM_TOL = 1e-4
+
+
+def test_deck_traps_are_recorded():
+    """Issue #224: the side set named like its block stops charon_mp.exe while it reads the mesh;
+    the misnamed doping block passes both and leaves the body undoped."""
+    traps = _record("probes")["deck_traps"]
+    side, misnamed = traps["side_set_named_body"], traps["doping_block_misnamed"]
+    assert side["interpreter_exit"] == 0 and side["xml_written"]
+    assert side["charon_exit"] != 0 and not side["completed"] and side["doping"] is None
+    assert not side["exodus_written"]
+    assert "Different entity rank has already been set on Part" in side["tail"]
+    assert "process_sidesets" in side["tail"]
+    assert misnamed["interpreter_exit"] == 0 and misnamed["charon_exit"] == 0
+    assert misnamed["completed"] and misnamed["exodus_written"]
+    dop = misnamed["doping"]
+    assert dop["poly_max_rel"] == 0.0 and dop["body_max_abs_cm3"] == 0.0
+
+
+def _newton() -> dict:
+    return _record("hard-range")["newton"]
+
+
+def test_newton_steps_are_recorded():
+    newton = _newton()
+    assert set(newton) == NEWTON_STEPS
+    for name, n in newton.items():
+        assert (n["b2_exit"] == 0) == (n["failed"] is None) == (not n["stalled"]), name
+        if not n["stalled"]:
+            assert "solves" not in n, name
+            continue
+        assert n["deck"] == n["failed"]["deck"], name
+        if n["deck"] == "eq":
+            assert n["failed_at_v"] == 0.0 and n["from_v"] is None, name
+        else:
+            # the last failed LOCA step, from the bias the currents file prints to nine digits
+            assert n["failed_at_v"] == n["failed"]["loca_failures"][-1][0], name
+            assert n["from_v_log"] == n["failed"]["last_converged_v"], name
+            assert abs(n["from_v"] - n["from_v_log"]) <= 5e-4 * abs(n["from_v_log"]), name
+        assert set(n["solves"]) == {"1e-10", "1e-11"}, name
+
+
+def test_newton_iterations_are_the_logs():
+    """Per iteration, the WRMS norm recomputed from Charon's files is the one NOX prints (to its
+    four digits, wherever NOX evaluates it), the vectors are in the matrix's order
+    (the first linear residual is small), and an unconverged solve ran out of iterations."""
+    for name, n in _newton().items():
+        for tol, s in n.get("solves", {}).items():
+            its = s["iterations"]
+            assert [it["iteration"] for it in its] == list(range(1, len(its) + 1)), name
+            assert s["newton_steps"] == len(its), (name, tol)
+            if not s["converged"]:
+                assert len(its) == NEWTON_MAX_ITERATIONS, (name, tol)
+            for it in its:
+                # NOX evaluates the WRMS test only once the F-norm test passes (Minimal checks)
+                if it["log_fnorm"] < NEWTON_FNORM_TOL:
+                    assert _shown(f"{it['log_wrms']:.3e}", it["wrms"]), (name, tol, it["iteration"])
+            assert its[0]["linear_rel_residual"] < 1e-6, (name, tol)
+            last = s["last"]
+            assert sum(last["unknowns_by_field"].values()) == last["unknowns"], (name, tol)
+            assert sum(last["wrms_share_by_field"].values()) == pytest.approx(1.0), (name, tol)
+            # the imported state is the first previous iterate (V0 printed to six digits)
+            check = last.get("state_check_max_rel")
+            if check:
+                assert check["potential"] < 1e-5, (name, tol, check)
+                assert max(check["electrons"], check["holes"]) < 1e-12, (name, tol, check)

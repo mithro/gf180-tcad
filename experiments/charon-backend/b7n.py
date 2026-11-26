@@ -53,7 +53,7 @@ STEP = re.compile(
 )
 STATUS = re.compile(
     r"-- (?:Final )?Status Test Results --\n.*?F-Norm = (\S+) <.*?WRMS-Norm = (\S+) <.*?"
-    r"Number of Iterations = (\d+) <",
+    r"Number of Iterations = (-?\d+) <",
     re.DOTALL,
 )
 FLOORS = """With x the previous iterate (the one the WRMS weights use), eps the double precision
@@ -130,7 +130,9 @@ def analyse(d: Path, rel, abs_, log_text, perm, fields, state, scales):
     """Per-iteration records from the Matrix Market files in d, and the last iteration's
     floors, 2-norm condition numbers and WRMS shares."""
     steps = {int(k): (float(f), float(s), float(dx)) for k, f, s, dx in STEP.findall(log_text)}
-    status = {int(k): (float(f), float(w)) for f, w, k in STATUS.findall(log_text)}
+    # a converged solve's final status prints its iteration count as -1: the last step's
+    status = {(int(k) if int(k) >= 0 else max(steps)): (float(f), float(w))
+              for f, w, k in STATUS.findall(log_text)}  # fmt: skip
     count = len(list(d.glob("J_*.mm")))
     its = []
     for c in range(count):
@@ -285,10 +287,7 @@ def main(dev, params):
                 "abs": abs_,
                 "converged": ok,
                 "wall_s": round(dt, 1),
-                "newton_limit": [
-                    list(map(int, m))
-                    for m in re.findall(r"Number of Iterations = (\d+) < (\d+)", log)[-1:]
-                ],
+                "newton_steps": max(int(k) for k, *_ in STEP.findall(log)),
                 "scales": scales,
                 **analyse(Path("."), rel, abs_, log, perm, fields, state, scales),
             }
