@@ -14,9 +14,9 @@
   bare-f0.1-f64-v4    4 V steps (the first mesh level)
   bare-f0.1-f64-v5    5 V steps
   bare-f0.05-f64-v4   the 0.05 um mesh
-  abut-f0.07          the N-well with the generated P-well abutting (cases.calib3) on the
-                      mesh of the abutting prediction cases
-  abut-f0.05, abut-f0.02   the same on finer meshes
+  abut-f0.05          the N-well with the generated P-well abutting (cases.calib3)
+  abut-f0.03          the same on the mesh of the abutting prediction cases
+  abut-f0.02          the same on a finer mesh
 
 ``diodes`` runs diode1d.py (three abrupt N+/P diodes) in the sandbox and writes
 WORKDIR/diode1d.json, its log and pins.json. ``record`` writes the diode record
@@ -46,11 +46,11 @@ BARE = {
     "bare-f0.1-f64-v5": ("f0.1", False, 5.0),
     "bare-f0.05-f64-v4": ("f0.05", False, 4.0),
 }
-# The abutting junction: cases.calib3's section on three meshes; 0.07 is the mesh
+# The abutting junction: cases.calib3's section on three meshes; 0.03 is the mesh
 # predict.py gives a case with an abutting P-well.
 ABUT_MESH = {
-    "abut-f0.07": {"fine": 0.07, "surf": 0.03, "coarse": 0.5},
     "abut-f0.05": {"fine": 0.05, "surf": 0.02, "coarse": 0.5},
+    "abut-f0.03": {"fine": 0.03, "surf": 0.02, "coarse": 0.5},
     "abut-f0.02": {"fine": 0.02, "surf": 0.02, "coarse": 0.5},
 }
 DIODES = ("1e+15", "1e+16", "1e+17")

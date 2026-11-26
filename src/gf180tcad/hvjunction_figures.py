@@ -3,23 +3,27 @@
 
 Everything is read from the committed records of ``experiments/hv-junction``
 (``results/hv-junction/*.json``), the structure list ``experiments/hv-junction/structures.json``
-and three host modules of that experiment, loaded from their files: ``hvsite.py`` (the drawn
-structure as a cross-section), ``ionize.py`` (the ionisation integral) and ``profile1d.py`` (the
-sheet resistance and capacitance of a well profile).
+and four host modules of that experiment, loaded from their files: ``predict.py`` (the case
+sets), ``hvsite.py`` (the drawn structure as a cross-section), ``ionize.py`` (the ionisation
+integral) and ``profile1d.py`` (the sheet resistance and capacitance of a well profile).
 
-A record that is not committed gives a dash wherever the page prints one of its values, and its
-points are missing from the figures; nothing else changes. The prediction records are ``main``,
-``supp``, ``family`` and ``delta``: a case takes its value from the last of them that holds it.
-Only the structures of ``structures.json`` are read from them. The other records are ``checks``,
-``diodes`` and ``charon``.
+The prediction records are ``main`` and ``family``. A case is read from them only when its
+parameters are the ones ``predict.py`` gives now (the record's ``params_sha256``), so a record
+made before a change of the structures or the process never prints a superseded number. A
+value whose record or case is not committed prints as a dash, and its points are missing from
+the figures. The other records are ``checks``, ``diodes`` and ``charon``.
 
 :func:`substitutions` gives the page's ``{{ hvj_<name> }}`` values, and :func:`write_all` writes
 each figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg`` into
-``docs/_generated/hv-junction/`` at docs build time (:func:`gf180tcad.docgen.generate`).
+``docs/_generated/hv-junction/`` at docs build time (:func:`gf180tcad.docgen.generate`). The
+page's result tables are written into it by::
+
+    uv run --locked --group docs python -m gf180tcad.hvjunction_figures tables
 """
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import importlib.util
 import json
@@ -40,38 +44,41 @@ from gf180tcad.sandbox import REPO_ROOT
 
 EXPERIMENT = REPO_ROOT / "experiments" / "hv-junction"
 ROOT = REPO_ROOT / "results" / "hv-junction"
+PAGE = REPO_ROOT / "docs" / "results" / "hv-junction.md"
 
-#: The records, in the order a later one replaces the cases of an earlier one.
-PREDICTION_RECORDS = ("main", "supp", "family", "delta")
+#: The prediction records, in the order a later one replaces the cases of an earlier one.
+PREDICTION_RECORDS = ("main", "family")
 RECORDS = (*PREDICTION_RECORDS, "checks", "diodes", "charon")
 #: The text of a value whose record or case is not committed.
 MISSING = "—"
 
-#: The process assumptions of the main cases and of the doping family (``predict.py``).
-PROCESSES = ("A", "An", "Aq", "B", "Bq")
-FAMILY = ("Alo", "Ahi", "Blo", "Bhi", "Bdp", "Bq3")
-#: The structures ``predict.py`` runs under the family (its ``KEY``).
-FAMILY_STRUCTURES = ("NT20", "NC0", "NA0p6", "NAM1_6", "NW3", "NR3_2", "NM1_6", "DT20", "DM1_6",
-                     "DAo1")  # fmt: skip
-#: The check cases of ``checks.py`` and the cases ``charon_batch.py`` ran.
+#: The check cases of ``checks.py`` and the cases of the Charon cross-check.
 CHECKS = ("bare-f0.1-x128-v2", "bare-f0.1-f64-v2", "bare-f0.1-f64-v4", "bare-f0.1-f64-v5",
-          "bare-f0.05-f64-v4", "abut-f0.07", "abut-f0.05", "abut-f0.02")  # fmt: skip
+          "bare-f0.05-f64-v4", "abut-f0.05", "abut-f0.03", "abut-f0.02")  # fmt: skip
 DIODES = {"1e+15": 1e15, "1e+16": 1e16, "1e+17": 1e17}
 #: diode1d.py's donor doping of the N+ side (cm^-3), dd.py's intrinsic density (cm^-3) and
 #: thermal voltage at 300 K (V): the built-in potential of its diodes.
 DIODE_ND, NI, VT = 1e19, 1.0e10, 1.380649e-23 * 300.0 / 1.602176634e-19
-CHARON_CASES = ("NT20|A|edge", "NT20|B|edge", "NW1p5|B|edge", "NM1_6|B|edge", "NR1_2|B|edge",
-                "DT20|B|edge")  # fmt: skip
+CHARON_CASES = ("NT20|AL|edge", "NT20|BL|edge", "NW1p5|BL|edge", "NM1_6|BL|edge",
+                "NR1_2|BL|edge", "DT20|BL|edge")  # fmt: skip
 CHARON_FIELDS = {"current": "bv_current_v", "integral": "bv_integral_v",
                  "last": "last_converged_v"}  # fmt: skip
 
 # The published anchors of the doping family, each with its public source on the page: the
-# N-well sheet resistance window and typical value (ohm/square), the zero-bias capacitance of
-# the N-well diode model (F/cm^2), and the typical and minimum N-well breakdown voltage (V).
-ANCHORS = {"rs_min": 800.0, "rs_typ": 1000.0, "rs_max": 1200.0, "cj0": 1.4914e-8,
-           "bv_typ": 14.0, "bv_min": 10.0, "dnw_model_bv": 30.48}  # fmt: skip
-#: The same section on two meshes: an abutting P-well, generated (A) and drawn at no distance (B).
-MESH_PAIR = ("NT20|A|edge", "NW0|B|edge")
+# zero-bias capacitance, grading coefficient and junction potential of the N-well and deep
+# N-well diode models (F/cm^2, dimensionless, V), the typical N-well breakdown voltage (V) and
+# the deep N-well model's breakdown voltage (V).
+ANCHORS = {
+    "nw": {"cj0": 1.4914e-8, "mj": 0.30525, "pb": 0.43905},
+    "dnw": {"cj0": 2.2998e-8, "mj": 0.14716, "pb": 0.35175},
+    "bv_typ": 14.0,
+    "dnw_model_bv": 30.48,
+}
+#: The reverse bias (V) at which the anchors table compares the capacitances a second time.
+ANCHOR_BIAS_V = 10.0
+#: The same section on two meshes: an abutting P-well, generated (AL) and drawn at no distance
+#: (BL).
+MESH_PAIR = ("NT20|AL|edge", "NW0|BL|edge")
 
 STYLE = {
     "size_in": (6.4, 4.4),
@@ -85,7 +92,7 @@ STYLE = {
     # the contact labels of the cross-section sit at this height (µm, above the plate)
     "label_y_um": -2.1,
     "section_struct": {"rings": [[2.0, 2.0]], "plates": {"m1": 6.0}, "term": 12.0},
-    "curve_cases": ("NT20|A|edge", "NT20|B|edge", "NM1_6|B|edge", "NR3_1p5|B|edge"),
+    "curve_cases": ("NT20|AL|edge", "NT20|BL|edge", "NM1_6|BL|edge", "NR3_1p5|BL|edge"),
     "analytic_points": 400,
 }
 
@@ -96,6 +103,16 @@ def _load(name: str) -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@functools.cache
+def _predict() -> ModuleType:
+    """``predict.py`` (it imports ``hvsite.py`` by its bare name)."""
+    sys.path.insert(0, str(EXPERIMENT))
+    try:
+        return _load("predict")
+    finally:
+        sys.path.remove(str(EXPERIMENT))
 
 
 # --- the records ----------------------------------------------------------------------------------
@@ -113,47 +130,43 @@ def records(root: Path = ROOT) -> dict[str, dict]:
 
 def structures() -> dict[str, dict]:
     """The simulated structures of the test die: ``structures.json`` without the open site and
-    the capacitance wells, as ``predict.py`` selects them."""
-    data = json.loads((EXPERIMENT / "structures.json").read_text("utf-8"))
-    return {k: v for k, v in data.items() if v["kind"] != "open" and v["half"] < 40}
+    the capacitance wells (``predict.STRUCTS``)."""
+    return _predict().STRUCTS
 
 
-def cases(root: Path = ROOT) -> dict[str, dict]:
-    """Every prediction case of the committed records whose structure is in
-    ``structures.json``, ``{case name: its row}``. A case takes the row of the last record of
-    :data:`PREDICTION_RECORDS` that holds it."""
-    out = {}
-    recs = records(root)
-    for name in PREDICTION_RECORDS:
-        out.update(recs.get(name, {}).get("cases", {}))
-    known = structures()
-    return {c: row for c, row in out.items() if c.split("|")[0].split("@")[0] in known}
-
-
-def current_hashes() -> dict[str, str]:
-    """``{case: sha256 of its parameters}`` of the case sets ``predict.py`` gives now: every
-    structure under :data:`PROCESSES` and the family, hashed as ``record.py`` hashes them."""
-    sys.path.insert(0, str(EXPERIMENT))  # predict.py imports hvsite.py by its bare name
-    try:
-        predict = _load("predict")
-    finally:
-        sys.path.remove(str(EXPERIMENT))
+@functools.cache
+def current_cases() -> dict[str, dict]:
+    """``{case: parameters}`` of the case sets ``predict.py`` gives now: ``main`` (every
+    structure under its ``PROCESSES``, the NAT structures under ``NAT_ONLY``) and ``family``."""
+    predict = _predict()
     struct = predict.STRUCTS
     want = predict.cases(sorted(struct), predict.PROCESSES)
     nat = [n for n, st in struct.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
     want.update(predict.cases(sorted(nat), predict.NAT_ONLY))
     want.update(predict.cases([k for k in predict.KEY if k in struct], predict.FAMILY))
+    return want
+
+
+@functools.cache
+def current_hashes() -> dict[str, str]:
+    """``{case: sha256 of its parameters}`` of :func:`current_cases`, hashed as ``record.py``
+    hashes them."""
     return {
         c: hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()
-        for c, p in want.items()
+        for c, p in current_cases().items()
     }
 
 
-def superseded(root: Path = ROOT) -> list[str]:
-    """The cases the page's tables print whose record row was run with other parameters than
-    ``predict.py`` gives now (the ``delta`` case set reruns them)."""
-    got, now = cases(root), current_hashes()
-    return sorted(c for c in table_cases() if c in got and got[c]["params_sha256"] != now.get(c))
+def cases(root: Path = ROOT) -> dict[str, dict]:
+    """``{case name: its row}`` of every prediction case of the committed records that was run
+    with the parameters ``predict.py`` gives now. A case takes the row of the last record of
+    :data:`PREDICTION_RECORDS` that holds it."""
+    out = {}
+    recs = records(root)
+    for name in PREDICTION_RECORDS:
+        out.update(recs.get(name, {}).get("cases", {}))
+    now = current_hashes()
+    return {c: row for c, row in out.items() if row["params_sha256"] == now.get(c)}
 
 
 def shown(row: dict | None) -> str:
@@ -188,20 +201,27 @@ def group(row: str, struct: dict[str, dict] | None = None) -> str:
     return "bare"
 
 
+_NWELL = (("AL", "edge"), ("BL", "edge"), ("BL", "corner"), ("BD", "edge"), ("BD", "corner"),
+          ("BLq", "edge"))  # fmt: skip
 #: The columns of each group's table: (process, shape).
 COLUMNS = {
-    "bare": (("A", "edge"), ("B", "edge"), ("B", "corner"), ("Bq", "edge"), ("Bq", "corner")),
-    "pwell": (("A", "edge"), ("B", "edge"), ("B", "corner"), ("Bq", "edge"), ("Bq", "corner")),
-    "plates": (("A", "edge"), ("B", "edge"), ("B", "corner"), ("Bq", "edge"), ("Bq", "corner")),
-    "rings": (("A", "edge"), ("B", "edge"), ("B", "corner"), ("Bq", "edge"), ("Bq", "corner")),
-    "nat": (("A", "edge"), ("An", "edge"), ("An", "corner"), ("Bq", "edge"), ("Bq", "corner")),
-    "deep": (("A", "edge"), ("A", "corner"), ("B", "edge"), ("B", "corner"), ("Bq", "edge")),
-}
-FAMILY_COLUMNS = {
-    "family-b": (("Blo", "edge"), ("B", "edge"), ("Bhi", "edge"), ("Bdp", "edge"),
-                 ("Bq3", "edge")),
-    "family-a": (("Alo", "edge"), ("A", "edge"), ("Ahi", "edge")),
+    "bare": _NWELL,
+    "pwell": _NWELL,
+    "plates": _NWELL,
+    "rings": _NWELL,
+    "nat": (("AL", "edge"), ("AnL", "edge"), ("AnL", "corner"), ("AnD", "edge"),
+            ("AnD", "corner"), ("BLq", "edge")),
+    "deep": (("AL", "edge"), ("AL", "corner"), ("AD", "edge"), ("BL", "edge"), ("BL", "corner"),
+             ("BD", "edge")),
 }  # fmt: skip
+#: The columns of the two family tables: the substrate doping, then the charge and the P-well.
+FAMILY_COLUMNS = {
+    "family-sub": (("BLlo", "edge"), ("BL", "edge"), ("BLhi", "edge"), ("BDlo", "edge"),
+                   ("BD", "edge"), ("BDhi", "edge")),
+    "family-other": (("BLq", "edge"), ("BLq3", "edge"), ("AL", "edge"), ("ALhi", "edge")),
+}  # fmt: skip
+#: The ``:name:`` of each table on the page.
+TABLE_NAMES = {name: f"tab-hvj-{name}" for name in (*COLUMNS, *FAMILY_COLUMNS)}
 
 
 def key(case: str) -> str:
@@ -209,11 +229,17 @@ def key(case: str) -> str:
     return "hvj_" + re.sub(r"[^0-9A-Za-z]", "_", case)
 
 
+def family_structures() -> list[str]:
+    """The structures of the family tables: ``predict.KEY``."""
+    return [k for k in _predict().KEY if k in structures()]
+
+
 def table(name: str) -> str:
-    """The Markdown rows of the table of group ``name`` (or ``family-a``, ``family-b``), as the page holds them:
-    a header, then one row per structure with a substitution per value."""
+    """The Markdown rows of the table ``name`` (a key of :data:`COLUMNS` or
+    :data:`FAMILY_COLUMNS`), as the page holds them: a header, then one row per structure with
+    a substitution per value."""
     if name in FAMILY_COLUMNS:
-        columns, names = FAMILY_COLUMNS[name], [s for s in FAMILY_STRUCTURES if s in structures()]
+        columns, names = FAMILY_COLUMNS[name], family_structures()
     else:
         columns, names = COLUMNS[name], [r for r in rows() if group(r) == name]
     head = ["Structure", *(p if s == "edge" else f"{p} corner" for p, s in columns)]
@@ -230,9 +256,22 @@ def table_cases() -> list[str]:
     for row in rows():
         out += [f"{row}|{p}|{s}" for p, s in COLUMNS[group(row)]]
     for columns in FAMILY_COLUMNS.values():
-        out += [f"{row}|{p}|{s}" for row in FAMILY_STRUCTURES for p, s in columns
-                if row in structures()]  # fmt: skip
+        out += [f"{row}|{p}|{s}" for row in family_structures() for p, s in columns]
     return out
+
+
+def write_tables(page: Path = PAGE) -> bool:
+    """Rewrite the rows of every result table of ``page`` (the table blocks named by
+    :data:`TABLE_NAMES`) from :func:`table`. Returns whether the page changed."""
+    text = old = page.read_text("utf-8")
+    for name, label in TABLE_NAMES.items():
+        m = re.search(rf"(:name: {re.escape(label)}\n\n)((?:\|.*\n)+)", text)
+        if m is None:
+            raise ValueError(f"{page}: no table named {label}")
+        text = text[: m.start(2)] + table(name) + "\n" + text[m.end(2) :]
+    if text != old:
+        page.write_text(text, "utf-8")
+    return text != old
 
 
 # --- the checks -----------------------------------------------------------------------------------
@@ -258,19 +297,32 @@ def built_in(doping: float) -> float:
     return VT * float(np.log(DIODE_ND * doping / NI**2))
 
 
-def nwell_anchors() -> dict[str, float]:
-    """The N-well profile of ``hvsite.DEFAULT_PROCESS`` in ``profile1d.py``: its sheet
-    resistance (ohm/square) and zero-bias junction capacitance (F/cm^2)."""
+@functools.cache
+def well_anchors() -> dict[str, float]:
+    """The wells of ``hvsite.DEFAULT_PROCESS`` in ``profile1d.py``: ``nw_rs``, the sheet
+    resistance of the N-well under the trench oxide (ohm/square); ``nw_c0`` and ``nw_c10``, its
+    junction capacitance at 0 V and :data:`ANCHOR_BIAS_V` (F/cm^2); ``dnw_c0`` and ``dnw_c10``,
+    those of the deep N-well over the deep P layer; and ``<name>_model``, the diode model's
+    value of each capacitance."""
     hvsite, profile1d = _load("hvsite"), _load("profile1d")
     pr = hvsite.DEFAULT_PROCESS
     um = 1e-4
-    y = np.linspace(0, 12 * um, 24001)
-    wells = [(g["peak"], g["rp"] * um, g["sy"] * um) for g in pr["nw"]]
-    n, total = profile1d.net(y, wells, pr["sub"])
-    return {
-        "rs": float(profile1d.sheet_resistance(y, n, total)),
-        "cj0": float(profile1d.cv(y, n, np.array([0.0]))[0]),
-    }
+    y = np.linspace(0, 16 * um, 32001)
+    volts = np.array([0.0, ANCHOR_BIAS_V])
+
+    def boxes(implants):
+        return [(g["peak"], g["rp"] * um, g["sy"] * um) for g in implants]
+
+    n, total = profile1d.net(y, boxes(pr["nw"]), pr["sub"])
+    out = {"nw_rs": float(profile1d.sheet_resistance(y, n, total, top=hvsite.STI * um))}
+    deep, _ = profile1d.net(y, boxes(pr["dnw"]), pr["sub"], boxes(pr["deep_p"]))
+    for well, profile in (("nw", n), ("dnw", deep)):
+        c = profile1d.cv(y, profile, volts)
+        m = ANCHORS[well]
+        model = profile1d.model_c(volts, m["cj0"], m["mj"], m["pb"])
+        for tag, got, want in zip(("c0", "c10"), c, model, strict=True):
+            out[f"{well}_{tag}"], out[f"{well}_{tag}_model"] = float(got), float(want)
+    return out
 
 
 def _two(v: float | None) -> str:
@@ -280,24 +332,31 @@ def _two(v: float | None) -> str:
 def substitutions(root: Path = ROOT) -> dict[str, str]:
     """``{"hvj_<name>": text}``: every number the page prints.
 
-    ``hvj_<case>`` (:func:`key`) is :func:`shown` of each case of the records and of each table
-    cell; ``hvj_n_<record>`` and ``hvj_n_<record>_missing`` count a prediction record's cases and
-    the cases its runs left without a result; ``hvj_n_superseded`` counts :func:`superseded`; ``hvj_chk_<name>`` is a check case's breakdown
-    voltage; ``hvj_diode_<doping>`` the 1D diode's, ``hvj_diode_<doping>_analytic`` the
-    triangular-field value, ``_vbi`` the built-in potential and ``_applied`` their difference; ``hvj_charon_<case>_<field>`` the Charon values; ``hvj_nw_rs``,
-    ``hvj_nw_cj0`` and ``hvj_nw_cj0_pct`` the N-well anchors; ``hvj_abut_pct`` how far the
-    abutting junction lies above the published typical value; ``hvj_mesh_pair_pct`` the
-    difference of the two meshes of :data:`MESH_PAIR`."""
+    ``hvj_<case>`` (:func:`key`) is :func:`shown` of each current case; ``hvj_n_<record>``
+    counts the cases of a prediction record that :func:`cases` reads and
+    ``hvj_n_<record>_missing`` the current cases its runs left without a result;
+    ``hvj_chk_<name>`` is a check case's breakdown voltage; ``hvj_diode_<doping>`` the 1D
+    diode's, ``hvj_diode_<doping>_analytic`` the triangular-field value, ``_vbi`` the built-in
+    potential and ``_applied`` their difference; ``hvj_<case>_charon_<field>`` the Charon
+    values; ``hvj_nw_rs`` and ``hvj_<well>_<c0|c10>[_model]`` the anchors of
+    :func:`well_anchors` (capacitances in fF/µm²); ``hvj_abut_pct`` how far the abutting
+    junction lies above the published typical value; ``hvj_mesh_pair_pct`` the difference of
+    the two meshes of :data:`MESH_PAIR`."""
     recs = records(root)
     got = cases(root)
-    out = {key(c): shown(got.get(c)) for c in {*got, *table_cases()}}
-    if len(out) != len({*got, *table_cases()}):
+    names = {*current_cases(), *table_cases()}
+    out = {key(c): shown(got.get(c)) for c in names}
+    if len(out) != len(names):
         raise ValueError("two case names give one substitution key")
+    now = current_hashes()
     for name in PREDICTION_RECORDS:
         rec = recs.get(name)
-        out[f"hvj_n_{name}"] = MISSING if rec is None else str(len(rec["cases"]))
-        out[f"hvj_n_{name}_missing"] = MISSING if rec is None else str(len(rec["not_converged"]))
-    out["hvj_n_superseded"] = str(len(superseded(root)))
+        if rec is None:
+            out[f"hvj_n_{name}"] = out[f"hvj_n_{name}_missing"] = MISSING
+            continue
+        read = [c for c, r in rec["cases"].items() if r["params_sha256"] == now.get(c)]
+        out[f"hvj_n_{name}"] = str(len(read))
+        out[f"hvj_n_{name}_missing"] = str(len([c for c in rec["not_converged"] if c in now]))
     checks = recs.get("checks", {}).get("cases", {})
     for name in CHECKS:
         row = checks.get(name)
@@ -305,8 +364,8 @@ def substitutions(root: Path = ROOT) -> dict[str, str]:
     diodes = recs.get("diodes", {}).get("diodes", {})
     for name, doping in DIODES.items():
         short = name.replace("+", "")
-        out[f"hvj_diode_{short}"] = _two(diodes.get(name, {}).get("bv_v"))
         analytic = analytic_diode_bv(doping)
+        out[f"hvj_diode_{short}"] = _two(diodes.get(name, {}).get("bv_v"))
         out[f"hvj_diode_{short}_analytic"] = _two(analytic)
         out[f"hvj_diode_{short}_vbi"] = _two(built_in(doping))
         out[f"hvj_diode_{short}_applied"] = _two(analytic - built_in(doping))
@@ -314,10 +373,9 @@ def substitutions(root: Path = ROOT) -> dict[str, str]:
     for case in CHARON_CASES:
         for field, source in CHARON_FIELDS.items():
             out[f"{key(case)}_charon_{field}"] = _two(charon.get(case, {}).get(source))
-    anchors = nwell_anchors()
-    out["hvj_nw_rs"] = f"{anchors['rs']:.0f}"
-    out["hvj_nw_cj0"] = f"{anchors['cj0'] * 1e8:.3f}"
-    out["hvj_nw_cj0_pct"] = f"{100 * abs(anchors['cj0'] / ANCHORS['cj0'] - 1):.0f}"
+    for name, value in well_anchors().items():
+        # F/cm^2 to fF/µm^2 is a factor of 1e7
+        out[f"hvj_{name}"] = f"{value:.0f}" if name == "nw_rs" else f"{value * 1e7:.3f}"
     abut, coarse = (got.get(c) for c in MESH_PAIR)
     ok = abut is not None and abut["bv_v"] is not None
     out["hvj_abut_pct"] = f"{100 * (abut['bv_v'] / ANCHORS['bv_typ'] - 1):.0f}" if ok else MISSING
@@ -342,12 +400,14 @@ def _bv(got: dict, case: str) -> float:
 
 def section_boxes(struct: dict | None = None) -> dict:
     """The cross-section ``hvsite.section`` gives the structure ``struct`` (default
-    :data:`STYLE` ``section_struct``) under assumption A, as boxes in µm: ``{"width", "sti_depth",
+    :data:`STYLE` ``section_struct``) under assumption AL, as boxes in µm: ``{"width", "sti_depth",
     "boxes": [(kind, x0, x1, depth)], "plates": [(x0, x1, y0, y1)], "contacts": {name: (x0, x1)}}``.
     ``kind`` is ``n-well``, ``ring``, ``p-well``, ``n+`` or ``p+``; a box reaches down to its
     implant's peak plus :data:`STYLE` ``box_sigmas`` standard deviations."""
     hvsite = _load("hvsite")
-    p = hvsite.section(struct or STYLE["section_struct"], {"pwell": "everywhere"})
+    p = hvsite.section(
+        struct or STYLE["section_struct"], {"pwell": "everywhere", "deep_p_where": "dnw"}
+    )
     width, edge = p["width"], 8.0
     boxes = []
     for sign, items in (("n", p["wells"]), ("p", p["pfield"])):
@@ -465,7 +525,7 @@ def pwell_points() -> dict[str, list[tuple[float, str]]]:
 
 
 def pwell_figure(palette: str, root: Path = ROOT):
-    """Breakdown voltage against the distance of a drawn P-well, assumption B."""
+    """Breakdown voltage against the distance of a drawn P-well, assumption BL."""
     pal = ef.PALETTES[palette]
     got = cases(root)
     pts = pwell_points()
@@ -474,7 +534,7 @@ def pwell_figure(palette: str, root: Path = ROOT):
     for kind, colour, marker, label in (("nw", "electron", "o", "N-well"),
                                         ("dnw", "hole", "s", "deep N-well")):  # fmt: skip
         for shape in ("edge", "corner"):
-            _series(ax, pal, got, pts[kind], "B", shape, colour, marker, f"{label}, {shape}")
+            _series(ax, pal, got, pts[kind], "BL", shape, colour, marker, f"{label}, {shape}")
     ax.set_xlabel("drawn P-well distance from the well edge (µm)")
     ax.set_ylabel("breakdown voltage (V)")
     ax.set_ylim(bottom=0)
@@ -495,7 +555,7 @@ def plate_points() -> dict[str, list[tuple[float, str]]]:
 
 
 def plate_figure(palette: str, root: Path = ROOT):
-    """Breakdown voltage against the length of a single field plate, by layer, assumption B."""
+    """Breakdown voltage against the length of a single field plate, by layer, assumption BL."""
     pal = ef.PALETTES[palette]
     got = cases(root)
     fig = _figure(STYLE["size_in"])
@@ -504,7 +564,7 @@ def plate_figure(palette: str, root: Path = ROOT):
         plate_points().items(), ("hole", "electron", "highlight"), "o^s",
         ("Poly2", "Metal1", "Metal2"), strict=True):  # fmt: skip
         for shape in ("edge", "corner"):
-            _series(ax, pal, got, pts, "B", shape, colour, marker, f"{label}, {shape}")
+            _series(ax, pal, got, pts, "BL", shape, colour, marker, f"{label}, {shape}")
     ax.set_xlabel("plate length beyond the well edge (µm)")
     ax.set_ylabel("breakdown voltage (V)")
     ax.set_ylim(bottom=0)
@@ -530,7 +590,7 @@ def ring_points() -> dict[str, list[tuple[float, str]]]:
 
 def ring_figure(palette: str, root: Path = ROOT):
     """Breakdown voltage against the number of floating rings and against the gap of a single
-    ring, assumption B."""
+    ring, assumption BL."""
     pal = ef.PALETTES[palette]
     got = cases(root)
     pts = ring_points()
@@ -539,7 +599,7 @@ def ring_figure(palette: str, root: Path = ROOT):
     for ax, name, xlabel in ((left, "count", "number of rings, first gap 2 µm"),
                              (right, "gap", "gap of a single ring (µm)")):  # fmt: skip
         for shape in ("edge", "corner"):
-            _series(ax, pal, got, pts[name], "B", shape, "electron", "o", shape)
+            _series(ax, pal, got, pts[name], "BL", shape, "electron", "o", shape)
         ax.set_xlabel(xlabel)
         ax.grid(True)
     left.set_ylabel("breakdown voltage (V)")
@@ -553,16 +613,16 @@ def ring_figure(palette: str, root: Path = ROOT):
 def corner_points() -> dict[str, list[tuple[float, str]]]:
     """Per well kind, [(simulated corner radius in µm, structure)] of the corner structures
     (NC, DC) and of the plain 20 µm terminations NT20 and DT20; a drawn radius below 2 µm is
-    simulated at 2 µm (``predict.MIN_CORNER``)."""
+    simulated at ``predict.MIN_CORNER``."""
     out = {"nw": [], "dnw": []}
     for name, st in structures().items():
         if re.fullmatch(r"[ND]C\d+|[ND]T20", name):
-            out[st["kind"]].append((max(st["corner"], 2.0), name))
+            out[st["kind"]].append((max(st["corner"], _predict().MIN_CORNER), name))
     return {k: sorted(v) for k, v in out.items()}
 
 
 def corner_figure(palette: str, root: Path = ROOT):
-    """Breakdown voltage of the cylindrical corner section against its radius, assumption B, with
+    """Breakdown voltage of the cylindrical corner section against its radius, assumption BL, with
     the straight edge's value as a horizontal line."""
     pal = ef.PALETTES[palette]
     got = cases(root)
@@ -571,8 +631,8 @@ def corner_figure(palette: str, root: Path = ROOT):
     for (kind, pts), colour, marker, label in zip(
         corner_points().items(), ("electron", "hole"), "os", ("N-well", "deep N-well"),
         strict=True):  # fmt: skip
-        _series(ax, pal, got, pts, "B", "corner", colour, marker, f"{label}, corner")
-        edge = _bv(got, f"{'NT20' if kind == 'nw' else 'DT20'}|B|edge")
+        _series(ax, pal, got, pts, "BL", "corner", colour, marker, f"{label}, corner")
+        edge = _bv(got, f"{'NT20' if kind == 'nw' else 'DT20'}|BL|edge")
         ax.axhline(edge, color=pal[colour], lw=STYLE["line_width"], ls="-",
                    label=f"{label}, straight edge", gid=f"{kind} edge")  # fmt: skip
     ax.set_xlabel("corner radius (µm)")
@@ -610,3 +670,9 @@ def write_all(out_dir: Path, root: Path = ROOT) -> None:
     for name, draw in FIGURES.items():
         for palette in ef.PALETTES:
             (out / f"{name}-{palette}.svg").write_bytes(draw(palette, root))
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] != ["tables"]:
+        sys.exit("usage: python -m gf180tcad.hvjunction_figures tables")
+    print(f"{PAGE}: {'rewritten' if write_tables() else 'unchanged'}")
