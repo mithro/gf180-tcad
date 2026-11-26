@@ -1664,7 +1664,7 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
                 "(top) and the change against the next finer level (bottom).",
                 roots,
             ),
-            *_meshconv_rows(report, table_label("tcad", name, "meshconv", dim)),
+            *_meshconv_rows(report, table_label("tcad", name, "meshconv", dim, "levels")),
             "",
         ]
         for ex in report.get("excluded_levels", []):

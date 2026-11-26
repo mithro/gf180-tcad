@@ -75,7 +75,9 @@ PRs but is not a merge blocker.
     that prefix, never a running number: `tab-poe-pairs` reads "Table poe-pairs". So adding a
     figure renumbers nothing, and an identifier quoted in an issue stays valid.
   - [`docs/_ext/stable_ids.py`](docs/_ext/stable_ids.py) shows the labels. A numbered item
-    with no `:name:`, or two labels that give one identifier, fails the `-W` build.
+    with no `:name:`, or two labels that give one identifier, fails the `-W` build. That
+    holds across kinds: `fig-x` beside `tab-x` would read "Figure x" and "Table x", so a
+    table that goes with a figure takes a suffix, such as `tab-meshconv-1d-levels`.
   - Choose a label that reads well to a reader, such as `tab-cv-nfet-verdicts`, not `tab-1` or
     `fig-new-plot2`. A renamed label fails the build at every `{numref}` to the old one.
   - Never write "Figure 3" or "Table 12" by hand: no such number exists. The NUMBER-REF check
