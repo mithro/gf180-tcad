@@ -16,6 +16,7 @@ commit and the scripts); each record holds them once. The records:
   (b4pp.py) and on a metal-gate MOS capacitor (b4mg.py), from a work directory of their own.
 """
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -61,7 +62,9 @@ def cv(work: Path) -> dict:
     for step in sorted(p.name for p in work.iterdir() if p.name.startswith("cv-")):
         d = work / step
         an = _json(d / "b2an_result.json")
-        (raw_path,) = sorted(d.glob("b2_*.json"))
+        # b2.py's result; a stopped sweep also leaves b2_failed.json and b2_grid.json
+        (raw_path,) = [p for p in sorted(d.glob("b2_*.json"))
+                       if p.name not in ("b2_failed.json", "b2_grid.json")]  # fmt: skip
         raw = _json(raw_path)
         cmd = _json(d / "done.json")["command"]
         words = cmd.split()
@@ -151,7 +154,12 @@ def main(argv: list[str]) -> int:
     for name, (prefix, build) in RECORDS.items():
         if not any(s.startswith(prefix) for s in steps):
             continue
-        io.write_json(out / f"{name}.json", {"schema": 1, **pins, **build(work)})
+        # record.py runs on the host after the run and only reads the run directories, so a
+        # fix to it rewrites the records from the same runs: its own sha256 is recorded apart
+        # from the run's pins
+        me = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+        io.write_json(out / f"{name}.json",
+                      {"schema": 1, **pins, "record_py_sha256": me, **build(work)})  # fmt: skip
         print(f"wrote {out / name}.json", flush=True)
     return 0
 

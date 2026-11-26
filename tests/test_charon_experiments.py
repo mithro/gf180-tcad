@@ -35,14 +35,20 @@ def _git(*args: str) -> bytes:
 
 def test_pinned_scripts_are_the_committed_ones():
     """Each script's sha256 in the pins is that of the script at the pinned commit, and the
-    experiment directory has not changed a script since (README edits are allowed)."""
+    experiment directory has not changed a script since (README edits are allowed). record.py
+    only reads the run directories after the run, so the records carry its sha256 apart."""
     pins = _record("cv")
     _git("cat-file", "-e", pins["commit"])  # needs full history (CI checks out with depth 0)
     for name, digest in pins["scripts_sha256"].items():
         at_pin = _git("show", f"{pins['commit']}:experiments/charon-backend/{name}")
         assert hashlib.sha256(at_pin).hexdigest() == digest, name
-        now = (REPO_ROOT / "experiments" / "charon-backend" / name).read_bytes()
-        assert hashlib.sha256(now).hexdigest() == digest, f"{name} changed since the run"
+        now = hashlib.sha256(
+            (REPO_ROOT / "experiments" / "charon-backend" / name).read_bytes()
+        ).hexdigest()
+        if name == "record.py":  # runs after the run, on the host; it records its own sha256
+            assert all(_record(n)["record_py_sha256"] == now for n in RECORDS), name
+            continue
+        assert now == digest, f"{name} changed since the run"
 
 
 def test_devsim_values_are_the_committed_results():
