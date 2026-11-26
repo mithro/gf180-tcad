@@ -921,11 +921,21 @@ def check_charon_structures(fig):
     d.done()
 
 
+def _check_log_with_zeros(d, gid, x, rel, floor, ax):
+    """A relative change drawn on a log axis: the line breaks at exact zeros, which are markers
+    at ``floor`` (gid + " zeros")."""
+    x, rel = np.asarray(x, float), np.asarray(rel, float)
+    d.line(gid, x, np.where(rel == 0, np.nan, rel), ax)
+    zero = rel == 0
+    d.points(f"{gid} zeros", x[zero], np.full(int(zero.sum()), floor), ax)
+
+
 def check_charon_tolerance(fig):
     runs = _charon("cv")["runs"]
     studies = _charon("hard-range")["step_studies"]
     top, bottom = fig.axes
     d = Drawn(fig)
+    pairs = {}
     for device, by_params in lf.CHARON_B7_PAIRS.items():
         for params, (name, refs) in by_params.items():
             r = runs[name]
@@ -936,7 +946,12 @@ def check_charon_tolerance(fig):
                 us += [DEVICES[device].polarity * v for v in vg] + [np.nan]
                 rels += [abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)]
                              - 1) for v in vg] + [np.nan]  # fmt: skip
-            d.line(f"tolerance pair {device} {params}", us[:-1], rels[:-1], top)
+            pairs[device, params] = (us[:-1], rels[:-1])
+    rel_all = np.asarray([v for _, r in pairs.values() for v in r], float)
+    floor = np.nanmin(rel_all[rel_all > 0]) / lf.STYLE["zero_floor_factor"]
+    assert np.sum(rel_all == 0) > 0  # the records have exact zeros: they must be drawn
+    for (device, params), (us, rels) in pairs.items():
+        _check_log_with_zeros(d, f"tolerance pair {device} {params}", us, rels, floor, top)
     default = runs[lf.CHARON_B7_PAIRS["pfet_05v0"]["start"][0]]
     names = [*lf.CHARON_STALL_STUDIES, "default"]
     stopped = {n: studies[n]["failed"] is not None for n in lf.CHARON_STALL_STUDIES}
@@ -994,7 +1009,9 @@ def check_charon_checks(fig):
     vg = [v for v in loose["vg"] if v in ref["vg"]]
     rel = [abs(loose["c_ff_um2"][loose["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
            for v in vg]  # fmt: skip
-    d.line("tolerance looser", np.asarray(vg) - loose["dv_fb_v"], rel, b7)
+    rel = np.asarray(rel, float)
+    floor = np.min(rel[rel > 0]) / lf.STYLE["zero_floor_factor"]
+    _check_log_with_zeros(d, "tolerance looser", np.asarray(vg) - loose["dv_fb_v"], rel, floor, b7)
     for n in lf.CHARON_TIGHT:
         d.vline(f"tighter {n}", float(hard["step_studies"][n]["failed"]["failed_at"][0]), b7)
     d.done()

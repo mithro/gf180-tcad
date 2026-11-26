@@ -53,6 +53,8 @@ STYLE = {
     "checks_in": (8.0, 11.0),
     "legend_beside": (1.01, 1.0),
     "tolerance_rows": (1.0, 1.4),
+    # exact zeros of a relative change are drawn this factor below its smallest nonzero value
+    "zero_floor_factor": 3.0,
     # Ring round a marked point, this size (pt).
     "ring_pt": 16.0,
     # Label lift above a point or line, as a fraction of the axis span.
@@ -1687,6 +1689,29 @@ def charon_tolerance(roots: Roots = DEFAULT_ROOTS) -> dict:
     return {"pairs": pairs, "stall": stall}
 
 
+def _zero_floor(values) -> float:
+    """The log axis floor of relative changes ``values``: below the smallest nonzero one by
+    :data:`STYLE` ``zero_floor_factor``; exact zeros are drawn there."""
+    v = np.asarray(values, float)
+    return float(np.nanmin(v[v > 0]) / STYLE["zero_floor_factor"])
+
+
+def _zero_handle(colour: str):
+    """The legend entry of the exact-zero markers of :func:`_log_with_zeros` (not drawn)."""
+    return matplotlib.lines.Line2D([], [], ls="none", marker="v", ms=STYLE["marker_pt"],
+                                   color=colour, label="exactly zero (identical)")  # fmt: skip
+
+
+def _log_with_zeros(ax, x, rel, floor: float, colour: str, gid: str, **line) -> None:
+    """``rel`` against ``x`` on a log axis: the line breaks at exact zeros, which are drawn as
+    markers at ``floor`` (gid ``gid + " zeros"``)."""
+    x, rel = np.asarray(x, float), np.asarray(rel, float)
+    ax.plot(x, np.where(rel == 0, np.nan, rel), color=colour, gid=gid, **line)
+    zero = rel == 0
+    ax.scatter(x[zero], np.full(int(zero.sum()), floor), marker="v", s=STYLE["marker_pt"] ** 2,
+               color=colour, gid=f"{gid} zeros")  # fmt: skip
+
+
 def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """Top: ``abs(C / C_ref - 1)`` between the backend's default tolerance and the reference, for
     both devices and parameter sets. Bottom: the pfet start sweeps under each setting, at the gate
@@ -1701,12 +1726,15 @@ def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         top_fig, bottom_fig = fig.subfigures(len(CHARON_PANELS), 1,
                                              height_ratios=STYLE["tolerance_rows"])  # fmt: skip
         top, bottom = top_fig.subplots(), bottom_fig.subplots()
+        floor = _zero_floor([v for by in k["pairs"].values() for d in by.values()
+                             for v in d["rel"]])  # fmt: skip
         for device, by_params in k["pairs"].items():
             for params, d in by_params.items():
-                top.plot(d["u"], d["rel"], color=pal[colours[device, params]],
-                         lw=ef.STYLE["line_width"], label=f"{device} {params}",
-                         gid=f"tolerance pair {device} {params}")  # fmt: skip
+                _log_with_zeros(top, d["u"], d["rel"], floor, pal[colours[device, params]],
+                                f"tolerance pair {device} {params}", lw=ef.STYLE["line_width"],
+                                label=f"{device} {params}")  # fmt: skip
         top.set_yscale("log")
+        top.set_ylim(bottom=floor / STYLE["zero_floor_factor"])
         top.set_xlabel("u = polarity × vg (V)")
         top.set_ylabel("relative change of C")
         names = list(k["stall"])
@@ -1719,9 +1747,12 @@ def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                            edgecolors=pal["highlight"], label=gid, gid=gid)  # fmt: skip
         bottom.set_yticks(y, [k["stall"][n]["label"] for n in names])
         bottom.invert_yaxis()
-        bottom.set_xlabel("pfet start: where the sweep stopped (V)")
+        bottom.set_xlabel("pfet start: gate bias of the device\nwhere the sweep stopped (V)")
         bottom.grid(True, axis="x")
-        fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
+        handles = [*top.get_legend_handles_labels()[0], _zero_handle(pal["text"]),
+                   *bottom.get_legend_handles_labels()[0]]  # fmt: skip
+        fig.legend(handles=handles, loc="outside lower center", ncols=STYLE["legend_cols"],
+                   frameon=False)  # fmt: skip
         return fig
 
 
@@ -1866,24 +1897,25 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                             gid=f"charge check {device} {key} {s}")  # fmt: skip
         b6.set_yscale("log")
         b6.set_xlabel(f"{p_b6}: u = polarity × vg (V)")
-        b6.set_ylabel("mismatch")
-        b7.plot(k["b7"]["device_v"], k["b7"]["rel"], color=pal["highlight"], lw=lw,
-                label="a hundred times looser\n(nfet, project lifetimes)",
-                gid="tolerance looser")  # fmt: skip
+        b6.set_ylabel("relative mismatch")
+        floor = _zero_floor(k["b7"]["rel"])
+        _log_with_zeros(b7, k["b7"]["device_v"], k["b7"]["rel"], floor, pal["highlight"],
+                        "tolerance looser", lw=lw,
+                        label="a hundred times looser\n(nfet, project lifetimes)")  # fmt: skip
         for n, v in k["b7"]["tight"].items():
             b7.axvline(v, color=pal["hole"], lw=lw, ls="--",
                        label="ten times tighter:\nwhere it stopped",
                        gid=f"tighter {n}")  # fmt: skip
         b7.set_yscale("log")
         b7.set_xlabel(f"{p_b7}: gate bias of the device, vg − dv_fb (V)")
-        b7.set_ylabel("C change")
-        for ax in (
-            b2,
-            b6,
-            b7,
-        ):  # each panel's own legend, beside it: one figure legend would not fit
-            ax.legend(loc="upper left", bbox_to_anchor=STYLE["legend_beside"], fontsize="small",
-                      frameon=False)  # fmt: skip
+        b7.set_ylabel("relative change of C")
+        b7.set_ylim(bottom=floor / STYLE["zero_floor_factor"])
+        # each panel's own legend, beside it: one figure legend would not fit
+        extra = {b7: [_zero_handle(pal["highlight"])]}
+        for ax in (b2, b6, b7):
+            handles = ax.get_legend_handles_labels()[0] + extra.get(ax, [])
+            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=STYLE["legend_beside"],
+                      fontsize="small", frameon=False)  # fmt: skip
         return fig
 
 
