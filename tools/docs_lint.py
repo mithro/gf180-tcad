@@ -873,21 +873,30 @@ def _bare_prose(line):
     return line
 
 
-# A table named without a {numref}: by its place, by "the table" doing something, by ordinal.
-# "tables?(?!-)" leaves "table-driven" alone; "(?!\s+of\b)" leaves another document's table
-# ("in the tables of the PDK manual", "these tables of Green's paper") alone.
+# A table named without a {numref}: by its place, by "the table" doing something, by ordinal
+# or count, by its parts. "tables?(?!-)" leaves "table-driven" alone; "(?!\s+of\b)" leaves
+# another document's table ("in the tables of the PDK manual", "these tables of Green's paper",
+# "the second table of the user manual") alone, and "of the table" counts only where the
+# sentence ends on it.
 _TABLE = r"tables?\b(?!-)"
+_OF_ANOTHER = r"(?!\s+of\b)"
 _TABLE_VERBS = (r"(?:gives?|lists?|shows?|holds?|asks?|says?|repeats?|has|have|contains?|records?"
-                r"|compares?|sums?|covers?|sets?)")
+                r"|reports?|compares?|sums?|covers?|sets?)")
 _TABLE_REF = re.compile(
     "(" + "|".join([
         rf"\b{_TABLE}\s+(?:above|below)\b",
         rf"\b(?:the|these)\s+(?:following|next|previous)\s+{_TABLE}",
-        rf"\b(?:this|these|those)\s+{_TABLE}(?!\s+of\b)",
-        rf"\b(?:in|see)\s+the\s+{_TABLE}(?!\s+of\b)",
-        rf"\bboth\s+{_TABLE}",
-        rf"\bthe\s+(?:first|second|third|fourth|fifth|last|other)\s+{_TABLE}",
+        rf"\b(?:this|these|those)\s+{_TABLE}{_OF_ANOTHER}",
+        rf"\b(?:in|see)\s+the\s+{_TABLE}{_OF_ANOTHER}",
+        rf"\bboth\s+{_TABLE}{_OF_ANOTHER}",
+        rf"\bthe\s+(?:first|second|third|fourth|fifth|last|other|two|three|four|five)\s+"
+        rf"{_TABLE}{_OF_ANOTHER}",
         rf"\bthe\s+{_TABLE}\s+{_TABLE_VERBS}\b",
+        r"\bthe\s+table['\u2019]s\b",
+        rf"\bthe\s+{_TABLE}\s+at\s+the\s+(?:end|top|bottom|start|foot|head)\b",
+        rf"\b(?:rows?|columns?|cells?|entries|captions?|headers?)\s+of\s+the\s+{_TABLE}"
+        rf"{_OF_ANOTHER}",
+        rf"\bof\s+the\s+{_TABLE}(?=\s*(?:[.;:!?]|$))",
     ]) + ")",
     flags=re.I,
 )
@@ -920,9 +929,11 @@ def _paragraphs(lines, kinds=("prose", "caption")):
 
 def table_ref_findings(lines):
     """TABLE-REF: a table named without a {numref}: by its place ("the table below", "the
-    following table"), as "this/these/those table(s)", "in/see the table", "both tables", "the
-    second table", or "the table gives/has/lists/...". Each paragraph is read with its wrapped
-    lines joined, so a phrase split across a line break is found too."""
+    following table", "the table at the end"), as "this/these/those table(s)", "in/see the
+    table", "both tables", "the second table", "the two tables", "the table's", "the rows of
+    the table", "of the table" ending a sentence, or "the table gives/has/lists/reports/...".
+    A table followed by "of" is another document's and is left alone. Each paragraph is read
+    with its wrapped lines joined, so a phrase split across a line break is found too."""
     out = []
     for text, starts in _paragraphs(lines):
         for m in _TABLE_REF.finditer(text):

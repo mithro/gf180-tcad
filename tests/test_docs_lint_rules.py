@@ -860,7 +860,12 @@ def test_measure_docs_reads_table_directive_caption_and_cells():
      "The table records each run.", "The tables compare both engines.",
      "See the table for the values.", "Both tables give the bounds.",
      "The second table gives the pfet.", "It is fitted, and the table gives the values.",
-     "The table\nbelow lists them.", "The values of\nthese tables are fitted."],
+     "The table\nbelow lists them.", "The values of these\ntables are fitted.",
+     "The table's last row is the pfet.", "The rows of the table hold one value.",
+     "The gm is in the last column of the table.", "The table at the end gives the bounds.",
+     "The table reports each run.", "The two tables give the bounds.",
+     "The other table gives the nfet.", "The values are those of the table; the fit uses them.",
+     "Both\ntables give the bounds.", "The gm is in the last column of the\ntable."],
 )  # fmt: skip
 def test_table_ref_fires_on_a_place_reference(line):
     """Positive control: a table named by its place, in prose or in a figure caption."""
@@ -876,7 +881,11 @@ def test_table_ref_fires_on_a_place_reference(line):
      "Wikipedia's table of band gaps at 302 K gives it.", "Each table gives one value per cell.",
      "The values are in the tables of the PDK manual.",
      "These tables of Green's paper give 1.12 eV.", "In the table of the standard, Vt is 0.7 V.",
-     "This table-driven fit converges."],
+     "This table-driven fit converges.", "Both tables of the PDK manual give it.",
+     "The other table of the standard gives 5 V.", "The second table of the user manual gives it.",
+     "The two tables of the PDK manual give it.", "The rows of the table of the standard agree.",
+     "The value of the table of Green's paper is 1.12 eV.", "The table-driven fit's last row.",
+     "Wikipedia's table reports 1.14 eV.", "It is in the table of the user manual."],
 )  # fmt: skip
 def test_table_ref_quiet_on_citations_and_other_tables(line):
     assert not [c for _, c, _ in lint().rule_findings(f"# T\n\n{line}\n") if c == "TABLE-REF"]
@@ -927,6 +936,20 @@ def test_figure_form_names_a_table_as_a_table():
     fig = [m for _, c, m in lint().rule_findings("# T\n\nSee {numref}`fig-x`.\n")
            if c == "FIGURE-FORM"]  # fmt: skip
     assert "a figure on another page" in fig[0] and "Figure %s of" in fig[0], fig
+
+
+def test_table_ref_wrap_case_needs_the_lines_joined():
+    """The wrapped positive cases above split their phrase across the line break: neither line
+    alone is a hit, so they pass only because each paragraph is read with its lines joined."""
+    rule = lint()._TABLE_REF
+    for line in (
+        "The table\nbelow lists them.",
+        "The values of these\ntables are fitted.",
+        "Both\ntables give the bounds.",
+        "The gm is in the last column of the\ntable.",
+    ):
+        assert not any(rule.search(part) for part in line.split("\n")), line
+        assert rule.search(" ".join(line.split("\n"))), line
 
 
 def test_table_ref_across_a_line_wrap_reports_its_first_line():
