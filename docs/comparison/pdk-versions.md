@@ -3,8 +3,10 @@
 # PDK versions: runs 1 and 2 vs the latest
 
 The design spec ({repo}`docs/superpowers/specs/2026-10-18-gf180-tcad-design.md`, §4) names
-{{ open_pdks }} commit [`d658698bd8bc`](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c) ([1.0.604](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c)) as the {term}`GF180MCU`
-{term}`PDK` of {{ wafer_space }} runs 1 and 2, and asks for it to be compared with the latest.
+the {term}`GF180MCU` {term}`PDK` of {{ wafer_space }} runs 1 and 2. That is
+{{ open_pdks }} commit [`d658698bd8bc`](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c) ([1.0.604](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c)).
+The spec asks for it to be compared with the latest.
+
 The {term}`SPICE reference <SPICE reference results>` ({repo}`results/spice`) uses the latest PDK, the one
 in the pinned base image ({repo}`docker/IMAGE`, open_pdks [`1689ac3f2dc7`](https://github.com/fossi-foundation/open-pdks/commit/1689ac3f2dc763876eaf967227c7dfe831b031ae), recorded
 in {repo}`docker/base/versions.json`). This page answers whether the {term}`model card` of
@@ -51,17 +53,17 @@ uv run --locked python -m gf180tcad.pdkdiff run --out results/spice-pdk-d658698
 ({{ uv }} runs it in the project's locked environment.)
 
 1. **Fetch.** {{ Ciel }} ([2.6.1](https://pypi.org/project/ciel/2.6.1/), shipped in the base
-   image) fetches the {{ gf180mcu_pdk }} family at that commit, with only the
+   image) fetches the {{ gf180mcu_pdk }} family at that commit. It fetches only the
    {{ gf180mcu_models }} as a library, from its default public data source
    ([ciel-releases](https://github.com/fossi-foundation/ciel-releases)). This runs in the
    {term}`sandbox` and is the only step with network access.
 2. **Pin.** Every model file (the 16 {{ ngspice }} and {{ Xyce }} model files) and the PDK's
-   build record must match its sha256 in {repo}`data/pdk-d658698.sha256`, which lists them by
+   build record must match its sha256 in {repo}`data/pdk-d658698.sha256`. That file lists them by
    path. Two independent
    fetches gave the same files. {repo}`data/pdk-d658698.versions.json` records the variant,
    the commit and the three hashes that {py:func}`gf180tcad.pdk.check_against` reads.
 3. **Run.** One sandbox {term}`job` per geometry, with no network, runs
-   {py:func}`gf180tcad.reference.run_job`, the generator's own job, with only its PDK lookup
+   {py:func}`gf180tcad.reference.run_job`, the generator's own job. Only its PDK lookup is
    pointed at the pinned copy ({py:func}`gf180tcad.pdkdiff.run_pdk_job`). The {term}`SPICE` generator
    modules are not edited, so the {term}`provenance` of {repo}`results/spice` does not change
    ({test}`tests/test_pdkdiff.py::test_reference_py_untouched`).
@@ -99,11 +101,13 @@ computer ({ref}`cross-host-determinism`) and {py:func}`gf180tcad.manifest.verify
 
 The capacitor and bipolar transistor libraries are compared for both ngspice and Xyce.
 
-Each library has 50 `.lib` sections. 49 are identical, among them [`typical`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L105) (the
+Each library has 50 `.lib` sections, and 49 of them are identical. Among them are [`typical`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L105) (the
 TT `.param` values), [`nfet_06v0_t`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37038) and [`pfet_06v0_t`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38074) (the
-{term}`BSIM4` cards), and the wrapper subcircuits of the two devices are identical too. The one
-change is in the resistor section [`res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571): the parasitic capacitor model
-[`fox_sub`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38715) of nine poly resistors. d658698 writes it as a [`.model`](https://ngspice.sourceforge.io/docs.html)
+{term}`BSIM4` cards). The wrapper subcircuits of the two devices are identical too.
+
+The one
+change is in the resistor section [`res`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38571). It is the parasitic capacitor model
+[`fox_sub`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38715) of nine poly resistors. Commit d658698 writes it as a [`.model`](https://ngspice.sourceforge.io/docs.html)
 line `.model fox_sub c` with a continuation line {repo}`+ cox=8.85e-05 <results/spice-pdk-d658698/sm141064.ngspice.diff#L8>` (ngspice) or
 {repo}`+ level=1 <results/spice-pdk-d658698/sm141064.xyce.diff#L8>` (Xyce), and the latest writes
 [`.model fox_sub c cj=8.85e-05`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38715). This affects resistor simulations only. The TT
@@ -329,7 +333,7 @@ and BETA0 are set (impact-ionisation substrate current on). The pfet card sets n
 ## The PDK of a run-2 project checkout
 
 A run-2 project's checkout of the PDK (its `gf180mcuD` directory) reports a different build in
-its build record: open_pdks [`40cee970`](https://github.com/fossi-foundation/open-pdks/commit/40cee970d8a9b7eaea35a34fe7d6068f05721f0a) ([1.0.537](https://github.com/fossi-foundation/open-pdks/commit/40cee970d8a9b7eaea35a34fe7d6068f05721f0a)), with an ngspice main
+its build record. It is open_pdks [`40cee970`](https://github.com/fossi-foundation/open-pdks/commit/40cee970d8a9b7eaea35a34fe7d6068f05721f0a) ([1.0.537](https://github.com/fossi-foundation/open-pdks/commit/40cee970d8a9b7eaea35a34fe7d6068f05721f0a)), with an ngspice main
 library of sha256 `6edba54d23b38a2c60f8ffdbaa3eb75a7568c615e4820808969bd1121b77b1aa`. That is
 neither d658698 (`f6f4a96e…`) nor the latest (`69a7ab87…`), so not every run-2 project used
 d658698. This page compares only d658698, the PDK the design spec names. A separate comparison
