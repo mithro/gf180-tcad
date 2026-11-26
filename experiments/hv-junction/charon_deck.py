@@ -298,10 +298,12 @@ def _solver(stage, step, min_step, max_steps, tol):
         out += ["start sweep options",
                 "  continuation method is natural",
                 "  predictor method is constant",
-                f"  initial step size = {step:g}",
+                # start small and grow: a first step of volts from an equilibrium or
+                # restart state can overflow, and Charon then aborts instead of halving
+                f"  initial step size = {max(min_step, step / 8):g}",
                 f"  maximum step size = {step:g}",
                 f"  minimum step size = {min_step:g}",
-                "  step size aggressiveness = 0.5",
+                "  step size aggressiveness = 1.0",
                 "  failed step reduction factor = 0.5",
                 "  successful step increase factor = 2.0",
                 f"  maximum number of steps = {max_steps}",
