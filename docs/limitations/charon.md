@@ -11,7 +11,8 @@ records in {repo}`results/charon-experiments/`.
 (charon-strip)=
 ## The test structure
 
-Charon has no 1D mode and reads only Exodus II meshes. The experiments take the {{ lim_charon_nodes }} nodes of the
+The experiments give Charon its mesh as an Exodus II file, written by
+{repo}`cx.py <experiments/charon-backend/cx.py>`. They take the {{ lim_charon_nodes }} nodes of the
 committed {{ DEVSIM }} {term}`job` of {term}`nfet_05v0` at the calibrated values
 ({repo}`its meta file <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`). They
 extrude the nodes into a strip one element wide, as {numref}`fig-charon-strip` shows near the
@@ -38,10 +39,10 @@ a node pair at the same depth; the shading marks the element blocks `gate_poly`,
 
 The deck sets every constant of the project's table explicitly: permittivities, temperature,
 intrinsic density, mobilities and SRH lifetimes. Both contacts are ohmic, the gate on the poly.
-Charon's nodal `Doping` equals the description at every node of both devices
-({repo}`probes.json <results/charon-experiments/probes.json>`, B5), as
-{numref}`fig-charon-doping` shows. Its intrinsic density equals the project's
-{{ lim_charon_ni }} cm⁻³ exactly.
+Charon's nodal `Doping` equals the description at every node of both devices. The largest
+relative difference is {{ lim_charon_doping_rel }}
+({repo}`probes.json <results/charon-experiments/probes.json>`, B5). {numref}`fig-charon-doping`
+draws both. Charon's nodal intrinsic density is {{ lim_charon_ni }} cm⁻³, the project's value.
 
 ```{figure} /_generated/limitations/charon-doping-light.svg
 :name: fig-charon-doping
@@ -187,15 +188,16 @@ last Newton step leaves the residual at {{ lim_charon_stall_fnorm }}. The WRMS n
 {{ lim_charon_stall_wrms }}, above its limit of 1, after {{ lim_charon_stall_iters }}
 iterations, the most allowed. The experiment decks leave NOX's rescue on.
 
-The bottom panel of {numref}`fig-charon-tolerance` shows what changes the outcome. Steps of 5 mV
-and a lifetime of 1e-16 s stop at the same bias. Loosening either tolerance alone, the relative
+The bottom panel of {numref}`fig-charon-tolerance` shows what changes the outcome. NOX's rescue off,
+steps of 5 mV and a lifetime of 1e-16 s stop at the same bias. Loosening either tolerance alone, the relative
 to 1e-9 or the absolute to 1e-11, passes. A ten times tighter relative tolerance, 1e-11, stops
 earlier, at {{ lim_charon_stall_ramp_v }} V on the ramp from equilibrium.
 
-So the stall is the round-off floor of Newton's update at one bias, not a step too large. The
-floor depends on the bias and the doping: at 1e-11 the nfet calibrated ramp stops at
-{{ lim_charon_tight_ramp_v }} V instead. The backend's 1e-9 passes on all four cases and gives
-the same C as 1e-10 within {{ lim_charon_b7_max }}. That is far below Charon's difference from
+So a smaller step does not pass the stall, and a looser tolerance does. At 1e-11 the nfet
+calibrated ramp, with the project's lifetimes, stops at {{ lim_charon_tight_ramp_v }} V. What
+limits Newton at these biases is open
+([issue #223](https://github.com/mithro/gf180-tcad/issues/223)). The backend's 1e-9 passes on
+all four cases and gives the same C as 1e-10 within {{ lim_charon_b7_max }}. That is far below Charon's difference from
 DEVSIM, {{ lim_charon_pfet_start_devsim }} for the pfet start case.
 
 (charon-hard-range)=
@@ -213,7 +215,7 @@ stop at {{ lim_charon_tau_stop }} V. Only lifetimes of 1e-14 s or shorter reach 
 ```{figure} /_generated/limitations/charon-hard-range-light.svg
 :name: fig-charon-hard-range
 :figclass: only-light
-:alt: One marker per solver setting at the last converged bias: hollow markers between 0.05 and 0.45 V, filled markers for the shortest lifetimes at 5 V, crosses at 0 V.
+:alt: One marker per solver setting at the last converged bias: hollow markers for the settings that stopped, filled markers for the shortest lifetimes at the end of the sweep, crosses at 0 V for failed equilibria.
 
 The last converged device bias of each solver setting, sweeping the nfet strip up from 0 V
 ({repo}`results/charon-experiments/hard-range.json`). Filled: the sweep reached 5 V. Hollow: it
@@ -222,7 +224,7 @@ stopped. Crosses: the equilibrium solve itself failed.
 
 ```{figure} /_generated/limitations/charon-hard-range-dark.svg
 :figclass: only-dark
-:alt: One marker per solver setting at the last converged bias: hollow markers between 0.05 and 0.45 V, filled markers for the shortest lifetimes at 5 V, crosses at 0 V.
+:alt: One marker per solver setting at the last converged bias: hollow markers for the settings that stopped, filled markers for the shortest lifetimes at the end of the sweep, crosses at 0 V for failed equilibria.
 
 The last converged device bias of each solver setting, sweeping the nfet strip up from 0 V
 ({repo}`results/charon-experiments/hard-range.json`). Filled: the sweep reached 5 V. Hollow: it
@@ -320,15 +322,19 @@ change a hundred times looser, and dotted where the ten times tighter studies st
 
 ## Deck rules the backend follows
 
-Charon 2.2 needs four things in a deck, and the experiment scripts set each one. Three of them
-fail silently when missing. The side sets and blocks they name are those of
-{numref}`fig-charon-strip`:
+The experiment scripts and the backend write four things into every deck. The side sets and
+blocks they name are those of {numref}`fig-charon-strip`:
 
-- A side set named like an element block aborts the run with MPI error 14 and no message. The
-  scripts name the body's side set `body_contact`.
-- A uniform doping block counts only when named `Function1`, `Function2` and so on. Any other name
-  passes the interpreter and leaves the doping at zero.
-- The plugin writes its gmsh file in cm, and Charon reads µm. The 2D experiment scales by 1e4.
-- The tpetra block offers no direct solver. Three `Direct input` lines rooted at
-  `Charon->Solution Control` select Amesos2 KLU2. NOX's "Rescue Bad Newton Solve" is on by
-  default and would let a Newton step use an unconverged linear solve; the backend turns it off.
+- The body's side set is named `body_contact`, never `body`, the name of its element block
+  ({repo}`cx.py <experiments/charon-backend/cx.py>`).
+- Each uniform doping block is named `Function1`, `Function2` and so on
+  ({repo}`decks.py <experiments/charon-backend/decks.py>`). With that naming the nodal doping
+  matches the description (B5, {numref}`fig-charon-doping`).
+- The 2D mesh's coordinates are scaled from the plugin's cm to µm, by 1e4
+  ({repo}`b1.py <experiments/charon-backend/b1.py>`). The scaled mesh gives C within
+  {{ lim_charon_tri3_2d }} of DEVSIM's 1D (B1).
+- Three `Direct input` lines rooted at `Charon->Solution Control` select Amesos2 KLU2
+  ({repo}`opts.py <experiments/charon-backend/opts.py>`; B3, {numref}`fig-charon-checks`). The
+  backend also turns NOX's "Rescue Bad Newton Solve" off.
+
+What Charon does when the first two are broken is [issue #224](https://github.com/mithro/gf180-tcad/issues/224).
