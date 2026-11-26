@@ -782,6 +782,31 @@ def test_load_params_refuses_a_job_from_other_parameters(tmp_path):
         job.load_params(d, cv_meta)
 
 
+def test_load_params_refuses_a_job_from_another_edge_fit(tmp_path, monkeypatch):
+    """A job must carry the committed poly length bias fit: a job without one is refused once a
+    fit is committed, and a job with one is refused while none is."""
+    from gf180tcad.tcad import edgefit
+
+    d = tmp_path / "nfet_05v0" / "calibrated" / "w10p0_l0p60"
+    d.mkdir(parents=True)
+    cv_meta = json.loads((L0P60 / "cv.meta.json").read_bytes())
+    job.load_params(d, cv_meta)  # the control: no fit committed, none recorded
+    with pytest.raises(job.JobMismatch, match="poly length bias fit"):
+        job.load_params(d, {**cv_meta, "edge_fit": {"poly_bias_nm": 40.0, "sha256": "f" * 64}})
+    root = tmp_path / "edgefit"
+    root.mkdir()
+    edgefit.fit_file("nfet_05v0", root).write_text(
+        json.dumps({"device": "nfet_05v0", "poly_bias_nm": 40.0, "schema": edgefit.SCHEMA}),
+        "utf-8",
+    )
+    monkeypatch.setattr(edgefit, "TREE_ROOT", root)
+    with pytest.raises(job.JobMismatch, match="poly length bias fit"):
+        job.load_params(d, cv_meta)
+    fit = {"poly_bias_nm": 40.0, "sha256": edgefit.sha256("nfet_05v0", root)}
+    proc, _ = job.load_params(d, {**cv_meta, "edge_fit": fit})
+    assert proc.values()["poly_bias_nm"] == 40.0
+
+
 def test_load_params_refuses_a_job_of_another_geometry(tmp_path):
     """The param_sha256 matches, but the job recorded another SPICE geometry than its
     geometry id gives today."""

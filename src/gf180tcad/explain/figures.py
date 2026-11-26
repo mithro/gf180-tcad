@@ -528,8 +528,10 @@ class Box(NamedTuple):
 def cell_extents(c: model.Cell) -> dict[str, Box]:
     """The drawn extent ``(x0, x1, y0, y1)`` of each part of the 2D cell (µm), the silicon surface
     at y = 0 and depth growing downwards, the gate centred on x = 0. The oxide is drawn at its
-    scale factor; the source and drain widths are the cell's, from its reduced mesh artefact."""
-    half = c.l_um / 2
+    scale factor; the source and drain widths are the cell's, from its reduced mesh artefact. The
+    gate is drawn as meshed, :attr:`gf180tcad.explain.model.Cell.gate_um` (the drawn L plus the
+    fitted poly length bias at each end, plan Task E3)."""
+    half = c.gate_um / 2
     t_ox = c.t_ox_um * c.scales.get("oxide", 1)
     return {
         "gate": Box(-half, half, -(t_ox + c.poly_um), -t_ox),
@@ -550,7 +552,7 @@ def window_box(c: model.Cell) -> Box:
     either side of the gate, from the drawn poly top down to
     :data:`gf180tcad.meshcut.WINDOW_DEPTH_UM` below the silicon surface."""
     gate = cell_extents(c)["gate"]
-    margin = meshcut.WINDOW_KX * c.l_um
+    margin = meshcut.WINDOW_KX * c.gate_um
     return Box(gate.x0 - margin, gate.x1 + margin, gate.y0, meshcut.WINDOW_DEPTH_UM)
 
 
