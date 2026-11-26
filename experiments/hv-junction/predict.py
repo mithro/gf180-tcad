@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """The prediction cases: every structure of the test die under each process assumption.
 
-    uv run python experiments/hv-junction/predict.py OUT.json [SET] [RECORD.json]
+    uv run python experiments/hv-junction/predict.py OUT.json [SET] [RECORD.json ...]
 
 structures.json is the structure list exported by mithro/evampire
 (silicon/hvtest/export.py). Each structure is simulated as a straight edge and as a round
@@ -9,7 +9,8 @@ corner of its corner radius, under the process assumptions of PROCESSES. Case na
 <structure>|<process>|<edge or corner>, with @g0 or @gw for a gated plate held at 0 V or
 tied to the well.
 
-SET "rest RECORD.json" is every case of "main" that RECORD.json does not hold (the first
+SET "rest RECORD.json ..." is every case of "main" that the records do not hold with its
+present parameters (the first
 batch of "main" left the multi-ring sections and some oxide-charge sections unfinished; they
 were rerun with a solver that gives up a diverging step early). SET "main" is every structure under the four main assumptions; "family" is a few key
 structures under the lighter and heavier substrate.
@@ -17,6 +18,7 @@ structures under the lighter and heavier substrate.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import sys
@@ -85,7 +87,12 @@ def cases(names, processes):
                     p["depth"] = 14.0
                     # mesh spacings: the 0.1 um mesh gives a bare edge within 0.5 % of the 0.05 um one
                     # (73.84 V against 73.51 V), far inside the spread of the doping family
-                    p["mesh"] = ({"fine": 0.03, "surf": 0.02, "coarse": 0.6} if a_like
+                    # a heavy P region within 1.5 um of the edge (a drawn P-well, or the P+
+                    # ring of NT1) needs the fine mesh just as an abutting generated P-well
+                    # does: NW0 under B came out 12 % high on the 0.1 um mesh
+                    near = ((s["pwell_gap"] is not None and s["pwell_gap"] <= 1.5 and not a_like
+                             and proc["pwell"] != "everywhere") or s["term"] <= 2.0)
+                    p["mesh"] = ({"fine": 0.03, "surf": 0.02, "coarse": 0.6} if a_like or near
                                  else {"fine": 0.1, "surf": 0.04, "coarse": 0.6})
                     if tag == "@gw":  # the gate pad connected to the well pad
                         for pl in p["plates"]:
@@ -107,8 +114,15 @@ if __name__ == "__main__":
         got = cases(sorted(STRUCTS), PROCESSES)
         nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
         got.update(cases(sorted(nat), NAT_ONLY))
-        have = json.loads(pathlib.Path(sys.argv[3]).read_text())["cases"]
-        got = {n: p for n, p in got.items() if n not in have}
+        have = {}
+        for path in sys.argv[3:]:
+            have.update(json.loads(pathlib.Path(path).read_text())["cases"])
+
+        def digest(p):
+            return hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()
+
+        got = {n: p for n, p in got.items()
+               if n not in have or have[n]["params_sha256"] != digest(p)}
     else:
         got = cases([k for k in KEY if k in STRUCTS], FAMILY)
     json.dump(got, open(sys.argv[1], "w"), indent=1)
