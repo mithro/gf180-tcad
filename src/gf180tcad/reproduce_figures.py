@@ -170,7 +170,7 @@ MESHWELL_SQUARE = REPO_ROOT / "data" / "images" / "meshwell-square.json"
 SQUARE_PANELS = (("stable", "stable image"), ("dev", "dev-HEAD image"))
 
 #: One 2D cell meshed in each TCAD image, recorded by ``tools/gmsh-cell-mesh``: the record and
-#: one npz per image, of the triangles in a box at the gate's source-side edge.
+#: one npz per image, of the triangles in a box in the gate oxide (``BOX_CENTRE_UM`` of the tool).
 CELL_MESH = REPO_ROOT / "data" / "images" / "cell-mesh"
 
 #: The example of a partial run on the reproduce page: one engine, one corner, one device.

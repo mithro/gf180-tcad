@@ -23,6 +23,11 @@ set where the comparison of 2026-11-27 found points that the two gmsh versions p
 differently; the record lists those points, and a test checks the box holds one. The image
 page's ``cell-mesh`` figure (:func:`gf180tcad.reproduce_figures.cell_mesh_figure`) draws the
 two boxes.
+
+Re-record (``record``) after any change that moves the record: a new pin in
+``docker/TCAD_IMAGE`` or ``docker/TCAD_DEV_IMAGE``, a recut or rerun of the job ``w10p0_l0p70``
+(its ``cv.meta.json`` or ``mesh_sha256`` changes), or an edit of this file (the record holds its
+sha256). Tests compare the record with each of these.
 """
 
 import hashlib
@@ -100,8 +105,8 @@ def compare(stable_msh: Path, dev_msh: Path) -> dict:
     """The two full meshes compared point by point (coordinates in the file's unit, cm).
 
     - ``same_number``: the points that have the same number and the same coordinates in both;
-    - ``moved``: each point of the stable mesh whose coordinates are not in the dev mesh, with
-      the dev mesh's point nearest it, as ``[[x, y], [x, y]]``;
+    - ``moved``: with the points of each mesh sorted by (x, y), each pair at the same place in
+      the two sorted lists whose coordinates differ, as ``[[x, y] stable, [x, y] dev]``;
     - ``largest_relative_move``: the largest coordinate difference of a ``moved`` pair over
       that coordinate;
     - ``same_triangles``: with each stable point matched to the dev point at the same place in
