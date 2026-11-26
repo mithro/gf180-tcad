@@ -3,8 +3,9 @@
 modules, what each committed record pins, the record writers' refusals, and the numbers and
 figures of docs/results/hv-junction.md against the records.
 
-A record under results/hv-junction/ is tested when it is committed: main, supp, family and
-checks (record.py), diodes (checks.py) and charon (charon_record.py)."""
+A record under results/hv-junction/ is tested when it is committed: main, supp, family, delta
+and checks (record.py), diodes (checks.py) and charon (charon_record.py). A prediction case takes
+its value from the last of main, supp, family and delta that holds it."""
 
 import hashlib
 import json
@@ -38,7 +39,9 @@ PAGE = REPO_ROOT / "docs" / "results" / "hv-junction.md"
 Q, EPS, UM = 1.602176634e-19, 11.7 * 8.8541878128e-14, 1e-4
 
 # The records record.py writes, and every record a file under results/hv-junction/ may be.
-SWEEP_RECORDS = ("main", "supp", "family", "checks")
+SWEEP_RECORDS = ("main", "supp", "family", "delta", "checks")
+# The prediction records, in the order a later one replaces the cases of an earlier one.
+PREDICTION_RECORDS = ("main", "supp", "family", "delta")
 ALL_RECORDS = (*SWEEP_RECORDS, "diodes", "charon")
 # The case the sandbox test reruns (297 s in the main batch) and its tolerance in volts.
 RERUN_CASE, RERUN_TOL_V = "NW0|B|edge", 1e-6
@@ -83,13 +86,20 @@ def _supp_cases() -> dict:
     return got
 
 
-def _expected(name: str) -> dict:
-    return {
-        "main": _main_cases,
-        "supp": _supp_cases,
-        "family": lambda: predict.cases(predict.KEY, predict.FAMILY),
-        "checks": checks.check_cases,
-    }[name]()
+def _current_cases() -> dict:
+    """Every prediction case predict.py gives now: the sets "main" and "family"."""
+    got = _main_cases()
+    got.update(predict.cases([k for k in predict.KEY if k in predict.STRUCTS], predict.FAMILY))
+    return got
+
+
+def _latest_rows() -> dict:
+    """Each case's row in the last prediction record that holds it, for the structures of
+    structures.json."""
+    rows = {}
+    for name in _present(PREDICTION_RECORDS):
+        rows.update(_load(name)["cases"])
+    return {c: r for c, r in rows.items() if c.split("|")[0].split("@")[0] in predict.STRUCTS}
 
 
 # --- the physics of the host modules --------------------------------------------------------------
@@ -294,20 +304,38 @@ def test_record_rows_are_whole(name):
         assert bv == row["bv_v"] or np.isclose(bv, row["bv_v"], rtol=1e-12), case
 
 
-@pytest.mark.parametrize("name", _present(SWEEP_RECORDS))
-def test_record_cases_are_the_case_set(name):
-    """The record's cases and the ones its runs left out are the case set, and a row's
-    parameters are the ones the case set gives now. The main record's deep N-wells under A and
-    Aq are the exception: the supp set reruns them with other parameters."""
-    rec = _load(name)
-    want = _expected(name)
-    assert set(rec["cases"]) | set(rec["not_converged"]) <= set(want)
-    other = {c for c, row in rec["cases"].items() if row["params_sha256"] != _sha(want[c])}
-    if name == "main":
-        assert other <= set(_supp_cases()), sorted(other - set(_supp_cases()))
-        assert all(predict.STRUCTS[c.split("|")[0].split("@")[0]]["kind"] == "dnw" for c in other)
-    else:
-        assert not other, sorted(other)
+def test_latest_records_hold_the_current_case_sets(hf):
+    """A record is the record of what ran at its commit, so a later change of structures.json,
+    hvsite.py or predict.py leaves rows with superseded parameters; the delta set reruns them.
+    The page counts the printed ones, and once delta is committed there are none. The check
+    record's parameters are always the ones checks.py gives now."""
+    rows, now = _latest_rows(), _current_cases()
+    stale = sorted(
+        c for c in hf.table_cases() if c in rows and rows[c]["params_sha256"] != _sha(now[c])
+    )
+    assert hf.superseded() == stale
+    assert hf.substitutions()["hvj_n_superseded"] == str(len(stale))
+    assert set(hf.table_cases()) <= set(now)
+    if "delta" in _present():
+        assert not stale, stale
+        assert not set(_load("delta")["cases"]) - set(now)
+    if "checks" in _present():
+        want = checks.check_cases()
+        for case, row in _load("checks")["cases"].items():
+            assert row["params_sha256"] == _sha(want[case]), case
+
+
+def test_copies_have_the_section_of_the_original():
+    """A structure whose name ends in b, and NT20L, give the cases of the structure they copy."""
+    got = _main_cases()
+    for copy, orig in (
+        ("NT20b", "NT20"),
+        ("NT20L", "NT20"),
+        ("DT20b", "DT20"),
+        ("NA0p6b", "NA0p6"),
+    ):
+        for proc in ("A", "B"):
+            assert got[f"{copy}|{proc}|edge"] == got[f"{orig}|{proc}|edge"], copy
 
 
 def test_diode_record_is_the_three_diodes():
@@ -441,15 +469,12 @@ def _text(row: dict | None) -> str:
 
 def test_page_numbers_are_the_records(hf):
     """Every value of the page is a substitution, and every substitution of a case is that
-    case's breakdown voltage in the committed records to one decimal (supp before main)."""
+    case's breakdown voltage to one decimal, from the last prediction record that holds it."""
     subs = hf.substitutions()
     page = PAGE.read_text("utf-8")
     used = set(re.findall(r"\{\{ (hvj_\w+) \}\}", page))
     assert used <= set(subs), sorted(used - set(subs))
-    rows = {}
-    for name in ("main", "supp", "family"):
-        if name in _present():
-            rows.update(_load(name)["cases"])
+    rows = _latest_rows()
     assert rows == hf.cases()
     for case in {*rows, *hf.table_cases()}:
         assert subs[hf.key(case)] == _text(rows.get(case)), case
@@ -472,6 +497,7 @@ def test_page_tables_are_the_generated_rows(hf):
     listed = [r for g in hf.COLUMNS for r in hf.rows() if hf.group(r) == g]
     assert sorted(listed) == sorted(hf.rows())
     assert tuple(hf.FAMILY_STRUCTURES) == tuple(predict.KEY)
+    assert tuple(hf.PREDICTION_RECORDS) == PREDICTION_RECORDS
     assert set(hf.FAMILY) == set(predict.FAMILY) and set(hf.PROCESSES) == {
         *predict.PROCESSES, *predict.NAT_ONLY}  # fmt: skip
     assert hf.structures() == predict.STRUCTS

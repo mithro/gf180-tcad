@@ -8,8 +8,10 @@ structure as a cross-section), ``ionize.py`` (the ionisation integral) and ``pro
 sheet resistance and capacitance of a well profile).
 
 A record that is not committed gives a dash wherever the page prints one of its values, and its
-points are missing from the figures; nothing else changes. The records are ``main``, ``supp`` (it
-replaces the cases of ``main`` it reruns), ``family``, ``checks``, ``diodes`` and ``charon``.
+points are missing from the figures; nothing else changes. The prediction records are ``main``,
+``supp``, ``family`` and ``delta``: a case takes its value from the last of them that holds it.
+Only the structures of ``structures.json`` are read from them. The other records are ``checks``,
+``diodes`` and ``charon``.
 
 :func:`substitutions` gives the page's ``{{ hvj_<name> }}`` values, and :func:`write_all` writes
 each figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg`` into
@@ -18,9 +20,11 @@ each figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg`` i
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import re
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -38,7 +42,7 @@ EXPERIMENT = REPO_ROOT / "experiments" / "hv-junction"
 ROOT = REPO_ROOT / "results" / "hv-junction"
 
 #: The records, in the order a later one replaces the cases of an earlier one.
-PREDICTION_RECORDS = ("main", "supp", "family")
+PREDICTION_RECORDS = ("main", "supp", "family", "delta")
 RECORDS = (*PREDICTION_RECORDS, "checks", "diodes", "charon")
 #: The text of a value whose record or case is not committed.
 MISSING = "—"
@@ -115,13 +119,41 @@ def structures() -> dict[str, dict]:
 
 
 def cases(root: Path = ROOT) -> dict[str, dict]:
-    """Every prediction case of the committed records, ``{case name: its row}``; a case of
-    ``supp`` replaces the one of ``main`` it reruns."""
+    """Every prediction case of the committed records whose structure is in
+    ``structures.json``, ``{case name: its row}``. A case takes the row of the last record of
+    :data:`PREDICTION_RECORDS` that holds it."""
     out = {}
     recs = records(root)
     for name in PREDICTION_RECORDS:
         out.update(recs.get(name, {}).get("cases", {}))
-    return out
+    known = structures()
+    return {c: row for c, row in out.items() if c.split("|")[0].split("@")[0] in known}
+
+
+def current_hashes() -> dict[str, str]:
+    """``{case: sha256 of its parameters}`` of the case sets ``predict.py`` gives now: every
+    structure under :data:`PROCESSES` and the family, hashed as ``record.py`` hashes them."""
+    sys.path.insert(0, str(EXPERIMENT))  # predict.py imports hvsite.py by its bare name
+    try:
+        predict = _load("predict")
+    finally:
+        sys.path.remove(str(EXPERIMENT))
+    struct = predict.STRUCTS
+    want = predict.cases(sorted(struct), predict.PROCESSES)
+    nat = [n for n, st in struct.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
+    want.update(predict.cases(sorted(nat), predict.NAT_ONLY))
+    want.update(predict.cases([k for k in predict.KEY if k in struct], predict.FAMILY))
+    return {
+        c: hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()
+        for c, p in want.items()
+    }
+
+
+def superseded(root: Path = ROOT) -> list[str]:
+    """The cases the page's tables print whose record row was run with other parameters than
+    ``predict.py`` gives now (the ``delta`` case set reruns them)."""
+    got, now = cases(root), current_hashes()
+    return sorted(c for c in table_cases() if c in got and got[c]["params_sha256"] != now.get(c))
 
 
 def shown(row: dict | None) -> str:
@@ -181,7 +213,7 @@ def table(name: str) -> str:
     """The Markdown rows of the table of group ``name`` (or ``family-a``, ``family-b``), as the page holds them:
     a header, then one row per structure with a substitution per value."""
     if name in FAMILY_COLUMNS:
-        columns, names = FAMILY_COLUMNS[name], list(FAMILY_STRUCTURES)
+        columns, names = FAMILY_COLUMNS[name], [s for s in FAMILY_STRUCTURES if s in structures()]
     else:
         columns, names = COLUMNS[name], [r for r in rows() if group(r) == name]
     head = ["Structure", *(p if s == "edge" else f"{p} corner" for p, s in columns)]
@@ -198,7 +230,8 @@ def table_cases() -> list[str]:
     for row in rows():
         out += [f"{row}|{p}|{s}" for p, s in COLUMNS[group(row)]]
     for columns in FAMILY_COLUMNS.values():
-        out += [f"{row}|{p}|{s}" for row in FAMILY_STRUCTURES for p, s in columns]
+        out += [f"{row}|{p}|{s}" for row in FAMILY_STRUCTURES for p, s in columns
+                if row in structures()]  # fmt: skip
     return out
 
 
@@ -249,7 +282,7 @@ def substitutions(root: Path = ROOT) -> dict[str, str]:
 
     ``hvj_<case>`` (:func:`key`) is :func:`shown` of each case of the records and of each table
     cell; ``hvj_n_<record>`` and ``hvj_n_<record>_missing`` count a prediction record's cases and
-    the cases its runs left without a result; ``hvj_chk_<name>`` is a check case's breakdown
+    the cases its runs left without a result; ``hvj_n_superseded`` counts :func:`superseded`; ``hvj_chk_<name>`` is a check case's breakdown
     voltage; ``hvj_diode_<doping>`` the 1D diode's, ``hvj_diode_<doping>_analytic`` the
     triangular-field value, ``_vbi`` the built-in potential and ``_applied`` their difference; ``hvj_charon_<case>_<field>`` the Charon values; ``hvj_nw_rs``,
     ``hvj_nw_cj0`` and ``hvj_nw_cj0_pct`` the N-well anchors; ``hvj_abut_pct`` how far the
@@ -264,6 +297,7 @@ def substitutions(root: Path = ROOT) -> dict[str, str]:
         rec = recs.get(name)
         out[f"hvj_n_{name}"] = MISSING if rec is None else str(len(rec["cases"]))
         out[f"hvj_n_{name}_missing"] = MISSING if rec is None else str(len(rec["not_converged"]))
+    out["hvj_n_superseded"] = str(len(superseded(root)))
     checks = recs.get("checks", {}).get("cases", {})
     for name in CHECKS:
         row = checks.get(name)
@@ -517,12 +551,12 @@ def ring_figure(palette: str, root: Path = ROOT):
 
 
 def corner_points() -> dict[str, list[tuple[float, str]]]:
-    """Per well kind, [(simulated corner radius in µm, structure)] of the plain 20 µm
-    terminations; a drawn radius below 2 µm is simulated at 2 µm (``predict.MIN_CORNER``)."""
+    """Per well kind, [(simulated corner radius in µm, structure)] of the corner structures
+    (NC, DC) and of the plain 20 µm terminations NT20 and DT20; a drawn radius below 2 µm is
+    simulated at 2 µm (``predict.MIN_CORNER``)."""
     out = {"nw": [], "dnw": []}
     for name, st in structures().items():
-        plain = group(name) in ("bare", "deep") and st["term"] == 20.0 and not st["plates"]
-        if plain and st["pwell_gap"] is None and st["nat_gap"] is None:
+        if re.fullmatch(r"[ND]C\d+|[ND]T20", name):
             out[st["kind"]].append((max(st["corner"], 2.0), name))
     return {k: sorted(v) for k, v in out.items()}
 
