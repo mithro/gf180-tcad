@@ -226,12 +226,10 @@ The doping of each part of the simulated cell is in {numref}`Figure %s of Defini
 
 ## Comparisons of DEVSIM or Charon with foundry SPICE models
 
-<!-- figure-ok: a literature search record names papers and repositories, not a physical thing -->
-
 A search on 2026-11-26 looked for a published comparison of {{ DEVSIM }} or {{ Charon }}
 results with a foundry's {term}`BSIM4` {term}`model card`. It found one, for the SkyWater SKY130
 process, in a GitHub repository. It found no Charon-versus-BSIM comparison. The only
-{term}`gf180mcu <GF180MCU>` TCAD work it found is this project.
+{term}`gf180mcu <GF180MCU>` {term}`TCAD` work it found is this project.
 {numref}`tab-lit-search-bsim-queries` lists every query.
 
 ~~~{table} The queries of the search on 2026-11-26, one row per query, with the comparison each found.
@@ -273,15 +271,15 @@ The search also read the two simulators' own publication lists. These are the hi
 the question:
 
 - **OpenTCAD.** Its [SKY130 `nfet_01v8` check](https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/validation/sky130/README.md)
-  simulates a 1 µm nMOS in DEVSIM. It compares the result with curves that ngspice 44.2 computes
-  from SKY130's typical-corner BSIM4 card. The compared values are the threshold voltage, the body
-  effect, the subthreshold swing, the peak transconductance and the on-current. The check was
+  simulates a 1 µm nMOS in DEVSIM. It compares the result with {{ ngspice }} 44.2 simulations of
+  SKY130's typical-corner BSIM4 card. The compared values are the threshold voltage at five back
+  biases, the subthreshold swing, the peak transconductance and the on-current. The check was
   first committed on 2026-11-05.
 - **devphys.** Its [README](https://github.com/joaln27/devphys/blob/bcae3beebcaaeb15a1937af996f43e0bc15bcdb4/README.md)
   compares DEVSIM simulations of SKY130 `nfet_01v8` with measured silicon at 300 K and 77 K. It
   sets its 77 K error beside the error the dataset's authors give for their own BSIM4 fits. It
-  compares an extracted oxide thickness with the card's `toxe`. It shows no DEVSIM curve beside a
-  PDK SPICE curve.
+  compares its own extracted `toxe` with the card's value. It makes no comparison of DEVSIM drain
+  current or capacitance with the {term}`PDK` SPICE models.
 - **The 2021 request.** [DEVSIM issue 74](https://github.com/devsim/devsim/issues/74) asked in
   August 2021 for an open TCAD flow matched to the SKY130 PDK. It was closed in April 2022 with
   no comments.
