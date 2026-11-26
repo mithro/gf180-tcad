@@ -18,6 +18,7 @@ commit and the scripts); each record holds them once. The records:
 
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -100,7 +101,7 @@ def hard_range(work: Path) -> dict:
     return {
         "variants": {name: _reached(v) for name, v in variants.items()},
         "inversion_side": _json(work / "b2-inversion-side" / "b2d.json"),
-        "nlp": _json(work / "b2-nlp" / "b2nlp.json"),
+        "nlp": _nlp(_json(work / "b2-nlp" / "b2nlp.json")),
         "step_studies": {
             p.name: {
                 "command": _json(p / "done.json")["command"],
@@ -123,6 +124,15 @@ def probes(work: Path) -> dict:
         "harmonic_balance": b4,
         "tri3": {**_json(work / "b1-tri3" / "b1.json"), **_json(work / "b1-tri3" / "b1an.json")},
     }
+
+
+def _nlp(rec: dict) -> dict:
+    """b2nlp.json with each diverged point's NaN F-norms as None (JSON has no NaN); the
+    point's ``nan_residual`` says the residual was NaN."""
+    for p in rec["points"]:
+        if "newton_f_dx" in p:
+            p["newton_f_dx"] = [[f if math.isfinite(f) else None, dx] for f, dx in p["newton_f_dx"]]
+    return rec
 
 
 def harmonic_balance(work: Path) -> dict:
