@@ -23,6 +23,8 @@ How it works:
 * A numbered item with no label (Sphinx gave it an id such as ``id3``), a label without the
   prefix of its kind (``fig-`` for a figure, ``tab-`` for a table, :data:`KIND_PREFIXES`) and
   two labels that give the same identifier are Sphinx warnings, so ``sphinx-build -W`` fails.
+  That holds across kinds too: a figure ``fig-x`` and a table ``tab-x`` would read as "Figure x"
+  and "Table x", so one identifier names one item on the site whatever its kind.
 
 theme_figures (docs/_ext/theme_figures.py) merges each light/dark twin pair into one figure on
 ``doctree-read``, before any number is assigned, so a pair has the light twin's label and one
@@ -78,10 +80,10 @@ def restore_numbers(app, env) -> list[str]:
 
 def replace_numbers(app, env) -> list[str]:
     """Swap every number Sphinx assigned for the item's identifier; warn for an item with no
-    label and for two labels with one identifier."""
+    label and for two labels with one identifier, of the same kind or not."""
     env.stable_ids_numbers = copy.deepcopy(env.toc_fignumbers)
     labels = _labels(env)
-    seen: dict[tuple[str, str], tuple[str, str]] = {}
+    seen: dict[str, tuple[str, str, str]] = {}
     for docname in sorted(env.toc_fignumbers):
         for kind, numbers in env.toc_fignumbers[docname].items():
             for element_id in sorted(numbers):
@@ -110,16 +112,33 @@ def replace_numbers(app, env) -> list[str]:
                         type="stable_ids",
                     )
                 identifier = stable_id(kind, label)
-                first = seen.setdefault((kind, identifier), (docname, label))
-                if first != (docname, label):
+                first = seen.setdefault(identifier, (kind, docname, label))
+                if first[0] != kind:
+                    logger.warning(
+                        "%s '%s' has the same identifier '%s' as the %s '%s' in %s, so a "
+                        'reader sees "%s %s" and "%s %s"; rename one of the labels',
+                        kind,
+                        label,
+                        identifier,
+                        first[0],
+                        first[2],
+                        first[1],
+                        first[0].capitalize(),
+                        identifier,
+                        kind.capitalize(),
+                        identifier,
+                        location=docname,
+                        type="stable_ids",
+                    )
+                elif first[1:] != (docname, label):
                     logger.warning(
                         "%s '%s' has the same identifier '%s' as '%s' in %s; rename one of "
                         "the labels",
                         kind,
                         label,
                         identifier,
+                        first[2],
                         first[1],
-                        first[0],
                         location=docname,
                         type="stable_ids",
                     )
