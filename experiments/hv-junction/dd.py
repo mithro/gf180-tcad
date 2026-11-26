@@ -105,15 +105,14 @@ def drift_diffusion(device, si_regions, si_contacts, with_qf=False, update="defa
         sp.CreateSiliconDriftDiffusionAtContact(device, r, c)
 
 
-def solve(rel=1e-6, abs_=1e10, iters=30):
+def solve(rel=1e-6, abs_=1e10, iters=30, divergence=20):
     """rel is DEVSIM's relative update limit for every equation. In double precision the
     continuity equations of a depleted region stall near 3e-7 while the potential is
     converged to 1e-13, so a limit of 1e-8 stopped sweeps that had not broken down."""
-    # maximum_divergence: give up after the error has grown this many times. A diverging
-    # Newton iteration is very slow to factorise, and the default of 20 kept a step that
-    # was going to be halved anyway busy for an hour.
+    # divergence: give up after the error has grown this many times. The damped equilibrium
+    # solves need DEVSIM's default of 20; a bias step uses 4 (see ramp).
     ds.solve(type="dc", absolute_error=abs_, relative_error=rel, maximum_iterations=iters,
-             maximum_divergence=4)
+             maximum_divergence=divergence)
 
 
 def ramp(device, contacts, target, step, on_point, min_step=None):
@@ -137,7 +136,9 @@ def ramp(device, contacts, target, step, on_point, min_step=None):
         nxt = v + sign * min(dv, abs(target - v))
         put(nxt)
         try:
-            solve()
+            # a diverging Newton iteration is very slow to factorise: give the step up
+            # early and halve it, instead of spending an hour on it
+            solve(divergence=4)
         except ds.error as exc:
             put(v)
             dv /= 2
