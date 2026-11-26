@@ -296,7 +296,7 @@ The list continues with the other hits from the queries:
   resistance with a Liberty file characterised with BSIM. The file comes from a standard-cell
   repository. It prints the DEVSIM saturation current beside BSIM's.
 - **The 2021 request.** [DEVSIM issue 74](https://github.com/devsim/devsim/issues/74) asked in
-  August 2021 for an open TCAD flow matched to the SKY130 PDK. It was closed in April 2022 with
+  August 2021 for an open TCAD flow matched to the SKY130 {term}`PDK`. It was closed in April 2022 with
   no comments.
 
 The search also read the two simulators' own publication lists. These are the hits from those
