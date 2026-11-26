@@ -80,12 +80,11 @@ The resumed sweeps are the dotted curves of {numref}`Figure %s of The 2D MOS cap
   {term}`stable TCAD image` (PyPI releases) is the release baseline and is used for
   debugging. A dev HEAD can break what the release did; such drift is reported, never hidden
   by a looser {term}`tolerance`. See {ref}`tcad-dev-image`.
-- **2D results are on the stable image.** The 1D results are made on the dev-HEAD
-  image, byte-identical to the stable image's. The 2D MOS capacitor is on the stable image.
-  The dev image's {{ gmsh }} 5 writes another mesh file for a 2D cell, with the same
-  triangles renumbered ({numref}`Figure %s of Base image <fig-cell-mesh>`). And the 2D {term}`mesh convergence`
-  has not been rerun on the dev image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
-  See {ref}`tcad-results-image`.
+- **2D results are on the stable image.** The 1D results are made on the dev-HEAD image. The
+  dev image's {{ gmsh }} 5 writes another mesh file for a 2D cell, with the same triangles
+  renumbered ({numref}`Figure %s of Base image <fig-cell-mesh>`). The 2D {term}`mesh convergence`
+  has not been rerun there ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)). See
+  {ref}`tcad-results-image`.
 - **Two dev-HEAD packages are forks.** The dev-HEAD image runs the full flow. To get there,
   {{ meshwell }} and the {{ gf180mcu_gdsfactory }} come from mithro forks of their upstream
   HEADs ({{ meshwell_fork }}, {{ gf180mcu_fork }}), and one test of {{ gplugins_fork }} is
