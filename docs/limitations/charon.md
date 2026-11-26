@@ -148,22 +148,26 @@ both devices and both parameter sets.
 ```{figure} /_generated/limitations/charon-tolerance-light.svg
 :name: fig-charon-tolerance
 :figclass: only-light
-:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below. Bottom: one marker per pfet start setting at the bias where its sweep stopped, or at the grid end.
+:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below, with a dot on every point and triangles at the axis floor where the change is exactly zero. Bottom: one marker per pfet start setting: filled at the grid end, hollow where the sweep failed, a cross where the ramp from equilibrium failed before the sweep began.
 
 Top: the relative change of C from the reference tolerance (1e-10) to the backend's (1e-9), per
 device and parameter set ({repo}`results/charon-experiments/cv.json`). Bottom: the pfet start
 sweep under each setting ({repo}`results/charon-experiments/hard-range.json`). Filled: it reached
-the end of the grid. Hollow: it stopped at that bias.
+the end of the grid. Hollow: the sweep failed at that bias. Cross: the ramp up from equilibrium
+failed at that bias, so the sweep never started. In the top panel the triangles at the floor mark
+exactly zero changes.
 ```
 
 ```{figure} /_generated/limitations/charon-tolerance-dark.svg
 :figclass: only-dark
-:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below. Bottom: one marker per pfet start setting at the bias where its sweep stopped, or at the grid end.
+:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below, with a dot on every point and triangles at the axis floor where the change is exactly zero. Bottom: one marker per pfet start setting: filled at the grid end, hollow where the sweep failed, a cross where the ramp from equilibrium failed before the sweep began.
 
 Top: the relative change of C from the reference tolerance (1e-10) to the backend's (1e-9), per
 device and parameter set ({repo}`results/charon-experiments/cv.json`). Bottom: the pfet start
 sweep under each setting ({repo}`results/charon-experiments/hard-range.json`). Filled: it reached
-the end of the grid. Hollow: it stopped at that bias.
+the end of the grid. Hollow: the sweep failed at that bias. Cross: the ramp up from equilibrium
+failed at that bias, so the sweep never started. In the top panel the triangles at the floor mark
+exactly zero changes.
 ```
 
 {numref}`tab-charon-tolerance-change` gives the largest change per case. The pfet start reference
@@ -191,8 +195,8 @@ iterations, the most allowed.
 The bottom panel of {numref}`fig-charon-tolerance` shows what changes the outcome. NOX's rescue off,
 steps of 5 mV and a lifetime of 1e-16 s stop at the same bias. Loosening either tolerance alone, the relative
 to 1e-9 or the absolute to 1e-11, passes. Tightening both tolerances ten times, to 1e-11
-relative and 1e-13 absolute, stops earlier. It stops at {{ lim_charon_stall_ramp_v }} V on the
-ramp from equilibrium.
+relative and 1e-13 absolute, fails before the sweep. The ramp up from equilibrium fails at
+{{ lim_charon_stall_ramp_v }} V, so the sweep never starts.
 
 So a smaller step does not pass the stall, and a looser tolerance does. At 1e-11 the nfet
 calibrated ramp, with the project's lifetimes, stops at {{ lim_charon_tight_ramp_v }} V. What
@@ -281,28 +285,32 @@ residual turns NaN. Charon then aborts with MPI error 14.
 ```{figure} /_generated/limitations/charon-checks-light.svg
 :name: fig-charon-checks
 :figclass: only-light
-:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state; the C change a hundred times looser on a log axis, triangles at its floor where it is exactly zero, and one dashed line where the ten times tighter nfet study stopped.
+:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state, with a triangle at the floor where one is exactly zero; the C change a hundred times looser on a log axis, a dot on every point, triangles at its floor where it is exactly zero, and one dashed line where the ten times tighter nfet study failed on its ramp from equilibrium.
 
 Top to bottom: B3, each linear solver's sweep from its start to where it stopped. B2, the
 nonlinear-Poisson C (circles) and DEVSIM's C at the same bias (squares); a dotted line, "Newton
 diverged, no C", at each bias where the solve diverged. B6, the oxide-flux spread and the poly
-and body charge mismatches per state, nfet solid and pfet dashed. B7, the nfet C change a
+and body charge mismatches per state, nfet solid and pfet dashed, triangles at the floor where
+one is exactly zero. B7, the nfet C change a
 hundred times looser with the project's lifetimes, triangles where it is exactly zero, and a
-dashed line where the ten times tighter study of the same case stopped
+dashed line where the ten times tighter study of the same case failed: on its ramp from
+equilibrium, before its sweep began
 ({repo}`results/charon-experiments/probes.json`, {repo}`results/charon-experiments/hard-range.json`,
 {repo}`results/charon-experiments/cv.json`).
 ```
 
 ```{figure} /_generated/limitations/charon-checks-dark.svg
 :figclass: only-dark
-:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state; the C change a hundred times looser on a log axis, triangles at its floor where it is exactly zero, and one dashed line where the ten times tighter nfet study stopped.
+:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state, with a triangle at the floor where one is exactly zero; the C change a hundred times looser on a log axis, a dot on every point, triangles at its floor where it is exactly zero, and one dashed line where the ten times tighter nfet study failed on its ramp from equilibrium.
 
 Top to bottom: B3, each linear solver's sweep from its start to where it stopped. B2, the
 nonlinear-Poisson C (circles) and DEVSIM's C at the same bias (squares); a dotted line, "Newton
 diverged, no C", at each bias where the solve diverged. B6, the oxide-flux spread and the poly
-and body charge mismatches per state, nfet solid and pfet dashed. B7, the nfet C change a
+and body charge mismatches per state, nfet solid and pfet dashed, triangles at the floor where
+one is exactly zero. B7, the nfet C change a
 hundred times looser with the project's lifetimes, triangles where it is exactly zero, and a
-dashed line where the ten times tighter study of the same case stopped
+dashed line where the ten times tighter study of the same case failed: on its ramp from
+equilibrium, before its sweep began
 ({repo}`results/charon-experiments/probes.json`, {repo}`results/charon-experiments/hard-range.json`,
 {repo}`results/charon-experiments/cv.json`).
 ```
