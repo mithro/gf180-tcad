@@ -217,6 +217,13 @@ The doping of each part of the simulated cell is in {numref}`Figure %s of Defini
 
 - {{ Charon }} User Manual v2.2 (SAND 2022), {doi}`10.2172/1871374`.
 
+(lit-shadid)=
+
+- Shadid, Hoekstra, Hennigan, Castro and Fixel, "Simulation of neutron radiation damage in
+  silicon semiconductor devices", Sandia National Laboratories report SAND2007-7157, 2007,
+  {doi}`10.2172/934581`. It describes the {{ Charon }} code: a stabilized finite-element
+  discretization of the {term}`drift-diffusion` equations.
+
 (lit-bochev)=
 
 - Bochev, Peterson and Gao, Comput. Methods Appl. Mech. Eng. 254, 2013,
