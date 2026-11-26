@@ -90,6 +90,9 @@ under an open licence, and every input is pinned to an exact version.
   process or Agree at the rest.
 - **The 2D cross-sections are mixed.** Each calibrated 2D cross-section is Same process or
   Disagree.
+- **Charon agrees with DEVSIM in 1D.** In experiments the C differs by at most
+  {{ lim_charon_nfet_devsim }} (nfet) and {{ lim_charon_pfet_devsim }} (pfet). Every committed
+  TCAD result is DEVSIM's ({doc}`limitations/charon`).
 - **No chip has been measured.** No silicon data exists to check either model against.
 
 {doc}`limitations/status` lists every committed result, its folder and its verdict.

@@ -169,3 +169,15 @@ def test_backend_tolerance_is_b7_equivalent():
     assert stall["newton_limit"] == [[50, 50]] and stall["final"][-1][1] > 1
     for name in ("study-pfet-start-rel-1e-9-abs-1e-12", "study-pfet-start-rel-1e-10-abs-1e-11"):
         assert studies[name]["b2_exit"] == 0, name
+
+
+def test_readme_charon_numbers_are_the_records():
+    """README.md is read on GitHub without substitutions: its Charon numbers are typed, and
+    must equal the page's substitutions."""
+    from gf180tcad import limitations_figures as lf
+
+    subs = lf.substitutions()
+    readme = (REPO_ROOT / "README.md").read_text("utf-8")
+    want = (f"within {subs['lim_charon_nfet_devsim']} (nfet) and "
+            f"{subs['lim_charon_pfet_devsim']} (pfet) of DEVSIM's")  # fmt: skip
+    assert want in " ".join(readme.split()), want
