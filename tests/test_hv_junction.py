@@ -147,7 +147,8 @@ def test_nwell_profile_meets_the_public_anchors():
     y = np.linspace(0, 12e-4, 24001)
     wells = [(g["peak"], g["rp"] * UM, g["sy"] * UM) for g in pr["nw"]]
     n, total = profile1d.net(y, wells, pr["sub"])
-    assert 800 < profile1d.sheet_resistance(y, n, total) < 1200
+    # the published resistor lies under the 0.32 um trench oxide
+    assert 800 < profile1d.sheet_resistance(y, n, total, top=0.32e-4) < 1200
     c0 = profile1d.cv(y, n, np.array([0.0]))[0]
     assert abs(c0 - 1.4914e-8) / 1.4914e-8 < 0.15, c0
 

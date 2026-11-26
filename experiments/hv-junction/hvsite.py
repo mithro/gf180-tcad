@@ -15,7 +15,11 @@ a corner of that radius.
 from __future__ import annotations
 
 STI = 0.32
-POLY = (-0.20, 0.0)
+# The poly plate is lifted 10 nm off the trench oxide's top, so that it lies wholly inside
+# the dielectric region and its contact fixes the potential on every side. With its bottom
+# face on the boundary between the two oxide regions the trench oxide under it was left
+# floating, and every poly-plate result was wrong.
+POLY = (-0.21, -0.01)
 M1 = (-1.41, -0.86)
 M2 = (-2.56, -2.01)
 LAYER_Y = {"poly": POLY, "m1": M1, "m2": M2}
@@ -31,18 +35,21 @@ DEFAULT_STRUCT = {
 # (N+/P-well 11 V, P+/N-well 10.5 V, N-well/P-well 14 V), and a deeper light part, which
 # with the substrate sets the published N-well capacitance and sheet resistance.
 DEFAULT_PROCESS = {
-    "sub": 3.5e15,
+    "sub": 3.56e15,
     "nw": [{"peak": 2.5e17, "rp": 0.32, "sy": 0.13, "sx": 0.08},
-           {"peak": 3e16, "rp": 0.9, "sy": 0.5, "sx": 0.35}],
-    "dnw": [{"peak": 4e16, "rp": 1.5, "sy": 0.7, "sx": 0.5}],
+           {"peak": 4.63e16, "rp": 1.42, "sy": 0.41, "sx": 0.29}],
+    "dnw": [{"peak": 2e17, "rp": 2.55, "sy": 0.3, "sx": 0.3}],
     "pw": [{"peak": 4e17, "rp": 0.32, "sy": 0.13, "sx": 0.08},
            {"peak": 4e16, "rp": 0.8, "sy": 0.4, "sx": 0.3}],
     "pplus": [{"peak": 5e19, "rp": 0.0, "sy": 0.08, "sx": 0.08}],
     "nplus": [{"peak": 1e20, "rp": 0.0, "sy": 0.08, "sx": 0.08}],
     "qf": 0.0,
-    # extra acceptors spanning the whole section, for a substrate whose doping rises with
-    # depth (the deep N-well capacitance model suggests it; the N-well one does not)
-    "deep_p": [],
+    # A P layer about 4.4 um down, which the deep N-well's capacitance model and its 30 V
+    # breakdown need (fit.py). The N-well's capacitance model, which reaches only 10 V,
+    # cannot tell whether that layer lies under deep N-well only ("dnw") or under the
+    # whole wafer ("blanket"); "none" leaves it out.
+    "deep_p": [{"peak": 4.99e17, "rp": 4.36, "sy": 0.3, "sx": 0.3}],
+    "deep_p_where": "dnw",
     # whether the generated P-well fills the strip between an N-well and a NAT region
     "nat_strip": True,
     # "everywhere": the foundry generates P-well wherever there is no N-well, deep N-well
@@ -66,9 +73,11 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0):
     well = pr["nw"] if s["kind"] == "nw" else pr["dnw"]
     wells = _boxes(-10.0, edge, well)
     probes = []
+    ring_spans = []
     d = 0.0
     for gap, rw in s["rings"]:
         d += gap
+        ring_spans.append((edge + d, edge + d + rw))
         wells += _boxes(edge + d, edge + d + rw, pr["nw"])
         probes.append([edge + d + rw / 2, pr["nw"][0]["rp"]])
         d += rw
@@ -88,8 +97,17 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0):
                 pfield += _boxes(edge, edge + s["nat_gap"], pr["pw"])
         else:
             start = edge + (1.5 if s["kind"] == "dnw" else 0.0)
-        pfield += _boxes(start, far, pr["pw"])
-    pfield += _boxes(-10.0, far, pr["deep_p"])
+        # the generated P-well is the complement of the N-well layer: none where a ring is
+        x = start
+        for a, b in ring_spans:
+            if a > x:
+                pfield += _boxes(x, a, pr["pw"])
+            x = max(x, b)
+        pfield += _boxes(x, far, pr["pw"])
+    if pr["deep_p_where"] == "blanket":
+        pfield += _boxes(-10.0, far, pr["deep_p"])
+    elif pr["deep_p_where"] == "dnw" and s["kind"] == "dnw":
+        pfield += _boxes(-10.0, edge, pr["deep_p"])
     plates = []
     top = 1.5
     for layer, length in s["plates"].items():

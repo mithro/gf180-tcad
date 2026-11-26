@@ -41,10 +41,12 @@ def junction_depth(y, n):
     return y[k] + (y[k + 1] - y[k]) * n[k] / (n[k] - n[k + 1])
 
 
-def sheet_resistance(y, n, total):
-    """Of the N layer above the deepest junction, ohm/square (neutral, undepleted)."""
+def sheet_resistance(y, n, total, top=0.0):
+    """Of the N layer between depth `top` and the deepest junction, ohm/square (neutral,
+    undepleted). top = 0.32e-4 gives the well under trench oxide, which is what the PDK's
+    N-well resistor is."""
     yj = junction_depth(y, n)
-    m = (y < yj) & (n > 0)
+    m = (y >= top) & (y < yj) & (n > 0)
     return 1.0 / (Q * np.trapezoid(mobility_n(total[m]) * n[m], y[m]))
 
 

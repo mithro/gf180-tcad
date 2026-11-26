@@ -105,7 +105,10 @@ def drift_diffusion(device, si_regions, si_contacts, with_qf=False, update="defa
         sp.CreateSiliconDriftDiffusionAtContact(device, r, c)
 
 
-def solve(rel=1e-8, abs_=1e10, iters=30):
+def solve(rel=1e-6, abs_=1e10, iters=30):
+    """rel is DEVSIM's relative update limit for every equation. In double precision the
+    continuity equations of a depleted region stall near 3e-7 while the potential is
+    converged to 1e-13, so a limit of 1e-8 stopped sweeps that had not broken down."""
     ds.solve(type="dc", absolute_error=abs_, relative_error=rel, maximum_iterations=iters)
 
 
