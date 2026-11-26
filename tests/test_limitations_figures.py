@@ -58,6 +58,7 @@ FIGURES = [
     "charon-cv",
     "charon-hard-range",
     "charon-structures",
+    "charon-tolerance",
 ]
 
 _RENDER = textwrap.dedent(
@@ -372,6 +373,8 @@ def _allowed_names() -> set[str]:
     names = set(DEVICES) | gids | set(lf.PLUGIN_FILES) | set(lf.LATEST_FILES) | set(lf.FIGURES)
     names |= set(lf.CHARON_REF.values()) | set(lf.CHARON_CHECKS)  # record keys of cv.json
     names |= {lf.CHARON_REF_VARIANT, lf.CHARON_TIGHT_STUDY, *lf.CHARON_LOOSE_PAIR}  # record keys
+    names |= {n for by in lf.CHARON_B7_PAIRS.values() for pair in by.values() for n in pair}
+    names |= set(lf.CHARON_STALL_STUDIES)
     return names | {"1D", "2D", "BSIM4", "utf-8"}
 
 
@@ -914,6 +917,35 @@ def check_charon_structures(fig):
     d.done()
 
 
+def check_charon_tolerance(fig):
+    runs = _charon("cv")["runs"]
+    studies = _charon("hard-range")["step_studies"]
+    top, bottom = fig.axes
+    d = Drawn(fig)
+    for device, by_params in lf.CHARON_B7_PAIRS.items():
+        for params, (name, ref) in by_params.items():
+            r, b = runs[name], runs[ref]
+            vg = [v for v in r["vg"] if v in b["vg"]]
+            rel = [abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)] - 1)
+                   for v in vg]  # fmt: skip
+            d.line(
+                f"tolerance pair {device} {params}",
+                DEVICES[device].polarity * np.asarray(vg),
+                rel,
+                top,
+            )
+    default = runs[lf.CHARON_B7_PAIRS["pfet_05v0"]["start"][0]]
+    names = [*lf.CHARON_STALL_STUDIES, "default"]
+    stopped = {n: studies[n]["failed"] is not None for n in lf.CHARON_STALL_STUDIES}
+    stopped["default"] = False
+    for gid, pick in (("reached the grid end", False), ("stopped", True)):
+        picked = [n for n in names if stopped[n] is pick]
+        xs = [float(studies[n]["failed"]["failed_at"][0]) if pick else default["vg"][-1]
+              for n in picked]  # fmt: skip
+        d.points(gid, xs, [names.index(n) for n in picked], bottom)
+    d.done()
+
+
 CHECKS = {
     "engine-diff": (lf.engine_diff_figure, check_engine_diff),
     "engine-subthreshold": (lf.engine_subthreshold_figure, check_engine_subthreshold),
@@ -933,6 +965,7 @@ CHECKS = {
     "charon-cv": (lf.charon_cv_figure, check_charon_cv),
     "charon-hard-range": (lf.charon_hard_range_figure, check_charon_hard_range),
     "charon-structures": (lf.charon_structures_figure, check_charon_structures),
+    "charon-tolerance": (lf.charon_tolerance_figure, check_charon_tolerance),
 }
 
 

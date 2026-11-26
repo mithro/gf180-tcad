@@ -1509,7 +1509,36 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
     doping = probes["doping"]
     (ni,) = {v["ni_cm3"] for v in doping.values()}
     sig = STYLE["page_digits"]
+    tol = charon_tolerance(roots)
+    b7 = {f"lim_charon_b7_{_SHORT[d]}_{params}": _sci(float(np.max(v["rel"])))
+          for d, by in tol["pairs"].items() for params, v in by.items()}  # fmt: skip
+    studies = hard["step_studies"]
+    stall = studies[CHARON_STALL_STUDIES[0]]["failed"]
+    ((iters, _limit),) = stall["newton_limit"]
+    fnorm, wrms = stall["final"][-1]
+    ramp = {n: studies[n]["failed"] for n in CHARON_STALL_STUDIES if studies[n]["failed"]
+            and studies[n]["failed"]["deck"].startswith("ramp")}  # fmt: skip
+    (ramp_stop,) = ramp.values()
+    pfet_start_ref = cv[CHARON_B7_PAIRS["pfet_05v0"]["start"][1]]
+    pfet_start = cv[CHARON_B7_PAIRS["pfet_05v0"]["start"][0]]
+
+    def signed(v: float) -> str:
+        return f"{v:g}".replace("-", "\u2212")
+
     return {
+        **b7,
+        "lim_charon_b7_max": _sci(
+            max(float(np.max(v["rel"])) for by in tol["pairs"].values() for v in by.values())
+        ),
+        "lim_charon_stall_v": f"{float(stall['failed_at'][0]):g}",
+        "lim_charon_stall_fnorm": _sci(fnorm),
+        "lim_charon_stall_wrms": f"{wrms:g}",
+        "lim_charon_stall_iters": f"{iters}",
+        "lim_charon_stall_ramp_v": f"{float(ramp_stop['failed_at'][0]):g}",
+        "lim_charon_tight_ramp_v": signed(float(tight["failed"]["failed_at"][0])),
+        "lim_charon_pfet_start_from": f"{min(pfet_start_ref['vg']):g}",
+        "lim_charon_pfet_start_points": f"{pfet_start_ref['n']}",
+        "lim_charon_pfet_start_devsim": _sci(pfet_start["max_abs_rel_vs_devsim"]),
         "lim_charon_nodes": f"{cv[n_ref]['boundary_nodes'][-1] + 1}",
         "lim_charon_points": f"{cv[n_ref]['n']}",
         "lim_charon_ni": _sci_full(ni),
@@ -1538,6 +1567,118 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
         "lim_charon_hb_depl": f"{hb_gate['depletion']:.{sig}f}",
         "lim_charon_tight": rel_tight,
     }
+
+
+#: The B7 pairs (``cv.json``): per device and parameter set, the run at the backend's default
+#: WRMS tolerance (1e-9 relative) and the run at the reference tolerance (1e-10). The pfet start
+#: reference covers only the biases above the stall of the reference tolerance.
+CHARON_B7_PAIRS = {
+    "nfet_05v0": {
+        "calibrated": ("cv-nfet-tau15-1e-9", "cv-nfet-tau15-1e-10"),
+        "start": ("cv-nfet-start-tau15-1e-9", "cv-nfet-start-tau15-1e-10"),
+    },
+    "pfet_05v0": {
+        "calibrated": ("cv-pfet-tau15-1e-9", "cv-pfet-tau15-1e-10"),
+        "start": ("cv-pfet-start-tau15-1e-9", "cv-pfet-start-tau15-1e-10-above-0.6"),
+    },
+}
+
+#: The pfet start sweeps of ``hard-range.json`` (``step_studies``): the reference tolerance, then
+#: one setting changed each. The first is the stall the page describes.
+CHARON_STALL_STUDIES = (
+    "study-pfet-start-1e-10",
+    "study-pfet-start-1e-10-5mV",
+    "study-pfet-start-1e-10-tau16",
+    "study-pfet-start-1e-11",
+    "study-pfet-start-rel-1e-9-abs-1e-12",
+    "study-pfet-start-rel-1e-10-abs-1e-11",
+)
+
+
+def _study_label(command: str) -> str:
+    """A study's settings from its command: the WRMS tolerances, the SRH lifetime and the LOCA
+    steps per grid step."""
+    env = dict(w.split("=", 1) for w in command.split() if w.startswith("CX_") and "=" in w)
+    return (f"rel {env['CX_REL']}, abs {env['CX_ABS']}, lifetime {env['CX_TAU']} s, "
+            f"{env['CX_SUB']} steps per grid step")  # fmt: skip
+
+
+def charon_tolerance(roots: Roots = DEFAULT_ROOTS) -> dict:
+    """``pairs``: per device and parameter set of :data:`CHARON_B7_PAIRS`, the biases both runs
+    have (``u``, polarity times vg) and ``abs(C_default / C_reference - 1)`` there. ``stall``: per
+    study of :data:`CHARON_STALL_STUDIES` and the default-tolerance pfet start run, its label,
+    whether it stopped, and the gate bias of the device where it stopped (V), or the end of its
+    grid."""
+    root = charon_root(roots)
+    runs = charon_record("cv", root)["runs"]
+    studies = charon_record("hard-range", root)["step_studies"]
+    pairs = {}
+    for device, by_params in CHARON_B7_PAIRS.items():
+        pol = DEVICES[device].polarity
+        for params, (name, ref) in by_params.items():
+            r, b = runs[name], runs[ref]
+            vg = [v for v in r["vg"] if v in b["vg"]]
+            rel = [abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)] - 1)
+                   for v in vg]  # fmt: skip
+            pairs.setdefault(device, {})[params] = {
+                "u": pol * np.asarray(vg),
+                "rel": np.asarray(rel),
+            }
+    default = runs[CHARON_B7_PAIRS["pfet_05v0"]["start"][0]]
+    stall = {}
+    for name in CHARON_STALL_STUDIES:
+        s = studies[name]
+        failed = s["failed"]
+        stall[name] = {
+            "label": _study_label(s["command"]),
+            "stopped": failed is not None,
+            "bias_v": float(failed["failed_at"][0]) if failed else default["vg"][-1],
+        }
+    stall["default"] = {
+        "label": _study_label(" ".join(f"{k}={v}" for k, v in default["settings"].items())),
+        "stopped": False,
+        "bias_v": default["vg"][-1],
+    }
+    return {"pairs": pairs, "stall": stall}
+
+
+def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Top: ``abs(C / C_ref - 1)`` between the backend's default tolerance and the reference, for
+    both devices and parameter sets. Bottom: the pfet start sweeps under each setting, at the gate
+    bias where each stopped (hollow) or at the end of the grid (filled)."""
+    pal = ef.PALETTES[palette]
+    k = charon_tolerance(roots)
+    colours = {("nfet_05v0", "calibrated"): "electron", ("nfet_05v0", "start"): "highlight",
+               ("pfet_05v0", "calibrated"): "hole", ("pfet_05v0", "start"): "highlight_oxide"}  # fmt: skip
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(STYLE["tall_in"])
+        top, bottom = fig.subplots(len(CHARON_PANELS), 1)
+        for device, by_params in k["pairs"].items():
+            for params, d in by_params.items():
+                top.plot(d["u"], d["rel"], color=pal[colours[device, params]],
+                         lw=ef.STYLE["line_width"], label=f"{device} {params}",
+                         gid=f"tolerance pair {device} {params}")  # fmt: skip
+        top.set_yscale("log")
+        top.set_xlabel("u = polarity × vg (V)")
+        top.set_ylabel("relative change of C")
+        names = list(k["stall"])
+        y = np.arange(len(names))
+        for gid, pick, face in (("reached the grid end", False, pal["highlight"]),
+                                ("stopped", True, "none")):  # fmt: skip
+            idx = [i for i, n in enumerate(names) if k["stall"][n]["stopped"] is pick]
+            bottom.scatter([k["stall"][names[i]]["bias_v"] for i in idx], y[idx],
+                           s=STYLE["marker_pt"] ** 2, facecolors=face,
+                           edgecolors=pal["highlight"], label=gid, gid=gid)  # fmt: skip
+        bottom.set_yticks(y, [k["stall"][n]["label"] for n in names])
+        bottom.invert_yaxis()
+        bottom.set_xlabel("pfet start: gate bias of the device where the sweep stopped (V)")
+        bottom.grid(True, axis="x")
+        fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
+        return fig
+
+
+#: The panels of :func:`charon_tolerance_figure`, top to bottom.
+CHARON_PANELS = ("tolerance pairs", "pfet start sweeps")
 
 
 def _edges(pairs) -> tuple[np.ndarray, np.ndarray]:
@@ -1665,6 +1806,7 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "charon-cv": _svg_of(charon_cv_figure),
     "charon-hard-range": _svg_of(charon_hard_range_figure),
     "charon-structures": _svg_of(charon_structures_figure),
+    "charon-tolerance": _svg_of(charon_tolerance_figure),
 }
 
 
