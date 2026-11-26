@@ -125,6 +125,8 @@ STYLE = {
     "width_pad": 0.25,
     # Enough significant digits to print every input of that record as the record holds it.
     "input_digits": 10,
+    # The decimals of the v0.8.0 junction drop (V), as the page's ramp tables print it.
+    "drop_decimals": 5,
 }
 
 # Unit conversions: fraction to per cent, µm to nm, V to mV, A to pA, Hz to MHz.
@@ -1207,6 +1209,11 @@ def abrupt_junction(root: Path = PLUGIN_ROOT) -> dict:
     return json.loads((Path(root) / ABRUPT_FILE).read_text("utf-8"))
 
 
+def _mesh_words(scale: float) -> str:
+    """The page's words for a record's mesh: "full mesh" at its own size, else "mesh × <scale>"."""
+    return "full mesh" if scale == 1 else f"mesh × {scale:g}"
+
+
 def abrupt_widths(root: Path = PLUGIN_ROOT) -> list[tuple[str, float, str]]:
     """``[(label, width µm, palette colour), ...]``: the PN slab's recorded equilibrium depletion
     width in each v0.8.0 record (n and p below the record's fraction of |NetDoping| on the bottom
@@ -1214,11 +1221,12 @@ def abrupt_widths(root: Path = PLUGIN_ROOT) -> list[tuple[str, float, str]]:
     span where n and p are below that fraction, and the full width x_n + x_p."""
     rec = abrupt_junction(root)
     pct = f"{rec['fraction'] * UNITS['percent']:g} %"
-    out = [(f"{name}, recorded", r["ddcomponent"]["equilibrium"]["depletion_width_um"], colour)
-           for (name, r), colour in zip(plugin_records(root).items(), ("electron", "hole"),
-                                        strict=True)]  # fmt: skip
+    out = [(f"{r['gplugins_tag']} {_mesh_words(r['mesh_scale'])}, recorded",
+            r["ddcomponent"]["equilibrium"]["depletion_width_um"], colour)
+           for r, colour in zip(plugin_records(root).values(), ("electron", "hole"),
+                                strict=True)]  # fmt: skip
     out.append((f"approximation, n and p < {pct} |N|", rec["inner_width_um"], "highlight"))
-    out.append(("approximation, x_n + x_p", rec["width_um"], "muted"))
+    out.append(("approximation, $x_n + x_p$", rec["width_um"], "muted"))
     return out
 
 
@@ -1252,16 +1260,23 @@ def _plain(v: float) -> str:
 def _abrupt_substitutions(roots: Roots) -> dict[str, str]:
     """The plugin-history page's abrupt-junction numbers (``lim_abrupt_*``), from
     :func:`abrupt_junction` and the v0.8.0 records: the inputs (dopings, temperature, constants),
-    V_t and V_bi, the widths, the half-mesh record's width minus the approximation's span, and
-    the own-mesh record's count of depleted nodes."""
+    V_t and V_bi, the widths, the half-mesh record's width minus the approximation's span, its
+    depleted nodes and their mean spacing, the own-mesh record's count of depleted nodes, and the
+    equilibrium junction drop, the same in both records."""
     root = plugin_root(roots)
     rec = abrupt_junction(root)
     c = rec["constants"]
     d = STYLE["width_digits"]
     full, *_, half = plugin_records(root).values()  # PLUGIN_FILES order: own mesh, then half
-    measured = half["ddcomponent"]["equilibrium"]["depletion_width_um"]
+    eq = half["ddcomponent"]["equilibrium"]
+    measured, nodes = eq["depletion_width_um"], eq["depleted_nodes"]
+    drops = {r["ddcomponent"]["equilibrium"]["junction"]["drop_v"] for r in (full, half)}
+    (drop,) = {f"{v:.{STYLE['drop_decimals']}f}" for v in drops}  # one drop at both meshes
     return {
         "lim_abrupt_full_nodes": str(full["ddcomponent"]["equilibrium"]["depleted_nodes"]),
+        "lim_abrupt_half_nodes": str(nodes),
+        "lim_abrupt_spacing": f"{measured / (nodes - 1):.{STYLE['delta_digits']}g}",
+        "lim_abrupt_drop": drop,
         "lim_abrupt_na": _plain(rec["doping"]["n_a_cm3"]),
         "lim_abrupt_nd": _plain(rec["doping"]["n_d_cm3"]),
         "lim_abrupt_ni": _plain(c["n_i_cm3"]),

@@ -1300,6 +1300,15 @@ def test_abrupt_junction_numbers_are_the_record():
     assert subs["lim_abrupt_full_nodes"] == str(
         full["ddcomponent"]["equilibrium"]["depleted_nodes"]
     )
+    eq = half["ddcomponent"]["equilibrium"]
+    assert subs["lim_abrupt_half_nodes"] == str(eq["depleted_nodes"])
+    spacing = eq["depletion_width_um"] / (eq["depleted_nodes"] - 1)
+    assert float(subs["lim_abrupt_spacing"]) == float(f"{spacing:.2g}")
+    drop = full["ddcomponent"]["equilibrium"]["junction"]["drop_v"]
+    assert subs["lim_abrupt_drop"] == f"{drop:.5f}"
     page = (lf.REPO_ROOT / "docs" / "limitations" / "plugin-history.md").read_text(encoding="utf-8")
     used = set(re.findall(r"\{\{ (lim_abrupt_\w+) \}\}", page))
     assert used == {k for k in subs if k.startswith("lim_abrupt_")}
+    # the drop is substituted, never typed (review of #227)
+    assert "stays at {{ lim_abrupt_drop }} V" in page
+    assert not re.search(r"stays at \d", page)
