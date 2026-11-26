@@ -349,7 +349,7 @@ has a wider lead, and NT20V lies in the 6 V gate-oxide area. The values are in
 | NT20L | {{ hvj_NT20L_AL_edge }} | {{ hvj_NT20L_BL_edge }} | {{ hvj_NT20L_BL_corner }} | {{ hvj_NT20L_BD_edge }} |
 | NT20V | {{ hvj_NT20V_AL_edge }} | {{ hvj_NT20V_BL_edge }} | {{ hvj_NT20V_BL_corner }} | {{ hvj_NT20V_BD_edge }} |
 | NT20b | {{ hvj_NT20b_AL_edge }} | {{ hvj_NT20b_BL_edge }} | {{ hvj_NT20b_BL_corner }} | {{ hvj_NT20b_BD_edge }} |
-| NT35 | {{ hvj_NT35_AL_edge }} | {{ hvj_NT35_BL_edge }} | {{ hvj_NT35_BL_corner }} | {{ hvj_NT35_BD_edge }} |
+| NT20c | {{ hvj_NT20c_AL_edge }} | {{ hvj_NT20c_BL_edge }} | {{ hvj_NT20c_BL_corner }} | {{ hvj_NT20c_BD_edge }} |
 | NT5 | {{ hvj_NT5_AL_edge }} | {{ hvj_NT5_BL_edge }} | {{ hvj_NT5_BL_corner }} | {{ hvj_NT5_BD_edge }} |
 ~~~
 
@@ -425,10 +425,8 @@ next section.
 | NA0p6 | {{ hvj_NA0p6_AL_edge }} | {{ hvj_NA0p6_AnL_edge }} | {{ hvj_NA0p6_AnL_corner }} | {{ hvj_NA0p6_AnD_edge }} |
 | NA0p6C0 | {{ hvj_NA0p6C0_AL_edge }} | {{ hvj_NA0p6C0_AnL_edge }} | {{ hvj_NA0p6C0_AnL_corner }} | {{ hvj_NA0p6C0_AnD_edge }} |
 | NA0p6T10 | {{ hvj_NA0p6T10_AL_edge }} | {{ hvj_NA0p6T10_AnL_edge }} | {{ hvj_NA0p6T10_AnL_corner }} | {{ hvj_NA0p6T10_AnD_edge }} |
-| NA0p6T35 | {{ hvj_NA0p6T35_AL_edge }} | {{ hvj_NA0p6T35_AnL_edge }} | {{ hvj_NA0p6T35_AnL_corner }} | {{ hvj_NA0p6T35_AnD_edge }} |
 | NA0p6b | {{ hvj_NA0p6b_AL_edge }} | {{ hvj_NA0p6b_AnL_edge }} | {{ hvj_NA0p6b_AnL_corner }} | {{ hvj_NA0p6b_AnD_edge }} |
 | NA2 | {{ hvj_NA2_AL_edge }} | {{ hvj_NA2_AnL_edge }} | {{ hvj_NA2_AnL_corner }} | {{ hvj_NA2_AnD_edge }} |
-| NA4 | {{ hvj_NA4_AL_edge }} | {{ hvj_NA4_AnL_edge }} | {{ hvj_NA4_AnL_corner }} | {{ hvj_NA4_AnD_edge }} |
 | NAGM1@g0 | {{ hvj_NAGM1_g0_AL_edge }} | {{ hvj_NAGM1_g0_AnL_edge }} | {{ hvj_NAGM1_g0_AnL_corner }} | {{ hvj_NAGM1_g0_AnD_edge }} |
 | NAGM1@gw | {{ hvj_NAGM1_gw_AL_edge }} | {{ hvj_NAGM1_gw_AnL_edge }} | {{ hvj_NAGM1_gw_AnL_corner }} | {{ hvj_NAGM1_gw_AnD_edge }} |
 | NAM1_10 | {{ hvj_NAM1_10_AL_edge }} | {{ hvj_NAM1_10_AnL_edge }} | {{ hvj_NAM1_10_AnL_corner }} | {{ hvj_NAM1_10_AnD_edge }} |
@@ -459,6 +457,9 @@ plates are plotted against their length in {numref}`hvj-plates-figure`.
 | NM1_10 | {{ hvj_NM1_10_AL_edge }} | {{ hvj_NM1_10_BL_edge }} | {{ hvj_NM1_10_BL_corner }} | {{ hvj_NM1_10_BD_edge }} |
 | NM1_3 | {{ hvj_NM1_3_AL_edge }} | {{ hvj_NM1_3_BL_edge }} | {{ hvj_NM1_3_BL_corner }} | {{ hvj_NM1_3_BD_edge }} |
 | NM1_6 | {{ hvj_NM1_6_AL_edge }} | {{ hvj_NM1_6_BL_edge }} | {{ hvj_NM1_6_BL_corner }} | {{ hvj_NM1_6_BD_edge }} |
+| NM1_6C0 | {{ hvj_NM1_6C0_AL_edge }} | {{ hvj_NM1_6C0_BL_edge }} | {{ hvj_NM1_6C0_BL_corner }} | {{ hvj_NM1_6C0_BD_edge }} |
+| NM1_6L | {{ hvj_NM1_6L_AL_edge }} | {{ hvj_NM1_6L_BL_edge }} | {{ hvj_NM1_6L_BL_corner }} | {{ hvj_NM1_6L_BD_edge }} |
+| NM1_6b | {{ hvj_NM1_6b_AL_edge }} | {{ hvj_NM1_6b_BL_edge }} | {{ hvj_NM1_6b_BL_corner }} | {{ hvj_NM1_6b_BD_edge }} |
 | NM2_12 | {{ hvj_NM2_12_AL_edge }} | {{ hvj_NM2_12_BL_edge }} | {{ hvj_NM2_12_BL_corner }} | {{ hvj_NM2_12_BD_edge }} |
 | NM2_6 | {{ hvj_NM2_6_AL_edge }} | {{ hvj_NM2_6_BL_edge }} | {{ hvj_NM2_6_BL_corner }} | {{ hvj_NM2_6_BD_edge }} |
 | NP1 | {{ hvj_NP1_AL_edge }} | {{ hvj_NP1_BL_edge }} | {{ hvj_NP1_BL_corner }} | {{ hvj_NP1_BD_edge }} |
@@ -504,6 +505,7 @@ count and against the gap of a single ring in {numref}`hvj-rings-figure`.
 | NR1S8 | {{ hvj_NR1S8_AL_edge }} | {{ hvj_NR1S8_BL_edge }} | {{ hvj_NR1S8_BL_corner }} | {{ hvj_NR1S8_BD_edge }} |
 | NR1_1p4 | {{ hvj_NR1_1p4_AL_edge }} | {{ hvj_NR1_1p4_BL_edge }} | {{ hvj_NR1_1p4_BL_corner }} | {{ hvj_NR1_1p4_BD_edge }} |
 | NR1_2 | {{ hvj_NR1_2_AL_edge }} | {{ hvj_NR1_2_BL_edge }} | {{ hvj_NR1_2_BL_corner }} | {{ hvj_NR1_2_BD_edge }} |
+| NR1_2L | {{ hvj_NR1_2L_AL_edge }} | {{ hvj_NR1_2L_BL_edge }} | {{ hvj_NR1_2L_BL_corner }} | {{ hvj_NR1_2L_BD_edge }} |
 | NR1_3 | {{ hvj_NR1_3_AL_edge }} | {{ hvj_NR1_3_BL_edge }} | {{ hvj_NR1_3_BL_corner }} | {{ hvj_NR1_3_BD_edge }} |
 | NR3M1 | {{ hvj_NR3M1_AL_edge }} | {{ hvj_NR3M1_BL_edge }} | {{ hvj_NR3M1_BL_corner }} | {{ hvj_NR3M1_BD_edge }} |
 | NR3W1 | {{ hvj_NR3W1_AL_edge }} | {{ hvj_NR3W1_BL_edge }} | {{ hvj_NR3W1_BL_corner }} | {{ hvj_NR3W1_BD_edge }} |
@@ -550,14 +552,12 @@ draw a NAT layer that overlaps the deep N-well edge by 1 µm. The values are in
 | DAo1 | {{ hvj_DAo1_AL_edge }} | {{ hvj_DAo1_AD_edge }} | {{ hvj_DAo1_BL_edge }} | {{ hvj_DAo1_BD_edge }} |
 | DAo1C0 | {{ hvj_DAo1C0_AL_edge }} | {{ hvj_DAo1C0_AD_edge }} | {{ hvj_DAo1C0_BL_edge }} | {{ hvj_DAo1C0_BD_edge }} |
 | DAo1M1_6 | {{ hvj_DAo1M1_6_AL_edge }} | {{ hvj_DAo1M1_6_AD_edge }} | {{ hvj_DAo1M1_6_BL_edge }} | {{ hvj_DAo1M1_6_BD_edge }} |
-| DAo1T35 | {{ hvj_DAo1T35_AL_edge }} | {{ hvj_DAo1T35_AD_edge }} | {{ hvj_DAo1T35_BL_edge }} | {{ hvj_DAo1T35_BD_edge }} |
 | DC0 | {{ hvj_DC0_AL_edge }} | {{ hvj_DC0_AD_edge }} | {{ hvj_DC0_BL_edge }} | {{ hvj_DC0_BD_edge }} |
 | DGM1@g0 | {{ hvj_DGM1_g0_AL_edge }} | {{ hvj_DGM1_g0_AD_edge }} | {{ hvj_DGM1_g0_BL_edge }} | {{ hvj_DGM1_g0_BD_edge }} |
 | DGM1@gw | {{ hvj_DGM1_gw_AL_edge }} | {{ hvj_DGM1_gw_AD_edge }} | {{ hvj_DGM1_gw_BL_edge }} | {{ hvj_DGM1_gw_BD_edge }} |
 | DM1_10 | {{ hvj_DM1_10_AL_edge }} | {{ hvj_DM1_10_AD_edge }} | {{ hvj_DM1_10_BL_edge }} | {{ hvj_DM1_10_BD_edge }} |
 | DM1_6 | {{ hvj_DM1_6_AL_edge }} | {{ hvj_DM1_6_AD_edge }} | {{ hvj_DM1_6_BL_edge }} | {{ hvj_DM1_6_BD_edge }} |
 | DPM12 | {{ hvj_DPM12_AL_edge }} | {{ hvj_DPM12_AD_edge }} | {{ hvj_DPM12_BL_edge }} | {{ hvj_DPM12_BD_edge }} |
-| DT10 | {{ hvj_DT10_AL_edge }} | {{ hvj_DT10_AD_edge }} | {{ hvj_DT10_BL_edge }} | {{ hvj_DT10_BD_edge }} |
 | DT20 | {{ hvj_DT20_AL_edge }} | {{ hvj_DT20_AD_edge }} | {{ hvj_DT20_BL_edge }} | {{ hvj_DT20_BD_edge }} |
 | DT20b | {{ hvj_DT20b_AL_edge }} | {{ hvj_DT20b_AD_edge }} | {{ hvj_DT20b_BL_edge }} | {{ hvj_DT20b_BD_edge }} |
 | DT2p6 | {{ hvj_DT2p6_AL_edge }} | {{ hvj_DT2p6_AD_edge }} | {{ hvj_DT2p6_BL_edge }} | {{ hvj_DT2p6_BD_edge }} |
