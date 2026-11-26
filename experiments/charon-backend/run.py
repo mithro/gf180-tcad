@@ -43,9 +43,10 @@ _HARD = (
 
 
 def _env(rel: str, abs_: str, *, tau: str = "", vgmax: str = "", vgmin: str = "", sub: str = "",
-         pred: str = "") -> str:  # fmt: skip
+         pred: str = "", reverse: str = "", partial: str = "", norescue: str = "") -> str:  # fmt: skip
     return (f"CX_REL={rel} CX_ABS={abs_} CX_LIN=klu2 CX_TAU={tau} CX_VGMAX={vgmax} "
-            f"CX_VGMIN={vgmin} CX_SUB={sub} CX_PRED={pred}")  # fmt: skip
+            f"CX_VGMIN={vgmin} CX_SUB={sub} CX_PRED={pred} CX_REVERSE={reverse} "
+            f"CX_PARTIAL={partial} CX_NORESCUE={norescue}")  # fmt: skip
 
 
 def _cv(dev: str, rel: str, abs_: str, *, params: str = "calibrated", **kw: str) -> str:
@@ -85,6 +86,17 @@ STEPS = {
     "cv-pfet-start-tau15-1e-9": _cv(
         "pfet_05v0", "1e-9", "1e-11", params="start", tau="1e-15", sub="5"
     ),
+    # the pfet start values at 1e-10 from -5 V up; the converged grid points are kept
+    "cv-pfet-start-tau15-1e-10-from-minus-5": _cv(
+        "pfet_05v0",
+        "1e-10",
+        "1e-12",
+        params="start",
+        tau="1e-15",
+        sub="5",
+        reverse="1",
+        partial="1",
+    ),
     # the pfet start values at 1e-10 stop at 0.569 V (the studies below); compared above it
     "cv-pfet-start-tau15-1e-10-above-0.6": _cv(
         "pfet_05v0", "1e-10", "1e-12", params="start", tau="1e-15", sub="5", vgmin="0.6"
@@ -110,6 +122,9 @@ STEPS = {
     # The pfet start values' stall at 1e-10 and the settings tried on it (each may stop).
     "study-pfet-start-1e-10": _study(
         "pfet_05v0", "1e-10", "1e-12", params="start", tau="1e-15", sub="5"
+    ),
+    "study-pfet-start-1e-10-rescue-off": _study(
+        "pfet_05v0", "1e-10", "1e-12", params="start", tau="1e-15", sub="5", norescue="1"
     ),
     "study-pfet-start-1e-10-5mV": _study(
         "pfet_05v0", "1e-10", "1e-12", params="start", tau="1e-15", sub="10"

@@ -113,6 +113,7 @@ for cname, extra in CONFIGS.items():
         sweep_time_s=dt,
         newton_steps=len(re.findall(r"-- Nonlinear Solver Step \d+ --", log)),
         belos_iteration_blocks=log.count("Starting iterations with Belos"),
+        failed_at=re.findall(r"Value of continuation parameter at failed step = (\S+)", log),
         xml_linear_solver_type=re.findall(
             r'name="Linear Solver Type" type="string" value="(\w+)"',
             Path(f"{cname}_sw.inp.xml").read_text(),

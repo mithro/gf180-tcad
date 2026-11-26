@@ -9,6 +9,7 @@ reported too (the potential drop across the poly). Writes b2nlp.json.
 """
 
 import json
+import re
 from pathlib import Path
 
 import cx
@@ -47,7 +48,13 @@ for vg in (-3.0, -1.0, 0.0, 0.5, 1.0, 3.0):
         ok, log, dt = cx.run(f"{name}.inp")
         if not ok:
             q = None
-            out["points"].append({"vg": vg, "ok": False, "tail": log[-1500:]})
+            steps = re.findall(r"\|\|F\|\| = +(\S+) +step = \S+ +dx = (\S+)", log)
+            out["points"].append({
+                "vg": vg, "ok": False, "tail": log[-1500:],
+                "nan_residual": "Finite Number Check (Two-Norm F) = NaN" in log,
+                "newton_f_dx": [[float(f), float(x)] for f, x in steps],
+                "mpi_abort_code": [int(m) for m in re.findall(r"with errorcode (\d+)", log)],
+            })  # fmt: skip
             break
         st = cx.read_states(f"{name}.exo")
         q[side] = cx.oxide_flux_charge(st, 0, xs1d, bn[1], bn[2], c.eps_ox, c.eps0_f_per_cm)[0]

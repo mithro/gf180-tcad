@@ -13,6 +13,10 @@ import numpy as np
 
 dev, params, tag = sys.argv[1], sys.argv[2], sys.argv[3]
 job = cx.truncate_grid(cx.job1d(dev, params))
+PARTIAL_GRID = Path("b2_grid.json")
+if PARTIAL_GRID.is_file():  # b2.py CX_PARTIAL: the grid points both sides reached
+    k = json.loads(PARTIAL_GRID.read_text())["n_grid"]
+    job.vg, job.c_devsim = job.vg[:k], job.c_devsim[:k]
 DV = 1e-3
 n = len(job.vg)
 xs = np.array(job.stack.node_positions_um()[0])
@@ -20,7 +24,7 @@ bn = job.stack.node_positions_um()[1]
 c = job.stack.constants
 q_e = c.q_c
 eps0 = c.eps0_f_per_cm
-res = {"device": dev, "params": params, "tag": tag, "n": n}
+res = {"device": dev, "params": params, "tag": tag, "n": n, "partial": PARTIAL_GRID.is_file()}
 
 SUB = int(os.environ.get("CX_SUB") or 1)
 IDX = np.arange(n) * SUB
@@ -31,7 +35,7 @@ for side, sgn in (("A", -1), ("B", 1)):
     v = rows[:, head.index("gate_Voltage")]
     want = np.array(job.vg) - job.dv_fb + sgn * DV
     # LOCA ends with a tiny step onto the exact bound when the accumulated value falls short
-    extra = v[(n - 1) * SUB + 1 :]
+    extra = v[(n - 1) * SUB + 1 :] if not PARTIAL_GRID.is_file() else v[:0]
     res[f"extra_states_{side}"] = len(extra)
     res[f"extra_max_dev_{side}"] = float(np.max(np.abs(extra - want[-1]))) if len(extra) else 0.0
     res[f"align_{side}"] = float(np.max(np.abs(v[IDX] - want)))
@@ -55,6 +59,9 @@ for side, sgn in (("A", -1), ("B", 1)):
     e = c.eps_ox * eps0 * (psi[:, i0:i1] - psi[:, i0 + 1 : i1 + 1]) / np.diff(x[i0 : i1 + 1])
     q_gate = e[:, 0]
     res[f"oxide_flux_spread_{side}"] = float(np.max(np.abs(e - e[:, :1]) / np.max(np.abs(e))))
+    res[f"oxide_flux_spread_per_state_{side}"] = (
+        np.max(np.abs(e - e[:, :1]), axis=1) / np.max(np.abs(e))
+    ).tolist()
     # space charge over the CVFEM control volumes (1D median dual: half of each neighbour interval)
     st_ = job.meta["stack"]
     pol = st_["polarity"]
@@ -78,6 +85,8 @@ for side, sgn in (("A", -1), ("B", 1)):
     scale = np.max(np.abs(q_gate))
     res[f"poly_vs_gate_{side}"] = float(np.max(np.abs(q_poly - q_gate)) / scale)
     res[f"body_vs_gate_{side}"] = float(np.max(np.abs(q_body + q_gate)) / scale)
+    res[f"poly_vs_gate_per_state_{side}"] = (np.abs(q_poly - q_gate) / scale).tolist()
+    res[f"body_vs_gate_per_state_{side}"] = (np.abs(q_body + q_gate) / scale).tolist()
     # n*p/ni^2 in the neutral bulk (last body node and first poly node)
     ni = c.n_i_cm3
     res[f"np_over_ni2_body_{side}"] = [

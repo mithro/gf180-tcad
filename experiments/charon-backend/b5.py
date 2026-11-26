@@ -63,6 +63,10 @@ for dev in ("nfet_05v0", "pfet_05v0"):
             interface_doping_cm3=[float(dop[bn[1]]), float(dop[bn[2]])],
             ni_cm3=float(st.nodal["Intrinsic Concentration"][0, 0] * c0),
             ni_want=job.meta["constants"]["n_i_cm3"],
+            x_um=list(map(float, xs)),
+            doping_cm3=dop.tolist(),
+            description_cm3=want.tolist(),
+            semiconductor_nodes=semi.tolist(),
         )
         nn = st.nodal["ELECTRON_DENSITY"][0, 0::2]
         pp = st.nodal["HOLE_DENSITY"][0, 0::2]

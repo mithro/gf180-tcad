@@ -61,7 +61,11 @@ def newton_stats(log):
     return {"final": out, "iters": its, "failed_at": fails}, len(steps)
 
 
-def solve(name, gate_bc, problem, *, mesh, idx=None, init="equilibrium", sweep=None):
+PARTIAL = os.environ.get("CX_PARTIAL") == "1"
+
+
+def solve(name, gate_bc, problem, *, mesh, idx=None, init="equilibrium", sweep=None,
+          may_stop=False):  # fmt: skip
     Path(f"{name}.inp").write_text(
         deck(
             mesh=mesh,
@@ -90,6 +94,8 @@ def solve(name, gate_bc, problem, *, mesh, idx=None, init="equilibrium", sweep=N
             "newton_limit": [list(map(int, m)) for m in
                              re.findall(r"Number of Iterations = (\d+) < (\d+)", out)[-1:]],
         }, indent=1))  # fmt: skip
+        if may_stop:
+            return out, dt, stats
         raise SystemExit(f"{name} failed")
     return out, dt, stats
 
@@ -146,6 +152,7 @@ for side, v0 in (("A", va0), ("B", vb0)):
         idx=-1,
         init="exodus",
         sweep=sw_opts,
+        may_stop=PARTIAL,
     )
     shutil.copy("currents-loca.dat", f"currents-sweep{side}.dat")
     head, rows = cx.read_currents("currents-loca.dat")
@@ -167,5 +174,10 @@ for side, sgn in (("A", -1), ("B", 1)):
     got = np.array(res[f"v{side}"])
     res[f"align{side}"] = float(np.max(np.abs(got - want))) if len(got) == len(want) else None
     print(side, "states", len(got), "max |v - grid|", res[f"align{side}"])
+if PARTIAL:
+    # the grid points both sides reached: every sub-th state from the first
+    k = min((len(res[f"v{s}"]) - 1) // sub + 1 for s in ("A", "B"))
+    res["n_grid"] = min(k, n)
+    Path("b2_grid.json").write_text(json.dumps({"n_grid": res["n_grid"], "of": n}))
 res["wall_s"] = time.time() - t0  # C, alignment and charge checks: b2an.py
 Path(f"b2_{tag}.json").write_text(json.dumps(res, indent=1, default=float))

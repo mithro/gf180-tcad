@@ -234,7 +234,8 @@ def run(inp: str, *, current=True, log=None, timeout=3600):
     out = r.stdout + r.stderr
     if r.returncode != 0 or not Path(inp + ".xml").exists():
         raise RuntimeError(f"interpreter failed ({r.returncode}):\n{out}")
-    cmd = [CHARON, f"--i={inp}.xml"] + (["--current"] if current else [])
+    # stdbuf: charon_mp.exe buffers stdout, and an MPI_ABORT loses the buffered tail
+    cmd = ["stdbuf", "-o0", "-e0", CHARON, f"--i={inp}.xml"] + (["--current"] if current else [])
     r = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout)
     out = r.stdout + r.stderr
     Path(log or (inp + ".log")).write_text(out)
@@ -440,6 +441,8 @@ def truncate_grid(job, vgmax=None, vgmin=None):
     if vgmin is None:
         v = os.environ.get("CX_VGMIN")
         vgmin = float(v) if v else None
+    if os.environ.get("CX_REVERSE") == "1":  # sweep the grid from its other end
+        job.vg, job.c_devsim = job.vg[::-1], job.c_devsim[::-1]
     k = 0
     for v in job.vg:
         if (vgmax is not None and v > vgmax + 1e-12) or (vgmin is not None and v < vgmin - 1e-12):
