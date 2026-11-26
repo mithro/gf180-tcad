@@ -91,6 +91,11 @@ def cases(names, processes):
                     p["vstep"] = 1.5 if a_like else 3.0
                     p["vmax"] = 60.0 if a_like else 150.0
                     p["depth"] = 14.0
+                    if corner is not None and corner < 2.0:
+                        # a sharp corner's section is a small disc that depletes fully; in
+                        # double precision its sweep stops converging near 36 V, in 128-bit
+                        # it runs to breakdown (NC0 under BL: 46.1 V)
+                        p["extended"] = True
                     # mesh spacings: the 0.1 um mesh gives a bare edge within 0.5 % of the 0.05 um one
                     # (73.84 V against 73.51 V), far inside the spread of the doping family
                     # a heavy P region within 1.5 um of the edge (a drawn P-well, or the P+
