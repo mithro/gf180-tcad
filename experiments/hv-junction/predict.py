@@ -123,6 +123,16 @@ if __name__ == "__main__":
 
         got = {n: p for n, p in got.items()
                if n not in have or have[n]["params_sha256"] != digest(p)}
+    elif which == "p5":
+        # ring 1 of each ring-sense structure held at 0 V: the current into the well is then
+        # the punch-through current that procedure P5 of the test method measures
+        got = {}
+        for name in sorted(n for n, st in STRUCTS.items() if st["sense"]):
+            for pname in ("AL", "BL", "BD"):
+                p = hvsite.section(STRUCTS[name], PROCESSES[pname], ring_grounded=True)
+                p["vstep"], p["vmax"], p["depth"] = 1.0, 100.0, 14.0
+                p["mesh"] = {"fine": 0.05, "surf": 0.03, "coarse": 0.6}
+                got[f"{name}|{pname}|edge"] = p
     else:
         got = cases([k for k in KEY if k in STRUCTS], FAMILY)
     json.dump(got, open(sys.argv[1], "w"), indent=1)

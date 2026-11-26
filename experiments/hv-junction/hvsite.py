@@ -62,7 +62,9 @@ def _boxes(x0, x1, implants):
     return [{"x0": x0, "x1": x1, **g} for g in implants]
 
 
-def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0):
+def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0, ring_grounded=False):
+    """ring_grounded: ring 1 gets the contact its sense pad has, held at 0 V while the well
+    is swept: the punch-through measurement between a well and a neighbouring well."""
     s = {**DEFAULT_STRUCT, **struct}
     pr = {**DEFAULT_PROCESS, **(process or {})}
     edge = 8.0 if corner is None else max(float(corner), 1.0)
@@ -126,11 +128,20 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0):
     sti = [[c1, ring0], [ring0 + s["ncomp_w"], width]]
     if c0 > 0.3:
         sti.insert(0, [0.0, c0])
+    contacts = {"well": [c0, c1], "sub": [ring0, ring0 + s["ncomp_w"]]}
+    if ring_grounded:
+        a, b = ring_spans[0]
+        mid = (a + b) / 2
+        tap = [mid - 0.3, mid + 0.3]  # the 0.6 um N+ tap of the sense pad
+        k = next(i for i, (x0, x1) in enumerate(sti) if x0 < tap[0] and tap[1] < x1)
+        sti[k:k + 1] = [[sti[k][0], tap[0]], [tap[1], sti[k][1]]]
+        wells += _boxes(tap[0], tap[1], pr["nplus"])
+        contacts["ring"] = tap
     return {
         "width": width, "depth": 18.0, "ox_top": top, "sub": pr["sub"],
         "cyl": corner is not None,
         "wells": wells, "pfield": pfield, "sti": sti, "sti_depth": STI,
-        "contacts": {"well": [c0, c1], "sub": [ring0, ring0 + s["ncomp_w"]]},
+        "contacts": contacts,
         "plates": plates, "qf": pr["qf"], "gate_v": gate_v,
         "mesh": {"fine": 0.05, "surf": 0.02, "coarse": 0.5},
         "vmax": vmax, "vstep": 4.0, "probes": probes, "extended": False,
