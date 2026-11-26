@@ -150,6 +150,36 @@ def test_two_labels_with_one_identifier_fail_the_build(tmp_path):
     assert "has the same identifier 'plot'" in r.stderr, r.stderr
 
 
+def test_a_figure_and_a_table_with_one_identifier_fail_the_build(tmp_path):
+    """Positive control (issue #212): "fig-values" and "tab-values" are different labels of
+    different kinds, but a reader sees "Figure values" and "Table values"."""
+    importorskip("sphinx")
+    two = _TWO + (
+        "\nSee :numref:`fig-values`.\n\n.. figure:: plain.svg\n   :name: fig-values\n\n   Again.\n"
+    )
+    _site(tmp_path / "src", two=two)
+    r = _build(tmp_path / "src", tmp_path / "out")
+    assert r.returncode != 0
+    assert (
+        "figure 'fig-values' has the same identifier 'values' as the table 'tab-values' in one"
+        in r.stderr
+    ), r.stderr
+
+
+def test_a_figure_and_a_table_with_different_identifiers_build(tmp_path):
+    """Negative control of the test above: the same figure labelled "fig-values-plot" beside
+    "tab-values" builds, so the warning there comes from the shared identifier alone."""
+    importorskip("sphinx")
+    two = _TWO + (
+        "\nSee :numref:`fig-values-plot`.\n\n.. figure:: plain.svg\n"
+        "   :name: fig-values-plot\n\n   Again.\n"
+    )
+    _site(tmp_path / "src", two=two)
+    r = _build(tmp_path / "src", tmp_path / "out")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "Figure values-plot: " in _captions((tmp_path / "out" / "two.html").read_text("utf-8"))
+
+
 def test_a_named_dark_twin_fails_the_build(tmp_path):
     """Positive control: the dark twin's label would vanish with it in the merge."""
     importorskip("sphinx")
