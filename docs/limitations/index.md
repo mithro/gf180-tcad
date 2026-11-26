@@ -37,8 +37,9 @@ there.
   Both Charon images are built and pinned, and no Charon job has run ({ref}`numerical-acceptance`,
   {ref}`charon-images`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
-- **Earlier comparisons.** A search on 2026-11-26 found one {{ DEVSIM }}-versus-BSIM comparison
-  for an open {term}`PDK`: OpenTCAD's check of the SkyWater SKY130 `nfet_01v8` {term}`card <model card>`. It found no
+- **Earlier comparisons.** A search ran on 2026-11-26. It found one {{ DEVSIM }}-versus-BSIM
+  comparison for an open {term}`PDK`: OpenTCAD's calibration of a device to the SkyWater SKY130 `nfet_01v8`
+  {term}`card <model card>`. It found no
   {{ Charon }}-versus-BSIM comparison and no {term}`gf180mcu <GF180MCU>` TCAD paper
   ({ref}`lit-search-bsim`).
 

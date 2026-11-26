@@ -3,7 +3,8 @@
 The papers, books and manuals the design and these pages cite, grouped by what they are used
 for ({repo}`design spec, section 11 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#11-literature-initial-verify-items-to-be-checked-before-citing>`).
 Each DOI resolves to a record whose title, authors, volume, issue and year match the entry.
-Each annotation names what the project uses the item for.
+Each annotation names what the project uses the item for. The last section is the record of a
+search: its items are the hits, not sources the project uses.
 
 ## Tolerances
 
@@ -227,15 +228,15 @@ The doping of each part of the simulated cell is in {numref}`Figure %s of Defini
 ## Comparisons of DEVSIM or Charon with foundry SPICE models
 
 A search on 2026-11-26 looked for a published comparison of {{ DEVSIM }} or {{ Charon }}
-results with a foundry's {term}`BSIM4` {term}`model card`. It found one, for the SkyWater SKY130
-process, in a GitHub repository. It found no Charon-versus-BSIM comparison. The only
+results with a foundry's {term}`BSIM4` {term}`model card`. It found one, a calibration to the
+SkyWater SKY130 card, in a GitHub repository. It found no Charon-versus-BSIM comparison. The only
 {term}`gf180mcu <GF180MCU>` {term}`TCAD` work it found is this project.
 {numref}`tab-lit-search-bsim-queries` lists every query.
 
-~~~{table} The queries of the search on 2026-11-26, one row per query, with the comparison each found.
+~~~{table} The queries of the search on 2026-11-26, one row per query, with the relevant hit each found.
 :name: tab-lit-search-bsim-queries
 
-| Where | Query | Comparison found |
+| Where | Query | Relevant hit |
 |---|---|---|
 | Web search | `devsim bsim comparison` | none |
 | Web search | `charon tcad bsim comparison` | none |
@@ -248,7 +249,7 @@ process, in a GitHub repository. It found no Charon-versus-BSIM comparison. The 
 | Web search, extended | `open-source TCAD SkyWater sky130 device simulation DEVSIM ngspice comparison` | devphys |
 | Web search, extended | `gf180mcu TCAD device simulation paper` | this project only |
 | Web search, extended | `Charon Sandia TCAD compact model SPICE comparison Xyce MOSFET` | none |
-| Web search | `devphys github devsim sky130 calibrated measured silicon 77 K` | none |
+| Web search | `devphys github devsim sky130 calibrated measured silicon 77 K` | devphys |
 | Web search, arxiv.org only | `DEVSIM TCAD MOSFET BSIM` | none |
 | Web search, ieeexplore.ieee.org only | `DEVSIM open-source TCAD MOSFET compact model comparison` | none |
 | Web search, ieeexplore.ieee.org and osti.gov only | `Charon TCAD Sandia MOSFET compact model` | none |
@@ -267,22 +268,30 @@ process, in a GitHub repository. It found no Charon-versus-BSIM comparison. The 
 | Google Scholar | `"devsim" "bsim"` | none: the site answered HTTP 403 |
 ~~~
 
-The search also read the two simulators' own publication lists. These are the hits that touch
-the question:
+These are the hits about DEVSIM and the SKY130 process, from the queries:
 
-- **OpenTCAD.** Its [SKY130 `nfet_01v8` check](https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/validation/sky130/README.md)
-  simulates a 1 µm nMOS in DEVSIM. It compares the result with {{ ngspice }} 44.2 simulations of
-  SKY130's typical-corner BSIM4 card. The compared values are the threshold voltage at five back
-  biases, the subthreshold swing, the peak transconductance and the on-current. The check was
-  first committed on 2026-11-05.
+- **OpenTCAD's check.** Its [SKY130 `nfet_01v8` check](https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/validation/sky130/README.md)
+  simulates a 1 µm nMOS in DEVSIM. It compares the result with {{ ngspice }} 44.2 curves of
+  SKY130's typical-corner BSIM4 card. The version committed on 2026-11-05 compared the
+  threshold voltage only.
+- **OpenTCAD's calibration.** Commits on 2026-11-18 fit the device's implant dose, drive-in and
+  Lombardi mobility coefficients to the card. They compare the threshold at five back biases,
+  the subthreshold swing, the peak transconductance, the on-current and the linear Id–Vgs
+  curves. The comparison is a fit to the card, as in this project.
 - **devphys.** Its [README](https://github.com/joaln27/devphys/blob/bcae3beebcaaeb15a1937af996f43e0bc15bcdb4/README.md)
   compares DEVSIM simulations of SKY130 `nfet_01v8` with measured silicon at 300 K and 77 K. It
   sets its 77 K error beside the error the dataset's authors give for their own BSIM4 fits. It
   compares its extracted `toxe` with the card's. It compares no DEVSIM current or capacitance
   with the {term}`PDK` SPICE models.
+- **devphys's inverter.** The inverter stage of the same repository compares the drive
+  resistance of a DEVSIM-derived inverter with a Liberty file characterised with BSIM. The Liberty file comes from a standard-cell repository, not from the PDK cards.
 - **The 2021 request.** [DEVSIM issue 74](https://github.com/devsim/devsim/issues/74) asked in
   August 2021 for an open TCAD flow matched to the SKY130 PDK. It was closed in April 2022 with
   no comments.
+
+The search also read the two simulators' own publication lists. These are the hits from those
+lists and the papers they lead to:
+
 - **DEVSIM's list of papers.** The [DEVSIM introduction](https://devsim.org/introduction.html)
   links a spreadsheet of papers that cite DEVSIM. On 2026-11-26 it held 50 titles. None names
   BSIM, a compact model, SPICE, a PDK or a foundry process.
