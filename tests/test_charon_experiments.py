@@ -129,6 +129,43 @@ def test_page_numbers_are_the_records():
 def test_step_studies_are_recorded():
     """The plan's step and tolerance studies ran as committed steps and recorded their outcome."""
     studies = _record("hard-range")["step_studies"]
-    assert set(studies) == {"study-nfet-tau15-secant-50mV", "study-nfet-default-1e-11"}
+    assert set(studies) == {
+        "study-nfet-tau15-secant-50mV",
+        "study-nfet-default-1e-11",
+        "study-pfet-start-1e-10",
+        "study-pfet-start-1e-10-5mV",
+        "study-pfet-start-1e-10-tau16",
+        "study-pfet-start-1e-11",
+        "study-pfet-start-rel-1e-9-abs-1e-12",
+        "study-pfet-start-rel-1e-10-abs-1e-11",
+    }
     for name, s in studies.items():
         assert (s["b2_exit"] == 0) == (s["failed"] is None), name
+
+
+def test_backend_tolerance_is_b7_equivalent():
+    """B7 for the backend's WRMS 1e-9/1e-11: on both devices and both parameter sets, wherever
+    1e-10/1e-12 converges, C moves by less than 1e-8 relative; 1e-9 covers every grid, and the
+    pfet start reference stops where the page says."""
+    runs = _record("cv")["runs"]
+    pairs = {
+        ("cv-nfet-tau15-1e-9", "cv-nfet-tau15-1e-10"),
+        ("cv-pfet-tau15-1e-9", "cv-pfet-tau15-1e-10"),
+        ("cv-nfet-start-tau15-1e-9", "cv-nfet-start-tau15-1e-10"),
+        ("cv-pfet-start-tau15-1e-9", "cv-pfet-start-tau15-1e-10-above-0.6"),
+    }
+    for name, ref in pairs:
+        r, b = runs[name], runs[ref]
+        assert r["settings"]["CX_REL"] == "1e-9" and b["settings"]["CX_REL"] == "1e-10"
+        assert r["n"] == len(r["vg"]) and len(r["vg"]) == len(runs["cv-nfet-tau15-1e-10"]["vg"])
+        common = [v for v in r["vg"] if v in b["vg"]]
+        assert len(common) == b["n"], name
+        rel = max(abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)] - 1)
+                  for v in common)  # fmt: skip
+        assert rel < 1e-8, (name, rel)
+    studies = _record("hard-range")["step_studies"]
+    stall = studies["study-pfet-start-1e-10"]["failed"]
+    assert float(stall["failed_at"][0]) < min(runs["cv-pfet-start-tau15-1e-10-above-0.6"]["vg"])
+    assert stall["newton_limit"] == [[50, 50]] and stall["final"][-1][1] > 1
+    for name in ("study-pfet-start-rel-1e-9-abs-1e-12", "study-pfet-start-rel-1e-10-abs-1e-11"):
+        assert studies[name]["b2_exit"] == 0, name
