@@ -45,8 +45,11 @@ SWEEP_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "family", "p5", "check
 PREDICTION_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "family")
 CHARON_RECORDS = ("charon-firstpass", "charon")
 ALL_RECORDS = (*SWEEP_RECORDS, "diodes", *CHARON_RECORDS)
-# The case the sandbox test reruns (297 s in the main batch) and its tolerance in volts.
-RERUN_CASE, RERUN_TOL_V = "NT5|BL|edge", 1e-6
+# The case the sandbox test reruns and its tolerance in volts. It is a case of the record
+# rest3, whose runs used the sweep code as it is now (later commits only reformatted it);
+# main.json's runs used an earlier ramp, which solves other bias points.
+RERUN_RECORD = "rest3"
+RERUN_CASE, RERUN_TOL_V = "NT20c|BD|corner", 1e-6
 
 
 def _load(name: str) -> dict:
@@ -712,14 +715,14 @@ def test_figure_points_are_the_structures(hf):
 
 @pytest.mark.sandbox
 def test_rerun_reproduces_the_record(tmp_path):
-    """A rerun of one short case of the main record in the sandbox gives its breakdown voltage
-    within RERUN_TOL_V and its bias points exactly (5 minutes, one 8 GiB container)."""
+    """A rerun of one short case of the record RERUN_RECORD in the sandbox gives its breakdown
+    voltage within RERUN_TOL_V and its bias points exactly (minutes, one 8 GiB container)."""
     import run as runner
 
     params = _main_cases()[RERUN_CASE]
     want = _latest_rows().get(RERUN_CASE)
-    if want is None:
-        pytest.skip(f"no committed record holds {RERUN_CASE} with the present parameters")
+    if RERUN_RECORD not in _present() or want != _load(RERUN_RECORD)["cases"].get(RERUN_CASE):
+        pytest.skip(f"{RERUN_RECORD} does not hold the latest row of {RERUN_CASE}")
     work = tmp_path / "work"
     work.mkdir()
     (work / "params.json").write_text(json.dumps(params, indent=1))
@@ -728,4 +731,4 @@ def test_rerun_reproduces_the_record(tmp_path):
     got = json.loads((work / "result.json").read_text())
     assert got["v"] == want["v"] and got["nodes"] == want["nodes"]
     assert abs(got["bv_v"] - want["bv_v"]) < RERUN_TOL_V, (got["bv_v"], want["bv_v"])
-    assert runner.image() == _load("main")["pins"]["image"]
+    assert runner.image() == _load(RERUN_RECORD)["pins"]["image"]
