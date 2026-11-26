@@ -14,7 +14,7 @@ ionisation integral along a field line reaches 1. The records are in
 |---|---|
 | [`structures.json`](structures.json) | The drawn structures, exported by evampire's layout generator. |
 | [`hvsite.py`](hvsite.py) | Turns one structure and one process assumption into the parameters of its cross-section. It holds the doping family. |
-| [`predict.py`](predict.py) | Writes the prediction case sets `main` and `family`. |
+| [`predict.py`](predict.py) | Writes the case sets `main`, `family`, `rest` and `p5`. |
 | [`cases.py`](cases.py) | The bare-edge and calibration sections that the check cases build on. |
 | [`checks.py`](checks.py) | Writes the check cases, runs the 1D diodes and writes the diode record. |
 | [`structure.py`](structure.py), [`dd.py`](dd.py) | The DEVSIM mesh, doping and drift-diffusion set-up. They run inside the sandbox. |
@@ -28,7 +28,7 @@ ionisation integral along a field line reaches 1. The records are in
 | [`charon_mesh.py`](charon_mesh.py), [`charon_deck.py`](charon_deck.py), [`charon_run.py`](charon_run.py), [`charon_field.py`](charon_field.py) | The Charon cross-check: DEVSIM's nodes as an Exodus mesh, the decks, the sweep and its post-processing. |
 | [`charon_batch.py`](charon_batch.py), [`charon_record.py`](charon_record.py) | Run named cases on Charon, and write their record. |
 | [`charon_defaults.py`](charon_defaults.py), [`charon_diode_ref.py`](charon_diode_ref.py) | Development checks of the Charon set-up. No record holds their results. |
-| [`fit.py`](fit.py) | Development script that fitted the deep parts of the doping family to the published capacitance models. No record holds its results. |
+| [`fit.py`](fit.py) | Development script (scipy on the host) that fitted the deep parts of the doping family to the published capacitance models, the N-well with the deep P layer under it. No record holds its results. |
 
 The tests are [`tests/test_hv_junction.py`](../../tests/test_hv_junction.py). The figures and
 the page's numbers are in
@@ -51,11 +51,31 @@ uv run --locked python experiments/hv-junction/batch.py $W/main $W/main-cases.js
 uv run --locked python experiments/hv-junction/record.py $W/main $W/main-cases.json \
     results/hv-junction/main.json --allow-missing
 
+# rest: the cases of main that the records named lack or hold with older parameters.
+# Name every record written so far; write each round to a new record (rest, rest2, rest3 ...).
+uv run --locked python experiments/hv-junction/predict.py $W/rest-cases.json rest \
+    results/hv-junction/main.json results/hv-junction/rest.json \
+    results/hv-junction/rest2.json results/hv-junction/rest3.json
+uv run --locked python experiments/hv-junction/batch.py $W/rest $W/rest-cases.json --jobs 40
+uv run --locked python experiments/hv-junction/record.py $W/rest $W/rest-cases.json \
+    results/hv-junction/rest.json --allow-missing
+
+# mem: cases that ran out of memory at 8 GiB, rerun with more (a case file of those cases)
+uv run --locked python experiments/hv-junction/batch.py $W/mem $W/mem-cases.json --jobs 8 --mem 24g
+uv run --locked python experiments/hv-junction/record.py $W/mem $W/mem-cases.json \
+    results/hv-junction/mem.json --allow-missing
+
 # family: the key structures under the lighter and heavier substrate and a higher oxide charge
 uv run --locked python experiments/hv-junction/predict.py $W/family-cases.json family
 uv run --locked python experiments/hv-junction/batch.py $W/family $W/family-cases.json --jobs 40
 uv run --locked python experiments/hv-junction/record.py $W/family $W/family-cases.json \
     results/hv-junction/family.json --allow-missing
+
+# p5: each ring-sense structure with its first ring held at 0 V
+uv run --locked python experiments/hv-junction/predict.py $W/p5-cases.json p5
+uv run --locked python experiments/hv-junction/batch.py $W/p5 $W/p5-cases.json --jobs 18
+uv run --locked python experiments/hv-junction/record.py $W/p5 $W/p5-cases.json \
+    results/hv-junction/p5.json --allow-missing
 
 # checks: precision, bias step and mesh (eight cases), then the three 1D diodes
 uv run --locked python experiments/hv-junction/checks.py cases $W/checks-cases.json
@@ -66,11 +86,12 @@ uv run --locked python experiments/hv-junction/checks.py diodes $W/diodes
 uv run --locked python experiments/hv-junction/checks.py record $W/diodes \
     results/hv-junction/diodes.json
 
-# charon: six cases of main on Charon (16 GiB each)
-CASES='NT20|AL|edge NT20|BL|edge NW1p5|BL|edge NM1_6|BL|edge NR1_2|BL|edge DT20|BL|edge'
-uv run --locked python experiments/hv-junction/charon_batch.py $W/charon $W/main-cases.json $CASES
-uv run --locked python experiments/hv-junction/charon_record.py $W/charon $W/main-cases.json \
-    results/hv-junction/charon.json $CASES
+# charon: cases of main on Charon (16 GiB each), compared with the committed DEVSIM record
+uv run --locked python experiments/hv-junction/charon_batch.py $W/charon2 $W/main-cases.json \
+    'NP4|BL|edge' 'NT20|BD|edge'
+uv run --locked python experiments/hv-junction/charon_record.py $W/charon2 \
+    results/hv-junction/charon.json HEAD:results/hv-junction/main.json \
+    'NP4|BL|edge' 'NT20|BD|edge'
 ```
 
 After a record is added or replaced, or [`structures.json`](structures.json),
@@ -90,10 +111,19 @@ from the records at docs build time, so nothing is typed by hand from a record. 
 up each record that exists.
 
 A record is the record of what ran at its commit. The page, the figures and the tests read a
-case from `main` or `family` only when the record's `params_sha256` of that case is the hash
-of the parameters [`predict.py`](predict.py) gives now. A case run with other parameters, and
-a case with no result, prints as a dash. So a record made before a change of the structures or
-the process never prints a superseded number, and the dashes show what a rerun has to cover.
+case only when the record's `params_sha256` of that case is the hash of the parameters
+[`predict.py`](predict.py) gives now. A case run with other parameters, and a case with no
+result, prints as a dash. So a record made before a change of the structures or the process
+never prints a superseded number, and the dashes show what a `rest` round has to cover.
+
+The order of the prediction records is `main`, `rest`, `rest2`, `rest3`, `mem`, `family`: a
+case takes the row of the last of them that holds it. A further round needs its name added
+to `PREDICTION_RECORDS` in
+[`src/gf180tcad/hvjunction_figures.py`](../../src/gf180tcad/hvjunction_figures.py) and in
+[`tests/test_hv_junction.py`](../../tests/test_hv_junction.py). The record `p5` is its own
+set. Its cases carry the names of ordinary cases with other parameters, so it is never merged
+with the others and has its own table. `charon-firstpass.json` holds six sections of the
+first doping family, against the `main.json` of commit 1b6e59f.
 
 ## Run times
 
@@ -113,13 +143,19 @@ development runs. A 0.025 µm mesh took 2.2 hours and is not among the check cas
 Each run's `pins.json` holds the commit, whether the checkout had uncommitted changes, the
 image by digest ([`docker/TCAD_DEV_IMAGE`](../../docker/TCAD_DEV_IMAGE), and
 [`docker/CHARON_IMAGE`](../../docker/CHARON_IMAGE) for a Charon run) and the sha256 of every
-tracked file of this directory. A record holds the pins once. [`record.py`](record.py),
-[`charon_record.py`](charon_record.py) and [`checks.py`](checks.py) refuse runs whose pins
-differ and runs from a checkout with uncommitted changes. A record also holds the sha256 of
-each case's parameters.
+tracked file of this directory.
 
-The tests check a record's pins against the files at the record's own commit, so that commit
-must stay an ancestor of the branch: never rebase a branch that holds a record.
+A record of [`record.py`](record.py) holds the image and the sha256 of the five modules a
+sweep imports ([`dd.py`](dd.py), [`fieldline.py`](fieldline.py), [`ionize.py`](ionize.py),
+[`structure.py`](structure.py), [`sweep.py`](sweep.py)), which every run must share. It also
+lists every commit its runs were made at, so a batch restarted after an unrelated commit is
+accepted. It refuses runs from a checkout with uncommitted changes. It holds the sha256 of
+each case's parameters. A Charon record adds the Charon image, each case's commit and Charon
+module hashes, and the commit, path and sha256 of the DEVSIM record it compares with. The
+diode record of [`checks.py`](checks.py) holds one run's full pins.
+
+The tests check a record's pins against the files at each of its commits, so those commits
+must stay ancestors of the branch: never rebase a branch that holds a record.
 
 Not pinned:
 

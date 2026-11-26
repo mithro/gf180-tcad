@@ -3,9 +3,10 @@
 modules, what each committed record pins, the record writers' refusals, and the numbers and
 figures of docs/results/hv-junction.md against the records.
 
-A record under results/hv-junction/ is tested when it is committed: main, family and checks
-(record.py), diodes (checks.py) and charon (charon_record.py). A prediction case is read from
-main or family only when its row was run with the parameters predict.py gives now."""
+A record under results/hv-junction/ is tested when it is committed. A prediction case takes the
+row of the last of main, rest, rest2, rest3, mem and family that holds it, and only a row that
+was run with the parameters predict.py gives now. The p5 record is its own set: its cases carry
+the names of ordinary cases and are never merged with them."""
 
 import hashlib
 import json
@@ -39,13 +40,13 @@ PAGE = REPO_ROOT / "docs" / "results" / "hv-junction.md"
 Q, EPS, UM = 1.602176634e-19, 11.7 * 8.8541878128e-14, 1e-4
 
 # The records record.py writes, and every record a file under results/hv-junction/ may be.
-SWEEP_RECORDS = ("main", "family", "checks")
+SWEEP_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "family", "p5", "checks")
 # The prediction records, in the order a later one replaces the cases of an earlier one.
-PREDICTION_RECORDS = ("main", "family")
+PREDICTION_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "family")
 CHARON_RECORDS = ("charon-firstpass", "charon")
 ALL_RECORDS = (*SWEEP_RECORDS, "diodes", *CHARON_RECORDS)
 # The case the sandbox test reruns (297 s in the main batch) and its tolerance in volts.
-RERUN_CASE, RERUN_TOL_V = "NW0|BL|edge", 1e-6
+RERUN_CASE, RERUN_TOL_V = "NT5|BL|edge", 1e-6
 
 
 def _load(name: str) -> dict:
@@ -66,19 +67,12 @@ def _sha(params: dict) -> str:
 
 def _main_cases() -> dict:
     """The cases of predict.py's set "main"."""
-    got = predict.cases(sorted(predict.STRUCTS), predict.PROCESSES)
-    nat = [
-        n for n, st in predict.STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0
-    ]
-    got.update(predict.cases(sorted(nat), predict.NAT_ONLY))
-    return got
+    return predict.main_cases()
 
 
 def _current_cases() -> dict:
     """Every prediction case predict.py gives now: the sets "main" and "family"."""
-    got = _main_cases()
-    got.update(predict.cases([k for k in predict.KEY if k in predict.STRUCTS], predict.FAMILY))
-    return got
+    return {**predict.main_cases(), **predict.family_cases()}
 
 
 def _latest_rows() -> dict:
@@ -338,8 +332,9 @@ def test_record_rows_are_whole(name):
 
 def test_only_current_cases_are_read(hf):
     """A record is the record of what ran at its commit. The page and the figures read a row
-    only when its parameters are the ones predict.py gives now, and every table case is one of
-    the present case set. The check record's parameters are the ones checks.py gives now."""
+    only when its parameters are the ones predict.py gives now, from the last prediction record
+    that holds the case, and every table case is one of the present case set. The check
+    record's parameters are the ones checks.py gives now."""
     assert hf.cases() == _latest_rows()
     assert hf.current_cases() == _current_cases()
     assert set(hf.table_cases()) <= set(_current_cases())
@@ -349,12 +344,34 @@ def test_only_current_cases_are_read(hf):
             assert row["params_sha256"] == _sha(want[case]), case
 
 
+def test_p5_is_its_own_set(hf):
+    """The p5 cases carry the names of ordinary cases with other parameters (ring 1 held at
+    0 V), so the p5 record is never read as a prediction record: no ordinary row has a p5
+    case's parameters, and the page prints the p5 rows under their own keys."""
+    p5, main = predict.p5_cases(), _main_cases()
+    assert set(p5) <= set(main) and hf.P5_RECORD not in hf.PREDICTION_RECORDS
+    assert all(_sha(p5[c]) != _sha(main[c]) for c in p5)
+    assert sorted({c.split("|")[0] for c in p5}) == hf.p5_structures()
+    rows = _load("p5")["cases"] if "p5" in _present() else {}
+    want = {c: r for c, r in rows.items() if c in p5 and r["params_sha256"] == _sha(p5[c])}
+    assert hf.p5_cases() == want
+    ordinary = hf.cases()
+    assert all(
+        ordinary[c]["params_sha256"] != r["params_sha256"] for c, r in want.items() if c in ordinary
+    )
+    subs = hf.substitutions()
+    for case in p5:
+        assert subs[hf.p5_key(case)] == _text(want.get(case)), case
+        assert hf.p5_key(case) != hf.key(case)
+
+
 def test_copies_have_the_section_of_the_original():
-    """A structure whose name ends in b, NT20L and NT20V give the cases of the structure they
-    copy."""
+    """A copy (a name ending in b or c), a lead control (ending in L) and NT20V give the cases
+    of the structure they copy."""
     got = _main_cases()
-    pairs = (("NT20b", "NT20"), ("NT20L", "NT20"), ("NT20V", "NT20"), ("DT20b", "DT20"),
-             ("NA0p6b", "NA0p6"))  # fmt: skip
+    pairs = (("NT20b", "NT20"), ("NT20c", "NT20"), ("NT20L", "NT20"), ("NT20V", "NT20"),
+             ("DT20b", "DT20"), ("NA0p6b", "NA0p6"), ("NM1_6b", "NM1_6"), ("NM1_6L", "NM1_6"),
+             ("NR1_2L", "NR1_2"))  # fmt: skip
     for copy, orig in pairs:
         for proc in ("AL", "BL"):
             assert got[f"{copy}|{proc}|edge"] == got[f"{orig}|{proc}|edge"], copy
@@ -532,23 +549,24 @@ def test_page_numbers_are_the_records(hf):
     rows = _latest_rows()
     for case in {*_current_cases(), *hf.table_cases()}:
         assert subs[hf.key(case)] == _text(rows.get(case)), case
-    now = _current_cases()
-    for name in PREDICTION_RECORDS:
-        if name in _present():
-            rec = _load(name)
-            read = [
-                c
-                for c, r in rec["cases"].items()
-                if c in now and r["params_sha256"] == _sha(now[c])
-            ]
-            assert subs[f"hvj_n_{name}"] == str(len(read))
-            assert subs[f"hvj_n_{name}_missing"] == str(len(set(rec["not_converged"]) & set(now)))
-        else:
-            assert subs[f"hvj_n_{name}"] == "\u2014"
-    fine, coarse = (rows.get(c, {}).get("bv_v") for c in hf.MESH_PAIR)
+    fine, coarse = (rows.get(c, {}).get("bv_v") for c in hf.STEP_PAIR)
     assert subs["hvj_abut_pct"] == ("\u2014" if fine is None else f"{100 * (fine / 14.0 - 1):.0f}")
     both = fine is not None and coarse is not None
-    assert subs["hvj_mesh_pair_pct"] == (f"{100 * (coarse / fine - 1):.0f}" if both else "\u2014")
+    assert subs["hvj_step_pair_pct"] == (
+        f"{100 * abs(coarse / fine - 1):.1f}" if both else "\u2014")  # fmt: skip
+    main = _main_cases()
+    have = [c for c in main if c in rows]
+    assert subs["hvj_n_cases"] == str(len(main))
+    assert subs["hvj_n_absent"] == str(len(main) - len(have))
+    assert subs["hvj_n_open"] == str(sum(rows[c]["bv_v"] is None for c in have))
+    end = rows.get(hf.OPEN_CORNER)
+    if end is not None and end["bv_v"] is None:
+        slope = (end["i_n"][-1] - end["i_n"][-2]) / (end["v"][-1] - end["v"][-2])
+        assert subs["hvj_open_corner_v"] == f"{end['v'][-1]:.1f}"
+        assert subs["hvj_open_corner_i"] == f"{end['i_n'][-1]:.3f}"
+        assert subs["hvj_open_corner_slope"] == f"{slope:.3f}"
+        assert subs["hvj_open_corner_extrapolated"] == (
+            f"{end['v'][-1] + (1 - end['i_n'][-1]) / slope:.0f}")  # fmt: skip
     for name, short in (("1e+15", "1e15"), ("1e+16", "1e16"), ("1e+17", "1e17")):
         assert subs[f"hvj_diode_{short}_analytic"] == f"{_abrupt_bv(float(name)):.2f}"
     assert 800 < float(subs["hvj_nw_rs"]) < 1200
@@ -580,15 +598,44 @@ def test_page_tables_are_the_generated_rows(hf, tmp_path):
     assert set(hf.CHARON_CASES["charon"]) <= set(_current_cases())
 
 
-def test_page_mesh_pair_is_one_section():
-    """NT20 under AL and NW0 under BL, which the page calls one junction on two meshes, differ
-    only in the mesh, the bias step and the end of the sweep."""
+def test_page_step_pair_is_one_section():
+    """NT20 under AL and NW0 under BL, which the page calls one junction with two bias steps,
+    differ only in the bias step and the end of the sweep."""
     got = _main_cases()
     a, b = got["NT20|AL|edge"], got["NW0|BL|edge"]
-    assert {k for k in a if a[k] != b[k]} == {"mesh", "vstep", "vmax"}
-    assert (a["mesh"]["fine"], b["mesh"]["fine"]) == (0.03, 0.1)
+    assert {k for k in a if a[k] != b[k]} == {"vstep", "vmax"}
+    assert a["mesh"]["fine"] == 0.03 and _main_cases()["NT20|BL|edge"]["mesh"]["fine"] == 0.1
     assert (a["vstep"], b["vstep"], a["vmax"], b["vmax"]) == (1.5, 3.0, 60.0, 150.0)
     assert not [c for c in got if c.split("|")[1] == "AD" and c.startswith("NT")]
+
+
+def test_anchors_are_the_profiles(hf):
+    """The anchors the page prints: the N-well's capacitance follows the diode model within
+    4 % from 0 to 10 V only with the deep P layer under it, and the plane breakdown voltages
+    are profile1d.plane_breakdown of the profiles."""
+    pr = hvsite.DEFAULT_PROCESS
+    y = np.linspace(0, 16e-4, 32001)
+
+    def boxes(implants, shift=0.0):
+        return [(g["peak"], (g["rp"] + shift) * UM, g["sy"] * UM) for g in implants]
+
+    volts = np.array([0.0, 1.0, 2.0, 3.0, 5.0, 7.0, 10.0])
+    model = profile1d.model_c(volts, 1.4914e-8, 0.30525, 0.43905)
+    bare, _ = profile1d.net(y, boxes(pr["nw"]), pr["sub"])
+    under, _ = profile1d.net(y, boxes(pr["nw"]), pr["sub"], boxes(pr["deep_p"]))
+    assert np.all(np.abs(profile1d.cv(y, under, volts) / model - 1) < 0.04)
+    ratio = profile1d.cv(y, bare, volts) / model
+    assert abs(ratio[0] - 1) < 0.01 and 0.80 < ratio[-1] < 0.86
+    subs = hf.substitutions()
+    assert subs["hvj_plane_nwd"] == f"{profile1d.plane_breakdown(y, under):.0f}"
+    assert subs["hvj_plane_nw"] == f"{profile1d.plane_breakdown(y, bare):.0f}"
+    for suffix, shift in hf.LAYER_SHIFTS_UM.items():
+        moved, _ = profile1d.net(y, boxes(pr["nw"]), pr["sub"], boxes(pr["deep_p"], shift))
+        assert subs[f"hvj_plane_nwd_{suffix}"] == f"{profile1d.plane_breakdown(y, moved):.0f}"
+    assert subs["hvj_nwd_c10"] == f"{profile1d.cv(y, under, volts)[-1] * 1e7:.3f}"
+    page = " ".join(PAGE.read_text("utf-8").split())
+    assert "A layer 1 µm or 0.25 µm shallower" in page and "0.25 µm or 1 µm deeper" in page
+    assert list(hf.LAYER_SHIFTS_UM.values()) == [-1.0, -0.25, 0.25, 1.0]
 
 
 def test_page_states_the_code_constants():
@@ -626,7 +673,9 @@ def hf_anchor(key: str):
 
 def test_missing_records_give_dashes(hf, tmp_path):
     subs = hf.substitutions(tmp_path)
-    assert subs["hvj_NT20_BL_edge"] == subs["hvj_n_main"] == subs["hvj_abut_pct"] == hf.MISSING
+    assert subs["hvj_NT20_BL_edge"] == subs["hvj_abut_pct"] == hf.MISSING
+    assert subs["hvj_n_absent"] == subs["hvj_n_cases"] and subs["hvj_n_open"] == "0"
+    assert subs["hvj_p5_NR1S2_BL_edge"] == subs["hvj_open_corner_v"] == hf.MISSING
     assert subs["hvj_diode_1e17_analytic"] != hf.MISSING
     for palette in ("light", "dark"):
         for draw in hf.FIGURES.values():

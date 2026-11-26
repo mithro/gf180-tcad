@@ -7,11 +7,14 @@ and four host modules of that experiment, loaded from their files: ``predict.py`
 sets), ``hvsite.py`` (the drawn structure as a cross-section), ``ionize.py`` (the ionisation
 integral) and ``profile1d.py`` (the sheet resistance and capacitance of a well profile).
 
-The prediction records are ``main`` and ``family``. A case is read from them only when its
-parameters are the ones ``predict.py`` gives now (the record's ``params_sha256``), so a record
-made before a change of the structures or the process never prints a superseded number. A
-value whose record or case is not committed prints as a dash, and its points are missing from
-the figures. The other records are ``checks``, ``diodes``, ``charon-firstpass`` and ``charon``.
+The prediction records are ``main``, ``rest``, ``rest2``, ``rest3``, ``mem`` and ``family``: a
+case takes the row of the last of them that holds it. A row is read only when its parameters are
+the ones ``predict.py`` gives now (the record's ``params_sha256``), so a record made before a
+change of the structures or the process never prints a superseded number. The record ``p5`` is
+its own set: its cases have the names of ordinary cases, with the first ring held at 0 V, and
+are never merged with them. A value whose record or case is not committed prints as a dash, and
+its points are missing from the figures. The other records are ``checks``, ``diodes``,
+``charon-firstpass`` and ``charon``.
 
 :func:`substitutions` gives the page's ``{{ hvj_<name> }}`` values, and :func:`write_all` writes
 each figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg`` into
@@ -24,7 +27,6 @@ page's result tables are written into it by::
 from __future__ import annotations
 
 import functools
-import hashlib
 import importlib.util
 import json
 import re
@@ -47,9 +49,11 @@ ROOT = REPO_ROOT / "results" / "hv-junction"
 PAGE = REPO_ROOT / "docs" / "results" / "hv-junction.md"
 
 #: The prediction records, in the order a later one replaces the cases of an earlier one.
-PREDICTION_RECORDS = ("main", "family")
+PREDICTION_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "family")
+#: The record of the ring-sense structures with ring 1 held at 0 V; never merged with the others.
+P5_RECORD = "p5"
 #: Every record: the prediction records, the check cases, the 1D diodes and the Charon cases.
-RECORDS = (*PREDICTION_RECORDS, "checks", "diodes", "charon-firstpass", "charon")
+RECORDS = (*PREDICTION_RECORDS, P5_RECORD, "checks", "diodes", "charon-firstpass", "charon")
 #: The text of a value whose record or case is not committed.
 MISSING = "—"
 
@@ -84,9 +88,14 @@ ANCHORS = {
 }
 #: The reverse bias (V) at which the anchors table compares the capacitances a second time.
 ANCHOR_BIAS_V = 10.0
-#: The same section on two meshes: an abutting P-well, generated (AL) and drawn at no distance
-#: (BL).
-MESH_PAIR = ("NT20|AL|edge", "NW0|BL|edge")
+#: The shifts of the deep P layer (µm, positive is deeper) at which the N-well's plane breakdown
+#: under assumption D is recomputed, and the key suffix of each.
+LAYER_SHIFTS_UM = {"m100": -1.0, "m025": -0.25, "p025": 0.25, "p100": 1.0}
+#: The same section and mesh with two bias steps (1.5 V and 3 V): an abutting P-well, generated
+#: (AL) and drawn at no distance (BL).
+STEP_PAIR = ("NT20|AL|edge", "NW0|BL|edge")
+#: A sharp-corner case whose sweep stops converging before the integral reaches 1.
+OPEN_CORNER = "NC0|BD|corner"
 
 STYLE = {
     "size_in": (6.4, 4.4),
@@ -105,22 +114,23 @@ STYLE = {
 }
 
 
-def _load(name: str) -> ModuleType:
-    """A host module of the experiment, from its file (it is not a package)."""
-    spec = importlib.util.spec_from_file_location(f"_hvj_{name}", EXPERIMENT / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 @functools.cache
-def _predict() -> ModuleType:
-    """``predict.py`` (it imports ``hvsite.py`` by its bare name)."""
+def _load(name: str) -> ModuleType:
+    """A host module of the experiment, from its file. The folder is not a package, and its
+    modules import each other by bare name, so it is on ``sys.path`` during the import."""
     sys.path.insert(0, str(EXPERIMENT))
     try:
-        return _load("predict")
+        spec = importlib.util.spec_from_file_location(f"_hvj_{name}", EXPERIMENT / f"{name}.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
     finally:
         sys.path.remove(str(EXPERIMENT))
+
+
+def _predict() -> ModuleType:
+    """``predict.py``."""
+    return _load("predict")
 
 
 # --- the records ----------------------------------------------------------------------------------
@@ -144,25 +154,33 @@ def structures() -> dict[str, dict]:
 
 @functools.cache
 def current_cases() -> dict[str, dict]:
-    """``{case: parameters}`` of the case sets ``predict.py`` gives now: ``main`` (every
-    structure under its ``PROCESSES``, the NAT structures under ``NAT_ONLY``) and ``family``."""
+    """``{case: parameters}`` of the case sets ``predict.py`` gives now: ``main`` and
+    ``family``."""
     predict = _predict()
-    struct = predict.STRUCTS
-    want = predict.cases(sorted(struct), predict.PROCESSES)
-    nat = [n for n, st in struct.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
-    want.update(predict.cases(sorted(nat), predict.NAT_ONLY))
-    want.update(predict.cases([k for k in predict.KEY if k in struct], predict.FAMILY))
-    return want
+    return {**predict.main_cases(), **predict.family_cases()}
 
 
 @functools.cache
 def current_hashes() -> dict[str, str]:
     """``{case: sha256 of its parameters}`` of :func:`current_cases`, hashed as ``record.py``
     hashes them."""
-    return {
-        c: hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()
-        for c, p in current_cases().items()
-    }
+    digest = _predict().digest
+    return {c: digest(p) for c, p in current_cases().items()}
+
+
+@functools.cache
+def p5_hashes() -> dict[str, str]:
+    """``{case: sha256 of its parameters}`` of ``predict.py``'s set ``p5``."""
+    predict = _predict()
+    return {c: predict.digest(p) for c, p in predict.p5_cases().items()}
+
+
+def p5_cases(root: Path = ROOT) -> dict[str, dict]:
+    """``{case name: its row}`` of the ``p5`` record, for the rows run with the parameters
+    ``predict.py`` gives now."""
+    got = records(root).get(P5_RECORD, {}).get("cases", {})
+    now = p5_hashes()
+    return {c: row for c, row in got.items() if row["params_sha256"] == now.get(c)}
 
 
 def cases(root: Path = ROOT) -> dict[str, dict]:
@@ -227,12 +245,22 @@ FAMILY_COLUMNS = {
     "family-other": (("BLq", "edge"), ("BLq3", "edge"), ("AL", "edge"), ("ALhi", "edge")),
 }
 #: The ``:name:`` of each table on the page.
-TABLE_NAMES = {name: f"tab-hvj-{name}" for name in (*COLUMNS, *FAMILY_COLUMNS)}
+TABLE_NAMES = {name: f"tab-hvj-{name}" for name in (*COLUMNS, *FAMILY_COLUMNS, "p5")}
 
 
 def key(case: str) -> str:
     """The substitution key of a case: ``hvj_`` and the case name with ``@`` and ``|`` as ``_``."""
     return "hvj_" + re.sub(r"[^0-9A-Za-z]", "_", case)
+
+
+def p5_key(case: str) -> str:
+    """The substitution key of a case of the ``p5`` record."""
+    return "hvj_p5_" + key(case)[len("hvj_") :]
+
+
+def p5_structures() -> list[str]:
+    """The ring-sense structures, the rows of the ``p5`` table."""
+    return sorted(n for n, st in structures().items() if st["sense"])
 
 
 def family_structures() -> list[str]:
@@ -244,6 +272,13 @@ def table(name: str) -> str:
     """The Markdown rows of the table ``name`` (a key of :data:`COLUMNS` or
     :data:`FAMILY_COLUMNS`), as the page holds them: a header, then one row per structure with
     a substitution per value."""
+    if name == "p5":
+        procs = _predict().P5_PROCESSES
+        lines = ["| Structure | " + " | ".join(procs) + " |", "|" + "---|" * (len(procs) + 1)]
+        for row in p5_structures():
+            cells = [f"{{{{ {p5_key(f'{row}|{p}|edge')} }}}}" for p in procs]
+            lines.append(f"| {row} | " + " | ".join(cells) + " |")
+        return "\n".join(lines)
     if name in FAMILY_COLUMNS:
         columns, names = FAMILY_COLUMNS[name], family_structures()
     else:
@@ -305,30 +340,52 @@ def built_in(doping: float) -> float:
 
 @functools.cache
 def well_anchors() -> dict[str, float]:
-    """The wells of ``hvsite.DEFAULT_PROCESS`` in ``profile1d.py``: ``nw_rs``, the sheet
-    resistance of the N-well under the trench oxide (ohm/square); ``nw_c0`` and ``nw_c10``, its
-    junction capacitance at 0 V and :data:`ANCHOR_BIAS_V` (F/cm^2); ``dnw_c0`` and ``dnw_c10``,
-    those of the deep N-well over the deep P layer; and ``<name>_model``, the diode model's
-    value of each capacitance."""
+    """The wells of ``hvsite.DEFAULT_PROCESS`` in ``profile1d.py``, depletion approximation.
+
+    ``nw_rs`` is the sheet resistance of the N-well under the trench oxide (ohm/square).
+    ``<well>_c0`` and ``<well>_c10`` are the junction capacitance at 0 V and
+    :data:`ANCHOR_BIAS_V` (F/cm^2) and ``<well>_<c0|c10>_model`` the diode model's value;
+    ``<well>`` is ``nw`` (the N-well with no deep P layer under it, assumption L), ``nwd`` (with
+    the layer under it, assumption D) or ``dnw`` (the deep N-well over the layer).
+    ``plane_<well>`` is the plane breakdown voltage of the well's deepest junction (V, junction
+    potential), and ``plane_nwd_<suffix>`` that of the N-well with the deep P layer shifted by
+    each of :data:`LAYER_SHIFTS_UM`."""
     hvsite, profile1d = _load("hvsite"), _load("profile1d")
     pr = hvsite.DEFAULT_PROCESS
     um = 1e-4
     y = np.linspace(0, 16 * um, 32001)
     volts = np.array([0.0, ANCHOR_BIAS_V])
 
-    def boxes(implants):
-        return [(g["peak"], g["rp"] * um, g["sy"] * um) for g in implants]
+    def boxes(implants, shift=0.0):
+        return [(g["peak"], (g["rp"] + shift) * um, g["sy"] * um) for g in implants]
 
     n, total = profile1d.net(y, boxes(pr["nw"]), pr["sub"])
     out = {"nw_rs": float(profile1d.sheet_resistance(y, n, total, top=hvsite.STI * um))}
+    blanket, _ = profile1d.net(y, boxes(pr["nw"]), pr["sub"], boxes(pr["deep_p"]))
     deep, _ = profile1d.net(y, boxes(pr["dnw"]), pr["sub"], boxes(pr["deep_p"]))
-    for well, profile in (("nw", n), ("dnw", deep)):
+    for well, model, profile in (("nw", "nw", n), ("nwd", "nw", blanket), ("dnw", "dnw", deep)):
         c = profile1d.cv(y, profile, volts)
-        m = ANCHORS[well]
-        model = profile1d.model_c(volts, m["cj0"], m["mj"], m["pb"])
-        for tag, got, want in zip(("c0", "c10"), c, model, strict=True):
-            out[f"{well}_{tag}"], out[f"{well}_{tag}_model"] = float(got), float(want)
+        m = ANCHORS[model]
+        want = profile1d.model_c(volts, m["cj0"], m["mj"], m["pb"])
+        for tag, got, ref in zip(("c0", "c10"), c, want, strict=True):
+            out[f"{well}_{tag}"], out[f"{well}_{tag}_model"] = float(got), float(ref)
+        out[f"plane_{well}"] = profile1d.plane_breakdown(y, profile)
+    for suffix, shift in LAYER_SHIFTS_UM.items():
+        moved, _ = profile1d.net(y, boxes(pr["nw"]), pr["sub"], boxes(pr["deep_p"], shift))
+        out[f"plane_nwd_{suffix}"] = profile1d.plane_breakdown(y, moved)
     return out
+
+
+def open_corner(root: Path = ROOT) -> dict[str, float] | None:
+    """The end of the sweep of :data:`OPEN_CORNER`: ``v`` the last bias solved, ``i`` the
+    integral there, ``slope`` its rise per volt over the last step, and ``extrapolated`` the
+    bias at which that straight line reaches 1. None when the case has no row or broke down."""
+    row = cases(root).get(OPEN_CORNER)
+    if row is None or row["bv_v"] is not None or len(row["v"]) < 2:
+        return None
+    (v0, v1), (i0, i1) = row["v"][-2:], row["i_n"][-2:]
+    slope = (i1 - i0) / (v1 - v0)
+    return {"v": v1, "i": i1, "slope": slope, "extrapolated": v1 + (1 - i1) / slope}
 
 
 def _two(v: float | None) -> str:
@@ -338,32 +395,24 @@ def _two(v: float | None) -> str:
 def substitutions(root: Path = ROOT) -> dict[str, str]:
     """``{"hvj_<name>": text}``: every number the page prints.
 
-    ``hvj_<case>`` (:func:`key`) is :func:`shown` of each current case; ``hvj_n_<record>``
-    counts the cases of a prediction record that :func:`cases` reads and
-    ``hvj_n_<record>_missing`` the current cases its runs left without a result;
+    ``hvj_<case>`` (:func:`key`) is :func:`shown` of each current case and ``hvj_p5_<case>`` that
+    of each case of the ``p5`` set; ``hvj_n_cases`` counts the cases of the ``main`` set,
+    ``hvj_n_absent`` those of them no record holds with the present parameters and ``hvj_n_open``
+    those whose integral stayed below 1; ``hvj_open_corner_<name>`` are :func:`open_corner`;
     ``hvj_chk_<name>`` is a check case's breakdown voltage; ``hvj_diode_<doping>`` the 1D
     diode's, ``hvj_diode_<doping>_analytic`` the triangular-field value, ``_vbi`` the built-in
     potential and ``_applied`` their difference; ``hvj_c1_<case>_<field>`` and
     ``hvj_c2_<case>_<field>`` the values of the two Charon records (:data:`CHARON_PREFIX`,
-    :data:`CHARON_FIELDS`); ``hvj_nw_rs`` and ``hvj_<well>_<c0|c10>[_model]`` the anchors of
+    :data:`CHARON_FIELDS`); ``hvj_nw_rs``, ``hvj_<well>_<c0|c10>[_model]`` and ``hvj_plane_<name>`` the anchors of
     :func:`well_anchors` (capacitances in fF/µm²); ``hvj_abut_pct`` how far the abutting
-    junction lies above the published typical value; ``hvj_mesh_pair_pct`` the difference of
-    the two meshes of :data:`MESH_PAIR`."""
+    junction lies above the published typical value; ``hvj_step_pair_pct`` the difference of
+    the two bias steps of :data:`STEP_PAIR`."""
     recs = records(root)
     got = cases(root)
     names = {*current_cases(), *table_cases()}
     out = {key(c): shown(got.get(c)) for c in names}
     if len(out) != len(names):
         raise ValueError("two case names give one substitution key")
-    now = current_hashes()
-    for name in PREDICTION_RECORDS:
-        rec = recs.get(name)
-        if rec is None:
-            out[f"hvj_n_{name}"] = out[f"hvj_n_{name}_missing"] = MISSING
-            continue
-        read = [c for c, r in rec["cases"].items() if r["params_sha256"] == now.get(c)]
-        out[f"hvj_n_{name}"] = str(len(read))
-        out[f"hvj_n_{name}_missing"] = str(len([c for c in rec["not_converged"] if c in now]))
     checks = recs.get("checks", {}).get("cases", {})
     for name in CHECKS:
         row = checks.get(name)
@@ -383,13 +432,28 @@ def substitutions(root: Path = ROOT) -> dict[str, str]:
                 k = f"{CHARON_PREFIX[name]}_{key(case)[len('hvj_') :]}_{field}"
                 out[k] = _two(charon.get(case, {}).get(source))
     for name, value in well_anchors().items():
-        # F/cm^2 to fF/µm^2 is a factor of 1e7
-        out[f"hvj_{name}"] = f"{value:.0f}" if name == "nw_rs" else f"{value * 1e7:.3f}"
-    abut, coarse = (got.get(c) for c in MESH_PAIR)
-    ok = abut is not None and abut["bv_v"] is not None
-    out["hvj_abut_pct"] = f"{100 * (abut['bv_v'] / ANCHORS['bv_typ'] - 1):.0f}" if ok else MISSING
+        if name == "nw_rs" or name.startswith("plane_"):
+            out[f"hvj_{name}"] = f"{value:.0f}"
+        else:  # F/cm^2 to fF/µm^2 is a factor of 1e7
+            out[f"hvj_{name}"] = f"{value * 1e7:.3f}"
+    fine, coarse = (got.get(c) for c in STEP_PAIR)
+    ok = fine is not None and fine["bv_v"] is not None
+    out["hvj_abut_pct"] = f"{100 * (fine['bv_v'] / ANCHORS['bv_typ'] - 1):.0f}" if ok else MISSING
     ok = ok and coarse is not None and coarse["bv_v"] is not None
-    out["hvj_mesh_pair_pct"] = f"{100 * (coarse['bv_v'] / abut['bv_v'] - 1):.0f}" if ok else MISSING
+    out["hvj_step_pair_pct"] = (
+        f"{100 * abs(coarse['bv_v'] / fine['bv_v'] - 1):.1f}" if ok else MISSING
+    )
+    p5 = p5_cases(root)
+    for case in p5_hashes():
+        out[p5_key(case)] = shown(p5.get(case))
+    main_set = _predict().main_cases()
+    have = [c for c in main_set if c in got]
+    out["hvj_n_cases"] = str(len(main_set))
+    out["hvj_n_absent"] = str(len(main_set) - len(have))
+    out["hvj_n_open"] = str(len([c for c in have if got[c]["bv_v"] is None]))
+    end = open_corner(root)
+    for name, digits in (("v", 1), ("i", 3), ("slope", 3), ("extrapolated", 0)):
+        out[f"hvj_open_corner_{name}"] = MISSING if end is None else f"{end[name]:.{digits}f}"
     return out
 
 
@@ -523,6 +587,12 @@ def _series(ax, pal, got, points, process, shape, colour, marker, label):
             gid=f"{label} {process} {shape}")  # fmt: skip
 
 
+def _is_copy(name: str) -> bool:
+    """Whether a structure is a copy or a control of another one: a name of a plate or ring
+    structure that ends in ``b``, ``L`` or ``C0`` after its size."""
+    return re.search(r"_\d+(p\d+)?(b|L|C0)$", name) is not None
+
+
 def pwell_points() -> dict[str, list[tuple[float, str]]]:
     """Per well kind, [(drawn P-well distance in µm, structure)] of the structures that differ
     from the plain 20 µm termination only by a drawn P-well."""
@@ -557,6 +627,8 @@ def plate_points() -> dict[str, list[tuple[float, str]]]:
     plate tied to the well and nothing else drawn; length 0 is the plain termination NT20."""
     out = {"poly": [(0.0, "NT20")], "m1": [(0.0, "NT20")], "m2": [(0.0, "NT20")]}
     for name, st in structures().items():
+        if _is_copy(name):
+            continue
         if group(name) == "plates" and len(st["plates"]) == 1 and not st["gate"]:
             ((layer, length),) = st["plates"].items()
             out[layer].append((length, name))
@@ -588,7 +660,7 @@ def ring_points() -> dict[str, list[tuple[float, str]]]:
     count, gap = [(0.0, "NT20")], []
     for name, st in structures().items():
         rings = st["rings"]
-        if not rings or st["plates"] or {w for _, w in rings} != {2.0}:
+        if not rings or st["plates"] or {w for _, w in rings} != {2.0} or _is_copy(name):
             continue
         if len(rings) == 1 and not name.startswith("NR1S"):
             gap.append((rings[0][0], name))

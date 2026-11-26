@@ -196,8 +196,9 @@ deep N-well or under the whole wafer, so both are simulated ({ref}`hvj-assumptio
 
 The family is set against the published values of {numref}`tab-hvj-anchors`. The sheet
 resistance and the capacitances are computed from the profiles by
-{repo}`experiments/hv-junction/profile1d.py`, in the {term}`depletion approximation`. The breakdown
-voltages are the simulated cases NT20 and DT20 under assumption AL.
+{repo}`experiments/hv-junction/profile1d.py`, in the {term}`depletion approximation`. The
+N-well capacitance is given with the deep P layer under the N-well (D) and without it (L).
+The breakdown voltages are the simulated cases NT20 and DT20 under assumption AL.
 
 ~~~{table} The published anchors of the doping family and what the family gives.
 :name: tab-hvj-anchors
@@ -205,8 +206,10 @@ voltages are the simulated cases NT20 and DT20 under assumption AL.
 | Quantity | Published | Family |
 |---|---|---|
 | N-well sheet resistance (Ω/sq) | 1000 | {{ hvj_nw_rs }} |
-| N-well capacitance at 0 V (fF/µm²) | {{ hvj_nw_c0_model }} | {{ hvj_nw_c0 }} |
-| N-well capacitance at 10 V (fF/µm²) | {{ hvj_nw_c10_model }} | {{ hvj_nw_c10 }} |
+| N-well capacitance at 0 V, L (fF/µm²) | {{ hvj_nw_c0_model }} | {{ hvj_nw_c0 }} |
+| N-well capacitance at 10 V, L (fF/µm²) | {{ hvj_nw_c10_model }} | {{ hvj_nw_c10 }} |
+| N-well capacitance at 0 V, D (fF/µm²) | {{ hvj_nwd_c0_model }} | {{ hvj_nwd_c0 }} |
+| N-well capacitance at 10 V, D (fF/µm²) | {{ hvj_nwd_c10_model }} | {{ hvj_nwd_c10 }} |
 | Deep N-well capacitance at 0 V (fF/µm²) | {{ hvj_dnw_c0_model }} | {{ hvj_dnw_c0 }} |
 | Deep N-well capacitance at 10 V (fF/µm²) | {{ hvj_dnw_c10_model }} | {{ hvj_dnw_c10 }} |
 | N-well breakdown voltage (V) | 14 | {{ hvj_NT20_AL_edge }} |
@@ -221,6 +224,19 @@ capacitances are those of the diode models `diode_nw2ps_06v0`
 and `diode_dw2ps`
 ([model file](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38512)),
 evaluated at the bias. The deep N-well model also gives the 30.48 V.
+
+The N-well was fitted with the deep P layer under it
+({repo}`experiments/hv-junction/fit.py`). Its capacitance follows the model up to 10 V only
+with that layer. Within this model D is therefore the better-supported assumption.
+
+The deep P layer also sets a ceiling. Under D the plane junction of the N-well breaks down at
+a junction potential of {{ hvj_plane_nwd }} V, in the depletion approximation. Without the
+layer it reaches {{ hvj_plane_nw }} V. The deep N-well's plane junction breaks down at
+{{ hvj_plane_dnw }} V.
+
+The ceiling moves with the depth of the layer, which no public value fixes. A layer 1 µm or
+0.25 µm shallower gives {{ hvj_plane_nwd_m100 }} V or {{ hvj_plane_nwd_m025 }} V. A layer
+0.25 µm or 1 µm deeper gives {{ hvj_plane_nwd_p025 }} V or {{ hvj_plane_nwd_p100 }} V.
 
 The published N-well breakdown voltage is 14 V typical and 10 V minimum
 ([electrical specification 5.5](https://gf180mcu-pdk.readthedocs.io/en/latest/analog/spice/elec_specs/elec_specs_5_5.html)).
@@ -302,14 +318,13 @@ are the section of {numref}`hvj-section-figure` without ring or plate. Their val
 | abutting | 0.02 | 64-bit | 1 | {{ hvj_chk_abut_f0_02 }} |
 ~~~
 
-The prediction cases use two meshes. A case whose P-well abuts the N-well under assumption A
-has 0.03 µm at the drawn edges and 1.5 V steps. Every other case has 0.1 µm and 3 V steps.
+The prediction cases use two meshes. A case with a heavy P region within 1.5 µm of the well
+edge has 0.03 µm at the drawn edges. Every other case has 0.1 µm. A case whose generated
+P-well abuts the N-well takes 1.5 V steps, and every other case 3 V steps.
 
-The main record holds one section on both meshes. NT20 under AL and NW0 under BL are the same
-abutting junction. It breaks down at {{ hvj_NT20_AL_edge }} V on the fine mesh and at
-{{ hvj_NW0_BL_edge }} V on the coarse one. The coarse value differs by
-{{ hvj_mesh_pair_pct }} %. The junctions of {numref}`tab-hvj-pwell` with a P-well within
-1.5 µm carry that mesh error.
+The records hold one section on one mesh with both steps. NT20 under AL and NW0 under BL are
+the same abutting junction. It breaks down at {{ hvj_NT20_AL_edge }} V with 1.5 V steps and at
+{{ hvj_NW0_BL_edge }} V with 3 V steps. The two differ by {{ hvj_step_pair_pct }} %.
 
 (hvj-results)=
 
@@ -325,14 +340,24 @@ A value written `> V` is a sweep whose integral stayed below 1 up to V, the high
 solved. The sweep ends at 60 V for a case with an abutting P-well and at 150 V otherwise.
 Each value comes from a curve like those of {numref}`hvj-integral-figure`.
 
+The main set has {{ hvj_n_cases }} cases. No record holds {{ hvj_n_absent }} of them with the
+present parameters; they print a dash. In {{ hvj_n_open }} more the solve stopped converging
+before the integral reached 1; they print `> V`.
+
+The sharp corners are among those. The corner of NC0 under BD stops at
+{{ hvj_open_corner_v }} V with the integral at {{ hvj_open_corner_i }}. It rose by
+{{ hvj_open_corner_slope }} per volt over the last step. A straight line through that step
+reaches 1 at {{ hvj_open_corner_extrapolated }} V.
+
 ### Plain terminations
 
 NT structures have a bare termination of the named length between the well and the substrate
 tap. NC structures have a 20 µm termination and the named corner radius. Every other corner
 has a radius of 8 µm. A drawn radius under 1 µm is simulated at 1 µm.
 
-Three kinds of copy have the section of NT20. A name ending in `b` is a second copy, NT20L
-has a wider lead, and NT20V lies in the 6 V gate-oxide area. The values are in
+Some structures are copies or controls of another and have its section. A name ending in `b`
+or `c` is a further copy. A name ending in `L` has a wider lead, and NT20V lies in the 6 V
+gate-oxide area. NM1_6C0 is NM1_6 with sharp corners. The values are in
 {numref}`tab-hvj-bare`, and the corner values are plotted against the radius in
 {numref}`hvj-corners-figure`.
 
@@ -492,6 +517,25 @@ BL, by layer: the straight edge (solid) and the corner section (dashed). Length 
 NR structures surround the N-well with floating N-well rings. The digit after NR is the number
 of rings. The values are in {numref}`tab-hvj-rings`. Assumption BL is plotted against the ring
 count and against the gap of a single ring in {numref}`hvj-rings-figure`.
+
+A ring-sense structure (NR1S, NR4S) brings its first ring out to a pad. NR1S names the gap of
+its one ring. With that ring held at 0 V the well-to-ring gap alone carries the bias.
+
+The breakdown voltage of that connection is in {numref}`tab-hvj-p5`. It comes from a separate
+record. Its cases are never mixed with the floating-ring cases of {numref}`tab-hvj-rings`.
+
+~~~{table} Breakdown voltage (V) of the ring-sense structures with the first ring held at 0 V.
+:name: tab-hvj-p5
+
+| Structure | AL | BL | BD |
+|---|---|---|---|
+| NR1S12 | {{ hvj_p5_NR1S12_AL_edge }} | {{ hvj_p5_NR1S12_BL_edge }} | {{ hvj_p5_NR1S12_BD_edge }} |
+| NR1S2 | {{ hvj_p5_NR1S2_AL_edge }} | {{ hvj_p5_NR1S2_BL_edge }} | {{ hvj_p5_NR1S2_BD_edge }} |
+| NR1S3 | {{ hvj_p5_NR1S3_AL_edge }} | {{ hvj_p5_NR1S3_BL_edge }} | {{ hvj_p5_NR1S3_BD_edge }} |
+| NR1S5 | {{ hvj_p5_NR1S5_AL_edge }} | {{ hvj_p5_NR1S5_BL_edge }} | {{ hvj_p5_NR1S5_BD_edge }} |
+| NR1S8 | {{ hvj_p5_NR1S8_AL_edge }} | {{ hvj_p5_NR1S8_BL_edge }} | {{ hvj_p5_NR1S8_BD_edge }} |
+| NR4S | {{ hvj_p5_NR4S_AL_edge }} | {{ hvj_p5_NR4S_BL_edge }} | {{ hvj_p5_NR4S_BD_edge }} |
+~~~
 
 ~~~{table} Breakdown voltage (V) of the N-wells with floating rings.
 :name: tab-hvj-rings
@@ -689,13 +733,13 @@ trend.
 - **The absolute level.** The family's abutting junction lies {{ hvj_abut_pct }} % above the
   published typical value ({numref}`tab-hvj-anchors`). No correction is applied to any value.
 - **The doping.** The wells are a family set against published values, not measured profiles.
-  The deep P layer is inferred from the deep N-well's diode model, and its extent is an
-  assumption ({ref}`hvj-assumptions`).
+  The deep P layer is inferred from the diode models. Its extent and its depth are
+  assumptions, and its depth moves the ceiling under D ({ref}`hvj-process`).
 - **The floating rings.** A field line ends where the field falls under 2e3 V/cm, inside each
   ring. The integral is therefore taken gap by gap, and multiplication in one gap is not
   carried into the next ({numref}`hvj-rings-figure`).
-- **The mesh.** A junction with a P-well within 1.5 µm changes by {{ hvj_mesh_pair_pct }} %
-  between the two prediction meshes ({ref}`hvj-checks`).
+- **The sharp corners.** Their sweeps stop converging before the integral reaches 1
+  ({ref}`hvj-results`).
 - **No silicon data.** No measurement of these structures exists
   ({doc}`/limitations/silicon-validation`).
 
@@ -710,10 +754,13 @@ shared. The record writer {repo}`experiments/hv-junction/record.py` refuses runs
 differ. {repo}`experiments/hv-junction/README.md` gives the command of each record. The curves
 of {numref}`hvj-integral-figure` are read from the main record.
 
-- **main** ({repo}`main.json <results/hv-junction/main.json>`) holds every structure under
-  the main assumptions. Of its cases, {{ hvj_n_main }} have the parameters of the present
-  case set. The runs of that set left {{ hvj_n_main_missing }} cases without a result.
+- **main** ({repo}`main.json <results/hv-junction/main.json>`) holds the first batch of the
+  main set: every structure under the main assumptions.
+- **rest**, **rest2**, **rest3** and **mem** hold the cases of the main set that an earlier
+  record lacks or holds with older parameters. A case takes the last of them that holds it.
 - **family** holds the doping family.
+- **p5** holds the ring-sense structures with the first ring at 0 V. It is never merged with
+  the others, because its cases carry the names of ordinary cases.
 - **checks** and **diodes** hold the cases of {ref}`hvj-checks`.
 - **charon-firstpass** and **charon** hold the cases of {ref}`hvj-charon`.
 
