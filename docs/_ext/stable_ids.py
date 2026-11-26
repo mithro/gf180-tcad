@@ -116,7 +116,7 @@ def replace_numbers(app, env) -> list[str]:
                 if first[0] != kind:
                     logger.warning(
                         "%s '%s' has the same identifier '%s' as the %s '%s' in %s, so a "
-                        "reader sees \"%s %s\" and \"%s %s\"; rename one of the labels",
+                        'reader sees "%s %s" and "%s %s"; rename one of the labels',
                         kind,
                         label,
                         identifier,
