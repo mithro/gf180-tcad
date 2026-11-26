@@ -518,3 +518,56 @@ def test_failed_runs_record_where_they_last_converged():
         first_from = f["loca_failures"][0][1]
         direction = 1 if f["loca_failures"][0][0] > first_from else -1
         assert direction * (f["last_converged_v"] - first_from) > 0, f["deck"]
+
+
+def _record_module():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "charon_record", REPO_ROOT / "experiments" / "charon-backend" / "record.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_LOG_HEAD = """Start of Continuation Step 1 : Parameter: Varying Voltage = 1.000e-01 from 0.000e+00
+--> Step Converged in 3 Nonlinear Solver Iterations!
+Start of Continuation Step 2 : Parameter: Varying Voltage = 1.500e-01 from 1.000e-01
+Value of continuation parameter at failed step = 1.500e-01 from 1.000e-01
+Start of Continuation Step 2 : Parameter: Varying Voltage = 1.200e-01 from 1.000e-01
+--> Step Converged in 4 Nonlinear Solver Iterations!
+Start of Continuation Step 3 : Parameter: Varying Voltage = 1.300e-01 from 1.200e-01
+Value of continuation parameter at failed step = 1.300e-01 from 1.200e-01
+"""
+
+
+@pytest.mark.parametrize(
+    ("tail", "error"),
+    [("\tStep size reached minimum step size bound\n", None),
+     ("LOCA reached the maximum number of steps\n", "minimum-step-size abort"),
+     (("\tStep size reached minimum step size bound\n"
+       "Start of Continuation Step 3 : Parameter: Varying Voltage = 1.250e-01 from 1.200e-01\n"
+       "--> Step Converged in 2 Nonlinear Solver Iterations!\n"), "is not the last failure's")],
+)  # fmt: skip
+def test_last_converged_needs_the_minimum_step_abort(tmp_path, tail, error):
+    """record.py takes the last failure's "from" as the last converged bias only when the log
+    ends in LOCA's minimum-step-size abort and its last converged step is that bias."""
+    rec = _record_module()
+    log = tmp_path / "rampA.inp.log"
+    log.write_text(_LOG_HEAD + tail)
+    if error is None:
+        failures, last = rec._loca_failures(log)
+        assert failures == [[0.15, 0.1], [0.13, 0.12]] and last == 0.12
+    else:
+        with pytest.raises(ValueError, match=error):
+            rec._loca_failures(log)
+
+
+def test_last_converged_must_be_the_last_failures_from(tmp_path):
+    rec = _record_module()
+    log = tmp_path / "rampA.inp.log"
+    log.write_text(_LOG_HEAD.replace("--> Step Converged in 4", "--> Step failed in 4")
+                   + "\tStep size reached minimum step size bound\n")  # fmt: skip
+    with pytest.raises(ValueError, match="is not the last failure's"):
+        rec._loca_failures(log)

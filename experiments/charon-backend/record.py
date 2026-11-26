@@ -119,18 +119,45 @@ def hard_range(work: Path) -> dict:
 LOCA_FAILED = re.compile(r"Value of continuation parameter at failed step = (\S+) from (\S+)")
 
 
-def _loca_failures(log: Path) -> list[list[float]]:
-    """Every failed LOCA step of a run's log, ``[failed at, stepped from]`` in V. After a failure
-    LOCA retries with a smaller step down to its minimum, so the last entry's "from" is the last
-    bias the run converged at."""
-    return [[float(a), float(b)] for a, b in LOCA_FAILED.findall(log.read_text(errors="replace"))]
+#: The start of a LOCA step, with the bias it steps to.
+LOCA_STEP = re.compile(r"Start of Continuation Step \d+ : Parameter: \S+ \S+ = (\S+) from")
+#: NOX's message for a converged step, and LOCA's for a run that ran out of step size.
+STEP_CONVERGED = "Step Converged in"
+MIN_STEP_ABORT = "Step size reached minimum step size bound"
+
+
+def _loca_failures(log: Path) -> tuple[list[list[float]], float]:
+    """A failed run's LOCA failures, ``[failed at, stepped from]`` in V, and the last bias it
+    converged at.
+
+    After a failure LOCA retries with smaller steps down to its minimum and then aborts. The
+    log must end in that abort, and its last converged step must be the last failure's "from";
+    a run that ended otherwise (LOCA's maximum number of steps, say) raises ValueError.
+    """
+    text = log.read_text(errors="replace")
+    failures = [[float(a), float(b)] for a, b in LOCA_FAILED.findall(text)]
+    if not failures:
+        raise ValueError(f"{log}: no failed LOCA step")
+    if MIN_STEP_ABORT not in text[text.rindex("Value of continuation parameter at failed step") :]:
+        raise ValueError(f"{log}: the run did not end in the minimum-step-size abort")
+    converged, step_v = None, None
+    for line in text.splitlines():
+        if m := LOCA_STEP.search(line):
+            step_v = float(m.group(1))
+        elif STEP_CONVERGED in line:
+            converged = step_v
+    if converged != failures[-1][1]:
+        raise ValueError(
+            f"{log}: last converged step {converged} V is not the last failure's 'from' "
+            f"{failures[-1][1]} V"
+        )
+    return failures, converged
 
 
 def _failed(step: Path) -> dict:
     """b2_failed.json with the failed deck's LOCA failures and its last converged bias."""
     rec = _json(step / "b2_failed.json")
-    rec["loca_failures"] = _loca_failures(step / f"{rec['deck']}.inp.log")
-    rec["last_converged_v"] = rec["loca_failures"][-1][1]
+    rec["loca_failures"], rec["last_converged_v"] = _loca_failures(step / f"{rec['deck']}.inp.log")
     return rec
 
 
@@ -139,8 +166,7 @@ def _solvers(d: Path) -> dict:
     rec = _json(d / "b3.json")
     for name, v in rec.items():
         if isinstance(v, dict) and v.get("failed_at"):
-            v["loca_failures"] = _loca_failures(d / f"{name}_sw.inp.log")
-            v["last_converged_v"] = v["loca_failures"][-1][1]
+            v["loca_failures"], v["last_converged_v"] = _loca_failures(d / f"{name}_sw.inp.log")
     return rec
 
 
