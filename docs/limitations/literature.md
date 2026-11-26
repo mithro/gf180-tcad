@@ -272,15 +272,16 @@ These are the hits about DEVSIM and the SKY130 process, from the queries:
 - **OpenTCAD's check.** Its [SKY130 `nfet_01v8` check](https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/validation/sky130/README.md)
   simulates a 1 µm nMOS in DEVSIM. It compares the result with {{ ngspice }} 44.2 curves of
   SKY130's typical-corner BSIM4 card. The version committed on 2026-11-05 compared the
-  threshold voltage only. {numref}`fig-lit-opentcad-vth-check` is that version's figure.
+  threshold voltage only. {numref}`fig-lit-opentcad-vth-check` is the check's figure at the pinned
+  commit, before the calibration.
 - **OpenTCAD's calibration.** Commits on 2026-11-18 fit the device's implant dose, drive-in and
   Lombardi mobility coefficients to the card. They compare the threshold at five back biases,
-  the subthreshold swing, the peak transconductance, the on-current and the linear Id–Vgs
-  curves. The comparison is a fit to the card, as in this project.
+  the subthreshold swing, the peak transconductance, the on-current and the {term}`linear Id`–Vgs
+  curves. The comparison is a fit to the card.
 
 ```{figure} images/opentcad-sky130-vth-check.png
 :name: fig-lit-opentcad-vth-check
-:alt: Two plots. Left: acceptor concentration against depth below the silicon surface, from 0 to 900 nm on a log axis from 1e14 to 1e19 per cubic centimetre, with mesh points on a design line peaking near 30 nm and again near 420 nm. Right: drain current per micrometre against gate voltage from 0 to 1.8 V on a log axis, with a dashed line at 0.592 V and a shaded band of 20 percent around it.
+:alt: Two plots. Left: acceptor concentration against depth below the silicon surface, from 0 to 900 nm on a log axis from 1e14 to 1e19 per cubic centimetre, with mesh points on a design line peaking near 30 nm and again near 420 nm. Right: drain current per micrometre against gate voltage from 0 to 1.8 V on a log axis, with a dashed line at 0.592 V, a shaded band of 20 percent around it and a dotted line at 0.697 V.
 
 OpenTCAD's threshold check of a 1 µm SKY130 `nfet_01v8`, before its calibration to the card. Left, the channel doping of the DEVSIM device. Right, its drain current against gate voltage at a drain voltage of 50 mV, beside the card's threshold ([OpenTCAD](https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/validation/sky130/README.md), Apache License).
 ```
@@ -290,10 +291,10 @@ The list continues with the other hits from the queries:
 - **devphys.** Its [README](https://github.com/joaln27/devphys/blob/bcae3beebcaaeb15a1937af996f43e0bc15bcdb4/README.md)
   compares DEVSIM simulations of SKY130 `nfet_01v8` with measured silicon at 300 K and 77 K. It
   sets its 77 K error beside the error the dataset's authors give for their own BSIM4 fits. It
-  compares its extracted `toxe` with the card's. It compares no DEVSIM current or capacitance
-  with the {term}`PDK` SPICE models.
-- **devphys's inverter.** The inverter stage of the same repository compares the drive
-  resistance of a DEVSIM-derived inverter with a Liberty file characterised with BSIM. The Liberty file comes from a standard-cell repository, not from the PDK cards.
+  compares its extracted `toxe` with the card's.
+- **devphys's inverter.** Its inverter stage compares a DEVSIM-derived inverter's drive
+  resistance with a Liberty file characterised with BSIM. The file comes from a standard-cell
+  repository. It prints the DEVSIM saturation current beside BSIM's.
 - **The 2021 request.** [DEVSIM issue 74](https://github.com/devsim/devsim/issues/74) asked in
   August 2021 for an open TCAD flow matched to the SKY130 PDK. It was closed in April 2022 with
   no comments.
