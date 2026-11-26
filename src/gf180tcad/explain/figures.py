@@ -181,6 +181,10 @@ STYLE = {
     # The source doping profile: a taller figure for the two rows; depths to (1 + pad) junction
     # depths; along the surface, this many lateral straggles either side of the gate edge.
     "profile_size_in": (6.4, 6.4),
+    # The resistivity figure's bottom panel: markers drawn above the grid.
+    "point_zorder": 3,
+    # Its top panel's legend sits above the axes, clear of the curve (axes fraction).
+    "legend_above": (0.5, 1.0),
     "profile_pad": 0.5,
     "profile_span": 4.0,
     # The labels either side of the gate edge sit this fraction of the axis width off its line.
@@ -1672,6 +1676,75 @@ def junction_profile(palette: str) -> bytes:
         return svg_bytes(junction_profile_figure(palette))
 
 
+def resistivity_curve() -> dict[str, np.ndarray | float]:
+    """The resistivity of n-type silicon against its donor density, an idealised example: the
+    donor densities ``n_cm3`` from the mobility fit's lower limit (``n_min_fit``) to the nfet's
+    source and drain peak (``sd_peak_nfet``), their mobility
+    (:func:`~gf180tcad.explain.idealised.doping_mobility`) and resistivity ``rho_ohm_cm``
+    (:func:`~gf180tcad.explain.idealised.resistivity`); the peak's own value (``rho_sd``); and
+    the resistivity of pure silicon with the simulation's n_i and constant mobilities
+    (``rho_intrinsic``, :func:`~gf180tcad.explain.idealised.intrinsic_resistivity`) at its
+    temperature ``t_k``."""
+    v = numbers.value
+    n = np.geomspace(v("n_min_fit"), v("sd_peak_nfet"), STYLE["regime_points"])
+    mu = idealised.doping_mobility(v("mu0_n_fit"), v("mu1_n_fit"), v("nref_n_fit"),
+                                   v("alpha_n_fit"), n)  # fmt: skip
+    return {
+        "n_cm3": n,
+        "rho_ohm_cm": idealised.resistivity(v("q_tcad"), n, mu),
+        "n_sd": v("sd_peak_nfet"),
+        "rho_sd": v("rho_sd_nfet"),
+        "rho_intrinsic": v("rho_intrinsic_tcad"),
+        "t_k": v("t_tcad"),
+    }
+
+
+def silicon_resistivity_figure(palette: str):
+    """The matplotlib figure of :func:`silicon_resistivity`, for the tests to read its lines: on
+    top the doped curve on its own axis range, below the two resistivities as markers, one row
+    each, on a log axis."""
+    pal = PALETTES[palette]
+    lw = STYLE["line_width"]
+    k = resistivity_curve()
+    n = k["n_cm3"]
+    with matplotlib.rc_context(palette_rc(palette)):
+        fig = Figure(figsize=STYLE["profile_size_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        top, bottom = fig.subplots(2, 1)
+        top.set_xscale("log")
+        top.set_yscale("log")
+        top.plot(n, k["rho_ohm_cm"], color=pal["electron"], lw=lw, gid="doped",
+                 label="n-type silicon, from the mobility fit")  # fmt: skip
+        top.plot([k["n_sd"]], [k["rho_sd"]], color=pal["electron"], marker="o", ls="none",
+                 gid="sd-peak", label="nfet source and drain peak")  # fmt: skip
+        top.grid(True)
+        top.set_xlabel("donor density (cm⁻³)")
+        top.set_ylabel("resistivity (Ω·cm)")
+        top.legend(loc="lower center", bbox_to_anchor=STYLE["legend_above"], frameon=False)
+        rows = (("nfet source and drain peak", k["rho_sd"], "electron", "point-sd-peak"),
+                (f"pure silicon, $n_i$ at {k['t_k']:g} K", k["rho_intrinsic"], "intrinsic",
+                 "point-intrinsic"))  # fmt: skip
+        for i, (_label, rho, colour, gid) in enumerate(rows):
+            bottom.plot([rho], [i], color=pal[colour], marker="o", ls="none", gid=gid,
+                        zorder=STYLE["point_zorder"])  # fmt: skip
+        bottom.set_yticks(range(len(rows)), [label for label, *_ in rows])
+        bottom.set_ylim(len(rows) - 1 + STYLE["row_pad"], -STYLE["row_pad"])  # first row on top
+        bottom.set_xscale("log")
+        bottom.set_axisbelow(True)
+        bottom.grid(True, axis="x")
+        bottom.set_xlabel("resistivity (Ω·cm)")
+        return fig
+
+
+def silicon_resistivity(palette: str) -> bytes:
+    """Two panels (:func:`resistivity_curve`): on top, the resistivity of n-type silicon against
+    its donor density over the range of the mobility fit, with the nfet's source and drain peak
+    marked; below, that peak's resistivity beside pure silicon's with the simulations' n_i and
+    constant mobilities, as markers on a log axis."""
+    with matplotlib.rc_context(palette_rc(palette)):
+        return svg_bytes(silicon_resistivity_figure(palette))
+
+
 # The corner-fit figure of docs/reproduce/index.md (Task 16a): the nfet at the longest
 # calibration gate, the geometry of the MOS capacitor page's C-V figure.
 CORNER_DEVICE, CORNER_GEOMETRY = "nfet_05v0", "w10p0_l10p00"
@@ -2209,6 +2282,7 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "calibration-stack": _calibration_stack,
     "silicon-bonds": _silicon_bonds,
     "silicon-dopants": _silicon_dopants,
+    "silicon-resistivity": silicon_resistivity,
     "junction-profile": junction_profile,
     "ldd-cell": _ldd_cell,
     "corner-cv": corner_cv,
@@ -2242,6 +2316,7 @@ _PLOTS = (
     "junction-profile",
     "silicon-bonds",
     "silicon-dopants",
+    "silicon-resistivity",
     "corner-cv",
     "corner-bounds",
     "corner-crosscheck",

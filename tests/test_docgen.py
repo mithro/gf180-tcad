@@ -55,6 +55,7 @@ EXPLAINED_FIGURES = [
     "cv-parts",
     "silicon-bonds",
     "silicon-dopants",
+    "silicon-resistivity",
     "junction-profile",
     "ldd-cell",
     "cv-overview",

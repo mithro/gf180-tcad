@@ -125,7 +125,8 @@ def _toml_keys(path: Path) -> set[tuple[str, str]]:
     if not path.is_file():
         return set()
     data = tomllib.loads(path.read_text(encoding="utf-8"))
-    return {(s, k) for s, t in data.items() if isinstance(t, dict) for k in t if k != "sources"}
+    meta = ("sources", "units")  # each table's metadata, not values
+    return {(s, k) for s, t in data.items() if isinstance(t, dict) for k in t if k not in meta}
 
 
 def test_no_textbook_value_twice():
@@ -261,7 +262,8 @@ def test_idealised_table_is_closed_and_documented():
     assert set(idealised.FORMULAS) == {
         "abrupt_junction", "boltzmann_fermi", "built_in_potential", "degenerate_offset",
         "depletion_width", "mass_action", "bulk_potential", "flat_band", "threshold",
-        "depletion_depth", "surface_bending",
+        "depletion_depth", "surface_bending", "atoms_per_dopant", "doping_mobility",
+        "resistivity", "intrinsic_resistivity",
     }  # fmt: skip
     for f in idealised.FORMULAS.values():
         doc = " ".join((f.fn.__doc__ or "").split())
@@ -2864,6 +2866,91 @@ def test_positive_control_text_outside():
     FigureCanvasAgg(fig)
     fig.subplots().set_title("short")
     assert not text_outside(fig)
+
+
+def test_conduction_formulas_against_hand_values():
+    """The atoms per dopant, the doping-dependent mobility and the resistivities (issue #99).
+
+    - atoms_per_dopant: 5e22 / 1e17 = 5e5.
+    - doping_mobility, the electron fit at N = 1e20 cm⁻³: (1e20 / 8.5e16)^0.72 =
+      exp(0.72 × ln 1176.471) = exp(0.72 × 7.070274) = exp(5.090597) = 162.4878, so
+      μ = 65 + 1265 / 163.4878 = 65 + 7.737573 = 72.73757 cm²/(V·s).
+    - resistivity: q = 1.6e-19 C, N = 1e20 cm⁻³, μ = 100 cm²/(V·s) give
+      ρ = 1 / (1.6e-19 × 1e20 × 100) = 1 / 1600 = 6.25e-4 Ω·cm.
+    - intrinsic_resistivity: q = 1.6e-19 C, n_i = 1e10 cm⁻³, μ_n + μ_p = 1400 + 450 = 1850
+      give ρ_i = 1 / (1.6e-19 × 1e10 × 1850) = 1 / 2.96e-6 = 3.378378e5 Ω·cm.
+    """
+    from gf180tcad.explain import idealised
+
+    assert idealised.atoms_per_dopant(5e22, 1e17) == pytest.approx(5e5, rel=1e-12)
+    mu = idealised.doping_mobility(65.0, 1265.0, 8.5e16, 0.72, 1e20)
+    assert mu == pytest.approx(72.73757, rel=1e-6)
+    assert idealised.resistivity(1.6e-19, 1e20, 100.0) == pytest.approx(6.25e-4, rel=1e-12)
+    assert idealised.intrinsic_resistivity(1.6e-19, 1e10, 1400.0, 450.0) == pytest.approx(
+        3.378378e5, rel=1e-6
+    )
+
+
+def test_silicon_resistivity_figure_draws_the_numbers():
+    """The resistivity figure: on top the fit's resistivity over its stated range up to the
+    nfet's source and drain peak, and the dot of the page's rho_sd_nfet there; below, markers
+    at rho_sd_nfet and at pure silicon's rho_intrinsic_tcad, labelled with the simulations'
+    temperature; all from the registry."""
+    from gf180tcad.explain import figures, idealised
+
+    numbers = _numbers()
+    v = numbers.value
+    fig = figures.silicon_resistivity_figure("light")
+    top, bottom = fig.axes
+    lines = {ln.get_gid(): ln for ln in top.get_lines()}
+    assert set(lines) == {"doped", "sd-peak"}
+    n = lines["doped"].get_xdata()
+    assert n[0] == pytest.approx(v("n_min_fit")) and n[-1] == pytest.approx(v("sd_peak_nfet"))
+    mu = idealised.doping_mobility(
+        v("mu0_n_fit"), v("mu1_n_fit"), v("nref_n_fit"), v("alpha_n_fit"), n
+    )
+    assert lines["doped"].get_ydata() == pytest.approx(1 / (v("q_tcad") * n * mu), rel=1e-12)
+    assert list(lines["sd-peak"].get_xdata()) == [pytest.approx(v("sd_peak_nfet"))]
+    assert list(lines["sd-peak"].get_ydata()) == [pytest.approx(v("rho_sd_nfet"))]
+    assert lines["doped"].get_ydata()[-1] == pytest.approx(v("rho_sd_nfet"), rel=1e-12)
+    points = {ln.get_gid(): ln for ln in bottom.get_lines()}
+    assert set(points) == {"point-sd-peak", "point-intrinsic"}
+    assert list(points["point-sd-peak"].get_xdata()) == [pytest.approx(v("rho_sd_nfet"))]
+    assert list(points["point-intrinsic"].get_xdata()) == [pytest.approx(v("rho_intrinsic_tcad"))]
+    assert [list(points[g].get_ydata()) for g in ("point-sd-peak", "point-intrinsic")] == [[0], [1]]
+    assert not bottom.patches  # markers, not bars: a log axis gives a bar no meaningful length
+    assert bottom.get_axisbelow() is True  # the grid stays under the markers
+    labels = [t.get_text() for t in bottom.get_yticklabels()]
+    assert f"{v('t_tcad'):g} K" in labels[1]
+    assert "x_fig_silicon_resistivity_scale" not in figures.substitutions()
+    light = figures.FIGURES["silicon-resistivity"]("light")
+    assert light.startswith(b"<?xml") and light != figures.FIGURES["silicon-resistivity"]("dark")
+
+
+def test_pure_silicon_uses_the_simulation_constants():
+    """Pure silicon's resistivity on the page uses the committed n_i and constant mobilities
+    of the simulation (review of #228), not textbook mobilities at another temperature."""
+    numbers = _numbers()
+    assert numbers.REGISTRY["rho_intrinsic_tcad"].inputs == (
+        "q_tcad", "n_i_tcad", "mu_n_tcad", "mu_p_tcad")  # fmt: skip
+    meta = json.loads((ROOT / numbers.REGISTRY["mu_n_tcad"].source).read_text("utf-8"))
+    c = meta["constants"]
+    want = 1 / (c["q_c"] * c["n_i_cm3"] * (c["mu_n_cm2_per_vs"] + c["mu_p_cm2_per_vs"]))
+    assert numbers.value("rho_intrinsic_tcad") == pytest.approx(want, rel=1e-12)
+
+
+def test_textbook_toml_values_are_the_fetched_ones():
+    """data/explain/textbook.toml holds the values of the fetched sources (issue #99): the Ioffe
+    archive's atom density, and Wikipedia's electron mobility fit."""
+    data = tomllib.loads(TEXTBOOK.read_text(encoding="utf-8"))
+    assert data["silicon"]["atom_density_cm3"] == 5e22
+    fit = data["mobility_fit"]
+    assert (fit["electron_mu0_cm2_per_vs"], fit["electron_mu1_cm2_per_vs"],
+            fit["electron_nref_cm3"], fit["electron_alpha"], fit["n_min_cm3"]) == (
+        65.0, 1265.0, 8.5e16, 0.72, 1e18)  # fmt: skip
+    for table in ("silicon", "mobility_fit"):
+        values = {k for k in data[table] if k not in ("units", "sources")}
+        assert values == set(data[table]["units"]) == set(data[table]["sources"]), table
 
 
 def test_parts_mesh_is_the_parts_cell_s_mesh():

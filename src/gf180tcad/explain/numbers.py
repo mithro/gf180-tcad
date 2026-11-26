@@ -79,6 +79,8 @@ def _proc(device: str) -> str:
 
 
 _CM3 = "cm⁻³"
+_MOB = "cm²/(V·s)"
+_RHO = "Ω·cm"
 _CAP = "fF/µm²"
 _RESULT = "results/tcad/calibration/nfet_05v0.result.json"
 _CELL = "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json"
@@ -150,6 +152,32 @@ _ENTRIES = (
         formula="depletion_width",
         inputs=("n_ch_nfet_cal", "sd_peak_nfet", "vbi_nfet", "eps_si_tcad", "eps0_tcad", "q_tcad"),
         factor=1e4,
+    ),
+    # How many atoms, and how well doped silicon conducts (silicon-and-carriers.md, issue #99).
+    Number("atom_density_si", "textbook", _CM3, 1, TEXTBOOK, {"toml": ["silicon", "atom_density_cm3"]}),
+    Number(
+        "atoms_per_dopant_body", "idealised", "", 2,
+        formula="atoms_per_dopant", inputs=("atom_density_si", "n_ch_nfet_cal"),
+    ),
+    Number("mu_n_tcad", "committed", _MOB, 4, _meta("nfet_05v0"), {"json": ["constants", "mu_n_cm2_per_vs"]}),
+    Number("mu_p_tcad", "committed", _MOB, 4, _meta("nfet_05v0"), {"json": ["constants", "mu_p_cm2_per_vs"]}),
+    Number("mu0_n_fit", "textbook", _MOB, 2, TEXTBOOK, {"toml": ["mobility_fit", "electron_mu0_cm2_per_vs"]}),
+    Number("mu1_n_fit", "textbook", _MOB, 4, TEXTBOOK, {"toml": ["mobility_fit", "electron_mu1_cm2_per_vs"]}),
+    Number("nref_n_fit", "textbook", _CM3, 2, TEXTBOOK, {"toml": ["mobility_fit", "electron_nref_cm3"]}),
+    Number("alpha_n_fit", "textbook", "", 2, TEXTBOOK, {"toml": ["mobility_fit", "electron_alpha"]}),
+    Number("n_min_fit", "textbook", _CM3, 1, TEXTBOOK, {"toml": ["mobility_fit", "n_min_cm3"]}),
+    Number(
+        "mu_n_sd_nfet", "idealised", _MOB, 2,
+        formula="doping_mobility",
+        inputs=("mu0_n_fit", "mu1_n_fit", "nref_n_fit", "alpha_n_fit", "sd_peak_nfet"),
+    ),
+    Number(
+        "rho_sd_nfet", "idealised", _RHO, 2,
+        formula="resistivity", inputs=("q_tcad", "sd_peak_nfet", "mu_n_sd_nfet"),
+    ),
+    Number(
+        "rho_intrinsic_tcad", "idealised", _RHO, 2,
+        formula="intrinsic_resistivity", inputs=("q_tcad", "n_i_tcad", "mu_n_tcad", "mu_p_tcad"),
     ),
     # The transistor's parts (transistor-parts.md): the calibrated nfet 2D cell w10p0_l0p70.
     Number("l_cell", "committed", "µm", 1, _CELL, {"json": ["geometry", "l_um"]}),

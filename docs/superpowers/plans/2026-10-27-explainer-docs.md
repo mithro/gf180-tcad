@@ -186,6 +186,14 @@ These pages are grounded in the committed SPICE reference, which exists for ever
   the process-file note's "about 40 mV" is #96.
 - The page prints `constants.n_i300_cm3` with its two sources on the literature page (#97). It
   leaves out every fact without a checked source (#99).
+- #99, sourced parts: silicon's atom density, from the Ioffe archive's basic parameters. Also
+  the resistivity against doping, from Wikipedia "Electron mobility" and its majority-carrier fit.
+  Wikipedia cites the fit's 10¹⁸ cm⁻³-and-up range to Anderson and Anderson 2005, and its
+  parameters to Caughey and Thomas. Both are entries of
+  [`data/explain/textbook.toml`](../../../data/explain/textbook.toml), used on the silicon page.
+  Pure silicon's resistivity uses the simulations' committed n_i and constant mobilities.
+  The page says the TCAD mobility has no doping dependence (review of #228).
+  The public GF180MCU PDK documents name no dopant species, so the page names none (#99 comment).
 - Glossary entries "gate oxide", "poly-silicon" and "n-well" land in E0 (planned for E1),
   because the first page uses them. The gate, the body, the source and the drain get one plain
   clause on the page instead: as glossary terms the link checkers would match every use of
