@@ -73,19 +73,6 @@ def _main_cases() -> dict:
     return got
 
 
-def _supp_cases() -> dict:
-    """The cases of predict.py's set "supp"."""
-    deep = sorted(n for n, st in predict.STRUCTS.items() if st["kind"] == "dnw")
-    ring = sorted(n for n, st in predict.STRUCTS.items() if st["rings"])
-    got = predict.cases(deep, {k: predict.PROCESSES[k] for k in ("A", "Aq")})
-    got.update(predict.cases(ring, {"Bq": predict.PROCESSES["Bq"]}))
-    slow = predict.cases(["NR5_2"], {"B": predict.PROCESSES["B"]})
-    for p in slow.values():
-        p["extended"] = True
-    got.update(slow)
-    return got
-
-
 def _current_cases() -> dict:
     """Every prediction case predict.py gives now: the sets "main" and "family"."""
     got = _main_cases()
