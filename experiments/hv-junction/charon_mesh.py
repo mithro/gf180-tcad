@@ -10,7 +10,8 @@ node spacing of diode1d.py along y. Both store, per region, the node coordinates
 exactly as DEVSIM holds them, the triangles, and per contact the boundary edges.
 
 `exodus` writes one TRI3 element block per meshed region (the conductor "plate" regions
-are holes: DEVSIM meshes them, Charon gets no elements there), merges the interface nodes
+are holes: DEVSIM meshes them, Charon gets no elements there; insulator blocks are named
+"ins_" + region, see block_name), merges the interface nodes
 DEVSIM duplicates per region, and writes one side set per contact. Charon works in
 micrometres, so coordinates are multiplied by 1e4. Next to MESH.exo it writes
 MESH.exo.map.npz: for every region the global (0-based) Exodus node of each DEVSIM node,
@@ -26,6 +27,18 @@ import numpy as np
 
 CM_TO_UM = 1.0e4
 SKIP_MATERIALS = ("metal",)  # conductor regions: boundaries only, no elements
+
+
+def block_name(region, material):
+    """Exodus element block of a DEVSIM region.
+
+    Charon sets the initial potential block by block in the order of the block names, and
+    a node shared by two blocks keeps the last value. The silicon ("si") must come after
+    every insulator: a trench block named "sti0" would overwrite the equilibrium potential
+    of the silicon on the trench walls with 0, and with 1e20 doping there the first Newton
+    step of the equilibrium solve is 1e10 kT/q and the residual overflows.
+    """
+    return region if material == "Si" else "ins_" + region
 
 
 def dump_device(device, contacts, path, extra=None):
@@ -171,7 +184,7 @@ def merge(meta, arrays, tol_cm=1e-11, quads=False):
         start += n
         tri = node_map[r][arrays[f"tri_{r}"]]
         conn = _quads(xy, tri, r, tol_cm) if quads else _anticlockwise(xy, tri, r)
-        blocks.append((r, material, conn))
+        blocks.append((block_name(r, material), material, conn))
     sides = {}
     nn = len(xy)
     for name, region in meta["contacts"].items():

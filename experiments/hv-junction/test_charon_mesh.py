@@ -72,6 +72,7 @@ def test_deck_doping_matches_structure_expression():
     assert np.isclose(net[2], -3e15, rtol=1e-3)  # deep under the P field
     text = charon_deck.deck(dev, "sweep", "dd0.exo", "sweep.exo", v1=50.0, step=2.0)
     assert "BC is ohmic for well on si swept from 0 to 50" in text
-    assert "BC is contact on insulator for plate0 on ox" in text and "swept from 0 to 50" in text
+    assert "BC is contact on insulator for plate0 on ins_ox" in text
+    assert "geometry block is ins_ox" in text and "swept from 0 to 50" in text
     assert text.count("start mgauss doping") == 2
     assert "avalanche is on" in text and "electron E0 = 1.231e+06" in text

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import math
 
+import charon_mesh
 import ionize
 
 # The same constants dd.py gives DEVSIM.
@@ -54,7 +55,7 @@ WORKSET = 500  # elements assembled together
 def describe_params(p, blocks):
     """Device description of a structure.py parameter dictionary.
 
-    blocks: [(name, material)] as the mesh dump lists them. The doping repeats
+    blocks: [(region, material)] as the mesh dump lists them. The doping repeats
     structure.net_doping_expr term by term: uniform acceptors, then one box per well
     (donors) and per pfield entry (acceptors).
     """
@@ -63,8 +64,10 @@ def describe_params(p, blocks):
         doping.append({"kind": "box", "type": "donor", **_box(w)})
     for w in p.get("pfield", []):
         doping.append({"kind": "box", "type": "acceptor", **_box(w)})
-    plates = {f"plate{k}": ("ox", pl["tie"]) for k, pl in enumerate(p.get("plates", []))}
-    return {"blocks": [tuple(b) for b in blocks], "doping": doping,
+    ox = charon_mesh.block_name("ox", "Oxide")
+    plates = {f"plate{k}": (ox, pl["tie"]) for k, pl in enumerate(p.get("plates", []))}
+    named = [(charon_mesh.block_name(r, m), m) for r, m in blocks]
+    return {"blocks": named, "doping": doping,
             "ohmic": {"well": "si", "sub": "si"}, "plates": plates}  # fmt: skip
 
 
