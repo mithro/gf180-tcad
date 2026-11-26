@@ -158,7 +158,6 @@ _ENTRIES = (
     Number("node_count_cell", "committed", "", 3, _CELL, {"json": ["node_count"]}),
     Number("node_count_window", "committed", "", 3, _CELL_MESH, {"json": ["node_count"]}),
     Number("h_si_surface_cell", "committed", "nm", 2, _CELL, {"json": ["mesh", "h_si_surface_nm"]}),
-    Number("h_si_bulk_cell", "committed", "nm", 2, _CELL, {"json": ["mesh", "h_si_bulk_nm"]}),
     # F/m on the card; the page prints fF/µm (1e15 fF/F over 1e6 µm/m).
     Number("cgdl_nfet", "committed", "fF/µm", 2, _proc("nfet_05v0"), {"toml": ["param", "cgdl_f_per_m", "value"]}, factor=1e9),
     # The MOS capacitor (mos-capacitor.md): the SPICE model and the calibration at w10p0_l10p00.
