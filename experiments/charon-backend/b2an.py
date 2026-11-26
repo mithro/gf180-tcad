@@ -1,0 +1,126 @@
+"""B2/B6 analysis of the sweeps written by b2.py: grid alignment, C-V, charge checks.
+
+usage: python3 b2an.py DEVICE PARAMS TAG
+"""
+
+import json
+import os
+import sys
+from pathlib import Path
+
+import cx
+import numpy as np
+
+dev, params, tag = sys.argv[1], sys.argv[2], sys.argv[3]
+job = cx.truncate_grid(cx.job1d(dev, params))
+PARTIAL_GRID = Path("b2_grid.json")
+if PARTIAL_GRID.is_file():  # b2.py CX_PARTIAL: the grid points both sides reached
+    k = json.loads(PARTIAL_GRID.read_text())["n_grid"]
+    job.vg, job.c_devsim = job.vg[:k], job.c_devsim[:k]
+DV = 1e-3
+n = len(job.vg)
+xs = np.array(job.stack.node_positions_um()[0])
+bn = job.stack.node_positions_um()[1]
+c = job.stack.constants
+q_e = c.q_c
+eps0 = c.eps0_f_per_cm
+res = {"device": dev, "params": params, "tag": tag, "n": n, "partial": PARTIAL_GRID.is_file()}
+
+SUB = int(os.environ.get("CX_SUB") or 1)
+IDX = np.arange(n) * SUB
+
+sides = {}
+for side, sgn in (("A", -1), ("B", 1)):
+    head, rows = cx.read_currents(f"currents-sweep{side}.dat")
+    v = rows[:, head.index("gate_Voltage")]
+    want = np.array(job.vg) - job.dv_fb + sgn * DV
+    # LOCA ends with a tiny step onto the exact bound when the accumulated value falls short
+    extra = v[(n - 1) * SUB + 1 :] if not PARTIAL_GRID.is_file() else v[:0]
+    res[f"extra_states_{side}"] = len(extra)
+    res[f"extra_max_dev_{side}"] = float(np.max(np.abs(extra - want[-1]))) if len(extra) else 0.0
+    res[f"align_{side}"] = float(np.max(np.abs(v[IDX] - want)))
+    st = cx.read_states(f"sweep{side}.exo")
+    res[f"exo_times_first_{side}"] = [float(t) for t in st.times[:3]]
+    res[f"exo_globals_{side}"] = sorted(st.globals_)
+    if len(st.times) > IDX[-1]:
+        res[f"align_exo_time_{side}"] = float(np.max(np.abs(np.asarray(st.times[IDX]) - want)))
+    psi = st.nodal["ELECTRIC_POTENTIAL"][IDX, 0::2]
+    has_np = "ELECTRON_DENSITY" in st.nodal
+    nn = st.nodal["ELECTRON_DENSITY"][IDX, 0::2] if has_np else None
+    pp = st.nodal["HOLE_DENSITY"][IDX, 0::2] if has_np else None
+    res[f"nodal_vars_{side}"] = sorted(st.nodal)
+    # y = w nodes must equal y = 0 nodes (a 1D solution on the strip)
+    res[f"strip_y_asym_{side}"] = float(
+        np.max(np.abs(st.nodal["ELECTRIC_POTENTIAL"][IDX, 1::2] - psi))
+    )
+    x = xs * 1e-4
+    i0, i1 = bn[1], bn[2]  # oxide nodes i0..i1
+    # flux through each oxide interval (C/cm^2), positive for the gate charge
+    e = c.eps_ox * eps0 * (psi[:, i0:i1] - psi[:, i0 + 1 : i1 + 1]) / np.diff(x[i0 : i1 + 1])
+    q_gate = e[:, 0]
+    res[f"oxide_flux_spread_{side}"] = float(np.max(np.abs(e - e[:, :1]) / np.max(np.abs(e))))
+    res[f"oxide_flux_spread_per_state_{side}"] = (
+        np.max(np.abs(e - e[:, :1]), axis=1) / np.max(np.abs(e))
+    ).tolist()
+    # space charge over the CVFEM control volumes (1D median dual: half of each neighbour interval)
+    st_ = job.meta["stack"]
+    pol = st_["polarity"]
+    net = np.zeros(len(xs))
+    gate_net = st_["ngate_cm3"] if pol == "n" else -st_["ngate_cm3"]
+    body_net = -st_["n_ch_cm3"] if pol == "n" else st_["n_ch_cm3"]
+
+    def region_charge(lo, hi, dnet, x=x, pp=pp, nn=nn):
+        h = np.diff(x[lo : hi + 1])
+        vol = np.zeros(hi - lo + 1)
+        vol[:-1] += h / 2
+        vol[1:] += h / 2
+        rho = q_e * (pp[:, lo : hi + 1] - nn[:, lo : hi + 1] + dnet)
+        return rho @ vol
+
+    if not has_np:
+        sides[side] = q_gate
+        continue
+    q_poly = region_charge(0, i0, gate_net)
+    q_body = region_charge(i1, len(xs) - 1, body_net)
+    scale = np.max(np.abs(q_gate))
+    res[f"poly_vs_gate_{side}"] = float(np.max(np.abs(q_poly - q_gate)) / scale)
+    res[f"body_vs_gate_{side}"] = float(np.max(np.abs(q_body + q_gate)) / scale)
+    res[f"poly_vs_gate_per_state_{side}"] = (np.abs(q_poly - q_gate) / scale).tolist()
+    res[f"body_vs_gate_per_state_{side}"] = (np.abs(q_body + q_gate) / scale).tolist()
+    # n*p/ni^2 in the neutral bulk (last body node and first poly node)
+    ni = c.n_i_cm3
+    res[f"np_over_ni2_body_{side}"] = [
+        float(nn[0, -1] * pp[0, -1] / ni**2),
+        float(nn[-1, -1] * pp[-1, -1] / ni**2),
+    ]
+    semi = np.r_[0 : i0 + 1, i1 : len(xs)]
+    dev_np = np.abs(nn[:, semi] * pp[:, semi] / ni**2 - 1)
+    res[f"max_abs_np_over_ni2_minus_1_{side}"] = float(np.max(dev_np))
+    res[f"np_dev_per_state_{side}"] = np.max(dev_np, axis=1).tolist()
+    res[f"np_over_ni2_poly_{side}"] = [
+        float(nn[0, 0] * pp[0, 0] / ni**2),
+        float(nn[-1, 0] * pp[-1, 0] / ni**2),
+    ]
+    sides[side] = q_gate
+cc = (sides["B"] - sides["A"]) / (2 * DV) * 1e7
+dv = np.array(job.c_devsim)
+rel = (cc - dv) / dv
+res["vg"] = list(job.vg)
+res["x_um"] = xs.tolist()
+res["boundary_nodes"] = list(bn)
+res["layers"] = [layer.name for layer in job.stack.layers]
+res["contacts"] = job.stack.contact_ends()
+res["dv_fb_v"] = job.dv_fb
+res["polarity"] = job.meta["stack"]["polarity"]
+res["strip_width_um"] = cx.STRIP_WIDTH_UM
+res["c_devsim"] = list(job.c_devsim)
+res["c_ff_um2"] = cc.tolist()
+res["rel_vs_devsim"] = rel.tolist()
+res["max_abs_rel_vs_devsim"] = float(np.max(np.abs(rel)))
+res["argmax_vg"] = job.vg[int(np.argmax(np.abs(rel)))]
+for k, val in res.items():
+    if not isinstance(val, list) or len(val) < 5:
+        print(k, val)
+for i in range(0, n, 10):
+    print(f"vg={job.vg[i]:+.2f} C={cc[i]:.7f} devsim={dv[i]:.7f} rel={rel[i]:+.3e}")
+Path(f"b2an_{tag}.json").write_text(json.dumps(res, indent=1))

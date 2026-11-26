@@ -54,6 +54,13 @@ FIGURES = [
     "pn-slab",
     "pin-depletion",
     "edge-sensitivity",
+    "charon-strip",
+    "charon-cv",
+    "charon-hard-range",
+    "charon-structures",
+    "charon-tolerance",
+    "charon-doping",
+    "charon-checks",
 ]
 
 _RENDER = textwrap.dedent(
@@ -362,10 +369,16 @@ TABLES = ("STYLE", "UNITS", "TOOLS")
 
 def _allowed_names() -> set[str]:
     """Names that hold digits but are identifiers, not numbers: the devices and their geometry
-    ids, the plugin-history record files, the figures, the dimensions of the model, the model's
-    name and the text encoding."""
+    ids, the plugin-history record files, the figures, the Charon C-V runs, the dimensions of the
+    model, the model's name and the text encoding."""
     gids = {geometry_id(g) for d in DEVICES.values() for g in d.geometries}
     names = set(DEVICES) | gids | set(lf.PLUGIN_FILES) | set(lf.LATEST_FILES) | set(lf.FIGURES)
+    names |= set(lf.CHARON_REF.values()) | set(lf.CHARON_CHECKS)  # record keys of cv.json
+    names |= {lf.CHARON_REF_VARIANT, lf.CHARON_TIGHT_STUDY, *lf.CHARON_LOOSE_PAIR}  # record keys
+    names |= {n for by in lf.CHARON_B7_PAIRS.values() for name, refs in by.values()
+              for n in (name, *refs)}  # fmt: skip
+    names |= set(lf.CHARON_TIGHT) | set(lf.CHARON_CHECK_PANELS)
+    names |= set(lf.CHARON_STALL_STUDIES)
     return names | {"1D", "2D", "BSIM4", "utf-8"}
 
 
@@ -803,6 +816,234 @@ def check_edge_sensitivity(fig):
     d.done()
 
 
+def _charon(name: str) -> dict:
+    return _json("charon-experiments", f"{name}.json")
+
+
+def check_charon_strip(fig):
+    run = _charon("cv")["runs"]["cv-nfet-tau15-1e-10"]
+    x = np.asarray(run["x_um"]) * 1e3
+    bn = run["boundary_nodes"]
+    lo, hi = lf.STYLE["strip_span_nm"]
+    d = Drawn(fig)
+    for i, layer in enumerate(run["layers"]):
+        xs = x[bn[i] : bn[i + 1] + 1] - x[bn[1]]
+        keep = xs[(xs >= lo) & (xs <= hi)]
+        ln = d(f"nodes {layer}")
+        assert _close(ln.get_xdata(), np.repeat(keep, 3)), layer
+        want_y = np.tile([0.0, run["strip_width_um"], np.nan], len(keep))
+        assert _close(ln.get_ydata(), want_y), layer
+        r = d(f"block {layer}")
+        assert _close([r.get_x(), r.get_x() + r.get_width()],
+                      [max(xs[0], lo), min(xs[-1], hi)]), layer  # fmt: skip
+        assert _close([r.get_y(), r.get_height()], [0, 1]), layer
+    d.done()
+
+
+def check_charon_cv(fig):
+    runs = _charon("cv")["runs"]
+    d = Drawn(fig)
+    refs = {"nfet_05v0": "cv-nfet-tau15-1e-10", "pfet_05v0": "cv-pfet-tau15-1e-10"}
+    for device, name in refs.items():
+        r = runs[name]
+        u = DEVICES[device].polarity * np.asarray(r["vg"])
+        c, dv = np.asarray(r["c_ff_um2"]), np.asarray(r["c_devsim"])
+        d.line(f"{device} DEVSIM", u, dv)
+        d.line(f"{device} Charon", u, c)
+        d.line(f"{device} against DEVSIM", u, np.abs(c / dv - 1))
+        assert np.all(np.abs(c / dv - 1) < meshconv.CRITERION), device
+    for name, (device, *_rest) in lf.CHARON_CHECKS.items():
+        r, ref = runs[name], runs[refs[device]]
+        vg = [v for v in r["vg"] if v in ref["vg"]]
+        rel = [abs(r["c_ff_um2"][r["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
+               for v in vg]  # fmt: skip
+        d.line(name, DEVICES[device].polarity * np.asarray(vg), rel)
+    d.hline("tolerance", meshconv.CRITERION)
+    d.done()
+
+
+def check_charon_hard_range(fig):
+    variants = _charon("hard-range")["variants"]
+    names = list(variants)
+    d = Drawn(fig)
+    groups = {
+        "reached the sweep end": [n for n in names if variants[n]["sweep_converged"]],
+        "failed after its last converged bias": [n for n in names if not variants[n]["sweep_converged"]
+                    and variants[n]["equilibrium_converged"]],
+        "equilibrium failed": [n for n in names if not variants[n]["equilibrium_converged"]],
+    }  # fmt: skip
+    for gid, picked in groups.items():
+        xs = [variants[n]["last_converged_v"] if variants[n]["equilibrium_converged"] else 0.0
+              for n in picked]  # fmt: skip
+        d.points(gid, xs, [names.index(n) for n in picked])
+    (ax,) = fig.axes
+    assert [t.get_text() for t in ax.get_yticklabels()] == names
+    d.done()
+
+
+def check_charon_structures(fig):
+    hb = _charon("harmonic-balance")
+    tri3 = _charon("probes")["tri3"]
+    w = _charon("cv")["runs"]["cv-nfet-tau15-1e-10"]["strip_width_um"]
+    top, mid, bottom = fig.axes
+    d = Drawn(fig)
+
+    def pairs(gid, x, ax):
+        d.line(gid, np.repeat(x, 3), np.tile([0.0, w, np.nan], len(x)), ax)
+
+    x = np.asarray(hb["parallel_plate"]["x_um"]) * 1e3
+    pairs("plate oxide nodes", x, top)
+    d.vline("plate contact top", x[0], top)
+    d.vline("plate contact bottom", x[-1], top)
+    mg = hb["metal_gate"]
+    x = np.asarray(mg["x_um"]) * 1e3
+    n = mg["oxide_nodes"]
+    pairs("metal oxide nodes", x[:n], mid)
+    pairs("metal body nodes", x[n - 1 :], mid)
+    d.vline("metal contact gate", x[0], mid)
+    d.vline("metal contact body_contact", x[-1], mid)
+    xy = np.asarray(tri3["mesh2d_xy_um"])
+    tris = []
+    for name, blk in tri3["mesh2d_triangles"].items():
+        ln = d(f"mesh {name}", bottom)
+        got = np.column_stack([ln.get_xdata(), ln.get_ydata()]).reshape(-1, 3, 2)
+        assert np.all(np.isnan(got[:, 2])), name
+        got_edges = {frozenset(map(tuple, seg)) for seg in got[:, :2].tolist()}
+        want = {frozenset((tuple(xy[t[i]].tolist()), tuple(xy[t[(i + 1) % 3]].tolist())))
+                for t in blk for i in range(3)}  # fmt: skip
+        assert got_edges == want, name
+        tris += blk
+    for name, ss in tri3["mesh2d_side_sets"].items():
+        segs = [(xy[tris[e - 1][s - 1]], xy[tris[e - 1][s % 3]])
+                for e, s in zip(ss["elements"], ss["sides"], strict=True)]  # fmt: skip
+        want = np.array([[a, b, (np.nan, np.nan)] for a, b in segs]).reshape(-1, 2)
+        d.line(f"side {name}", want[:, 0], want[:, 1], bottom)
+    d.done()
+
+
+def _check_log_with_zeros(d, gid, x, rel, floor, ax):
+    """A relative change drawn on a log axis: the line breaks at exact zeros, which are markers
+    at ``floor`` (gid + " zeros"), and every nonzero point is visible: the line marks each of
+    its points, so a point between two zeros is drawn though no segment reaches it."""
+    x, rel = np.asarray(x, float), np.asarray(rel, float)
+    d.line(gid, x, np.where(rel == 0, np.nan, rel), ax)
+    ln = d(gid, ax)
+    marked = ln.get_marker() not in (None, "", "None", " ") and ln.get_markersize() > 0
+    if marked:
+        assert ln.get_markevery() is None, gid  # every point
+    else:  # no dots: every nonzero point must sit on a segment, next to a nonzero neighbour
+        nonzero = rel != 0
+        left = np.r_[False, nonzero[:-1]]
+        right = np.r_[nonzero[1:], False]
+        assert np.all(~nonzero | left | right), gid
+    zero = rel == 0
+    if zero.any():
+        d.points(f"{gid} zeros", x[zero], np.full(int(zero.sum()), floor), ax)
+    else:
+        assert not [a for a in ax.collections if a.get_gid() == f"{gid} zeros"], gid
+
+
+def check_charon_tolerance(fig):
+    runs = _charon("cv")["runs"]
+    studies = _charon("hard-range")["step_studies"]
+    top, bottom = fig.axes
+    d = Drawn(fig)
+    pairs = {}
+    for device, by_params in lf.CHARON_B7_PAIRS.items():
+        for params, (name, refs) in by_params.items():
+            r = runs[name]
+            us, rels = [], []
+            for ref in refs:
+                b = runs[ref]
+                vg = [v for v in r["vg"] if v in b["vg"]]
+                us += [DEVICES[device].polarity * v for v in vg] + [np.nan]
+                rels += [abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)]
+                             - 1) for v in vg] + [np.nan]  # fmt: skip
+            pairs[device, params] = (us[:-1], rels[:-1])
+    rel_all = np.asarray([v for _, r in pairs.values() for v in r], float)
+    floor = np.nanmin(rel_all[rel_all > 0]) / lf.STYLE["zero_floor_factor"]
+    assert np.sum(rel_all == 0) > 0  # the records have exact zeros: they must be drawn
+    for (device, params), (us, rels) in pairs.items():
+        _check_log_with_zeros(d, f"tolerance pair {device} {params}", us, rels, floor, top)
+    default = runs[lf.CHARON_B7_PAIRS["pfet_05v0"]["start"][0]]
+    names = [*lf.CHARON_STALL_STUDIES, "default"]
+    stopped = {n: studies[n]["failed"] is not None for n in lf.CHARON_STALL_STUDIES}
+    stopped["default"] = False
+    on_ramp = {n: bool(studies[n]["failed"]) and studies[n]["failed"]["deck"].startswith("ramp")
+               for n in lf.CHARON_STALL_STUDIES}  # fmt: skip
+    on_ramp["default"] = False
+    assert any(on_ramp.values())  # the 1e-11 study failed before its sweep began
+    groups = {
+        "reached the grid end": [n for n in names if not stopped[n]],
+        "failed in the sweep": [n for n in names if stopped[n] and not on_ramp[n]],
+        "ramp from equilibrium failed,\nsweep never started": [n for n in names if on_ramp[n]],
+    }
+    for gid, picked in groups.items():
+        xs = [studies[n]["failed"]["last_converged_v"] if stopped[n] else default["vg"][-1]
+              for n in picked]  # fmt: skip
+        d.points(gid, xs, [names.index(n) for n in picked], bottom)
+    d.done()
+
+
+def check_charon_doping(fig):
+    d = Drawn(fig)
+    axes = dict(zip(DEVICES, fig.axes, strict=True))
+    for tag, rec in _charon("probes")["doping"].items():
+        device = tag.rsplit("_", 1)[0]
+        semi = np.asarray(rec["semiconductor_nodes"])
+        gap = np.nonzero(np.diff(semi) > 1)[0] + 1  # no line across the oxide
+        assert len(gap) == 1, tag
+
+        def broken(key, semi=semi, gap=gap, rec=rec):
+            return np.insert(np.asarray(rec[key], float)[semi], gap, np.nan)
+
+        x = broken("x_um")
+        d.line(f"{tag} description", x, np.abs(broken("description_cm3")), axes[device])
+        d.line(f"{tag} charon", x, np.abs(broken("doping_cm3")), axes[device])
+        assert rec["max_rel_doping"] == 0.0, tag
+    d.done()
+
+
+def check_charon_checks(fig):
+    probes, hard, runs = _charon("probes"), _charon("hard-range"), _charon("cv")["runs"]
+    b3, b2, b6, b7 = fig.axes
+    d = Drawn(fig)
+    solvers = {n: r for n, r in probes["solvers"].items() if isinstance(r, dict) and "sweep_v" in r}
+    for i, (name, rec) in enumerate(solvers.items()):
+        lo, hi = rec["sweep_v"]
+        end = rec["last_converged_v"] if rec["failed_at"] else hi
+        d.line(f"solver {name}", [lo, end], [i, i], b3)
+    ok = [p for p in hard["nlp"]["points"] if p["ok"]]
+    bad = [p for p in hard["nlp"]["points"] if not p["ok"]]
+    d.points("nlp converged", [p["vg"] for p in ok], [p["c_nlp"] for p in ok], b2)
+    d.points("nlp devsim", [p["vg"] for p in ok], [p["c_devsim"] for p in ok], b2)
+    for i, p in enumerate(bad):  # a diverged point carries no value: a line at its bias only
+        assert p["nan_residual"], p["vg"]
+        d.vline(f"nlp diverged {i}", p["vg"], b2)
+    keys = ("oxide_flux_spread", "poly_vs_gate", "body_vs_gate")
+    allv = np.asarray([v for name in lf.CHARON_REF.values() for key in keys for s in "AB"
+                       for v in runs[name][f"{key}_per_state_{s}"]], float)  # fmt: skip
+    assert np.sum(allv == 0) > 0  # an exact zero in the records: drawn at the floor
+    b6_floor = np.min(allv[allv > 0]) / lf.STYLE["zero_floor_factor"]
+    for device, name in lf.CHARON_REF.items():
+        r = runs[name]
+        u = DEVICES[device].polarity * np.asarray(r["vg"])
+        for key in keys:
+            for s in "AB":
+                _check_log_with_zeros(d, f"charge check {device} {key} {s}", u,
+                                      r[f"{key}_per_state_{s}"], b6_floor, b6)  # fmt: skip
+    loose, ref = (runs[n] for n in lf.CHARON_LOOSE_PAIR)
+    vg = [v for v in loose["vg"] if v in ref["vg"]]
+    rel = [abs(loose["c_ff_um2"][loose["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
+           for v in vg]  # fmt: skip
+    rel = np.asarray(rel, float)
+    floor = np.min(rel[rel > 0]) / lf.STYLE["zero_floor_factor"]
+    _check_log_with_zeros(d, "tolerance looser", np.asarray(vg) - loose["dv_fb_v"], rel, floor, b7)
+    for n in lf.CHARON_TIGHT:
+        d.vline(f"tighter {n}", hard["step_studies"][n]["failed"]["last_converged_v"], b7)
+    d.done()
+
+
 CHECKS = {
     "engine-diff": (lf.engine_diff_figure, check_engine_diff),
     "engine-subthreshold": (lf.engine_subthreshold_figure, check_engine_subthreshold),
@@ -818,6 +1059,13 @@ CHECKS = {
     "pn-slab": (lf.pn_slab_figure, check_pn_slab),
     "pin-depletion": (lf.pin_depletion_figure, check_pin_depletion),
     "edge-sensitivity": (lf.edge_sensitivity_figure, check_edge_sensitivity),
+    "charon-strip": (lf.charon_strip_figure, check_charon_strip),
+    "charon-cv": (lf.charon_cv_figure, check_charon_cv),
+    "charon-hard-range": (lf.charon_hard_range_figure, check_charon_hard_range),
+    "charon-structures": (lf.charon_structures_figure, check_charon_structures),
+    "charon-tolerance": (lf.charon_tolerance_figure, check_charon_tolerance),
+    "charon-doping": (lf.charon_doping_figure, check_charon_doping),
+    "charon-checks": (lf.charon_checks_figure, check_charon_checks),
 }
 
 
@@ -934,7 +1182,8 @@ def test_page_numbers_are_the_committed_files():
     assert subs["lim_ccox_acc"] == f"{ratio[np.argmin(qs['vg'])]:.3f}" == "1.068"
     assert subs["lim_ccox_inv"] == f"{ratio[np.argmax(qs['vg'])]:.3f}" == "1.087"
     page = (REPO_ROOT / "docs/limitations/moscap2d.md").read_text("utf-8")
-    for key in subs:
+    # the Charon page's numbers: tests/test_charon_experiments.py::test_page_numbers_are_the_records
+    for key in (k for k in subs if not k.startswith("lim_charon_")):
         assert f"{{{{ {key} }}}}" in page, key
     for old in ("2.7e-8", "1.071", "1.090"):
         assert old not in page, old
