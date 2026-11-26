@@ -1,5 +1,5 @@
 {
-  "commit": "78e10497ac573b6952bc7c8b96ef6956e401a860",
+  "commit": "c2397b7e2d544223b32fdeedafa5d616986ee4e4",
   "doping": {
     "nfet_05v0_calibrated": {
       "body_doping_cm3": -8.813323306821749e+16,
@@ -96,7 +96,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 17.244498014450073,
+        "hb_time_s": 17.633538961410522,
         "rows": [
           [
             -2.09874753,
@@ -172,7 +172,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 17.68170976638794,
+        "hb_time_s": 18.26356053352356,
         "rows": [
           [
             -0.0987475315,
@@ -226,7 +226,7 @@
       "accumulation": {
         "c_qs_f_cm2": 2.0355070180250638e-07,
         "hb_ok": false,
-        "hb_time_s": 39.89892935752869,
+        "hb_time_s": 43.81828737258911,
         "v_device": -2.098747531469644,
         "vg": -2.0
       },
@@ -258,7 +258,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 19.921250820159912,
+        "hb_time_s": 20.78109049797058,
         "rows": [
           [
             -0.0987475315,
@@ -336,7 +336,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 17.57758355140686,
+        "hb_time_s": 17.471386909484863,
         "rows": [
           [
             -2.09874753,
@@ -412,7 +412,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 16.94664192199707,
+        "hb_time_s": 18.697258472442627,
         "rows": [
           [
             -0.0987475315,
@@ -490,7 +490,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 16.828571557998657,
+        "hb_time_s": 18.272919178009033,
         "rows": [
           [
             -2.09874753,
@@ -566,7 +566,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 18.680318355560303,
+        "hb_time_s": 21.81943964958191,
         "rows": [
           [
             -0.0987475315,
@@ -644,7 +644,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 16.5244562625885,
+        "hb_time_s": 17.744100332260132,
         "rows": [
           [
             -2.09874753,
@@ -720,7 +720,7 @@
           "gate_gate_poly_SinH1.000000__DispCurrent"
         ],
         "hb_ok": true,
-        "hb_time_s": 17.632001638412476,
+        "hb_time_s": 21.96023917198181,
         "rows": [
           [
             -0.0987475315,
@@ -776,7 +776,7 @@
   "scripts_sha256": {
     "b1.py": "ee6692158b67e50071c78e72ae52db9f145cd8829edba5ed2ca51cdd2f4925b3",
     "b1an.py": "f2e9db11b80f7444d3ea1e716df2ebdad28ac1dcf9693205de15c1c299ce309c",
-    "b2.py": "3314c48b734239596dbc96e87e699db37d0f3b362fbc3a51421f610692a74ff9",
+    "b2.py": "297f010b894428c5b33139067ba171ff7a64861be514656f07597368b851a47f",
     "b2an.py": "b6f19ccf377c225edba789c318e6f57c697e7a3f5a2fb59df6094317bb1c9f57",
     "b2d.py": "386dd313612b7384bbc5c4bbb312ebe57f5a6689ee48cea4176c15a71d63bb92",
     "b2h.py": "cda8be65f2409d4e59515322e9075cf37dccd72dc64b7ca19670da4e2024ddb8",
@@ -786,13 +786,13 @@
     "b4mg.py": "919f5eadb6c3967baffd2320c3bebcd626391ad683410e8396aad0c0bdc124eb",
     "b4pp.py": "68ed618057b9ccfac89a8584516d55b1f789c6ca718759988f64ea5ac927037c",
     "b5.py": "985b8960cb831002ab51791f828680ccbb833897fd194e638aa98ee38a209d80",
-    "cx.py": "945ca62978714582b3f30c248489a8c0a860d525b238813514e85e8898f8360d",
+    "cx.py": "f9b37cb34946f3fb2ed47a38cbedd7aaa69fc406a99480db22f0856e2a0cb3f4",
     "decks.py": "32f21bbe9f8829981414642b62f8885f9dba09b0d6522f1f1384a11a7d0e1134",
     "diag.py": "571539869c5c81b16e56412eddd6991cf44cc41cea47e742afe28cc4e9906efd",
     "ncdump.py": "824edcb454d23821e953eb34ba767c3be64627d80a3fcf9b0728ae146c494d30",
     "opts.py": "a5b807312ab0e1bdc252be09e75356393f1a011f8732e3ebeaf05bb6ecec815b",
     "record.py": "068ec8b8bc83791dbfb89541cb09b44c309321eb72eea49f5936951a084df76e",
-    "run.py": "f49fcc815d661b4d486b86c5768e3a728a0af26e754251b2b6a3ee8bb760211e"
+    "run.py": "c69e42728be7b89281a6d2c2ffc2a56755d9cff389fc8b2ceccf2499580528e5"
   },
   "solvers": {
     "Amesos2_config.h": [
@@ -830,7 +830,7 @@
     "amesos2_klu2": {
       "belos_iteration_blocks": 0,
       "eq_ok": true,
-      "eq_time_s": 7.81087589263916,
+      "eq_time_s": 7.33049750328064,
       "newton_steps": 172,
       "solver_lines": [
         "Amesos2   [unused]",
@@ -839,7 +839,7 @@
       ],
       "states": 27,
       "sweep_ok": true,
-      "sweep_time_s": 21.231557607650757,
+      "sweep_time_s": 21.44658136367798,
       "xml_linear_solver_type": [
         "Amesos2"
       ]
@@ -847,14 +847,14 @@
     "belos": {
       "belos_iteration_blocks": 238,
       "eq_ok": true,
-      "eq_time_s": 7.5113441944122314,
+      "eq_time_s": 7.887237071990967,
       "newton_steps": 264,
       "solver_lines": [
         "Using iterative solver = \"Belos::BlockGmresSolMgr\":"
       ],
       "sweep_ok": false,
-      "sweep_time_s": 31.461668491363525,
-      "tail": "e>\n     OP: Thyra::LinearOpBase<double>\n    Flexible: false\n    Num Blocks: 100\n    Maximum Iterations: 300\n    Maximum Restarts: 20\n    Convergence Tolerance: 1e-06\n  With #Eqns=2832, #RHSs=1 ...\n  \n  *******************************************************\n  ***** Belos Iterative Solver:  Block Gmres \n  ***** Maximum Iterations: 300\n  ***** Block Size: 1\n  ***** Residual Test: \n  *****   Test 1 : Belos::StatusTestImpResNorm<>: (2-Norm Res Vec) / (2-Norm Res0), tol = 1e-12\n  *******************************************************\n  Iter   0, [ 1] :    1.000000e+00\n  Iter   7, [ 1] :    1.799740e-13\n  Belos::BlockGmresSolMgr::solve(): Warning! Solver has experienced a loss of accuracy!\n \n The Belos solver of type \"\"Belos::BlockGmresSolMgr\": {Flexible: false, Num Blocks: 100, Maximum Iterations: 300, Maximum Restarts: 20, Convergence Tolerance: 1e-12}\" returned a solve status of \"SOLVE_STATUS_UNCONVERGED\" in 7 iterations with total CPU time of 0.00491335 sec\nWARNING: LOCA::BorderedSolver::LowerTriangularBlockElimination::solve() - \nReturn Type = NotConverged\nWARNING: LOCA::MultiContinuation::ConstrainedGroup::applyJacobianInverseMultiVector() - \nReturn Type = NotConverged\nWARNING: LOCA::MultiContinuation::ConstrainedGroup::computeNewton() - \nReturn Type = NotConverged\nWARNING: NOX::Direction::Newton::compute() - Linear solve failed to achieve convergence - using the step anyway since \"Rescue Bad Newton Solve\" is true \n\n************************************************************************\n-- Nonlinear Solver Step 50 -- \n||F|| = 4.821e-03  step = 1.000e+00  dx = 4.694e-01 (Failed!)\n************************************************************************\n\n************************************************************************\n-- Final Status Test Results --\nFailed.......OR Combination -> \n  **...........AND Combination -> \n    **...........F-Norm = 4.821e-03 < 1.000e-04\n                 (Unscaled Two-Norm, Absolute Tolerance)\n    ??...........WRMS-Norm = 1.000e+12 < 1\n                 (Min Step Size:  1.000e+00 >= 0)\n  Failed.......Number of Iterations = 50 < 50\n  ??...........Finite Number Check (Two-Norm F) = Unknown\n************************************************************************\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nContinuation Step Number 24 experienced a convergence failure in\nthe nonlinear solver after 50 Iterations\nValue of continuation parameter at failed step = 2.000e-01 from 1.500e-01\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\tStep size reached minimum step size bound\n--------------------------------------------------------------------------\nMPI_ABORT was invoked on rank 0 in communicator MPI_COMM_WORLD\nwith errorcode 14.\n\nNOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.\nYou may or may not see output from other processes, depending on\nexactly when Open MPI kills them.\n--------------------------------------------------------------------------\n",
+      "sweep_time_s": 31.520442962646484,
+      "tail": "e>\n     OP: Thyra::LinearOpBase<double>\n    Flexible: false\n    Num Blocks: 100\n    Maximum Iterations: 300\n    Maximum Restarts: 20\n    Convergence Tolerance: 1e-06\n  With #Eqns=2832, #RHSs=1 ...\n  \n  *******************************************************\n  ***** Belos Iterative Solver:  Block Gmres \n  ***** Maximum Iterations: 300\n  ***** Block Size: 1\n  ***** Residual Test: \n  *****   Test 1 : Belos::StatusTestImpResNorm<>: (2-Norm Res Vec) / (2-Norm Res0), tol = 1e-12\n  *******************************************************\n  Iter   0, [ 1] :    1.000000e+00\n  Iter   7, [ 1] :    1.799740e-13\n  Belos::BlockGmresSolMgr::solve(): Warning! Solver has experienced a loss of accuracy!\n \n The Belos solver of type \"\"Belos::BlockGmresSolMgr\": {Flexible: false, Num Blocks: 100, Maximum Iterations: 300, Maximum Restarts: 20, Convergence Tolerance: 1e-12}\" returned a solve status of \"SOLVE_STATUS_UNCONVERGED\" in 7 iterations with total CPU time of 0.00386775 sec\nWARNING: LOCA::BorderedSolver::LowerTriangularBlockElimination::solve() - \nReturn Type = NotConverged\nWARNING: LOCA::MultiContinuation::ConstrainedGroup::applyJacobianInverseMultiVector() - \nReturn Type = NotConverged\nWARNING: LOCA::MultiContinuation::ConstrainedGroup::computeNewton() - \nReturn Type = NotConverged\nWARNING: NOX::Direction::Newton::compute() - Linear solve failed to achieve convergence - using the step anyway since \"Rescue Bad Newton Solve\" is true \n\n************************************************************************\n-- Nonlinear Solver Step 50 -- \n||F|| = 4.821e-03  step = 1.000e+00  dx = 4.694e-01 (Failed!)\n************************************************************************\n\n************************************************************************\n-- Final Status Test Results --\nFailed.......OR Combination -> \n  **...........AND Combination -> \n    **...........F-Norm = 4.821e-03 < 1.000e-04\n                 (Unscaled Two-Norm, Absolute Tolerance)\n    ??...........WRMS-Norm = 1.000e+12 < 1\n                 (Min Step Size:  1.000e+00 >= 0)\n  Failed.......Number of Iterations = 50 < 50\n  ??...........Finite Number Check (Two-Norm F) = Unknown\n************************************************************************\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nContinuation Step Number 24 experienced a convergence failure in\nthe nonlinear solver after 50 Iterations\nValue of continuation parameter at failed step = 2.000e-01 from 1.500e-01\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\tStep size reached minimum step size bound\n--------------------------------------------------------------------------\nMPI_ABORT was invoked on rank 0 in communicator MPI_COMM_WORLD\nwith errorcode 14.\n\nNOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.\nYou may or may not see output from other processes, depending on\nexactly when Open MPI kills them.\n--------------------------------------------------------------------------\n",
       "xml_linear_solver_type": [
         "Belos"
       ]
@@ -928,9 +928,9 @@
       }
     },
     "mesh2d_A_ok": true,
-    "mesh2d_A_time_s": 39.60247826576233,
+    "mesh2d_A_time_s": 39.29865550994873,
     "mesh2d_B_ok": true,
-    "mesh2d_B_time_s": 37.94385552406311,
+    "mesh2d_B_time_s": 39.21114754676819,
     "mesh2d_side_sets": {
       "body_contact": {
         "elements": [
@@ -34476,14 +34476,14 @@
     "strip_max_rel_q_tri3_vs_quad4": 0.0005526104438338627,
     "strip_quad4": "ok",
     "strip_quad4_A_failed_steps": [],
-    "strip_quad4_A_time_s": 12.361802577972412,
+    "strip_quad4_A_time_s": 13.181837320327759,
     "strip_quad4_B_failed_steps": [],
-    "strip_quad4_B_time_s": 12.282195568084717,
+    "strip_quad4_B_time_s": 14.100317239761353,
     "strip_tri3": "ok",
     "strip_tri3_A_failed_steps": [],
-    "strip_tri3_A_time_s": 18.607985973358154,
+    "strip_tri3_A_time_s": 19.993222951889038,
     "strip_tri3_B_failed_steps": [],
-    "strip_tri3_B_time_s": 20.26482367515564,
+    "strip_tri3_B_time_s": 21.131103515625,
     "t_ox_mesh_nm": 15.200000000000001
   }
 }
