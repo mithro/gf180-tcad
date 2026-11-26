@@ -365,7 +365,7 @@ def _plan_measured() -> dict[str, float | list]:
         "0.35": [
             float(v["ref_1e-10"]["failed_at"][0]),
             max(v[n]["last_converged_v"] for n in listed),
-            float(v["ref_1e-10"]["failed_at"][0]),
+            float(v["step_5mV"]["failed_at"][0]),
         ],
         "0.30": v["ref_1e-10"]["last_converged_v"],
         "0.25": min(v[n]["last_converged_v"] for n in listed),
@@ -374,6 +374,10 @@ def _plan_measured() -> dict[str, float | list]:
         "1.1e-9": _rel_max(runs, "cv-nfet-tau14-1e-10", "cv-nfet-tau15-1e-10"),
         "5.7e-10": _rel_max(runs, "cv-pfet-tau14-1e-10", "cv-pfet-tau15-1e-10"),
         "1.0e-9": [_rel_max(runs, "cv-nfet-default-1e-10", "cv-nfet-tau15-1e-10"), b7[0]],
+        "2e-16": max(
+            max(abs(d["np_over_ni2_body_bulk"] - 1), abs(d["np_over_ni2_poly_bulk"] - 1))
+            for d in probes["doping"].values()
+        ),
         "7e-6": max(r[f"max_abs_np_over_ni2_minus_1_{s}"] for r in short for s in "AB"),
         "201": [len(ref_n["vg"]), len(runs["cv-pfet-start-tau15-1e-9"]["vg"])],
         "0.55": [
@@ -435,8 +439,11 @@ def _plan_measured() -> dict[str, float | list]:
 
 
 def _matches(text: str, value: float) -> bool:
-    """Whether ``text`` is ``value`` at the digits it shows (an integer text: the nearest one)."""
+    """Whether ``text`` is ``value`` at the digits it shows (an integer text: the nearest one;
+    "0" only an exact zero)."""
     t = text.replace("−", "-")
+    if t == "0":
+        return value == 0.0
     if "e" in t:
         return _shown(t, value)
     digits = len(t.split(".")[1]) if "." in t else 0
@@ -456,6 +463,19 @@ def test_plan_charon_numbers_are_the_records():
     measured = _plan_measured()
     untied = sorted({t for t in tokens if t not in measured and t not in PLAN_SETTINGS})
     assert not untied, f"numbers in the amendment tied to no record: {untied}"
+    # the bias lists, which also type numbers that are settings elsewhere (1, 3, 5)
+    hard = _record("hard-range")
+    nlp = hard["nlp"]["points"]
+    lists = {
+        r"At (.+?) V Newton's first update overshoots": [p["vg"] for p in nlp if not p["ok"]],
+        r"where the solve converges, (.+?) V\.": [p["vg"] for p in nlp if p["ok"]],
+        r"Steady-state solves started at (.+?) V fail": sorted(
+            float(b) for b in hard["inversion_side"]["direct"]
+        ),
+    }
+    for pattern, want in lists.items():
+        (typed,) = re.findall(pattern, amendment)
+        assert [_num(t) for t in re.split(r", | and ", typed)] == want, (pattern, typed)
     for text, values in measured.items():
         values = values if isinstance(values, list) else [values]
         assert tokens.count(text) >= len(values), (text, tokens.count(text), len(values))
