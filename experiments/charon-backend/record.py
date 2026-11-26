@@ -9,9 +9,10 @@ commit and the scripts); each record holds them once. The records:
 - ``cv.json``: the C-V runs (``cv-*`` steps): their settings, the gate biases, Charon's and
   DEVSIM's C per area (fF/um^2) and the per-state checks of b2an.py;
 - ``hard-range.json``: the solver variants through the onset of inversion (b2h.py), the solves
-  from the inversion side (b2d.py) and the nonlinear-Poisson check (b2nlp.py);
+  from the inversion side (b2d.py), the nonlinear-Poisson check (b2nlp.py), the step studies and
+  the Newton diagnostics at the stalls (b7n.py, issue #223);
 - ``probes.json``: the nodal doping (b5.py), the linear solvers (b3.py), the harmonic-balance
-  columns (b4.py) and the TRI3 meshes (b1.py, b1an.py);
+  columns (b4.py), the TRI3 meshes (b1.py, b1an.py) and the deck traps (traps.py, issue #224);
 - ``harmonic-balance.json``: the harmonic-balance columns on an oxide-only parallel plate
   (b4pp.py) and on a metal-gate MOS capacitor (b4mg.py), from a work directory of their own.
 """
@@ -111,6 +112,21 @@ def hard_range(work: Path) -> dict:
             }
             for p in sorted(work.glob("study-*"))
         },
+        "newton": newton(work),
+    }
+
+
+def newton(work: Path) -> dict:
+    """The Newton diagnostics of issue #223 (``newton-*`` steps): the sweep's outcome as in
+    ``step_studies`` and b7n.py's record."""
+    return {
+        p.name: {
+            "command": _json(p / "done.json")["command"],
+            "b2_exit": int((p / "b2_exit.txt").read_text()),
+            "failed": _failed(p) if (p / "b2_failed.json").is_file() else None,
+            **_json(p / "b7n.json"),
+        }
+        for p in sorted(work.glob("newton-*"))
     }
 
 
@@ -180,6 +196,7 @@ def probes(work: Path) -> dict:
         "solvers": _solvers(work / "b3-solvers"),
         "harmonic_balance": b4,
         "tri3": {**_json(work / "b1-tri3" / "b1.json"), **_json(work / "b1-tri3" / "b1an.json")},
+        "deck_traps": _json(work / "probe-deck-traps" / "traps.json"),
     }
 
 
