@@ -66,7 +66,7 @@ versus what was *predicted*.
 - `nfet_06v0` card highlights: TOXE 15.2 nm, TOXP 16 nm, NDEP 1.7e17 cm⁻³, NGATE 1e20, NSD 1e20, XJ 0.15 µm, VTH0 0.673 V, K1 0.9, LPE0 163 nm, U0 0.0525 m²/Vs, VSAT 1.04e5 m/s, RDSW 2175 Ω·µm; IGCMOD = IGBMOD = 0 (no gate leakage); ALPHA0/BETA0 set (impact-ionisation substrate current on); two L bins (0.6–0.7, 0.7–50 µm). `pfet_06v0`: NDEP 1.7e17, NGATE 3.6e19, U0 0.0151, Lmin 0.5 µm.
 - PDK electrical spec (public, gf180mcu-pdk.readthedocs.io): NE2 10/0.6 VT0 0.58/0.70/0.82 V, Idsat 400/500/600 µA/µm, Ioff ≤ 10 pA/µm, BVDSS ≥ 8.5 V; PE2 10/0.5 VT0 ≈ −0.83 V, Idsat ≈ −240 µA/µm (±~15%); 6 V Cox 1.8/2.3/2.8 fF/µm².
 - **No measured device I-V/C-V data exists** for any wafer.space run 1/2 design (confirmed by the audit and bench sessions).
-- **No published DEVSIM- or Charon-vs-BSIM comparison exists for any open PDK**, and no gf180mcu TCAD paper was found. This work is novel; documentation must carry that weight.
+- **Earlier comparisons (corrected 2026-11-26, issue #205).** A dated search found one DEVSIM-vs-BSIM comparison for an open PDK, OpenTCAD's SKY130 `nfet_01v8` check, and no Charon-vs-BSIM comparison or gf180mcu TCAD paper. The record is in [docs/limitations/literature.md](../../limitations/literature.md), section "Comparisons of DEVSIM or Charon with foundry SPICE models".
 
 ## 5. Definition of agreement
 
@@ -972,3 +972,8 @@ that the intent survives later rewording of the sections it changed.
   (0.3245 V and 0.2827 V). Following the review of PR #160, §5.3 now widens such a window by
   the VTH0 offset on each side; refitted once widened, both end inside it (ff 0.3455 V of
   0.449 V, sf 0.2917 V of 0.3654 V) and no corner fit sits on a limit.
+- **2026-11-26: §4 earlier-comparisons fact corrected (issue #205).** §4 said no DEVSIM- or
+  Charon-vs-BSIM comparison existed for any open PDK and gave no method. A dated search, recorded
+  in [docs/limitations/literature.md](../../limitations/literature.md), found OpenTCAD's DEVSIM check
+  against the SKY130 `nfet_01v8` BSIM4 card, first committed on 2026-11-05. §4 now states what the
+  search found, and the sentence "This work is novel" is dropped.
