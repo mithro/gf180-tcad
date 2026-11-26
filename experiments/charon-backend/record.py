@@ -123,7 +123,7 @@ def newton(work: Path) -> dict:
         p.name: {
             "command": _json(p / "done.json")["command"],
             "b2_exit": int((p / "b2_exit.txt").read_text()),
-            "failed": _failed(p) if (p / "b2_failed.json").is_file() else None,
+            "failed": _newton_failed(p) if (p / "b2_failed.json").is_file() else None,
             **_json(p / "b7n.json"),
         }
         for p in sorted(work.glob("newton-*"))
@@ -175,6 +175,15 @@ def _failed(step: Path) -> dict:
     rec = _json(step / "b2_failed.json")
     rec["loca_failures"], rec["last_converged_v"] = _loca_failures(step / f"{rec['deck']}.inp.log")
     return rec
+
+
+def _newton_failed(step: Path) -> dict:
+    """As :func:`_failed`; a failed equilibrium (deck ``eq``, no LOCA step) has no LOCA failures
+    and no last converged bias."""
+    rec = _json(step / "b2_failed.json")
+    if rec["deck"] == "eq":
+        return {**rec, "loca_failures": [], "last_converged_v": None}
+    return _failed(step)
 
 
 def _solvers(d: Path) -> dict:
