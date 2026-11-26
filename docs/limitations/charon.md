@@ -115,6 +115,66 @@ harmonic-balance deck keeps the project's lifetimes. There the lifetime sets how
 inversion charge follows the signal. A short one would turn a 1 MHz curve into the low-frequency
 one.
 
+(charon-tolerance)=
+## The Newton tolerance
+
+The experiments run at a WRMS tolerance of 1e-10 relative and 1e-12 absolute. The backend
+writes 1e-9 and 1e-11 into its decks. Wherever both converge, they give the same C within
+{{ lim_charon_b7_max }} relative. The top panel of {numref}`fig-charon-tolerance` shows this on
+both devices and both parameter sets.
+
+```{figure} /_generated/limitations/charon-tolerance-light.svg
+:name: fig-charon-tolerance
+:figclass: only-light
+:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below. Bottom: one marker per pfet start setting at the bias where its sweep stopped, or at the grid end.
+
+Top: the relative change of C from the reference tolerance (1e-10) to the backend's (1e-9), per
+device and parameter set ({repo}`results/charon-experiments/cv.json`). Bottom: the pfet start
+sweep under each setting ({repo}`results/charon-experiments/hard-range.json`). Filled: it reached
+the end of the grid. Hollow: it stopped at that bias.
+```
+
+```{figure} /_generated/limitations/charon-tolerance-dark.svg
+:figclass: only-dark
+:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below. Bottom: one marker per pfet start setting at the bias where its sweep stopped, or at the grid end.
+
+Top: the relative change of C from the reference tolerance (1e-10) to the backend's (1e-9), per
+device and parameter set ({repo}`results/charon-experiments/cv.json`). Bottom: the pfet start
+sweep under each setting ({repo}`results/charon-experiments/hard-range.json`). Filled: it reached
+the end of the grid. Hollow: it stopped at that bias.
+```
+
+{numref}`tab-charon-tolerance` gives the largest change per case. The pfet start reference
+stops at {{ lim_charon_stall_v }} V. Its row compares the {{ lim_charon_pfet_start_points }}
+biases from 5 V down to {{ lim_charon_pfet_start_from }} V.
+
+```{table} The largest relative change of C between the WRMS tolerances 1e-9 and 1e-10.
+:name: tab-charon-tolerance
+
+| Device | Parameter set | Largest relative change |
+|---|---|---|
+| nfet | calibrated | {{ lim_charon_b7_nfet_calibrated }} |
+| nfet | start | {{ lim_charon_b7_nfet_start }} |
+| pfet | calibrated | {{ lim_charon_b7_pfet_calibrated }} |
+| pfet | start | {{ lim_charon_b7_pfet_start }} |
+```
+
+At 1e-10 the pfet start sweep stops at {{ lim_charon_stall_v }} V on its way down from 5 V. Its
+last Newton step leaves the residual at {{ lim_charon_stall_fnorm }}. The WRMS norm stays at
+{{ lim_charon_stall_wrms }}, above its limit of 1, after {{ lim_charon_stall_iters }}
+iterations, the most allowed. The experiment decks leave NOX's rescue on.
+
+The bottom panel of {numref}`fig-charon-tolerance` shows what changes the outcome. Steps of 5 mV
+and a lifetime of 1e-16 s stop at the same bias. Loosening either tolerance alone, the relative
+to 1e-9 or the absolute to 1e-11, passes. A ten times tighter relative tolerance, 1e-11, stops
+earlier, at {{ lim_charon_stall_ramp_v }} V on the ramp from equilibrium.
+
+So the stall is the round-off floor of Newton's update at one bias, not a step too large. The
+floor depends on the bias and the doping: at 1e-11 the nfet calibrated ramp stops at
+{{ lim_charon_tight_ramp_v }} V instead. The backend's 1e-9 passes on all four cases and gives
+the same C as 1e-10 within {{ lim_charon_b7_max }}. That is far below Charon's difference from
+DEVSIM, {{ lim_charon_pfet_start_devsim }} for the pfet start case.
+
 (charon-hard-range)=
 ## Where the default settings stop
 
