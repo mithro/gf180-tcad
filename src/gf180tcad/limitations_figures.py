@@ -1551,11 +1551,14 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
             max(float(np.nanmax(v["rel"])) for by in tol["pairs"].values() for v in by.values())
         ),
         "lim_charon_stall_v": f"{float(stall['failed_at'][0]):g}",
+        "lim_charon_stall_last": f"{stall['last_converged_v']:g}",
         "lim_charon_stall_fnorm": _sci(fnorm),
         "lim_charon_stall_wrms": f"{wrms:g}",
         "lim_charon_stall_iters": f"{iters}",
-        "lim_charon_stall_ramp_v": f"{float(ramp_stop['failed_at'][0]):g}",
-        "lim_charon_tight_ramp_v": signed(float(tight["failed"]["failed_at"][0])),
+        # a ramp goes on converging past its first failed step (LOCA retries with smaller
+        # steps): the page gives where it last converged
+        "lim_charon_stall_ramp_v": f"{ramp_stop['last_converged_v']:g}",
+        "lim_charon_tight_ramp_v": signed(tight["failed"]["last_converged_v"]),
         "lim_charon_pfet_start_from": f"{min(above['vg']):g}",
         "lim_charon_pfet_start_up_to": signed(max(up["vg"])),
         "lim_charon_pfet_start_points": f"{tol['pairs']['pfet_05v0']['start']['biases']}",
@@ -1683,7 +1686,8 @@ def charon_tolerance(roots: Roots = DEFAULT_ROOTS) -> dict:
             "stopped": failed is not None,
             # a failure on the ramp from 0 V to the sweep's first bias: the sweep never started
             "on_ramp": failed is not None and failed["deck"].startswith("ramp"),
-            "bias_v": float(failed["failed_at"][0]) if failed else default["vg"][-1],
+            # where the failed solve last converged, or the end of the grid
+            "bias_v": failed["last_converged_v"] if failed else default["vg"][-1],
         }
     stall["default"] = {
         "label": "backend default: " + _study_label(default["settings"], reference),
@@ -1707,13 +1711,15 @@ def _zero_handle(colour: str):
                                    color=colour, label="exactly zero (identical)")  # fmt: skip
 
 
-def _log_with_zeros(ax, x, rel, floor: float, colour: str, gid: str, **line) -> None:
+def _log_with_zeros(ax, x, rel, floor: float, colour: str, gid: str, dots: bool = True,
+                    **line) -> None:  # fmt: skip
     """``rel`` against ``x`` on a log axis: the line breaks at exact zeros, which are drawn as
     markers at ``floor`` (gid ``gid + " zeros"``). Every nonzero point carries a small marker,
-    so a point between two zeros stays visible."""
+    so a point between two zeros stays visible; ``dots=False`` leaves them off a line that has
+    no such point (its dashes stay readable)."""
     x, rel = np.asarray(x, float), np.asarray(rel, float)
-    ax.plot(x, np.where(rel == 0, np.nan, rel), color=colour, gid=gid, marker="o",
-            ms=STYLE["point_ms"], **line)  # fmt: skip
+    marks = {"marker": "o", "ms": STYLE["point_ms"]} if dots else {}
+    ax.plot(x, np.where(rel == 0, np.nan, rel), color=colour, gid=gid, **marks, **line)
     zero = rel == 0
     if zero.any():
         ax.scatter(x[zero], np.full(int(zero.sum()), floor), marker="v",
@@ -1750,7 +1756,7 @@ def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         groups = (
             ("reached the grid end", lambda d: not d["stopped"], "o", pal["highlight"]),
             ("failed in the sweep", lambda d: d["stopped"] and not d["on_ramp"], "o", "none"),
-            ("failed on the ramp up from equilibrium,\nsweep never started", lambda d: d["on_ramp"], "x",
+            ("ramp from equilibrium failed,\nsweep never started", lambda d: d["on_ramp"], "x",
              pal["highlight"]),
         )  # fmt: skip
         for gid, pick, marker, face in groups:
@@ -1761,7 +1767,7 @@ def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                            label=gid, gid=gid)  # fmt: skip
         bottom.set_yticks(y, [k["stall"][n]["label"] for n in names])
         bottom.invert_yaxis()
-        bottom.set_xlabel("pfet start: gate bias of the device\nwhere the solve failed (V)")
+        bottom.set_xlabel("pfet start: last converged\ngate bias of the device (V)")
         bottom.grid(True, axis="x")
         handles = [*top.get_legend_handles_labels()[0], _zero_handle(pal["text"]),
                    *bottom.get_legend_handles_labels()[0]]  # fmt: skip
@@ -1832,8 +1838,8 @@ def charon_checks(roots: Roots = DEFAULT_ROOTS) -> dict:
     solvers = {}
     for name, rec in probes["solvers"].items():
         if isinstance(rec, dict) and "sweep_v" in rec:
-            stop = rec["failed_at"]
-            solvers[name] = {"sweep_v": rec["sweep_v"], "stop_v": float(stop[0]) if stop else None}
+            # where a failed sweep last converged (None: it reached the end)
+            solvers[name] = {"sweep_v": rec["sweep_v"], "stop_v": rec.get("last_converged_v")}
     nlp = {p["vg"]: ((p["c_nlp"], p["c_devsim"]) if p["ok"] else None)
            for p in hard["nlp"]["points"]}  # fmt: skip
     b6 = {}
@@ -1847,8 +1853,8 @@ def charon_checks(roots: Roots = DEFAULT_ROOTS) -> dict:
     vg = [v for v in loose["vg"] if v in ref["vg"]]
     rel = [abs(loose["c_ff_um2"][loose["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
            for v in vg]  # fmt: skip
-    tight = {n: float(hard["step_studies"][n]["failed"]["failed_at"][0]) for n in CHARON_TIGHT}
-    # on the axis of the tight study's stop: the gate bias of the device, vg - dv_fb
+    tight = {n: hard["step_studies"][n]["failed"]["last_converged_v"] for n in CHARON_TIGHT}
+    # on the axis of the tight study's last converged bias: the gate bias of the device, vg - dv_fb
     device_v = np.asarray(vg) - loose["dv_fb_v"]
     return {"solvers": solvers, "nlp": nlp, "b6": b6,
             "b7": {"device_v": device_v, "rel": np.asarray(rel), "tight": tight}}  # fmt: skip
@@ -1884,7 +1890,7 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             b3.plot([lo, hi if stop is None else stop], [i, i], color=pal["highlight"], lw=lw,
                     gid=f"solver {n}")  # fmt: skip
         b3.set_yticks(range(len(names)), names)
-        b3.set_xlabel(f"{p_b3}: gate bias of the device reached (V)")
+        b3.set_xlabel(f"{p_b3}: from the first bias to the last converged one (V)")
         ok = {v: c for v, c in k["nlp"].items() if c is not None}
         bad = [v for v, c in k["nlp"].items() if c is None]
         b2.scatter(list(ok), [c for c, _ in ok.values()], s=STYLE["marker_pt"] ** 2,
@@ -1909,7 +1915,7 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             for key, (colour, label) in b6_keys.items():
                 for s in "AB":
                     _log_with_zeros(b6, d["u"], d[f"{key}_{s}"], b6_floor, pal[colour],
-                                    f"charge check {device} {key} {s}", lw=lw,
+                                    f"charge check {device} {key} {s}", dots=False, lw=lw,
                                     ls=STYLE["device_ls"][device],
                                     label=label if (device, s) == (first, "A") else None)  # fmt: skip
         b6.set_yscale("log")
@@ -1922,14 +1928,17 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                         label="a hundred times looser\n(nfet, project lifetimes)")  # fmt: skip
         for n, v in k["b7"]["tight"].items():
             b7.axvline(v, color=pal["hole"], lw=lw, ls="--",
-                       label="ten times tighter:\nfailed on its ramp",
+                       label="ten times tighter:\nlast converged on its ramp",
                        gid=f"tighter {n}")  # fmt: skip
         b7.set_yscale("log")
         b7.set_xlabel(f"{p_b7}: gate bias of the device, vg − dv_fb (V)")
         b7.set_ylabel("relative change of C")
         b7.set_ylim(bottom=floor / STYLE["zero_floor_factor"])
         # each panel's own legend, beside it: one figure legend would not fit
-        extra = {b6: [_zero_handle(pal["text"])], b7: [_zero_handle(pal["highlight"])]}
+        devices = [matplotlib.lines.Line2D([], [], color=pal["text"], lw=lw,
+                                           ls=STYLE["device_ls"][dev], label=dev)
+                   for dev in k["b6"]]  # fmt: skip
+        extra = {b6: [*devices, _zero_handle(pal["text"])], b7: [_zero_handle(pal["highlight"])]}
         for ax in (b2, b6, b7):
             handles = ax.get_legend_handles_labels()[0] + extra.get(ax, [])
             ax.legend(handles=handles, loc="upper left", bbox_to_anchor=STYLE["legend_beside"],

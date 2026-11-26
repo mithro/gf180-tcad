@@ -928,8 +928,14 @@ def _check_log_with_zeros(d, gid, x, rel, floor, ax):
     x, rel = np.asarray(x, float), np.asarray(rel, float)
     d.line(gid, x, np.where(rel == 0, np.nan, rel), ax)
     ln = d(gid, ax)
-    assert ln.get_marker() not in (None, "", "None", " ") and ln.get_markersize() > 0, gid
-    assert ln.get_markevery() is None, gid  # every point
+    marked = ln.get_marker() not in (None, "", "None", " ") and ln.get_markersize() > 0
+    if marked:
+        assert ln.get_markevery() is None, gid  # every point
+    else:  # no dots: every nonzero point must sit on a segment, next to a nonzero neighbour
+        nonzero = rel != 0
+        left = np.r_[False, nonzero[:-1]]
+        right = np.r_[nonzero[1:], False]
+        assert np.all(~nonzero | left | right), gid
     zero = rel == 0
     if zero.any():
         d.points(f"{gid} zeros", x[zero], np.full(int(zero.sum()), floor), ax)
@@ -970,12 +976,10 @@ def check_charon_tolerance(fig):
     groups = {
         "reached the grid end": [n for n in names if not stopped[n]],
         "failed in the sweep": [n for n in names if stopped[n] and not on_ramp[n]],
-        "failed on the ramp up from equilibrium,\nsweep never started": [
-            n for n in names if on_ramp[n]
-        ],
+        "ramp from equilibrium failed,\nsweep never started": [n for n in names if on_ramp[n]],
     }
     for gid, picked in groups.items():
-        xs = [float(studies[n]["failed"]["failed_at"][0]) if stopped[n] else default["vg"][-1]
+        xs = [studies[n]["failed"]["last_converged_v"] if stopped[n] else default["vg"][-1]
               for n in picked]  # fmt: skip
         d.points(gid, xs, [names.index(n) for n in picked], bottom)
     d.done()
@@ -1007,7 +1011,7 @@ def check_charon_checks(fig):
     solvers = {n: r for n, r in probes["solvers"].items() if isinstance(r, dict) and "sweep_v" in r}
     for i, (name, rec) in enumerate(solvers.items()):
         lo, hi = rec["sweep_v"]
-        end = float(rec["failed_at"][0]) if rec["failed_at"] else hi
+        end = rec["last_converged_v"] if rec["failed_at"] else hi
         d.line(f"solver {name}", [lo, end], [i, i], b3)
     ok = [p for p in hard["nlp"]["points"] if p["ok"]]
     bad = [p for p in hard["nlp"]["points"] if not p["ok"]]
@@ -1036,7 +1040,7 @@ def check_charon_checks(fig):
     floor = np.min(rel[rel > 0]) / lf.STYLE["zero_floor_factor"]
     _check_log_with_zeros(d, "tolerance looser", np.asarray(vg) - loose["dv_fb_v"], rel, floor, b7)
     for n in lf.CHARON_TIGHT:
-        d.vline(f"tighter {n}", float(hard["step_studies"][n]["failed"]["failed_at"][0]), b7)
+        d.vline(f"tighter {n}", hard["step_studies"][n]["failed"]["last_converged_v"], b7)
     d.done()
 
 
