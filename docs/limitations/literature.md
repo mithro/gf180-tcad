@@ -79,14 +79,11 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
 (lit-wikipedia-mobility)=
 
 - Wikipedia, "[Electron mobility](https://en.wikipedia.org/w/index.php?title=Electron_mobility&oldid=1383366442)".
-  Its section "Relation to conductivity" gives σ = e(nμ_e + pμ_h). Its table "List of
-  highest measured mobilities" gives crystalline silicon 1,400 cm²/(V⋅s) for electrons and 450
-  for holes, citing the NSM archive. Its section "Doping
-  concentration dependence in heavily-doped silicon" gives the majority-carrier fit of silicon
-  for 10¹⁸ cm⁻³ and up. That fit cites Caughey and Thomas, "Carrier mobilities in silicon
-  empirically related to doping and field", Proc. IEEE 55(12), 2192-2193, 1967
-  ({ref}`Caughey and Thomas <lit-caughey>`). The explainer uses both for the resistivity of doped and pure silicon
-  ({ref}`explained-conduction`).
+  It gives σ = e(nμ_e + pμ_h) and crystalline silicon's highest measured mobilities, 1,400
+  cm²/(V⋅s) for electrons and 450 for holes. The explainer uses them for the resistivity of
+  doped and pure silicon ({ref}`explained-conduction`).
+- The same article gives the majority-carrier mobility fit of silicon for 10¹⁸ cm⁻³ and up. It
+  cites {ref}`Caughey and Thomas <lit-caughey>`, Proc. IEEE 55(12), 2192-2193, 1967.
 
 (lit-colorado-constants)=
 
