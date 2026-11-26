@@ -76,7 +76,9 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0):
     ring0 = edge + term
     pfield = _boxes(ring0, ring0 + s["ncomp_w"], pr["pplus"])
     far = width + 10.0
-    if s["pwell_gap"] is not None:  # a drawn P-well exists under either assumption
+    if s["pwell_gap"] is not None and pr["pwell"] != "everywhere":
+        # a drawn P-well; where the P-well is generated anyway it is the same implant, and
+        # drawing it adds nothing
         pfield += _boxes(edge + s["pwell_gap"], far, pr["pw"])
     if pr["pwell"] == "everywhere":
         if s["nat_gap"] is not None:

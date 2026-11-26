@@ -188,7 +188,7 @@ def test_plates_and_rings_follow_the_layout():
 def test_a_drawn_pwell_starts_where_drawn_under_b_only():
     plain = hvsite.section({}, {"pwell": "everywhere"})
     drawn = hvsite.section({"pwell_gap": 6.0}, {"pwell": "everywhere"})
-    assert _acceptor_starts(drawn)[0] == _acceptor_starts(plain)[0] == 8.0
+    assert drawn["pfield"] == plain["pfield"]
     assert _acceptor_starts(hvsite.section({"pwell_gap": 6.0}, {"pwell": "drawn"})) == [14.0, 14.0]
 
 

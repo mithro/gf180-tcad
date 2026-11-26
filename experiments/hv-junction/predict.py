@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """The prediction cases: every structure of the test die under each process assumption.
 
-    uv run python experiments/hv-junction/predict.py OUT.json [SET]
+    uv run python experiments/hv-junction/predict.py OUT.json [SET] [RECORD.json ...]
 
 structures.json is the structure list exported by mithro/evampire
 (silicon/hvtest/export.py). Each structure is simulated as a straight edge and as a round
@@ -15,6 +15,7 @@ structures under the lighter and heavier substrate.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import sys
@@ -104,6 +105,21 @@ if __name__ == "__main__":
         for p in slow.values():
             p["extended"] = True
         got.update(slow)
+    elif which == "delta":
+        # every case of "main" and "family" whose parameters differ from the records named
+        # after the set, or that has no converged result in them
+        want = cases(sorted(STRUCTS), PROCESSES)
+        nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
+        want.update(cases(sorted(nat), NAT_ONLY))
+        want.update(cases([k for k in KEY if k in STRUCTS], FAMILY))
+        have = {}
+        for path in sys.argv[3:]:
+            have.update(json.loads(pathlib.Path(path).read_text())["cases"])
+        got = {}
+        for name, p in want.items():
+            digest = hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()
+            if name not in have or have[name]["params_sha256"] != digest:
+                got[name] = p
     else:
         got = cases(KEY, FAMILY)
     json.dump(got, open(sys.argv[1], "w"), indent=1)
