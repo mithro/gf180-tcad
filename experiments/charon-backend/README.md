@@ -1,12 +1,15 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Charon backend experiments B1 to B7
 
+<!-- figure-ok: GitHub renders this README without the docs build; the strip and the 2D mesh are drawn on the linked Charon page -->
+
 This directory runs experiments B1 to B7 of the
 [Charon plan, Task B](../../docs/superpowers/plans/2026-10-27-phase4-charon-backend.md#task-b-backendscharon-behind-the-task-15-seam).
 Each one runs the 1D MOS capacitor (and, for B1, a small 2D mesh) in the pinned
 [Charon image](../../docker/CHARON_IMAGE) through [`tools/sandbox-run`](../../tools/sandbox-run).
 The records are in [`results/charon-experiments/`](../../results/charon-experiments), and the
-write-up is [`docs/limitations/charon.md`](../../docs/limitations/charon.md).
+write-up is [`docs/limitations/charon.md`](../../docs/limitations/charon.md), whose figures draw
+the strip and the 2D mesh.
 
 | File | What it is |
 |---|---|
@@ -36,8 +39,9 @@ make manifest
 ```
 
 The work directory must be outside the repository, because the sandbox refuses the repository.
-A step whose `done.json` exists is skipped, so a cut-off run resumes. The records carry the pins
-of the run; record.py only reads the run directories, so a later fix to it rewrites the records
-from the same runs. Each step writes its
-complete output to `<workdir>/<step>/run.log`. The whole set takes about three hours on this
+
+A step whose [`done.json`](run.py) exists is skipped, so a cut-off run resumes. The records carry
+the pins of the run. [`record.py`](record.py) only reads the run directories, so a later fix to it
+rewrites the records from the same runs; the records carry its sha256 apart. Each step writes its
+complete output to [`<workdir>/<step>/run.log`](run.py). The whole set takes about three hours on this
 project's host, one 2 GiB container at a time.
