@@ -20,6 +20,23 @@ VERSIONS = DOCKER / "tcad" / "versions.json"
 VENV = "/opt/gf180tcad-tcad"
 # meshwell's mesh of the unit square in each TCAD image (tools/meshwell-square, #157).
 MESHWELL_SQUARE = REPO_ROOT / "data" / "images" / "meshwell-square.json"
+CELL_MESH = REPO_ROOT / "data" / "images" / "cell-mesh"
+
+
+def _cell_mesh_probe_is_the_record(key: str, run, image: str, tmp_path: Path) -> None:
+    """tools/gmsh-cell-mesh's probe, run in image ``image`` through ``run``, gives the entry
+    data/images/cell-mesh/record.json holds for ``key``, and the box npz it writes is the
+    committed one (#157): the image page's cell-mesh figure draws what the image makes."""
+    import hashlib
+
+    record = json.loads((CELL_MESH / "record.json").read_text(encoding="utf-8"))["images"][key]
+    assert record.pop("image") == image
+    res = run(["python3", "/work/src/tools/gmsh-cell-mesh", "probe"], tmp_path, mem="2g", cpus=1)
+    assert json.loads(res.stdout.splitlines()[-1]) == record
+    box = (tmp_path / "box.npz").read_bytes()
+    assert box == (CELL_MESH / f"{key}.npz").read_bytes()
+    assert hashlib.sha256(box).hexdigest() == record["box_npz_sha256"]
+
 
 BASE_KEYS = set(json.loads((DOCKER / "base" / "versions.json").read_text(encoding="utf-8")))
 TCAD_KEYS = BASE_KEYS | {
@@ -289,6 +306,12 @@ def test_tcad_meshwell_square_is_the_record(tmp_path):
     assert record.pop("image") == _tcad_image()
     res = _run(["python3", "/work/src/tools/meshwell-square", "probe"], tmp_path)
     assert json.loads(res.stdout.splitlines()[-1]) == record
+
+
+@pytest.mark.sandbox
+def test_tcad_cell_mesh_is_the_record(tmp_path):
+    """The stable image meshes the 2D cell as data/images/cell-mesh/ records it (#157)."""
+    _cell_mesh_probe_is_the_record("stable", _run, _tcad_image(), tmp_path)
 
 
 @pytest.mark.sandbox
