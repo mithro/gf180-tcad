@@ -82,8 +82,8 @@ STYLE = {
     # The mesh figure of a reduced mesh artefact: each region filled in its Okabe-Ito colour at
     # this opacity, every mesh edge this thin (pt), the region boundaries at "edge_width". The
     # triangles are embedded as an image at this resolution (dots per inch), the rest as
-    # vectors. The figure's height follows the window's aspect (to scale), within these bounds
-    # (in), plus room for the axis labels and the legend.
+    # vectors. The axes' height follows the window's aspect (to scale), at most this tall
+    # (in); the figure adds the margins, the bottom one holding the axis labels and the legend.
     "mesh_regions": {
         "body": ("#E69F00", "body (silicon)"),
         "gate_poly": ("#56B4E9", "gate (polysilicon)"),
@@ -98,8 +98,10 @@ STYLE = {
     "mesh_alpha": 0.55,
     "mesh_edge_pt": 0.2,
     "mesh_dpi": 150,
-    "mesh_height_in": (1.2, 3.6),
-    "mesh_room_in": 1.6,
+    "mesh_axes_max_in": 3.6,
+    # The y-axis label's length (in): an axes shorter than it gets that much room, half above
+    # and half below, so the label is not cut.
+    "mesh_ylabel_in": 1.0,
     # The axes' margins (in): fixed, so the figure is drawn once (no layout pass over the mesh).
     "mesh_margin_in": {"left": 0.9, "right": 0.2, "bottom": 1.35, "top": 0.15},
     # The junction panels: positions from (1 + pad) widths into the body to pad widths into the
@@ -795,15 +797,20 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
     xy = win.nodes_cm * meshcut.UM_PER_MSH_UNIT
     (x0, x1), (y0, y1) = win.x_um, win.y_um
     width = STYLE["size_in"][0]
-    low, high = STYLE["mesh_height_in"]
-    height = min(max(width * (y1 - y0) / (x1 - x0), low), high) + STYLE["mesh_room_in"]
+    m = STYLE["mesh_margin_in"]
+    # the axes' height at full width, to scale, so no band is left above or below them
+    axes_h = min(
+        (width - m["left"] - m["right"]) * (y1 - y0) / (x1 - x0), STYLE["mesh_axes_max_in"]
+    )
+    extra = max(STYLE["mesh_ylabel_in"] - axes_h, 0.0) / 2
+    top, bottom = m["top"] + extra, m["bottom"] + extra
+    height = axes_h + top + bottom
     colours = {name: STYLE["mesh_regions"].get(name, (pal["muted"], name)) for name in win.regions}
     with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=(width, height))
         FigureCanvasAgg(fig)
-        m = STYLE["mesh_margin_in"]
         fig.subplots_adjust(left=m["left"] / width, right=1 - m["right"] / width,
-                            bottom=m["bottom"] / height, top=1 - m["top"] / height)  # fmt: skip
+                            bottom=bottom / height, top=1 - top / height)  # fmt: skip
         ax = fig.add_subplot()
         # one RGBA row per region, the opacity in it, indexed by each triangle's region
         rgba = np.array([to_rgba(colours[n][0], STYLE["mesh_alpha"]) for n in win.regions])
@@ -831,7 +838,7 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
         ax.set_xlabel("position across the cell (µm)")
         ax.set_ylabel("height (µm)")
         present = sorted({win.regions[r] for r in np.unique(win.region)})
-        # one legend entry per label (the contacts share one), in the order of first use
+        # one legend entry per label (the contacts share one), in the regions' alphabetical order
         labels = dict.fromkeys(colours[n] for n in present)
         keys = [Patch(facecolor=colour, alpha=STYLE["mesh_alpha"], label=label)
                 for colour, label in labels]  # fmt: skip
