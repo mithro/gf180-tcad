@@ -16,6 +16,7 @@ import decks
 import numpy as np
 
 out = {}
+SWEEP_V = (-1.0, 0.3)  # the gate bias of the device swept, from and to (V)
 cfg = Path("/opt/charon/include")
 for name in ("Stratimikos_Config.h", "StratimikosConfig.h", "Amesos2_config.h"):
     p = cfg / name
@@ -79,6 +80,7 @@ for cname, extra in CONFIGS.items():
     )
     ok, log, dt = cx.run(f"{cname}_eq.inp")
     rec = {
+        "sweep_v": list(SWEEP_V),
         "eq_ok": ok,
         "eq_time_s": dt,
         "solver_lines": sorted(
@@ -99,7 +101,7 @@ for cname, extra in CONFIGS.items():
     Path(f"{cname}_sw.inp").write_text(
         deck(
             f"{cname}_sw",
-            "swept from -1.0 to 0.3",
+            f"swept from {SWEEP_V[0]!r} to {SWEEP_V[1]!r}",
             "parameter sweep",
             f"{cname}_eq.exo",
             "exodus",
