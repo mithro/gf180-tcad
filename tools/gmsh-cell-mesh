@@ -13,6 +13,9 @@ stops it after the mesh is written, before the equilibrium solve, so a run fits 
                                  image through the sandbox (2 GiB, one CPU, no network, one at
                                  a time), compare the two full meshes (:func:`compare`) and
                                  write data/images/cell-mesh/
+  tools/gmsh-cell-mesh record DIR  the same, written into DIR instead (the sandbox test
+                                 tests/test_tcad_image.py::test_tcad_cell_mesh_record_regenerates
+                                 compares it with the committed record)
 
 The record (:data:`RECORD`) holds the job, its committed ``cv.meta.json`` sha256 and
 ``mesh_sha256``, this tool's sha256, per image its pin, the gmsh version, the full mesh's
@@ -139,9 +142,9 @@ def compare(stable_msh: Path, dev_msh: Path) -> dict:
     }
 
 
-def record() -> None:
+def record(dest: Path = OUT) -> None:
     """Run the probe in both images through the sandbox, one at a time, compare the two full
-    meshes and write the record."""
+    meshes and write the record and the boxes into ``dest``."""
     import tempfile
 
     sys.path.insert(0, str(REPO / "src"))
@@ -155,7 +158,8 @@ def record() -> None:
         "tool_sha256": _sha256(Path(__file__)),
         "images": {},
     }
-    OUT.mkdir(parents=True, exist_ok=True)
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
     scratch = Path.home() / ".cache" / "gf180-tcad"
     scratch.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=scratch) as tmp:
@@ -171,11 +175,12 @@ def record() -> None:
                 image=pin,
             )
             sys.stderr.write(res.stderr)
-            shutil.copyfile(work / BOX_NAME, OUT / f"{name}.npz")
+            shutil.copyfile(work / BOX_NAME, dest / f"{name}.npz")
             out["images"][name] = {"image": pin, **json.loads(res.stdout.splitlines()[-1])}
         out["comparison"] = compare(Path(tmp) / "stable" / MESH_NAME, Path(tmp) / "dev" / MESH_NAME)
-    RECORD.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"wrote {RECORD.relative_to(REPO)}")
+    path = dest / RECORD.name
+    path.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"wrote {path}")
 
 
 if __name__ == "__main__":
@@ -183,5 +188,7 @@ if __name__ == "__main__":
         print(json.dumps(probe(Path.cwd()), sort_keys=True))
     elif sys.argv[1:] == ["record"]:
         record()
+    elif len(sys.argv) == 3 and sys.argv[1] == "record":
+        record(Path(sys.argv[2]))
     else:
         raise SystemExit(__doc__)

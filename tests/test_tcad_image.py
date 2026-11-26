@@ -309,6 +309,20 @@ def test_tcad_meshwell_square_is_the_record(tmp_path):
 
 
 @pytest.mark.sandbox
+def test_tcad_cell_mesh_record_regenerates(tmp_path):
+    """tools/gmsh-cell-mesh's record, rerun in both images, is the committed record and boxes,
+    byte for byte: its comparison of the two full meshes (counts, renumbered points, moved
+    points) is checked only by regenerating it (#157). Two 2 GiB sandbox jobs, one at a time."""
+    import subprocess
+    import sys
+
+    subprocess.run([sys.executable, str(REPO_ROOT / "tools" / "gmsh-cell-mesh"), "record",
+                    str(tmp_path)], check=True)  # fmt: skip
+    for name in ("record.json", "stable.npz", "dev.npz"):
+        assert (tmp_path / name).read_bytes() == (CELL_MESH / name).read_bytes(), name
+
+
+@pytest.mark.sandbox
 def test_tcad_cell_mesh_is_the_record(tmp_path):
     """The stable image meshes the 2D cell as data/images/cell-mesh/ records it (#157)."""
     _cell_mesh_probe_is_the_record("stable", _run, _tcad_image(), tmp_path)
