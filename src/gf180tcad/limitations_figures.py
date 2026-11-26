@@ -48,6 +48,11 @@ STYLE = {
     "marker_pt": 9.0,
     "small_marker_pt": 6.0,
     "device_ls": {"nfet_05v0": "-", "pfet_05v0": "--"},
+    # the checks figure has four panels and a long legend; the tolerance figure's bottom panel
+    # holds the long study labels
+    "checks_in": (8.0, 11.0),
+    "legend_beside": (1.01, 1.0),
+    "tolerance_rows": (1.0, 1.4),
     # Ring round a marked point, this size (pt).
     "ring_pt": 16.0,
     # Label lift above a point or line, as a fraction of the axis span.
@@ -1550,7 +1555,7 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
         "lim_charon_pfet_start_from": f"{min(above['vg']):g}",
         "lim_charon_pfet_start_up_to": signed(max(up["vg"])),
         "lim_charon_pfet_start_points": f"{tol['pairs']['pfet_05v0']['start']['biases']}",
-        "lim_charon_nlp_c": f"{max(abs(checks['nlp'][v]) for v in nlp_ok):g}",
+        "lim_charon_nlp_c": f"{max(abs(checks['nlp'][v][0]) for v in nlp_ok):g}",
         "lim_charon_nlp_ok": listed(nlp_ok),
         "lim_charon_nlp_bad": listed(nlp_bad),
         "lim_charon_belos_stop": f"{belos_stop:g}",
@@ -1558,6 +1563,7 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
         "lim_charon_nodes": f"{cv[n_ref]['boundary_nodes'][-1] + 1}",
         "lim_charon_points": f"{cv[n_ref]['n']}",
         "lim_charon_ni": _sci_full(ni),
+        "lim_charon_doping_rel": f"{max(v['max_rel_doping'] for v in doping.values()):g}",
         "lim_charon_ref_tau": cv[n_ref]["settings"]["CX_TAU"],
         "lim_charon_nfet_devsim": _sci(cv[n_ref]["max_abs_rel_vs_devsim"]),
         "lim_charon_pfet_devsim": _sci(cv[p_ref]["max_abs_rel_vs_devsim"]),
@@ -1616,12 +1622,24 @@ CHARON_STALL_STUDIES = (
 )
 
 
-def _study_label(command: str) -> str:
-    """A study's settings from its command: the WRMS tolerances, the SRH lifetime and the LOCA
-    steps per grid step."""
-    env = dict(w.split("=", 1) for w in command.split() if w.startswith("CX_") and "=" in w)
-    return (f"rel {env['CX_REL']}, abs {env['CX_ABS']}, lifetime {env['CX_TAU']} s, "
-            f"{env['CX_SUB']} steps per grid step")  # fmt: skip
+#: How a study label names each setting that differs from the reference study.
+STUDY_SETTINGS = {"CX_REL": "rel {}", "CX_ABS": "abs {}", "CX_TAU": "lifetime {} s",
+                  "CX_SUB": "{} LOCA steps per grid step", "CX_NORESCUE": "rescue off"}  # fmt: skip
+
+
+def _study_env(command: str) -> dict[str, str]:
+    return dict(w.split("=", 1) for w in command.split() if w.startswith("CX_") and "=" in w)
+
+
+def _study_label(env: dict[str, str], reference: dict[str, str]) -> str:
+    """A study's label: the settings of :data:`STUDY_SETTINGS` that differ from ``reference``
+    (the reference study, labelled with its tolerances)."""
+    if env == reference:
+        return "reference: " + ", ".join(
+            STUDY_SETTINGS[k].format(env[k]) for k in ("CX_REL", "CX_ABS")
+        )
+    return ", ".join(STUDY_SETTINGS[k].format(env.get(k, "")) for k in STUDY_SETTINGS
+                     if env.get(k, "") != reference.get(k, ""))  # fmt: skip
 
 
 def charon_tolerance(roots: Roots = DEFAULT_ROOTS) -> dict:
@@ -1651,17 +1669,18 @@ def charon_tolerance(roots: Roots = DEFAULT_ROOTS) -> dict:
                 "biases": int(np.sum(np.isfinite(rels))),
             }
     default = runs[CHARON_B7_PAIRS["pfet_05v0"]["start"][0]]
+    reference = _study_env(studies[CHARON_STALL_STUDIES[0]]["command"])
     stall = {}
     for name in CHARON_STALL_STUDIES:
         s = studies[name]
         failed = s["failed"]
         stall[name] = {
-            "label": _study_label(s["command"]),
+            "label": _study_label(_study_env(s["command"]), reference),
             "stopped": failed is not None,
             "bias_v": float(failed["failed_at"][0]) if failed else default["vg"][-1],
         }
     stall["default"] = {
-        "label": _study_label(" ".join(f"{k}={v}" for k, v in default["settings"].items())),
+        "label": "backend default: " + _study_label(default["settings"], reference),
         "stopped": False,
         "bias_v": default["vg"][-1],
     }
@@ -1678,7 +1697,10 @@ def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                ("pfet_05v0", "calibrated"): "hole", ("pfet_05v0", "start"): "highlight_oxide"}  # fmt: skip
     with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
-        top, bottom = fig.subplots(len(CHARON_PANELS), 1)
+        # subfigures: the bottom panel's long study labels do not narrow the top panel
+        top_fig, bottom_fig = fig.subfigures(len(CHARON_PANELS), 1,
+                                             height_ratios=STYLE["tolerance_rows"])  # fmt: skip
+        top, bottom = top_fig.subplots(), bottom_fig.subplots()
         for device, by_params in k["pairs"].items():
             for params, d in by_params.items():
                 top.plot(d["u"], d["rel"], color=pal[colours[device, params]],
@@ -1697,7 +1719,7 @@ def charon_tolerance_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                            edgecolors=pal["highlight"], label=gid, gid=gid)  # fmt: skip
         bottom.set_yticks(y, [k["stall"][n]["label"] for n in names])
         bottom.invert_yaxis()
-        bottom.set_xlabel("pfet start: gate bias of the device where the sweep stopped (V)")
+        bottom.set_xlabel("pfet start: where the sweep stopped (V)")
         bottom.grid(True, axis="x")
         fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
         return fig
@@ -1709,15 +1731,18 @@ CHARON_PANELS = ("tolerance pairs", "pfet start sweeps")
 
 def charon_doping(roots: Roots = DEFAULT_ROOTS) -> dict:
     """B5: per device and parameter set, the semiconductor nodes' depth from the gate end (um),
-    the description's net doping there and Charon's nodal ``Doping`` (cm^-3, signed)."""
+    the description's net doping there and Charon's nodal ``Doping`` (cm^-3, signed), a NaN
+    break at the oxide; and the record's largest relative difference of the two."""
     out = {}
     for tag, rec in charon_record("probes", charon_root(roots))["doping"].items():
-        semi = rec["semiconductor_nodes"]
+        semi = np.asarray(rec["semiconductor_nodes"])
+        gap = np.nonzero(np.diff(semi) > 1)[0] + 1  # the oxide between poly and body
         out[tag] = {
-            "x_um": np.asarray(rec["x_um"])[semi],
-            "description": np.asarray(rec["description_cm3"])[semi],
-            "charon": np.asarray(rec["doping_cm3"])[semi],
-        }
+            k: np.insert(np.asarray(rec[key], float)[semi], gap, np.nan)
+            for k, key in (("x_um", "x_um"), ("description", "description_cm3"),
+                           ("charon", "doping_cm3"))
+        }  # fmt: skip
+        out[tag]["max_rel_doping"] = rec["max_rel_doping"]
     return out
 
 
@@ -1764,7 +1789,8 @@ def charon_checks(roots: Roots = DEFAULT_ROOTS) -> dict:
         if isinstance(rec, dict) and "sweep_v" in rec:
             stop = rec["failed_at"]
             solvers[name] = {"sweep_v": rec["sweep_v"], "stop_v": float(stop[0]) if stop else None}
-    nlp = {p["vg"]: (p["c_nlp"] if p["ok"] else None) for p in hard["nlp"]["points"]}
+    nlp = {p["vg"]: ((p["c_nlp"], p["c_devsim"]) if p["ok"] else None)
+           for p in hard["nlp"]["points"]}  # fmt: skip
     b6 = {}
     for device, name in CHARON_REF.items():
         r = runs[name]
@@ -1777,12 +1803,16 @@ def charon_checks(roots: Roots = DEFAULT_ROOTS) -> dict:
     rel = [abs(loose["c_ff_um2"][loose["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
            for v in vg]  # fmt: skip
     tight = {n: float(hard["step_studies"][n]["failed"]["failed_at"][0]) for n in CHARON_TIGHT}
+    # on the axis of the tight study's stop: the gate bias of the device, vg - dv_fb
+    device_v = np.asarray(vg) - loose["dv_fb_v"]
     return {"solvers": solvers, "nlp": nlp, "b6": b6,
-            "b7": {"u": np.asarray(vg), "rel": np.asarray(rel), "tight": tight}}  # fmt: skip
+            "b7": {"device_v": device_v, "rel": np.asarray(rel), "tight": tight}}  # fmt: skip
 
 
-#: The ten times tighter tolerance studies (``hard-range.json``, ``step_studies``).
-CHARON_TIGHT = ("study-nfet-default-1e-11", "study-pfet-start-1e-11")
+#: The ten times tighter tolerance study of the nfet calibrated values with the project's
+#: lifetimes (``hard-range.json``, ``step_studies``): the case of the B7 panel's curve. The pfet
+#: start study at 1e-11 is in :func:`charon_tolerance_figure`.
+CHARON_TIGHT = ("study-nfet-default-1e-11",)
 
 #: The panels of :func:`charon_checks_figure`, top to bottom.
 CHARON_CHECK_PANELS = ("B3 linear solvers", "B2 nonlinear Poisson", "B6 charge checks",
@@ -1798,7 +1828,7 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     k = charon_checks(roots)
     lw = ef.STYLE["line_width"]
     with matplotlib.rc_context(ef.palette_rc(palette)):
-        fig = _figure(STYLE["tall_in"])
+        fig = _figure(STYLE["checks_in"])
         b3, b2, b6, b7 = fig.subplots(len(CHARON_CHECK_PANELS), 1)
         p_b3, p_b2, p_b6, p_b7 = CHARON_CHECK_PANELS
         names = list(k["solvers"])
@@ -1811,10 +1841,16 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         b3.set_xlabel(f"{p_b3}: gate bias of the device reached (V)")
         ok = {v: c for v, c in k["nlp"].items() if c is not None}
         bad = [v for v, c in k["nlp"].items() if c is None]
-        b2.scatter(list(ok), list(ok.values()), s=STYLE["marker_pt"] ** 2, color=pal["highlight"],
-                   label="nonlinear Poisson converged", gid="nlp converged")  # fmt: skip
-        b2.scatter(bad, np.zeros(len(bad)), marker="x", s=STYLE["marker_pt"] ** 2,
-                   color=pal["text"], label="Newton diverged (NaN)", gid="nlp diverged")  # fmt: skip
+        b2.scatter(list(ok), [c for c, _ in ok.values()], s=STYLE["marker_pt"] ** 2,
+                   color=pal["highlight"], label="nonlinear Poisson C",
+                   gid="nlp converged")  # fmt: skip
+        b2.scatter(list(ok), [d for _, d in ok.values()], s=STYLE["marker_pt"] ** 2,
+                   marker="s", facecolors="none", edgecolors=pal["electron"],
+                   label="DEVSIM C at the same bias", gid="nlp devsim")  # fmt: skip
+        for i, v in enumerate(bad):  # no value: the solve diverged there
+            b2.axvline(v, color=pal["text"], lw=lw, ls=":",
+                       label="Newton diverged, no C" if i == 0 else None,
+                       gid=f"nlp diverged {i}")  # fmt: skip
         b2.set_xlabel(f"{p_b2}: gate bias vg (V)")
         b2.set_ylabel("C (fF/µm²)")
         b6_keys = {"oxide_flux_spread": ("highlight", "oxide-flux spread"),
@@ -1830,15 +1866,24 @@ def charon_checks_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                             gid=f"charge check {device} {key} {s}")  # fmt: skip
         b6.set_yscale("log")
         b6.set_xlabel(f"{p_b6}: u = polarity × vg (V)")
-        b6.set_ylabel("relative mismatch")
-        b7.plot(k["b7"]["u"], k["b7"]["rel"], color=pal["highlight"], lw=lw,
-                label="a hundred times looser", gid="tolerance looser")  # fmt: skip
+        b6.set_ylabel("mismatch")
+        b7.plot(k["b7"]["device_v"], k["b7"]["rel"], color=pal["highlight"], lw=lw,
+                label="a hundred times looser\n(nfet, project lifetimes)",
+                gid="tolerance looser")  # fmt: skip
         for n, v in k["b7"]["tight"].items():
-            b7.axvline(v, color=pal["text"], lw=lw, ls=":", gid=f"tighter {n}")
+            b7.axvline(v, color=pal["hole"], lw=lw, ls="--",
+                       label="ten times tighter:\nwhere it stopped",
+                       gid=f"tighter {n}")  # fmt: skip
         b7.set_yscale("log")
-        b7.set_xlabel(f"{p_b7}: gate bias of the device (V); dotted: the tighter studies' stops")
-        b7.set_ylabel("relative change of C")
-        fig.legend(loc="outside lower center", ncols=STYLE["legend_cols"], frameon=False)
+        b7.set_xlabel(f"{p_b7}: gate bias of the device, vg − dv_fb (V)")
+        b7.set_ylabel("C change")
+        for ax in (
+            b2,
+            b6,
+            b7,
+        ):  # each panel's own legend, beside it: one figure legend would not fit
+            ax.legend(loc="upper left", bbox_to_anchor=STYLE["legend_beside"], fontsize="small",
+                      frameon=False)  # fmt: skip
         return fig
 
 

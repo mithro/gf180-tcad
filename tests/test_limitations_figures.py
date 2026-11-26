@@ -954,11 +954,16 @@ def check_charon_doping(fig):
     axes = dict(zip(DEVICES, fig.axes, strict=True))
     for tag, rec in _charon("probes")["doping"].items():
         device = tag.rsplit("_", 1)[0]
-        semi = rec["semiconductor_nodes"]
-        x = np.asarray(rec["x_um"])[semi]
-        d.line(f"{tag} description", x, np.abs(np.asarray(rec["description_cm3"])[semi]),
-               axes[device])  # fmt: skip
-        d.line(f"{tag} charon", x, np.abs(np.asarray(rec["doping_cm3"])[semi]), axes[device])
+        semi = np.asarray(rec["semiconductor_nodes"])
+        gap = np.nonzero(np.diff(semi) > 1)[0] + 1  # no line across the oxide
+        assert len(gap) == 1, tag
+
+        def broken(key, semi=semi, gap=gap, rec=rec):
+            return np.insert(np.asarray(rec[key], float)[semi], gap, np.nan)
+
+        x = broken("x_um")
+        d.line(f"{tag} description", x, np.abs(broken("description_cm3")), axes[device])
+        d.line(f"{tag} charon", x, np.abs(broken("doping_cm3")), axes[device])
         assert rec["max_rel_doping"] == 0.0, tag
     d.done()
 
@@ -975,7 +980,10 @@ def check_charon_checks(fig):
     ok = [p for p in hard["nlp"]["points"] if p["ok"]]
     bad = [p for p in hard["nlp"]["points"] if not p["ok"]]
     d.points("nlp converged", [p["vg"] for p in ok], [p["c_nlp"] for p in ok], b2)
-    d.points("nlp diverged", [p["vg"] for p in bad], [0.0] * len(bad), b2)
+    d.points("nlp devsim", [p["vg"] for p in ok], [p["c_devsim"] for p in ok], b2)
+    for i, p in enumerate(bad):  # a diverged point carries no value: a line at its bias only
+        assert p["nan_residual"], p["vg"]
+        d.vline(f"nlp diverged {i}", p["vg"], b2)
     for device, name in lf.CHARON_REF.items():
         r = runs[name]
         u = DEVICES[device].polarity * np.asarray(r["vg"])
@@ -986,7 +994,7 @@ def check_charon_checks(fig):
     vg = [v for v in loose["vg"] if v in ref["vg"]]
     rel = [abs(loose["c_ff_um2"][loose["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
            for v in vg]  # fmt: skip
-    d.line("tolerance looser", vg, rel, b7)
+    d.line("tolerance looser", np.asarray(vg) - loose["dv_fb_v"], rel, b7)
     for n in lf.CHARON_TIGHT:
         d.vline(f"tighter {n}", float(hard["step_studies"][n]["failed"]["failed_at"][0]), b7)
     d.done()
