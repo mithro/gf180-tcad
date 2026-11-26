@@ -717,7 +717,7 @@ def _no_artefact(params: str) -> str:
 _MESH_ALT = (
     "The mesh around the gate of the 2D cell: thousands of small triangles, densest in a thin "
     "band at the silicon surface under the gate, coloured by region: the gate on top, the gate "
-    "oxide under it, the insulator beside the gate and the silicon body below."
+    "oxide under it, the insulator beside the gate, the grey contacts and the silicon body below."
 )
 
 

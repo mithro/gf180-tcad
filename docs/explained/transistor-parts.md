@@ -135,7 +135,7 @@ The triangles grow larger away from the oxide, as the figure shows.
 ```{figure} /_generated/explained/parts-mesh-light.svg
 :figclass: only-light
 :name: fig-parts-mesh
-:alt: The mesh of the cell around the gate: a blue gate on a thin oxide band, a yellow insulator on each side with a grey contact at each outer corner, the orange body below, each filled with small triangles, finest at the oxide.
+:alt: The mesh of the cell around the gate: a blue gate on a thin oxide band, a yellow insulator on each side with a grey contact at lower outer corner, the orange body below, each filled with small triangles, finest at the oxide.
 
 The mesh of the 2D cell of {numref}`fig-parts-cell` around its gate, from the cell's
 {ref}`reduced mesh artefact <moscap2d-mesh-artefact>`
@@ -146,7 +146,7 @@ is filled in its part's colour. {{ x_fig_parts_mesh_scale }}
 
 ```{figure} /_generated/explained/parts-mesh-dark.svg
 :figclass: only-dark
-:alt: The mesh of the cell around the gate: a blue gate on a thin oxide band, a yellow insulator on each side with a grey contact at each outer corner, the orange body below, each filled with small triangles, finest at the oxide.
+:alt: The mesh of the cell around the gate: a blue gate on a thin oxide band, a yellow insulator on each side with a grey contact at lower outer corner, the orange body below, each filled with small triangles, finest at the oxide.
 
 The mesh of the 2D cell of {numref}`fig-parts-cell` around its gate, from the cell's
 {ref}`reduced mesh artefact <moscap2d-mesh-artefact>`

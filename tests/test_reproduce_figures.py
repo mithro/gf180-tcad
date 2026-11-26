@@ -640,7 +640,7 @@ def _check_cell_mesh_record(record):
 
 def check_cell_mesh(fig):
     """Each panel draws its image's box from data/images/cell-mesh/: every triangle's edges in
-    µm, every point at its place with its number, the points the other image places
+    nm, every point at its place with its number, the points the other image places
     differently ringed, the limits round the points and the image's gmsh version; the title
     gives the record's comparison of the two full meshes. The record names the committed 2D
     job and its mesh, the stable image's mesh is that mesh, and the box holds a moved point."""
