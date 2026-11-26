@@ -196,13 +196,15 @@ def _expected_page_numbers() -> dict:
         **{f"lim_charon_b7_{k}": x for k, x in b7.items()},
         "lim_charon_b7_max": max(b7.values()),
         "lim_charon_stall_v": float(stall["failed_at"][0]),
+        "lim_charon_stall_last": stall["loca_failures"][-1][1],
         "lim_charon_stall_fnorm": stall["final"][-1][0],
         "lim_charon_stall_wrms": stall["final"][-1][1],
         "lim_charon_stall_iters": f"{stall['newton_limit'][0][0]}",
-        "lim_charon_stall_ramp_v": float(ramp["failed_at"][0]),
-        "lim_charon_tight_ramp_v": float(
-            studies["study-nfet-default-1e-11"]["failed"]["failed_at"][0]
-        ),
+        # a ramp goes on converging past its first failure: where it last converged
+        "lim_charon_stall_ramp_v": ramp["loca_failures"][-1][1],
+        "lim_charon_tight_ramp_v": studies["study-nfet-default-1e-11"]["failed"]["loca_failures"][
+            -1
+        ][1],
         "lim_charon_pfet_start_from": min(above["vg"]),
         "lim_charon_pfet_start_up_to": max(up["vg"]),
         "lim_charon_pfet_start_points": f"{len(covered)}",
@@ -210,7 +212,7 @@ def _expected_page_numbers() -> dict:
         "lim_charon_nlp_c": max(abs(p["c_nlp"]) for p in nlp_ok),
         "lim_charon_nlp_ok": [p["vg"] for p in nlp_ok],
         "lim_charon_nlp_bad": [p["vg"] for p in nlp if not p["ok"]],
-        "lim_charon_belos_stop": float(belos["failed_at"][0]),
+        "lim_charon_belos_stop": belos["loca_failures"][-1][1],
     }
 
 
@@ -328,7 +330,7 @@ def test_readme_charon_numbers_are_the_records():
 #: tolerances, lifetimes and scalings tried, biases and sweep ends chosen, the frequencies and
 #: amplitudes, the grid, the spec section, years, file-resolution and scale factors.
 PLAN_SETTINGS = {
-    "1", "3", "5", "10", "11", "14", "26", "50", "2026", "12.1", "0.3", "0.5", "1.5", "−5",
+    "1", "3", "5", "10", "11", "14", "26", "50", "2026", "12.1",
     "1e-3", "1e-4", "1e-5", "1e-7", "1e-8", "1e-9", "1e-10", "1e-11", "1e-12", "1e-13", "1e-14",
     "1e-15", "1e-16", "1e4", "1e10", "1e20",
 }  # fmt: skip
@@ -386,22 +388,34 @@ def _plan_measured() -> dict[str, float | list]:
         ],
         "12": v["ref_1e-10"]["failed_wrms"],
         "59": v["step_5mV"]["failed_wrms"],
+        "0.15": next(
+            s for s in probes["solvers"].values() if isinstance(s, dict) and s.get("failed_at")
+        )["last_converged_v"],
         "0.2": float(
             next(
                 s for s in probes["solvers"].values() if isinstance(s, dict) and s.get("failed_at")
             )["failed_at"][0]
         ),
         "0.569": float(studies["study-pfet-start-1e-10"]["failed"]["failed_at"][0]),
+        "0.579": studies["study-pfet-start-1e-10"]["failed"]["last_converged_v"],
         "1.238": studies["study-pfet-start-1e-10"]["failed"]["final"][-1][1],
-        "0.45": float(studies["study-pfet-start-1e-11"]["failed"]["failed_at"][0]),
-        "−0.15": float(studies["study-nfet-default-1e-11"]["failed"]["failed_at"][0]),
+        "0.5303": studies["study-pfet-start-1e-11"]["failed"]["last_converged_v"],
+        "−0.5399": studies["study-nfet-default-1e-11"]["failed"]["last_converged_v"],
+        # the B3 sweep's ends, the inversion-side starts, the reverse sweep's start
+        "0.3": probes["solvers"]["belos"]["sweep_v"][1],
+        "0.5": [
+            min(float(b) for b in hard["inversion_side"]["direct"]),
+            next(p["vg"] for p in nlp if not p["ok"] and p["vg"] > 0),
+        ],
+        "1.5": sorted(float(b) for b in hard["inversion_side"]["direct"])[2],
+        "−5": min(runs["cv-pfet-start-tau15-1e-10-from-minus-5"]["vg"]),
         "4.4e-10": b7[1],
         "1.4e-9": b7[2],
         "5.1e-10": b7[3],
         "3e-5": min(devsim),
         "5e-5": max(devsim),
         "1.3e-9": _rel_max(runs, "cv-nfet-default-1e-8", "cv-nfet-default-1e-10"),
-        "−1": next(p["vg"] for p in nlp if p["ok"]),
+        "−1": [next(p["vg"] for p in nlp if p["ok"]), probes["solvers"]["belos"]["sweep_v"][0]],
         "0": [[p["vg"] for p in nlp if p["ok"]][1], max(abs(p["c_nlp"]) for p in nlp if p["ok"])],
         "−3": next(p["vg"] for p in nlp if not p["ok"]),
         "2.8e-13": max(ref_n["poly_vs_gate_A"], ref_n["poly_vs_gate_B"]),
@@ -481,3 +495,26 @@ def test_plan_charon_numbers_are_the_records():
         assert tokens.count(text) >= len(values), (text, tokens.count(text), len(values))
         for value in values:
             assert _matches(text, value), (text, value)
+
+
+def test_failed_runs_record_where_they_last_converged():
+    """Each failed study and solver sweep records its LOCA failures from the run log; its last
+    converged bias is the last failure's "from". A ramp (minimum step 1e-4 V) goes on
+    converging past its first failure, so for a ramp that bias lies beyond the first failure's
+    "from", in the ramp's direction: the page and the figures give it, not the first failure."""
+    studies = _record("hard-range")["step_studies"]
+    solvers = _record("probes")["solvers"]
+    failed = [s["failed"] for s in studies.values() if s["failed"]]
+    failed += [v for v in solvers.values() if isinstance(v, dict) and v.get("failed_at")]
+    assert failed
+    for f in failed:
+        pairs = f["loca_failures"]
+        assert pairs and f["last_converged_v"] == pairs[-1][1], f
+        assert float(f["failed_at"][0]) == pairs[0][0], f
+    ramps = [s["failed"] for s in studies.values() if s["failed"] and
+             s["failed"]["deck"].startswith("ramp")]  # fmt: skip
+    assert len(ramps) == 2
+    for f in ramps:
+        first_from = f["loca_failures"][0][1]
+        direction = 1 if f["loca_failures"][0][0] > first_from else -1
+        assert direction * (f["last_converged_v"] - first_from) > 0, f["deck"]
