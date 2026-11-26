@@ -274,8 +274,9 @@ Against u = polarity × Vg, nfet above and pfet below ({repo}`results/tcad/meshc
   pinned in {repo}`docker/TCAD_DEV_IMAGE` and are regenerated when that image changes. They are
   byte-identical to the stable image's ({repo}`docker/TCAD_IMAGE`), which
   {test}`tests/tcad/test_moscap1d.py::test_stable_and_dev_images_agree` checks. The 2D results
-  are from the stable image. The dev image's {{ gmsh }} 5 writes another mesh file for a 2D cell, with the same
-  triangles renumbered ({numref}`Figure %s of Base image <fig-cell-mesh>`). And the 2D mesh convergence has not
+  are from the stable image. The dev image's {{ gmsh }} 5 writes another mesh file for
+  `w10p0_l0p70`: the same triangles, renumbered, {{ repro_cell_moved }} points moved by rounding
+  ({numref}`Figure %s of Base image <fig-cell-mesh>`). And the 2D mesh convergence has not
   been rerun there ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)); see
   {ref}`tcad-results-image`.
 
