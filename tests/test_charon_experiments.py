@@ -206,6 +206,9 @@ def _expected_page_numbers() -> dict:
             -1
         ][1],
         "lim_charon_pfet_start_from": min(above["vg"]),
+        "lim_charon_tight_ramp_to": runs["cv-nfet-default-1e-10"]["vg"][0]
+        - runs["cv-nfet-default-1e-10"]["dv_fb_v"],
+        "lim_charon_nfet_dv_fb": runs["cv-nfet-default-1e-10"]["dv_fb_v"],
         "lim_charon_pfet_start_up_to": max(up["vg"]),
         "lim_charon_pfet_start_points": f"{len(covered)}",
         "lim_charon_pfet_start_devsim": pfet_9["max_abs_rel_vs_devsim"],

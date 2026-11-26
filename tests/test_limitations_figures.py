@@ -868,7 +868,7 @@ def check_charon_hard_range(fig):
     d = Drawn(fig)
     groups = {
         "reached the sweep end": [n for n in names if variants[n]["sweep_converged"]],
-        "stopped": [n for n in names if not variants[n]["sweep_converged"]
+        "failed after its last converged bias": [n for n in names if not variants[n]["sweep_converged"]
                     and variants[n]["equilibrium_converged"]],
         "equilibrium failed": [n for n in names if not variants[n]["equilibrium_converged"]],
     }  # fmt: skip

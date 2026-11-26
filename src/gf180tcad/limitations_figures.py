@@ -1390,7 +1390,12 @@ def charon_hard_range_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         ax = fig.subplots()
         groups = (
             ("reached the sweep end", lambda p: p["passed"], "o", pal["highlight"]),
-            ("stopped", lambda p: not p["passed"] and p["reached_v"] is not None, "o", "none"),
+            (
+                "failed after its last converged bias",
+                lambda p: not p["passed"] and p["reached_v"] is not None,
+                "o",
+                "none",
+            ),
             ("equilibrium failed", lambda p: p["reached_v"] is None, "x", pal["text"]),
         )
         for label, pick, marker, face in groups:
@@ -1559,6 +1564,11 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
         # steps): the page gives where it last converged
         "lim_charon_stall_ramp_v": f"{ramp_stop['last_converged_v']:g}",
         "lim_charon_tight_ramp_v": signed(tight["failed"]["last_converged_v"]),
+        # the nfet ramp's target, the first grid point as a device bias, and the shift
+        "lim_charon_tight_ramp_to": signed(
+            round(cv[CHARON_LOOSE_PAIR[1]]["vg"][0] - cv[CHARON_LOOSE_PAIR[1]]["dv_fb_v"], 1)
+        ),
+        "lim_charon_nfet_dv_fb": f"{cv[CHARON_LOOSE_PAIR[1]]['dv_fb_v']:.3g}",
         "lim_charon_pfet_start_from": f"{min(above['vg']):g}",
         "lim_charon_pfet_start_up_to": signed(max(up["vg"])),
         "lim_charon_pfet_start_points": f"{tol['pairs']['pfet_05v0']['start']['biases']}",
