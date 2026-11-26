@@ -161,7 +161,14 @@ def setup_physics(p, names):
     dd.solve(abs_=1.0, rel=1e-9, iters=60)
     qf = p.get("qf", 0.0)
     if qf:
-        dd.add_interface_charge(dev, "si", qf)
+        dd.add_interface_charge(dev, "si", 0.0)
     dd.undamp_oxide(dev, names["ox"])
     dd.drift_diffusion(dev, names["si"], names["si_contacts"], with_qf=bool(qf))
     dd.solve(iters=60)
+    # the oxide charge is switched on in steps: at full strength the equilibrium solve of a
+    # section with floating rings does not converge from the charge-free start
+    for k in range(1, 9):
+        if not qf:
+            break
+        ds.set_parameter(device=dev, region="si", name="Qf", value=qf * k / 8)
+        dd.solve(iters=60)

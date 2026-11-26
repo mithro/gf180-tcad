@@ -62,7 +62,9 @@ def cases(names, processes):
         for tag, s in variants:
             for pname, proc in processes.items():
                 strip = s["nat_gap"] is not None and s["nat_gap"] > 0 and proc.get("nat_strip", True)
-                a_like = proc["pwell"] == "everywhere" and (s["nat_gap"] is None or strip)
+                # an abutting P-well: breakdown below 30 V whatever else is drawn
+                a_like = (proc["pwell"] == "everywhere" and s["kind"] == "nw"
+                          and (s["nat_gap"] is None or strip))
                 shapes = [("edge", None)]
                 if not a_like:  # next to an abutting P-well the corner radius hardly matters
                     shapes.append(("corner", max(s["corner"], MIN_CORNER)))
@@ -90,6 +92,18 @@ if __name__ == "__main__":
         got = cases(sorted(STRUCTS), PROCESSES)
         nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
         got.update(cases(sorted(nat), NAT_ONLY))
+    elif which == "supp":
+        # the cases that the first batch of "main" left open (its record names them):
+        # deep N-wells under A and Aq, which need the full sweep and a corner section, and
+        # the ring structures with oxide charge, which need the charge switched on in steps
+        deep = sorted(n for n, st in STRUCTS.items() if st["kind"] == "dnw")
+        ring = sorted(n for n, st in STRUCTS.items() if st["rings"])
+        got = cases(deep, {k: PROCESSES[k] for k in ("A", "Aq")})
+        got.update(cases(ring, {"Bq": PROCESSES["Bq"]}))
+        slow = cases(["NR5_2"], {"B": PROCESSES["B"]})
+        for p in slow.values():
+            p["extended"] = True
+        got.update(slow)
     else:
         got = cases(KEY, FAMILY)
     json.dump(got, open(sys.argv[1], "w"), indent=1)

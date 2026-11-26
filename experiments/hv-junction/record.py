@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """Write one record from the run directories of a batch.
 
-    uv run python experiments/hv-junction/record.py WORKDIR CASES.json OUT.json
+    uv run python experiments/hv-junction/record.py WORKDIR CASES.json OUT.json [--allow-missing]
 
 The record holds the pins every run shared (commit, image, file hashes) and, per case,
 its parameters' sha256, the breakdown voltage, the bias points with the ionisation
 integral, the peak silicon and oxide fields, the well current and the probe (floating
 ring) potentials. It refuses runs whose pins differ, runs made from a checkout with
-uncommitted changes, and a missing case.
+uncommitted changes, and a missing case (with --allow-missing a case whose run left no
+result is listed under "not_converged" instead).
 """
 
 from __future__ import annotations
@@ -25,14 +26,17 @@ KEEP = ("v", "i_n", "emax", "eox_max", "i_well", "probes", "where_um")
 def main(argv):
     work, cases_path, out = (pathlib.Path(a).expanduser() for a in argv[:3])
     cases = json.loads(cases_path.read_text())
-    shared, rows = None, {}
+    shared, rows, missing = None, {}, []
     for name, params in cases.items():
         d = work / batch.safe(name)
         try:
             res = json.loads((d / "result.json").read_text())
             pins = json.loads((d / "pins.json").read_text())
         except FileNotFoundError as exc:
-            raise SystemExit(f"{name}: not run ({exc.filename})") from None
+            if "--allow-missing" not in argv:
+                raise SystemExit(f"{name}: not run ({exc.filename})") from None
+            missing.append(name)
+            continue
         pins.pop("case")
         if pins["dirty"]:
             raise SystemExit(f"{name}: run from a checkout with uncommitted changes")
@@ -50,7 +54,7 @@ def main(argv):
             "nodes": res["nodes"],
             **{k: res[k] for k in KEEP},
         }
-    record = {"schema": 1, "pins": shared, "cases": rows}
+    record = {"schema": 1, "pins": shared, "cases": rows, "not_converged": missing}
     out.write_text(json.dumps(record, indent=1, sort_keys=True) + "\n")
     print(f"{len(rows)} cases written to {out}")
 
