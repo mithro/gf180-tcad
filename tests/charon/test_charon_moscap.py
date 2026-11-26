@@ -22,6 +22,11 @@ def _devsim_meta(device: str, params: str) -> dict:
     return json.loads((DEVSIM_1D / device / params / moscap1d.PER_AREA_META).read_text("utf-8"))
 
 
+#: A fake sweep's Newton record: per side, each grid point's iterations, F-norm and WRMS norm.
+NEWTON = {side: [{"iterations": 4, "f_norm": 1e-9, "wrms": 0.5}] * 3
+          for side in ("sweep_minus", "sweep_plus")}  # fmt: skip
+
+
 def _fake_cv(device="nfet_05v0", params="start"):
     from gf180tcad.tcad.__main__ import load_params
 
@@ -33,7 +38,8 @@ def _fake_cv(device="nfet_05v0", params="start"):
         device=device, vg=vg, c_per_area_ff_um2=(2.0, 1.0, 2.0), points=pts,
         constants=process.CONSTANTS, mesh=meshconv.selected_spec(device, 1), stack=stack,
         node_count=686, strip_node_count=1372, mesh_sha256="0" * 64,
-        settings={"srh_lifetime_s": 1e-15, "substeps": 5},
+        settings={"srh_lifetime_s": 1e-15, "substeps": 5, "wrms_rel_tol": 1e-9,
+                  "wrms_abs_tol": 1e-11, "newton_per_point": NEWTON},
     )  # fmt: skip
     return cv, proc, cal
 
@@ -65,7 +71,8 @@ def test_meta_records_charon_settings(tmp_path):
     charon_moscap.write(cv, tmp_path, proc=proc, params="start", mesh_source="m", image="img",
                         calibration_sha256=cal)  # fmt: skip
     m = json.loads((tmp_path / moscap1d.PER_AREA_META).read_text())
-    assert m["charon"] == {"srh_lifetime_s": 1e-15, "substeps": 5, "image": "img",
+    assert m["charon"] == {"srh_lifetime_s": 1e-15, "substeps": 5, "wrms_rel_tol": 1e-9,
+                           "wrms_abs_tol": 1e-11, "newton_per_point": NEWTON, "image": "img",
                            "strip_node_count": 1372}  # fmt: skip
     assert m["mesh_sha256"] == "0" * 64
     cols, _ = io.read_csv(tmp_path / moscap1d.PER_AREA_CSV)
