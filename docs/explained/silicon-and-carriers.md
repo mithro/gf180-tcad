@@ -159,7 +159,7 @@ and $n_i$. Adding acceptors raises the holes and lowers the electrons by the sam
 ## How well doped silicon conducts
 
 The mobility μ of a carrier says how fast it drifts per unit of electric field. The
-resistivity of silicon whose majority carriers carry the current follows from it
+resistivity of silicon whose majority carriers carry the current follows from their mobility
 ({ref}`Wikipedia, Electron mobility <lit-wikipedia-mobility>`):
 
 $$
@@ -190,8 +190,9 @@ where
 - $N_{ref}$ is the fit's reference density, {{ x_nref_n_fit }}, in cm⁻³;
 - $\alpha$ is the fit's exponent, {{ x_alpha_n_fit }}, dimensionless.
 
-At the nfet source and drain peak, {{ x_sd_peak_nfet }} of donors, the idealised fit gives
-{{ x_mu_n_sd_nfet }}. The resistivity is then {{ x_rho_sd_nfet }}, an idealised example.
+At the nfet source and drain peak, {{ x_sd_peak_nfet }} of donors, the fit gives
+{{ x_mu_n_sd_nfet }}, an idealised example. The resistivity is then {{ x_rho_sd_nfet }}, also
+an idealised example.
 
 Pure silicon has n = p = $n_i$, and both carriers conduct.
 {math:numref}`eq-silicon-intrinsic` gives its resistivity
@@ -206,35 +207,36 @@ where
 - $\rho_i$ is the resistivity of pure silicon, in Ω·cm;
 - $q$ is the elementary charge, in C;
 - $n_i$ is the {term}`intrinsic carrier density`, in cm⁻³;
-- $\mu_n$ is the electron mobility, at most {{ x_mu_n_max_si }} ({ref}`Wikipedia <lit-wikipedia-mobility>`), in cm²/(V·s);
-- $\mu_p$ is the hole mobility, at most {{ x_mu_p_max_si }}, in cm²/(V·s).
+- $\mu_n$ is the electron mobility, {{ x_mu_n_tcad }} in the simulations, in cm²/(V·s);
+- $\mu_p$ is the hole mobility, {{ x_mu_p_tcad }} in the simulations, in cm²/(V·s).
 
-With the committed $n_i$ and those largest mobilities, pure silicon has at least
-{{ x_rho_intrinsic_min }}, an idealised example. The doped source and drain conduct far
-better, so the doping, not $n_i$, sets how well the silicon conducts.
-{numref}`fig-silicon-resistivity` draws both.
+The simulations use $n_i$ = {{ x_n_i_tcad }} at {{ x_t_tcad }} and one constant mobility per
+carrier ({repo}`per_area.meta.json <results/tcad/moscap1d/nfet_05v0/calibrated/per_area.meta.json>`).
+With those committed values, pure silicon has {{ x_rho_intrinsic_tcad }}, an idealised example.
+The doped source and drain conduct far better, so the doping, not $n_i$, sets how well the
+silicon conducts. {numref}`fig-silicon-resistivity` draws both.
 
 ```{figure} /_generated/explained/silicon-resistivity-light.svg
 :figclass: only-light
 :name: fig-silicon-resistivity
-:alt: Log-log plot of resistivity against donor density: a falling solid line from the lowest to the highest density, a dot at its end, and a flat dashed line far above it.
+:alt: Two panels. Top: a log-log line of resistivity falling with donor density, with a dot at its high end. Bottom: two horizontal bars on a log axis, a short one for the source and drain peak and a long one for pure silicon.
 
-The resistivity of n-type silicon against its donor density, from
+Top: the resistivity of n-type silicon against its donor density, from
 {math:numref}`eq-silicon-resistivity` and the mobility fit {math:numref}`eq-silicon-mobility`,
-over the fit's range (solid). The dot is the nfet source and drain peak. The dashed line is
-the smallest resistivity of pure silicon, {math:numref}`eq-silicon-intrinsic`. All are
-idealised examples.
+over the fit's range. The dot is the nfet source and drain peak. Bottom: that peak's
+resistivity beside pure silicon's, {math:numref}`eq-silicon-intrinsic`, with the simulations'
+$n_i$ and mobilities, on a log axis. All are idealised examples.
 ```
 
 ```{figure} /_generated/explained/silicon-resistivity-dark.svg
 :figclass: only-dark
-:alt: Log-log plot of resistivity against donor density: a falling solid line from the lowest to the highest density, a dot at its end, and a flat dashed line far above it.
+:alt: Two panels. Top: a log-log line of resistivity falling with donor density, with a dot at its high end. Bottom: two horizontal bars on a log axis, a short one for the source and drain peak and a long one for pure silicon.
 
-The resistivity of n-type silicon against its donor density, from
+Top: the resistivity of n-type silicon against its donor density, from
 {math:numref}`eq-silicon-resistivity` and the mobility fit {math:numref}`eq-silicon-mobility`,
-over the fit's range (solid). The dot is the nfet source and drain peak. The dashed line is
-the smallest resistivity of pure silicon, {math:numref}`eq-silicon-intrinsic`. All are
-idealised examples.
+over the fit's range. The dot is the nfet source and drain peak. Bottom: that peak's
+resistivity beside pure silicon's, {math:numref}`eq-silicon-intrinsic`, with the simulations'
+$n_i$ and mobilities, on a log axis. All are idealised examples.
 ```
 
 (explained-silicon-differs)=
@@ -249,6 +251,11 @@ fails in very heavily doped silicon ({ref}`Sze and Ng, ch. 1 <lit-sze>`). The ga
 The calibration absorbs that error in a shift of the gate voltage, one of its three parameters.
 The shift also takes up other offsets, and the fit sets it to {{ x_dv_fb_nfet_cal }}. The note
 on that parameter in {repo}`data/process/nfet_05v0.toml` says what it absorbs.
+
+The TCAD gives each carrier one constant mobility, with no doping dependence
+({py:class}`~gf180tcad.tcad.process.Constants`). It is {{ x_mu_n_tcad }} for electrons and
+{{ x_mu_p_tcad }} for holes. So its source and drain conduct better than
+the fit of {math:numref}`eq-silicon-mobility` gives.
 
 The body doping is one uniform value ({py:mod}`gf180tcad.tcad.stack`), fitted to the
 {term}`C–V` curves of the SPICE model. The 2D cell and its other differences are on
