@@ -126,7 +126,7 @@ simulated cell has four contacts, gate, body, drain and source
 ({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`). The
 simulator solves for the cell on a mesh, a grid of {{ x_node_count_cell }} points.
 
-The points are the corners of triangles that fill every part of the cell. The part of the mesh
+The points are the vertices of triangles that fill every part of the cell. The part of the mesh
 around the gate is drawn in {numref}`fig-parts-mesh`. The points are {{ x_h_si_surface_cell }}
 apart at the silicon surface. Away from the oxide the spacing grows to {{ x_h_si_bulk_cell }}
 ({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`).

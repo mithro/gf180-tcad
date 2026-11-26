@@ -497,7 +497,7 @@ result kind in it: the image's name, its reference and its probe record. That re
 :figclass: only-light
 :alt: Two panels of the same small patch of triangles in the gate oxide, each point labelled with a six-digit number. The numbers differ between the panels; two points are ringed in each.
 
-The mesh of the nfet cell `w10p0_l0p70` in a small box in the gate oxide: the stable image
+The mesh of the nfet cell `w10p0_l0p70` in a small box in the {term}`gate oxide`: the stable image
 (left) and the dev-HEAD image (right). Each point carries its number in that image's mesh. The
 ringed points differ between the two images by rounding. The title compares the two
 full meshes. Drawn from {repo}`data/images/cell-mesh/record.json` and its two boxes, which
@@ -508,7 +508,7 @@ full meshes. Drawn from {repo}`data/images/cell-mesh/record.json` and its two bo
 :figclass: only-dark
 :alt: Two panels of the same small patch of triangles in the gate oxide, each point labelled with a six-digit number. The numbers differ between the panels; two points are ringed in each.
 
-The mesh of the nfet cell `w10p0_l0p70` in a small box in the gate oxide: the stable image
+The mesh of the nfet cell `w10p0_l0p70` in a small box in the {term}`gate oxide`: the stable image
 (left) and the dev-HEAD image (right). Each point carries its number in that image's mesh. The
 ringed points differ between the two images by rounding. The title compares the two
 full meshes. Drawn from {repo}`data/images/cell-mesh/record.json` and its two boxes, which

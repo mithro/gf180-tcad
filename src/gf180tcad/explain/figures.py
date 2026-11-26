@@ -847,11 +847,11 @@ def _parts_cell(palette: str) -> bytes:
 
 
 # The parts page's cell's reduced mesh artefact (transistor-parts.md, "The contacts").
-PARTS_MESH = (numbers.ROOT / numbers.CELL_MESH).parent
+_PARTS_MESH = (numbers.ROOT / numbers._CELL_MESH).parent
 
 
 def _parts_mesh(palette: str) -> bytes:
-    return mesh_artefact(PARTS_MESH, palette)
+    return mesh_artefact(_PARTS_MESH, palette)
 
 
 def _mesh_window(palette: str) -> bytes:
