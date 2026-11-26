@@ -173,3 +173,17 @@ def test_exodus_reads_back_with_meshio(driver, driver_dir):
     m = meshio.read(driver_dir / "strip.exo")
     assert np.array_equal(m.points[:, :2], np.asarray(driver["strip_xy_um"]))
     assert [len(c.data) for c in m.cells] == driver["strip_blocks"]
+
+
+@pytest.mark.sandbox
+@pytest.mark.parametrize("device", process.DEVICES)
+def test_meta_records_the_achieved_convergence(driver_dir, device):
+    """Each job's meta has the WRMS tolerances and, per side, every grid point's Newton
+    iterations, F-norm and WRMS norm, each converged (WRMS norm below 1)."""
+    m = json.loads((driver_dir / f"job_{device}" / moscap1d.PER_AREA_META).read_text())
+    c = m["charon"]
+    assert (c["wrms_rel_tol"], c["wrms_abs_tol"]) == (1e-9, 1e-11)
+    assert set(c["newton_per_point"]) == {"sweep_minus", "sweep_plus"}
+    for side, pts in c["newton_per_point"].items():
+        assert len(pts) == m["points"], side
+        assert all(0 < p["iterations"] and p["wrms"] < 1 and p["f_norm"] >= 0 for p in pts), side

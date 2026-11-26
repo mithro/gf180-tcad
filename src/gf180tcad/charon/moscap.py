@@ -119,12 +119,11 @@ def simulate(
     dev = charon.create_1d_device(desc, workdir=workdir)
     try:
         res = charon.run_cv_sweep(dev, sweep)
-        checks = dev.checks
+        checks, newton, tol = dev.checks, dev.newton, dev.tolerances
     finally:
         dev.delete_device()
     if res.unit != "F/cm^2" or len(res.cgg) != len(vg):
         raise RuntimeError(f"a 1D Charon sweep gives {len(vg)} points in F/cm^2, got {res.unit}")
-    tol = charon_deck.Tolerances()
     xs, _ = desc.node_positions_um()
     settings = {
         "srh_lifetime_s": charon_deck.SRH_LIFETIME_S,
@@ -137,6 +136,9 @@ def simulate(
         "wrms_abs_tol": tol.abs,
         "max_iterations": tol.max_iterations,
         "linear_tol": tol.linear,
+        # the achieved convergence: per side, each grid point's Newton iterations, final F-norm
+        # and WRMS norm (below 1 is converged at wrms_rel_tol and wrms_abs_tol)
+        "newton_per_point": newton,
         "convergence_columns": CONVERGENCE_NOTE,
     }
     points = tuple(
