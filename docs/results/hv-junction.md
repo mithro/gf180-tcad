@@ -497,8 +497,11 @@ count and against the gap of a single ring in {numref}`hvj-rings-figure`.
 
 | Structure | AL | BL | BL corner | BD |
 |---|---|---|---|---|
+| NR1S12 | {{ hvj_NR1S12_AL_edge }} | {{ hvj_NR1S12_BL_edge }} | {{ hvj_NR1S12_BL_corner }} | {{ hvj_NR1S12_BD_edge }} |
 | NR1S2 | {{ hvj_NR1S2_AL_edge }} | {{ hvj_NR1S2_BL_edge }} | {{ hvj_NR1S2_BL_corner }} | {{ hvj_NR1S2_BD_edge }} |
 | NR1S3 | {{ hvj_NR1S3_AL_edge }} | {{ hvj_NR1S3_BL_edge }} | {{ hvj_NR1S3_BL_corner }} | {{ hvj_NR1S3_BD_edge }} |
+| NR1S5 | {{ hvj_NR1S5_AL_edge }} | {{ hvj_NR1S5_BL_edge }} | {{ hvj_NR1S5_BL_corner }} | {{ hvj_NR1S5_BD_edge }} |
+| NR1S8 | {{ hvj_NR1S8_AL_edge }} | {{ hvj_NR1S8_BL_edge }} | {{ hvj_NR1S8_BL_corner }} | {{ hvj_NR1S8_BD_edge }} |
 | NR1_1p4 | {{ hvj_NR1_1p4_AL_edge }} | {{ hvj_NR1_1p4_BL_edge }} | {{ hvj_NR1_1p4_BL_corner }} | {{ hvj_NR1_1p4_BD_edge }} |
 | NR1_2 | {{ hvj_NR1_2_AL_edge }} | {{ hvj_NR1_2_BL_edge }} | {{ hvj_NR1_2_BL_corner }} | {{ hvj_NR1_2_BD_edge }} |
 | NR1_3 | {{ hvj_NR1_3_AL_edge }} | {{ hvj_NR1_3_BL_edge }} | {{ hvj_NR1_3_BL_corner }} | {{ hvj_NR1_3_BD_edge }} |
@@ -549,22 +552,16 @@ draw a NAT layer that overlaps the deep N-well edge by 1 µm. The values are in
 | DAo1M1_6 | {{ hvj_DAo1M1_6_AL_edge }} | {{ hvj_DAo1M1_6_AD_edge }} | {{ hvj_DAo1M1_6_BL_edge }} | {{ hvj_DAo1M1_6_BD_edge }} |
 | DAo1T35 | {{ hvj_DAo1T35_AL_edge }} | {{ hvj_DAo1T35_AD_edge }} | {{ hvj_DAo1T35_BL_edge }} | {{ hvj_DAo1T35_BD_edge }} |
 | DC0 | {{ hvj_DC0_AL_edge }} | {{ hvj_DC0_AD_edge }} | {{ hvj_DC0_BL_edge }} | {{ hvj_DC0_BD_edge }} |
-| DC15 | {{ hvj_DC15_AL_edge }} | {{ hvj_DC15_AD_edge }} | {{ hvj_DC15_BL_edge }} | {{ hvj_DC15_BD_edge }} |
 | DGM1@g0 | {{ hvj_DGM1_g0_AL_edge }} | {{ hvj_DGM1_g0_AD_edge }} | {{ hvj_DGM1_g0_BL_edge }} | {{ hvj_DGM1_g0_BD_edge }} |
 | DGM1@gw | {{ hvj_DGM1_gw_AL_edge }} | {{ hvj_DGM1_gw_AD_edge }} | {{ hvj_DGM1_gw_BL_edge }} | {{ hvj_DGM1_gw_BD_edge }} |
 | DM1_10 | {{ hvj_DM1_10_AL_edge }} | {{ hvj_DM1_10_AD_edge }} | {{ hvj_DM1_10_BL_edge }} | {{ hvj_DM1_10_BD_edge }} |
-| DM1_3 | {{ hvj_DM1_3_AL_edge }} | {{ hvj_DM1_3_AD_edge }} | {{ hvj_DM1_3_BL_edge }} | {{ hvj_DM1_3_BD_edge }} |
 | DM1_6 | {{ hvj_DM1_6_AL_edge }} | {{ hvj_DM1_6_AD_edge }} | {{ hvj_DM1_6_BL_edge }} | {{ hvj_DM1_6_BD_edge }} |
 | DPM12 | {{ hvj_DPM12_AL_edge }} | {{ hvj_DPM12_AD_edge }} | {{ hvj_DPM12_BL_edge }} | {{ hvj_DPM12_BD_edge }} |
 | DT10 | {{ hvj_DT10_AL_edge }} | {{ hvj_DT10_AD_edge }} | {{ hvj_DT10_BL_edge }} | {{ hvj_DT10_BD_edge }} |
 | DT20 | {{ hvj_DT20_AL_edge }} | {{ hvj_DT20_AD_edge }} | {{ hvj_DT20_BL_edge }} | {{ hvj_DT20_BD_edge }} |
 | DT20b | {{ hvj_DT20b_AL_edge }} | {{ hvj_DT20b_AD_edge }} | {{ hvj_DT20b_BL_edge }} | {{ hvj_DT20b_BD_edge }} |
 | DT2p6 | {{ hvj_DT2p6_AL_edge }} | {{ hvj_DT2p6_AD_edge }} | {{ hvj_DT2p6_BL_edge }} | {{ hvj_DT2p6_BD_edge }} |
-| DT35 | {{ hvj_DT35_AL_edge }} | {{ hvj_DT35_AD_edge }} | {{ hvj_DT35_BL_edge }} | {{ hvj_DT35_BD_edge }} |
-| DT5 | {{ hvj_DT5_AL_edge }} | {{ hvj_DT5_AD_edge }} | {{ hvj_DT5_BL_edge }} | {{ hvj_DT5_BD_edge }} |
 | DW1p5 | {{ hvj_DW1p5_AL_edge }} | {{ hvj_DW1p5_AD_edge }} | {{ hvj_DW1p5_BL_edge }} | {{ hvj_DW1p5_BD_edge }} |
-| DW3 | {{ hvj_DW3_AL_edge }} | {{ hvj_DW3_AD_edge }} | {{ hvj_DW3_BL_edge }} | {{ hvj_DW3_BD_edge }} |
-| DW6 | {{ hvj_DW6_AL_edge }} | {{ hvj_DW6_AD_edge }} | {{ hvj_DW6_BL_edge }} | {{ hvj_DW6_BD_edge }} |
 ~~~
 
 ### Doping family
