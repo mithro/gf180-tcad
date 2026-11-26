@@ -8,13 +8,13 @@ import json
 import math
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from gf180tcad import io
 from gf180tcad import limitations_figures as lf
-from gf180tcad.comparison_figures import edge_split
 from gf180tcad.devices import DEVICES
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import calibration, calibration_file
@@ -90,17 +90,23 @@ def test_record_pins_what_the_runs_used(device, gid):
 
 
 @pytest.mark.parametrize(("device", "gid"), CELLS)
-def test_record_base_is_the_committed_cell(device, gid):
-    """The harness's base variant solves the committed cell: the same node count and meshed
-    length, and its Cgg per unit width at each plateau within 1e-9 of the committed cv.csv (the
-    variant starts each bias from equilibrium, the committed sweep from the bias before)."""
+def test_record_base_is_the_committed_cell(device, gid, tmp_path):
+    """The harness's base variant solves the δ = 0 cell the poly length bias fit read: the cell
+    as committed at the fit's commit (plan Task E3, "Design"; the committed cell is now the
+    fitted one). The same node count and meshed length, and its Cgg per unit width at each
+    plateau within 1e-9 of that cv.csv (the variant starts each bias from equilibrium, the
+    committed sweep from the bias before)."""
+    from gf180tcad.tcad import edgefit
+
     base = lf.edge_record(device, gid)["variants"]["base"]
-    cv = _cell_cv(device, gid)
-    meta = json.loads(
-        (
-            REPO_ROOT / "results/tcad/moscap2d" / device / "calibrated" / gid / "cv.meta.json"
-        ).read_text("utf-8")
-    )
+    commit = edgefit.read(device)["commit"]
+    rel = f"results/tcad/moscap2d/{device}/calibrated/{gid}"
+    raw = _at(commit, f"{rel}/cv.csv")
+    path = Path(tmp_path) / "cv.csv"
+    path.write_bytes(raw)
+    cv, _ = io.read_csv(path)
+    meta = json.loads(_at(commit, f"{rel}/cv.meta.json"))
+    assert "edge_fit" not in meta, "the fit's input cell must be the δ = 0 one"
     assert base["node_count"] == meta["node_count"]
     assert base["meshed_l_um"] == meta["meshed_l_um"]
     assert base["bias_um"] == 0.0 and not base["plugs"] and base["ldd"] is None
@@ -131,7 +137,7 @@ def test_bias_variants_mesh_the_longer_poly(device, gid):
 
 @pytest.mark.parametrize(("device", "gid"), CELLS)
 def test_edge_fit_is_the_least_squares_bias(device, gid):
-    """Re-derived from the record's raw Cgg and the edge split: the slope is the least-squares
+    """Re-derived from the record's raw Cgg and the edge split of the δ = 0 cells: the slope is the least-squares
     line through the origin of every bias<nm> variant's gain at both plateaus; δ makes slope × δ
     the mean of the two plateaus' edge gaps (SPICE minus 2D), so the residuals are equal and
     opposite. The fitted δ and residual are the ones the docs state."""
@@ -145,11 +151,14 @@ def test_edge_fit_is_the_least_squares_bias(device, gid):
                 ys.append(c - base[vg])
     x, y = np.array(xs), np.array(ys)
     slope = float(np.linalg.lstsq(x[:, None], y, rcond=None)[0][0])
-    split = edge_split(device)
-    gaps = []
-    for u in lf.STYLE["edge_u_v"]:
-        (i,) = np.flatnonzero(split["u"] == u)
-        gaps.append(float(split["spice"]["edge"][i] - split["two_d"]["edge"][i]))
+    # the gaps of the δ = 0 cells the fit read: its frozen rows, which
+    # tests/test_edge_fit_rerun.py shows are the cells at the fit's commit
+    from gf180tcad.calibrate import edge
+    from gf180tcad.tcad import edgefit
+
+    rows = edgefit.read(device)["cells"]
+    gaps = [s - d for s, d in zip(edge.intercepts(rows, "spice"), edge.intercepts(rows, "two_d"),
+                                  strict=True)]  # fmt: skip
     delta = sum(gaps) / 2 / slope
 
     fit = lf.edge_fit(device, gid)

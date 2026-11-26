@@ -940,8 +940,19 @@ def edge_gains(device: str, gid: str, root: Path = EDGE_ROOT) -> dict[str, tuple
 
 
 def edge_targets(device: str, roots: Roots = DEFAULT_ROOTS) -> tuple[float, float]:
-    """The 2D edge's shortfall against SPICE (fF/µm) at u = -5 and +5 V: the SPICE minus the 2D
-    ``C_edge`` of :func:`gf180tcad.comparison_figures.edge_split`."""
+    """The 2D edge's shortfall against SPICE (fF/µm) at u = -5 and +5 V that the poly length
+    bias is fitted to: the SPICE minus the 2D ``C_edge`` of the δ = 0 cells.
+
+    Once the fit is committed (``<tcad root>/edgefit``, :mod:`gf180tcad.tcad.edgefit`), they are
+    its frozen targets, because the committed cells are then the fitted ones (plan Task E3).
+    For a results tree without a fit, they come from the live edge split of its cells
+    (:func:`gf180tcad.comparison_figures.edge_split`)."""
+    from gf180tcad.tcad import edgefit
+
+    fit = edgefit.read(device, Path(roots.tcad) / "edgefit")
+    if fit is not None:
+        lo, hi = fit["targets_ff_per_um"]
+        return float(lo), float(hi)
     from gf180tcad.comparison_figures import edge_split
 
     s = edge_split(device, roots.spice, roots.tcad)
