@@ -68,6 +68,26 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
   temperature dependence and the band-edge densities of states with their masses
   ({ref}`display-values`).
 
+(lit-ioffe-basic)=
+
+- Ioffe Physico-Technical Institute, NSM archive of semiconductor properties, silicon,
+  [basic parameters](https://web.archive.org/web/20261021031102/http://www.ioffe.ru/SVA/NSM/Semicond/Si/basic.html)
+  (archived copy of 2026-10-21). Its table "Basic Parameters at 300 K" gives the number of atoms
+  in 1 cm³ of silicon, 5·10²², that the explainer compares with the doping
+  ({ref}`explained-dopants`).
+
+(lit-wikipedia-mobility)=
+
+- Wikipedia, "[Electron mobility](https://en.wikipedia.org/w/index.php?title=Electron_mobility&oldid=1383366442)".
+  Its section "Relation to conductivity" gives σ = e(nμ_e + pμ_h). Its table "List of
+  highest measured mobilities" gives crystalline silicon 1,400 cm²/(V⋅s) for electrons and 450
+  for holes, citing the NSM archive. Its section "Doping
+  concentration dependence in heavily-doped silicon" gives the majority-carrier fit of silicon
+  for 10¹⁸ cm⁻³ and up. That fit cites Caughey and Thomas, "Carrier mobilities in silicon
+  empirically related to doping and field", Proc. IEEE 55(12), 2192-2193, 1967
+  ({ref}`lit-caughey`). The explainer uses both for the resistivity of doped and pure silicon
+  ({ref}`explained-conduction`).
+
 (lit-colorado-constants)=
 
 - University of Colorado Boulder, Electrical, Computer and Energy Engineering, constants sheet
@@ -81,8 +101,8 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
   the table of band gaps at 302 K. It gives 1.14 eV for silicon. For that value it cites Streetman
   and Banerjee, *Solid State Electronic Devices*, 5th ed., p. 524. It also cites Pankove,
   *Optical Processes in Semiconductors*, 1971. It gives 9 eV for SiO₂, citing Vella et al.,
-  "[Unraveling exciton dynamics in amorphous silicon dioxide](https://doi.org/10.1103/PhysRevB.83.174201)",
-  Phys. Rev. B 83, 174201, 2011 ({ref}`display-values`).
+  "Unraveling exciton dynamics in amorphous silicon dioxide",
+  Phys. Rev. B 83, 174201, 2011, {doi}`10.1103/PhysRevB.83.174201` ({ref}`display-values`).
 
 (lit-wikipedia-effective-mass)=
 
@@ -319,7 +339,7 @@ lists and the papers they lead to:
 - **Charon's list of publications.** The [Charon publications page](https://charon.sandia.gov/publications-and-documents/)
   held 16 items on 2026-11-26. No title names a compact model, SPICE or BSIM.
 - **Charon and compact models.** Huang et al.,
-  [SAND2021-2473C](https://www.osti.gov/servlets/purl/1854316), fit a graph-network compact
+  SAND2021-2473C, {doi}`10.2172/1854316`, fit a graph-network compact
   model of a p-n diode to Charon results. BSIM appears in their software list only. Gao et al.,
   ACM TODAES 2026, {doi}`10.1145/3766551`, calibrate Charon to measured dose effects in a
   commercial SiC power MOSFET. Their abstract names no BSIM card.
