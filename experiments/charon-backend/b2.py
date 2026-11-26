@@ -85,7 +85,11 @@ def solve(name, gate_bc, problem, *, mesh, idx=None, init="equilibrium", sweep=N
         print("failed_at", stats["failed_at"][:5], "iters tail", stats["iters"][-5:])
         Path("b2_failed.json").write_text(json.dumps({
             "deck": name, "failed_at": stats["failed_at"], "iterations": stats["iters"],
-            "final": stats["final"]}, indent=1))  # fmt: skip
+            "final": stats["final"],
+            # the failed step's Newton iterations against the limit, from its last status test
+            "newton_limit": [list(map(int, m)) for m in
+                             re.findall(r"Number of Iterations = (\d+) < (\d+)", out)[-1:]],
+        }, indent=1))  # fmt: skip
         raise SystemExit(f"{name} failed")
     return out, dt, stats
 

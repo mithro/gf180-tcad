@@ -42,15 +42,23 @@ _HARD = (
 )
 
 
-def _cv(
-    dev: str, rel: str, abs_: str, *, tau: str = "", vgmax: str = "", sub: str = "", pred: str = ""
-) -> str:
-    env = (f"CX_REL={rel} CX_ABS={abs_} CX_LIN=klu2 CX_TAU={tau} CX_VGMAX={vgmax} "
-           f"CX_SUB={sub} CX_PRED={pred}")  # fmt: skip
+def _env(rel: str, abs_: str, *, tau: str = "", vgmax: str = "", vgmin: str = "", sub: str = "",
+         pred: str = "") -> str:  # fmt: skip
+    return (f"CX_REL={rel} CX_ABS={abs_} CX_LIN=klu2 CX_TAU={tau} CX_VGMAX={vgmax} "
+            f"CX_VGMIN={vgmin} CX_SUB={sub} CX_PRED={pred}")  # fmt: skip
+
+
+def _cv(dev: str, rel: str, abs_: str, *, params: str = "calibrated", **kw: str) -> str:
+    env = _env(rel, abs_, **kw)
     return (
-        f"env {env} python3 b2.py {dev} calibrated ni && "
-        f"env {env} python3 b2an.py {dev} calibrated result"
+        f"env {env} python3 b2.py {dev} {params} ni && "
+        f"env {env} python3 b2an.py {dev} {params} result"
     )
+
+
+def _study(dev: str, rel: str, abs_: str, *, params: str = "calibrated", **kw: str) -> str:
+    """A sweep that may stop: b2.py records where (b2_failed.json); the step exits 0."""
+    return f"env {_env(rel, abs_, **kw)} python3 b2.py {dev} {params} ni; echo $? > b2_exit.txt"
 
 
 STEPS = {
@@ -67,6 +75,20 @@ STEPS = {
     "cv-nfet-tau15-constant": _cv("nfet_05v0", "1e-10", "1e-12", tau="1e-15", pred="constant"),
     "cv-pfet-tau15-1e-10": _cv("pfet_05v0", "1e-10", "1e-12", tau="1e-15", sub="5"),
     "cv-pfet-tau14-1e-10": _cv("pfet_05v0", "1e-10", "1e-12", tau="1e-14", sub="5"),
+    "cv-pfet-tau15-1e-9": _cv("pfet_05v0", "1e-9", "1e-11", tau="1e-15", sub="5"),
+    "cv-nfet-start-tau15-1e-10": _cv(
+        "nfet_05v0", "1e-10", "1e-12", params="start", tau="1e-15", sub="5"
+    ),
+    "cv-nfet-start-tau15-1e-9": _cv(
+        "nfet_05v0", "1e-9", "1e-11", params="start", tau="1e-15", sub="5"
+    ),
+    "cv-pfet-start-tau15-1e-9": _cv(
+        "pfet_05v0", "1e-9", "1e-11", params="start", tau="1e-15", sub="5"
+    ),
+    # the pfet start values at 1e-10 stop at 0.569 V (the studies below); compared above it
+    "cv-pfet-start-tau15-1e-10-above-0.6": _cv(
+        "pfet_05v0", "1e-10", "1e-12", params="start", tau="1e-15", sub="5", vgmin="0.6"
+    ),
     "b4-harmonic-balance": (
         "for fa in '1e6 1e-4' '1e3 1e-4' '1e0 1e-4' '1e6 1e-3' '1e6 1e-5'; do "
         "set -- $fa; env CX_REL=1e-8 CX_ABS=1e-10 CX_F=$1 CX_AMP=$2 "
@@ -84,6 +106,25 @@ STEPS = {
     "study-nfet-default-1e-11": (
         "env CX_REL=1e-11 CX_ABS=1e-13 CX_LIN=klu2 CX_TAU= CX_VGMAX=0.35 CX_SUB= "
         "CX_PRED= python3 b2.py nfet_05v0 calibrated ni; echo $? > b2_exit.txt"
+    ),
+    # The pfet start values' stall at 1e-10 and the settings tried on it (each may stop).
+    "study-pfet-start-1e-10": _study(
+        "pfet_05v0", "1e-10", "1e-12", params="start", tau="1e-15", sub="5"
+    ),
+    "study-pfet-start-1e-10-5mV": _study(
+        "pfet_05v0", "1e-10", "1e-12", params="start", tau="1e-15", sub="10"
+    ),
+    "study-pfet-start-1e-10-tau16": _study(
+        "pfet_05v0", "1e-10", "1e-12", params="start", tau="1e-16", sub="5"
+    ),
+    "study-pfet-start-1e-11": _study(
+        "pfet_05v0", "1e-11", "1e-13", params="start", tau="1e-15", sub="5"
+    ),
+    "study-pfet-start-rel-1e-9-abs-1e-12": _study(
+        "pfet_05v0", "1e-9", "1e-12", params="start", tau="1e-15", sub="5"
+    ),
+    "study-pfet-start-rel-1e-10-abs-1e-11": _study(
+        "pfet_05v0", "1e-10", "1e-11", params="start", tau="1e-15", sub="5"
     ),
     "b4-parallel-plate": "python3 b4pp.py",
     "b4-metal-gate": "python3 b4mg.py",

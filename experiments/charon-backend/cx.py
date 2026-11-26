@@ -430,12 +430,20 @@ def msh_to_exodus_parts(m, *, regions, contacts):
     return xy, blocks, sidesets, info
 
 
-def truncate_grid(job, vgmax=None):
-    """Keep only the grid points with vg <= vgmax (env CX_VGMAX when vgmax is None)."""
+def truncate_grid(job, vgmax=None, vgmin=None):
+    """Keep only the leading grid points with vg <= vgmax and vg >= vgmin (env CX_VGMAX and
+    CX_VGMIN when None). The nfet grid ascends, so CX_VGMAX cuts its end; the pfet grid descends
+    from +5 V, so CX_VGMIN cuts its end."""
     if vgmax is None:
         v = os.environ.get("CX_VGMAX")
         vgmax = float(v) if v else None
-    if vgmax is not None:
-        k = sum(1 for v in job.vg if v <= vgmax + 1e-12)
-        job.vg, job.c_devsim = job.vg[:k], job.c_devsim[:k]
+    if vgmin is None:
+        v = os.environ.get("CX_VGMIN")
+        vgmin = float(v) if v else None
+    k = 0
+    for v in job.vg:
+        if (vgmax is not None and v > vgmax + 1e-12) or (vgmin is not None and v < vgmin - 1e-12):
+            break
+        k += 1
+    job.vg, job.c_devsim = job.vg[:k], job.c_devsim[:k]
     return job
