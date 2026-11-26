@@ -483,8 +483,14 @@ result kind in it: the image's name, its reference and its probe record. That re
   are therefore made on the stable image, explicitly, as {numref}`fig-results-images` shows.
 - **One 2D cell in both images.** {repo}`tools/gmsh-cell-mesh` meshes the nfet cell
   `w10p0_l0p70` in each image with the cell's own mesh spec. The two meshes have the same
-  triangles. In gmsh 5, most points get other numbers, and rounding moves a few points by
-  a tiny amount, as {numref}`fig-cell-mesh` shows. So the mesh file's sha256 differs between the images.
+  triangles, {{ repro_cell_node_count }} points each. Under gmsh {{ repro_cell_gmsh_dev }},
+  {{ repro_cell_same_number }} of them keep their number from gmsh {{ repro_cell_gmsh_stable }}.
+  Rounding moves {{ repro_cell_moved }} points, by at most {{ repro_cell_largest_move }} of a
+  coordinate, as {numref}`fig-cell-mesh` shows. So the mesh file's sha256 differs between the
+  images. Its tests fail when either image's pin or the cell's
+  {repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`
+  changes. A
+  recut or rerun of `w10p0_l0p70` therefore needs `record` of the tool, as a pin change does.
 - **No 2D mesh convergence on dev.** The 2D mesh convergence has not been rerun on the dev
   image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)).
 - **Known gap.** The stable image's builder, {repo}`docker/tcad/build`, has the laxer
