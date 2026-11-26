@@ -34,7 +34,10 @@ import argparse
 import math
 from pathlib import Path
 
+import harness  # this directory: the recorded width's definition
+
 from gf180tcad import io
+from gf180tcad.explain import idealised
 
 NAME = "abrupt-junction.json"
 #: Where the rib's dopings come from: ``get_doping_info_generic`` of gplugins v0.8.0.
@@ -65,7 +68,7 @@ TEMPERATURE_SOURCE = (
 )
 T_K = 300.0
 #: The carrier-density threshold of the recorded depletion width (``harness.depletion_width``).
-FRACTION = 1e-2
+FRACTION = harness.FRACTION
 #: The fork test that uses the same inner-width definition.
 FORK_TEST_SOURCE = (
     "https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/"
@@ -75,18 +78,20 @@ CM_TO_UM = 1e4
 
 
 def compute() -> dict:
-    """The record: inputs, their sources, the formulas and the widths (µm)."""
+    """The record: inputs, their sources, the formulas and the widths (µm), from the shared
+    formulas of :mod:`gf180tcad.explain.idealised`."""
     c = CONSTANTS
-    eps = c["eps_si"] * c["eps_0_f_per_cm"]
-    vt = c["k_j_per_k"] * T_K / c["q_c"]
-    vbi = vt * math.log(N_A_CM3 * N_D_CM3 / c["n_i_cm3"] ** 2)
+    q, eps_r, eps0 = c["q_c"], c["eps_si"], c["eps_0_f_per_cm"]
+    vt = c["k_j_per_k"] * T_K / q
+    vbi = idealised.built_in_potential(N_A_CM3, N_D_CM3, c["n_i_cm3"], vt)
+    w_cm = idealised.depletion_width(N_A_CM3, N_D_CM3, vbi, eps_r, eps0, q)
     total = N_A_CM3 + N_D_CM3
-    w_cm = math.sqrt(2 * eps * vbi * total / (c["q_c"] * N_A_CM3 * N_D_CM3))
-
-    def tail_cm(n_cm3: float) -> float:
-        return math.sqrt(2 * eps * vt * math.log(1 / FRACTION) / (c["q_c"] * n_cm3))
-
-    inner_cm = w_cm - tail_cm(N_D_CM3) - tail_cm(N_A_CM3)
+    # n (or p) falls below FRACTION of the doping where the potential is V_t ln(1/FRACTION)
+    # inside the depletion edge: the depth of that bending in the depletion approximation.
+    psi_f = vt * math.log(1 / FRACTION)
+    tail_n = idealised.depletion_depth(psi_f, N_D_CM3, eps_r, eps0, q)
+    tail_p = idealised.depletion_depth(psi_f, N_A_CM3, eps_r, eps0, q)
+    inner_cm = w_cm - tail_n - tail_p
     return {
         "doping": {"n_d_cm3": N_D_CM3, "n_a_cm3": N_A_CM3, "source": DOPING_SOURCE},
         "constants": {**c, "source": CONSTANTS_SOURCE},
