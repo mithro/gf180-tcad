@@ -759,7 +759,7 @@ uses every interface. The "as ported" rows are also those of
   bottom vertices (jump below 1e-6 V).
 - **The forward current is conserved and grows like a diode's.** Anode = −cathode within 1e-6
   relative. The current grows from 9.7e-15 to 1.0e-13 A/cm between 0.1 and 0.2 V.
-- **Ideality factor.** For
+- **The implied n.** For
   I = I0 (exp(V / n V_t) − 1), I2 / I1 = exp(a) + 1 with a = 0.1 V / (n V_t). So the implied
   {term}`ideality factor` n = 0.1 V / (V_t ln(I2 / I1 − 1)) is **1.73**, within the [1, 2] the test asserts.
 
