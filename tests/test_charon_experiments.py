@@ -216,6 +216,50 @@ def _expected_page_numbers() -> dict:
         "lim_charon_nlp_ok": [p["vg"] for p in nlp_ok],
         "lim_charon_nlp_bad": [p["vg"] for p in nlp if not p["ok"]],
         "lim_charon_belos_stop": belos["loca_failures"][-1][1],
+        **_expected_newton_numbers(),
+    }
+
+
+def _expected_newton_numbers() -> dict:
+    """The page's numbers of issues #223 and #224, recomputed from the records."""
+    traps = _record("probes")["deck_traps"]
+    newton = _record("hard-range")["newton"]
+    stalled = [n for n in newton.values() if n["stalled"]]
+    loose_rel = max(n["search_rel"] for n in newton.values())
+
+    def last(n, key, tol="1e-10"):
+        return n["solves"][tol]["iterations"][-1][key]
+
+    def smallest(n, tol="1e-10"):
+        return min(it["wrms"] for it in n["solves"][tol]["iterations"])
+
+    res = [last(n, "f_2") / n["solves"]["1e-10"]["last"]["f_roundoff_2"] for n in stalled]
+    cond = [last(n, "cond1_row_scaled") for n in stalled]
+    pfet = [n for n in stalled if n["device"] == "pfet_05v0" and n["search_rel"] == loose_rel]
+    (nfet,) = [n for n in stalled if n["device"] == "nfet_05v0" and n["tau"] is None
+               and n["search_rel"] == loose_rel]  # fmt: skip
+    tight = [n for n in stalled if n["search_rel"] < loose_rel]
+    scales = stalled[0]["solves"]["1e-10"]["scales"]
+    return {
+        "lim_charon_trap_side_exit": f"{traps['side_set_named_body']['charon_exit']}",
+        "lim_charon_trap_body_doping": traps["doping_block_misnamed"]["doping"]["body_max_abs_cm3"],
+        "lim_charon_newton_floor_x": max(n["solves"]["1e-10"]["last"]["floor_x"] for n in stalled),
+        "lim_charon_newton_floor_x_tight": max(
+            n["solves"]["1e-11"]["last"]["floor_x"] for n in stalled
+        ),
+        "lim_charon_newton_res_lo": min(res),
+        "lim_charon_newton_res_hi": max(res),
+        "lim_charon_newton_cond_lo": min(cond),
+        "lim_charon_newton_cond_hi": max(cond),
+        "lim_charon_newton_conv_hi": max(smallest(n) for n in tight),
+        "lim_charon_newton_pfet_v": pfet[0]["failed_at_v"],
+        "lim_charon_newton_pfet_floor": max(smallest(n) for n in pfet),
+        "lim_charon_newton_nfet_v": nfet["failed_at_v"],
+        "lim_charon_newton_nfet_floor": smallest(nfet),
+        "lim_charon_newton_nfet_cond": last(nfet, "cond1_row_scaled"),
+        "lim_charon_newton_tight_v": [n["failed_at_v"] for n in tight if n["deck"] != "eq"],
+        "lim_charon_newton_v0": scales["V0"],
+        "lim_charon_newton_c0": scales["C0"],
     }
 
 
@@ -399,7 +443,11 @@ def _plan_measured() -> dict[str, float | list]:
                 s for s in probes["solvers"].values() if isinstance(s, dict) and s.get("failed_at")
             )["failed_at"][0]
         ),
-        "0.569": float(studies["study-pfet-start-1e-10"]["failed"]["failed_at"][0]),
+        "0.569": [
+            float(studies["study-pfet-start-1e-10"]["failed"]["failed_at"][0]),
+            hard["newton"]["newton-pfet-start-default-1e-10"]["failed_at_v"],
+        ],
+        **_plan_newton(hard["newton"], probes["deck_traps"]),
         "0.579": studies["study-pfet-start-1e-10"]["failed"]["last_converged_v"],
         "1.238": studies["study-pfet-start-1e-10"]["failed"]["final"][-1][1],
         "0.5303": studies["study-pfet-start-1e-11"]["failed"]["last_converged_v"],
@@ -452,6 +500,23 @@ def _plan_measured() -> dict[str, float | list]:
             for c, x in body_1hz.items()
             if c.startswith("body") and "CosH1" in c and c.endswith("__Current")
         ),
+    }
+
+
+def _plan_newton(newton: dict, traps: dict) -> dict:
+    """The amendment's numbers of issues #223 and #224."""
+    stalled = [n for n in newton.values() if n["stalled"]]
+    last = [n["solves"]["1e-10"]["iterations"][-1] for n in stalled]
+    res = [it["f_2"] / n["solves"]["1e-10"]["last"]["f_roundoff_2"] for it, n in zip(last, stalled)]
+    cond = [it["cond1_row_scaled"] for it in last]
+    return {
+        "0.24": min(res),
+        "4.7": max(res),
+        "1.2e9": min(cond),
+        "1.0e18": max(cond),
+        "1.9e-6": max(n["solves"]["1e-10"]["last"]["floor_x"] for n in stalled),
+        "0.549": newton["newton-nfet-start-default-1e-10"]["failed_at_v"],
+        "14": traps["side_set_named_body"]["charon_exit"],
     }
 
 
@@ -653,3 +718,38 @@ def test_newton_iterations_are_the_logs():
             if check:
                 assert check["potential"] < 1e-5, (name, tol, check)
                 assert max(check["electrons"], check["holes"]) < 1e-12, (name, tol, check)
+
+
+def test_newton_page_claims():
+    """The Charon page's statements on the Newton diagnostics (issue #223), one by one."""
+    newton = _newton()
+    stalled = {k: n for k, n in newton.items() if n["stalled"]}
+    eps = np.finfo(float).eps
+    for name, n in stalled.items():
+        loose, tight = n["solves"]["1e-10"]["iterations"], n["solves"]["1e-11"]["iterations"]
+        # the full Newton step at every iteration: no line search acts
+        assert all(it["log_step"] == 1.0 for it in loose + tight), name
+        # the same updates while both run; the WRMS norm at 1e-11 is ten times that at 1e-10
+        for a, b in zip(loose, tight, strict=False):
+            assert a["dx_2"] == pytest.approx(b["dx_2"], rel=1e-12), (name, a["iteration"])
+            assert b["wrms"] / a["wrms"] == pytest.approx(10.0, rel=1e-9), (name, a["iteration"])
+        # floor_x far below the limit; the residual at its round-off scale
+        assert n["solves"]["1e-11"]["last"]["floor_x"] < 1e-3, name
+        ratio = loose[-1]["f_2"] / n["solves"]["1e-10"]["last"]["f_roundoff_2"]
+        assert 0.1 < ratio < 10, (name, ratio)
+        # a 1e-11 sweep's failure converges at 1e-10; a 1e-10 sweep's fails at both
+        if n["search_rel"] == 1e-11:
+            assert n["solves"]["1e-10"]["converged"] and not n["solves"]["1e-11"]["converged"]
+        else:
+            assert not n["solves"]["1e-10"]["converged"] and not n["solves"]["1e-11"]["converged"]
+    # one factor at a time
+    assert set(newton) - set(stalled) == {"newton-nfet-start-tau15-1e-10"}
+    pfet = {stalled[f"newton-pfet-start-{t}-1e-10"]["failed_at_v"] for t in ("default", "tau15")}
+    assert len(pfet) == 1
+    assert stalled["newton-nfet-start-default-1e-11"]["deck"] == "eq"
+    assert all(
+        n["deck"] != "eq" for k, n in stalled.items() if k != "newton-nfet-start-default-1e-11"
+    )
+    nfet = stalled["newton-nfet-start-default-1e-10"]
+    assert nfet["solves"]["1e-10"]["iterations"][-1]["cond1_row_scaled"] > 1 / eps
+    assert min(it["wrms"] for it in nfet["solves"]["1e-10"]["iterations"]) > 1
