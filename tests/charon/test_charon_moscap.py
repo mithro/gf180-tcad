@@ -171,8 +171,8 @@ def test_exodus_reads_back_with_meshio(driver, driver_dir):
     import meshio
 
     m = meshio.read(driver_dir / "strip.exo")
-    assert np.array_equal(m.points[:, :2], np.asarray(driver["strip_xy_um"]))
-    assert [len(c.data) for c in m.cells] == driver["strip_blocks"]
+    assert np.array_equal(m.points[:, :2], np.asarray(driver["stacks"]["strip_xy_um"]))
+    assert [len(c.data) for c in m.cells] == driver["stacks"]["strip_blocks"]
 
 
 @pytest.mark.sandbox
