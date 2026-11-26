@@ -219,24 +219,24 @@ silicon conducts. {numref}`fig-silicon-resistivity` draws both.
 ```{figure} /_generated/explained/silicon-resistivity-light.svg
 :figclass: only-light
 :name: fig-silicon-resistivity
-:alt: Two panels. Top: a log-log line of resistivity falling with donor density, with a dot at its high end. Bottom: two horizontal bars on a log axis, a short one for the source and drain peak and a long one for pure silicon.
+:alt: Two panels. Top: a log-log line of resistivity falling with donor density, with a dot at its high end. Bottom: two markers on a log resistivity axis, one row each, the source and drain peak near the left and pure silicon near the right.
 
 Top: the resistivity of n-type silicon against its donor density, from
 {math:numref}`eq-silicon-resistivity` and the mobility fit {math:numref}`eq-silicon-mobility`,
 over the fit's range. The dot is the nfet source and drain peak. Bottom: that peak's
 resistivity beside pure silicon's, {math:numref}`eq-silicon-intrinsic`, with the simulations'
-$n_i$ and mobilities, on a log axis. All are idealised examples.
+$n_i$ and mobilities, as markers on a log axis. All are idealised examples.
 ```
 
 ```{figure} /_generated/explained/silicon-resistivity-dark.svg
 :figclass: only-dark
-:alt: Two panels. Top: a log-log line of resistivity falling with donor density, with a dot at its high end. Bottom: two horizontal bars on a log axis, a short one for the source and drain peak and a long one for pure silicon.
+:alt: Two panels. Top: a log-log line of resistivity falling with donor density, with a dot at its high end. Bottom: two markers on a log resistivity axis, one row each, the source and drain peak near the left and pure silicon near the right.
 
 Top: the resistivity of n-type silicon against its donor density, from
 {math:numref}`eq-silicon-resistivity` and the mobility fit {math:numref}`eq-silicon-mobility`,
 over the fit's range. The dot is the nfet source and drain peak. Bottom: that peak's
 resistivity beside pure silicon's, {math:numref}`eq-silicon-intrinsic`, with the simulations'
-$n_i$ and mobilities, on a log axis. All are idealised examples.
+$n_i$ and mobilities, as markers on a log axis. All are idealised examples.
 ```
 
 (explained-silicon-differs)=

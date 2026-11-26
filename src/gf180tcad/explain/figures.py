@@ -174,6 +174,10 @@ STYLE = {
     # The source doping profile: a taller figure for the two rows; depths to (1 + pad) junction
     # depths; along the surface, this many lateral straggles either side of the gate edge.
     "profile_size_in": (6.4, 6.4),
+    # The resistivity figure's bottom panel: markers drawn above the grid.
+    "point_zorder": 3,
+    # Its top panel's legend sits above the axes, clear of the curve (axes fraction).
+    "legend_above": (0.5, 1.0),
     "profile_pad": 0.5,
     "profile_span": 4.0,
     # The labels either side of the gate edge sit this fraction of the axis width off its line.
@@ -1674,9 +1678,9 @@ def resistivity_curve() -> dict[str, np.ndarray | float]:
 
 
 def silicon_resistivity_figure(palette: str):
-    """The matplotlib figure of :func:`silicon_resistivity`, for the tests to read its lines and
-    bars: on top the doped curve on its own axis range, below the two resistivities side by
-    side on a log axis."""
+    """The matplotlib figure of :func:`silicon_resistivity`, for the tests to read its lines: on
+    top the doped curve on its own axis range, below the two resistivities as markers, one row
+    each, on a log axis."""
     pal = PALETTES[palette]
     lw = STYLE["line_width"]
     k = resistivity_curve()
@@ -1694,23 +1698,27 @@ def silicon_resistivity_figure(palette: str):
         top.grid(True)
         top.set_xlabel("donor density (cm⁻³)")
         top.set_ylabel("resistivity (Ω·cm)")
-        top.legend(loc="lower left", frameon=False)
-        labels = ["nfet source and drain peak", f"pure silicon, $n_i$ at {k['t_k']:g} K"]
-        bars = bottom.barh(labels, [k["rho_sd"], k["rho_intrinsic"]],
-                           color=[pal["electron"], pal["intrinsic"]])  # fmt: skip
-        for bar, gid in zip(bars, ("bar-sd-peak", "bar-intrinsic"), strict=True):
-            bar.set_gid(gid)
+        top.legend(loc="lower center", bbox_to_anchor=STYLE["legend_above"], frameon=False)
+        rows = (("nfet source and drain peak", k["rho_sd"], "electron", "point-sd-peak"),
+                (f"pure silicon, $n_i$ at {k['t_k']:g} K", k["rho_intrinsic"], "intrinsic",
+                 "point-intrinsic"))  # fmt: skip
+        for i, (_label, rho, colour, gid) in enumerate(rows):
+            bottom.plot([rho], [i], color=pal[colour], marker="o", ls="none", gid=gid,
+                        zorder=STYLE["point_zorder"])  # fmt: skip
+        bottom.set_yticks(range(len(rows)), [label for label, *_ in rows])
+        bottom.set_ylim(len(rows) - 1 + STYLE["row_pad"], -STYLE["row_pad"])  # first row on top
         bottom.set_xscale("log")
-        bottom.invert_yaxis()
+        bottom.set_axisbelow(True)
         bottom.grid(True, axis="x")
         bottom.set_xlabel("resistivity (Ω·cm)")
         return fig
 
 
 def silicon_resistivity(palette: str) -> bytes:
-    """The resistivity of n-type silicon against its donor density over the range of the
-    mobility fit, with the nfet's source and drain peak marked, against the smallest resistivity
-    of pure silicon (:func:`resistivity_curve`)."""
+    """Two panels (:func:`resistivity_curve`): on top, the resistivity of n-type silicon against
+    its donor density over the range of the mobility fit, with the nfet's source and drain peak
+    marked; below, that peak's resistivity beside pure silicon's with the simulations' n_i and
+    constant mobilities, as markers on a log axis."""
     with matplotlib.rc_context(palette_rc(palette)):
         return svg_bytes(silicon_resistivity_figure(palette))
 

@@ -2893,8 +2893,8 @@ def test_conduction_formulas_against_hand_values():
 
 def test_silicon_resistivity_figure_draws_the_numbers():
     """The resistivity figure: on top the fit's resistivity over its stated range up to the
-    nfet's source and drain peak, and the dot of the page's rho_sd_nfet there; below, the bars
-    of rho_sd_nfet and of pure silicon's rho_intrinsic_tcad, labelled with the simulations'
+    nfet's source and drain peak, and the dot of the page's rho_sd_nfet there; below, markers
+    at rho_sd_nfet and at pure silicon's rho_intrinsic_tcad, labelled with the simulations'
     temperature; all from the registry."""
     from gf180tcad.explain import figures, idealised
 
@@ -2913,9 +2913,13 @@ def test_silicon_resistivity_figure_draws_the_numbers():
     assert list(lines["sd-peak"].get_xdata()) == [pytest.approx(v("sd_peak_nfet"))]
     assert list(lines["sd-peak"].get_ydata()) == [pytest.approx(v("rho_sd_nfet"))]
     assert lines["doped"].get_ydata()[-1] == pytest.approx(v("rho_sd_nfet"), rel=1e-12)
-    bars = {b.get_gid(): b for b in bottom.patches if b.get_gid()}
-    assert bars["bar-sd-peak"].get_width() == pytest.approx(v("rho_sd_nfet"))
-    assert bars["bar-intrinsic"].get_width() == pytest.approx(v("rho_intrinsic_tcad"))
+    points = {ln.get_gid(): ln for ln in bottom.get_lines()}
+    assert set(points) == {"point-sd-peak", "point-intrinsic"}
+    assert list(points["point-sd-peak"].get_xdata()) == [pytest.approx(v("rho_sd_nfet"))]
+    assert list(points["point-intrinsic"].get_xdata()) == [pytest.approx(v("rho_intrinsic_tcad"))]
+    assert [list(points[g].get_ydata()) for g in ("point-sd-peak", "point-intrinsic")] == [[0], [1]]
+    assert not bottom.patches  # markers, not bars: a log axis gives a bar no meaningful length
+    assert bottom.get_axisbelow() is True  # the grid stays under the markers
     labels = [t.get_text() for t in bottom.get_yticklabels()]
     assert f"{v('t_tcad'):g} K" in labels[1]
     assert "x_fig_silicon_resistivity_scale" not in figures.substitutions()
