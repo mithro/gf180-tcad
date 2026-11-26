@@ -19,7 +19,8 @@ stops it after the mesh is written, before the equilibrium solve, so a run fits 
 
 The record (:data:`RECORD`) holds the job, its committed ``cv.meta.json`` sha256 and
 ``mesh_sha256``, this tool's sha256, per image its pin, the gmsh version, the full mesh's
-sha256 and counts and the box's npz (``<image>.npz``, cut by
+sha256 and counts, the sha256 of every repository module the probe loaded (``modules``, by
+path) and the box's npz (``<image>.npz``, cut by
 :func:`gf180tcad.meshcut.window.cut`, which keeps whole triangles) with its sha256, and the
 comparison of the two full meshes. The box (:data:`BOX_CENTRE_UM`, :data:`BOX_HALF_UM`) is
 set where the comparison of 2026-11-27 found points that the two gmsh versions place
@@ -30,7 +31,8 @@ two boxes.
 Re-record (``record``) after any change that moves the record: a new pin in
 ``docker/TCAD_IMAGE`` or ``docker/TCAD_DEV_IMAGE``, a recut or rerun of the job ``w10p0_l0p70``
 (its ``cv.meta.json`` or ``mesh_sha256`` changes), or an edit of this file (the record holds its
-sha256). Tests compare the record with each of these.
+sha256), or of a repository module the probe loads (``modules``). Tests compare the record
+with each of these.
 """
 
 import hashlib
@@ -92,6 +94,7 @@ def probe(out: Path) -> dict:
     win = window.cut(mesh, x_um=x_um, y_um=y_um)
     npz.write_npz(out / BOX_NAME, win.arrays())
     return {
+        "modules": loaded_modules(),
         "box_npz_sha256": _sha256(out / BOX_NAME),
         "box_x_um": list(x_um),
         "box_y_um": list(y_um),
@@ -102,6 +105,20 @@ def probe(out: Path) -> dict:
         "full_mesh_triangle_count": len(mesh.triangles),
         "gmsh": gmsh.__version__,
     }
+
+
+def loaded_modules() -> dict[str, str]:
+    """``{path: sha256}`` of every file of this repository that Python has loaded as a module
+    (the gf180tcad code the mesh and the cut ran through), path relative to the repository."""
+    out = {}
+    for module in list(sys.modules.values()):
+        f = getattr(module, "__file__", None)
+        if not f:
+            continue
+        path = Path(f).resolve()
+        if path.is_relative_to(REPO) and path.suffix == ".py":
+            out[str(path.relative_to(REPO))] = _sha256(path)
+    return dict(sorted(out.items()))
 
 
 def compare(stable_msh: Path, dev_msh: Path) -> dict:

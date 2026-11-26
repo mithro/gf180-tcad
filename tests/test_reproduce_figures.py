@@ -625,6 +625,16 @@ def _check_cell_mesh_record(record):
     assert 0 <= cmp["same_number"] <= cmp["node_count"]
     tool = REPO_ROOT / "tools" / "gmsh-cell-mesh"
     assert record["tool_sha256"] == hashlib.sha256(tool.read_bytes()).hexdigest()
+    # the repository code the probe ran through (gf180tcad and the gplugins submodule, which the
+    # sandbox mounts): the same in both images, and unchanged since
+    modules = images["stable"]["modules"]
+    assert modules == images["dev"]["modules"]
+    for rel in ("src/gf180tcad/meshcut/window.py", "src/gf180tcad/tcad/moscap2d.py",
+                "src/gf180tcad/tcad/stack.py", "src/gf180tcad/tcad/mesh.py",
+                "third_party/gplugins/gplugins/devsim/get_simulation.py"):  # fmt: skip
+        assert rel in modules, rel
+    for rel, sha in modules.items():
+        assert hashlib.sha256((REPO_ROOT / rel).read_bytes()).hexdigest() == sha, rel
     pairs = np.array(cmp["moved"], dtype=float)  # (n, 2 images, 2 coordinates)
     a, b = pairs[:, 0], pairs[:, 1]
     assert np.all(np.any(a != b, axis=1)), "a moved pair that does not move"
