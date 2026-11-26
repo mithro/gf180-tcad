@@ -162,7 +162,15 @@ def calib3():
     return out
 
 
-SETS = {"calib3": calib3, "scan1": scan1, "corners": corners, "meshes": meshes, "calib": calib, "calib2": calib2}
+SETS = {
+    "calib3": calib3,
+    "scan1": scan1,
+    "corners": corners,
+    "meshes": meshes,
+    "calib": calib,
+    "calib2": calib2,
+}
 
 if __name__ == "__main__":
-    json.dump(SETS[sys.argv[1]](), open(sys.argv[2], "w"), indent=1)
+    with open(sys.argv[2], "w") as out_file:
+        json.dump(SETS[sys.argv[1]](), out_file, indent=1)

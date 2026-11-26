@@ -134,7 +134,7 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0, ring_grou
         mid = (a + b) / 2
         tap = [mid - 0.3, mid + 0.3]  # the 0.6 um N+ tap of the sense pad
         k = next(i for i, (x0, x1) in enumerate(sti) if x0 < tap[0] and tap[1] < x1)
-        sti[k:k + 1] = [[sti[k][0], tap[0]], [tap[1], sti[k][1]]]
+        sti[k : k + 1] = [[sti[k][0], tap[0]], [tap[1], sti[k][1]]]
         wells += _boxes(tap[0], tap[1], pr["nplus"])
         contacts["ring"] = tap
     return {

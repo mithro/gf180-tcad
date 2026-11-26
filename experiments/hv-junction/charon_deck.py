@@ -81,8 +81,13 @@ def describe_diode(na, nd=1e19, xj_um=0.5, length_um=8.0):
     # at xj is P, as DEVSIM's "y < xj" makes it.
     doping = [
         {"kind": "uniform", "type": "donor", "value": nd, "ymin": -1.0, "ymax": xj_um - 1e-6},
-        {"kind": "uniform", "type": "acceptor", "value": na, "ymin": xj_um - 1e-7,
-         "ymax": length_um + 1.0},
+        {
+            "kind": "uniform",
+            "type": "acceptor",
+            "value": na,
+            "ymin": xj_um - 1e-7,
+            "ymax": length_um + 1.0,
+        },
     ]
     return {"blocks": [("si", "Si")], "doping": doping,
             "ohmic": {"well": "si", "sub": "si"}, "plates": {}}  # fmt: skip
@@ -266,8 +271,9 @@ def _boundaries(dev, stage, v0, v1):
            f"BC is ohmic for sub on {dev['ohmic']['sub']} fixed at 0"]  # fmt: skip
     for name, (block, tie) in dev["plates"].items():
         how = swept if tie == "well" else "fixed at 0"
-        out.append(f"BC is contact on insulator for {name} on {block} "
-                   f"with work function {work:.7g} {how}")
+        out.append(
+            f"BC is contact on insulator for {name} on {block} with work function {work:.7g} {how}"
+        )
     return out + [""]
 
 

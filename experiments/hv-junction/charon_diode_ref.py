@@ -15,13 +15,12 @@ import json
 import sys
 import time
 
-import devsim as ds
-import numpy as np
-
 import charon_mesh
 import dd
+import devsim as ds
 import fieldline
 import ionize
+import numpy as np
 
 
 def main(na, length_um, vmax, vstep, result):
@@ -55,7 +54,8 @@ def main(na, length_um, vmax, vstep, result):
     out = {"na": na, "length_um": length_um, "nodes": len(x), "reached_v": reached,
            "bv_v": ionize.breakdown_voltage(rec["v"], rec["i_n"]),
            "seconds": time.time() - t0, **rec}  # fmt: skip
-    json.dump(out, open(result, "w"), indent=1)
+    with open(result, "w") as out_file:
+        json.dump(out, out_file, indent=1)
     print("RESULT bv", out["bv_v"], "reached", reached, flush=True)
 
 

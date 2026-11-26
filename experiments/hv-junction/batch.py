@@ -60,7 +60,10 @@ def main(argv):
             log.write(f"{done}/{len(futs)} {name}: {status} | elapsed {el / 60:.1f} min, "
                       f"ETA {eta / 60:.1f} min ({clock})\n")  # fmt: skip
             log.flush()
-        if runner.pins(allow_dirty=True) != {**pins, "dirty": runner.pins(allow_dirty=True)["dirty"]}:
+        if runner.pins(allow_dirty=True) != {
+            **pins,
+            "dirty": runner.pins(allow_dirty=True)["dirty"],
+        }:
             log.write("WARNING: the checkout changed during the batch\n")
     return 0
 

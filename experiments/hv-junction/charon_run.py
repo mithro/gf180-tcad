@@ -37,12 +37,11 @@ import subprocess
 import sys
 import time
 
-import numpy as np
-
 import charon_deck
 import charon_field
 import charon_mesh
 import ionize
+import numpy as np
 
 I_THRESHOLD = 1.0e-7  # A per cm of depth
 MULTIPLICATION = 100.0
@@ -60,12 +59,12 @@ def run_stage(stage, text):
     t0 = time.time()
     with open(f"{stage}.log", "w") as log:
         r = subprocess.run(["charonInterpreter.py", "-i", f"{stage}.inp"],
-                           stdout=log, stderr=subprocess.STDOUT)  # fmt: skip
+                           stdout=log, stderr=subprocess.STDOUT, check=False)  # fmt: skip
         if r.returncode:
             raise RuntimeError(f"charonInterpreter.py failed on {stage}.inp, see {stage}.log")
         log.flush()
         r = subprocess.run(["charon_mp.exe", f"--i={stage}.inp.xml", "--current"],
-                           stdout=log, stderr=subprocess.STDOUT)  # fmt: skip
+                           stdout=log, stderr=subprocess.STDOUT, check=False)  # fmt: skip
     seconds = time.time() - t0
     print(f"STAGE {stage} exit {r.returncode} in {seconds:.0f}s", flush=True)
     return r.returncode, seconds
@@ -126,7 +125,7 @@ def bv_by_threshold(v, i, threshold=I_THRESHOLD):
 
 
 def _column(cur, contact):
-    return cur[[n for n in cur if n.startswith(f"{contact}_") and n.endswith("_Current")][0]]
+    return cur[next(n for n in cur if n.startswith(f"{contact}_") and n.endswith("_Current"))]
 
 
 def avalanche_sweep(dev, vmax, vstep, min_step, common):
@@ -231,8 +230,9 @@ def simulate(dev, mesh_npz, vmax, vstep, step_cm, scheme="cvfem", min_step=None,
             continue
         more = charon_field.scan_both(seg, step_cm, planes)
         scan = more if scan is None else {k: scan[k] + more[k] for k in scan}
-        files += charon_field.save_potentials(seg, SAVE_EVERY_V, "potential_",
-                                              v_lo=seen + 1e-9, v_hi=hi)
+        files += charon_field.save_potentials(
+            seg, SAVE_EVERY_V, "potential_", v_lo=seen + 1e-9, v_hi=hi
+        )
         seen = max(more["v"])
     bv_int = ionize.breakdown_voltage(scan["v"], scan["i_n"])
     bv_low = ionize.breakdown_voltage(scan["v"], scan["i_n_low_branch"])
@@ -258,7 +258,8 @@ def simulate(dev, mesh_npz, vmax, vstep, step_cm, scheme="cvfem", min_step=None,
 def main(argv):
     mode = argv[0]
     if mode == "case":
-        p = json.load(open(argv[1]))
+        with open(argv[1]) as params_file:
+            p = json.load(params_file)
         meta, _ = charon_mesh.load_dump(argv[2])
         dev = charon_deck.describe_params(p, meta["regions"])
         out = simulate(dev, argv[2], p["vmax"], p["vstep"], 0.5 * p["mesh"]["surf"] * 1e-4,
@@ -275,7 +276,8 @@ def main(argv):
         result = argv[6]
     else:
         sys.exit(f"unknown mode {mode}")
-    json.dump(out, open(result, "w"), indent=1)
+    with open(result, "w") as out_file:
+        json.dump(out, out_file, indent=1)
     return 0
 
 

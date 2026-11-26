@@ -80,8 +80,14 @@ def add_interface_charge(device, region, qf_cm2):
 def undamp_oxide(device, ox_regions):
     """Plain Newton updates in the dielectric once the equilibrium solve is done."""
     for r in ox_regions:
-        ds.equation(device=device, region=r, name="PotentialEquation", variable_name="Potential",
-                    edge_model="PotentialEdgeFlux", variable_update="default")
+        ds.equation(
+            device=device,
+            region=r,
+            name="PotentialEquation",
+            variable_name="Potential",
+            edge_model="PotentialEdgeFlux",
+            variable_update="default",
+        )
 
 
 def drift_diffusion(device, si_regions, si_contacts, with_qf=False, update="default"):
@@ -90,7 +96,9 @@ def drift_diffusion(device, si_regions, si_contacts, with_qf=False, update="defa
     for r in si_regions:
         mc.CreateSolution(device, r, "Electrons")
         mc.CreateSolution(device, r, "Holes")
-        ds.set_node_values(device=device, region=r, name="Electrons", init_from="IntrinsicElectrons")
+        ds.set_node_values(
+            device=device, region=r, name="Electrons", init_from="IntrinsicElectrons"
+        )
         ds.set_node_values(device=device, region=r, name="Holes", init_from="IntrinsicHoles")
         sp.CreateSiliconDriftDiffusion(device, r)
         if with_qf:
@@ -98,9 +106,16 @@ def drift_diffusion(device, si_regions, si_contacts, with_qf=False, update="defa
             mc.CreateNodeModel(device, r, "PotentialNodeCharge", pne)
             mc.CreateNodeModelDerivative(device, r, "PotentialNodeCharge", pne, "Electrons")
             mc.CreateNodeModelDerivative(device, r, "PotentialNodeCharge", pne, "Holes")
-        ds.equation(device=device, region=r, name="PotentialEquation", variable_name="Potential",
-                    node_model="PotentialNodeCharge", edge_model="PotentialEdgeFlux",
-                    time_node_model="", variable_update=update)
+        ds.equation(
+            device=device,
+            region=r,
+            name="PotentialEquation",
+            variable_name="Potential",
+            node_model="PotentialNodeCharge",
+            edge_model="PotentialEdgeFlux",
+            time_node_model="",
+            variable_update=update,
+        )
     for c, r in si_contacts.items():
         sp.CreateSiliconDriftDiffusionAtContact(device, r, c)
 
@@ -111,8 +126,13 @@ def solve(rel=1e-6, abs_=1e10, iters=30, divergence=20):
     converged to 1e-13, so a limit of 1e-8 stopped sweeps that had not broken down."""
     # divergence: give up after the error has grown this many times. The damped equilibrium
     # solves need DEVSIM's default of 20; a bias step uses 4 (see ramp).
-    ds.solve(type="dc", absolute_error=abs_, relative_error=rel, maximum_iterations=iters,
-             maximum_divergence=divergence)
+    ds.solve(
+        type="dc",
+        absolute_error=abs_,
+        relative_error=rel,
+        maximum_iterations=iters,
+        maximum_divergence=divergence,
+    )
 
 
 def ramp(device, contacts, target, step, on_point, min_step=None):

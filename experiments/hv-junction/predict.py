@@ -9,11 +9,10 @@ corner of its corner radius, under the process assumptions of PROCESSES. Case na
 <structure>|<process>|<edge or corner>, with @g0 or @gw for a gated plate held at 0 V or
 tied to the well.
 
-SET "rest RECORD.json ..." is every case of "main" that the records do not hold with its
-present parameters (the first
-batch of "main" left the multi-ring sections and some oxide-charge sections unfinished; they
-were rerun with a solver that gives up a diverging step early). SET "main" is every structure under the four main assumptions; "family" is a few key
-structures under the lighter and heavier substrate.
+SET "main" is every structure under the main assumptions. SET "family" is a few key
+structures under the lighter and heavier substrate and a higher oxide charge. SET "rest
+RECORD.json ..." is every case of "main" that the records named do not hold with its present
+parameters. SET "p5" is each ring-sense structure with its first ring held at 0 V.
 """
 
 from __future__ import annotations
@@ -55,6 +54,8 @@ KEY = ["NT20", "NC0", "NA0p6", "NAM1_6", "NW3", "NR3_2", "NM1_6", "NP2", "DT20",
 # A drawn sharp corner is simulated as a round one of this radius: about the lateral spread
 # of the well's deep part plus the corner rounding of the mask.
 MIN_CORNER = 1.0
+# The process assumptions of the set "p5".
+P5_PROCESSES = ("AL", "BL", "BD")
 
 
 def structures():
@@ -71,10 +72,15 @@ def cases(names, processes):
             variants = [("@g0", st), ("@gw", st)]
         for tag, s in variants:
             for pname, proc in processes.items():
-                strip = s["nat_gap"] is not None and s["nat_gap"] > 0 and proc.get("nat_strip", True)
+                strip = (
+                    s["nat_gap"] is not None and s["nat_gap"] > 0 and proc.get("nat_strip", True)
+                )
                 # an abutting P-well: breakdown below 30 V whatever else is drawn
-                a_like = (proc["pwell"] == "everywhere" and s["kind"] == "nw"
-                          and (s["nat_gap"] is None or strip))
+                a_like = (
+                    proc["pwell"] == "everywhere"
+                    and s["kind"] == "nw"
+                    and (s["nat_gap"] is None or strip)
+                )
                 if a_like and proc["deep_p_where"] == "blanket":
                     continue  # a layer 4 um down does not reach a junction that breaks at 18 V
                 shapes = [("edge", None)]
@@ -90,10 +96,17 @@ def cases(names, processes):
                     # a heavy P region within 1.5 um of the edge (a drawn P-well, or the P+
                     # ring of NT1) needs the fine mesh just as an abutting generated P-well
                     # does: NW0 under B came out 12 % high on the 0.1 um mesh
-                    near = ((s["pwell_gap"] is not None and s["pwell_gap"] <= 1.5 and not a_like
-                             and proc["pwell"] != "everywhere") or s["term"] <= 2.0)
-                    p["mesh"] = ({"fine": 0.03, "surf": 0.02, "coarse": 0.6} if a_like or near
-                                 else {"fine": 0.1, "surf": 0.04, "coarse": 0.6})
+                    near = (
+                        s["pwell_gap"] is not None
+                        and s["pwell_gap"] <= 1.5
+                        and not a_like
+                        and proc["pwell"] != "everywhere"
+                    ) or s["term"] <= 2.0
+                    p["mesh"] = (
+                        {"fine": 0.03, "surf": 0.02, "coarse": 0.6}
+                        if a_like or near
+                        else {"fine": 0.1, "surf": 0.04, "coarse": 0.6}
+                    )
                     if tag == "@gw":  # the gate pad connected to the well pad
                         for pl in p["plates"]:
                             pl["tie"] = "well"
@@ -103,37 +116,58 @@ def cases(names, processes):
 
 STRUCTS = structures()
 
+
+def digest(params):
+    """The sha256 of a case's parameters, as record.py stores it."""
+    return hashlib.sha256(json.dumps(params, sort_keys=True).encode()).hexdigest()
+
+
+def main_cases():
+    """Set "main": every structure under PROCESSES, the NAT structures under NAT_ONLY too."""
+    got = cases(sorted(STRUCTS), PROCESSES)
+    nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
+    got.update(cases(sorted(nat), NAT_ONLY))
+    return got
+
+
+def family_cases():
+    """Set "family": the KEY structures under FAMILY."""
+    return cases([k for k in KEY if k in STRUCTS], FAMILY)
+
+
+def rest_cases(have):
+    """Set "rest": the cases of "main" that the record rows `have` ({case: row}) do not hold
+    with their present parameters."""
+    return {n: p for n, p in main_cases().items()
+            if n not in have or have[n]["params_sha256"] != digest(p)}  # fmt: skip
+
+
+def p5_cases():
+    """Set "p5": ring 1 of each ring-sense structure held at 0 V. The current into the well
+    is then the punch-through current that procedure P5 of the test method measures."""
+    got = {}
+    for name in sorted(n for n, st in STRUCTS.items() if st["sense"]):
+        for pname in P5_PROCESSES:
+            p = hvsite.section(STRUCTS[name], PROCESSES[pname], ring_grounded=True)
+            p["vstep"], p["vmax"], p["depth"] = 1.0, 100.0, 14.0
+            p["mesh"] = {"fine": 0.05, "surf": 0.03, "coarse": 0.6}
+            got[f"{name}|{pname}|edge"] = p
+    return got
+
+
 if __name__ == "__main__":
     which = sys.argv[2] if len(sys.argv) > 2 else "main"
     if which == "main":
-        got = cases(sorted(STRUCTS), PROCESSES)
-        nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
-        got.update(cases(sorted(nat), NAT_ONLY))
+        got = main_cases()
     elif which == "rest":
-        # the cases of "main" that the record named after the set does not hold
-        got = cases(sorted(STRUCTS), PROCESSES)
-        nat = [n for n, st in STRUCTS.items() if st["nat_gap"] is not None and st["nat_gap"] > 0]
-        got.update(cases(sorted(nat), NAT_ONLY))
         have = {}
         for path in sys.argv[3:]:
             have.update(json.loads(pathlib.Path(path).read_text())["cases"])
-
-        def digest(p):
-            return hashlib.sha256(json.dumps(p, sort_keys=True).encode()).hexdigest()
-
-        got = {n: p for n, p in got.items()
-               if n not in have or have[n]["params_sha256"] != digest(p)}
+        got = rest_cases(have)
     elif which == "p5":
-        # ring 1 of each ring-sense structure held at 0 V: the current into the well is then
-        # the punch-through current that procedure P5 of the test method measures
-        got = {}
-        for name in sorted(n for n, st in STRUCTS.items() if st["sense"]):
-            for pname in ("AL", "BL", "BD"):
-                p = hvsite.section(STRUCTS[name], PROCESSES[pname], ring_grounded=True)
-                p["vstep"], p["vmax"], p["depth"] = 1.0, 100.0, 14.0
-                p["mesh"] = {"fine": 0.05, "surf": 0.03, "coarse": 0.6}
-                got[f"{name}|{pname}|edge"] = p
+        got = p5_cases()
     else:
-        got = cases([k for k in KEY if k in STRUCTS], FAMILY)
-    json.dump(got, open(sys.argv[1], "w"), indent=1)
+        got = family_cases()
+    with open(sys.argv[1], "w") as out_file:
+        json.dump(got, out_file, indent=1)
     print(f"{len(got)} cases")

@@ -278,7 +278,8 @@ def summary(meta, m):
 def main(argv):
     mode = argv[0]
     if mode == "dump":
-        meta = dump_params(json.load(open(argv[1])), argv[2])
+        with open(argv[1]) as params_file:
+            meta = dump_params(json.load(params_file), argv[2])
     elif mode == "diode":
         meta = dump_diode(float(argv[1]), float(argv[2]), argv[3])
     elif mode == "exodus":

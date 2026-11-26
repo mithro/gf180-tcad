@@ -15,10 +15,9 @@ from __future__ import annotations
 
 import contextlib
 
-import numpy as np
-
 import fieldline
 import ionize
+import numpy as np
 
 V0_300K = 0.025852  # V, what Charon prints for T = 300 K
 

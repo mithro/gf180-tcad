@@ -63,7 +63,7 @@ def main(argv):
             "nodes": res["nodes"],
             **{k: res[k] for k in KEEP},
         }
-    shared["commit"] = sorted(commits)[0] if len(commits) == 1 else None
+    shared["commit"] = min(commits) if len(commits) == 1 else None
     shared["commits"] = sorted(commits)
     record = {"schema": 2, "pins": shared, "cases": rows, "not_converged": missing}
     out.write_text(json.dumps(record, indent=1, sort_keys=True) + "\n")

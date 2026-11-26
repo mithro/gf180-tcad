@@ -30,9 +30,8 @@ Parameter dictionary (all lengths in um, dopings in cm^-3):
 
 from __future__ import annotations
 
-import devsim as ds
-
 import dd
+import devsim as ds
 
 UM = 1e-4
 
@@ -104,7 +103,7 @@ def build(p, device="hv"):
     ox_contacts = {}
     for k, pl in enumerate(p.get("plates", [])):
         name = f"plate{k}"
-        box = dict(xl=pl["x0"] * UM, xh=pl["x1"] * UM, yl=pl["y0"] * UM, yh=pl["y1"] * UM)
+        box = {"xl": pl["x0"] * UM, "xh": pl["x1"] * UM, "yl": pl["y0"] * UM, "yh": pl["y1"] * UM}
         ds.add_2d_region(mesh=mesh, material="metal", region=name, **box)
         ds.add_2d_contact(mesh=mesh, name=name, region="ox", material="metal", bloat=eps, **box)
         ox_contacts[name] = "ox"

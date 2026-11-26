@@ -10,6 +10,7 @@ Units: cm, cm^-3, V, F/cm^2, ohm/square.
 
 from __future__ import annotations
 
+import ionize
 import numpy as np
 
 Q = 1.602176634e-19
@@ -22,7 +23,11 @@ def mobility_n(n):
     """Electron mobility against total doping at 300 K (Masetti et al., IEEE TED 30, 1983,
     arsenic/phosphorus-like majority fit), cm^2/Vs."""
     n = np.asarray(n, dtype=float)
-    return 68.5 + (1414.0 - 68.5) / (1.0 + (n / 9.2e16) ** 0.711) - 56.1 / (1.0 + (3.41e20 / n) ** 1.98)
+    return (
+        68.5
+        + (1414.0 - 68.5) / (1.0 + (n / 9.2e16) ** 0.711)
+        - 56.1 / (1.0 + (3.41e20 / n) ** 1.98)
+    )
 
 
 def net(y, wells, sub, pfield=()):
@@ -79,3 +84,31 @@ def cv(y, n, volts):
 def model_c(volts, cjo, mj, pb):
     """The SPICE junction capacitance, same units as cjo."""
     return cjo / (1.0 + np.asarray(volts) / pb) ** mj
+
+
+def plane_breakdown(y, n):
+    """Plane breakdown voltage of the deepest junction of the net doping n on the uniform
+    grid y, in the depletion approximation: the junction potential (applied bias plus
+    built-in potential) at which ionize.py's electron integral over the depletion field
+    reaches 1. NaN when it is not reached below 400 V."""
+    sg = np.sign(n)
+    j = np.nonzero(sg[:-1] != sg[1:])[0][-1]
+    dy = y[1] - y[0]
+    cum = np.cumsum(n) * dy
+    prev = None
+    for a in range(j - 1, 0, -max(1, j // 300)):
+        seg = cum[j:] - cum[a]
+        k = np.nonzero(np.sign(seg[:-1]) != np.sign(seg[1:]))[0]
+        if len(k) == 0:
+            break
+        b = j + k[0]
+        field = np.abs(Q / EPS * (cum[a : b + 1] - cum[a]))
+        volts = np.trapezoid(field, y[a : b + 1])
+        s = y[a : b + 1] - y[a]
+        i_n, _ = ionize.ionisation_integrals(s, field[::-1])
+        if prev and i_n >= 1:
+            return float(np.interp(0, [np.log(prev[1]), np.log(i_n)], [prev[0], volts]))
+        prev = (volts, max(i_n, 1e-300))
+        if volts > 400:
+            break
+    return float("nan")

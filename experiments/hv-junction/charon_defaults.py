@@ -57,13 +57,13 @@ def charon_values(names):
     with open("charon_defaults.cpp", "w") as f:
         f.write(SOURCE)
     quiet = {"capture_output": True, "text": True, "check": True}
-    flags = subprocess.run(["mpicxx", "--showme:compile"], **quiet)
+    flags = subprocess.run(["mpicxx", "--showme:compile"], **quiet)  # noqa: PLW1510
     subprocess.run(["g++", "-std=c++17", "-I/opt/charon/include", *flags.stdout.split(),
                     "charon_defaults.cpp", "-o", "charon_defaults.exe", "-L/opt/charon/lib",
                     "-lcharon", "-lteuchosparameterlist", "-lteuchoscore",
                     "-Wl,-rpath,/opt/charon/lib", "-Wl,--allow-shlib-undefined"],
                    check=True)  # fmt: skip
-    r = subprocess.run(["./charon_defaults.exe", *names], **quiet)
+    r = subprocess.run(["./charon_defaults.exe", *names], **quiet)  # noqa: PLW1510
     out = {}
     for line in r.stdout.splitlines():
         name, _, value = line.partition("=")

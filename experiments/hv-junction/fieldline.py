@@ -7,10 +7,9 @@ outside the silicon), marked by NaN in the potential; a field line ends there.
 
 from __future__ import annotations
 
+import ionize
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
-
-import ionize
 
 
 def to_grid(x, y, values):

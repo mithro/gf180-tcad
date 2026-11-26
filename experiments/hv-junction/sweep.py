@@ -15,19 +15,19 @@ import json
 import sys
 import time
 
-import devsim as ds
-import numpy as np
-
 import dd
+import devsim as ds
 import fieldline
 import ionize
+import numpy as np
 import structure
 
 UM = 1e-4
 
 
 def main(params_path, result_path):
-    p = json.load(open(params_path))
+    with open(params_path) as params_file:
+        p = json.load(params_file)
     t0 = time.time()
     dd.use_extended_precision(p.get("extended", True))
     names = structure.build(p)
@@ -38,8 +38,18 @@ def main(params_path, result_path):
     step = 0.5 * p["mesh"]["surf"] * UM
     probes = p.get("probes", [])
     probe_idx = [int(np.argmin((x - a * UM) ** 2 + (y - b * UM) ** 2)) for a, b in probes]
-    tied = ["well"] + [f"plate{k}" for k, pl in enumerate(p.get("plates", [])) if pl["tie"] == "well"]
-    rec = {"v": [], "i_n": [], "emax": [], "where_um": [], "i_well": [], "probes": [], "eox_max": []}
+    tied = ["well"] + [
+        f"plate{k}" for k, pl in enumerate(p.get("plates", [])) if pl["tie"] == "well"
+    ]
+    rec = {
+        "v": [],
+        "i_n": [],
+        "emax": [],
+        "where_um": [],
+        "i_well": [],
+        "probes": [],
+        "eox_max": [],
+    }
 
     def point(v):
         psi = np.array(ds.get_node_model_values(device=dev, region="si", name="Potential"))
@@ -53,7 +63,9 @@ def main(params_path, result_path):
         rec["v"].append(v)
         rec["i_n"].append(i_n)
         rec["emax"].append(emax)
-        rec["where_um"].append([float(where[0] / UM), float(where[1] / UM)] if where is not None else None)
+        rec["where_um"].append(
+            [float(where[0] / UM), float(where[1] / UM)] if where is not None else None
+        )
         rec["i_well"].append(float(cur))
         rec["probes"].append([float(psi[k]) for k in probe_idx])
         rec["eox_max"].append(eox)
@@ -69,14 +81,17 @@ def main(params_path, result_path):
     reached = dd.ramp(dev, tied, p["vmax"], p["vstep"], point)
     out = {
         "params": p,
-        "nodes": {r: len(ds.get_node_model_values(device=dev, region=r, name="x"))
-                  for r in names["si"] + names["ox"]},  # fmt: skip
+        "nodes": {
+            r: len(ds.get_node_model_values(device=dev, region=r, name="x"))
+            for r in names["si"] + names["ox"]
+        },
         "reached_v": reached,
         "bv_v": ionize.breakdown_voltage(rec["v"], rec["i_n"]),
         "seconds": time.time() - t0,
         **rec,
     }
-    json.dump(out, open(result_path, "w"), indent=1)
+    with open(result_path, "w") as out_file:
+        json.dump(out, out_file, indent=1)
     print("RESULT bv", out["bv_v"], "reached", reached, "nodes", out["nodes"], flush=True)
 
 

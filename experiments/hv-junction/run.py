@@ -27,7 +27,9 @@ def image(charon=False):
 
 
 def _git(*args):
-    return subprocess.run(["git", *args], cwd=REPO, check=True, capture_output=True, text=True).stdout
+    return subprocess.run(
+        ["git", *args], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout
 
 
 def pins(charon=False, allow_dirty=False):

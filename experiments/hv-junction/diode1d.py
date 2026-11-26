@@ -7,11 +7,10 @@ test_ionize._abrupt_bv. Writes diode1d.json. Run through run.py.
 import json
 import sys
 
-import devsim as ds
-import numpy as np
-
 import dd
+import devsim as ds
 import ionize
+import numpy as np
 
 
 def run(na, vmax, length_um):
@@ -57,4 +56,5 @@ if __name__ == "__main__":
         bv, reached = run(na, vmax, length)
         out[f"{na:.0e}"] = {"bv_v": bv, "reached_v": reached}
         print("RESULT", na, bv, reached, flush=True)
-    json.dump(out, open(sys.argv[1] if len(sys.argv) > 1 else "diode1d.json", "w"), indent=1)
+    with open(sys.argv[1] if len(sys.argv) > 1 else "diode1d.json", "w") as out_file:
+        json.dump(out, out_file, indent=1)
