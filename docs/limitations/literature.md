@@ -222,6 +222,84 @@ The doping of each part of the simulated cell is in {numref}`Figure %s of Defini
   {doi}`10.1016/j.cma.2012.10.009`: a control-volume finite-element method for the
   drift–diffusion equations on unstructured grids.
 
+(lit-search-bsim)=
+
+## Comparisons of DEVSIM or Charon with foundry SPICE models
+
+<!-- figure-ok: a literature search record names papers and repositories, not a physical thing -->
+
+A search on 2026-11-26 looked for a published comparison of {{ DEVSIM }} or {{ Charon }}
+results with a foundry's {term}`BSIM4` {term}`model card`. It found one, for the SkyWater SKY130
+process, in a GitHub repository. It found no Charon-versus-BSIM comparison. The only
+{term}`gf180mcu <GF180MCU>` TCAD work it found is this project.
+{numref}`tab-lit-search-bsim-queries` lists every query.
+
+~~~{table} The queries of the search on 2026-11-26, one row per query, with the comparison each found.
+:name: tab-lit-search-bsim-queries
+
+| Where | Query | Comparison found |
+|---|---|---|
+| Web search | `devsim bsim comparison` | none |
+| Web search | `charon tcad bsim comparison` | none |
+| Web search | `open-source tcad compact model validation` | none |
+| Web search | `devsim mosfet calibration` | none |
+| Web search | `"charon" sandia semiconductor device simulator validation` | none |
+| Web search | `sky130 tcad` | none |
+| Web search | `gf180 tcad` | none |
+| Web search, extended | `DEVSIM simulation compared with BSIM4 SPICE model foundry PDK` | none |
+| Web search, extended | `open-source TCAD SkyWater sky130 device simulation DEVSIM ngspice comparison` | devphys |
+| Web search, extended | `gf180mcu TCAD device simulation paper` | this project only |
+| Web search, extended | `Charon Sandia TCAD compact model SPICE comparison Xyce MOSFET` | none |
+| Web search | `devphys github devsim sky130 calibrated measured silicon 77 K` | none |
+| Web search, arxiv.org only | `DEVSIM TCAD MOSFET BSIM` | none |
+| Web search, ieeexplore.ieee.org only | `DEVSIM open-source TCAD MOSFET compact model comparison` | none |
+| Web search, ieeexplore.ieee.org and osti.gov only | `Charon TCAD Sandia MOSFET compact model` | none |
+| Web search, extended | `FOSS TCAD open PDK sky130 gf180 MOS-AK devsim BSIM verification` | OpenTCAD |
+| Web search, extended | `"GF180MCU" OR "gf180mcu" TCAD Sentaurus OR DEVSIM OR Charon simulation transistor doping profile` | this project only |
+| Web search, extended | `open-source TCAD calibrated against foundry SPICE model card BSIM4 ngspice reference curves github` | this project only |
+| arXiv API | `all:devsim` | none |
+| arXiv API | `all:charon AND all:TCAD` | none |
+| arXiv API | `abs:charon AND abs:semiconductor` | none |
+| arXiv API | `all:gf180mcu` | none |
+| arXiv API | `all:GF180MCU AND all:TCAD` | none |
+| arXiv API | `all:sky130 AND all:TCAD` | none |
+| arXiv API | `abs:"open-source TCAD"` | none |
+| arXiv API | `abs:TCAD AND abs:BSIM` | none |
+| GitHub topic `tcad` | first page of repositories | devphys |
+| Google Scholar | `"devsim" "bsim"` | none: the site answered HTTP 403 |
+~~~
+
+The search also read the two simulators' own publication lists. These are the hits that touch
+the question:
+
+- **OpenTCAD.** Its [SKY130 `nfet_01v8` check](https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/validation/sky130/README.md)
+  simulates a 1 µm nMOS in DEVSIM. It compares the result with curves that ngspice 44.2 computes
+  from SKY130's typical-corner BSIM4 card. The compared values are the threshold voltage, the body
+  effect, the subthreshold swing, the peak transconductance and the on-current. The check was
+  first committed on 2026-11-05.
+- **devphys.** Its [README](https://github.com/joaln27/devphys/blob/bcae3beebcaaeb15a1937af996f43e0bc15bcdb4/README.md)
+  compares DEVSIM simulations of SKY130 `nfet_01v8` with measured silicon at 300 K and 77 K. It
+  sets its 77 K error beside the error the dataset's authors give for their own BSIM4 fits. It
+  compares an extracted oxide thickness with the card's `toxe`. It shows no DEVSIM curve beside a
+  PDK SPICE curve.
+- **The 2021 request.** [DEVSIM issue 74](https://github.com/devsim/devsim/issues/74) asked in
+  August 2021 for an open TCAD flow matched to the SKY130 PDK. It was closed in April 2022 with
+  no comments.
+- **DEVSIM's list of papers.** The [DEVSIM introduction](https://devsim.org/introduction.html)
+  links a spreadsheet of papers that cite DEVSIM. On 2026-11-26 it held 50 titles. None names
+  BSIM, a compact model, SPICE, a PDK or a foundry process.
+- **A DEVSIM radiation study.** Julson et al.,
+  [arXiv:2605.16597](https://arxiv.org/abs/2605.16597), couple DEVSIM with Geant4 for a 90 nm
+  NOR flash chip. They compare simulated threshold shifts with measured ones. The paper names no
+  BSIM model.
+- **Charon's list of publications.** The [Charon publications page](https://charon.sandia.gov/publications-and-documents/)
+  held 16 items on 2026-11-26. No title names a compact model, SPICE or BSIM.
+- **Charon and compact models.** Huang et al.,
+  [SAND2021-2473C](https://www.osti.gov/servlets/purl/1854316), fit a graph-network compact
+  model of a p-n diode to Charon results. BSIM appears in their software list only. Gao et al.,
+  ACM TODAES 2026, {doi}`10.1145/3766551`, calibrate Charon to measured dose effects in a
+  commercial SiC power MOSFET. Their abstract names no BSIM card.
+
 ## Tooling
 
 (lit-dmt)=
