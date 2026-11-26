@@ -709,7 +709,10 @@ def test_newton_iterations_are_the_logs():
                 # NOX evaluates the WRMS test only once the F-norm test passes (Minimal checks)
                 if it["log_fnorm"] < NEWTON_FNORM_TOL:
                     assert _shown(f"{it['log_wrms']:.3e}", it["wrms"]), (name, tol, it["iteration"])
-            assert its[0]["linear_rel_residual"] < 1e-6, (name, tol)
+            # a wrong order leaves ||J dx + f|| / ||f|| of order 1 or more (4e4 in the first
+            # draft of b7n.py); the right one leaves the direct solve's error, which grows with
+            # the conditioning (2.4e-6 where the row-scaled condition number is 1e18)
+            assert its[0]["linear_rel_residual"] < 1e-3, (name, tol)
             last = s["last"]
             assert sum(last["unknowns_by_field"].values()) == last["unknowns"], (name, tol)
             assert sum(last["wrms_share_by_field"].values()) == pytest.approx(1.0), (name, tol)
