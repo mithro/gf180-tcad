@@ -58,18 +58,21 @@ Each device and each metric gets one of three verdicts:
 - **Devices**: {term}`nfet_05v0` and {term}`pfet_05v0`. These are wrappers
   around the {term}`nfet_06v0` and {term}`pfet_06v0` {term}`BSIM4`
   {term}`cards <model card>` (in the {{ gf180mcu_models }}), differing only in the
-  mismatch parameter, so one calibrated thick-oxide ({term}`Dualgate`) recipe serves
+  mismatch parameter. So one calibrated thick-oxide ({term}`Dualgate`) recipe serves
   both.
-- **Geometries**, W/L in µm: 10/{term}`Lmin` (n: 0.6, p: 0.5), 10/0.7, 10/1, 10/2,
-  10/10, plus a narrow 1.6/0.7, the geometry of the taped-out `nfet_06v0` and
-  `pfet_06v0` test devices ({doc}`../limitations/silicon-validation`). The {term}`bin`
-  boundary at L = 0.7 µm is deliberately included.
+- **Geometries**, W/L in µm:
+  - 10/{term}`Lmin` (n: 0.6, p: 0.5), 10/0.7, 10/1, 10/2,
+    10/10;
+  - a narrow 1.6/0.7, the geometry of the taped-out `nfet_06v0` and
+    `pfet_06v0` test devices ({doc}`../limitations/silicon-validation`);
+  - the {term}`bin`
+    boundary at L = 0.7 µm is deliberately included.
 - **Bias**: Vgs and Vds from 0 to 5 V (mirrored for p); Vbs of 0, -1 and -2 V
   (mirrored for p). Temperature is 25 °C; −40 °C and 125 °C are on the
   {doc}`roadmap </roadmap>` ([issue #71](https://github.com/mithro/gf180-tcad/issues/71)).
 - **SPICE**: TT {term}`corner`, {{ ngspice }} primary and {{ Xyce }} secondary. A disagreement
   between the two SPICE engines of more than 0.5 % flags a problem with the
-  reference, not with the TCAD (the {term}`engine cross-check`; current status in
+  reference, not with the TCAD. This is the {term}`engine cross-check` (current status in
   {doc}`../limitations/engine-cross-check`).
 
 (spice-reference-conditions)=
@@ -125,14 +128,16 @@ generated. It is on the {doc}`roadmap </roadmap>`
 
 To stop the TCAD from being tuned to the answer, the targets are split.
 
-- **{term}`Calibration targets <calibration target>`** (may be used to tune the process
-  description): long-channel {term}`Cgg`-Vg (oxide, well and channel doping, flat-band),
+- **{term}`Calibration targets <calibration target>`** may be used to tune the process
+  description. They are long-channel {term}`Cgg`-Vg (oxide, well and channel doping, flat-band),
   long-channel Vt and {term}`body effect`, {term}`Vt(L) roll-off <Vt roll-off>`, and
   {term}`subthreshold slope`.
-- **{term}`Validation targets <validation target>`** (must never be tuned on; they are the
-  evidence): Idsat, {term}`linear Id` at high Vgs, {term}`gm`, {term}`gds` (output conductance),
-  Vt at the narrow width, {term}`DIBL`, and all of the above at geometries not used in
-  calibration.
+- **{term}`Validation targets <validation target>`** must never be tuned on; they are the
+  evidence. They are:
+  - Idsat, {term}`linear Id` at high Vgs, {term}`gm`, {term}`gds` (output conductance),
+    Vt at the narrow width and {term}`DIBL`;
+  - all of the above at geometries not used in
+    calibration.
 - **{term}`Held-out geometries <held-out geometry>`**, fixed before calibration: calibration may see W = 10
   µm at L = 10, 2 and Lmin. W = 10 µm at L = 0.7 and 1 µm and the narrow
   1.6/0.7 are held out for validation only. All metrics at held-out geometries
@@ -163,23 +168,29 @@ geometries ({py:data}`gf180tcad.devices.DEVICES`).
 
 ### Parameter sources and budget
 
-Allowed sources, in order of preference: (1) the PDK's public documentation
-({{ gf180mcu_pdk_docs }}); (2) values in the public SPICE card (TOXE, TOXP, NDEP, {term}`NSD`, {term}`NGATE`,
-{term}`XJ`, LPE0, RDSW; see the {ref}`BSIM4 manual <lit-bsim4>`), used as starting points and bounds and never as fixed truths, because
-{term}`BSIM` parameters are fitted rather than physical; (3) generic published
-0.18 µm-class 5 V values with a citation.
+Allowed sources, in order of preference:
+
+1. the PDK's public documentation
+   ({{ gf180mcu_pdk_docs }});
+2. values in the public SPICE card (TOXE, TOXP, NDEP, {term}`NSD`, {term}`NGATE`,
+   {term}`XJ`, LPE0, RDSW; see the {ref}`BSIM4 manual <lit-bsim4>`). They are used as starting points and bounds and never as fixed truths, because
+   {term}`BSIM` parameters are fitted rather than physical;
+3. generic published
+   0.18 µm-class 5 V values with a citation.
 
 Every value carries a {term}`provenance tag`: `pdk-doc`, `spice-card`, `literature` or
-`calibrated`. Each tunable parameter, its value, bounds, public source and the
-target it was tuned against is recorded in a machine-readable process file and
+`calibrated`. Each tunable parameter is recorded with its value, bounds, public source and the
+target it was tuned against. The record is in a machine-readable process file and is
 rendered in these pages.
 
 At most **8 {term}`calibrated parameters <calibrated parameter budget>`** are allowed per device type (n or p),
 shared across all geometries. A structural feature that no public source
-documents (for example a halo or pocket implant) counts against the budget and
+documents counts against the budget. An example is a halo or pocket implant. Such a feature
 must be justified by a calibration-target residual that cannot otherwise be
-removed. If the calibration targets cannot reach tolerance within the budget,
-calibration stops, the best fit is published with a {term}`Disagree` or {term}`Same process`
+removed.
+
+If the calibration targets cannot reach tolerance within the budget,
+calibration stops. The best fit is then published with a {term}`Disagree` or {term}`Same process`
 verdict, and the residual is analysed. The budget is not raised
 silently.
 
@@ -188,10 +199,12 @@ silently.
 ### The "Same process" window
 
 Where the PDK publishes a spec min-max, the window covers both the published
-spec and the {term}`corner envelope` (their {term}`combined range`: the lowest lower bound and the
-highest upper bound), and the page shows which one sets it (spec, envelope, or both);
-otherwise the corner envelope is used. The corner envelope is the envelope of the TT,
-{term}`FF`, {term}`SS <SS corner>`, {term}`FS` and {term}`SF` SPICE corners at the same
+spec and the {term}`corner envelope`; otherwise the corner envelope is used.
+Covering both means their {term}`combined range`: the lowest lower bound and the
+highest upper bound. The page shows which one sets it (spec, envelope, or both).
+
+The corner envelope is the envelope of the TT,
+{term}`FF`, {term}`SS <SS corner>`, {term}`FS` and {term}`SF` SPICE corners. It is taken at the same
 geometry and bias, so the reference dataset includes all five corners. It is published as
 {repo}`results/spice/envelope.json` (see {doc}`pdk-spec-check`).
 
@@ -317,7 +330,8 @@ The largest change of the C per area of the MOS capacitors against the next fine
 - **{{ DEVSIM }} versus {{ Charon }}** on the identical mesh and identical models: at most
   1 % on Id and 2 mV on Vt. Every other metric is held by kind: 1 % for relative quantities
   (the same value as the {term}`mesh convergence` criterion) and 2 mV for voltages. A larger difference is a
-  simulator problem and blocks process conclusions. No {{ Charon }} {term}`job` has run, so this check
+  simulator problem and blocks process conclusions.
+- **No {{ Charon }} {term}`job` has run**, so this check
   has no result. Running both backends on every {term}`TCAD` job
   ({repo}`design spec, section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`)
   is on the {doc}`roadmap </roadmap>` ([issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
