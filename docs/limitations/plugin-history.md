@@ -277,8 +277,8 @@ and at mesh × 0.5 on 8. So the re-verification compared it at mesh × 0.5
 
 (plugin-history-abrupt)=
 
-**The ideal abrupt junction.** The rib's junction is a step of two dopings. Its donor side has
-N_D = {{ lim_abrupt_nd }} cm⁻³ and its acceptor side N_A = {{ lim_abrupt_na }} cm⁻³. These are the
+**The ideal abrupt junction.** The rib's junction is a step of two dopings. Its {term}`donor` side has
+N_D = {{ lim_abrupt_nd }} cm⁻³ and its {term}`acceptor` side N_A = {{ lim_abrupt_na }} cm⁻³. These are the
 defaults of v0.8.0's
 [`get_doping_info_generic`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/doping.py#L29-L33).
 {repo}`experiments/plugin-history/abrupt_junction.py` applies the {term}`depletion approximation`
@@ -312,7 +312,7 @@ where
 - $V_{bi}$ is the built-in potential, {{ lim_abrupt_vbi }} here, in V;
 - $V_t$ is the thermal voltage of {math:numref}`eq-plugin-history-vt`, in V;
 - $N_A$ and $N_D$ are the acceptor and donor densities, in cm⁻³;
-- $n_i$ is the intrinsic carrier density, {{ lim_abrupt_ni }}, in cm⁻³.
+- $n_i$ is the {term}`intrinsic carrier density`, {{ lim_abrupt_ni }}, in cm⁻³.
 
 {math:numref}`eq-plugin-history-w` gives the total depletion width:
 
@@ -331,8 +331,8 @@ where
 - $q$ is the elementary charge, in C.
 
 The recorded width counts only nodes where n and p are both below {{ lim_abrupt_pct }} %
-|NetDoping|. In the depletion approximation that span is narrower than W. Each depletion edge
-loses a tail, given by {math:numref}`eq-plugin-history-tail` for this symmetric junction:
+|NetDoping|. In the depletion approximation that span is narrower than W. Each edge of the {term}`depletion`
+region loses a tail, given by {math:numref}`eq-plugin-history-tail` for this symmetric junction:
 
 $$
 L_f = \sqrt{\frac{2 \varepsilon_{si} \varepsilon_0 V_t \ln(1/f)}{q N}}
@@ -407,7 +407,7 @@ leading hypothesis, and the junction probe confirms it:
 - **The junction drop never changes with bias.** It stays at 0.83450 V. That is the rib's
   {term}`built-in potential`, {{ lim_abrupt_vbi }} V by {math:numref}`eq-plugin-history-vbi`, with
   {term}`Boltzmann statistics` and the constants of DEVSIM's `simple_physics`
-  ({ref}`plugin-history-abrupt`).
+  ({ref}`the ideal abrupt junction <plugin-history-abrupt>`).
 - **The Potential is discontinuous at the rib's bottom vertices**, by 0.46 V at equilibrium (0.73 V at
   mesh × 0.5). The jump grows by the applied bias, because only the slab moves.
 - **The rib's absolute Potential depends on the mesh** (ψ(x_j) is −0.47002 V at full mesh and
@@ -667,7 +667,7 @@ count is reported, not asserted. The v0.8.0 anode − cathode at 0 V is 0.958654
   self-difference (× 1 against × 0.5) is 0.
 - **depletion width, bottom edge:** compared at × 0.5. The allowed difference is v0.8.0's
   self-difference, 0.0302 µm; the port differs from v0.8.0 by Δ = 0.0088 µm.
-- **depletion width against the depletion approximation:** the approximation gives W_f = {{ lim_abrupt_inner }} µm ({ref}`plugin-history-abrupt`).
+- **depletion width against the depletion approximation:** the approximation gives W_f = {{ lim_abrupt_inner }} µm ({ref}`the ideal abrupt junction <plugin-history-abrupt>`).
   The allowed difference is one bottom-edge node spacing, 0.0100 µm; Δ = 0.0066 µm at × 0.5.
 
 The anode − cathode potential is a boundary-condition check, not a mesh check: it is the
