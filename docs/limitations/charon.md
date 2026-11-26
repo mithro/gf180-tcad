@@ -144,12 +144,12 @@ sweep under each setting ({repo}`results/charon-experiments/hard-range.json`). F
 the end of the grid. Hollow: it stopped at that bias.
 ```
 
-{numref}`tab-charon-tolerance` gives the largest change per case. The pfet start reference
+{numref}`tab-charon-tolerance-change` gives the largest change per case. The pfet start reference
 stops at {{ lim_charon_stall_v }} V. Its row compares the {{ lim_charon_pfet_start_points }}
 biases from 5 V down to {{ lim_charon_pfet_start_from }} V.
 
 ```{table} The largest relative change of C between the WRMS tolerances 1e-9 and 1e-10.
-:name: tab-charon-tolerance
+:name: tab-charon-tolerance-change
 
 | Device | Parameter set | Largest relative change |
 |---|---|---|
