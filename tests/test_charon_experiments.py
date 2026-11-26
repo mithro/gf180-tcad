@@ -324,20 +324,140 @@ def test_readme_charon_numbers_are_the_records():
     assert want in " ".join(readme.split()), want
 
 
-def test_plan_charon_numbers_are_the_records():
-    """The plan is read on GitHub without substitutions: the numbers its Task B amendment types
-    are the page's substitutions, so a changed record fails here until the plan follows."""
-    from gf180tcad import limitations_figures as lf
+#: Numbers the plan's Task B amendment types that are settings or citations, not measurements: the
+#: tolerances, lifetimes and scalings tried, biases and sweep ends chosen, the frequencies and
+#: amplitudes, the grid, the spec section, years, file-resolution and scale factors.
+PLAN_SETTINGS = {
+    "1", "3", "5", "10", "11", "14", "26", "50", "2026", "12.1", "0.3", "0.5", "1.5", "−5",
+    "1e-3", "1e-4", "1e-5", "1e-7", "1e-8", "1e-9", "1e-10", "1e-11", "1e-12", "1e-13", "1e-14",
+    "1e-15", "1e-16", "1e4", "1e10", "1e20",
+}  # fmt: skip
 
-    subs = lf.substitutions()
+
+def _plan_tokens(text: str) -> list[str]:
+    """The numbers a Markdown text types, outside code spans, {repo} links and issue links."""
+    text = re.sub(r"\{repo\}`[^`]*`|`[^`]*`|\[issue #[0-9]+\]\([^)]*\)", "", text)
+    return re.findall(r"(?<![\w.#])[−-]?[0-9]+(?:\.[0-9]+)?(?:e[-+]?[0-9]+)?(?!\w)", text)
+
+
+def _plan_measured() -> dict[str, float | list]:
+    """Every measured number the plan's Task B amendment types, recomputed from the records:
+    ``{text: value}`` (a list for a text the amendment types more than once)."""
+    runs, hard = _record("cv")["runs"], _record("hard-range")
+    probes, hb = _record("probes"), _record("harmonic-balance")
+    v, studies = hard["variants"], hard["step_studies"]
+    ref_n, ref_p = runs["cv-nfet-tau15-1e-10"], runs["cv-pfet-tau15-1e-10"]
+    listed = ("tol_1e-8", "tol_1e-6", "tol_1e-4", "scale_1e20", "step_5mV", "nosrh")
+    short = [r for r in runs.values() if r["settings"].get("CX_TAU") in ("1e-14", "1e-15")]
+    nlp = hard["nlp"]["points"]
+    hb1 = probes["harmonic_balance"]
+    gate = {s: abs(next(x for c, x in hb1["b4_1e+06_0.0001"][s]["c_from_columns_over_c_qs"]
+                        .items() if c.startswith("gate") and "CosH1" in c and "Disp" in c))
+            for s in ("accumulation", "depletion")}  # fmt: skip
+    body_1hz = hb1["b4_1_0.0001"]["depletion"]["c_from_columns_over_c_qs"]
+    b7 = [_rel_max(runs, "cv-nfet-tau15-1e-9", "cv-nfet-tau15-1e-10"),
+          _rel_max(runs, "cv-pfet-tau15-1e-9", "cv-pfet-tau15-1e-10"),
+          _rel_max(runs, "cv-nfet-start-tau15-1e-9", "cv-nfet-start-tau15-1e-10"),
+          max(_rel_max(runs, "cv-pfet-start-tau15-1e-9", r) for r in
+              ("cv-pfet-start-tau15-1e-10-above-0.6", "cv-pfet-start-tau15-1e-10-from-minus-5"))]  # fmt: skip
+    devsim = [ref_n["max_abs_rel_vs_devsim"], ref_p["max_abs_rel_vs_devsim"]]
+    return {
+        "0.35": [
+            float(v["ref_1e-10"]["failed_at"][0]),
+            max(v[n]["last_converged_v"] for n in listed),
+            float(v["ref_1e-10"]["failed_at"][0]),
+        ],
+        "0.30": v["ref_1e-10"]["last_converged_v"],
+        "0.25": min(v[n]["last_converged_v"] for n in listed),
+        "0.05": v["gfem"]["last_converged_v"],
+        "0.1": float(v["gfem"]["failed_at"][0]),
+        "1.1e-9": _rel_max(runs, "cv-nfet-tau14-1e-10", "cv-nfet-tau15-1e-10"),
+        "5.7e-10": _rel_max(runs, "cv-pfet-tau14-1e-10", "cv-pfet-tau15-1e-10"),
+        "1.0e-9": [_rel_max(runs, "cv-nfet-default-1e-10", "cv-nfet-tau15-1e-10"), b7[0]],
+        "7e-6": max(r[f"max_abs_np_over_ni2_minus_1_{s}"] for r in short for s in "AB"),
+        "201": [len(ref_n["vg"]), len(runs["cv-pfet-start-tau15-1e-9"]["vg"])],
+        "0.55": [
+            float(studies["study-nfet-tau15-secant-50mV"]["failed"]["failed_at"][0]),
+            max(runs["cv-pfet-start-tau15-1e-10-from-minus-5"]["vg"]),
+        ],
+        "12": v["ref_1e-10"]["failed_wrms"],
+        "59": v["step_5mV"]["failed_wrms"],
+        "0.2": float(
+            next(
+                s for s in probes["solvers"].values() if isinstance(s, dict) and s.get("failed_at")
+            )["failed_at"][0]
+        ),
+        "0.569": float(studies["study-pfet-start-1e-10"]["failed"]["failed_at"][0]),
+        "1.238": studies["study-pfet-start-1e-10"]["failed"]["final"][-1][1],
+        "0.45": float(studies["study-pfet-start-1e-11"]["failed"]["failed_at"][0]),
+        "−0.15": float(studies["study-nfet-default-1e-11"]["failed"]["failed_at"][0]),
+        "4.4e-10": b7[1],
+        "1.4e-9": b7[2],
+        "5.1e-10": b7[3],
+        "3e-5": min(devsim),
+        "5e-5": max(devsim),
+        "1.3e-9": _rel_max(runs, "cv-nfet-default-1e-8", "cv-nfet-default-1e-10"),
+        "−1": next(p["vg"] for p in nlp if p["ok"]),
+        "0": [[p["vg"] for p in nlp if p["ok"]][1], max(abs(p["c_nlp"]) for p in nlp if p["ok"])],
+        "−3": next(p["vg"] for p in nlp if not p["ok"]),
+        "2.8e-13": max(ref_n["poly_vs_gate_A"], ref_n["poly_vs_gate_B"]),
+        "8.0e-13": max(ref_p["poly_vs_gate_A"], ref_p["poly_vs_gate_B"]),
+        "4.4e-13": max(ref_n["body_vs_gate_A"], ref_n["body_vs_gate_B"]),
+        "8.1e-13": max(ref_p["body_vs_gate_A"], ref_p["body_vs_gate_B"]),
+        "1.0e-12": max(ref_n["oxide_flux_spread_A"], ref_n["oxide_flux_spread_B"]),
+        "1.4e-12": max(ref_p["oxide_flux_spread_A"], ref_p["oxide_flux_spread_B"]),
+        "3.0e-5": devsim[0],
+        "5.4e-5": devsim[1],
+        "1.5e-9": max(ref_n["align_A"], ref_n["align_B"]),
+        "2.8e-9": max(ref_p["align_A"], ref_p["align_B"]),
+        "2472": probes["tri3"]["mesh2d"]["nodes"],
+        "2.6e-4": abs(probes["tri3"]["rel_vs_devsim_1d"]),
+        "1.3e-3": probes["tri3"]["strip_max_rel_c_tri3_vs_quad4"],
+        "2.1e-9": max(
+            abs(abs(x) - 1)
+            for run in hb["parallel_plate"]["runs"].values()
+            for c, x in run["ratio"].items()
+            if "CosH1" in c
+        ),
+        "3.4e-7": max(
+            abs(abs(x) - 1)
+            for c, x in hb["metal_gate"]["depletion"]["ratio"].items()
+            if c.startswith("gate") and "CosH1" in c and "Disp" in c
+        ),
+        "0.20": gate["accumulation"],
+        "0.38": gate["depletion"],
+        "−0.16": next(
+            x
+            for c, x in body_1hz.items()
+            if c.startswith("body") and "CosH1" in c and c.endswith("__Current")
+        ),
+    }
+
+
+def _matches(text: str, value: float) -> bool:
+    """Whether ``text`` is ``value`` at the digits it shows (an integer text: the nearest one)."""
+    t = text.replace("−", "-")
+    if "e" in t:
+        return _shown(t, value)
+    digits = len(t.split(".")[1]) if "." in t else 0
+    return float(t) == round(float(value), digits)
+
+
+def test_plan_charon_numbers_are_the_records():
+    """The plan is read on GitHub without substitutions. Every number its Task B amendment
+    types is either a setting (:data:`PLAN_SETTINGS`) or a measurement tied here to its record,
+    by token (0.2 does not match inside 0.20), as often as the amendment types it."""
     plan = (REPO_ROOT / "docs/superpowers/plans/2026-10-27-phase4-charon-backend.md").read_text(
         "utf-8"
     )
     amendment = plan[plan.index("**Amended by experiments B1–B7"):plan.index(
         "**Decision: mesh and regions.**")]  # fmt: skip
-    for key in ("stall_v", "stall_wrms", "stall_ramp_v", "tight_ramp_v", "b7_nfet_calibrated",
-                "b7_pfet_calibrated", "b7_nfet_start", "b7_pfet_start", "nfet_devsim",
-                "pfet_devsim", "lifetime", "pfet_lifetime", "default_lifetime", "tol8",
-                "tri3_2d", "tri3_strip", "pp", "mg", "hb_acc", "hb_depl",
-                "pfet_start_up_to", "belos_stop", "fail_v", "pfet_start_points"):  # fmt: skip
-        assert subs[f"lim_charon_{key}"] in amendment, (key, subs[f"lim_charon_{key}"])
+    tokens = _plan_tokens(amendment)
+    measured = _plan_measured()
+    untied = sorted({t for t in tokens if t not in measured and t not in PLAN_SETTINGS})
+    assert not untied, f"numbers in the amendment tied to no record: {untied}"
+    for text, values in measured.items():
+        values = values if isinstance(values, list) else [values]
+        assert tokens.count(text) >= len(values), (text, tokens.count(text), len(values))
+        for value in values:
+            assert _matches(text, value), (text, value)
