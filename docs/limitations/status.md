@@ -59,6 +59,7 @@ page that explains it. The generated pages of every result are {doc}`/_generated
 | 1D calibration against the SPICE {term}`Cgg`–Vg | {repo}`results/tcad/calibration` | {doc}`/comparison/cv-agreement` |
 | Validation at the {term}`held-out geometries <held-out geometry>` | {repo}`results/tcad/validation` | {ref}`cv-agreement-validation` |
 | The 1D fit at the four other SPICE {term}`corners <corner>` | {repo}`results/tcad/corners` | {doc}`corners` |
+| The poly length bias of the 2D cells, fitted to the SPICE edge capacitance | {repo}`results/tcad/edgefit` | {ref}`moscap2d-edge` |
 ~~~
 
 ## The verdicts
