@@ -39,8 +39,28 @@ a node pair at the same depth; the shading marks the element blocks `gate_poly`,
 The deck sets every constant of the project's table explicitly: permittivities, temperature,
 intrinsic density, mobilities and SRH lifetimes. Both contacts are ohmic, the gate on the poly.
 Charon's nodal `Doping` equals the description at every node of both devices
-({repo}`probes.json <results/charon-experiments/probes.json>`, B5). Its intrinsic density equals
-the project's {{ lim_charon_ni }} cm⁻³ exactly.
+({repo}`probes.json <results/charon-experiments/probes.json>`, B5), as
+{numref}`fig-charon-doping` shows. Its intrinsic density equals the project's
+{{ lim_charon_ni }} cm⁻³ exactly.
+
+```{figure} /_generated/limitations/charon-doping-light.svg
+:name: fig-charon-doping
+:figclass: only-light
+:alt: Two panels, nfet and pfet: the description's net doping as a step line over depth, high in the poly and lower in the body, with Charon's nodal values as circles on the line.
+
+The magnitude of the net doping against depth from the gate end, nfet above and pfet below, at
+the start and calibrated values. Lines: the description. Circles: Charon's nodal `Doping`
+({repo}`results/charon-experiments/probes.json`, B5).
+```
+
+```{figure} /_generated/limitations/charon-doping-dark.svg
+:figclass: only-dark
+:alt: Two panels, nfet and pfet: the description's net doping as a step line over depth, high in the poly and lower in the body, with Charon's nodal values as circles on the line.
+
+The magnitude of the net doping against depth from the gate end, nfet above and pfet below, at
+the start and calibrated values. Lines: the description. Circles: Charon's nodal `Doping`
+({repo}`results/charon-experiments/probes.json`, B5).
+```
 
 (charon-cv)=
 ## The quasi-static C–V
@@ -89,7 +109,8 @@ The dashed line is the 1 % tolerance.
 
 The reference runs use SRH lifetimes of {{ lim_charon_ref_tau }} s, not the project's 1e-5 s.
 With no current, the steady state is each region's equilibrium, whatever the lifetimes. The short
-lifetimes only let the inversion charge appear quickly during the Newton solve.
+lifetimes tie n·p to n_i² at every node through the recombination term. That keeps the Newton
+system of the zero-current state solvable at the onset of inversion.
 
 In the bottom
 panel of {numref}`fig-charon-cv`, a lifetime of 1e-14 s moves C by at most
@@ -145,8 +166,10 @@ the end of the grid. Hollow: it stopped at that bias.
 ```
 
 {numref}`tab-charon-tolerance-change` gives the largest change per case. The pfet start reference
-stops at {{ lim_charon_stall_v }} V. Its row compares the {{ lim_charon_pfet_start_points }}
-biases from 5 V down to {{ lim_charon_pfet_start_from }} V.
+stops at {{ lim_charon_stall_v }} V on its way down from 5 V. A second reference run sweeps up
+from −5 V and converges to {{ lim_charon_pfet_start_up_to }} V. Together they cover the
+{{ lim_charon_pfet_start_points }} biases of that row, down to {{ lim_charon_pfet_start_from }} V
+from above.
 
 ```{table} The largest relative change of C between the WRMS tolerances 1e-9 and 1e-10.
 :name: tab-charon-tolerance-change
@@ -182,8 +205,9 @@ With the project's lifetimes, the nfet sweep fails at the onset of inversion, a 
 {{ lim_charon_fail_v }} V.
 
 {numref}`fig-charon-hard-range` shows the last bias each solver setting reached, sweeping up from
-0 V. Looser tolerances, another concentration scaling, 5 mV steps and the FEM discretisation stop
-between {{ lim_charon_stop_lo }} V and {{ lim_charon_stop_hi }} V. Lifetimes of 1e-12 s and 1e-13 s
+0 V. Five kinds of setting stop between {{ lim_charon_stop_lo }} V and {{ lim_charon_stop_hi }} V.
+They are looser tolerances, another concentration scaling, 5 mV steps, no SRH and the FEM
+discretisation. Lifetimes of 1e-12 s and 1e-13 s
 stop at {{ lim_charon_tau_stop }} V. Only lifetimes of 1e-14 s or shorter reach 5 V.
 
 ```{figure} /_generated/limitations/charon-hard-range-light.svg
@@ -245,6 +269,36 @@ parallel plate and metal-gate stack of {numref}`fig-charon-structures`; the othe
 The answers come from {repo}`probes.json <results/charon-experiments/probes.json>`,
 {repo}`hard-range.json <results/charon-experiments/hard-range.json>` and
 {repo}`harmonic-balance.json <results/charon-experiments/harmonic-balance.json>`.
+{numref}`fig-charon-checks` draws the B2, B3, B6 and B7 answers.
+
+The nonlinear-Poisson solve converges at {{ lim_charon_nlp_ok }} V, where C is
+{{ lim_charon_nlp_c }}. At {{ lim_charon_nlp_bad }} V Newton's first update overshoots and the
+residual turns NaN. Charon then aborts with MPI error 14.
+
+```{figure} /_generated/limitations/charon-checks-light.svg
+:name: fig-charon-checks
+:figclass: only-light
+:alt: Four panels: each linear solver's sweep as a bar, the nonlinear-Poisson C at each bias with crosses where it diverged, the charge-check mismatches per state, and the C change at a looser tolerance with dotted lines where tighter studies stopped.
+
+Top to bottom: B3, each linear solver's sweep from its start to where it stopped; B2, the
+nonlinear-Poisson C, crosses where Newton diverged; B6, the oxide-flux spread and the poly and body charge
+mismatches per state, as the legend names them, nfet solid and pfet dashed; B7, the C
+change a hundred times looser, and dotted where the ten times tighter studies stopped
+({repo}`results/charon-experiments/probes.json`, {repo}`results/charon-experiments/hard-range.json`,
+{repo}`results/charon-experiments/cv.json`).
+```
+
+```{figure} /_generated/limitations/charon-checks-dark.svg
+:figclass: only-dark
+:alt: Four panels: each linear solver's sweep as a bar, the nonlinear-Poisson C at each bias with crosses where it diverged, the charge-check mismatches per state, and the C change at a looser tolerance with dotted lines where tighter studies stopped.
+
+Top to bottom: B3, each linear solver's sweep from its start to where it stopped; B2, the
+nonlinear-Poisson C, crosses where Newton diverged; B6, the oxide-flux spread and the poly and body charge
+mismatches per state, as the legend names them, nfet solid and pfet dashed; B7, the C
+change a hundred times looser, and dotted where the ten times tighter studies stopped
+({repo}`results/charon-experiments/probes.json`, {repo}`results/charon-experiments/hard-range.json`,
+{repo}`results/charon-experiments/cv.json`).
+```
 
 ```{table} The other questions of Task B and what the experiments found.
 :name: tab-charon-other-answers
@@ -253,14 +307,14 @@ The answers come from {repo}`probes.json <results/charon-experiments/probes.json
 |---|---|---|
 | B1: does Charon read TRI3 blocks? (C of the 2D mesh at 0 V, relative to DEVSIM's 1D) | Yes | {{ lim_charon_tri3_2d }} |
 | B1: does the strip split into TRI3 match the QUAD4 strip on the same nodes? (largest relative C difference, [issue #215](https://github.com/mithro/gf180-tcad/issues/215)) | No | {{ lim_charon_tri3_strip }} |
-| B2: does the nonlinear-Poisson solve honour a biased poly gate? (its C, fF/µm²) | No | 0 |
-| B3: does Belos GMRES converge on the sweep? (Amesos2 KLU2 does) | No | not applicable |
+| B2: does the nonlinear-Poisson solve honour a biased poly gate? (its C where it converges, fF/µm²) | No | {{ lim_charon_nlp_c }} |
+| B3: does Belos GMRES converge on the sweep? (the bias where it stops, V; Amesos2 KLU2 reaches the end) | No | {{ lim_charon_belos_stop }} |
 | B4: do the cosine current columns give C on the parallel plate? (relative error) | Yes | {{ lim_charon_pp }} |
 | B4: do they give C on the metal-gate stack in depletion? (relative to the QS C) | Yes | {{ lim_charon_mg }} |
 | B4: do they give C with the ohmic poly gate in accumulation? (ratio to the QS C, [issue #213](https://github.com/mithro/gf180-tcad/issues/213)) | No | {{ lim_charon_hb_acc }} |
 | B4: do they give C with the ohmic poly gate in depletion? (ratio to the QS C, [issue #213](https://github.com/mithro/gf180-tcad/issues/213)) | No | {{ lim_charon_hb_depl }} |
 | B6: is the oxide flux a conservative gate charge? (mismatch with the poly and body charges) | Yes | {{ lim_charon_b6 }} |
-| B7: does a ten times looser tolerance move C? (largest relative change) | No | {{ lim_charon_tol8 }} |
+| B7: does a hundred times looser tolerance, 1e-8, move C with the project's lifetimes? (largest relative change) | No | {{ lim_charon_tol8 }} |
 | B7: does a ten times tighter tolerance converge? (the WRMS tolerance) | No | {{ lim_charon_tight }} |
 ```
 
