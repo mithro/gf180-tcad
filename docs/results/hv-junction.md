@@ -3,7 +3,7 @@
 The reverse {term}`breakdown voltage` of a well-to-substrate junction depends on what is drawn
 at the well edge. The experiment {repo}`experiments/hv-junction` simulates that edge for the
 structures of a test die of the [evampire](https://github.com/mithro/evampire) project. The
-structure list is {repo}`experiments/hv-junction/structures.json`. Each structure is an N-well
+structure list is {repo}`experiments/hv-junction/structures.json`. Each structure is an {term}`N-well <n-well>`
 or a {term}`deep N-well` in the P substrate, surrounded by one edge termination. The simulated
 section of one structure is in {numref}`hvj-section-figure`.
 
@@ -633,11 +633,11 @@ spread along a row is the range that the unpublished doping leaves open, on the 
 
 ## Charon cross-check
 
-{{ Charon }} solves six of the cases on {{ DEVSIM }}'s own nodes, written as a triangle mesh
+{{ Charon }} solves a case on {{ DEVSIM }}'s own nodes, written as a triangle mesh
 ({repo}`experiments/hv-junction/charon_mesh.py`). Its sweep includes impact ionisation in the
 continuity equations, so its current rises at breakdown
-({repo}`experiments/hv-junction/charon_run.py`). Three Charon values stand beside the DEVSIM
-value of {ref}`hvj-results` in {numref}`tab-hvj-charon`:
+({repo}`experiments/hv-junction/charon_run.py`). Three Charon values stand beside DEVSIM's
+breakdown voltage:
 
 - the bias at which the current is 100 times its low-bias trend;
 - the bias at which the integral {math:numref}`eq-hvj-integral` reaches 1 on Charon's potential;
@@ -648,17 +648,35 @@ Charon's control-volume scheme takes the hole coefficient's low-field values at 
 {math:numref}`eq-hvj-alpha`. Each case's DEVSIM curve is of the kind in
 {numref}`hvj-integral-figure`.
 
-~~~{table} Breakdown voltage (V): DEVSIM's integral against three Charon values.
+The six cases of {numref}`tab-hvj-charon-first` were run on an earlier member of the doping
+family, under its process names A and B. They compare the two simulators on one section each.
+Their values are not predictions of the present family
+({repo}`record <results/hv-junction/charon-firstpass.json>`). The cases of
+{numref}`tab-hvj-charon` are sections of the present family.
+
+~~~{table} Breakdown voltage (V) on the earlier doping family: DEVSIM against Charon.
+:name: tab-hvj-charon-first
+
+| Case | DEVSIM | Charon current | Charon integral | Charon last bias |
+|---|---|---|---|---|
+| NT20, A | {{ hvj_c1_NT20_A_edge_devsim }} | {{ hvj_c1_NT20_A_edge_current }} | {{ hvj_c1_NT20_A_edge_integral }} | {{ hvj_c1_NT20_A_edge_last }} |
+| NT20, B | {{ hvj_c1_NT20_B_edge_devsim }} | {{ hvj_c1_NT20_B_edge_current }} | {{ hvj_c1_NT20_B_edge_integral }} | {{ hvj_c1_NT20_B_edge_last }} |
+| NW1p5, B | {{ hvj_c1_NW1p5_B_edge_devsim }} | {{ hvj_c1_NW1p5_B_edge_current }} | {{ hvj_c1_NW1p5_B_edge_integral }} | {{ hvj_c1_NW1p5_B_edge_last }} |
+| NM1_6, B | {{ hvj_c1_NM1_6_B_edge_devsim }} | {{ hvj_c1_NM1_6_B_edge_current }} | {{ hvj_c1_NM1_6_B_edge_integral }} | {{ hvj_c1_NM1_6_B_edge_last }} |
+| NR1_2, B | {{ hvj_c1_NR1_2_B_edge_devsim }} | {{ hvj_c1_NR1_2_B_edge_current }} | {{ hvj_c1_NR1_2_B_edge_integral }} | {{ hvj_c1_NR1_2_B_edge_last }} |
+| DT20, B | {{ hvj_c1_DT20_B_edge_devsim }} | {{ hvj_c1_DT20_B_edge_current }} | {{ hvj_c1_DT20_B_edge_integral }} | {{ hvj_c1_DT20_B_edge_last }} |
+~~~
+
+A dash under Charon current is a sweep that stopped before its current reached 100 times the
+trend.
+
+~~~{table} Breakdown voltage (V) on the present doping family: DEVSIM against Charon.
 :name: tab-hvj-charon
 
 | Case | DEVSIM | Charon current | Charon integral | Charon last bias |
 |---|---|---|---|---|
-| NT20, AL | {{ hvj_NT20_AL_edge }} | {{ hvj_NT20_AL_edge_charon_current }} | {{ hvj_NT20_AL_edge_charon_integral }} | {{ hvj_NT20_AL_edge_charon_last }} |
-| NT20, BL | {{ hvj_NT20_BL_edge }} | {{ hvj_NT20_BL_edge_charon_current }} | {{ hvj_NT20_BL_edge_charon_integral }} | {{ hvj_NT20_BL_edge_charon_last }} |
-| NW1p5, BL | {{ hvj_NW1p5_BL_edge }} | {{ hvj_NW1p5_BL_edge_charon_current }} | {{ hvj_NW1p5_BL_edge_charon_integral }} | {{ hvj_NW1p5_BL_edge_charon_last }} |
-| NM1_6, BL | {{ hvj_NM1_6_BL_edge }} | {{ hvj_NM1_6_BL_edge_charon_current }} | {{ hvj_NM1_6_BL_edge_charon_integral }} | {{ hvj_NM1_6_BL_edge_charon_last }} |
-| NR1_2, BL | {{ hvj_NR1_2_BL_edge }} | {{ hvj_NR1_2_BL_edge_charon_current }} | {{ hvj_NR1_2_BL_edge_charon_integral }} | {{ hvj_NR1_2_BL_edge_charon_last }} |
-| DT20, BL | {{ hvj_DT20_BL_edge }} | {{ hvj_DT20_BL_edge_charon_current }} | {{ hvj_DT20_BL_edge_charon_integral }} | {{ hvj_DT20_BL_edge_charon_last }} |
+| NP4, BL | {{ hvj_c2_NP4_BL_edge_devsim }} | {{ hvj_c2_NP4_BL_edge_current }} | {{ hvj_c2_NP4_BL_edge_integral }} | {{ hvj_c2_NP4_BL_edge_last }} |
+| NT20, BD | {{ hvj_c2_NT20_BD_edge_devsim }} | {{ hvj_c2_NT20_BD_edge_current }} | {{ hvj_c2_NT20_BD_edge_integral }} | {{ hvj_c2_NT20_BD_edge_last }} |
 ~~~
 
 (hvj-limits)=
@@ -700,7 +718,7 @@ of {numref}`hvj-integral-figure` are read from the main record.
   case set. The runs of that set left {{ hvj_n_main_missing }} cases without a result.
 - **family** holds the doping family.
 - **checks** and **diodes** hold the cases of {ref}`hvj-checks`.
-- **charon** holds the cases of {ref}`hvj-charon`.
+- **charon-firstpass** and **charon** hold the cases of {ref}`hvj-charon`.
 
 A case is printed only when its record row was run with the parameters that
 {repo}`experiments/hv-junction/predict.py` gives at this commit. Any other case prints a dash.

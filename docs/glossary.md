@@ -398,7 +398,7 @@ Rsd
   2175 Ω·µm. See {ref}`mismatch-taxonomy`.
 
 BVDSS
-  Drain-source breakdown voltage. The {term}`PDK` publishes it, but breakdown is not simulated, so it is
+  Drain-source {term}`breakdown voltage`. The {term}`PDK` publishes it, but breakdown is not simulated, so it is
   not compared. See {ref}`pdk-definition-notes`.
 
 σ_mismatch
@@ -705,7 +705,7 @@ breakdown voltage
   {ref}`hvj-method`.
 
 ionisation integral
-  The number of electron-hole pairs that one carrier creates by impact ionisation while it
+  The number of {term}`electron`-{term}`hole` pairs that one carrier creates by impact ionisation while it
   crosses the depleted silicon along a field line. Avalanche sets in when it reaches 1
   ({ref}`Sze and Ng 2006, ch. 2 <lit-sze>`). See {ref}`hvj-method`.
 
@@ -715,7 +715,7 @@ deep N-well
 
 generated P-well
   The LVPWELL implant of {term}`GF180MCU` where the foundry derives it from the drawn layers
-  instead of the designer drawing it. Where it lies beside an N-well is an assumption of the
+  instead of the designer drawing it. Where it lies beside an {term}`N-well <n-well>` is an assumption of the
   high-voltage junction study. See {ref}`hvj-process`.
 
 NAT
@@ -724,7 +724,7 @@ NAT
 
 field plate
   A conductor over the oxide beyond a junction's edge, tied to one side of the junction. It
-  spreads the depletion region along the surface and lowers the peak field. See
+  spreads the {term}`depletion` region along the surface and lowers the peak field. See
   {ref}`hvj-results`.
 
 floating ring

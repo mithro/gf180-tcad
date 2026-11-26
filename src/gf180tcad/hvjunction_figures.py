@@ -11,7 +11,7 @@ The prediction records are ``main`` and ``family``. A case is read from them onl
 parameters are the ones ``predict.py`` gives now (the record's ``params_sha256``), so a record
 made before a change of the structures or the process never prints a superseded number. A
 value whose record or case is not committed prints as a dash, and its points are missing from
-the figures. The other records are ``checks``, ``diodes`` and ``charon``.
+the figures. The other records are ``checks``, ``diodes``, ``charon-firstpass`` and ``charon``.
 
 :func:`substitutions` gives the page's ``{{ hvj_<name> }}`` values, and :func:`write_all` writes
 each figure of :data:`FIGURES` as ``<name>-light.svg`` and ``<name>-dark.svg`` into
@@ -49,7 +49,7 @@ PAGE = REPO_ROOT / "docs" / "results" / "hv-junction.md"
 #: The prediction records, in the order a later one replaces the cases of an earlier one.
 PREDICTION_RECORDS = ("main", "family")
 #: Every record: the prediction records, the check cases, the 1D diodes and the Charon cases.
-RECORDS = (*PREDICTION_RECORDS, "checks", "diodes", "charon")
+RECORDS = (*PREDICTION_RECORDS, "checks", "diodes", "charon-firstpass", "charon")
 #: The text of a value whose record or case is not committed.
 MISSING = "—"
 
@@ -60,10 +60,17 @@ DIODES = {"1e+15": 1e15, "1e+16": 1e16, "1e+17": 1e17}
 #: diode1d.py's donor doping of the N+ side (cm^-3), dd.py's intrinsic density (cm^-3) and
 #: thermal voltage at 300 K (V): the built-in potential of its diodes.
 DIODE_ND, NI, VT = 1e19, 1.0e10, 1.380649e-23 * 300.0 / 1.602176634e-19
-CHARON_CASES = ("NT20|AL|edge", "NT20|BL|edge", "NW1p5|BL|edge", "NM1_6|BL|edge",
-                "NR1_2|BL|edge", "DT20|BL|edge")  # fmt: skip
-CHARON_FIELDS = {"current": "bv_current_v", "integral": "bv_integral_v",
-                 "last": "last_converged_v"}  # fmt: skip
+#: The cases of each Charon record: ``charon-firstpass`` ran six sections of the first doping
+#: family (its process names were A and B), ``charon`` runs sections of the present one.
+CHARON_CASES = {
+    "charon-firstpass": ("NT20|A|edge", "NT20|B|edge", "NW1p5|B|edge", "NM1_6|B|edge",
+                         "NR1_2|B|edge", "DT20|B|edge"),
+    "charon": ("NP4|BL|edge", "NT20|BD|edge"),
+}  # fmt: skip
+#: The substitution prefix of each Charon record.
+CHARON_PREFIX = {"charon-firstpass": "hvj_c1", "charon": "hvj_c2"}
+CHARON_FIELDS = {"devsim": "devsim_bv_v", "current": "bv_current_v",
+                 "integral": "bv_integral_v", "last": "last_converged_v"}  # fmt: skip
 
 # The published anchors of the doping family, each with its public source on the page: the
 # zero-bias capacitance, grading coefficient and junction potential of the N-well and deep
@@ -336,8 +343,9 @@ def substitutions(root: Path = ROOT) -> dict[str, str]:
     ``hvj_n_<record>_missing`` the current cases its runs left without a result;
     ``hvj_chk_<name>`` is a check case's breakdown voltage; ``hvj_diode_<doping>`` the 1D
     diode's, ``hvj_diode_<doping>_analytic`` the triangular-field value, ``_vbi`` the built-in
-    potential and ``_applied`` their difference; ``hvj_<case>_charon_<field>`` the Charon
-    values; ``hvj_nw_rs`` and ``hvj_<well>_<c0|c10>[_model]`` the anchors of
+    potential and ``_applied`` their difference; ``hvj_c1_<case>_<field>`` and
+    ``hvj_c2_<case>_<field>`` the values of the two Charon records (:data:`CHARON_PREFIX`,
+    :data:`CHARON_FIELDS`); ``hvj_nw_rs`` and ``hvj_<well>_<c0|c10>[_model]`` the anchors of
     :func:`well_anchors` (capacitances in fF/µm²); ``hvj_abut_pct`` how far the abutting
     junction lies above the published typical value; ``hvj_mesh_pair_pct`` the difference of
     the two meshes of :data:`MESH_PAIR`."""
@@ -368,10 +376,12 @@ def substitutions(root: Path = ROOT) -> dict[str, str]:
         out[f"hvj_diode_{short}_analytic"] = _two(analytic)
         out[f"hvj_diode_{short}_vbi"] = _two(built_in(doping))
         out[f"hvj_diode_{short}_applied"] = _two(analytic - built_in(doping))
-    charon = recs.get("charon", {}).get("cases", {})
-    for case in CHARON_CASES:
-        for field, source in CHARON_FIELDS.items():
-            out[f"{key(case)}_charon_{field}"] = _two(charon.get(case, {}).get(source))
+    for name, names in CHARON_CASES.items():
+        charon = recs.get(name, {}).get("cases", {})
+        for case in names:
+            for field, source in CHARON_FIELDS.items():
+                k = f"{CHARON_PREFIX[name]}_{key(case)[len('hvj_') :]}_{field}"
+                out[k] = _two(charon.get(case, {}).get(source))
     for name, value in well_anchors().items():
         # F/cm^2 to fF/µm^2 is a factor of 1e7
         out[f"hvj_{name}"] = f"{value:.0f}" if name == "nw_rs" else f"{value * 1e7:.3f}"

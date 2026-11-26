@@ -42,7 +42,8 @@ Q, EPS, UM = 1.602176634e-19, 11.7 * 8.8541878128e-14, 1e-4
 SWEEP_RECORDS = ("main", "family", "checks")
 # The prediction records, in the order a later one replaces the cases of an earlier one.
 PREDICTION_RECORDS = ("main", "family")
-ALL_RECORDS = (*SWEEP_RECORDS, "diodes", "charon")
+CHARON_RECORDS = ("charon-firstpass", "charon")
+ALL_RECORDS = (*SWEEP_RECORDS, "diodes", *CHARON_RECORDS)
 # The case the sandbox test reruns (297 s in the main batch) and its tolerance in volts.
 RERUN_CASE, RERUN_TOL_V = "NW0|BL|edge", 1e-6
 
@@ -262,33 +263,62 @@ def test_records_are_known_files():
     assert "main.json" in files
 
 
-@pytest.mark.parametrize("name", _present())
-def test_record_pins_what_the_runs_used(name):
-    """The record's pins are checked against the checkout at the record's own commit: the
-    commit is an ancestor of HEAD, the image is the one docker/ named then and names now, and
-    files_sha256 lists every file of the experiment at that commit with its sha256 there."""
-    rec = _load(name)
-    pins = rec["pins"]
-    assert rec["schema"] == 1 and pins["dirty"] is False
-    want = {"commit", "dirty", "files_sha256", "image"} | (
-        {"charon_image"} if name == "charon" else set()
-    )
-    assert set(pins) == want
-    commit = pins["commit"]
+def _files_at(commit: str, files: dict[str, str]) -> None:
+    """Each file of the experiment has the recorded sha256 at ``commit``, an ancestor of HEAD."""
     assert _git("cat-file", "-e", commit + "^{commit}").returncode == 0, commit
     assert _git("merge-base", "--is-ancestor", commit, "HEAD").returncode == 0, commit
+    for file, digest in files.items():
+        blob = _git("show", f"{commit}:experiments/hv-junction/{file}")
+        assert blob.returncode == 0, (commit, file)
+        assert hashlib.sha256(blob.stdout).hexdigest() == digest, (commit, file)
+
+
+def _image_at(commit: str, pins: dict) -> None:
+    """The pinned images are the ones docker/ named at ``commit`` and names now."""
     for key, path in (("image", "docker/TCAD_DEV_IMAGE"), ("charon_image", "docker/CHARON_IMAGE")):
         if key in pins:
             then = _git("show", f"{commit}:{path}").stdout.decode().split()[0]
             assert pins[key] == then == (REPO_ROOT / path).read_text("utf-8").split()[0]
-    tree = (
-        _git("ls-tree", "--name-only", commit, "experiments/hv-junction/").stdout.decode().split()
-    )
-    assert sorted(pins["files_sha256"]) == sorted(t.rsplit("/", 1)[1] for t in tree)
-    for file, digest in pins["files_sha256"].items():
-        blob = _git("show", f"{commit}:experiments/hv-junction/{file}")
-        assert blob.returncode == 0, file
-        assert hashlib.sha256(blob.stdout).hexdigest() == digest, file
+
+
+@pytest.mark.parametrize("name", _present())
+def test_record_pins_what_the_runs_used(name):
+    """The record's pins are checked against the checkout at each commit its runs were made
+    at. Every such commit is an ancestor of HEAD, named the pinned image, and held the modules
+    a sweep imports (record.SWEEP_FILES) with the recorded sha256. A Charon record also pins
+    the Charon image and, per case, the Charon modules at the case's commit. The diode record
+    pins one commit and every file of the experiment at it."""
+    rec = _load(name)
+    pins = rec["pins"]
+    if name == "diodes":
+        assert rec["schema"] == 1 and pins["dirty"] is False
+        assert set(pins) == {"commit", "dirty", "files_sha256", "image"}
+        tree = _git("ls-tree", "--name-only", pins["commit"], "experiments/hv-junction/")
+        assert sorted(pins["files_sha256"]) == sorted(
+            t.rsplit("/", 1)[1] for t in tree.stdout.decode().split())  # fmt: skip
+        _files_at(pins["commit"], pins["files_sha256"])
+        _image_at(pins["commit"], pins)
+        return
+    assert rec["schema"] == 2
+    charon = name in CHARON_RECORDS
+    assert set(pins) == {"commits", "files_sha256", "image"} | (
+        {"charon_image"} if charon else {"commit"})  # fmt: skip
+    assert tuple(sorted(pins["files_sha256"])) == record.SWEEP_FILES
+    assert pins["commits"] == sorted(set(pins["commits"])) and pins["commits"]
+    if not charon:
+        assert pins["commit"] == (pins["commits"][0] if len(pins["commits"]) == 1 else None)
+    for commit in pins["commits"]:
+        _files_at(commit, pins["files_sha256"])
+        _image_at(commit, pins)
+    if charon:
+        assert {row["commit"] for row in rec["cases"].values()} == set(pins["commits"])
+        for row in rec["cases"].values():
+            assert tuple(sorted(row["charon_files_sha256"])) == charon_record.CHARON_FILES
+            _files_at(row["commit"], row["charon_files_sha256"])
+        src = rec["devsim_record"]
+        blob = _git("show", f"{src['commit']}:{src['path']}")
+        assert blob.returncode == 0 and hashlib.sha256(blob.stdout).hexdigest() == src["sha256"]
+        assert _git("merge-base", "--is-ancestor", src["commit"], "HEAD").returncode == 0
 
 
 @pytest.mark.parametrize("name", _present(SWEEP_RECORDS))
@@ -342,21 +372,38 @@ def test_diode_record_is_the_three_diodes():
         assert abs(row["bv_v"] - (_abrupt_bv(float(name)) - 0.9)) < 0.3, name
 
 
-def test_charon_record_agrees_with_devsim():
-    """Charon's integral on its own potential lies within 1 % of DEVSIM's breakdown voltage."""
-    if "charon" not in _present():
-        pytest.skip("results/hv-junction/charon.json is not committed")
-    rec = _load("charon")
-    devsim = _latest_rows()
+@pytest.mark.parametrize("name", _present(CHARON_RECORDS))
+def test_charon_record_agrees_with_devsim(name, hf):
+    """Each Charon case has the parameters and the breakdown voltage of the DEVSIM record it
+    names, the integral on Charon's potential lies within 3 % of DEVSIM's breakdown voltage,
+    and the record's cases are the ones the page lists."""
+    rec = _load(name)
+    src = rec["devsim_record"]
+    devsim = json.loads(_git("show", f"{src['commit']}:{src['path']}").stdout)["cases"]
+    assert tuple(sorted(rec["cases"])) == tuple(sorted(hf.CHARON_CASES[name]))
     for case, row in rec["cases"].items():
-        assert set(row) == {"params_sha256", "integral", *charon_record.KEEP}, case
+        assert set(row) == {"params_sha256", "commit", "charon_files_sha256", "devsim_bv_v",
+                            "integral", *charon_record.KEEP}, case  # fmt: skip
         assert row["params_sha256"] == devsim[case]["params_sha256"], case
-        assert abs(row["bv_integral_v"] / devsim[case]["bv_v"] - 1) < 0.01, case
+        assert row["devsim_bv_v"] == devsim[case]["bv_v"], case
+        assert abs(row["bv_integral_v"] / row["devsim_bv_v"] - 1) < 0.03, case
+        prefix = f"{hf.CHARON_PREFIX[name]}_{hf.key(case)[4:]}"
+        subs = hf.substitutions()
+        assert subs[f"{prefix}_devsim"] == f"{row['devsim_bv_v']:.2f}"
+        assert subs[f"{prefix}_integral"] == f"{row['bv_integral_v']:.2f}"
+        assert subs[f"{prefix}_last"] == f"{row['last_converged_v']:.2f}"
+        cur = row["bv_current_v"]
+        assert subs[f"{prefix}_current"] == ("\u2014" if cur is None else f"{cur:.2f}")
+    if name == "charon":  # the present family: the DEVSIM rows are the ones the page reads
+        rows = _latest_rows()
+        assert all(rows[c]["params_sha256"] == r["params_sha256"] for c, r in rec["cases"].items())
 
 
 # --- the record writers refuse what they should ---------------------------------------------------
 
-_PINS = {"commit": "c0ffee", "dirty": False, "image": "img@sha256:1", "files_sha256": {"a.py": "1"}}
+_PINS = {"commit": "c0ffee", "dirty": False, "image": "img@sha256:1",
+         "files_sha256": {f: "1" for f in (*record.SWEEP_FILES, *charon_record.CHARON_FILES, "x.py")}}  # fmt: skip
+_SHARED = {"image": "img@sha256:1", "files_sha256": dict.fromkeys(record.SWEEP_FILES, "1")}
 _RESULT = {"bv_v": 12.0, "reached_v": 13.0, "nodes": {"si": 3}, "v": [0.0, 13.0], "i_n": [0.0, 1.1],
            "emax": [1.0, 2.0], "eox_max": [1.0, 2.0], "i_well": [0.0, 0.0], "probes": [[], []],
            "where_um": [None, [1.0, 0.1]]}  # fmt: skip
@@ -378,14 +425,22 @@ def test_record_py_writes_and_refuses(tmp_path):
     _fake_runs(work, cases)
     record.main([str(work), str(work / "cases.json"), str(out)])
     rec = json.loads(out.read_text())
-    assert rec["pins"] == _PINS and sorted(rec["cases"]) == sorted(cases)
+    assert rec["schema"] == 2 and sorted(rec["cases"]) == sorted(cases)
+    assert rec["pins"] == {**_SHARED, "commit": "c0ffee", "commits": ["c0ffee"]}
     assert rec["cases"]["A|B|edge"]["params_sha256"] == _sha(cases["A|B|edge"])
+    # a batch restarted at another commit with the same image and sweep modules is accepted
+    work = tmp_path / "work-commits"
+    _fake_runs(work, cases, pins={"C@g0|B|edge": {**_PINS, "commit": "beef"}})
+    record.main([str(work), str(work / "cases.json"), str(out)])
+    pins = json.loads(out.read_text())["pins"]
+    assert (pins["commit"], pins["commits"]) == (None, ["beef", "c0ffee"])
     for bad, match in (
-        ({"commit": "other"}, "pins differ"),
+        ({"image": "other"}, "image or simulation files differ"),
+        ({"files_sha256": {**_PINS["files_sha256"], "sweep.py": "2"}}, "files differ"),
         ({"dirty": True}, "uncommitted changes"),
     ):
         pins = {"C@g0|B|edge": {**_PINS, **bad}}
-        work = tmp_path / f"work-{match[:4]}"
+        work = tmp_path / f"work-{next(iter(bad))}-{match[:4]}"
         _fake_runs(work, cases, pins=pins)
         with pytest.raises(SystemExit, match=match):
             record.main([str(work), str(work / "cases.json"), str(out)])
@@ -407,23 +462,30 @@ def test_charon_record_writes_and_refuses(tmp_path):
     pins = {**_PINS, "charon_image": "charon@sha256:2"}
     res = {k: None for k in charon_record.KEEP} | {
         "integral": {k: [] for k in (*charon_record.KEEP_INTEGRAL, "where_um")}}  # fmt: skip
+    devsim = {c: {"params_sha256": _sha(p), "bv_v": 10.0} for c, p in cases.items()}
+    source = {"commit": "c0ffee", "path": "main.json", "sha256": "0"}
     work = tmp_path / "work"
-    _fake_runs(work, cases, pins=dict.fromkeys(cases, pins), results=dict.fromkeys(cases, res))
-    rec = charon_record.record(work, cases, list(cases))
-    assert rec["pins"] == pins and sorted(rec["cases"]) == sorted(cases)
-    assert set(rec["cases"]["A|B|edge"]["integral"]) == set(charon_record.KEEP_INTEGRAL)
+    later = {"A|B|edge": pins, "D|B|edge": {**pins, "commit": "beef"}}
+    _fake_runs(work, cases, pins=later, results=dict.fromkeys(cases, res))
+    rec = charon_record.record(work, list(cases), devsim, source)
+    assert rec["pins"] == {**_SHARED, "charon_image": pins["charon_image"],
+                           "commits": ["beef", "c0ffee"]}  # fmt: skip
+    assert rec["devsim_record"] == source and sorted(rec["cases"]) == sorted(cases)
+    row = rec["cases"]["D|B|edge"]
+    assert (row["commit"], row["devsim_bv_v"]) == ("beef", 10.0)
+    assert tuple(sorted(row["charon_files_sha256"])) == charon_record.CHARON_FILES
+    assert set(row["integral"]) == set(charon_record.KEEP_INTEGRAL)
     with pytest.raises(SystemExit, match="not run"):
-        charon_record.record(work, {**cases, "E|B|edge": {}}, [*cases, "E|B|edge"])
-    for bad, match in (({"dirty": True}, "uncommitted"), ({"charon_image": "x"}, "pins differ")):
+        charon_record.record(work, [*cases, "E|B|edge"], devsim, source)
+    other = {**devsim, "A|B|edge": {"params_sha256": "0", "bv_v": 1.0}}
+    with pytest.raises(SystemExit, match="no case with these parameters"):
+        charon_record.record(work, list(cases), other, source)
+    for bad, match in (({"dirty": True}, "uncommitted"), ({"charon_image": "x"}, "differ")):
         work = tmp_path / f"work-{match[:4]}"
         both = {"A|B|edge": pins, "D|B|edge": {**pins, **bad}}
         _fake_runs(work, cases, pins=both, results=dict.fromkeys(cases, res))
         with pytest.raises(SystemExit, match=match):
-            charon_record.record(work, cases, list(cases))
-    work = tmp_path / "work-nopin"
-    _fake_runs(work, cases, results=dict.fromkeys(cases, res))  # DEVSIM pins only
-    with pytest.raises(SystemExit, match=r"pins\.json holds"):
-        charon_record.record(work, cases, list(cases))
+            charon_record.record(work, list(cases), devsim, source)
 
 
 def test_check_cases_and_the_diode_record(tmp_path):
@@ -514,7 +576,8 @@ def test_page_tables_are_the_generated_rows(hf, tmp_path):
     assert hf.structures() == predict.STRUCTS
     assert tuple(hf.CHECKS) == tuple(checks.check_cases())
     assert tuple(hf.DIODES) == checks.DIODES
-    assert set(hf.CHARON_CASES) <= set(_current_cases())
+    assert set(hf.CHARON_CASES) == set(CHARON_RECORDS)
+    assert set(hf.CHARON_CASES["charon"]) <= set(_current_cases())
 
 
 def test_page_mesh_pair_is_one_section():
