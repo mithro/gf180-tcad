@@ -614,7 +614,7 @@
   }
  },
  "devsim_record": {
-  "commit": "262ed83f57c53afb9717237ee21d6be081d54915",
+  "commit": "c73cc5bb8cab8281bb7b94fed2b180bd3bca6d69",
   "path": "results/hv-junction/main.json",
   "sha256": "f221ffea150749220157ae8cdbd52dae03120aa6e6b81ddd94bf66a141224da3"
  },
