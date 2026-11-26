@@ -30,7 +30,9 @@ CV_KEEP = (
     "extra_max_dev_B", "strip_y_asym_A", "strip_y_asym_B", "oxide_flux_spread_A",
     "oxide_flux_spread_B", "poly_vs_gate_A", "poly_vs_gate_B", "body_vs_gate_A",
     "body_vs_gate_B", "max_abs_np_over_ni2_minus_1_A", "max_abs_np_over_ni2_minus_1_B",
-    "np_dev_per_state_A", "np_dev_per_state_B",
+    "np_dev_per_state_A", "np_dev_per_state_B", "partial", "oxide_flux_spread_per_state_A",
+    "oxide_flux_spread_per_state_B", "poly_vs_gate_per_state_A", "poly_vs_gate_per_state_B",
+    "body_vs_gate_per_state_A", "body_vs_gate_per_state_B",
 )  # fmt: skip
 
 
