@@ -505,7 +505,8 @@ def test_page_tables_are_the_generated_rows(hf, tmp_path):
     listed = [r for g in hf.COLUMNS for r in hf.rows() if hf.group(r) == g]
     assert sorted(listed) == sorted(hf.rows())
     main = {*predict.PROCESSES, *predict.NAT_ONLY}
-    assert {p for cols in hf.COLUMNS.values() for p, _ in cols} == main
+    assert {p for cols in hf.COLUMNS.values() for p, _ in cols} <= main
+    assert all(len(cols) <= 4 for cols in (*hf.COLUMNS.values(), *hf.FAMILY_COLUMNS.values()))
     family = {p for cols in hf.FAMILY_COLUMNS.values() for p, _ in cols}
     assert set(predict.FAMILY) <= family <= main | set(predict.FAMILY)
     assert hf.family_structures() == [k for k in predict.KEY if k in predict.STRUCTS]

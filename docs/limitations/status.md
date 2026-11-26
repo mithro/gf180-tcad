@@ -100,7 +100,7 @@ with its issue, is on the {doc}`/roadmap`.
 
 ## The high-voltage junction study
 
-The breakdown voltages of well edges with edge terminations are predicted in
+The {term}`breakdown voltages <breakdown voltage>` of well edges with edge terminations are predicted in
 {doc}`/results/hv-junction`, from the records of {repo}`results/hv-junction`. They are 2D
 predictions under an assumed doping family, with no silicon data
 ({ref}`limits <hvj-limits>`, {numref}`Figure %s of High-voltage junction terminations <hvj-section-figure>`).

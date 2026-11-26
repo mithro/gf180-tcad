@@ -37,14 +37,15 @@ there.
   Both Charon images are built and pinned, and no Charon job has run ({ref}`numerical-acceptance`,
   {ref}`charon-images`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
-- **The high-voltage junction predictions rest on assumptions.** Their well doping is a family
-  set against three published values, the foundry's P-well generation is assumed, and each
-  value is a 2D section ({ref}`hvj-limits`,
-  {numref}`Figure %s of High-voltage junction terminations <hvj-section-figure>`).
 - **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
   open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
 
 The 2D cells against SPICE are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-validation-figure>`. The crossing shift and plateau gap of every 2D cell are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-metrics-figure>`.
+
+The high-voltage junction predictions rest on assumptions. Their well doping is a family set
+against published values, the foundry's P-well generation is assumed, and each value is a 2D
+section ({ref}`hvj-limits`,
+{numref}`Figure %s of High-voltage junction terminations <hvj-section-figure>`).
 
 The design-spec requirements that are not built are listed under {ref}`limitations-spec-deviations`.
 

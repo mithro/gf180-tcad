@@ -7,7 +7,8 @@ structure list is {repo}`experiments/hv-junction/structures.json`. Each structur
 or a {term}`deep N-well` in the P substrate, surrounded by one edge termination. The simulated
 section of one structure is in {numref}`hvj-section-figure`.
 
-The numbers here are predictions of a 2D model under stated process assumptions. No measured
+The numbers here are predictions of a 2D model under stated process assumptions. Each
+assumption is one typical process; no {term}`process corner <corner>` is simulated. No measured
 breakdown voltage of these structures exists ({doc}`/limitations/silicon-validation`). The
 {ref}`limits <hvj-limits>` list what the model leaves out.
 
@@ -45,7 +46,7 @@ to two standard deviations below its implant peak
 ```
 
 The script {repo}`experiments/hv-junction/hvsite.py` turns a drawn structure into this section.
-The layer heights are those of the PDK's interconnect specification. The trench oxide is
+The layer heights are those of the {term}`PDK`'s interconnect specification. The trench oxide is
 0.32 µm thick and the dielectric under Metal1 is 0.86 µm thick
 ([dielectric table](https://gf180mcu-pdk.readthedocs.io/en/latest/analog/layout/inter_specs/inter_specs_2_2.html)).
 Poly2 is 0.2 µm thick and each metal 0.55 µm
@@ -66,7 +67,7 @@ $$ (eq-hvj-implant)
 
 where
 
-- $N$ is the dopant density of one box, in cm⁻³;
+- $N$ is the {term}`dopant` density of one box, in cm⁻³;
 - $N_0$ is its peak density, in cm⁻³;
 - $x$ and $y$ are the position along the surface and the depth, in µm;
 - $G$ is the depth profile of {math:numref}`eq-hvj-depth`, dimensionless;
@@ -111,12 +112,12 @@ where
 - $\varepsilon$ is the permittivity of the material, in F/cm;
 - $\psi$ is the electrostatic potential, in V;
 - $q$ is the elementary charge, in C;
-- $p$ and $n$ are the hole and electron densities, in cm⁻³;
-- $N_D$ and $N_A$ are the donor and acceptor densities of {math:numref}`eq-hvj-implant`, in cm⁻³.
+- $p$ and $n$ are the {term}`hole` and {term}`electron` densities, in cm⁻³;
+- $N_D$ and $N_A$ are the {term}`donor` and {term}`acceptor` densities of {math:numref}`eq-hvj-implant`, in cm⁻³.
 
 A {term}`fixed oxide charge` is a sheet of positive charge on the silicon surface nodes. The
 well contact and every plate tied to it
-are then swept upwards together ({repo}`experiments/hv-junction/sweep.py`). The curves of
+are then swept upwards together, one {term}`sweep` per case ({repo}`experiments/hv-junction/sweep.py`). The curves of
 {numref}`hvj-integral-figure` are such sweeps.
 
 ### Breakdown criterion
@@ -195,7 +196,7 @@ deep N-well or under the whole wafer, so both are simulated ({ref}`hvj-assumptio
 
 The family is set against the published values of {numref}`tab-hvj-anchors`. The sheet
 resistance and the capacitances are computed from the profiles by
-{repo}`experiments/hv-junction/profile1d.py`, in the depletion approximation. The breakdown
+{repo}`experiments/hv-junction/profile1d.py`, in the {term}`depletion approximation`. The breakdown
 voltages are the simulated cases NT20 and DT20 under assumption AL.
 
 ~~~{table} The published anchors of the doping family and what the family gives.
@@ -262,7 +263,7 @@ under D. The cases of the doping family add two suffixes:
 An abrupt N⁺/P diode has a known answer. In the depletion approximation its field is a
 triangle, the shape that the curves of {numref}`hvj-integral-figure` integrate over. The
 integral {math:numref}`eq-hvj-integral` over that triangle reaches 1 at one junction potential.
-The applied bias is that potential less the built-in potential.
+The applied bias is that potential less the {term}`built-in potential`.
 {repo}`experiments/hv-junction/diode1d.py` solves the same diode in {{ DEVSIM }}. The two are
 compared in {numref}`tab-hvj-diodes`.
 
@@ -317,7 +318,8 @@ abutting junction. It breaks down at {{ hvj_NT20_AL_edge }} V on the fine mesh a
 A structure's name starts with N (N-well) or D (deep N-well). The letters after it name what
 is drawn, and the number is its size in µm, with `p` for the decimal point. Each table gives
 the breakdown voltage in volts. The column is the process assumption; `corner` marks the
-cylindrical corner section, and the other columns are the straight edge.
+cylindrical corner section, and the other columns are the straight edge. The records hold
+more processes and shapes of each structure than the tables print.
 
 A value written `> V` is a sweep whose integral stayed below 1 up to V, the highest bias
 solved. The sweep ends at 60 V for a case with an abutting P-well and at 150 V otherwise.
@@ -337,18 +339,18 @@ has a wider lead, and NT20V lies in the 6 V gate-oxide area. The values are in
 ~~~{table} Breakdown voltage (V) of the plain terminations.
 :name: tab-hvj-bare
 
-| Structure | AL | BL | BL corner | BD | BD corner | BLq |
-|---|---|---|---|---|---|---|
-| NC0 | {{ hvj_NC0_AL_edge }} | {{ hvj_NC0_BL_edge }} | {{ hvj_NC0_BL_corner }} | {{ hvj_NC0_BD_edge }} | {{ hvj_NC0_BD_corner }} | {{ hvj_NC0_BLq_edge }} |
-| NC15 | {{ hvj_NC15_AL_edge }} | {{ hvj_NC15_BL_edge }} | {{ hvj_NC15_BL_corner }} | {{ hvj_NC15_BD_edge }} | {{ hvj_NC15_BD_corner }} | {{ hvj_NC15_BLq_edge }} |
-| NT1 | {{ hvj_NT1_AL_edge }} | {{ hvj_NT1_BL_edge }} | {{ hvj_NT1_BL_corner }} | {{ hvj_NT1_BD_edge }} | {{ hvj_NT1_BD_corner }} | {{ hvj_NT1_BLq_edge }} |
-| NT10 | {{ hvj_NT10_AL_edge }} | {{ hvj_NT10_BL_edge }} | {{ hvj_NT10_BL_corner }} | {{ hvj_NT10_BD_edge }} | {{ hvj_NT10_BD_corner }} | {{ hvj_NT10_BLq_edge }} |
-| NT20 | {{ hvj_NT20_AL_edge }} | {{ hvj_NT20_BL_edge }} | {{ hvj_NT20_BL_corner }} | {{ hvj_NT20_BD_edge }} | {{ hvj_NT20_BD_corner }} | {{ hvj_NT20_BLq_edge }} |
-| NT20L | {{ hvj_NT20L_AL_edge }} | {{ hvj_NT20L_BL_edge }} | {{ hvj_NT20L_BL_corner }} | {{ hvj_NT20L_BD_edge }} | {{ hvj_NT20L_BD_corner }} | {{ hvj_NT20L_BLq_edge }} |
-| NT20V | {{ hvj_NT20V_AL_edge }} | {{ hvj_NT20V_BL_edge }} | {{ hvj_NT20V_BL_corner }} | {{ hvj_NT20V_BD_edge }} | {{ hvj_NT20V_BD_corner }} | {{ hvj_NT20V_BLq_edge }} |
-| NT20b | {{ hvj_NT20b_AL_edge }} | {{ hvj_NT20b_BL_edge }} | {{ hvj_NT20b_BL_corner }} | {{ hvj_NT20b_BD_edge }} | {{ hvj_NT20b_BD_corner }} | {{ hvj_NT20b_BLq_edge }} |
-| NT35 | {{ hvj_NT35_AL_edge }} | {{ hvj_NT35_BL_edge }} | {{ hvj_NT35_BL_corner }} | {{ hvj_NT35_BD_edge }} | {{ hvj_NT35_BD_corner }} | {{ hvj_NT35_BLq_edge }} |
-| NT5 | {{ hvj_NT5_AL_edge }} | {{ hvj_NT5_BL_edge }} | {{ hvj_NT5_BL_corner }} | {{ hvj_NT5_BD_edge }} | {{ hvj_NT5_BD_corner }} | {{ hvj_NT5_BLq_edge }} |
+| Structure | AL | BL | BL corner | BD |
+|---|---|---|---|---|
+| NC0 | {{ hvj_NC0_AL_edge }} | {{ hvj_NC0_BL_edge }} | {{ hvj_NC0_BL_corner }} | {{ hvj_NC0_BD_edge }} |
+| NC15 | {{ hvj_NC15_AL_edge }} | {{ hvj_NC15_BL_edge }} | {{ hvj_NC15_BL_corner }} | {{ hvj_NC15_BD_edge }} |
+| NT1 | {{ hvj_NT1_AL_edge }} | {{ hvj_NT1_BL_edge }} | {{ hvj_NT1_BL_corner }} | {{ hvj_NT1_BD_edge }} |
+| NT10 | {{ hvj_NT10_AL_edge }} | {{ hvj_NT10_BL_edge }} | {{ hvj_NT10_BL_corner }} | {{ hvj_NT10_BD_edge }} |
+| NT20 | {{ hvj_NT20_AL_edge }} | {{ hvj_NT20_BL_edge }} | {{ hvj_NT20_BL_corner }} | {{ hvj_NT20_BD_edge }} |
+| NT20L | {{ hvj_NT20L_AL_edge }} | {{ hvj_NT20L_BL_edge }} | {{ hvj_NT20L_BL_corner }} | {{ hvj_NT20L_BD_edge }} |
+| NT20V | {{ hvj_NT20V_AL_edge }} | {{ hvj_NT20V_BL_edge }} | {{ hvj_NT20V_BL_corner }} | {{ hvj_NT20V_BD_edge }} |
+| NT20b | {{ hvj_NT20b_AL_edge }} | {{ hvj_NT20b_BL_edge }} | {{ hvj_NT20b_BL_corner }} | {{ hvj_NT20b_BD_edge }} |
+| NT35 | {{ hvj_NT35_AL_edge }} | {{ hvj_NT35_BL_edge }} | {{ hvj_NT35_BL_corner }} | {{ hvj_NT35_BD_edge }} |
+| NT5 | {{ hvj_NT5_AL_edge }} | {{ hvj_NT5_BL_edge }} | {{ hvj_NT5_BL_corner }} | {{ hvj_NT5_BD_edge }} |
 ~~~
 
 ```{figure} /_generated/hv-junction/corners-light.svg
@@ -380,12 +382,12 @@ distance.
 ~~~{table} Breakdown voltage (V) of the N-wells with a drawn P-well.
 :name: tab-hvj-pwell
 
-| Structure | AL | BL | BL corner | BD | BD corner | BLq |
-|---|---|---|---|---|---|---|
-| NW0 | {{ hvj_NW0_AL_edge }} | {{ hvj_NW0_BL_edge }} | {{ hvj_NW0_BL_corner }} | {{ hvj_NW0_BD_edge }} | {{ hvj_NW0_BD_corner }} | {{ hvj_NW0_BLq_edge }} |
-| NW1p5 | {{ hvj_NW1p5_AL_edge }} | {{ hvj_NW1p5_BL_edge }} | {{ hvj_NW1p5_BL_corner }} | {{ hvj_NW1p5_BD_edge }} | {{ hvj_NW1p5_BD_corner }} | {{ hvj_NW1p5_BLq_edge }} |
-| NW3 | {{ hvj_NW3_AL_edge }} | {{ hvj_NW3_BL_edge }} | {{ hvj_NW3_BL_corner }} | {{ hvj_NW3_BD_edge }} | {{ hvj_NW3_BD_corner }} | {{ hvj_NW3_BLq_edge }} |
-| NW6 | {{ hvj_NW6_AL_edge }} | {{ hvj_NW6_BL_edge }} | {{ hvj_NW6_BL_corner }} | {{ hvj_NW6_BD_edge }} | {{ hvj_NW6_BD_corner }} | {{ hvj_NW6_BLq_edge }} |
+| Structure | AL | BL | BL corner | BD |
+|---|---|---|---|---|
+| NW0 | {{ hvj_NW0_AL_edge }} | {{ hvj_NW0_BL_edge }} | {{ hvj_NW0_BL_corner }} | {{ hvj_NW0_BD_edge }} |
+| NW1p5 | {{ hvj_NW1p5_AL_edge }} | {{ hvj_NW1p5_BL_edge }} | {{ hvj_NW1p5_BL_corner }} | {{ hvj_NW1p5_BD_edge }} |
+| NW3 | {{ hvj_NW3_AL_edge }} | {{ hvj_NW3_BL_edge }} | {{ hvj_NW3_BL_corner }} | {{ hvj_NW3_BD_edge }} |
+| NW6 | {{ hvj_NW6_AL_edge }} | {{ hvj_NW6_BL_edge }} | {{ hvj_NW6_BL_corner }} | {{ hvj_NW6_BD_edge }} |
 ~~~
 
 ```{figure} /_generated/hv-junction/pwell-distance-light.svg
@@ -418,21 +420,21 @@ next section.
 ~~~{table} Breakdown voltage (V) of the N-wells with a NAT layer.
 :name: tab-hvj-nat
 
-| Structure | AL | AnL | AnL corner | AnD | AnD corner | BLq |
-|---|---|---|---|---|---|---|
-| NA0p6 | {{ hvj_NA0p6_AL_edge }} | {{ hvj_NA0p6_AnL_edge }} | {{ hvj_NA0p6_AnL_corner }} | {{ hvj_NA0p6_AnD_edge }} | {{ hvj_NA0p6_AnD_corner }} | {{ hvj_NA0p6_BLq_edge }} |
-| NA0p6C0 | {{ hvj_NA0p6C0_AL_edge }} | {{ hvj_NA0p6C0_AnL_edge }} | {{ hvj_NA0p6C0_AnL_corner }} | {{ hvj_NA0p6C0_AnD_edge }} | {{ hvj_NA0p6C0_AnD_corner }} | {{ hvj_NA0p6C0_BLq_edge }} |
-| NA0p6T10 | {{ hvj_NA0p6T10_AL_edge }} | {{ hvj_NA0p6T10_AnL_edge }} | {{ hvj_NA0p6T10_AnL_corner }} | {{ hvj_NA0p6T10_AnD_edge }} | {{ hvj_NA0p6T10_AnD_corner }} | {{ hvj_NA0p6T10_BLq_edge }} |
-| NA0p6T35 | {{ hvj_NA0p6T35_AL_edge }} | {{ hvj_NA0p6T35_AnL_edge }} | {{ hvj_NA0p6T35_AnL_corner }} | {{ hvj_NA0p6T35_AnD_edge }} | {{ hvj_NA0p6T35_AnD_corner }} | {{ hvj_NA0p6T35_BLq_edge }} |
-| NA0p6b | {{ hvj_NA0p6b_AL_edge }} | {{ hvj_NA0p6b_AnL_edge }} | {{ hvj_NA0p6b_AnL_corner }} | {{ hvj_NA0p6b_AnD_edge }} | {{ hvj_NA0p6b_AnD_corner }} | {{ hvj_NA0p6b_BLq_edge }} |
-| NA2 | {{ hvj_NA2_AL_edge }} | {{ hvj_NA2_AnL_edge }} | {{ hvj_NA2_AnL_corner }} | {{ hvj_NA2_AnD_edge }} | {{ hvj_NA2_AnD_corner }} | {{ hvj_NA2_BLq_edge }} |
-| NA4 | {{ hvj_NA4_AL_edge }} | {{ hvj_NA4_AnL_edge }} | {{ hvj_NA4_AnL_corner }} | {{ hvj_NA4_AnD_edge }} | {{ hvj_NA4_AnD_corner }} | {{ hvj_NA4_BLq_edge }} |
-| NAGM1@g0 | {{ hvj_NAGM1_g0_AL_edge }} | {{ hvj_NAGM1_g0_AnL_edge }} | {{ hvj_NAGM1_g0_AnL_corner }} | {{ hvj_NAGM1_g0_AnD_edge }} | {{ hvj_NAGM1_g0_AnD_corner }} | {{ hvj_NAGM1_g0_BLq_edge }} |
-| NAGM1@gw | {{ hvj_NAGM1_gw_AL_edge }} | {{ hvj_NAGM1_gw_AnL_edge }} | {{ hvj_NAGM1_gw_AnL_corner }} | {{ hvj_NAGM1_gw_AnD_edge }} | {{ hvj_NAGM1_gw_AnD_corner }} | {{ hvj_NAGM1_gw_BLq_edge }} |
-| NAM1_10 | {{ hvj_NAM1_10_AL_edge }} | {{ hvj_NAM1_10_AnL_edge }} | {{ hvj_NAM1_10_AnL_corner }} | {{ hvj_NAM1_10_AnD_edge }} | {{ hvj_NAM1_10_AnD_corner }} | {{ hvj_NAM1_10_BLq_edge }} |
-| NAM1_3 | {{ hvj_NAM1_3_AL_edge }} | {{ hvj_NAM1_3_AnL_edge }} | {{ hvj_NAM1_3_AnL_corner }} | {{ hvj_NAM1_3_AnD_edge }} | {{ hvj_NAM1_3_AnD_corner }} | {{ hvj_NAM1_3_BLq_edge }} |
-| NAM1_6 | {{ hvj_NAM1_6_AL_edge }} | {{ hvj_NAM1_6_AnL_edge }} | {{ hvj_NAM1_6_AnL_corner }} | {{ hvj_NAM1_6_AnD_edge }} | {{ hvj_NAM1_6_AnD_corner }} | {{ hvj_NAM1_6_BLq_edge }} |
-| NAM2_12 | {{ hvj_NAM2_12_AL_edge }} | {{ hvj_NAM2_12_AnL_edge }} | {{ hvj_NAM2_12_AnL_corner }} | {{ hvj_NAM2_12_AnD_edge }} | {{ hvj_NAM2_12_AnD_corner }} | {{ hvj_NAM2_12_BLq_edge }} |
+| Structure | AL | AnL | AnL corner | AnD |
+|---|---|---|---|---|
+| NA0p6 | {{ hvj_NA0p6_AL_edge }} | {{ hvj_NA0p6_AnL_edge }} | {{ hvj_NA0p6_AnL_corner }} | {{ hvj_NA0p6_AnD_edge }} |
+| NA0p6C0 | {{ hvj_NA0p6C0_AL_edge }} | {{ hvj_NA0p6C0_AnL_edge }} | {{ hvj_NA0p6C0_AnL_corner }} | {{ hvj_NA0p6C0_AnD_edge }} |
+| NA0p6T10 | {{ hvj_NA0p6T10_AL_edge }} | {{ hvj_NA0p6T10_AnL_edge }} | {{ hvj_NA0p6T10_AnL_corner }} | {{ hvj_NA0p6T10_AnD_edge }} |
+| NA0p6T35 | {{ hvj_NA0p6T35_AL_edge }} | {{ hvj_NA0p6T35_AnL_edge }} | {{ hvj_NA0p6T35_AnL_corner }} | {{ hvj_NA0p6T35_AnD_edge }} |
+| NA0p6b | {{ hvj_NA0p6b_AL_edge }} | {{ hvj_NA0p6b_AnL_edge }} | {{ hvj_NA0p6b_AnL_corner }} | {{ hvj_NA0p6b_AnD_edge }} |
+| NA2 | {{ hvj_NA2_AL_edge }} | {{ hvj_NA2_AnL_edge }} | {{ hvj_NA2_AnL_corner }} | {{ hvj_NA2_AnD_edge }} |
+| NA4 | {{ hvj_NA4_AL_edge }} | {{ hvj_NA4_AnL_edge }} | {{ hvj_NA4_AnL_corner }} | {{ hvj_NA4_AnD_edge }} |
+| NAGM1@g0 | {{ hvj_NAGM1_g0_AL_edge }} | {{ hvj_NAGM1_g0_AnL_edge }} | {{ hvj_NAGM1_g0_AnL_corner }} | {{ hvj_NAGM1_g0_AnD_edge }} |
+| NAGM1@gw | {{ hvj_NAGM1_gw_AL_edge }} | {{ hvj_NAGM1_gw_AnL_edge }} | {{ hvj_NAGM1_gw_AnL_corner }} | {{ hvj_NAGM1_gw_AnD_edge }} |
+| NAM1_10 | {{ hvj_NAM1_10_AL_edge }} | {{ hvj_NAM1_10_AnL_edge }} | {{ hvj_NAM1_10_AnL_corner }} | {{ hvj_NAM1_10_AnD_edge }} |
+| NAM1_3 | {{ hvj_NAM1_3_AL_edge }} | {{ hvj_NAM1_3_AnL_edge }} | {{ hvj_NAM1_3_AnL_corner }} | {{ hvj_NAM1_3_AnD_edge }} |
+| NAM1_6 | {{ hvj_NAM1_6_AL_edge }} | {{ hvj_NAM1_6_AnL_edge }} | {{ hvj_NAM1_6_AnL_corner }} | {{ hvj_NAM1_6_AnD_edge }} |
+| NAM2_12 | {{ hvj_NAM2_12_AL_edge }} | {{ hvj_NAM2_12_AnL_edge }} | {{ hvj_NAM2_12_AnL_corner }} | {{ hvj_NAM2_12_AnD_edge }} |
 ~~~
 
 ### Field plates
@@ -448,21 +450,21 @@ plates are plotted against their length in {numref}`hvj-plates-figure`.
 ~~~{table} Breakdown voltage (V) of the N-wells with field plates.
 :name: tab-hvj-plates
 
-| Structure | AL | BL | BL corner | BD | BD corner | BLq |
-|---|---|---|---|---|---|---|
-| NGM1@g0 | {{ hvj_NGM1_g0_AL_edge }} | {{ hvj_NGM1_g0_BL_edge }} | {{ hvj_NGM1_g0_BL_corner }} | {{ hvj_NGM1_g0_BD_edge }} | {{ hvj_NGM1_g0_BD_corner }} | {{ hvj_NGM1_g0_BLq_edge }} |
-| NGM1@gw | {{ hvj_NGM1_gw_AL_edge }} | {{ hvj_NGM1_gw_BL_edge }} | {{ hvj_NGM1_gw_BL_corner }} | {{ hvj_NGM1_gw_BD_edge }} | {{ hvj_NGM1_gw_BD_corner }} | {{ hvj_NGM1_gw_BLq_edge }} |
-| NGP4@g0 | {{ hvj_NGP4_g0_AL_edge }} | {{ hvj_NGP4_g0_BL_edge }} | {{ hvj_NGP4_g0_BL_corner }} | {{ hvj_NGP4_g0_BD_edge }} | {{ hvj_NGP4_g0_BD_corner }} | {{ hvj_NGP4_g0_BLq_edge }} |
-| NGP4@gw | {{ hvj_NGP4_gw_AL_edge }} | {{ hvj_NGP4_gw_BL_edge }} | {{ hvj_NGP4_gw_BL_corner }} | {{ hvj_NGP4_gw_BD_edge }} | {{ hvj_NGP4_gw_BD_corner }} | {{ hvj_NGP4_gw_BLq_edge }} |
-| NM1_10 | {{ hvj_NM1_10_AL_edge }} | {{ hvj_NM1_10_BL_edge }} | {{ hvj_NM1_10_BL_corner }} | {{ hvj_NM1_10_BD_edge }} | {{ hvj_NM1_10_BD_corner }} | {{ hvj_NM1_10_BLq_edge }} |
-| NM1_3 | {{ hvj_NM1_3_AL_edge }} | {{ hvj_NM1_3_BL_edge }} | {{ hvj_NM1_3_BL_corner }} | {{ hvj_NM1_3_BD_edge }} | {{ hvj_NM1_3_BD_corner }} | {{ hvj_NM1_3_BLq_edge }} |
-| NM1_6 | {{ hvj_NM1_6_AL_edge }} | {{ hvj_NM1_6_BL_edge }} | {{ hvj_NM1_6_BL_corner }} | {{ hvj_NM1_6_BD_edge }} | {{ hvj_NM1_6_BD_corner }} | {{ hvj_NM1_6_BLq_edge }} |
-| NM2_12 | {{ hvj_NM2_12_AL_edge }} | {{ hvj_NM2_12_BL_edge }} | {{ hvj_NM2_12_BL_corner }} | {{ hvj_NM2_12_BD_edge }} | {{ hvj_NM2_12_BD_corner }} | {{ hvj_NM2_12_BLq_edge }} |
-| NM2_6 | {{ hvj_NM2_6_AL_edge }} | {{ hvj_NM2_6_BL_edge }} | {{ hvj_NM2_6_BL_corner }} | {{ hvj_NM2_6_BD_edge }} | {{ hvj_NM2_6_BD_corner }} | {{ hvj_NM2_6_BLq_edge }} |
-| NP1 | {{ hvj_NP1_AL_edge }} | {{ hvj_NP1_BL_edge }} | {{ hvj_NP1_BL_corner }} | {{ hvj_NP1_BD_edge }} | {{ hvj_NP1_BD_corner }} | {{ hvj_NP1_BLq_edge }} |
-| NP2 | {{ hvj_NP2_AL_edge }} | {{ hvj_NP2_BL_edge }} | {{ hvj_NP2_BL_corner }} | {{ hvj_NP2_BD_edge }} | {{ hvj_NP2_BD_corner }} | {{ hvj_NP2_BLq_edge }} |
-| NP4 | {{ hvj_NP4_AL_edge }} | {{ hvj_NP4_BL_edge }} | {{ hvj_NP4_BL_corner }} | {{ hvj_NP4_BD_edge }} | {{ hvj_NP4_BD_corner }} | {{ hvj_NP4_BLq_edge }} |
-| NPM12 | {{ hvj_NPM12_AL_edge }} | {{ hvj_NPM12_BL_edge }} | {{ hvj_NPM12_BL_corner }} | {{ hvj_NPM12_BD_edge }} | {{ hvj_NPM12_BD_corner }} | {{ hvj_NPM12_BLq_edge }} |
+| Structure | AL | BL | BL corner | BD |
+|---|---|---|---|---|
+| NGM1@g0 | {{ hvj_NGM1_g0_AL_edge }} | {{ hvj_NGM1_g0_BL_edge }} | {{ hvj_NGM1_g0_BL_corner }} | {{ hvj_NGM1_g0_BD_edge }} |
+| NGM1@gw | {{ hvj_NGM1_gw_AL_edge }} | {{ hvj_NGM1_gw_BL_edge }} | {{ hvj_NGM1_gw_BL_corner }} | {{ hvj_NGM1_gw_BD_edge }} |
+| NGP4@g0 | {{ hvj_NGP4_g0_AL_edge }} | {{ hvj_NGP4_g0_BL_edge }} | {{ hvj_NGP4_g0_BL_corner }} | {{ hvj_NGP4_g0_BD_edge }} |
+| NGP4@gw | {{ hvj_NGP4_gw_AL_edge }} | {{ hvj_NGP4_gw_BL_edge }} | {{ hvj_NGP4_gw_BL_corner }} | {{ hvj_NGP4_gw_BD_edge }} |
+| NM1_10 | {{ hvj_NM1_10_AL_edge }} | {{ hvj_NM1_10_BL_edge }} | {{ hvj_NM1_10_BL_corner }} | {{ hvj_NM1_10_BD_edge }} |
+| NM1_3 | {{ hvj_NM1_3_AL_edge }} | {{ hvj_NM1_3_BL_edge }} | {{ hvj_NM1_3_BL_corner }} | {{ hvj_NM1_3_BD_edge }} |
+| NM1_6 | {{ hvj_NM1_6_AL_edge }} | {{ hvj_NM1_6_BL_edge }} | {{ hvj_NM1_6_BL_corner }} | {{ hvj_NM1_6_BD_edge }} |
+| NM2_12 | {{ hvj_NM2_12_AL_edge }} | {{ hvj_NM2_12_BL_edge }} | {{ hvj_NM2_12_BL_corner }} | {{ hvj_NM2_12_BD_edge }} |
+| NM2_6 | {{ hvj_NM2_6_AL_edge }} | {{ hvj_NM2_6_BL_edge }} | {{ hvj_NM2_6_BL_corner }} | {{ hvj_NM2_6_BD_edge }} |
+| NP1 | {{ hvj_NP1_AL_edge }} | {{ hvj_NP1_BL_edge }} | {{ hvj_NP1_BL_corner }} | {{ hvj_NP1_BD_edge }} |
+| NP2 | {{ hvj_NP2_AL_edge }} | {{ hvj_NP2_BL_edge }} | {{ hvj_NP2_BL_corner }} | {{ hvj_NP2_BD_edge }} |
+| NP4 | {{ hvj_NP4_AL_edge }} | {{ hvj_NP4_BL_edge }} | {{ hvj_NP4_BL_corner }} | {{ hvj_NP4_BD_edge }} |
+| NPM12 | {{ hvj_NPM12_AL_edge }} | {{ hvj_NPM12_BL_edge }} | {{ hvj_NPM12_BL_corner }} | {{ hvj_NPM12_BD_edge }} |
 ~~~
 
 ```{figure} /_generated/hv-junction/plates-light.svg
@@ -493,21 +495,21 @@ count and against the gap of a single ring in {numref}`hvj-rings-figure`.
 ~~~{table} Breakdown voltage (V) of the N-wells with floating rings.
 :name: tab-hvj-rings
 
-| Structure | AL | BL | BL corner | BD | BD corner | BLq |
-|---|---|---|---|---|---|---|
-| NR1S2 | {{ hvj_NR1S2_AL_edge }} | {{ hvj_NR1S2_BL_edge }} | {{ hvj_NR1S2_BL_corner }} | {{ hvj_NR1S2_BD_edge }} | {{ hvj_NR1S2_BD_corner }} | {{ hvj_NR1S2_BLq_edge }} |
-| NR1S3 | {{ hvj_NR1S3_AL_edge }} | {{ hvj_NR1S3_BL_edge }} | {{ hvj_NR1S3_BL_corner }} | {{ hvj_NR1S3_BD_edge }} | {{ hvj_NR1S3_BD_corner }} | {{ hvj_NR1S3_BLq_edge }} |
-| NR1_1p4 | {{ hvj_NR1_1p4_AL_edge }} | {{ hvj_NR1_1p4_BL_edge }} | {{ hvj_NR1_1p4_BL_corner }} | {{ hvj_NR1_1p4_BD_edge }} | {{ hvj_NR1_1p4_BD_corner }} | {{ hvj_NR1_1p4_BLq_edge }} |
-| NR1_2 | {{ hvj_NR1_2_AL_edge }} | {{ hvj_NR1_2_BL_edge }} | {{ hvj_NR1_2_BL_corner }} | {{ hvj_NR1_2_BD_edge }} | {{ hvj_NR1_2_BD_corner }} | {{ hvj_NR1_2_BLq_edge }} |
-| NR1_3 | {{ hvj_NR1_3_AL_edge }} | {{ hvj_NR1_3_BL_edge }} | {{ hvj_NR1_3_BL_corner }} | {{ hvj_NR1_3_BD_edge }} | {{ hvj_NR1_3_BD_corner }} | {{ hvj_NR1_3_BLq_edge }} |
-| NR3M1 | {{ hvj_NR3M1_AL_edge }} | {{ hvj_NR3M1_BL_edge }} | {{ hvj_NR3M1_BL_corner }} | {{ hvj_NR3M1_BD_edge }} | {{ hvj_NR3M1_BD_corner }} | {{ hvj_NR3M1_BLq_edge }} |
-| NR3W1 | {{ hvj_NR3W1_AL_edge }} | {{ hvj_NR3W1_BL_edge }} | {{ hvj_NR3W1_BL_corner }} | {{ hvj_NR3W1_BD_edge }} | {{ hvj_NR3W1_BD_corner }} | {{ hvj_NR3W1_BLq_edge }} |
-| NR3W3 | {{ hvj_NR3W3_AL_edge }} | {{ hvj_NR3W3_BL_edge }} | {{ hvj_NR3W3_BL_corner }} | {{ hvj_NR3W3_BD_edge }} | {{ hvj_NR3W3_BD_corner }} | {{ hvj_NR3W3_BLq_edge }} |
-| NR3_1p5 | {{ hvj_NR3_1p5_AL_edge }} | {{ hvj_NR3_1p5_BL_edge }} | {{ hvj_NR3_1p5_BL_corner }} | {{ hvj_NR3_1p5_BD_edge }} | {{ hvj_NR3_1p5_BD_corner }} | {{ hvj_NR3_1p5_BLq_edge }} |
-| NR3_2 | {{ hvj_NR3_2_AL_edge }} | {{ hvj_NR3_2_BL_edge }} | {{ hvj_NR3_2_BL_corner }} | {{ hvj_NR3_2_BD_edge }} | {{ hvj_NR3_2_BD_corner }} | {{ hvj_NR3_2_BLq_edge }} |
-| NR4S | {{ hvj_NR4S_AL_edge }} | {{ hvj_NR4S_BL_edge }} | {{ hvj_NR4S_BL_corner }} | {{ hvj_NR4S_BD_edge }} | {{ hvj_NR4S_BD_corner }} | {{ hvj_NR4S_BLq_edge }} |
-| NR5_1p4 | {{ hvj_NR5_1p4_AL_edge }} | {{ hvj_NR5_1p4_BL_edge }} | {{ hvj_NR5_1p4_BL_corner }} | {{ hvj_NR5_1p4_BD_edge }} | {{ hvj_NR5_1p4_BD_corner }} | {{ hvj_NR5_1p4_BLq_edge }} |
-| NR5_2 | {{ hvj_NR5_2_AL_edge }} | {{ hvj_NR5_2_BL_edge }} | {{ hvj_NR5_2_BL_corner }} | {{ hvj_NR5_2_BD_edge }} | {{ hvj_NR5_2_BD_corner }} | {{ hvj_NR5_2_BLq_edge }} |
+| Structure | AL | BL | BL corner | BD |
+|---|---|---|---|---|
+| NR1S2 | {{ hvj_NR1S2_AL_edge }} | {{ hvj_NR1S2_BL_edge }} | {{ hvj_NR1S2_BL_corner }} | {{ hvj_NR1S2_BD_edge }} |
+| NR1S3 | {{ hvj_NR1S3_AL_edge }} | {{ hvj_NR1S3_BL_edge }} | {{ hvj_NR1S3_BL_corner }} | {{ hvj_NR1S3_BD_edge }} |
+| NR1_1p4 | {{ hvj_NR1_1p4_AL_edge }} | {{ hvj_NR1_1p4_BL_edge }} | {{ hvj_NR1_1p4_BL_corner }} | {{ hvj_NR1_1p4_BD_edge }} |
+| NR1_2 | {{ hvj_NR1_2_AL_edge }} | {{ hvj_NR1_2_BL_edge }} | {{ hvj_NR1_2_BL_corner }} | {{ hvj_NR1_2_BD_edge }} |
+| NR1_3 | {{ hvj_NR1_3_AL_edge }} | {{ hvj_NR1_3_BL_edge }} | {{ hvj_NR1_3_BL_corner }} | {{ hvj_NR1_3_BD_edge }} |
+| NR3M1 | {{ hvj_NR3M1_AL_edge }} | {{ hvj_NR3M1_BL_edge }} | {{ hvj_NR3M1_BL_corner }} | {{ hvj_NR3M1_BD_edge }} |
+| NR3W1 | {{ hvj_NR3W1_AL_edge }} | {{ hvj_NR3W1_BL_edge }} | {{ hvj_NR3W1_BL_corner }} | {{ hvj_NR3W1_BD_edge }} |
+| NR3W3 | {{ hvj_NR3W3_AL_edge }} | {{ hvj_NR3W3_BL_edge }} | {{ hvj_NR3W3_BL_corner }} | {{ hvj_NR3W3_BD_edge }} |
+| NR3_1p5 | {{ hvj_NR3_1p5_AL_edge }} | {{ hvj_NR3_1p5_BL_edge }} | {{ hvj_NR3_1p5_BL_corner }} | {{ hvj_NR3_1p5_BD_edge }} |
+| NR3_2 | {{ hvj_NR3_2_AL_edge }} | {{ hvj_NR3_2_BL_edge }} | {{ hvj_NR3_2_BL_corner }} | {{ hvj_NR3_2_BD_edge }} |
+| NR4S | {{ hvj_NR4S_AL_edge }} | {{ hvj_NR4S_BL_edge }} | {{ hvj_NR4S_BL_corner }} | {{ hvj_NR4S_BD_edge }} |
+| NR5_1p4 | {{ hvj_NR5_1p4_AL_edge }} | {{ hvj_NR5_1p4_BL_edge }} | {{ hvj_NR5_1p4_BL_corner }} | {{ hvj_NR5_1p4_BD_edge }} |
+| NR5_2 | {{ hvj_NR5_2_AL_edge }} | {{ hvj_NR5_2_BL_edge }} | {{ hvj_NR5_2_BL_corner }} | {{ hvj_NR5_2_BD_edge }} |
 ~~~
 
 ```{figure} /_generated/hv-junction/rings-light.svg
@@ -540,55 +542,73 @@ draw a NAT layer that overlaps the deep N-well edge by 1 µm. The values are in
 ~~~{table} Breakdown voltage (V) of the deep N-well structures.
 :name: tab-hvj-deep
 
-| Structure | AL | AL corner | AD | BL | BL corner | BD |
-|---|---|---|---|---|---|---|
-| DAo1 | {{ hvj_DAo1_AL_edge }} | {{ hvj_DAo1_AL_corner }} | {{ hvj_DAo1_AD_edge }} | {{ hvj_DAo1_BL_edge }} | {{ hvj_DAo1_BL_corner }} | {{ hvj_DAo1_BD_edge }} |
-| DAo1C0 | {{ hvj_DAo1C0_AL_edge }} | {{ hvj_DAo1C0_AL_corner }} | {{ hvj_DAo1C0_AD_edge }} | {{ hvj_DAo1C0_BL_edge }} | {{ hvj_DAo1C0_BL_corner }} | {{ hvj_DAo1C0_BD_edge }} |
-| DAo1M1_6 | {{ hvj_DAo1M1_6_AL_edge }} | {{ hvj_DAo1M1_6_AL_corner }} | {{ hvj_DAo1M1_6_AD_edge }} | {{ hvj_DAo1M1_6_BL_edge }} | {{ hvj_DAo1M1_6_BL_corner }} | {{ hvj_DAo1M1_6_BD_edge }} |
-| DAo1T35 | {{ hvj_DAo1T35_AL_edge }} | {{ hvj_DAo1T35_AL_corner }} | {{ hvj_DAo1T35_AD_edge }} | {{ hvj_DAo1T35_BL_edge }} | {{ hvj_DAo1T35_BL_corner }} | {{ hvj_DAo1T35_BD_edge }} |
-| DC0 | {{ hvj_DC0_AL_edge }} | {{ hvj_DC0_AL_corner }} | {{ hvj_DC0_AD_edge }} | {{ hvj_DC0_BL_edge }} | {{ hvj_DC0_BL_corner }} | {{ hvj_DC0_BD_edge }} |
-| DC15 | {{ hvj_DC15_AL_edge }} | {{ hvj_DC15_AL_corner }} | {{ hvj_DC15_AD_edge }} | {{ hvj_DC15_BL_edge }} | {{ hvj_DC15_BL_corner }} | {{ hvj_DC15_BD_edge }} |
-| DGM1@g0 | {{ hvj_DGM1_g0_AL_edge }} | {{ hvj_DGM1_g0_AL_corner }} | {{ hvj_DGM1_g0_AD_edge }} | {{ hvj_DGM1_g0_BL_edge }} | {{ hvj_DGM1_g0_BL_corner }} | {{ hvj_DGM1_g0_BD_edge }} |
-| DGM1@gw | {{ hvj_DGM1_gw_AL_edge }} | {{ hvj_DGM1_gw_AL_corner }} | {{ hvj_DGM1_gw_AD_edge }} | {{ hvj_DGM1_gw_BL_edge }} | {{ hvj_DGM1_gw_BL_corner }} | {{ hvj_DGM1_gw_BD_edge }} |
-| DM1_10 | {{ hvj_DM1_10_AL_edge }} | {{ hvj_DM1_10_AL_corner }} | {{ hvj_DM1_10_AD_edge }} | {{ hvj_DM1_10_BL_edge }} | {{ hvj_DM1_10_BL_corner }} | {{ hvj_DM1_10_BD_edge }} |
-| DM1_3 | {{ hvj_DM1_3_AL_edge }} | {{ hvj_DM1_3_AL_corner }} | {{ hvj_DM1_3_AD_edge }} | {{ hvj_DM1_3_BL_edge }} | {{ hvj_DM1_3_BL_corner }} | {{ hvj_DM1_3_BD_edge }} |
-| DM1_6 | {{ hvj_DM1_6_AL_edge }} | {{ hvj_DM1_6_AL_corner }} | {{ hvj_DM1_6_AD_edge }} | {{ hvj_DM1_6_BL_edge }} | {{ hvj_DM1_6_BL_corner }} | {{ hvj_DM1_6_BD_edge }} |
-| DPM12 | {{ hvj_DPM12_AL_edge }} | {{ hvj_DPM12_AL_corner }} | {{ hvj_DPM12_AD_edge }} | {{ hvj_DPM12_BL_edge }} | {{ hvj_DPM12_BL_corner }} | {{ hvj_DPM12_BD_edge }} |
-| DT10 | {{ hvj_DT10_AL_edge }} | {{ hvj_DT10_AL_corner }} | {{ hvj_DT10_AD_edge }} | {{ hvj_DT10_BL_edge }} | {{ hvj_DT10_BL_corner }} | {{ hvj_DT10_BD_edge }} |
-| DT20 | {{ hvj_DT20_AL_edge }} | {{ hvj_DT20_AL_corner }} | {{ hvj_DT20_AD_edge }} | {{ hvj_DT20_BL_edge }} | {{ hvj_DT20_BL_corner }} | {{ hvj_DT20_BD_edge }} |
-| DT20b | {{ hvj_DT20b_AL_edge }} | {{ hvj_DT20b_AL_corner }} | {{ hvj_DT20b_AD_edge }} | {{ hvj_DT20b_BL_edge }} | {{ hvj_DT20b_BL_corner }} | {{ hvj_DT20b_BD_edge }} |
-| DT2p6 | {{ hvj_DT2p6_AL_edge }} | {{ hvj_DT2p6_AL_corner }} | {{ hvj_DT2p6_AD_edge }} | {{ hvj_DT2p6_BL_edge }} | {{ hvj_DT2p6_BL_corner }} | {{ hvj_DT2p6_BD_edge }} |
-| DT35 | {{ hvj_DT35_AL_edge }} | {{ hvj_DT35_AL_corner }} | {{ hvj_DT35_AD_edge }} | {{ hvj_DT35_BL_edge }} | {{ hvj_DT35_BL_corner }} | {{ hvj_DT35_BD_edge }} |
-| DT5 | {{ hvj_DT5_AL_edge }} | {{ hvj_DT5_AL_corner }} | {{ hvj_DT5_AD_edge }} | {{ hvj_DT5_BL_edge }} | {{ hvj_DT5_BL_corner }} | {{ hvj_DT5_BD_edge }} |
-| DW1p5 | {{ hvj_DW1p5_AL_edge }} | {{ hvj_DW1p5_AL_corner }} | {{ hvj_DW1p5_AD_edge }} | {{ hvj_DW1p5_BL_edge }} | {{ hvj_DW1p5_BL_corner }} | {{ hvj_DW1p5_BD_edge }} |
-| DW3 | {{ hvj_DW3_AL_edge }} | {{ hvj_DW3_AL_corner }} | {{ hvj_DW3_AD_edge }} | {{ hvj_DW3_BL_edge }} | {{ hvj_DW3_BL_corner }} | {{ hvj_DW3_BD_edge }} |
-| DW6 | {{ hvj_DW6_AL_edge }} | {{ hvj_DW6_AL_corner }} | {{ hvj_DW6_AD_edge }} | {{ hvj_DW6_BL_edge }} | {{ hvj_DW6_BL_corner }} | {{ hvj_DW6_BD_edge }} |
+| Structure | AL | AD | BL | BD |
+|---|---|---|---|---|
+| DAo1 | {{ hvj_DAo1_AL_edge }} | {{ hvj_DAo1_AD_edge }} | {{ hvj_DAo1_BL_edge }} | {{ hvj_DAo1_BD_edge }} |
+| DAo1C0 | {{ hvj_DAo1C0_AL_edge }} | {{ hvj_DAo1C0_AD_edge }} | {{ hvj_DAo1C0_BL_edge }} | {{ hvj_DAo1C0_BD_edge }} |
+| DAo1M1_6 | {{ hvj_DAo1M1_6_AL_edge }} | {{ hvj_DAo1M1_6_AD_edge }} | {{ hvj_DAo1M1_6_BL_edge }} | {{ hvj_DAo1M1_6_BD_edge }} |
+| DAo1T35 | {{ hvj_DAo1T35_AL_edge }} | {{ hvj_DAo1T35_AD_edge }} | {{ hvj_DAo1T35_BL_edge }} | {{ hvj_DAo1T35_BD_edge }} |
+| DC0 | {{ hvj_DC0_AL_edge }} | {{ hvj_DC0_AD_edge }} | {{ hvj_DC0_BL_edge }} | {{ hvj_DC0_BD_edge }} |
+| DC15 | {{ hvj_DC15_AL_edge }} | {{ hvj_DC15_AD_edge }} | {{ hvj_DC15_BL_edge }} | {{ hvj_DC15_BD_edge }} |
+| DGM1@g0 | {{ hvj_DGM1_g0_AL_edge }} | {{ hvj_DGM1_g0_AD_edge }} | {{ hvj_DGM1_g0_BL_edge }} | {{ hvj_DGM1_g0_BD_edge }} |
+| DGM1@gw | {{ hvj_DGM1_gw_AL_edge }} | {{ hvj_DGM1_gw_AD_edge }} | {{ hvj_DGM1_gw_BL_edge }} | {{ hvj_DGM1_gw_BD_edge }} |
+| DM1_10 | {{ hvj_DM1_10_AL_edge }} | {{ hvj_DM1_10_AD_edge }} | {{ hvj_DM1_10_BL_edge }} | {{ hvj_DM1_10_BD_edge }} |
+| DM1_3 | {{ hvj_DM1_3_AL_edge }} | {{ hvj_DM1_3_AD_edge }} | {{ hvj_DM1_3_BL_edge }} | {{ hvj_DM1_3_BD_edge }} |
+| DM1_6 | {{ hvj_DM1_6_AL_edge }} | {{ hvj_DM1_6_AD_edge }} | {{ hvj_DM1_6_BL_edge }} | {{ hvj_DM1_6_BD_edge }} |
+| DPM12 | {{ hvj_DPM12_AL_edge }} | {{ hvj_DPM12_AD_edge }} | {{ hvj_DPM12_BL_edge }} | {{ hvj_DPM12_BD_edge }} |
+| DT10 | {{ hvj_DT10_AL_edge }} | {{ hvj_DT10_AD_edge }} | {{ hvj_DT10_BL_edge }} | {{ hvj_DT10_BD_edge }} |
+| DT20 | {{ hvj_DT20_AL_edge }} | {{ hvj_DT20_AD_edge }} | {{ hvj_DT20_BL_edge }} | {{ hvj_DT20_BD_edge }} |
+| DT20b | {{ hvj_DT20b_AL_edge }} | {{ hvj_DT20b_AD_edge }} | {{ hvj_DT20b_BL_edge }} | {{ hvj_DT20b_BD_edge }} |
+| DT2p6 | {{ hvj_DT2p6_AL_edge }} | {{ hvj_DT2p6_AD_edge }} | {{ hvj_DT2p6_BL_edge }} | {{ hvj_DT2p6_BD_edge }} |
+| DT35 | {{ hvj_DT35_AL_edge }} | {{ hvj_DT35_AD_edge }} | {{ hvj_DT35_BL_edge }} | {{ hvj_DT35_BD_edge }} |
+| DT5 | {{ hvj_DT5_AL_edge }} | {{ hvj_DT5_AD_edge }} | {{ hvj_DT5_BL_edge }} | {{ hvj_DT5_BD_edge }} |
+| DW1p5 | {{ hvj_DW1p5_AL_edge }} | {{ hvj_DW1p5_AD_edge }} | {{ hvj_DW1p5_BL_edge }} | {{ hvj_DW1p5_BD_edge }} |
+| DW3 | {{ hvj_DW3_AL_edge }} | {{ hvj_DW3_AD_edge }} | {{ hvj_DW3_BL_edge }} | {{ hvj_DW3_BD_edge }} |
+| DW6 | {{ hvj_DW6_AL_edge }} | {{ hvj_DW6_AD_edge }} | {{ hvj_DW6_BL_edge }} | {{ hvj_DW6_BD_edge }} |
 ~~~
 
 ### Doping family
 
 Some structures are rerun under the family members of {ref}`hvj-assumptions`. The substrate
-dopings are in {numref}`tab-hvj-family-sub`. The oxide charge and the generated P-well are in
-{numref}`tab-hvj-family-other`. Both hold the straight edge. The spread along a row is the
-range that the unpublished doping leaves open, on the section of
+dopings are in {numref}`tab-hvj-family-l` and {numref}`tab-hvj-family-d`. The oxide charge and
+the generated P-well are in {numref}`tab-hvj-family-other`. All hold the straight edge. The
+spread along a row is the range that the unpublished doping leaves open, on the section of
 {numref}`hvj-section-figure`.
 
-~~~{table} Breakdown voltage (V) under the substrate dopings of the family.
-:name: tab-hvj-family-sub
+~~~{table} Breakdown voltage (V) under the substrate dopings, deep P layer under deep N-well only.
+:name: tab-hvj-family-l
 
-| Structure | BLlo | BL | BLhi | BDlo | BD | BDhi |
-|---|---|---|---|---|---|---|
-| NT20 | {{ hvj_NT20_BLlo_edge }} | {{ hvj_NT20_BL_edge }} | {{ hvj_NT20_BLhi_edge }} | {{ hvj_NT20_BDlo_edge }} | {{ hvj_NT20_BD_edge }} | {{ hvj_NT20_BDhi_edge }} |
-| NC0 | {{ hvj_NC0_BLlo_edge }} | {{ hvj_NC0_BL_edge }} | {{ hvj_NC0_BLhi_edge }} | {{ hvj_NC0_BDlo_edge }} | {{ hvj_NC0_BD_edge }} | {{ hvj_NC0_BDhi_edge }} |
-| NA0p6 | {{ hvj_NA0p6_BLlo_edge }} | {{ hvj_NA0p6_BL_edge }} | {{ hvj_NA0p6_BLhi_edge }} | {{ hvj_NA0p6_BDlo_edge }} | {{ hvj_NA0p6_BD_edge }} | {{ hvj_NA0p6_BDhi_edge }} |
-| NAM1_6 | {{ hvj_NAM1_6_BLlo_edge }} | {{ hvj_NAM1_6_BL_edge }} | {{ hvj_NAM1_6_BLhi_edge }} | {{ hvj_NAM1_6_BDlo_edge }} | {{ hvj_NAM1_6_BD_edge }} | {{ hvj_NAM1_6_BDhi_edge }} |
-| NW3 | {{ hvj_NW3_BLlo_edge }} | {{ hvj_NW3_BL_edge }} | {{ hvj_NW3_BLhi_edge }} | {{ hvj_NW3_BDlo_edge }} | {{ hvj_NW3_BD_edge }} | {{ hvj_NW3_BDhi_edge }} |
-| NR3_2 | {{ hvj_NR3_2_BLlo_edge }} | {{ hvj_NR3_2_BL_edge }} | {{ hvj_NR3_2_BLhi_edge }} | {{ hvj_NR3_2_BDlo_edge }} | {{ hvj_NR3_2_BD_edge }} | {{ hvj_NR3_2_BDhi_edge }} |
-| NM1_6 | {{ hvj_NM1_6_BLlo_edge }} | {{ hvj_NM1_6_BL_edge }} | {{ hvj_NM1_6_BLhi_edge }} | {{ hvj_NM1_6_BDlo_edge }} | {{ hvj_NM1_6_BD_edge }} | {{ hvj_NM1_6_BDhi_edge }} |
-| NP2 | {{ hvj_NP2_BLlo_edge }} | {{ hvj_NP2_BL_edge }} | {{ hvj_NP2_BLhi_edge }} | {{ hvj_NP2_BDlo_edge }} | {{ hvj_NP2_BD_edge }} | {{ hvj_NP2_BDhi_edge }} |
-| DT20 | {{ hvj_DT20_BLlo_edge }} | {{ hvj_DT20_BL_edge }} | {{ hvj_DT20_BLhi_edge }} | {{ hvj_DT20_BDlo_edge }} | {{ hvj_DT20_BD_edge }} | {{ hvj_DT20_BDhi_edge }} |
-| DM1_6 | {{ hvj_DM1_6_BLlo_edge }} | {{ hvj_DM1_6_BL_edge }} | {{ hvj_DM1_6_BLhi_edge }} | {{ hvj_DM1_6_BDlo_edge }} | {{ hvj_DM1_6_BD_edge }} | {{ hvj_DM1_6_BDhi_edge }} |
-| DAo1 | {{ hvj_DAo1_BLlo_edge }} | {{ hvj_DAo1_BL_edge }} | {{ hvj_DAo1_BLhi_edge }} | {{ hvj_DAo1_BDlo_edge }} | {{ hvj_DAo1_BD_edge }} | {{ hvj_DAo1_BDhi_edge }} |
+| Structure | BLlo | BL | BLhi |
+|---|---|---|---|
+| NT20 | {{ hvj_NT20_BLlo_edge }} | {{ hvj_NT20_BL_edge }} | {{ hvj_NT20_BLhi_edge }} |
+| NC0 | {{ hvj_NC0_BLlo_edge }} | {{ hvj_NC0_BL_edge }} | {{ hvj_NC0_BLhi_edge }} |
+| NA0p6 | {{ hvj_NA0p6_BLlo_edge }} | {{ hvj_NA0p6_BL_edge }} | {{ hvj_NA0p6_BLhi_edge }} |
+| NAM1_6 | {{ hvj_NAM1_6_BLlo_edge }} | {{ hvj_NAM1_6_BL_edge }} | {{ hvj_NAM1_6_BLhi_edge }} |
+| NW3 | {{ hvj_NW3_BLlo_edge }} | {{ hvj_NW3_BL_edge }} | {{ hvj_NW3_BLhi_edge }} |
+| NR3_2 | {{ hvj_NR3_2_BLlo_edge }} | {{ hvj_NR3_2_BL_edge }} | {{ hvj_NR3_2_BLhi_edge }} |
+| NM1_6 | {{ hvj_NM1_6_BLlo_edge }} | {{ hvj_NM1_6_BL_edge }} | {{ hvj_NM1_6_BLhi_edge }} |
+| NP2 | {{ hvj_NP2_BLlo_edge }} | {{ hvj_NP2_BL_edge }} | {{ hvj_NP2_BLhi_edge }} |
+| DT20 | {{ hvj_DT20_BLlo_edge }} | {{ hvj_DT20_BL_edge }} | {{ hvj_DT20_BLhi_edge }} |
+| DM1_6 | {{ hvj_DM1_6_BLlo_edge }} | {{ hvj_DM1_6_BL_edge }} | {{ hvj_DM1_6_BLhi_edge }} |
+| DAo1 | {{ hvj_DAo1_BLlo_edge }} | {{ hvj_DAo1_BL_edge }} | {{ hvj_DAo1_BLhi_edge }} |
+~~~
+
+~~~{table} Breakdown voltage (V) under the substrate dopings, deep P layer under the whole wafer.
+:name: tab-hvj-family-d
+
+| Structure | BDlo | BD | BDhi |
+|---|---|---|---|
+| NT20 | {{ hvj_NT20_BDlo_edge }} | {{ hvj_NT20_BD_edge }} | {{ hvj_NT20_BDhi_edge }} |
+| NC0 | {{ hvj_NC0_BDlo_edge }} | {{ hvj_NC0_BD_edge }} | {{ hvj_NC0_BDhi_edge }} |
+| NA0p6 | {{ hvj_NA0p6_BDlo_edge }} | {{ hvj_NA0p6_BD_edge }} | {{ hvj_NA0p6_BDhi_edge }} |
+| NAM1_6 | {{ hvj_NAM1_6_BDlo_edge }} | {{ hvj_NAM1_6_BD_edge }} | {{ hvj_NAM1_6_BDhi_edge }} |
+| NW3 | {{ hvj_NW3_BDlo_edge }} | {{ hvj_NW3_BD_edge }} | {{ hvj_NW3_BDhi_edge }} |
+| NR3_2 | {{ hvj_NR3_2_BDlo_edge }} | {{ hvj_NR3_2_BD_edge }} | {{ hvj_NR3_2_BDhi_edge }} |
+| NM1_6 | {{ hvj_NM1_6_BDlo_edge }} | {{ hvj_NM1_6_BD_edge }} | {{ hvj_NM1_6_BDhi_edge }} |
+| NP2 | {{ hvj_NP2_BDlo_edge }} | {{ hvj_NP2_BD_edge }} | {{ hvj_NP2_BDhi_edge }} |
+| DT20 | {{ hvj_DT20_BDlo_edge }} | {{ hvj_DT20_BD_edge }} | {{ hvj_DT20_BDhi_edge }} |
+| DM1_6 | {{ hvj_DM1_6_BDlo_edge }} | {{ hvj_DM1_6_BD_edge }} | {{ hvj_DM1_6_BDhi_edge }} |
+| DAo1 | {{ hvj_DAo1_BDlo_edge }} | {{ hvj_DAo1_BD_edge }} | {{ hvj_DAo1_BDhi_edge }} |
 ~~~
 
 ~~~{table} Breakdown voltage (V) under the oxide charges and the generated P-well of the family.

@@ -48,6 +48,7 @@ PAGE = REPO_ROOT / "docs" / "results" / "hv-junction.md"
 
 #: The prediction records, in the order a later one replaces the cases of an earlier one.
 PREDICTION_RECORDS = ("main", "family")
+#: Every record: the prediction records, the check cases, the 1D diodes and the Charon cases.
 RECORDS = (*PREDICTION_RECORDS, "checks", "diodes", "charon")
 #: The text of a value whose record or case is not committed.
 MISSING = "—"
@@ -201,25 +202,23 @@ def group(row: str, struct: dict[str, dict] | None = None) -> str:
     return "bare"
 
 
-_NWELL = (("AL", "edge"), ("BL", "edge"), ("BL", "corner"), ("BD", "edge"), ("BD", "corner"),
-          ("BLq", "edge"))  # fmt: skip
-#: The columns of each group's table: (process, shape).
+_NWELL = (("AL", "edge"), ("BL", "edge"), ("BL", "corner"), ("BD", "edge"))
+#: The columns of each group's table: (process, shape). A table has at most four of them.
 COLUMNS = {
     "bare": _NWELL,
     "pwell": _NWELL,
     "plates": _NWELL,
     "rings": _NWELL,
-    "nat": (("AL", "edge"), ("AnL", "edge"), ("AnL", "corner"), ("AnD", "edge"),
-            ("AnD", "corner"), ("BLq", "edge")),
-    "deep": (("AL", "edge"), ("AL", "corner"), ("AD", "edge"), ("BL", "edge"), ("BL", "corner"),
-             ("BD", "edge")),
-}  # fmt: skip
-#: The columns of the two family tables: the substrate doping, then the charge and the P-well.
+    "nat": (("AL", "edge"), ("AnL", "edge"), ("AnL", "corner"), ("AnD", "edge")),
+    "deep": (("AL", "edge"), ("AD", "edge"), ("BL", "edge"), ("BD", "edge")),
+}
+#: The columns of the family tables: the substrate doping under each extent of the deep P
+#: layer, then the oxide charge and the generated P-well.
 FAMILY_COLUMNS = {
-    "family-sub": (("BLlo", "edge"), ("BL", "edge"), ("BLhi", "edge"), ("BDlo", "edge"),
-                   ("BD", "edge"), ("BDhi", "edge")),
+    "family-l": (("BLlo", "edge"), ("BL", "edge"), ("BLhi", "edge")),
+    "family-d": (("BDlo", "edge"), ("BD", "edge"), ("BDhi", "edge")),
     "family-other": (("BLq", "edge"), ("BLq3", "edge"), ("AL", "edge"), ("ALhi", "edge")),
-}  # fmt: skip
+}
 #: The ``:name:`` of each table on the page.
 TABLE_NAMES = {name: f"tab-hvj-{name}" for name in (*COLUMNS, *FAMILY_COLUMNS)}
 
