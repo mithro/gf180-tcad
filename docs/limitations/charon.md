@@ -148,30 +148,32 @@ both devices and both parameter sets.
 ```{figure} /_generated/limitations/charon-tolerance-light.svg
 :name: fig-charon-tolerance
 :figclass: only-light
-:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below, with a dot on every point and triangles at the axis floor where the change is exactly zero. Bottom: one marker per pfet start setting: filled at the grid end, hollow where the sweep failed, a cross where the ramp from equilibrium failed before the sweep began.
+:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below, with a dot on every point and triangles at the axis floor where the change is exactly zero. Bottom: one marker per pfet start setting at the last bias it converged at: filled at the grid end, hollow where the sweep then failed, a cross where the ramp from equilibrium then failed before the sweep began.
 
 Top: the relative change of C from the reference tolerance (1e-10) to the backend's (1e-9), per
 device and parameter set ({repo}`results/charon-experiments/cv.json`). Bottom: the pfet start
-sweep under each setting ({repo}`results/charon-experiments/hard-range.json`). Filled: it reached
-the end of the grid. Hollow: the sweep failed at that bias. Cross: the ramp up from equilibrium
-failed at that bias, so the sweep never started. In the top panel the triangles at the floor mark
+sweep under each setting, at the last bias it converged at
+({repo}`results/charon-experiments/hard-range.json`). Filled: it reached the end of the grid.
+Hollow: the sweep failed after that bias. Cross: the ramp up from equilibrium failed after that
+bias, so the sweep never started. In the top panel the triangles at the floor mark
 exactly zero changes.
 ```
 
 ```{figure} /_generated/limitations/charon-tolerance-dark.svg
 :figclass: only-dark
-:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below, with a dot on every point and triangles at the axis floor where the change is exactly zero. Bottom: one marker per pfet start setting: filled at the grid end, hollow where the sweep failed, a cross where the ramp from equilibrium failed before the sweep began.
+:alt: Top: four curves of the relative C change between the two tolerances, all near 1e-9 or below, with a dot on every point and triangles at the axis floor where the change is exactly zero. Bottom: one marker per pfet start setting at the last bias it converged at: filled at the grid end, hollow where the sweep then failed, a cross where the ramp from equilibrium then failed before the sweep began.
 
 Top: the relative change of C from the reference tolerance (1e-10) to the backend's (1e-9), per
 device and parameter set ({repo}`results/charon-experiments/cv.json`). Bottom: the pfet start
-sweep under each setting ({repo}`results/charon-experiments/hard-range.json`). Filled: it reached
-the end of the grid. Hollow: the sweep failed at that bias. Cross: the ramp up from equilibrium
-failed at that bias, so the sweep never started. In the top panel the triangles at the floor mark
+sweep under each setting, at the last bias it converged at
+({repo}`results/charon-experiments/hard-range.json`). Filled: it reached the end of the grid.
+Hollow: the sweep failed after that bias. Cross: the ramp up from equilibrium failed after that
+bias, so the sweep never started. In the top panel the triangles at the floor mark
 exactly zero changes.
 ```
 
 {numref}`tab-charon-tolerance-change` gives the largest change per case. The pfet start reference
-stops at {{ lim_charon_stall_v }} V on its way down from 5 V. A second reference run sweeps up
+fails on its way down from 5 V, as the next paragraph describes. A second reference run sweeps up
 from −5 V and converges to {{ lim_charon_pfet_start_up_to }} V. Together they cover the
 {{ lim_charon_pfet_start_points }} biases of that row, down to {{ lim_charon_pfet_start_from }} V
 from above.
@@ -187,56 +189,59 @@ from above.
 | pfet | start | {{ lim_charon_b7_pfet_start }} |
 ```
 
-At 1e-10 the pfet start sweep stops at {{ lim_charon_stall_v }} V on its way down from 5 V. Its
-last Newton step leaves the residual at {{ lim_charon_stall_fnorm }}. The WRMS norm stays at
+Below, "failed at" is the bias of a solve's failed step, and "last converged" the last bias
+it converged at. At 1e-10 the pfet start sweep down from 5 V last converged
+at {{ lim_charon_stall_last }} V. It failed at {{ lim_charon_stall_v }} V. Its last Newton step
+leaves the residual at {{ lim_charon_stall_fnorm }}. The WRMS norm stays at
 {{ lim_charon_stall_wrms }}, above its limit of 1, after {{ lim_charon_stall_iters }}
 iterations, the most allowed.
 
 The bottom panel of {numref}`fig-charon-tolerance` shows what changes the outcome. NOX's rescue off,
-steps of 5 mV and a lifetime of 1e-16 s stop at the same bias. Loosening either tolerance alone, the relative
+10 LOCA steps per grid step (5 mV each) and a lifetime of 1e-16 s fail at the same bias. Loosening either tolerance alone, the relative
 to 1e-9 or the absolute to 1e-11, passes. Tightening both tolerances ten times, to 1e-11
-relative and 1e-13 absolute, fails before the sweep. The ramp up from equilibrium fails at
-{{ lim_charon_stall_ramp_v }} V, so the sweep never starts.
+relative and 1e-13 absolute, fails before the sweep. The ramp up from equilibrium last converged
+at {{ lim_charon_stall_ramp_v }} V, so the sweep never starts.
 
 So a smaller step does not pass the stall, and a looser tolerance does. At 1e-11 the nfet
-calibrated ramp, with the project's lifetimes, stops at {{ lim_charon_tight_ramp_v }} V. What
+calibrated ramp, with the project's lifetimes, last converged at {{ lim_charon_tight_ramp_v }} V. What
 limits Newton at these biases is open
 ([issue #223](https://github.com/mithro/gf180-tcad/issues/223)). The backend's 1e-9 passes on
 all four cases and gives the same C as 1e-10 within {{ lim_charon_b7_max }}. That is far below Charon's difference from
 DEVSIM, {{ lim_charon_pfet_start_devsim }} for the pfet start case.
 
 (charon-hard-range)=
-## Where the default settings stop
+## Where the default settings fail
 
 With the project's lifetimes, the nfet sweep fails at the onset of inversion, a device bias of
 {{ lim_charon_fail_v }} V.
 
 {numref}`fig-charon-hard-range` shows the last bias each solver setting reached, sweeping up from
-0 V. Five kinds of setting stop between {{ lim_charon_stop_lo }} V and {{ lim_charon_stop_hi }} V.
+0 V. Five kinds of setting last converged between {{ lim_charon_stop_lo }} V and
+{{ lim_charon_stop_hi }} V.
 They are looser tolerances, another concentration scaling, 5 mV steps, no SRH and the FEM
 discretisation. Lifetimes of 1e-12 s and 1e-13 s
-stop at {{ lim_charon_tau_stop }} V. Only lifetimes of 1e-14 s or shorter reach 5 V.
+last converged at {{ lim_charon_tau_stop }} V. Only lifetimes of 1e-14 s or shorter reach 5 V.
 
 ```{figure} /_generated/limitations/charon-hard-range-light.svg
 :name: fig-charon-hard-range
 :figclass: only-light
-:alt: One marker per solver setting at the last converged bias: hollow markers for the settings that stopped, filled markers for the shortest lifetimes at the end of the sweep, crosses at 0 V for failed equilibria.
+:alt: One marker per solver setting at the last converged bias: hollow markers for the settings that failed, filled markers for the shortest lifetimes at the end of the sweep, crosses at 0 V for failed equilibria.
 
 The last converged device bias of each solver setting, sweeping the nfet strip up from 0 V
 ({repo}`results/charon-experiments/hard-range.json`). Filled: the sweep reached 5 V. Hollow: it
-stopped. Crosses: the equilibrium solve itself failed.
+failed after that bias. Crosses: the equilibrium solve itself failed.
 ```
 
 ```{figure} /_generated/limitations/charon-hard-range-dark.svg
 :figclass: only-dark
-:alt: One marker per solver setting at the last converged bias: hollow markers for the settings that stopped, filled markers for the shortest lifetimes at the end of the sweep, crosses at 0 V for failed equilibria.
+:alt: One marker per solver setting at the last converged bias: hollow markers for the settings that failed, filled markers for the shortest lifetimes at the end of the sweep, crosses at 0 V for failed equilibria.
 
 The last converged device bias of each solver setting, sweeping the nfet strip up from 0 V
 ({repo}`results/charon-experiments/hard-range.json`). Filled: the sweep reached 5 V. Hollow: it
-stopped. Crosses: the equilibrium solve itself failed.
+failed after that bias. Crosses: the equilibrium solve itself failed.
 ```
 
-The reference setting stops with a residual of {{ lim_charon_ref_fnorm }} after its last Newton
+The reference setting fails with a residual of {{ lim_charon_ref_fnorm }} after its last Newton
 iteration. Its WRMS norm is {{ lim_charon_ref_wrms }}, above the limit of 1.
 Solves started on the inversion side fail too, at {{ lim_charon_inv_biases }} V.
 
@@ -285,32 +290,32 @@ residual turns NaN. Charon then aborts with MPI error 14.
 ```{figure} /_generated/limitations/charon-checks-light.svg
 :name: fig-charon-checks
 :figclass: only-light
-:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state, with a triangle at the floor where one is exactly zero; the C change a hundred times looser on a log axis, a dot on every point, triangles at its floor where it is exactly zero, and one dashed line where the ten times tighter nfet study failed on its ramp from equilibrium.
+:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state, with a triangle at the floor where one is exactly zero; the C change a hundred times looser on a log axis, a dot on every point, triangles at its floor where it is exactly zero, and one dashed line at the last bias the ramp from equilibrium of the ten times tighter nfet study converged at.
 
-Top to bottom: B3, each linear solver's sweep from its start to where it stopped. B2, the
+Top to bottom: B3, each linear solver's sweep from its start to where it last converged. B2, the
 nonlinear-Poisson C (circles) and DEVSIM's C at the same bias (squares); a dotted line, "Newton
 diverged, no C", at each bias where the solve diverged. B6, the oxide-flux spread and the poly
 and body charge mismatches per state, nfet solid and pfet dashed, triangles at the floor where
 one is exactly zero. B7, the nfet C change a
 hundred times looser with the project's lifetimes, triangles where it is exactly zero, and a
-dashed line where the ten times tighter study of the same case failed: on its ramp from
-equilibrium, before its sweep began
+dashed line at the last bias the ramp from equilibrium of the ten times tighter study of the
+same case converged at; its sweep never began
 ({repo}`results/charon-experiments/probes.json`, {repo}`results/charon-experiments/hard-range.json`,
 {repo}`results/charon-experiments/cv.json`).
 ```
 
 ```{figure} /_generated/limitations/charon-checks-dark.svg
 :figclass: only-dark
-:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state, with a triangle at the floor where one is exactly zero; the C change a hundred times looser on a log axis, a dot on every point, triangles at its floor where it is exactly zero, and one dashed line where the ten times tighter nfet study failed on its ramp from equilibrium.
+:alt: Four panels: each linear solver's sweep as a bar; the nonlinear-Poisson C as circles at two biases, DEVSIM's C there as squares, and dotted lines at the biases where Newton diverged; the charge-check mismatches per state, with a triangle at the floor where one is exactly zero; the C change a hundred times looser on a log axis, a dot on every point, triangles at its floor where it is exactly zero, and one dashed line at the last bias the ramp from equilibrium of the ten times tighter nfet study converged at.
 
-Top to bottom: B3, each linear solver's sweep from its start to where it stopped. B2, the
+Top to bottom: B3, each linear solver's sweep from its start to where it last converged. B2, the
 nonlinear-Poisson C (circles) and DEVSIM's C at the same bias (squares); a dotted line, "Newton
 diverged, no C", at each bias where the solve diverged. B6, the oxide-flux spread and the poly
 and body charge mismatches per state, nfet solid and pfet dashed, triangles at the floor where
 one is exactly zero. B7, the nfet C change a
 hundred times looser with the project's lifetimes, triangles where it is exactly zero, and a
-dashed line where the ten times tighter study of the same case failed: on its ramp from
-equilibrium, before its sweep began
+dashed line at the last bias the ramp from equilibrium of the ten times tighter study of the
+same case converged at; its sweep never began
 ({repo}`results/charon-experiments/probes.json`, {repo}`results/charon-experiments/hard-range.json`,
 {repo}`results/charon-experiments/cv.json`).
 ```
@@ -323,7 +328,7 @@ equilibrium, before its sweep began
 | B1: does Charon read TRI3 blocks? (C of the 2D mesh at 0 V, relative to DEVSIM's 1D) | Yes | {{ lim_charon_tri3_2d }} |
 | B1: does the strip split into TRI3 match the QUAD4 strip on the same nodes? (largest relative C difference, [issue #215](https://github.com/mithro/gf180-tcad/issues/215)) | No | {{ lim_charon_tri3_strip }} |
 | B2: does the nonlinear-Poisson solve honour a biased poly gate? (its C where it converges, fF/µm²) | No | {{ lim_charon_nlp_c }} |
-| B3: does Belos GMRES converge on the sweep? (the bias where it stops, V; Amesos2 KLU2 reaches the end) | No | {{ lim_charon_belos_stop }} |
+| B3: does Belos GMRES converge on the sweep? (the last bias it converged at, V; Amesos2 KLU2 reaches the end) | No | {{ lim_charon_belos_stop }} |
 | B4: do the cosine current columns give C on the parallel plate? (relative error) | Yes | {{ lim_charon_pp }} |
 | B4: do they give C on the metal-gate stack in depletion? (relative to the QS C) | Yes | {{ lim_charon_mg }} |
 | B4: do they give C with the ohmic poly gate in accumulation? (ratio to the QS C, [issue #213](https://github.com/mithro/gf180-tcad/issues/213)) | No | {{ lim_charon_hb_acc }} |
