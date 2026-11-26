@@ -53,6 +53,7 @@ FIGURES = [
     "meshconv-2d",
     "pn-slab",
     "pin-depletion",
+    "abrupt-junction",
     "edge-sensitivity",
     "charon-strip",
     "charon-cv",
@@ -796,6 +797,26 @@ def check_pin_depletion(fig):
     d.done()
 
 
+def check_abrupt_junction(fig):
+    """One bar per width, in order from the top: the two v0.8.0 records' equilibrium depletion
+    widths, then the record's depletion-approximation span and full width, read here from the
+    files directly; each bar starts at 0, sits on its row and has the common bar height."""
+    d = Drawn(fig)
+    (ax,) = fig.axes
+    rec = _json("plugin-history", "abrupt-junction.json")
+    want = [r["ddcomponent"]["equilibrium"]["depletion_width_um"] for r in _plugin().values()]
+    want += [rec["inner_width_um"], rec["width_um"]]
+    bars = [b for b in ax.patches if b.get_gid() is not None]
+    assert len(bars) == len(want)
+    heights = [b.get_height() for b in bars]
+    assert _close(heights, [heights[-1]] * len(bars))  # one bar height for every row
+    for i, (bar, width) in enumerate(zip(bars, want, strict=True)):
+        d(bar.get_gid(), ax)
+        assert _close([bar.get_x(), bar.get_width(), bar.get_y() + bar.get_height() / 2],
+                      [0.0, width, i]), bar.get_gid()  # fmt: skip
+    d.done()
+
+
 def check_edge_sensitivity(fig):
     """Per cell: each family's points are the record's gains, the target is SPICE minus 2D, the
     fit sits on the equal-gain line at slope × δ, and that line spans the largest value."""
@@ -1112,6 +1133,7 @@ CHECKS = {
     "meshconv-2d": (lf.meshconv_2d_figure, check_meshconv_2d),
     "pn-slab": (lf.pn_slab_figure, check_pn_slab),
     "pin-depletion": (lf.pin_depletion_figure, check_pin_depletion),
+    "abrupt-junction": (lf.abrupt_junction_figure, check_abrupt_junction),
     "edge-sensitivity": (lf.edge_sensitivity_figure, check_edge_sensitivity),
     "charon-strip": (lf.charon_strip_figure, check_charon_strip),
     "charon-cv": (lf.charon_cv_figure, check_charon_cv),
@@ -1238,8 +1260,9 @@ def test_page_numbers_are_the_committed_files():
     assert subs["lim_ccox_acc"] == f"{ratio[np.argmin(qs['vg'])]:.3f}" == "1.068"
     assert subs["lim_ccox_inv"] == f"{ratio[np.argmax(qs['vg'])]:.3f}" == "1.087"
     page = (REPO_ROOT / "docs/limitations/moscap2d.md").read_text("utf-8")
-    # the Charon page's numbers: tests/test_charon_experiments.py::test_page_numbers_are_the_records
-    for key in (k for k in subs if not k.startswith("lim_charon_")):
+    # the Charon page's numbers: tests/test_charon_experiments.py::test_page_numbers_are_the_records;
+    # the plugin-history page's: test_abrupt_junction_numbers_are_the_record
+    for key in (k for k in subs if not k.startswith(("lim_charon_", "lim_abrupt_"))):
         assert f"{{{{ {key} }}}}" in page, key
     for old in ("2.7e-8", "1.071", "1.090"):
         assert old not in page, old
@@ -1313,3 +1336,35 @@ def test_engine_page_forced_values_are_the_record():
         vals = [cases[gid][sweep]["forced_4p6"] for gid in cases]
         assert _shown(m[2 * k + 1].rstrip(","), min(vals)), (sweep, m[2 * k + 1])
         assert _shown(m[2 * k + 2].rstrip(","), max(vals)), (sweep, m[2 * k + 2])
+
+
+def test_abrupt_junction_numbers_are_the_record():
+    """The plugin-history page's ideal abrupt-junction numbers (issue #80): substituted from the
+    record and the v0.8.0 records, read here directly, and used on the page."""
+    subs = lf.substitutions()
+    rec = _json("plugin-history", "abrupt-junction.json")
+    full, half = _plugin().values()
+    assert float(subs["lim_abrupt_inner"]) == float(f"{rec['inner_width_um']:.4g}")
+    assert float(subs["lim_abrupt_w"]) == float(f"{rec['width_um']:.4g}")
+    assert float(subs["lim_abrupt_xn"]) == float(f"{rec['x_n_um']:.4g}")
+    assert float(subs["lim_abrupt_vbi"]) == float(f"{rec['v_bi_v']:.6g}")
+    assert float(subs["lim_abrupt_na"]) == rec["doping"]["n_a_cm3"]
+    assert float(subs["lim_abrupt_k"]) == rec["constants"]["k_j_per_k"]
+    w = half["ddcomponent"]["equilibrium"]["depletion_width_um"]
+    assert float(subs["lim_abrupt_measured"]) == float(f"{w:.4g}")
+    assert float(subs["lim_abrupt_delta"]) == float(f"{w - rec['inner_width_um']:.2g}")
+    assert subs["lim_abrupt_full_nodes"] == str(
+        full["ddcomponent"]["equilibrium"]["depleted_nodes"]
+    )
+    eq = half["ddcomponent"]["equilibrium"]
+    assert subs["lim_abrupt_half_nodes"] == str(eq["depleted_nodes"])
+    spacing = eq["depletion_width_um"] / (eq["depleted_nodes"] - 1)
+    assert float(subs["lim_abrupt_spacing"]) == float(f"{spacing:.2g}")
+    drop = full["ddcomponent"]["equilibrium"]["junction"]["drop_v"]
+    assert subs["lim_abrupt_drop"] == f"{drop:.5f}"
+    page = (lf.REPO_ROOT / "docs" / "limitations" / "plugin-history.md").read_text(encoding="utf-8")
+    used = set(re.findall(r"\{\{ (lim_abrupt_\w+) \}\}", page))
+    assert used == {k for k in subs if k.startswith("lim_abrupt_")}
+    # the drop is substituted, never typed (review of #227)
+    assert "stays at {{ lim_abrupt_drop }} V" in page
+    assert not re.search(r"stays at \d", page)

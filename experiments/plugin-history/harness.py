@@ -113,11 +113,16 @@ def contact_potential(device: str, contact: str, regions) -> float:
     raise ValueError(f"contact {contact!r} has no nodes in regions {list(regions)}")
 
 
+#: A node is depleted where both carrier densities are below this fraction of |NetDoping|
+#: (:func:`depletion_width`).
+FRACTION = 1e-2
+
+
 def depletion_width(x, y, n, p, net_doping, *, y_target: float):
     """``(width, y_cut, depleted_nodes)`` along the mesh row nearest ``y_target``.
 
     The row is the node y value closest to ``y_target`` (the smaller one on a tie). A node is
-    depleted where both carrier densities are below 1e-2 |NetDoping|. The width is the span
+    depleted where both carrier densities are below :data:`FRACTION` |NetDoping|. The width is the span
     (max x - min x) of the depleted nodes of the row, in the units of ``x``; 0 if none.
     """
     y_cut = min(sorted(set(y)), key=lambda v: abs(v - y_target))
@@ -126,7 +131,9 @@ def depletion_width(x, y, n, p, net_doping, *, y_target: float):
             xi: (ni, pi, di) for xi, yi, ni, pi, di in zip(x, y, n, p, net_doping) if yi == y_cut
         }.items()
     )
-    depleted = [xi for xi, (ni, pi, di) in row if ni < 1e-2 * abs(di) and pi < 1e-2 * abs(di)]
+    depleted = [
+        xi for xi, (ni, pi, di) in row if ni < FRACTION * abs(di) and pi < FRACTION * abs(di)
+    ]
     width = max(depleted) - min(depleted) if depleted else 0.0
     return width, y_cut, len(depleted)
 
