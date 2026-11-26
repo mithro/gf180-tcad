@@ -1653,10 +1653,10 @@ def junction_profile(palette: str) -> bytes:
 def resistivity_curve() -> dict[str, np.ndarray | float]:
     """The resistivity of n-type silicon against its donor density, an idealised example: the
     donor densities ``n_cm3`` from the mobility fit's lower limit (``n_min_fit``) to the nfet's
-    source and drain peak (``sd_peak_nfet``), their mobility (:func:`idealised.doping_mobility`)
-    and resistivity ``rho_ohm_cm`` (:func:`idealised.resistivity`); the peak's own value
+    source and drain peak (``sd_peak_nfet``), their mobility (:func:`~gf180tcad.explain.idealised.doping_mobility`)
+    and resistivity ``rho_ohm_cm`` (:func:`~gf180tcad.explain.idealised.resistivity`); the peak's own value
     (``rho_sd``); and the smallest resistivity of pure silicon (``rho_intrinsic``,
-    :func:`idealised.intrinsic_resistivity`)."""
+    :func:`~gf180tcad.explain.idealised.intrinsic_resistivity`)."""
     v = numbers.value
     n = np.geomspace(v("n_min_fit"), v("sd_peak_nfet"), STYLE["regime_points"])
     mu = idealised.doping_mobility(v("mu0_n_fit"), v("mu1_n_fit"), v("nref_n_fit"),

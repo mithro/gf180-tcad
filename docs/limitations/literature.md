@@ -85,7 +85,7 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
   concentration dependence in heavily-doped silicon" gives the majority-carrier fit of silicon
   for 10¹⁸ cm⁻³ and up. That fit cites Caughey and Thomas, "Carrier mobilities in silicon
   empirically related to doping and field", Proc. IEEE 55(12), 2192-2193, 1967
-  ({ref}`lit-caughey`). The explainer uses both for the resistivity of doped and pure silicon
+  ({ref}`Caughey and Thomas <lit-caughey>`). The explainer uses both for the resistivity of doped and pure silicon
   ({ref}`explained-conduction`).
 
 (lit-colorado-constants)=
