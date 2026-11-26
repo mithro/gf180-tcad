@@ -59,6 +59,8 @@ FIGURES = [
     "charon-hard-range",
     "charon-structures",
     "charon-tolerance",
+    "charon-doping",
+    "charon-checks",
 ]
 
 _RENDER = textwrap.dedent(
@@ -373,7 +375,9 @@ def _allowed_names() -> set[str]:
     names = set(DEVICES) | gids | set(lf.PLUGIN_FILES) | set(lf.LATEST_FILES) | set(lf.FIGURES)
     names |= set(lf.CHARON_REF.values()) | set(lf.CHARON_CHECKS)  # record keys of cv.json
     names |= {lf.CHARON_REF_VARIANT, lf.CHARON_TIGHT_STUDY, *lf.CHARON_LOOSE_PAIR}  # record keys
-    names |= {n for by in lf.CHARON_B7_PAIRS.values() for pair in by.values() for n in pair}
+    names |= {n for by in lf.CHARON_B7_PAIRS.values() for name, refs in by.values()
+              for n in (name, *refs)}  # fmt: skip
+    names |= set(lf.CHARON_TIGHT) | set(lf.CHARON_CHECK_PANELS)
     names |= set(lf.CHARON_STALL_STUDIES)
     return names | {"1D", "2D", "BSIM4", "utf-8"}
 
@@ -923,17 +927,16 @@ def check_charon_tolerance(fig):
     top, bottom = fig.axes
     d = Drawn(fig)
     for device, by_params in lf.CHARON_B7_PAIRS.items():
-        for params, (name, ref) in by_params.items():
-            r, b = runs[name], runs[ref]
-            vg = [v for v in r["vg"] if v in b["vg"]]
-            rel = [abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)] - 1)
-                   for v in vg]  # fmt: skip
-            d.line(
-                f"tolerance pair {device} {params}",
-                DEVICES[device].polarity * np.asarray(vg),
-                rel,
-                top,
-            )
+        for params, (name, refs) in by_params.items():
+            r = runs[name]
+            us, rels = [], []
+            for ref in refs:
+                b = runs[ref]
+                vg = [v for v in r["vg"] if v in b["vg"]]
+                us += [DEVICES[device].polarity * v for v in vg] + [np.nan]
+                rels += [abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)]
+                             - 1) for v in vg] + [np.nan]  # fmt: skip
+            d.line(f"tolerance pair {device} {params}", us[:-1], rels[:-1], top)
     default = runs[lf.CHARON_B7_PAIRS["pfet_05v0"]["start"][0]]
     names = [*lf.CHARON_STALL_STUDIES, "default"]
     stopped = {n: studies[n]["failed"] is not None for n in lf.CHARON_STALL_STUDIES}
@@ -943,6 +946,49 @@ def check_charon_tolerance(fig):
         xs = [float(studies[n]["failed"]["failed_at"][0]) if pick else default["vg"][-1]
               for n in picked]  # fmt: skip
         d.points(gid, xs, [names.index(n) for n in picked], bottom)
+    d.done()
+
+
+def check_charon_doping(fig):
+    d = Drawn(fig)
+    axes = dict(zip(DEVICES, fig.axes, strict=True))
+    for tag, rec in _charon("probes")["doping"].items():
+        device = tag.rsplit("_", 1)[0]
+        semi = rec["semiconductor_nodes"]
+        x = np.asarray(rec["x_um"])[semi]
+        d.line(f"{tag} description", x, np.abs(np.asarray(rec["description_cm3"])[semi]),
+               axes[device])  # fmt: skip
+        d.line(f"{tag} charon", x, np.abs(np.asarray(rec["doping_cm3"])[semi]), axes[device])
+        assert rec["max_rel_doping"] == 0.0, tag
+    d.done()
+
+
+def check_charon_checks(fig):
+    probes, hard, runs = _charon("probes"), _charon("hard-range"), _charon("cv")["runs"]
+    b3, b2, b6, b7 = fig.axes
+    d = Drawn(fig)
+    solvers = {n: r for n, r in probes["solvers"].items() if isinstance(r, dict) and "sweep_v" in r}
+    for i, (name, rec) in enumerate(solvers.items()):
+        lo, hi = rec["sweep_v"]
+        end = float(rec["failed_at"][0]) if rec["failed_at"] else hi
+        d.line(f"solver {name}", [lo, end], [i, i], b3)
+    ok = [p for p in hard["nlp"]["points"] if p["ok"]]
+    bad = [p for p in hard["nlp"]["points"] if not p["ok"]]
+    d.points("nlp converged", [p["vg"] for p in ok], [p["c_nlp"] for p in ok], b2)
+    d.points("nlp diverged", [p["vg"] for p in bad], [0.0] * len(bad), b2)
+    for device, name in lf.CHARON_REF.items():
+        r = runs[name]
+        u = DEVICES[device].polarity * np.asarray(r["vg"])
+        for key in ("oxide_flux_spread", "poly_vs_gate", "body_vs_gate"):
+            for s in "AB":
+                d.line(f"b6 {device} {key} {s}", u, r[f"{key}_per_state_{s}"], b6)
+    loose, ref = (runs[n] for n in lf.CHARON_LOOSE_PAIR)
+    vg = [v for v in loose["vg"] if v in ref["vg"]]
+    rel = [abs(loose["c_ff_um2"][loose["vg"].index(v)] / ref["c_ff_um2"][ref["vg"].index(v)] - 1)
+           for v in vg]  # fmt: skip
+    d.line("b7 looser", vg, rel, b7)
+    for n in lf.CHARON_TIGHT:
+        d.vline(f"b7 {n}", float(hard["step_studies"][n]["failed"]["failed_at"][0]), b7)
     d.done()
 
 
@@ -966,6 +1012,8 @@ CHECKS = {
     "charon-hard-range": (lf.charon_hard_range_figure, check_charon_hard_range),
     "charon-structures": (lf.charon_structures_figure, check_charon_structures),
     "charon-tolerance": (lf.charon_tolerance_figure, check_charon_tolerance),
+    "charon-doping": (lf.charon_doping_figure, check_charon_doping),
+    "charon-checks": (lf.charon_checks_figure, check_charon_checks),
 }
 
 

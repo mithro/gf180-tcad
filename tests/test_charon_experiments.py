@@ -5,6 +5,7 @@ pinned commit, DEVSIM values that are the committed DEVSIM results, and internal
 
 import hashlib
 import json
+import re
 import subprocess
 
 import numpy as np
@@ -92,38 +93,157 @@ def _shown(text: str, value: float) -> bool:
     return float(text) == float(f"{value:.{max(len(mantissa), 1) - 1}e}")
 
 
+def _rel_max(runs, name, ref):
+    r, b = runs[name], runs[ref]
+    common = [v for v in r["vg"] if v in b["vg"]]
+    return max(abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)] - 1)
+               for v in common)  # fmt: skip
+
+
+def _num(text: str) -> float:
+    return float(text.replace("−", "-"))
+
+
+def _expected_page_numbers() -> dict:
+    """Every ``lim_charon_*`` number recomputed from the records, independently of
+    gf180tcad.limitations_figures: ``{key: value}`` (a float compared at the digits the page
+    shows, or the exact text)."""
+    runs = _record("cv")["runs"]
+    hard = _record("hard-range")
+    probes = _record("probes")
+    hb = _record("harmonic-balance")
+    studies = hard["step_studies"]
+    ref_n, ref_p = runs["cv-nfet-tau15-1e-10"], runs["cv-pfet-tau15-1e-10"]
+    v = hard["variants"]
+    plain = [x["last_converged_v"] for x in v.values() if x["equilibrium_converged"]
+             and not x["sweep_converged"] and "tau" not in x["settings"]]  # fmt: skip
+    tau_stop = {x["last_converged_v"] for x in v.values() if "tau" in x["settings"]
+                and x["settings"]["rel"] == 1e-10 and not x["sweep_converged"]}  # fmt: skip
+    inv = sorted(float(b) for b in hard["inversion_side"]["direct"])
+    pp = max(abs(abs(x) - 1) for run in hb["parallel_plate"]["runs"].values()
+             for c, x in run["ratio"].items() if "CosH1" in c)  # fmt: skip
+    mg = max(abs(abs(x) - 1) for c, x in hb["metal_gate"]["depletion"]["ratio"].items()
+             if c.startswith("gate") and "CosH1" in c and "Disp" in c)  # fmt: skip
+    hb1 = probes["harmonic_balance"]["b4_1e+06_0.0001"]
+    hb_gate = {s: abs(next(x for c, x in hb1[s]["c_from_columns_over_c_qs"].items()
+                           if c.startswith("gate") and "CosH1" in c and "Disp" in c))
+               for s in ("accumulation", "depletion")}  # fmt: skip
+    b7 = {
+        "nfet_calibrated": _rel_max(runs, "cv-nfet-tau15-1e-9", "cv-nfet-tau15-1e-10"),
+        "nfet_start": _rel_max(runs, "cv-nfet-start-tau15-1e-9", "cv-nfet-start-tau15-1e-10"),
+        "pfet_calibrated": _rel_max(runs, "cv-pfet-tau15-1e-9", "cv-pfet-tau15-1e-10"),
+        "pfet_start": max(_rel_max(runs, "cv-pfet-start-tau15-1e-9", r) for r in
+                          ("cv-pfet-start-tau15-1e-10-above-0.6",
+                           "cv-pfet-start-tau15-1e-10-from-minus-5")),
+    }  # fmt: skip
+    above = runs["cv-pfet-start-tau15-1e-10-above-0.6"]
+    up = runs["cv-pfet-start-tau15-1e-10-from-minus-5"]
+    pfet_9 = runs["cv-pfet-start-tau15-1e-9"]
+    covered = {x for x in pfet_9["vg"] if x in above["vg"] or x in up["vg"]}
+    stall = studies["study-pfet-start-1e-10"]["failed"]
+    nlp = hard["nlp"]["points"]
+    nlp_ok = [p for p in nlp if p["ok"]]
+    (belos,) = [s for s in probes["solvers"].values()
+                if isinstance(s, dict) and s.get("failed_at")]  # fmt: skip
+    (ramp,) = [studies[n]["failed"] for n in studies if n.startswith("study-pfet-start")
+               and studies[n]["failed"] and studies[n]["failed"]["deck"].startswith("ramp")]  # fmt: skip
+    (ni,) = {d["ni_cm3"] for d in probes["doping"].values()}
+    return {
+        "lim_charon_nodes": f"{len(ref_n['x_um'])}",
+        "lim_charon_points": f"{len(ref_n['vg'])}",
+        "lim_charon_ni": ni,
+        "lim_charon_ref_tau": ref_n["settings"]["CX_TAU"],
+        "lim_charon_nfet_devsim": np.max(
+            np.abs(np.asarray(ref_n["c_ff_um2"]) / np.asarray(ref_n["c_devsim"]) - 1)
+        ),
+        "lim_charon_pfet_devsim": np.max(
+            np.abs(np.asarray(ref_p["c_ff_um2"]) / np.asarray(ref_p["c_devsim"]) - 1)
+        ),
+        "lim_charon_lifetime": _rel_max(runs, "cv-nfet-tau14-1e-10", "cv-nfet-tau15-1e-10"),
+        "lim_charon_pfet_lifetime": _rel_max(runs, "cv-pfet-tau14-1e-10", "cv-pfet-tau15-1e-10"),
+        "lim_charon_default_lifetime": _rel_max(
+            runs, "cv-nfet-default-1e-10", "cv-nfet-tau15-1e-10"
+        ),
+        "lim_charon_tol9": _rel_max(runs, "cv-nfet-tau15-1e-9", "cv-nfet-tau15-1e-10"),
+        "lim_charon_tol8": _rel_max(runs, "cv-nfet-default-1e-8", "cv-nfet-default-1e-10"),
+        "lim_charon_np_ref": max(
+            r[f"max_abs_np_over_ni2_minus_1_{s}"] for r in (ref_n, ref_p) for s in "AB"
+        ),
+        "lim_charon_b6": max(
+            r[f"{k}_vs_gate_{s}"] for r in (ref_n, ref_p) for k in ("poly", "body") for s in "AB"
+        ),
+        "lim_charon_fail_v": float(v["ref_1e-10"]["failed_at"][0]),
+        "lim_charon_stop_lo": min(plain),
+        "lim_charon_stop_hi": max(plain),
+        "lim_charon_tau_stop": tau_stop.pop(),
+        "lim_charon_ref_fnorm": v["ref_1e-10"]["failed_fnorm"],
+        "lim_charon_ref_wrms": v["ref_1e-10"]["failed_wrms"],
+        "lim_charon_inv_biases": ", ".join(f"{b:g}" for b in inv[:-1]) + f" and {inv[-1]:g}",
+        "lim_charon_tri3_2d": abs(probes["tri3"]["rel_vs_devsim_1d"]),
+        "lim_charon_tri3_strip": probes["tri3"]["strip_max_rel_c_tri3_vs_quad4"],
+        "lim_charon_pp": pp,
+        "lim_charon_mg": mg,
+        "lim_charon_hb_acc": hb_gate["accumulation"],
+        "lim_charon_hb_depl": hb_gate["depletion"],
+        "lim_charon_tight": "1e-11",
+        **{f"lim_charon_b7_{k}": x for k, x in b7.items()},
+        "lim_charon_b7_max": max(b7.values()),
+        "lim_charon_stall_v": float(stall["failed_at"][0]),
+        "lim_charon_stall_fnorm": stall["final"][-1][0],
+        "lim_charon_stall_wrms": stall["final"][-1][1],
+        "lim_charon_stall_iters": f"{stall['newton_limit'][0][0]}",
+        "lim_charon_stall_ramp_v": float(ramp["failed_at"][0]),
+        "lim_charon_tight_ramp_v": float(
+            studies["study-nfet-default-1e-11"]["failed"]["failed_at"][0]
+        ),
+        "lim_charon_pfet_start_from": min(above["vg"]),
+        "lim_charon_pfet_start_up_to": max(up["vg"]),
+        "lim_charon_pfet_start_points": f"{len(covered)}",
+        "lim_charon_pfet_start_devsim": pfet_9["max_abs_rel_vs_devsim"],
+        "lim_charon_nlp_c": max(abs(p["c_nlp"]) for p in nlp_ok),
+        "lim_charon_nlp_ok": [p["vg"] for p in nlp_ok],
+        "lim_charon_nlp_bad": [p["vg"] for p in nlp if not p["ok"]],
+        "lim_charon_belos_stop": float(belos["failed_at"][0]),
+    }
+
+
 def test_page_numbers_are_the_records():
-    """The Charon page and the status pages print their numbers by substitution
-    (``lim_charon_*``); each is recomputed here from the records, and no hand-typed copy of the
-    headline numbers is left on the pages."""
+    """Every number the Charon page prints by substitution (``lim_charon_*``) is recomputed here
+    from the records, independently of the figure module; every key is on the page; no
+    hand-typed copy of any of them is left on the pages."""
     from gf180tcad import limitations_figures as lf
 
     subs = {k: v for k, v in lf.substitutions().items() if k.startswith("lim_charon_")}
-    runs = _record("cv")["runs"]
-    for dev, name in (("nfet", "cv-nfet-tau15-1e-10"), ("pfet", "cv-pfet-tau15-1e-10")):
-        c, dv = np.asarray(runs[name]["c_ff_um2"]), np.asarray(runs[name]["c_devsim"])
-        assert _shown(subs[f"lim_charon_{dev}_devsim"], np.max(np.abs(c / dv - 1))), dev
-    assert subs["lim_charon_points"] == str(len(runs["cv-nfet-tau15-1e-10"]["vg"]))
-    ref = _record("hard-range")["variants"]["ref_1e-10"]
-    assert float(subs["lim_charon_fail_v"]) == float(ref["failed_at"][0])
-    assert _shown(subs["lim_charon_ref_fnorm"], ref["failed_fnorm"])
-    assert float(subs["lim_charon_ref_wrms"]) > 1
-    b6 = max(runs[n][f"{k}_vs_gate_{s}"] for n in ("cv-nfet-tau15-1e-10", "cv-pfet-tau15-1e-10")
-             for k in ("poly", "body") for s in "AB")  # fmt: skip
-    assert _shown(subs["lim_charon_b6"], b6)
-    tri3 = _record("probes")["tri3"]
-    assert _shown(subs["lim_charon_tri3_strip"], tri3["strip_max_rel_c_tri3_vs_quad4"])
-    assert _shown(subs["lim_charon_tri3_2d"], abs(tri3["rel_vs_devsim_1d"]))
+    want = _expected_page_numbers()
+    assert set(subs) == set(want), set(subs) ^ set(want)
+    for key, value in want.items():
+        text = subs[key]
+        if isinstance(value, str):
+            assert text == value, (key, text, value)
+        elif isinstance(value, list):  # a list of biases: "a, b and c"
+            assert [_num(t) for t in text.replace(" and ", ", ").split(", ")] == value, key
+        elif "e" in text:
+            assert _shown(text.replace("−", "-"), value), (key, text, value)
+        else:  # a fixed-point bias or ratio at the digits shown
+            digits = len(text.split(".")[1]) if "." in text else 0
+            assert round(_num(text), digits) == round(value, digits), (key, text, value)
+            assert abs(_num(text) - value) <= 0.5 * 10**-digits + 1e-12, (key, text, value)
     pages = {p: (REPO_ROOT / "docs" / p).read_text("utf-8") for p in
              ("limitations/charon.md", "limitations/index.md", "limitations/status.md",
-              "roadmap.md")}  # fmt: skip
+              "roadmap.md", "index.md")}  # fmt: skip
     for key in subs:
         assert f"{{{{ {key} }}}}" in pages["limitations/charon.md"], key
-    for page in ("limitations/index.md", "limitations/status.md", "roadmap.md"):
+    for page in ("limitations/index.md", "limitations/status.md", "roadmap.md", "index.md"):
         for dev in ("nfet", "pfet"):
             assert f"{{{{ lim_charon_{dev}_devsim }}}}" in pages[page], (page, dev)
-    for old in ("3.0e-5", "5.4e-5", "1.1e-9", "8.2e-13", "2.6e-4", "2.1e-9", "1.3e-9"):
-        assert old not in pages["limitations/charon.md"], old
+    # no hand-typed copy: no substituted number (in its e-notation forms) is typed on the pages
+    settings = {"lim_charon_ref_tau", "lim_charon_tight"}  # deck settings, typed where named
+    typed = {t for k, t in subs.items() if "e-" in t and k not in settings}
+    typed |= {t.replace("e-", "e-0") for t in typed}
+    for page, text in pages.items():
+        prose = re.sub(r"\{\{[^}]*\}\}", "", text)
+        for t in typed:
+            assert not re.search(rf"(?<![\w.]){re.escape(t)}(?![\w])", prose), (page, t)
 
 
 def test_step_studies_are_recorded():
@@ -133,6 +253,7 @@ def test_step_studies_are_recorded():
         "study-nfet-tau15-secant-50mV",
         "study-nfet-default-1e-11",
         "study-pfet-start-1e-10",
+        "study-pfet-start-1e-10-rescue-off",
         "study-pfet-start-1e-10-5mV",
         "study-pfet-start-1e-10-tau16",
         "study-pfet-start-1e-11",
@@ -153,16 +274,23 @@ def test_backend_tolerance_is_b7_equivalent():
         ("cv-pfet-tau15-1e-9", "cv-pfet-tau15-1e-10"),
         ("cv-nfet-start-tau15-1e-9", "cv-nfet-start-tau15-1e-10"),
         ("cv-pfet-start-tau15-1e-9", "cv-pfet-start-tau15-1e-10-above-0.6"),
+        ("cv-pfet-start-tau15-1e-9", "cv-pfet-start-tau15-1e-10-from-minus-5"),
     }
     for name, ref in pairs:
         r, b = runs[name], runs[ref]
-        assert r["settings"]["CX_REL"] == "1e-9" and b["settings"]["CX_REL"] == "1e-10"
+        assert (r["settings"]["CX_REL"], r["settings"]["CX_ABS"]) == ("1e-9", "1e-11"), name
+        assert (b["settings"]["CX_REL"], b["settings"]["CX_ABS"]) == ("1e-10", "1e-12"), ref
         assert r["n"] == len(r["vg"]) and len(r["vg"]) == len(runs["cv-nfet-tau15-1e-10"]["vg"])
         common = [v for v in r["vg"] if v in b["vg"]]
         assert len(common) == b["n"], name
         rel = max(abs(r["c_ff_um2"][r["vg"].index(v)] / b["c_ff_um2"][b["vg"].index(v)] - 1)
                   for v in common)  # fmt: skip
         assert rel < 1e-8, (name, rel)
+    # the two pfet start reference runs cover the whole grid between them
+    covered = set(runs["cv-pfet-start-tau15-1e-10-above-0.6"]["vg"]) | set(
+        runs["cv-pfet-start-tau15-1e-10-from-minus-5"]["vg"]
+    )
+    assert covered == set(runs["cv-pfet-start-tau15-1e-9"]["vg"])
     studies = _record("hard-range")["step_studies"]
     stall = studies["study-pfet-start-1e-10"]["failed"]
     assert float(stall["failed_at"][0]) < min(runs["cv-pfet-start-tau15-1e-10-above-0.6"]["vg"])
