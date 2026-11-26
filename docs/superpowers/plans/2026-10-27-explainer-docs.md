@@ -186,6 +186,11 @@ These pages are grounded in the committed SPICE reference, which exists for ever
   the process-file note's "about 40 mV" is #96.
 - The page prints `constants.n_i300_cm3` with its two sources on the literature page (#97). It
   leaves out every fact without a checked source (#99).
+- #99, sourced parts: silicon's atom density (Ioffe archive, basic parameters) and the
+  resistivity against doping (Wikipedia "Electron mobility", the Caughey–Thomas majority-carrier
+  fit for 10¹⁸ cm⁻³ and up, and σ = q(nμ_n + pμ_p)) are textbook entries of
+  `data/explain/textbook.toml`, used on the silicon page with the `silicon-resistivity` figure.
+  The public GF180MCU PDK documents name no dopant species, so the page names none (#99 comment).
 - Glossary entries "gate oxide", "poly-silicon" and "n-well" land in E0 (planned for E1),
   because the first page uses them. The gate, the body, the source and the drain get one plain
   clause on the page instead: as glossary terms the link checkers would match every use of

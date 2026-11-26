@@ -122,6 +122,10 @@ This repo's calibration ({ref}`cv-agreement`) adjusts three parameters until the
 capacitance of the gate matches the {term}`SPICE` model's. The body doping is one of them. It
 starts at NDEP and ends at {{ x_n_ch_nfet_cal }}, this repo's committed value.
 
+Silicon holds {{ x_atom_density_si }} atoms, a textbook value
+({ref}`Ioffe archive, basic parameters <lit-ioffe-basic>`). At the calibrated body doping, one
+atom in {{ x_atoms_per_dopant_body }} is an acceptor, an idealised example of that ratio.
+
 The {term}`pfet_05v0` is the mirror image. Its body is the {term}`n-well`, with a calibrated
 donor density of {{ x_n_ch_pfet_cal }}
 ({repo}`per_area.meta.json <results/tcad/moscap1d/pfet_05v0/calibrated/per_area.meta.json>`).
@@ -149,6 +153,89 @@ In the nfet body the holes number {{ x_n_ch_nfet_cal }}. The mass-action law the
 {{ x_n_minority_nfet }} of electrons, an idealised example computed from the committed doping
 and $n_i$. Adding acceptors raises the holes and lowers the electrons by the same factor. In
 {numref}`fig-silicon-doping` the majority densities are solid and the minority ones dashed.
+
+(explained-conduction)=
+
+## How well doped silicon conducts
+
+The mobility μ of a carrier says how fast it drifts per unit of electric field. The
+resistivity of silicon whose majority carriers carry the current follows from it
+({ref}`Wikipedia, Electron mobility <lit-wikipedia-mobility>`):
+
+$$
+\rho = \frac{1}{q N \mu}
+$$ (eq-silicon-resistivity)
+
+where
+
+- $\rho$ is the resistivity, in Ω·cm;
+- $q$ is the elementary charge, in C;
+- $N$ is the majority carrier density, the doping, in cm⁻³;
+- $\mu$ is the majority carrier mobility, in cm²/(V·s).
+
+Mobility falls as the doping rises. The fit below gives the electron mobility of n-type
+silicon at room temperature, for {{ x_n_min_fit }} of donors and up
+({ref}`Wikipedia, Electron mobility <lit-wikipedia-mobility>`):
+
+$$
+\mu = \mu_0 + \frac{\mu_1}{1 + (N / N_{ref})^{\alpha}}
+$$ (eq-silicon-mobility)
+
+where
+
+- $\mu$ is the electron mobility, in cm²/(V·s);
+- $\mu_0$ is the fit's floor, {{ x_mu0_n_fit }} ({ref}`Wikipedia <lit-wikipedia-mobility>`), in cm²/(V·s);
+- $\mu_1$ is the fit's step, {{ x_mu1_n_fit }}, in cm²/(V·s);
+- $N$ is the donor density, in cm⁻³;
+- $N_{ref}$ is the fit's reference density, {{ x_nref_n_fit }}, in cm⁻³;
+- $\alpha$ is the fit's exponent, {{ x_alpha_n_fit }}, dimensionless.
+
+At the nfet source and drain peak, {{ x_sd_peak_nfet }} of donors, the idealised fit gives
+{{ x_mu_n_sd_nfet }}. The resistivity is then {{ x_rho_sd_nfet }}, an idealised example.
+
+Pure silicon has n = p = $n_i$, and both carriers conduct.
+{math:numref}`eq-silicon-intrinsic` gives its resistivity
+({ref}`Wikipedia, Electron mobility <lit-wikipedia-mobility>`).
+
+$$
+\rho_i = \frac{1}{q n_i (\mu_n + \mu_p)}
+$$ (eq-silicon-intrinsic)
+
+where
+
+- $\rho_i$ is the resistivity of pure silicon, in Ω·cm;
+- $q$ is the elementary charge, in C;
+- $n_i$ is the {term}`intrinsic carrier density`, in cm⁻³;
+- $\mu_n$ is the electron mobility, at most {{ x_mu_n_max_si }} ({ref}`Wikipedia <lit-wikipedia-mobility>`), in cm²/(V·s);
+- $\mu_p$ is the hole mobility, at most {{ x_mu_p_max_si }}, in cm²/(V·s).
+
+With the committed $n_i$ and those largest mobilities, pure silicon has at least
+{{ x_rho_intrinsic_min }}, an idealised example. The doped source and drain conduct far
+better, so the doping, not $n_i$, sets how well the silicon conducts.
+{numref}`fig-silicon-resistivity` draws both.
+
+```{figure} /_generated/explained/silicon-resistivity-light.svg
+:figclass: only-light
+:name: fig-silicon-resistivity
+:alt: Log-log plot of resistivity against donor density: a falling solid line from the lowest to the highest density, a dot at its end, and a flat dashed line far above it.
+
+The resistivity of n-type silicon against its donor density, from
+{math:numref}`eq-silicon-resistivity` and the mobility fit {math:numref}`eq-silicon-mobility`,
+over the fit's range (solid). The dot is the nfet source and drain peak. The dashed line is
+the smallest resistivity of pure silicon, {math:numref}`eq-silicon-intrinsic`. All are
+idealised examples.
+```
+
+```{figure} /_generated/explained/silicon-resistivity-dark.svg
+:figclass: only-dark
+:alt: Log-log plot of resistivity against donor density: a falling solid line from the lowest to the highest density, a dot at its end, and a flat dashed line far above it.
+
+The resistivity of n-type silicon against its donor density, from
+{math:numref}`eq-silicon-resistivity` and the mobility fit {math:numref}`eq-silicon-mobility`,
+over the fit's range (solid). The dot is the nfet source and drain peak. The dashed line is
+the smallest resistivity of pure silicon, {math:numref}`eq-silicon-intrinsic`. All are
+idealised examples.
+```
 
 (explained-silicon-differs)=
 
