@@ -37,11 +37,8 @@ there.
   Both Charon images are built and pinned, and no Charon job has run ({ref}`numerical-acceptance`,
   {ref}`charon-images`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
-- **Earlier comparisons.** A search ran on 2026-11-26. It found one {{ DEVSIM }}-versus-BSIM
-  comparison for an open {term}`PDK`: OpenTCAD's calibration of a device to the SkyWater SKY130 `nfet_01v8`
-  {term}`card <model card>`. It found no
-  {{ Charon }}-versus-BSIM comparison and no {term}`gf180mcu <GF180MCU>` TCAD paper
-  ({ref}`lit-search-bsim`).
+- **Related work.** OpenTCAD calibrates a {{ DEVSIM }} transistor to the SkyWater SKY130
+  `nfet_01v8` {term}`card <model card>`. The search that found it is in {ref}`lit-search-bsim`.
 
 The 2D cells against SPICE are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-validation>`. The crossing shift and plateau gap of every 2D cell are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-metrics>`.
 
