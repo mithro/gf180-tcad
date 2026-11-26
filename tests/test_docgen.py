@@ -40,6 +40,7 @@ EXPLAINED_FIGURES = [
     "bands-stack",
     "bands-flat",
     "parts-cell",
+    "parts-mesh",
     "junction-cell",
     "junction-panels",
     "moscap-cell",

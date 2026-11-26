@@ -124,7 +124,36 @@ Each part takes its voltage through a contact, drawn as a solid bar in {numref}`
 gate's sits on top, the source's and the drain's at the surface, and the body's underneath. The
 simulated cell has four contacts, gate, body, drain and source
 ({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`). The
-simulator solves for the cell on a mesh, a grid of {{ x_node_count_cell }} points.
+simulator solves for the cell on a mesh of {{ x_node_count_cell }} points.
+
+The points are the vertices of triangles that fill every part of the cell. The part of the mesh
+around the gate is drawn in {numref}`fig-parts-mesh`. The points are {{ x_h_si_surface_cell }}
+apart at the silicon surface
+({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`).
+The triangles grow larger away from the oxide, as the figure shows.
+
+```{figure} /_generated/explained/parts-mesh-light.svg
+:figclass: only-light
+:name: fig-parts-mesh
+:alt: The mesh of the cell around the gate: a blue gate on a thin oxide band, a yellow insulator on each side with a grey contact at lower outer corner, the orange body below, each filled with small triangles, finest at the oxide.
+
+The mesh of the 2D cell of {numref}`fig-parts-cell` around its gate, from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`
+({repo}`mesh-window.meta.json <results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p70/mesh-window.meta.json>`).
+It holds {{ x_node_count_window }} of the mesh's {{ x_node_count_cell }} points. Each triangle
+is filled in its part's colour. {{ x_fig_parts_mesh_scale }}
+```
+
+```{figure} /_generated/explained/parts-mesh-dark.svg
+:figclass: only-dark
+:alt: The mesh of the cell around the gate: a blue gate on a thin oxide band, a yellow insulator on each side with a grey contact at lower outer corner, the orange body below, each filled with small triangles, finest at the oxide.
+
+The mesh of the 2D cell of {numref}`fig-parts-cell` around its gate, from the cell's
+{ref}`reduced mesh artefact <moscap2d-mesh-artefact>`
+({repo}`mesh-window.meta.json <results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p70/mesh-window.meta.json>`).
+It holds {{ x_node_count_window }} of the mesh's {{ x_node_count_cell }} points. Each triangle
+is filled in its part's colour. {{ x_fig_parts_mesh_scale }}
+```
 
 (explained-parts-ldd)=
 

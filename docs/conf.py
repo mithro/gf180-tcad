@@ -276,6 +276,15 @@ if _clash := sorted(set(_limits) & set(myst_substitutions)):
     raise ValueError(f"limitations substitutions clash with the others: {_clash}")
 myst_substitutions.update(_limits)
 
+# The reproduce pages print the numbers beside their figures by substitution, {{ repro_<name> }},
+# from the records the figures draw (gf180tcad.reproduce_figures.substitutions).
+from gf180tcad import reproduce_figures as _reproduce  # after the sys.path line above
+
+_repro = _reproduce.substitutions()
+if _clash := sorted(set(_repro) & set(myst_substitutions)):
+    raise ValueError(f"reproduce substitutions clash with the others: {_clash}")
+myst_substitutions.update(_repro)
+
 _generated = Path(__file__).parent / "_generated"
 _lock_path = Path(__file__).parent / ".generated.lock"
 _lock_file = None

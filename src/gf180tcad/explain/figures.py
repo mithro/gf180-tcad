@@ -82,21 +82,28 @@ STYLE = {
     # The mesh figure of a reduced mesh artefact: each region filled in its Okabe-Ito colour at
     # this opacity, every mesh edge this thin (pt), the region boundaries at "edge_width". The
     # triangles are embedded as an image at this resolution (dots per inch), the rest as
-    # vectors. The figure's height follows the window's aspect (to scale), within these bounds
-    # (in), plus room for the axis labels and the legend.
+    # vectors. The axes' height follows the window's aspect (to scale), at most this tall
+    # (in); the figure adds the margins, the bottom one holding the axis labels and the legend.
     "mesh_regions": {
         "body": ("#E69F00", "body (silicon)"),
         "gate_poly": ("#56B4E9", "gate (polysilicon)"),
         "ild": ("#F0E442", "insulator around the gate"),
         "oxide": ("#CC79A7", "gate oxide"),
+        # every contact in one grey, under one legend entry
+        "body_contact": ("#999999", "contact"),
+        "drain_contact": ("#999999", "contact"),
+        "gate_contact": ("#999999", "contact"),
+        "source_contact": ("#999999", "contact"),
     },
     "mesh_alpha": 0.55,
     "mesh_edge_pt": 0.2,
     "mesh_dpi": 150,
-    "mesh_height_in": (1.2, 3.6),
-    "mesh_room_in": 1.3,
+    "mesh_axes_max_in": 3.6,
+    # The y-axis label's length (in): an axes shorter than it gets that much room, half above
+    # and half below, so the label is not cut.
+    "mesh_ylabel_in": 1.0,
     # The axes' margins (in): fixed, so the figure is drawn once (no layout pass over the mesh).
-    "mesh_margin_in": {"left": 0.9, "right": 0.2, "bottom": 1.05, "top": 0.15},
+    "mesh_margin_in": {"left": 0.9, "right": 0.2, "bottom": 1.35, "top": 0.15},
     # The junction panels: positions from (1 + pad) widths into the body to pad widths into the
     # source, on this many points; the charge axis spans the dopings with headroom.
     "junction_pad": 0.25,
@@ -794,15 +801,20 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
     xy = win.nodes_cm * meshcut.UM_PER_MSH_UNIT
     (x0, x1), (y0, y1) = win.x_um, win.y_um
     width = STYLE["size_in"][0]
-    low, high = STYLE["mesh_height_in"]
-    height = min(max(width * (y1 - y0) / (x1 - x0), low), high) + STYLE["mesh_room_in"]
+    m = STYLE["mesh_margin_in"]
+    # the axes' height at full width, to scale, so no band is left above or below them
+    axes_h = min(
+        (width - m["left"] - m["right"]) * (y1 - y0) / (x1 - x0), STYLE["mesh_axes_max_in"]
+    )
+    extra = max(STYLE["mesh_ylabel_in"] - axes_h, 0.0) / 2
+    top, bottom = m["top"] + extra, m["bottom"] + extra
+    height = axes_h + top + bottom
     colours = {name: STYLE["mesh_regions"].get(name, (pal["muted"], name)) for name in win.regions}
     with matplotlib.rc_context(palette_rc(palette)):
         fig = Figure(figsize=(width, height))
         FigureCanvasAgg(fig)
-        m = STYLE["mesh_margin_in"]
         fig.subplots_adjust(left=m["left"] / width, right=1 - m["right"] / width,
-                            bottom=m["bottom"] / height, top=1 - m["top"] / height)  # fmt: skip
+                            bottom=bottom / height, top=1 - top / height)  # fmt: skip
         ax = fig.add_subplot()
         # one RGBA row per region, the opacity in it, indexed by each triangle's region
         rgba = np.array([to_rgba(colours[n][0], STYLE["mesh_alpha"]) for n in win.regions])
@@ -830,8 +842,10 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
         ax.set_xlabel("position across the cell (µm)")
         ax.set_ylabel("height (µm)")
         present = sorted({win.regions[r] for r in np.unique(win.region)})
-        keys = [Patch(facecolor=colours[n][0], alpha=STYLE["mesh_alpha"], label=colours[n][1])
-                for n in present]  # fmt: skip
+        # one legend entry per label (the contacts share one), in the regions' alphabetical order
+        labels = dict.fromkeys(colours[n] for n in present)
+        keys = [Patch(facecolor=colour, alpha=STYLE["mesh_alpha"], label=label)
+                for colour, label in labels]  # fmt: skip
         fig.legend(handles=keys, loc="lower center", ncols=2, frameon=False)
         buf = BytesIO()
         fig.savefig(buf, format="svg", metadata=plots.METADATA, dpi=STYLE["mesh_dpi"])
@@ -841,6 +855,14 @@ def mesh_artefact(artefact_dir: Path, palette: str) -> bytes:
 def _parts_cell(palette: str) -> bytes:
     c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p70", scales=STYLE["scales"])
     return cross_section(c, (), palette)
+
+
+# The parts page's cell's reduced mesh artefact (transistor-parts.md, "The contacts").
+_PARTS_MESH = (numbers.ROOT / numbers._CELL_MESH).parent
+
+
+def _parts_mesh(palette: str) -> bytes:
+    return mesh_artefact(_PARTS_MESH, palette)
 
 
 def _mesh_window(palette: str) -> bytes:
@@ -2243,6 +2265,7 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
     "bands-stack": _bands_stack,
     "bands-flat": _bands_flat,
     "parts-cell": _parts_cell,
+    "parts-mesh": _parts_mesh,
     "junction-cell": _junction_cell,
     "junction-panels": junction_panels,
     "moscap-cell": _moscap_cell,
@@ -2276,6 +2299,8 @@ FIGURES: dict[str, Callable[[str], bytes]] = {
 # widths of every cell come from its artefact, so no other cell names any); the plots of computed
 # curves and the drawings of the crystal (not drawings of the device) carry no statement.
 _DRAWN = {"ldd-cell": STYLE["ldd_drawn_um"]}
+# The drawings of a committed mesh: its node coordinates, so drawn to scale.
+_TO_SCALE = ("parts-mesh",)
 _PLOTS = (
     "bands-flat",
     "junction-panels",
@@ -2306,6 +2331,8 @@ def _statement(name: str) -> str:
     and chooses its sizes for the drawing; the others use the layer scale factors."""
     if name == "corner-area":
         return model.exaggeration({}, STYLE["area_drawn"])
+    if name in _TO_SCALE:
+        return model.exaggeration({})
     return model.exaggeration(STYLE["scales"], _DRAWN.get(name))
 
 

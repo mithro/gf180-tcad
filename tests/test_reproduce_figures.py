@@ -4,6 +4,7 @@ twins, drawn from the committed files, each embedded as a pair and cited on its 
 expected values are read here from the committed files, never from the pages' prose."""
 
 import ast
+import hashlib
 import json
 import os
 import re
@@ -41,6 +42,7 @@ SRC = REPO_ROOT / "src" / "gf180tcad" / "reproduce_figures.py"
 FIGURES = [
     "image-forks",
     "meshwell-square",
+    "cell-mesh",
     "results-images",
     "reproduce-targets",
     "reference-jobs",
@@ -606,6 +608,130 @@ def check_meshwell_square(fig):
     assert record["stable"]["triangles"] != record["dev"]["triangles"]
 
 
+def _check_cell_mesh_record(record):
+    """The record's comparison and per-image fields against what they must agree with: the
+    full meshes' counts, the moved pairs, the tool's own bytes, the stable job's committed
+    reduced artefact and each image's probed gmsh version (docker/tcad*/versions.json)."""
+    cmp, images = record["comparison"], record["images"]
+    assert cmp["node_count"] == images["stable"]["full_mesh_node_count"]
+    assert cmp["node_count"] == images["dev"]["full_mesh_node_count"]
+    assert images["stable"]["full_mesh_triangle_count"] == images["dev"]["full_mesh_triangle_count"]
+    artefact = json.loads(
+        (REPO_ROOT / "results" / "tcad" / "meshes" / "stable" / "nfet_05v0" / "calibrated"
+         / "w10p0_l0p70" / "mesh-window.meta.json").read_text("utf-8")
+    )  # fmt: skip
+    assert artefact["full_mesh_sha256"] == images["stable"]["full_mesh_sha256"]
+    assert artefact["full_mesh_triangle_count"] == images["stable"]["full_mesh_triangle_count"]
+    assert 0 <= cmp["same_number"] <= cmp["node_count"]
+    tool = REPO_ROOT / "tools" / "gmsh-cell-mesh"
+    assert record["tool_sha256"] == hashlib.sha256(tool.read_bytes()).hexdigest()
+    # the repository code the probe ran through (gf180tcad and the gplugins submodule, which the
+    # sandbox mounts): the same in both images, and unchanged since
+    modules = images["stable"]["modules"]
+    assert modules == images["dev"]["modules"]
+    for rel in ("src/gf180tcad/meshcut/window.py", "src/gf180tcad/tcad/moscap2d.py",
+                "src/gf180tcad/tcad/stack.py", "src/gf180tcad/tcad/mesh.py",
+                "third_party/gplugins/gplugins/devsim/get_simulation.py"):  # fmt: skip
+        assert rel in modules, rel
+    for rel, sha in modules.items():
+        assert hashlib.sha256((REPO_ROOT / rel).read_bytes()).hexdigest() == sha, rel
+    pairs = np.array(cmp["moved"], dtype=float)  # (n, 2 images, 2 coordinates)
+    a, b = pairs[:, 0], pairs[:, 1]
+    assert np.all(np.any(a != b, axis=1)), "a moved pair that does not move"
+    # rounding: each coordinate within two units in the last place of the stable value
+    assert np.all(np.abs(a - b) <= 2 * np.spacing(np.abs(a))), "a move larger than rounding"
+    rel = np.abs(a - b) / np.maximum(np.abs(a), np.finfo(float).tiny)
+    assert cmp["largest_relative_move"] == float(rel.max())
+    assert images["stable"]["full_mesh_sha256"] != images["dev"]["full_mesh_sha256"]
+    for key, sub in (("stable", "tcad"), ("dev", "tcad-dev")):
+        versions = json.loads((REPO_ROOT / "docker" / sub / "versions.json").read_text("utf-8"))
+        assert images[key]["gmsh"] == ".".join(versions["gmsh"].split(".")[:3]), key
+
+
+def check_cell_mesh(fig):
+    """Each panel draws its image's box from data/images/cell-mesh/: every triangle's edges in
+    nm, every point at its place with its number, the points the other image places
+    differently ringed, the limits round the points and the image's gmsh version; the title
+    gives the record's comparison of the two full meshes. The record names the committed 2D
+    job and its mesh, the stable image's mesh is that mesh, and the box holds a moved point."""
+    from gf180tcad.meshcut import UM_PER_MSH_UNIT
+    from gf180tcad.meshcut.npz import read_npz
+
+    nm_per_um = 1e3
+    nm = UM_PER_MSH_UNIT * nm_per_um  # nm per mesh-file unit (cm)
+
+    root = REPO_ROOT / "data" / "images" / "cell-mesh"
+    record = json.loads((root / "record.json").read_text("utf-8"))
+    cv_meta_path = REPO_ROOT / record["job"] / "cv.meta.json"
+    cv_meta = json.loads(cv_meta_path.read_bytes())
+    assert record["cv_meta_sha256"] == hashlib.sha256(cv_meta_path.read_bytes()).hexdigest()
+    assert record["mesh_sha256"] == cv_meta["mesh_sha256"]
+    assert record["images"]["stable"]["full_mesh_sha256"] == cv_meta["mesh_sha256"]
+    assert record["images"]["stable"]["full_mesh_node_count"] == cv_meta["node_count"]
+    cmp = record["comparison"]
+    names = {"stable": "stable image", "dev": "dev-HEAD image"}
+    pins = {"stable": "TCAD_IMAGE", "dev": "TCAD_DEV_IMAGE"}
+    assert set(record["images"]) == set(names)
+    assert len(fig.axes) == len(names)
+    want = {}
+    for side, (ax, (key, name)) in enumerate(zip(fig.axes, names.items(), strict=True)):
+        entry = record["images"][key]
+        assert entry["image"] == (REPO_ROOT / "docker" / pins[key]).read_text("utf-8").strip()
+        path = root / f"{key}.npz"
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == entry["box_npz_sha256"]
+        box = read_npz(path)
+        assert len(box["triangles"]) == entry["box_triangle_count"]
+        assert len(box["node_id"]) == entry["box_node_count"]
+        xy = box["nodes_cm"] * nm
+        lines = {ln.get_gid(): ln for ln in ax.get_lines()}
+        assert set(lines) == {f"{key} triangles"}
+        ln = lines[f"{key} triangles"]
+        got_x, got_y = np.asarray(ln.get_xdata()), np.asarray(ln.get_ydata())
+        k = 0
+        for t in box["triangles"]:
+            for x, y in [*xy[t], xy[t[0]]]:
+                assert got_x[k] == x and got_y[k] == y, (key, k)
+                k += 1
+            assert np.isnan(got_x[k]) and np.isnan(got_y[k]), (key, k)
+            k += 1
+        assert k == len(got_x) == len(got_y), key
+        # the moved points of this image inside its box: ringed, and at least one
+        pts = np.array([pair[side] for pair in cmp["moved"]]) * nm
+        (bx0, bx1) = np.array(entry["box_x_um"]) * nm_per_um
+        (by0, by1) = np.array(entry["box_y_um"]) * nm_per_um
+        inside = pts[
+            (pts[:, 0] >= bx0) & (pts[:, 0] <= bx1) & (pts[:, 1] >= by0) & (pts[:, 1] <= by1)
+        ]
+        assert len(inside) >= 1, key
+        (ring,) = [c for c in ax.collections if c.get_gid() == f"{key} moved"]
+        assert np.array_equal(ring.get_offsets(), inside), key
+        for t in ax.texts:
+            number = int(t.get_gid().removeprefix(f"{key} point "))
+            (i,) = np.flatnonzero(box["node_id"] == number)
+            assert tuple(t.get_position()) == tuple(xy[i]), (key, number)
+        want |= {f"{key} point {n}": f"{n}" for n in box["node_id"]}
+        assert ax.get_title() == f"{name},\ngmsh {entry['gmsh']}"
+        (x0, y0), (x1, y1) = xy.min(axis=0), xy.max(axis=0)
+        pad = rf.STYLE["cell_margin"] * max(x1 - x0, y1 - y0)
+        assert ax.get_xlim() == (x0 - pad, x1 + pad), key
+        assert ax.get_ylim() == (y0 - pad, y1 + pad), key
+        assert ax.get_xlabel() == "position across the cell (nm)"
+    assert_texts(fig, want)
+    assert fig.axes[0].get_ylabel() == "height (nm)"
+    (legend,) = fig.legends
+    assert [t.get_text() for t in legend.get_texts()] == [rf.CELL_RING_LABEL]
+    assert rf.CELL_RING_LABEL == "a point the other image places differently (rounding)"
+    _check_cell_mesh_record(record)
+    assert fig.axes[1].get_ylabel() == ""
+    assert cmp["same_triangles"] is True
+    same = "the same triangles"
+    assert fig.get_suptitle() == (
+        f"Full meshes: {same};\n{cmp['same_number']} of {cmp['node_count']} points keep their "
+        f"number;\n{len(cmp['moved'])} points differ, by at most "
+        f"{cmp['largest_relative_move']:.2g} of a coordinate"
+    )
+
+
 def check_results_images(fig):
     from gf180tcad.tcad import RESULTS_IMAGE
 
@@ -625,6 +751,7 @@ def check_results_images(fig):
 CHECKS = {
     "image-forks": check_forks,
     "meshwell-square": check_meshwell_square,
+    "cell-mesh": check_cell_mesh,
     "results-images": check_results_images,
     "reproduce-targets": check_reproduce_targets,
     "reference-jobs": check_reference_jobs,
@@ -826,6 +953,7 @@ _PLOTS = (
     "render-exaggeration",
     "render-band-offsets",
     "meshwell-square",
+    "cell-mesh",
     "display-dos-masses",
     "display-silicon-gap",
     "display-oxide-sources",

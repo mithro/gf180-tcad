@@ -84,6 +84,8 @@ _RHO = "Ω·cm"
 _CAP = "fF/µm²"
 _RESULT = "results/tcad/calibration/nfet_05v0.result.json"
 _CELL = "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json"
+# The same cell's reduced mesh artefact (figures._PARTS_MESH), drawn in fig-parts-mesh.
+_CELL_MESH = "results/tcad/meshes/stable/nfet_05v0/calibrated/w10p0_l0p70/mesh-window.meta.json"
 _SPICE_L10 = "results/spice/ngspice/typical/nfet_05v0/w10p0_l10p00/metrics.json"
 _L10 = ("per_geometry", "w10p0_l10p00")
 _ENTRIES = (
@@ -182,6 +184,8 @@ _ENTRIES = (
     Number("w_cell", "committed", "µm", 2, _CELL, {"json": ["geometry", "w_um"]}),
     Number("t_ox_cell", "committed", "nm", 4, _CELL, {"json": ["meshed_t_ox_nm"]}),
     Number("node_count_cell", "committed", "", 3, _CELL, {"json": ["node_count"]}),
+    Number("node_count_window", "committed", "", 3, _CELL_MESH, {"json": ["node_count"]}),
+    Number("h_si_surface_cell", "committed", "nm", 2, _CELL, {"json": ["mesh", "h_si_surface_nm"]}),
     # F/m on the card; the page prints fF/µm (1e15 fF/F over 1e6 µm/m).
     Number("cgdl_nfet", "committed", "fF/µm", 2, _proc("nfet_05v0"), {"toml": ["param", "cgdl_f_per_m", "value"]}, factor=1e9),
     # The MOS capacitor (mos-capacitor.md): the SPICE model and the calibration at w10p0_l10p00.
