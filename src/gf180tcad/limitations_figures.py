@@ -1440,11 +1440,14 @@ def charon_strip_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         return fig
 
 
-#: The record keys the page's numbers come from: the reference hard-range variant, the B7 study
-#: of a ten times tighter tolerance, and the pair of runs ten times apart in tolerance with the
-#: default lifetime.
+#: The reference variant of ``hard-range.json``: the project's lifetimes at the reference
+#: tolerance; the page gives the bias where it stops and its residual there.
 CHARON_REF_VARIANT = "ref_1e-10"
+#: The B7 step study of a ten times tighter WRMS tolerance (``hard-range.json``,
+#: ``step_studies``).
 CHARON_TIGHT_STUDY = "study-nfet-default-1e-11"
+#: The two ``cv.json`` runs with the project's lifetimes ten times apart in tolerance (looser,
+#: reference), compared for B7.
 CHARON_LOOSE_PAIR = ("cv-nfet-default-1e-8", "cv-nfet-default-1e-10")
 
 

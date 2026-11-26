@@ -155,7 +155,7 @@ Solves started on the inversion side fail too, at {{ lim_charon_inv_biases }} V.
 Three experiments use structures other than the strip of {numref}`fig-charon-strip`, all drawn in
 {numref}`fig-charon-structures`. The parallel plate is the strip's oxide alone between two
 contacts, `top` and `bottom`. The metal-gate stack is its oxide and body with a work-function gate on the oxide. The
-2D mesh is a gmsh triangle mesh of the uniform stack.
+2D mesh is a {{ gmsh }} triangle mesh of the uniform stack.
 
 ```{figure} /_generated/limitations/charon-structures-light.svg
 :name: fig-charon-structures
