@@ -121,10 +121,10 @@ LEVEL_NAME = "level.json"
 AGREEMENT_NAME = "agreement.json"
 PROGRESS_NAME = "progress.log"
 
-# A 2D sweep restarts itself in a fresh process when its memory passes the budget
-# (gf180tcad.tcad.jobmem, issue #233); the environment variable counts the restarts of a job, and
-# MAX_RESTARTS caps them (201 QS points at one restart per 30 points need 7).
+#: The environment variable that counts a 2D job's restarts: a sweep restarts itself in a fresh
+#: process when its memory passes the budget (:mod:`gf180tcad.tcad.jobmem`, issue #233).
 RESTARTS_ENV = "GF180TCAD_SWEEP_RESTARTS"
+#: The most restarts of one job; each restart follows at least one new saved point.
 MAX_RESTARTS = 50
 
 # The steps of a 2D moscap job (run_job_2d): both sweeps and the job files in one job, one sweep

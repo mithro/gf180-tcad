@@ -9,9 +9,10 @@ saved point (:func:`gf180tcad.tcad.moscap2d.simulate` with ``state_dir``):
 - it hands the heap's free pages back with glibc's ``malloc_trim(0)`` and reports how much that
   freed, which tells heap fragmentation (freed) from memory still in use (not freed);
 - it reports the resident memory (VmRSS) and the container's memory limit;
-- once the resident memory passes :data:`~gf180tcad.tcad.jobmem.BUDGET_FRACTION` of the limit, and has grown by at
-  least :data:`~gf180tcad.tcad.jobmem.GROWTH_FRACTION` of the limit since this process's first point, it raises
-  :class:`BudgetReached`, and the job restarts itself in a fresh process
+- once the resident memory passes :data:`~gf180tcad.tcad.jobmem.BUDGET_FRACTION` of the
+  limit, and has grown by :data:`~gf180tcad.tcad.jobmem.GROWTH_FRACTION` of the limit since
+  this process's first point, it raises :class:`BudgetReached`, and the job restarts itself
+  in a fresh process
   (:func:`gf180tcad.tcad.__main__.run_job_2d`), which resumes at the next point.
 
 The point is saved before the check, so a restart repeats no work but the mesh and equilibrium.
@@ -25,11 +26,12 @@ import ctypes
 import ctypes.util
 from pathlib import Path
 
-# Restart once the resident memory passes this fraction of the container's memory limit. A
-# 16 GiB job then restarts near 12 GiB, which leaves room for one more point's growth and the
-# solver's transient memory.
+#: Restart once the resident memory passes this fraction of the container's memory limit. A
+#: 16 GiB job then restarts near 12 GiB, which leaves room for one more point's growth and the
+#: solver's transient memory.
 BUDGET_FRACTION = 0.75
-# ... and only when it has grown by this fraction of the limit since the process's first point.
+#: Restart only when the resident memory has grown by this fraction of the limit since the
+#: process's first point.
 GROWTH_FRACTION = 0.2
 
 # The resident memory after the first point this process ran (set by after_point).
@@ -37,11 +39,12 @@ _first_rss: int | None = None
 
 _MIB = 1024 * 1024
 
-# The cgroup v2 and v1 files that hold the memory limit of the container the job runs in.
+#: The cgroup v2 and v1 files that hold the memory limit of the container the job runs in.
 CGROUP_LIMIT_FILES = (
     Path("/sys/fs/cgroup/memory.max"),
     Path("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
 )
+#: The file whose ``VmRSS`` line is the process's resident memory.
 STATUS_FILE = Path("/proc/self/status")
 
 # A cgroup v1 "no limit" reads as a huge number (PAGE_COUNTER_MAX pages); treat anything above
@@ -108,7 +111,8 @@ def trim() -> int:
 
 def over_budget(rss: int, first_rss: int, limit: int | None) -> bool:
     """Whether a job at resident memory ``rss`` (``first_rss`` after its first point) should
-    restart: above :data:`~gf180tcad.tcad.jobmem.BUDGET_FRACTION` of ``limit`` and grown by :data:`~gf180tcad.tcad.jobmem.GROWTH_FRACTION`."""
+    restart: above :data:`~gf180tcad.tcad.jobmem.BUDGET_FRACTION` of ``limit`` and grown
+    by :data:`~gf180tcad.tcad.jobmem.GROWTH_FRACTION` of it."""
     if limit is None:
         return False
     return rss > BUDGET_FRACTION * limit and rss - first_rss >= GROWTH_FRACTION * limit
