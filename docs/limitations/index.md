@@ -22,7 +22,7 @@ there.
   ({ref}`mismatch analysis <cv-agreement-mismatch>`).
 - **2D validation: {term}`Disagree` at four cells,** nfet W10/L0.6, W10/L0.7 and W1.6/L0.7, pfet W10/L2.
   All four fail on the 2D-only depletion shift ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
-  A fitted poly length bias supplies the edge capacitance; its miss at each plateau is the card's bias-dependent overlap ({ref}`moscap2d-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
+  A fitted poly length bias supplies the edge capacitance ({ref}`moscap2d-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
   The L = 2 µm AC solve and the L = 10 µm equilibrium solve fail
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59), [issue #58](https://github.com/mithro/gf180-tcad/issues/58);
   {ref}`cv-agreement-validation`, {doc}`moscap2d`).
