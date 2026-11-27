@@ -2360,7 +2360,11 @@ def charon_newton_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                 zoom.plot(f["iteration"][-window:], f["wrms"][-window:], color=colour[c["device"]],
                           lw=lw, ls="-" if c["tau"] else "--", marker=STYLE["newton_markers"][i],
                           ms=STYLE["small_marker_pt"], mfc="none", gid=f"plateau {name}")  # fmt: skip
-        for ax, ylabel in zip((wr_it, zoom, cond_it), CHARON_NEWTON_PANELS[:3], strict=True):
+        for ax, ylabel in zip(
+            (wr_it, zoom, cond_it),
+            CHARON_NEWTON_PANELS[: len(CHARON_NEWTON_PANELS) // 2],
+            strict=True,
+        ):
             ax.set_ylabel(ylabel)
             ax.grid(True)
         wr_it.set_yscale("log")
@@ -2391,7 +2395,9 @@ def charon_newton_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
                  f"condition number of D⁻¹J, {words}")  # fmt: skip
         cond.axvline(1 / np.finfo(np.float64).eps, color=pal["text"], lw=lw, ls="-.",
                      label="inverse of eps", gid="inverse eps")  # fmt: skip
-        for ax, title in zip((wr, res, cond), CHARON_NEWTON_PANELS[3:], strict=True):
+        for ax, title in zip(
+            (wr, res, cond), CHARON_NEWTON_PANELS[len(CHARON_NEWTON_PANELS) // 2 :], strict=True
+        ):
             ax.set_xscale("log")
             ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
             ax.set_yticks(y, [cases[n]["label"] for n in names], fontsize=small)
