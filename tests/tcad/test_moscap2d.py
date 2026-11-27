@@ -20,7 +20,7 @@ import pytest
 from gf180tcad import io, sandbox
 from gf180tcad.devices import DEVICES as SPICE_DEVICES
 from gf180tcad.devices import geometry_id
-from gf180tcad.tcad import TCAD_IMAGE, meshconv, moscap2d, process, stack
+from gf180tcad.tcad import TCAD_IMAGE, meshconv, moscap1d, moscap2d, process, stack
 from gf180tcad.tcad import __main__ as cli
 from gf180tcad.tcad.mesh import MeshSpec
 
@@ -549,3 +549,44 @@ def test_split_and_resumed_jobs_are_byte_identical(tmp_path):
         assert math.isclose(a, b, rel_tol=1e-12), (a, b)
     for a, b in zip(gx["cgg_per_um"], mono["ac"]["cgg"], strict=True):
         assert math.isclose(a, b, rel_tol=1e-8), (a, b)
+
+
+@pytest.mark.sandbox
+def test_sweep_restarts_at_the_memory_budget(tmp_path):
+    """A 2D sweep over its memory budget restarts in a fresh process and resumes (issue #233).
+
+    tests/tcad/moscap2d_split_driver.py ``both-restart`` runs the production ``--method both``
+    job with the budget at 0 (:data:`gf180tcad.tcad.jobmem.BUDGET_FRACTION`), so each sweep
+    execs a fresh process after every point but its last. The job finishes; every restart is a
+    resume in ``resumes.jsonl`` and the meta's ``resumed``; the mesh is byte-identical to the
+    uninterrupted job's; QS and AC agree with it within the solver's relative tolerance
+    (:data:`gf180tcad.tcad.moscap1d.REL_TOL`; a resumed QS point moves above round-off, #234).
+    """
+    out = tmp_path / "out"
+    out.mkdir()
+    for name, sub in (("both", "both"), ("both-restart", "restart")):  # one 2 GiB job at a time
+        sandbox.run(
+            ["python3", "/work/src/tests/tcad/moscap2d_split_driver.py", name, sub],
+            out_dir=out, image=TCAD_IMAGE, mem="2g", cpus=1,
+        )  # fmt: skip
+    restarts = {"qs": 4, "ac": 2}  # 5 QS and 3 AC points: a restart after each but the last
+    for m, n in restarts.items():
+        kept = (out / "restart" / f"state_{m}" / moscap2d.STATE_RESUMES).read_text().splitlines()
+        assert [json.loads(x)["kept"] for x in kept] == list(range(1, n + 1)), m
+        log = (out / "restart" / f"progress_{m}.log").read_text(encoding="utf-8")
+        assert [ln.split("restart ")[1].split()[0] for ln in log.splitlines()
+                if " restart " in ln] == [str(k) for k in range(1, n + 1)], m  # fmt: skip
+        assert log.count("memory after point") == n + 1, m
+    meta = json.loads((out / "restart" / moscap2d.META_JSON).read_bytes())
+    assert meta["resumed"] == restarts
+    ref = out / "both"
+    mesh = moscap2d.MESH_FILE
+    assert (out / "restart" / mesh).read_bytes() == (ref / mesh).read_bytes()
+    for name, keys in ((moscap2d.CV_CSV, ("c_per_area", "cgg_per_um")),
+                       (moscap2d.CGX_CSV, ("cgg_per_um",))):  # fmt: skip
+        a, _ = io.read_csv(ref / name)
+        b, _ = io.read_csv(out / "restart" / name)
+        assert list(a["vg"]) == list(b["vg"]), name
+        for k in keys:
+            for x, y in zip(a[k], b[k], strict=True):
+                assert math.isclose(x, y, rel_tol=moscap1d.REL_TOL), (name, k, x, y)

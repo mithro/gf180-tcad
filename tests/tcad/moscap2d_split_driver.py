@@ -9,6 +9,11 @@ the 2D job of the nfet Lmin cell (with S/D) on a small case: the start values, a
   method (the production code path);
 - ``qs-interrupt`` / ``ac-interrupt``: that sweep, stopped by an exception after its 2nd point
   (:data:`gf180tcad.tcad.moscap2d.AFTER_POINT`), as a cut-off job would be;
+- ``both-restart``, ``qs-restart``, ``ac-restart``: that method with the memory budget at 0
+  (:data:`gf180tcad.tcad.jobmem.BUDGET_FRACTION`, :data:`~gf180tcad.tcad.jobmem.GROWTH_FRACTION`),
+  so each sweep restarts in a fresh process after every point but its last; the restart runs
+  this driver's ``qs-restart`` / ``ac-restart`` (:data:`gf180tcad.tcad.__main__.RESTART_ARGV`),
+  which sets the small case up again;
 - ``mono``: the QS and AC sweeps in one ``sweep_cv`` call each (no per-point state), written to
   ``mono.json`` for the comparison with the per-point sweeps.
 """
@@ -18,7 +23,7 @@ import sys
 from pathlib import Path
 
 from gf180tcad.tcad import __main__ as cli
-from gf180tcad.tcad import meshconv, moscap2d, process
+from gf180tcad.tcad import jobmem, meshconv, moscap2d, process
 
 DEVICE, GID = "nfet_05v0", "w10p0_l0p60"
 SPEC = meshconv.START[2].scaled(2.0, refine_grading=True)
@@ -37,6 +42,11 @@ class Interrupt(RuntimeError):
 def main(step: str, sub: str) -> None:
     out = Path("/work/out") / sub
     out.mkdir(parents=True, exist_ok=True)
+    if step.endswith("-restart"):
+        jobmem.BUDGET_FRACTION = jobmem.GROWTH_FRACTION = 0.0
+        cli.RESTART_ARGV = lambda argv, m: [sys.executable, __file__, f"{m}-restart", sub]
+        cli.run_job_2d(DEVICE, "start", GID, out, method=step.split("-")[0])
+        return
     if step.endswith("-interrupt"):
         seen = []
 
