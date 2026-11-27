@@ -67,9 +67,9 @@ The checks come from two blocks of the v0.8.0 source:
   core, 90 nm slab), [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L385), then [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_simulation_xsection.py#L420).
 - **PN slab** ({numref}`fig-plugin-history-pn`). The [`__main__`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L412-L524) block of [`get_solver.py`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py): a trimmed [`straight_pn`](https://github.com/gdsfactory/gdsfactory/blob/v7.6.1/gdsfactory/components/straight_pin.py#L90) as a [`DDComponent`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L43), [`ddsolver()`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L204) and
   [`get_refined_mesh`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L328).
-- **The block solves only at equilibrium: it never calls `ramp_voltage`**. The PN-slab
-  ramp to 0.1 and 0.2 V is an addition of this record. It uses [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L243-L245)'s default contact,
-  `cathode` (the contact on the p⁺⁺ side, so the bias is forward).
+  - **The block solves only at equilibrium: it never calls `ramp_voltage`**. The PN-slab
+    ramp to 0.1 and 0.2 V is an addition of this record. It uses [`ramp_voltage`](https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L243-L245)'s default contact,
+    `cathode` (the contact on the p⁺⁺ side, so the bias is forward).
 
 The checks, and what each one runs:
 
@@ -437,8 +437,9 @@ leading hypothesis, and the junction probe confirms it:
 - **The Potential is discontinuous at the rib's bottom vertices**, by 0.46 V at equilibrium (0.73 V at
   mesh × 0.5). The jump grows by the applied bias, because only the slab moves.
 - **The rib's absolute Potential depends on the mesh**, because nothing fixes it. The value
-  ψ(x_j) is −0.47002 V at full mesh and −0.67054 V at × 0.5. This explains the non-physical Potential
-  span. It is the anode contact potential (+0.4793 V, the slab's maximum) minus the floating
+  ψ(x_j) is −0.47002 V at full mesh and −0.67054 V at × 0.5.
+- **The mesh-dependent rib Potential explains the non-physical Potential
+  span**. The span is the anode contact potential (+0.4793 V, the slab's maximum) minus the floating
   rib's minimum. That gives 0.4793 + 0.8820 = 1.3613 V and 0.4793 + 1.1474 = 1.6267 V
   ({test}`tests/test_plugin_history.py::test_committed_v080_junction_probe`).
 
@@ -755,7 +756,7 @@ uses every interface. The "as ported" rows are also those of
 - **The floating rib's absolute Potential** differs from v0.8.0's, because only the initial guess and
   the mesh set it. So only differences inside the rib are compared.
 - **As ported, the bias reaches the junction.** The drop falls by exactly the applied 0.1 V per
-  step (asserted within 1e-3 V). The values are 0.8345 → 0.7345 → 0.6345 V. The two regions agree at the
+  step. The values are 0.8345 → 0.7345 → 0.6345 V (asserted within 1e-3 V). The two regions agree at the
   bottom vertices (jump below 1e-6 V).
 - **The forward current is conserved and grows like a diode's.** Anode = −cathode within 1e-6
   relative. The current grows from 9.7e-15 to 1.0e-13 A/cm between 0.1 and 0.2 V.

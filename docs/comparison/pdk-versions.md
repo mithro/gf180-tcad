@@ -3,8 +3,8 @@
 # PDK versions: runs 1 and 2 vs the latest
 
 The design spec ({repo}`docs/superpowers/specs/2026-10-18-gf180-tcad-design.md`, §4) names
-the {term}`GF180MCU` {term}`PDK` of {{ wafer_space }} runs 1 and 2. That is
-{{ open_pdks }} commit [`d658698bd8bc`](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c) ([1.0.604](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c)).
+{{ open_pdks }} commit [`d658698bd8bc`](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c) as the {term}`GF180MCU` {term}`PDK` of {{ wafer_space }} runs 1 and 2.
+That commit is release [1.0.604](https://github.com/fossi-foundation/open-pdks/commit/d658698bd8bcf4e05fc7b5991a701247ba0d744c).
 The spec asks for it to be compared with the latest.
 
 The {term}`SPICE reference <SPICE reference results>` ({repo}`results/spice`) uses the latest PDK, the one

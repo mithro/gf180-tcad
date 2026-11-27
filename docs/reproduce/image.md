@@ -80,7 +80,7 @@ on it.
 
 This is the {term}`stable TCAD image`, with the latest PyPI releases of the TCAD stack. The
 {term}`dev-HEAD TCAD image` ({ref}`tcad-dev-image`) has the same structure with each project at its
-upstream development HEAD. It is the stack of the final results. This one is the baseline
+upstream development HEAD. It is the stack of the final results. This stable image is the baseline
 for how things used to work and for debugging.
 
 It adds a {{ uv }}-managed {{ Python }} 3.13 and a venv at `/opt/gf180tcad-tcad`,
@@ -98,15 +98,15 @@ download against the sha256 it embeds for that version). The venv holds {{ DEVSI
   the base value (`gf180mcuD`, the {{ open_pdks }} variant) would break it. The open_pdks files
   are still read from `$PDK_ROOT/gf180mcuD`. `PYTHON_CPU_COUNT=1` makes `os.cpu_count()` return 1,
   so meshwell's `n_threads=cpu_count()` defaults keep gmsh single-threaded.
-- **Thread variables.** The rest of the
-  environment (thread variables, `DEVSIM_MATH_LIBS`, `OPENBLAS_CORETYPE`, …) is inherited from
+- **The rest of the
+  environment** (thread variables, `DEVSIM_MATH_LIBS`, `OPENBLAS_CORETYPE`, …) is inherited from
   the base image. On every run, {repo}`tools/sandbox-run` also sets the thread variables
   (`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`).
 - **Baseline kernels.** The runner {repo}`tools/sandbox-run` is the
   only source of `NPY_DISABLE_CPU_FEATURES` ({{ numpy }}'s baseline kernels). Neither image sets it, so
   a plain `docker run` of the image does not get it.
 
-Its locks and pins:
+The TCAD image's locks and pins:
 
 - **Locks.** The package set is a non-package uv project, {repo}`docker/tcad/pyproject.toml`,
   with its own {repo}`docker/tcad/uv.lock` (which records `exclude-newer`).
@@ -285,7 +285,7 @@ The build record, the image and the other packages:
   reports the git revision of [gmsh `master`](https://gitlab.onelab.info/gmsh/gmsh) it was built
   from, and {repo}`docker/tcad-dev/upstream.json` records that commit.
 
-**Pins and provenance.** As for the stable image, {repo}`docker/TCAD_DEV_IMAGE` holds the
+**Pins and provenance.** The pin files work as for the stable image. The file {repo}`docker/TCAD_DEV_IMAGE` holds the
 {term}`manifest digest`. The file {repo}`docker/tcad-dev/IMAGE_ID` holds the {term}`config digest`. The file
 {repo}`docker/tcad-dev/versions.json` holds the output of {repo}`docker/tcad-dev/probe_versions.py`
 run in the image.
@@ -381,7 +381,7 @@ plugin fork is the submodule of {repo}`.gitmodules`, at the commit that
     an interface. Each reads back under gmsh 5 exactly as under gmsh 4.15.2. The check covers
     the node count, every cell block, and the physical groups.
   - **Upstream's own suite** fails the same 27 tests when run locally under gmsh
-    4.15.2 and under gmsh 5, against 155 before the fix. All of them are missing generated
+    4.15.2 and under gmsh 5, against 155 before the fix. All 27 are missing generated
     references.
   - **Check here.** {test}`tests/test_tcad_dev_image.py::test_tcad_dev_meshwell_mesh_reads_back`
     reads meshwell's square back in the dev image and asserts its point count, cell blocks,
