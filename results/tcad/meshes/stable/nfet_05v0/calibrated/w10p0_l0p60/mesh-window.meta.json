@@ -17,21 +17,21 @@
     "gate_contact___None",
     "ild___None"
   ],
-  "boundary_line_count": 7091,
+  "boundary_line_count": 7888,
   "format": 1,
-  "full_mesh_node_count": 225964,
-  "full_mesh_sha256": "8dad0ca787dc3d805661e6262725bb833ba33edf1b46bf7b4a3ce69afbc2ea64",
-  "full_mesh_triangle_count": 451341,
+  "full_mesh_node_count": 233559,
+  "full_mesh_sha256": "5c48300c0c45098709b18a640711ea952caf6cc6044dfca09c8edcb81bbf9ec4",
+  "full_mesh_triangle_count": 466522,
   "job": {
-    "cv_meta_sha256": "77185db9c4aa88eae04bb0340ad509e9e37e94ae4262964e73c2358a4eb43f18",
+    "cv_meta_sha256": "63359fd8360609e62e65f388edcf6b88699c5c42a16e424e1b53f1aa6a032a5b",
     "device": "nfet_05v0",
     "geometry_id": "w10p0_l0p60",
     "params": "calibrated",
     "tree": "tcad/moscap2d"
   },
   "net_doping": "Donors - Acceptors of the 2D job's own profiles (gplugins.devsim.doping, numpy form) at each node of a silicon region, in that region's frame and bound to that region's bounds in the full mesh, as assign_doping does; 0 at a node of no silicon region",
-  "node_count": 109188,
-  "npz_sha256": "21123720b165bbdfb5f4b09a72f83c507325d65b54f2b84add4d945d036ecba3",
+  "node_count": 121049,
+  "npz_sha256": "2ed3cec791648fc6241f24fe3ba068f37c17e0dee32c63f507a81050e6981fcf",
   "region_bounds_um": {
     "body": {
       "x_um": [
@@ -65,8 +65,8 @@
     },
     "gate_contact": {
       "x_um": [
-        0.4400000000000001,
-        1.04
+        0.4,
+        1.0799999999999998
       ],
       "y_um": [
         0.21605000000000002,
@@ -75,8 +75,8 @@
     },
     "gate_poly": {
       "x_um": [
-        0.4400000000000001,
-        1.04
+        0.4,
+        1.0799999999999998
       ],
       "y_um": [
         0.016050000000000002,
@@ -95,8 +95,8 @@
     },
     "oxide": {
       "x_um": [
-        0.4400000000000001,
-        1.04
+        0.4,
+        1.0799999999999998
       ],
       "y_um": [
         0.0,
@@ -124,9 +124,9 @@
     "source_contact",
     "ild"
   ],
-  "size_bytes": 3444020,
+  "size_bytes": 3825092,
   "source": "cache",
-  "triangle_count": 216407,
+  "triangle_count": 239891,
   "units": {
     "net_doping_cm3": "cm^-3",
     "nodes_cm": "cm",
@@ -138,16 +138,16 @@
     "rule": {
       "depth_um": 0.1,
       "gate_x_um": [
-        0.44,
-        1.04
+        0.4,
+        1.08
       ],
       "kx": 0.25,
       "poly_top_um": 0.21605048361638246,
       "surface_um": 0.0
     },
     "x_um": [
-      0.29,
-      1.19
+      0.23,
+      1.25
     ],
     "y_um": [
       -0.1,
