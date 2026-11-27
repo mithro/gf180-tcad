@@ -48,13 +48,27 @@ SWEEP_RECORDS = (
     "mem",
     "gaps",
     "sharp",
+    "rest5",
     "family",
     "family3",
     "p5",
+    "p5b",
     "checks",
+    "radius",
 )
 # The prediction records, in the order a later one replaces the cases of an earlier one.
-PREDICTION_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "gaps", "sharp", "family", "family3")
+PREDICTION_RECORDS = (
+    "main",
+    "rest",
+    "rest2",
+    "rest3",
+    "mem",
+    "gaps",
+    "sharp",
+    "rest5",
+    "family",
+    "family3",
+)
 CHARON_RECORDS = ("charon-firstpass", "charon")
 ALL_RECORDS = (*SWEEP_RECORDS, "diodes", *CHARON_RECORDS)
 # The case the sandbox test reruns and its tolerance in volts. It is a case of the record

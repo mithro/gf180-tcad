@@ -49,7 +49,18 @@ ROOT = REPO_ROOT / "results" / "hv-junction"
 PAGE = REPO_ROOT / "docs" / "results" / "hv-junction.md"
 
 #: The prediction records, in the order a later one replaces the cases of an earlier one.
-PREDICTION_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "gaps", "sharp", "family", "family3")
+PREDICTION_RECORDS = (
+    "main",
+    "rest",
+    "rest2",
+    "rest3",
+    "mem",
+    "gaps",
+    "sharp",
+    "rest5",
+    "family",
+    "family3",
+)
 #: The record of the ring-sense structures with ring 1 held at 0 V; never merged with the others.
 P5_RECORD = "p5"
 #: Every record: the prediction records, the check cases, the 1D diodes and the Charon cases.

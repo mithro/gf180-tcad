@@ -1,0 +1,49 @@
+{
+ "diodes": {
+  "1e+15": {
+   "bv_v": 265.0762222654637,
+   "reached_v": 400.0
+  },
+  "1e+16": {
+   "bv_v": 55.34720835159886,
+   "reached_v": 90.0
+  },
+  "1e+17": {
+   "bv_v": 14.88325142397807,
+   "reached_v": 25.0
+  }
+ },
+ "pins": {
+  "commit": "a44971fc57c33d33e1b8f77e3bcdbde41cfd9ecd",
+  "dirty": false,
+  "files_sha256": {
+   "README.md": "6e35b237823ed4fe93da18a6d0591f525633f20165507da1023546f5f5a9828e",
+   "batch.py": "a8c98f2185343a47e0c74e5f93bce974bf1ea3fc1651749db3103bb977f8f651",
+   "cases.py": "a5ebcbe91441e80d8814f4a8dab5ece4621ae90e483509052bfc19abaec7e394",
+   "charon_batch.py": "25785f55bb3db662c870468e95f976997d398246c111ebabbb5752e81e208f71",
+   "charon_deck.py": "24b2b0ca25fcaa2c2c85c20496cc264e03d009121791cc3b4f580addfedcc323",
+   "charon_defaults.py": "1d217e9e6d1836305806b6e8000f433622a69bef6aec928137a71343d57990ad",
+   "charon_diode_ref.py": "958755e2db959e12471284867abbc2424d1e45a78ca105aa6e04fddec4888de2",
+   "charon_field.py": "156c0ab566a268415e472de971c4b3cf118d85a999e1c4cbfbbd59d490d93a77",
+   "charon_mesh.py": "814f6b5c0f0bb4bdf6064f561e91dfa02a762ecc3bfbae0c58ac14a642b0862e",
+   "charon_record.py": "c51b782cfc39ebd7c3f0814b73578e862f0311a556f4bf6ff224c46dce4a54fd",
+   "charon_run.py": "e03d6d0d28d93d431d3c27a48d03506c9e873b6dfd059ec3b37d9690b4b0b500",
+   "checks.py": "d458eca9b2b0a3262b6426e623afc0474582685082e2bf256ac4ab08d0f32af0",
+   "dd.py": "dc99e71f834f8da50a1a54f1b67ce0f5afd3b59f65da7ac141178d8651ec31dc",
+   "diode1d.py": "f9e70d0ba3cf2fc6ce1326f1a54516130944283f82844a408ce8602ebed48bf9",
+   "fieldline.py": "a8c66af4f98c0b673cc8d748c69e10d06957418277136f0b61ffa0be5e11c7a8",
+   "fit.py": "efb6c9ac058adb912f1e3bc5fd6335aa828e5ea055361ddfa0b1ce4cc48292bf",
+   "hvsite.py": "54a99cd2323e9f6d5e73522a086941e8ec5209fa36e4655f6b776db4ada587bd",
+   "ionize.py": "aad178b04d13c36fd7882e1092b691c58d86df532dfbfe11e764e040c1b74b45",
+   "predict.py": "bc35c7b88b039d6eca7369ef7969b6f885feaa7e653e816cf2fbe3de5340248d",
+   "profile1d.py": "77081e1cdadee38a7dd5d61c584be477a60dd612451b032ec798df86631652ef",
+   "record.py": "f79b1c45dbdf76ab4718e06651c4d062e014e00c6cde2cebaf2a379c92fb6731",
+   "run.py": "0d8b89abc75f7ef730290f6e7ca2db5aa1630ca2ed81cbf2aad0fdf8c04cd81b",
+   "structure.py": "b6db548e981672457de6b8e495ba41cdd0c976af7fc89198002038df49fe5507",
+   "structures.json": "85759e08f78edacf762c062f42dc79ee44ade95be1f5513a845d049dba38c565",
+   "sweep.py": "74e33ae2803cd8bd174f57dd198d199386891b516ce2ff5dacff85e70e74e514"
+  },
+  "image": "ghcr.io/mithro/gf180-tcad-tcad-dev@sha256:fe34752893b8078bb9053875fd43d4b45b75ca757d75150b2dca4b9ada9c0c44"
+ },
+ "schema": 1
+}

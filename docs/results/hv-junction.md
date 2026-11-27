@@ -371,9 +371,9 @@ gate-oxide area. NM1_6C0 is NM1_6 with sharp corners. The values are in
 | Structure | AL | BL | BL corner | BD |
 |---|---|---|---|---|
 | NC0 | {{ hvj_NC0_AL_edge }} | {{ hvj_NC0_BL_edge }} | {{ hvj_NC0_BL_corner }} | {{ hvj_NC0_BD_edge }} |
+| NC0b | {{ hvj_NC0b_AL_edge }} | {{ hvj_NC0b_BL_edge }} | {{ hvj_NC0b_BL_corner }} | {{ hvj_NC0b_BD_edge }} |
 | NC15 | {{ hvj_NC15_AL_edge }} | {{ hvj_NC15_BL_edge }} | {{ hvj_NC15_BL_corner }} | {{ hvj_NC15_BD_edge }} |
 | NT1 | {{ hvj_NT1_AL_edge }} | {{ hvj_NT1_BL_edge }} | {{ hvj_NT1_BL_corner }} | {{ hvj_NT1_BD_edge }} |
-| NT10 | {{ hvj_NT10_AL_edge }} | {{ hvj_NT10_BL_edge }} | {{ hvj_NT10_BL_corner }} | {{ hvj_NT10_BD_edge }} |
 | NT20 | {{ hvj_NT20_AL_edge }} | {{ hvj_NT20_BL_edge }} | {{ hvj_NT20_BL_corner }} | {{ hvj_NT20_BD_edge }} |
 | NT20L | {{ hvj_NT20L_AL_edge }} | {{ hvj_NT20L_BL_edge }} | {{ hvj_NT20L_BL_corner }} | {{ hvj_NT20L_BD_edge }} |
 | NT20V | {{ hvj_NT20V_AL_edge }} | {{ hvj_NT20V_BL_edge }} | {{ hvj_NT20V_BL_corner }} | {{ hvj_NT20V_BD_edge }} |
@@ -414,6 +414,7 @@ distance.
 | Structure | AL | BL | BL corner | BD |
 |---|---|---|---|---|
 | NW0 | {{ hvj_NW0_AL_edge }} | {{ hvj_NW0_BL_edge }} | {{ hvj_NW0_BL_corner }} | {{ hvj_NW0_BD_edge }} |
+| NW0b | {{ hvj_NW0b_AL_edge }} | {{ hvj_NW0b_BL_edge }} | {{ hvj_NW0b_BL_corner }} | {{ hvj_NW0b_BD_edge }} |
 | NW1p5 | {{ hvj_NW1p5_AL_edge }} | {{ hvj_NW1p5_BL_edge }} | {{ hvj_NW1p5_BL_corner }} | {{ hvj_NW1p5_BD_edge }} |
 | NW3 | {{ hvj_NW3_AL_edge }} | {{ hvj_NW3_BL_edge }} | {{ hvj_NW3_BL_corner }} | {{ hvj_NW3_BD_edge }} |
 | NW6 | {{ hvj_NW6_AL_edge }} | {{ hvj_NW6_BL_edge }} | {{ hvj_NW6_BL_corner }} | {{ hvj_NW6_BD_edge }} |
@@ -455,7 +456,6 @@ next section.
 | NA0p6C0 | {{ hvj_NA0p6C0_AL_edge }} | {{ hvj_NA0p6C0_AnL_edge }} | {{ hvj_NA0p6C0_AnL_corner }} | {{ hvj_NA0p6C0_AnD_edge }} |
 | NA0p6T10 | {{ hvj_NA0p6T10_AL_edge }} | {{ hvj_NA0p6T10_AnL_edge }} | {{ hvj_NA0p6T10_AnL_corner }} | {{ hvj_NA0p6T10_AnD_edge }} |
 | NA0p6b | {{ hvj_NA0p6b_AL_edge }} | {{ hvj_NA0p6b_AnL_edge }} | {{ hvj_NA0p6b_AnL_corner }} | {{ hvj_NA0p6b_AnD_edge }} |
-| NA2 | {{ hvj_NA2_AL_edge }} | {{ hvj_NA2_AnL_edge }} | {{ hvj_NA2_AnL_corner }} | {{ hvj_NA2_AnD_edge }} |
 | NAGM1@g0 | {{ hvj_NAGM1_g0_AL_edge }} | {{ hvj_NAGM1_g0_AnL_edge }} | {{ hvj_NAGM1_g0_AnL_corner }} | {{ hvj_NAGM1_g0_AnD_edge }} |
 | NAGM1@gw | {{ hvj_NAGM1_gw_AL_edge }} | {{ hvj_NAGM1_gw_AnL_edge }} | {{ hvj_NAGM1_gw_AnL_corner }} | {{ hvj_NAGM1_gw_AnD_edge }} |
 | NAM1_10 | {{ hvj_NAM1_10_AL_edge }} | {{ hvj_NAM1_10_AnL_edge }} | {{ hvj_NAM1_10_AnL_corner }} | {{ hvj_NAM1_10_AnD_edge }} |
@@ -533,6 +533,8 @@ record. Its cases are never mixed with the floating-ring cases of {numref}`tab-h
 
 | Structure | AL | BL | BD |
 |---|---|---|---|
+| NAR1S3 | {{ hvj_p5_NAR1S3_AL_edge }} | {{ hvj_p5_NAR1S3_BL_edge }} | {{ hvj_p5_NAR1S3_BD_edge }} |
+| NAR1S8 | {{ hvj_p5_NAR1S8_AL_edge }} | {{ hvj_p5_NAR1S8_BL_edge }} | {{ hvj_p5_NAR1S8_BD_edge }} |
 | NR1S12 | {{ hvj_p5_NR1S12_AL_edge }} | {{ hvj_p5_NR1S12_BL_edge }} | {{ hvj_p5_NR1S12_BD_edge }} |
 | NR1S2 | {{ hvj_p5_NR1S2_AL_edge }} | {{ hvj_p5_NR1S2_BL_edge }} | {{ hvj_p5_NR1S2_BD_edge }} |
 | NR1S3 | {{ hvj_p5_NR1S3_AL_edge }} | {{ hvj_p5_NR1S3_BL_edge }} | {{ hvj_p5_NR1S3_BD_edge }} |
@@ -546,6 +548,10 @@ record. Its cases are never mixed with the floating-ring cases of {numref}`tab-h
 
 | Structure | AL | BL | BL corner | BD |
 |---|---|---|---|---|
+| NAR1S3 | {{ hvj_NAR1S3_AL_edge }} | {{ hvj_NAR1S3_BL_edge }} | {{ hvj_NAR1S3_BL_corner }} | {{ hvj_NAR1S3_BD_edge }} |
+| NAR1S8 | {{ hvj_NAR1S8_AL_edge }} | {{ hvj_NAR1S8_BL_edge }} | {{ hvj_NAR1S8_BL_corner }} | {{ hvj_NAR1S8_BD_edge }} |
+| NAR1_2 | {{ hvj_NAR1_2_AL_edge }} | {{ hvj_NAR1_2_BL_edge }} | {{ hvj_NAR1_2_BL_corner }} | {{ hvj_NAR1_2_BD_edge }} |
+| NAR3_2 | {{ hvj_NAR3_2_AL_edge }} | {{ hvj_NAR3_2_BL_edge }} | {{ hvj_NAR3_2_BL_corner }} | {{ hvj_NAR3_2_BD_edge }} |
 | NR1S12 | {{ hvj_NR1S12_AL_edge }} | {{ hvj_NR1S12_BL_edge }} | {{ hvj_NR1S12_BL_corner }} | {{ hvj_NR1S12_BD_edge }} |
 | NR1S2 | {{ hvj_NR1S2_AL_edge }} | {{ hvj_NR1S2_BL_edge }} | {{ hvj_NR1S2_BL_corner }} | {{ hvj_NR1S2_BD_edge }} |
 | NR1S3 | {{ hvj_NR1S3_AL_edge }} | {{ hvj_NR1S3_BL_edge }} | {{ hvj_NR1S3_BL_corner }} | {{ hvj_NR1S3_BD_edge }} |
@@ -598,18 +604,12 @@ draw a NAT layer that overlaps the deep N-well edge by 1 µm. The values are in
 | Structure | AL | AD | BL | BD |
 |---|---|---|---|---|
 | DAo1 | {{ hvj_DAo1_AL_edge }} | {{ hvj_DAo1_AD_edge }} | {{ hvj_DAo1_BL_edge }} | {{ hvj_DAo1_BD_edge }} |
-| DAo1C0 | {{ hvj_DAo1C0_AL_edge }} | {{ hvj_DAo1C0_AD_edge }} | {{ hvj_DAo1C0_BL_edge }} | {{ hvj_DAo1C0_BD_edge }} |
 | DAo1M1_6 | {{ hvj_DAo1M1_6_AL_edge }} | {{ hvj_DAo1M1_6_AD_edge }} | {{ hvj_DAo1M1_6_BL_edge }} | {{ hvj_DAo1M1_6_BD_edge }} |
 | DC0 | {{ hvj_DC0_AL_edge }} | {{ hvj_DC0_AD_edge }} | {{ hvj_DC0_BL_edge }} | {{ hvj_DC0_BD_edge }} |
-| DGM1@g0 | {{ hvj_DGM1_g0_AL_edge }} | {{ hvj_DGM1_g0_AD_edge }} | {{ hvj_DGM1_g0_BL_edge }} | {{ hvj_DGM1_g0_BD_edge }} |
-| DGM1@gw | {{ hvj_DGM1_gw_AL_edge }} | {{ hvj_DGM1_gw_AD_edge }} | {{ hvj_DGM1_gw_BL_edge }} | {{ hvj_DGM1_gw_BD_edge }} |
-| DM1_10 | {{ hvj_DM1_10_AL_edge }} | {{ hvj_DM1_10_AD_edge }} | {{ hvj_DM1_10_BL_edge }} | {{ hvj_DM1_10_BD_edge }} |
 | DM1_6 | {{ hvj_DM1_6_AL_edge }} | {{ hvj_DM1_6_AD_edge }} | {{ hvj_DM1_6_BL_edge }} | {{ hvj_DM1_6_BD_edge }} |
-| DPM12 | {{ hvj_DPM12_AL_edge }} | {{ hvj_DPM12_AD_edge }} | {{ hvj_DPM12_BL_edge }} | {{ hvj_DPM12_BD_edge }} |
 | DT20 | {{ hvj_DT20_AL_edge }} | {{ hvj_DT20_AD_edge }} | {{ hvj_DT20_BL_edge }} | {{ hvj_DT20_BD_edge }} |
 | DT20b | {{ hvj_DT20b_AL_edge }} | {{ hvj_DT20b_AD_edge }} | {{ hvj_DT20b_BL_edge }} | {{ hvj_DT20b_BD_edge }} |
 | DT2p6 | {{ hvj_DT2p6_AL_edge }} | {{ hvj_DT2p6_AD_edge }} | {{ hvj_DT2p6_BL_edge }} | {{ hvj_DT2p6_BD_edge }} |
-| DW1p5 | {{ hvj_DW1p5_AL_edge }} | {{ hvj_DW1p5_AD_edge }} | {{ hvj_DW1p5_BL_edge }} | {{ hvj_DW1p5_BD_edge }} |
 ~~~
 
 ### Doping family
@@ -729,8 +729,10 @@ trend.
 ## Limits
 
 - **2D sections.** Each value is one radial section. A corner is a smooth cylinder about one
-  axis ({numref}`hvj-corners-figure`). A drawn corner with vertices concentrates the field
-  more, so a corner value is an upper bound.
+  axis ({numref}`hvj-corners-figure`). A cut corner has 135° vertices, which no section
+  holds, so its value is an upper bound. A square corner is a cylinder of 1 µm radius, far
+  narrower than its depletion region. The field converges on it from every side, as it
+  does not on a 90° vertex, so its value is a lower bound.
 - **The criterion.** The integral reaching 1 marks the onset of avalanche on DEVSIM's
   potential. The solve carries no avalanche current, so it gives no current-voltage curve
   beyond that bias ({numref}`hvj-integral-figure`).
@@ -742,6 +744,9 @@ trend.
 - **The floating rings.** A field line ends where the field falls under 2e3 V/cm, inside each
   ring. The integral is therefore taken gap by gap, and multiplication in one gap is not
   carried into the next ({numref}`hvj-rings-figure`).
+- **The second simulator.** {{ Charon }} takes DEVSIM's nodes, doping and ionisation
+  coefficients. It checks the solve and the breakdown criterion, not the physical model
+  ({ref}`hvj-charon`).
 - **No silicon data.** No measurement of these structures exists
   ({doc}`/limitations/silicon-validation`).
 
