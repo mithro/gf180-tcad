@@ -77,7 +77,7 @@ import shutil
 import sys
 import tempfile
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -126,6 +126,10 @@ PROGRESS_NAME = "progress.log"
 RESTARTS_ENV = "GF180TCAD_SWEEP_RESTARTS"
 #: The most restarts of one job; each restart follows at least one new saved point.
 MAX_RESTARTS = 50
+#: A test hook: maps a restart's ``moscap-job`` command line and sweep method to the command
+#: that runs instead (the restart test's driver, which sets its small case up again). None in
+#: production.
+RESTART_ARGV: Callable[[list[str], str], list[str]] | None = None
 
 # The steps of a 2D moscap job (run_job_2d): both sweeps and the job files in one job, one sweep
 # alone (two jobs that can run in parallel on one scratch dir), the job files from both, or
@@ -241,9 +245,11 @@ def _restart_sweep(
         sys.executable, "-m", "gf180tcad.tcad", "moscap-job", "--device", device, "--dim", "2",
         "--params", params, "--geometry", gid, "--out", str(out), "--method", m,
     ]  # fmt: skip
+    if RESTART_ARGV is not None:
+        argv = RESTART_ARGV(argv, m)
     sys.stdout.flush()
     sys.stderr.flush()
-    os.execve(sys.executable, argv, {**os.environ, RESTARTS_ENV: str(restarts)})
+    os.execve(argv[0], argv, {**os.environ, RESTARTS_ENV: str(restarts)})
 
 
 def run_job_2d(device: str, params: str, gid: str, out: Path, method: str = "both") -> None:

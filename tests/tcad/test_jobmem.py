@@ -6,6 +6,7 @@ Host tests: the readings come from fake /proc and cgroup files, and the restart 
 """
 
 import os
+import platform
 import sys
 
 import pytest
@@ -47,8 +48,28 @@ def test_limit_bytes_without_cgroup_files(tmp_path):
     assert jobmem.limit_bytes((tmp_path / "a", tmp_path / "b")) is None
 
 
-def test_trim_frees_nothing_negative():
-    assert jobmem.trim() >= 0
+@pytest.mark.skipif(platform.libc_ver()[0] != "glibc", reason="malloc_trim is glibc's")
+def test_trim_on_glibc():
+    """On glibc the trim is there, and it hands back the pages of freed heap blocks."""
+    assert jobmem._malloc_trim() is not None
+    before = jobmem.rss_bytes()
+    # 4096 blocks of under 64 KiB (below the mmap threshold, so on the heap), all touched,
+    # then all freed but the last, which pins the heap top: free() keeps the pages resident
+    # and only malloc_trim hands them back
+    blocks = [bytearray(64 * 1024 - 64) for _ in range(4096)]
+    assert jobmem.rss_bytes() - before > 128 * 1024 * 1024
+    del blocks[:-1]
+    freed = jobmem.trim()
+    assert freed is not None and freed > 64 * 1024 * 1024, freed
+
+
+def test_trim_without_malloc_trim(monkeypatch):
+    monkeypatch.setattr(jobmem, "_malloc_trim", lambda: None)
+    assert jobmem.trim() is None
+
+
+def test_rss_bytes_without_status_file(tmp_path):
+    assert jobmem.rss_bytes(tmp_path / "missing") is None
 
 
 def test_over_budget():
@@ -64,9 +85,9 @@ def test_over_budget():
 @pytest.fixture
 def readings(monkeypatch):
     """after_point with fake readings: set ``rss`` (a list, one value per call) and ``limit``."""
-    state = {"rss": [], "limit": 16 * GIB}
+    state = {"rss": [], "limit": 16 * GIB, "trim": 3 << 20}
     monkeypatch.setattr(jobmem, "_first_rss", None)
-    monkeypatch.setattr(jobmem, "trim", lambda: 3 << 20)
+    monkeypatch.setattr(jobmem, "trim", lambda: state["trim"])
     monkeypatch.setattr(jobmem, "rss_bytes", lambda: state["rss"].pop(0))
     monkeypatch.setattr(jobmem, "limit_bytes", lambda: state["limit"])
     return state
@@ -96,6 +117,15 @@ def test_after_point_without_limit(readings):
     jobmem.after_point(0, last=False, log=lines.append)
     jobmem.after_point(1, last=False, log=lines.append)
     assert lines[1].endswith("no limit")
+
+
+def test_after_point_without_readings(readings):
+    """Without malloc_trim or /proc/self/status the line says so and the budget is skipped."""
+    lines = []
+    readings["rss"], readings["trim"] = [None, None], None
+    jobmem.after_point(0, last=False, log=lines.append)
+    jobmem.after_point(1, last=False, log=lines.append)
+    assert lines[0] == "memory after point 1: rss unavailable, trim unavailable, limit 16384 MiB"
 
 
 class _Exec(Exception):
@@ -153,3 +183,13 @@ def test_restarts_are_capped(restart, monkeypatch):
     with pytest.raises(RuntimeError, match="memory budget"):
         cli.run_job_2d("nfet_05v0", "start", "w10p0_l0p60", out, method="ac")
     assert calls == []
+
+
+def test_restart_argv_hook(restart, monkeypatch):
+    """The test hook replaces the restart's command (the sandbox restart test's driver)."""
+    out, calls = restart
+    monkeypatch.setattr(cli, "RESTART_ARGV", lambda argv, m: ["/bin/driver", m, argv[-3]])
+    with pytest.raises(_Exec):
+        cli.run_job_2d("nfet_05v0", "start", "w10p0_l0p60", out, method="qs")
+    ((path, argv, _),) = calls
+    assert (path, argv) == ("/bin/driver", ["/bin/driver", "qs", str(out)])
