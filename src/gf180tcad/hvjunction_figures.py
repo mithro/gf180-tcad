@@ -58,6 +58,7 @@ PREDICTION_RECORDS = (
     "gaps",
     "sharp",
     "rest5",
+    "ring128",
     "family",
     "family3",
 )

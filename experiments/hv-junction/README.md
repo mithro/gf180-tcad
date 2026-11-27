@@ -119,7 +119,7 @@ case only when the record's `params_sha256` of that case is the hash of the para
 result, prints as a dash. So a record made before a change of the structures or the process
 never prints a superseded number, and the dashes show what a `rest` round has to cover.
 
-The order of the prediction records is `main`, `rest`, `rest2`, `rest3`, `mem`, `gaps`, `sharp`, `rest5`, `family`, `family3` (the family's sharp corners in 128-bit): a
+The order of the prediction records is `main`, `rest`, `rest2`, `rest3`, `mem`, `gaps`, `sharp`, `rest5`, `ring128` (six multi-ring cases in 128-bit), `family`, `family3` (the family's sharp corners in 128-bit): a
 case takes the row of the last of them that holds it. A further round needs its name added
 to `PREDICTION_RECORDS` in
 [`src/gf180tcad/hvjunction_figures.py`](../../src/gf180tcad/hvjunction_figures.py) and in

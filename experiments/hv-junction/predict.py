@@ -54,6 +54,12 @@ KEY = ["NT20", "NC0", "NA0p6", "NAM1_6", "NW3", "NR3_2", "NM1_6", "NP2", "DT20",
 # A drawn sharp corner is simulated as a round one of this radius: about the lateral spread
 # of the well's deep part plus the corner rounding of the mask.
 MIN_CORNER = 1.0
+# Multi-ring sections whose sweep stops short of breakdown in double precision (one could
+# not leave 0 V): they are solved in 128-bit floats, like the sharp corners.
+EXTENDED_CASES = frozenset({
+    "NR3_1p5|AL|edge", "NR5_1p4|AL|edge", "NR5_1p4|BLq|corner", "NR5_1p4|BLq|edge",
+    "NR5_2|BLq|edge", "NR5_2|BL|corner",
+})  # fmt: skip
 # The process assumptions of the set "p5".
 P5_PROCESSES = ("AL", "BL", "BD")
 
@@ -115,7 +121,10 @@ def cases(names, processes):
                     if tag == "@gw":  # the gate pad connected to the well pad
                         for pl in p["plates"]:
                             pl["tie"] = "well"
-                    out[f"{name}{tag}|{pname}|{shape}"] = p
+                    case = f"{name}{tag}|{pname}|{shape}"
+                    if case in EXTENDED_CASES:
+                        p["extended"] = True
+                    out[case] = p
     return out
 
 
