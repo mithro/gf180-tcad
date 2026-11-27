@@ -360,15 +360,17 @@ bound, as a {term}`strict expected failure` at both lengths on the sensitivity a
   and 147 ({ref}`moscap2d-calibrated`). The same command was rerun on the same `--resume`,
   three attempts in all ({ref}`tcad-provenance`). The calibrated pfet L = 2 µm cell finished in one attempt,
   with a peak of 9.8 GiB.
-- **The per-point memory growth has no fixed cause.** The nfet L = 2 µm sweep's memory grows
-  with every point ([issue #233](https://github.com/mithro/gf180-tcad/issues/233), also issue
-  #78). The growth is in the main heap of the C library (`[heap]` in `/proc`). The uniform
-  stack holds steady (101k nodes, 30 biases: 1321 to 1331 MB). So do the coarser source/drain
-  meshes of issue #233: the source/drain cell alone does not cause it.
+- **The cause of the per-point memory growth is not settled.** [Issue #233](https://github.com/mithro/gf180-tcad/issues/233)
+  records the open question and the measurements. The nfet L = 2 µm sweep's memory grows with
+  every point, in the main heap of the C library (`[heap]` in `/proc`). The uniform stack holds
+  steady (101k nodes, 30 biases: 1321 to 1331 MB). So do the coarser source/drain meshes of
+  issue #233: the source/drain cell alone does not cause it.
 - **A 2D sweep restarts itself before the memory limit.** After every saved point the job
-  trims the heap and logs its memory ({py:mod}`gf180tcad.tcad.jobmem`). Near the container's
-  limit it restarts in a fresh process and resumes at the next point. Each restart is counted
-  in `resumed`, like the restarts above.
+  trims the heap and logs its memory ({py:mod}`gf180tcad.tcad.jobmem`). It restarts in a fresh
+  process once its resident memory passes {py:data}`~gf180tcad.tcad.jobmem.BUDGET_FRACTION`
+  (75 %) of the container's limit. It must also have grown by
+  {py:data}`~gf180tcad.tcad.jobmem.GROWTH_FRACTION` (20 %) of the limit since the process's
+  first point. The fresh process resumes at the next point, and `resumed` counts each restart.
 
 The resumed start cells are the dotted QS curves of {numref}`fig-moscap2d-ccox`, with no AC points.
 
