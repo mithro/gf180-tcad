@@ -94,7 +94,8 @@ LAYER_SHIFTS_UM = {"m100": -1.0, "m025": -0.25, "p025": 0.25, "p100": 1.0}
 #: The same section and mesh with two bias steps (1.5 V and 3 V): an abutting P-well, generated
 #: (AL) and drawn at no distance (BL).
 STEP_PAIR = ("NT20|AL|edge", "NW0|BL|edge")
-#: A sharp-corner case whose sweep stops converging before the integral reaches 1.
+#: A sharp-corner case. Its 64-bit sweep in ``main`` stopped converging before the integral
+#: reached 1; its 128-bit sweep in a later record runs to breakdown.
 OPEN_CORNER = "NC0|BD|corner"
 
 STYLE = {
@@ -377,10 +378,11 @@ def well_anchors() -> dict[str, float]:
 
 
 def open_corner(root: Path = ROOT) -> dict[str, float] | None:
-    """The end of the sweep of :data:`OPEN_CORNER`: ``v`` the last bias solved, ``i`` the
-    integral there, ``slope`` its rise per volt over the last step, and ``extrapolated`` the
-    bias at which that straight line reaches 1. None when the case has no row or broke down."""
-    row = cases(root).get(OPEN_CORNER)
+    """The end of the superseded 64-bit sweep of :data:`OPEN_CORNER` in the ``main`` record:
+    ``v`` the last bias solved, ``i`` the integral there, ``slope`` its rise per volt over the
+    last step, and ``extrapolated`` the bias at which that straight line reaches 1. None when
+    ``main`` has no such row or the row broke down."""
+    row = records(root).get("main", {}).get("cases", {}).get(OPEN_CORNER)
     if row is None or row["bv_v"] is not None or len(row["v"]) < 2:
         return None
     (v0, v1), (i0, i1) = row["v"][-2:], row["i_n"][-2:]

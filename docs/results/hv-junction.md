@@ -344,10 +344,14 @@ The main set has {{ hvj_n_cases }} cases. No record holds {{ hvj_n_absent }} of 
 present parameters; they print a dash. In {{ hvj_n_open }} more the solve stopped converging
 before the integral reached 1; they print `> V`.
 
-The sharp corners are among those. The corner of NC0 under BD stops at
-{{ hvj_open_corner_v }} V with the integral at {{ hvj_open_corner_i }}. It rose by
-{{ hvj_open_corner_slope }} per volt over the last step. A straight line through that step
-reaches 1 at {{ hvj_open_corner_extrapolated }} V.
+A sharp corner, one with a radius under 2 µm, is solved in 128-bit floats
+({repo}`experiments/hv-junction/predict.py`). In 64-bit floats its sweep stopped converging
+before the integral reached 1. In 128-bit floats it runs to breakdown. The corner of NC0
+breaks down at {{ hvj_NC0_BL_corner }} V under BL and at {{ hvj_NC0_BD_corner }} V under BD.
+
+The 64-bit sweep of that corner under BD stopped at {{ hvj_open_corner_v }} V with the
+integral at {{ hvj_open_corner_i }}. A straight line through its last step reaches 1 at
+{{ hvj_open_corner_extrapolated }} V, within 2 V of the 128-bit value.
 
 ### Plain terminations
 
@@ -738,8 +742,6 @@ trend.
 - **The floating rings.** A field line ends where the field falls under 2e3 V/cm, inside each
   ring. The integral is therefore taken gap by gap, and multiplication in one gap is not
   carried into the next ({numref}`hvj-rings-figure`).
-- **The sharp corners.** Their sweeps stop converging before the integral reaches 1
-  ({ref}`hvj-results`).
 - **No silicon data.** No measurement of these structures exists
   ({doc}`/limitations/silicon-validation`).
 

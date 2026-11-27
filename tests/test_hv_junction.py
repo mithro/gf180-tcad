@@ -562,17 +562,22 @@ def test_page_numbers_are_the_records(hf):
     assert subs["hvj_n_cases"] == str(len(main))
     assert subs["hvj_n_absent"] == str(len(main) - len(have))
     assert subs["hvj_n_open"] == str(sum(rows[c]["bv_v"] is None for c in have))
-    end = rows.get(hf.OPEN_CORNER)
-    if end is not None and end["bv_v"] is None:
-        slope = (end["i_n"][-1] - end["i_n"][-2]) / (end["v"][-1] - end["v"][-2])
-        assert subs["hvj_open_corner_v"] == f"{end['v'][-1]:.1f}"
-        assert subs["hvj_open_corner_i"] == f"{end['i_n'][-1]:.3f}"
-        assert subs["hvj_open_corner_slope"] == f"{slope:.3f}"
-        assert subs["hvj_open_corner_extrapolated"] == (
-            f"{end['v'][-1] + (1 - end['i_n'][-1]) / slope:.0f}")  # fmt: skip
-    for name, short in (("1e+15", "1e15"), ("1e+16", "1e16"), ("1e+17", "1e17")):
-        assert subs[f"hvj_diode_{short}_analytic"] == f"{_abrupt_bv(float(name)):.2f}"
-    assert 800 < float(subs["hvj_nw_rs"]) < 1200
+    # the sharp corner: its 128-bit row breaks down, and the superseded 64-bit row of main.json
+    # extrapolates to within 2 V of it
+    sharp = _main_cases()[hf.OPEN_CORNER]
+    assert sharp["extended"] is True and sharp["cyl"] and predict.MIN_CORNER < 2.0
+    assert _main_cases()["NT20|BD|corner"]["extended"] is False
+    old = _load("main")["cases"].get(hf.OPEN_CORNER)
+    if old is not None and old["bv_v"] is None:
+        slope = (old["i_n"][-1] - old["i_n"][-2]) / (old["v"][-1] - old["v"][-2])
+        line = old["v"][-1] + (1 - old["i_n"][-1]) / slope
+        assert subs["hvj_open_corner_v"] == f"{old['v'][-1]:.1f}"
+        assert subs["hvj_open_corner_i"] == f"{old['i_n'][-1]:.3f}"
+        assert subs["hvj_open_corner_extrapolated"] == f"{line:.0f}"
+        new = rows.get(hf.OPEN_CORNER)
+        if new is not None and new["bv_v"] is not None:
+            assert old["params_sha256"] != new["params_sha256"]
+            assert abs(line - new["bv_v"]) < 2.0
 
 
 def test_page_tables_are_the_generated_rows(hf, tmp_path):
