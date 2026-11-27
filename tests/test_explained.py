@@ -1068,7 +1068,8 @@ def test_cell_source_and_drain_widths_come_from_the_artefact():
 def test_cell_gate_is_drawn_as_meshed(tmp_path, monkeypatch):
     """Plan Task E3: a cell whose meta records a fitted poly length bias draws its gate (and the
     oxide under it) longer by that bias at each end, and the meshcut window around it grows
-    with it; without one, the gate is the drawn L."""
+    with it; without one, the gate is the drawn L. The committed cell records the fit; a copy
+    of its meta without it draws the drawn L."""
     import shutil
 
     from gf180tcad.explain import figures as ef
@@ -1076,19 +1077,28 @@ def test_cell_gate_is_drawn_as_meshed(tmp_path, monkeypatch):
 
     args = ("nfet_05v0", "calibrated", "w10p0_l0p70")
     committed = model.cell(*args, scales={})
-    assert committed.poly_bias_um == 0.0 and committed.gate_um == committed.l_um
+    fit = json.loads((ROOT / model.cell_meta_path(*args)).read_text("utf-8"))["edge_fit"]
+    nm_per_um = 1e3
+    bias_um = fit["poly_bias_nm"] / nm_per_um
+    assert committed.poly_bias_um == pytest.approx(bias_um) and bias_um > 0
+    assert committed.gate_um == pytest.approx(committed.l_um + 2 * bias_um)
+    ext = ef.cell_extents(committed)
+    for part in ("gate", "oxide"):
+        assert ext[part].x1 - ext[part].x0 == pytest.approx(committed.gate_um)
+    w = ef.window_box(committed)
+    assert (ext["gate"].x0 - w.x0) == pytest.approx(meshcut_kx() * committed.gate_um)
     for rel in (model.cell_meta_path(*args), model.meta_path(*args[:2]),
                 model.artefact_meta_path(*args), f"data/process/{args[0]}.toml"):  # fmt: skip
         (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / rel, tmp_path / rel)
     meta_file = tmp_path / model.cell_meta_path(*args)
     meta = json.loads(meta_file.read_text("utf-8"))
-    meta["edge_fit"] = {"poly_bias_nm": 40.0, "sha256": "0" * 64}
+    del meta["edge_fit"]
     meta_file.write_text(json.dumps(meta), "utf-8")
     monkeypatch.setattr(model, "ROOT", tmp_path)
     c = model.cell(*args, scales={})
-    assert c.poly_bias_um == pytest.approx(0.04)
-    assert c.gate_um == pytest.approx(committed.l_um + 0.08)
+    assert c.poly_bias_um == 0.0
+    assert c.gate_um == c.l_um
     ext = ef.cell_extents(c)
     for part in ("gate", "oxide"):
         assert ext[part].x1 - ext[part].x0 == pytest.approx(c.gate_um)
@@ -1137,10 +1147,10 @@ def test_cross_section_matches_cell():
     ext = figures.cell_extents(c)
     s_ox = c.scales.get("oxide", 1)
     gx0, gx1, gy0, gy1 = ext["gate"]
-    assert gx1 - gx0 == pytest.approx(c.l_um)
+    assert gx1 - gx0 == pytest.approx(c.gate_um)  # the meshed gate: L + 2 δ
     assert gy1 - gy0 == pytest.approx(c.poly_um)
     ox = ext["oxide"]
-    assert ox[1] - ox[0] == pytest.approx(c.l_um) and ox[3] - ox[2] == pytest.approx(
+    assert ox[1] - ox[0] == pytest.approx(c.gate_um) and ox[3] - ox[2] == pytest.approx(
         c.t_ox_um * s_ox
     )
     assert ox[2] == pytest.approx(gy1) and ox[3] == pytest.approx(0)
@@ -1742,7 +1752,7 @@ REPRODUCE_PAGE = ROOT / "docs" / "reproduce" / "index.md"
 
 def test_mesh_window_figure_draws_the_window_rule():
     """The reproduce page's figure outlines the window that meshcut cuts with its default rule:
-    a quarter gate length either side of the gate, from the drawn poly top down to
+    a quarter of the meshed gate length either side of the gate, from the drawn poly top down to
     WINDOW_DEPTH_UM below the silicon surface (depth grows downwards in the drawing)."""
     from gf180tcad import meshcut
     from gf180tcad.explain import figures, model
@@ -1750,8 +1760,9 @@ def test_mesh_window_figure_draws_the_window_rule():
     c = model.cell("nfet_05v0", "calibrated", "w10p0_l0p60", scales=figures.STYLE["scales"])
     gate = figures.cell_extents(c)["gate"]
     box = figures.window_box(c)
-    assert box.x0 == pytest.approx(gate.x0 - meshcut.WINDOW_KX * c.l_um)
-    assert box.x1 == pytest.approx(gate.x1 + meshcut.WINDOW_KX * c.l_um)
+    assert gate.x1 - gate.x0 == pytest.approx(c.gate_um)
+    assert box.x0 == pytest.approx(gate.x0 - meshcut.WINDOW_KX * c.gate_um)
+    assert box.x1 == pytest.approx(gate.x1 + meshcut.WINDOW_KX * c.gate_um)
     assert box.y0 == pytest.approx(gate.y0)  # the poly top
     assert box.y1 == pytest.approx(meshcut.WINDOW_DEPTH_UM)
     assert "mesh-window" in figures.FIGURES

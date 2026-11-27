@@ -73,8 +73,10 @@ Apache License). G is the gate, S the source and D the drain.
 ```
 
 The gate's length runs from source to drain, and its width runs along the strip. The
-simulated cell of {numref}`fig-parts-cell` has a gate {{ x_l_cell }} long and {{ x_w_cell }} wide
+simulated cell of {numref}`fig-parts-cell` has a gate drawn {{ x_l_cell }} long and {{ x_w_cell }} wide
 ({repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>`).
+Its poly is {{ x_poly_bias_cell }} longer at each end, the fitted poly length bias
+({ref}`moscap2d-edge`).
 The cross-section cuts across the strip, so it shows the length; the width runs into the page.
 
 (explained-parts-oxide)=
