@@ -73,11 +73,11 @@ page that explains it. The generated pages of every result are {doc}`/_generated
 |---|---|---|
 | 1D, the fitted geometries | {term}`Agree` | {term}`Disagree` |
 | 1D, the held-out geometries | Agree | {term}`Same process` |
-| 2D, W10/L0.6 or W10/L0.5 | Disagree | Same process |
+| 2D, W10/L0.6 or W10/L0.5 | Disagree | Agree |
 | 2D, W10/L0.7 | Disagree | Same process |
 | 2D, W1.6/L0.7 | Disagree | Same process |
-| 2D, W10/L1 | Same process | Disagree |
-| 2D, W10/L2 | Same process | Disagree |
+| 2D, W10/L1 | Same process | Same process |
+| 2D, W10/L2 | Agree | Disagree |
 | 2D, W10/L10 | not run | not run |
 ~~~
 
@@ -89,7 +89,8 @@ Same process. The W10/L10 cell has no 2D result, because its equilibrium solve f
 The first 2D row holds the shortest gates ({numref}`fig-status-cv`): 0.6 µm for the nfet,
 0.5 µm for the pfet. The 2D rows are the calibrated cells of the 2D validation
 ([issue #35](https://github.com/mithro/gf180-tcad/issues/35), {ref}`cv-agreement-validation`).
-In every 2D cell the poly is as drawn, its length bias at 0 ({ref}`process-data-poly-bias`).
+In every 2D cell the poly is longer by the fitted poly length bias at each gate end
+({ref}`moscap2d-edge`, {ref}`process-data-poly-bias`).
 The corner fits give each fitted number a lower and an upper bound and its spread
 ({ref}`explained-calibration-corners`).
 

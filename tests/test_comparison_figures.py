@@ -839,7 +839,7 @@ def _edge_numbers() -> dict:
     c = out["check"]
     out["fill"] = {
         "AREA_MAX": f"{max(out['area']):.1f}",
-        "EDGE_MIN": f"{min(out['gap']):.2f}",
+        "EDGE_MIN": f"{min(out['gap']):.2f}".replace("-", "−"),
         "EDGE_MAX": f"{max(out['gap']):.2f}",
         "NFET_SPICE": f"{out['nfet_total'][0]:.2f}",
         "NFET_TWO_D": f"{out['nfet_total'][1]:.2f}",
@@ -860,8 +860,8 @@ def _edge_numbers() -> dict:
 # Each placeholder of the section and the words around it on the page.
 _EDGE_PHRASES = {
     "AREA_MAX": "agrees within {} %",
-    "EDGE_MIN": "is {} to",
-    "EDGE_MAX": "to {} fF/µm below SPICE",
+    "EDGE_MIN": "2D edge is {} to",
+    "EDGE_MAX": "\n{} fF/µm. The 2D edge is larger at accumulation",
     "NFET_SPICE": "give {} fF (SPICE)",
     "NFET_TWO_D": "and {} fF (2D)",
     "PFET_EDGE": "the gap is {} fF",
@@ -896,6 +896,10 @@ def test_cv_page_prints_the_edge_split():
     assert all(abs(n["check"]["nfet_05v0", k]) < 1e-3 for k in ("accumulation", "inversion"))
     assert all(n["check"]["pfet_05v0", k] > 0.01 for k in ("accumulation", "inversion"))
     assert n["pfet_parts"][0] > 0 > n["pfet_parts"][1]
+    # at the fitted poly length bias the 2D edge is above SPICE's at accumulation and below it at
+    # inversion, for both devices (the page's "larger at accumulation and smaller at inversion")
+    for device, side, _u, e, _a in n["rows"]:
+        assert (e["two_d"] > e["spice"]) == (side == "accumulation"), (device, side)
 
 
 @pytest.mark.parametrize("device", ["nfet_05v0", "pfet_05v0"])

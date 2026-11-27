@@ -61,8 +61,8 @@ Three {term}`process file` tunables, 3 of the 8 parameters of the
 {ref}`parameter budget <parameter-budget>` of each device type. Their start values, bounds and
 the sources of the bounds are those of {doc}`process-data` (read with
 {py:func}`gf180tcad.tcad.process.load`); the calibration never redefines them and never writes the
-process files. The fourth tunable, the 2D poly length bias, is not fitted here
-({ref}`process-data-poly-bias`).
+process files. The fourth tunable, the 2D poly length bias, is fitted to the 2D cells' edge capacitance, not here
+({ref}`moscap2d-edge`, {ref}`process-data-poly-bias`).
 
 - `t_ox_eff_nm`, the {term}`effective oxide thickness`, between TOXE and TOXP plus the
   charge-centroid allowance (it absorbs the quantum-mechanical dark space, which is not
@@ -625,7 +625,7 @@ The cell gives 46.71 fF at Vg = +5 V and 45.72 fF at Vg = −5 V
 
 ### The 2D cells' edge capacitance
 
-Every 2D plateau lies below SPICE, by less at longer gates. A gate's capacitance per unit width is
+A gate's capacitance per unit width is
 a straight line in its length, {math:numref}`eq-cv-edge`:
 
 $$
@@ -649,7 +649,7 @@ At each gate bias, the line is fitted through the W = 10 µm cells that have a 2
 ```{figure} /_generated/comparison/edge-capacitance-light.svg
 :name: fig-cv-edge
 :figclass: only-light
-:alt: Four panels against u. Top, edge capacitance per width: the dashed 2D line lies well below the solid SPICE line on both plateaus. Bottom, capacitance per area: the two lines nearly coincide.
+:alt: Four panels against u. Top, edge capacitance per width: the dashed 2D line lies above the solid SPICE line at u = −5 V and below it at +5 V. Bottom, capacitance per area: the two lines nearly coincide.
 
 The edge capacitance per width (top) and the capacitance per area (bottom) of each device
 against u: SPICE at the {term}`typical corner <TT>` (solid), the calibrated 2D cells (dashed) and
@@ -659,7 +659,7 @@ cells at one bias.
 
 ```{figure} /_generated/comparison/edge-capacitance-dark.svg
 :figclass: only-dark
-:alt: Four panels against u. Top, edge capacitance per width: the dashed 2D line lies well below the solid SPICE line on both plateaus. Bottom, capacitance per area: the two lines nearly coincide.
+:alt: Four panels against u. Top, edge capacitance per width: the dashed 2D line lies above the solid SPICE line at u = −5 V and below it at +5 V. Bottom, capacitance per area: the two lines nearly coincide.
 
 The edge capacitance per width (top) and the capacitance per area (bottom) of each device
 against u: SPICE at the {term}`typical corner <TT>` (solid), the calibrated 2D cells (dashed) and
@@ -675,10 +675,10 @@ accumulation at u = −5 V, inversion at u = +5 V.
 
 | device | side | SPICE C_edge (fF/µm) | 2D C_edge (fF/µm) | BSIM4 extrinsic (fF/µm) |
 |---|---|---|---|---|
-| nfet | accumulation | 0.170 | 0.118 | 0.397 |
-| nfet | inversion | 0.420 | 0.151 | 0.645 |
-| pfet | accumulation | 0.332 | 0.115 | 0.313 |
-| pfet | inversion | 0.424 | 0.148 | 0.400 |
+| nfet | accumulation | 0.170 | 0.279 | 0.397 |
+| nfet | inversion | 0.420 | 0.312 | 0.645 |
+| pfet | accumulation | 0.332 | 0.364 | 0.313 |
+| pfet | inversion | 0.424 | 0.389 | 0.400 |
 ~~~
 
 {numref}`tab-cv-edge-per-area` gives the capacitance per area of the same lines.
@@ -690,18 +690,20 @@ accumulation at u = −5 V, inversion at u = +5 V.
 |---|---|---|---|
 | nfet | accumulation | 2.106 | 2.116 |
 | nfet | inversion | 2.083 | 2.100 |
-| pfet | accumulation | 2.174 | 2.154 |
+| pfet | accumulation | 2.174 | 2.153 |
 | pfet | inversion | 2.044 | 2.092 |
 ~~~
 
-The capacitance per area agrees within 2.4 % on both plateaus of both devices. The edge
-capacitance of the 2D cells is 0.05 to 0.28 fF/µm below SPICE. At the short gates that is
-most of the plateau gap. At nfet W10/L0.6 and u = +5 V, the two lines give 16.70 fF (SPICE)
-and 14.11 fF (2D).
+The capacitance per area agrees within 2.3 % on both plateaus of both devices. The 2D cells
+are solved with the fitted poly length bias ({ref}`moscap2d-edge`). SPICE minus the
+2D edge is −0.11 to
+0.11 fF/µm. The 2D edge is larger at accumulation and smaller at inversion.
+At nfet
+W10/L0.6 and u = +5 V, the two lines give 16.70 fF (SPICE) and 15.71 fF (2D).
 
 The per-area difference grows with L, and in three of the four cases it works against the edge.
-At pfet W10/L2 and u = +5 V, the edge part of the gap is 2.77 fF and the per-area part
-−0.97 fF.
+At pfet W10/L2 and u = +5 V, the edge part of the gap is 0.35 fF and the per-area part
+−0.96 fF.
 
 For the nfet, the SPICE edge is the card's extrinsic terms less 2·DLC·$C_{\mathrm{area}}$,
 to within 0.0003 fF/µm. The card's DLC, 54 nm ({repo}`data/process/nfet_05v0.toml`),
@@ -714,13 +716,17 @@ plateaus also lie off their line by up to 0.0053 fF/µm rms, against 0.0001 fF/�
 nfet. Which pfet card terms add this length-dependent part is
 [issue #194](https://github.com/mithro/gf180-tcad/issues/194).
 
-The 2D edge on the inversion side, 0.151 fF/µm, is about twice the card's outer fringe CF,
-0.073 fF/µm per edge. What the nfet cells lack there is the card's overlap less the DLC
-shortening, 2·(CGSO + CGSL − DLC·$C_{\mathrm{area}}$). The 2D cross-section has no lightly doped
-extension and no spacer ({py:mod}`gf180tcad.tcad.stack`). The 2D cross-section was tried with
+The 2D edge on the inversion side, 0.312 fF/µm, includes the fitted bias at both gate ends.
+The card's outer fringe CF is
+0.073 fF/µm per edge. The 2D cross-section has no lightly doped
+extension and no spacer ({py:mod}`gf180tcad.tcad.stack`).
+
+It was tried with
 contact plugs, a longer poly and extensions. None adds as much as 0.001 fF/µm more at +5 V than
 at −5 V ({ref}`moscap2d-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
-The nfet needs {{ lim_edge_nfet_target_step }} fF/µm more there.
+The nfet needs {{ lim_edge_nfet_target_step }} fF/µm more there. So the fitted bias leaves
+the step between the plateaus as its residual, tagged `spice-fit`: the card's bias-dependent
+overlap (CGSL with CKAPPA).
 
 L = 10 µm does not solve in 2D ({doc}`/limitations/moscap2d`). This deviates from the plan
 in one respect. The plan has {py:func}`~gf180tcad.calibrate.cv.validate_cv` call

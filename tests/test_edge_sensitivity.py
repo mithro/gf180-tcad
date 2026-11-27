@@ -266,7 +266,10 @@ def test_page_prints_the_fit():
     assert (peaks[0], peaks[-1]) == (1e18, 2e19)
     assert "1e18 to 2e19 cm⁻³" in page
     index = (REPO_ROOT / "docs/limitations/index.md").read_text("utf-8")
-    assert "too little edge capacitance ({ref}`moscap2d-edge`" in index
+    assert (
+        "its miss at each plateau is the card's bias-dependent overlap ({ref}`moscap2d-edge`"
+        in index
+    )
     cv = (REPO_ROOT / "docs/comparison/cv-agreement.md").read_text("utf-8")
     assert (
         "None adds as much as 0.001 fF/µm more at +5 V than at −5 V"
