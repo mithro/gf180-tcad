@@ -27,6 +27,8 @@ the strip and the 2D mesh.
 | [`b4.py`](b4.py) | B4: the harmonic-balance current columns on the poly-gate stack. |
 | [`b4pp.py`](b4pp.py), [`b4mg.py`](b4mg.py) | B4: the same columns on an oxide-only parallel plate and on a metal-gate MOS capacitor. |
 | [`b5.py`](b5.py) | B5: the nodal doping and the intrinsic density. |
+| [`b7n.py`](b7n.py) | The Newton iterations of each failed solve, repeated with the linear system written (issue #223). |
+| [`traps.py`](traps.py) | The two decks that break the deck rules (issue #224). |
 | [`diag.py`](diag.py), [`ncdump.py`](ncdump.py) | Diagnostics: one solve's profiles, a netCDF header dump. |
 
 ## Rebuild the records
@@ -43,5 +45,5 @@ The work directory must be outside the repository, because the sandbox refuses t
 A step whose [`done.json`](run.py) exists is skipped, so a cut-off run resumes. The records carry
 the pins of the run. [`record.py`](record.py) only reads the run directories, so a later fix to it
 rewrites the records from the same runs; the records carry its sha256 apart. Each step writes its
-complete output to [`<workdir>/<step>/run.log`](run.py). The whole set takes about three hours on this
+complete output to [`<workdir>/<step>/run.log`](run.py). The whole set takes about four and a half hours on this
 project's host, one 2 GiB container at a time.

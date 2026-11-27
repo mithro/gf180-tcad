@@ -207,10 +207,156 @@ calibrated ramp, with the project's lifetimes, runs down from 0 V towards
 {{ lim_charon_tight_ramp_to }} V. It last converged at {{ lim_charon_tight_ramp_v }} V. Both are
 device biases, vg − dv_fb, with dv_fb = {{ lim_charon_nfet_dv_fb }} V.
 
-What limits Newton at these biases is open
-([issue #223](https://github.com/mithro/gf180-tcad/issues/223)). The backend's 1e-9 passes on
-all four cases and gives the same C as 1e-10 within {{ lim_charon_b7_max }}. That is far below Charon's difference from
-DEVSIM, {{ lim_charon_pfet_start_devsim }} for the pfet start case.
+The backend's 1e-9 passes on all four cases and gives the same C as 1e-10 within
+{{ lim_charon_b7_max }}. That is far below Charon's difference from DEVSIM,
+{{ lim_charon_pfet_start_devsim }} for the pfet start case.
+
+(charon-newton)=
+### Why Newton stops
+
+The `newton-*` steps of {repo}`run.py <experiments/charon-backend/run.py>` sweep the start
+values of both devices, at each combination of lifetime and tolerance. Where a
+sweep fails, {repo}`b7n.py <experiments/charon-backend/b7n.py>` repeats the failed Newton solve
+at 1e-10 and at 1e-11. Its `write linear system is on` line makes Charon write the Jacobian J,
+the iterate and the residual after every iteration.
+
+Charon cannot report a condition number. Amesos2's KLU2 adapter
+([`Amesos2_KLU2_def.hpp`](https://github.com/trilinos/Trilinos/blob/81e9581a3c5f701d41e6828d0f0e5affcef5373a/packages/amesos2/src/Amesos2_KLU2_def.hpp)) calls neither of KLU's
+estimators, `KLU_condest` and `KLU_rcond`
+([`klu2_diagnostics.hpp`](https://github.com/trilinos/Trilinos/blob/81e9581a3c5f701d41e6828d0f0e5affcef5373a/packages/amesos2/src/KLU2/Source/klu2_diagnostics.hpp)). So
+{repo}`b7n.py <experiments/charon-backend/b7n.py>` computes the condition number from the
+written J. J's LU factors solve for every column of J⁻¹.
+
+A condition number near or above
+$1/\varepsilon$ gives its order of magnitude only. At that size the LU solve that computes it
+keeps few correct digits.
+
+NOX's convergence test asks the WRMS norm of the update to fall below 1,
+{math:numref}`eq-charon-wrms`
+([`NOX_StatusTest_NormWRMS.H`](https://github.com/trilinos/Trilinos/blob/81e9581a3c5f701d41e6828d0f0e5affcef5373a/packages/nox/src/NOX_StatusTest_NormWRMS.H)):
+
+$$
+\|\delta x\|_{\mathrm{WRMS}} = \sqrt{\frac{1}{N} \sum_{i=1}^{N} \left( \frac{\delta x_i}{r\,|x_i| + a} \right)^2}
+$$ (eq-charon-wrms)
+
+where
+
+- $\|\delta x\|_{\mathrm{WRMS}}$ is the WRMS norm of the update, dimensionless;
+- $N$ is the number of unknowns, dimensionless;
+- $i$ numbers the unknowns, dimensionless;
+- $\delta x_i$ is the update of unknown $i$ in one {term}`Newton iteration`, dimensionless;
+- $x_i$ is unknown $i$ before that update, in Charon's scaled units, dimensionless;
+- $r$ is the relative tolerance, dimensionless;
+- $a$ is the absolute tolerance, dimensionless.
+
+Charon's scaled units divide the potential by {{ lim_charon_newton_v0 }} V and the densities by
+{{ lim_charon_newton_c0 }} cm⁻³. Two round-off scales test the candidate limits,
+{math:numref}`eq-charon-floors`:
+
+$$
+f_x = \big\|\varepsilon\,|x|\big\|_{\mathrm{WRMS}}, \qquad
+s_F = \big\|\varepsilon\,|J|\,|x|\big\|_2
+$$ (eq-charon-floors)
+
+where
+
+- $f_x$ is floor_x, the WRMS norm of an update of $\varepsilon |x_i|$ in every unknown,
+  dimensionless;
+- $\varepsilon$ is the spacing of double-precision numbers at 1, 2⁻⁵², dimensionless;
+- $x$ is the vector of the unknowns $x_i$, dimensionless;
+- $J$ is the Jacobian of the scaled residual, dimensionless;
+- $|x|$ and $|J|$ hold the magnitudes of the entries, dimensionless;
+- $s_F$ is the round-off scale of the residual, dimensionless.
+
+The condition number measures how far J magnifies such round-off,
+{math:numref}`eq-charon-cond`:
+
+$$
+\kappa_1(A) = \|A\|_1\,\|A^{-1}\|_1, \qquad A = J \ \text{or}\ A = D^{-1} J
+$$ (eq-charon-cond)
+
+where
+
+- $\kappa_1(A)$ is the 1-norm condition number of the matrix $A$, dimensionless;
+- $\|A\|_1$ is the matrix 1-norm, the largest sum of magnitudes in a column of $A$,
+  dimensionless;
+- $J$ is the Jacobian, as in {math:numref}`eq-charon-floors`, dimensionless;
+- $D$ is the diagonal matrix of the row sums of $|J|$, dimensionless.
+
+$s_F$ takes the terms of each residual row to have the size of the matching entry of
+$|J|\,|x|$.
+
+{numref}`fig-charon-newton` shows each failed solve, repeated at the tolerance its sweep failed
+at. The decks set NOX's line search to `Full Step`, and every iteration takes step 1. The
+round-off of the unknowns is not the limit. Its floor_x is at most
+{{ lim_charon_newton_floor_x }} at 1e-10 and {{ lim_charon_newton_floor_x_tight }} at 1e-11.
+
+```{figure} /_generated/limitations/charon-newton-light.svg
+:name: fig-charon-newton
+:figclass: only-light
+:alt: Six panels. Three plot the WRMS norm and the condition number of J per Newton iteration of seven failed solves. Three hold one row of markers per solve.
+
+Top three panels: each failed solve, repeated at the tolerance its sweep failed at, per Newton
+iteration. They show the WRMS norm, its last iterations where it stays near 1, and the
+condition number of J. Colour gives the device; dashes mark the project's lifetime; each solve
+has its own marker. Below, one row per solve, named by device, lifetime, sweep tolerance and
+failed bias. The WRMS panel shows the failed solve's smallest WRMS norm (filled) and its floor_x
+(hollow square). In the residual and condition panels, filled markers are the failed solve and
+hollow ones the repeat at the other tolerance. For a 1e-10 sweep both repeats take the same
+iterates, so the hollow marker sits under the filled one. The hollow markers in view are the
+repeats that converge ({repo}`results/charon-experiments/hard-range.json`, `newton`).
+```
+
+```{figure} /_generated/limitations/charon-newton-dark.svg
+:figclass: only-dark
+:alt: Six panels. Three plot the WRMS norm and the condition number of J per Newton iteration of seven failed solves. Three hold one row of markers per solve.
+
+Top three panels: each failed solve, repeated at the tolerance its sweep failed at, per Newton
+iteration. They show the WRMS norm, its last iterations where it stays near 1, and the
+condition number of J. Colour gives the device; dashes mark the project's lifetime; each solve
+has its own marker. Below, one row per solve, named by device, lifetime, sweep tolerance and
+failed bias. The WRMS panel shows the failed solve's smallest WRMS norm (filled) and its floor_x
+(hollow square). In the residual and condition panels, filled markers are the failed solve and
+hollow ones the repeat at the other tolerance. For a 1e-10 sweep both repeats take the same
+iterates, so the hollow marker sits under the filled one. The hollow markers in view are the
+repeats that converge ({repo}`results/charon-experiments/hard-range.json`, `newton`).
+```
+
+The residual of a failed solve ends at its round-off scale. At the last iteration its 2-norm is
+{{ lim_charon_newton_res_lo }} to {{ lim_charon_newton_res_hi }} times $s_F$. There
+$\kappa_1(D^{-1}J)$ is {{ lim_charon_newton_cond_lo }} to {{ lim_charon_newton_cond_hi }}.
+
+Neither number separates the failing solves from the converging ones. The repeats that converge
+end at {{ lim_charon_newton_conv_res_lo }} to {{ lim_charon_newton_conv_res_hi }} times
+$s_F$. Their $\kappa_1(D^{-1}J)$ is {{ lim_charon_newton_conv_cond_lo }} to
+{{ lim_charon_newton_conv_cond_hi }}.
+
+In {{ lim_charon_newton_cycles }} of the {{ lim_charon_newton_failed }} failed solves the
+condition number of J alternates. Over the last {{ lim_charon_newton_cycle_window }} iterations,
+$\kappa_1(J)$ takes one value on even iterations and another on odd ones. Each repeats within
+{{ lim_charon_newton_cycle_parity }} %. The two differ by a factor of
+{{ lim_charon_newton_cycle_lo }} to {{ lim_charon_newton_cycle_hi }}. The update's 2-norm
+changes by at most {{ lim_charon_newton_cycle_dx }} % over the same iterations.
+
+The tolerance does not change the iterates. Both repeats take the same updates for as long as
+both run. At each such iteration the WRMS norm at 1e-11 is ten times the one at 1e-10. What sets
+the size of the update where it stops shrinking is open; see
+[issue #223](https://github.com/mithro/gf180-tcad/issues/223).
+
+Each failure of a 1e-11 sweep converges when repeated at 1e-10, with a WRMS norm of at most
+{{ lim_charon_newton_conv_hi }}. The failures of the 1e-10 sweeps stay above 1 at both
+tolerances. At 1e-11 every sweep fails. Three fail at device biases of
+{{ lim_charon_newton_tight_v }} V; the nfet with the project's lifetime fails at equilibrium. Whether the start potential
+at the oxide interfaces plays a part is [issue #232](https://github.com/mithro/gf180-tcad/issues/232).
+
+The two devices respond differently to the lifetime. At 1e-10 the pfet sweep fails at
+{{ lim_charon_newton_pfet_v }} V with either lifetime. Its WRMS norm stalls at
+{{ lim_charon_newton_pfet_floor }} at most. The nfet sweep reaches the end of its grid with
+1e-15 s.
+
+With the project's lifetime the nfet sweep fails at {{ lim_charon_newton_nfet_v }} V. There
+$\kappa_1(D^{-1}J)$ is {{ lim_charon_newton_nfet_cond }}, above $1/\varepsilon$. Its WRMS
+norm stays above {{ lim_charon_newton_nfet_floor }}.
 
 (charon-hard-range)=
 ## Where the default settings fail
@@ -348,10 +494,15 @@ applies to the 2D mesh only. The side sets and
 blocks they name are those of {numref}`fig-charon-strip`:
 
 - The body's side set is named `body_contact`, never `body`, the name of its element block.
-  Each script renames it, as {repo}`b2.py <experiments/charon-backend/b2.py>` does.
+  Each script renames it, as {repo}`b2.py <experiments/charon-backend/b2.py>` does. With the
+  side set named `body`, `charon_mp.exe` exits with code {{ lim_charon_trap_side_exit }} while
+  it reads the mesh. Charon's last message is "Error: Different entity rank has already been set
+  on Part", followed by Open MPI's `MPI_ABORT` notice.
 - Each uniform doping block is named `Function1`, `Function2` and so on
   ({repo}`decks.py <experiments/charon-backend/decks.py>`). With that naming the nodal doping
-  matches the description (B5, {numref}`fig-charon-doping`).
+  matches the description (B5, {numref}`fig-charon-doping`). A body block named `BodyDoping`
+  passes the interpreter, and Charon completes. The body's nodal doping is then
+  {{ lim_charon_trap_body_doping }} cm⁻³ ({numref}`fig-charon-traps`).
 - The 2D mesh's coordinates are scaled from the plugin's cm to µm, by 1e4
   ({repo}`b1.py <experiments/charon-backend/b1.py>`). The scaled mesh gives C within
   {{ lim_charon_tri3_2d }} of DEVSIM's 1D (B1).
@@ -359,4 +510,25 @@ blocks they name are those of {numref}`fig-charon-strip`:
   ({repo}`opts.py <experiments/charon-backend/opts.py>`; B3, {numref}`fig-charon-checks`). The
   backend also turns NOX's "Rescue Bad Newton Solve" off.
 
-What Charon does when the first two are broken is [issue #224](https://github.com/mithro/gf180-tcad/issues/224).
+The step `probe-deck-traps` of {repo}`run.py <experiments/charon-backend/run.py>` breaks the
+first two rules on the nfet strip with {repo}`traps.py <experiments/charon-backend/traps.py>`
+({repo}`probes.json <results/charon-experiments/probes.json>`, `deck_traps`).
+
+```{figure} /_generated/limitations/charon-traps-light.svg
+:name: fig-charon-traps
+:figclass: only-light
+:alt: Two panels over depth. Top, the poly: description line and Charon's nodal circles on it, at the same constant value. Bottom, the body: the description line at a negative constant, Charon's circles all on zero.
+
+The net doping of the nfet strip's deck whose body doping block is named `BodyDoping`, poly
+above and body below. Line: the description. Circles: Charon's nodal `Doping`
+({repo}`results/charon-experiments/probes.json`, `deck_traps`).
+```
+
+```{figure} /_generated/limitations/charon-traps-dark.svg
+:figclass: only-dark
+:alt: Two panels over depth. Top, the poly: description line and Charon's nodal circles on it, at the same constant value. Bottom, the body: the description line at a negative constant, Charon's circles all on zero.
+
+The net doping of the nfet strip's deck whose body doping block is named `BodyDoping`, poly
+above and body below. Line: the description. Circles: Charon's nodal `Doping`
+({repo}`results/charon-experiments/probes.json`, `deck_traps`).
+```

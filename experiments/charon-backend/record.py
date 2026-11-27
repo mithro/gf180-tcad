@@ -9,9 +9,10 @@ commit and the scripts); each record holds them once. The records:
 - ``cv.json``: the C-V runs (``cv-*`` steps): their settings, the gate biases, Charon's and
   DEVSIM's C per area (fF/um^2) and the per-state checks of b2an.py;
 - ``hard-range.json``: the solver variants through the onset of inversion (b2h.py), the solves
-  from the inversion side (b2d.py) and the nonlinear-Poisson check (b2nlp.py);
+  from the inversion side (b2d.py), the nonlinear-Poisson check (b2nlp.py), the step studies and
+  the Newton diagnostics at the stalls (b7n.py, issue #223);
 - ``probes.json``: the nodal doping (b5.py), the linear solvers (b3.py), the harmonic-balance
-  columns (b4.py) and the TRI3 meshes (b1.py, b1an.py);
+  columns (b4.py), the TRI3 meshes (b1.py, b1an.py) and the deck traps (traps.py, issue #224);
 - ``harmonic-balance.json``: the harmonic-balance columns on an oxide-only parallel plate
   (b4pp.py) and on a metal-gate MOS capacitor (b4mg.py), from a work directory of their own.
 """
@@ -111,6 +112,41 @@ def hard_range(work: Path) -> dict:
             }
             for p in sorted(work.glob("study-*"))
         },
+        "newton": newton(work),
+        "newton_fields": NEWTON_FIELDS,
+    }
+
+
+#: What the fields of ``newton`` hold where the names alone could mislead (b7n.py writes them).
+NEWTON_FIELDS = {
+    "f_2": "2-norm of the residual F written with update k, the unweighted F at the iterate "
+    "before update k (Charon's f_<k-1>.mm, in matrix order)",
+    "log_fnorm": "NOX's printed F-norm in the status test after update k: its own weighted norm "
+    "of F at the iterate after update k",
+    "log_wrms": "NOX's printed WRMS norm of update k; NOX evaluates it only once its F-norm test "
+    "passes, and prints 1e12 before that",
+    "dx_2": "2-norm of update k, x_k - x_(k-1), in Charon's scaled units",
+    "cond1": "1-norm condition number of J, ||J||_1 ||J^-1||_1, with J^-1 from J's LU factors; "
+    "near or above 1/eps the LU solve keeps few correct digits, so such values give the order of "
+    "magnitude only",
+    "cond1_row_scaled": "the same for D^-1 J, D the row sums of |J|",
+    "linear_rel_residual": "||J dx + f|| / ||f||: at the first update a check of the vector "
+    "order; later, with f at its round-off scale, it does not separate the orders",
+    "last": "computed from the files of the last update only, the only ones b7n.py keeps",
+}
+
+
+def newton(work: Path) -> dict:
+    """The Newton diagnostics of issue #223 (``newton-*`` steps): the sweep's outcome as in
+    ``step_studies`` and b7n.py's record."""
+    return {
+        p.name: {
+            "command": _json(p / "done.json")["command"],
+            "b2_exit": int((p / "b2_exit.txt").read_text()),
+            "failed": _newton_failed(p) if (p / "b2_failed.json").is_file() else None,
+            **_json(p / "b7n.json"),
+        }
+        for p in sorted(work.glob("newton-*"))
     }
 
 
@@ -161,6 +197,15 @@ def _failed(step: Path) -> dict:
     return rec
 
 
+def _newton_failed(step: Path) -> dict:
+    """As :func:`_failed`; a failed equilibrium (deck ``eq``, no LOCA step) has no LOCA failures
+    and no last converged bias."""
+    rec = _json(step / "b2_failed.json")
+    if rec["deck"] == "eq":
+        return {**rec, "loca_failures": [], "last_converged_v": None}
+    return _failed(step)
+
+
 def _solvers(d: Path) -> dict:
     """b3.json with each failed sweep's LOCA failures and its last converged bias."""
     rec = _json(d / "b3.json")
@@ -180,6 +225,7 @@ def probes(work: Path) -> dict:
         "solvers": _solvers(work / "b3-solvers"),
         "harmonic_balance": b4,
         "tri3": {**_json(work / "b1-tri3" / "b1.json"), **_json(work / "b1-tri3" / "b1an.json")},
+        "deck_traps": _json(work / "probe-deck-traps" / "traps.json"),
     }
 
 

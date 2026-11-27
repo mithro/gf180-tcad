@@ -143,7 +143,27 @@ STEPS = {
     ),
     "b4-parallel-plate": "python3 b4pp.py",
     "b4-metal-gate": "python3 b4mg.py",
+    # Issue #224: the side set named like its block, and the misnamed doping block.
+    "probe-deck-traps": "python3 traps.py",
 }
+
+
+def _newton(dev: str, tau: str, rel: str, abs_: str) -> str:
+    """Issue #223: the start-value sweep (may stop), then b7n.py's Newton diagnostics at its
+    stall, at both WRMS tolerances."""
+    env = _env(rel, abs_, tau=tau, sub="5")
+    return (f"env {env} python3 b2.py {dev} start ni; echo $? > b2_exit.txt; "
+            f"env {env} python3 b7n.py {dev} start")  # fmt: skip
+
+
+# One at a time on the start values: the device (its doping), the lifetime (the project's or
+# 1e-15 s) and the WRMS tolerance the sweep runs at.
+for _dev in ("nfet", "pfet"):
+    for _tau, _tname in (("", "default"), ("1e-15", "tau15")):
+        for _rel, _abs in (("1e-10", "1e-12"), ("1e-11", "1e-13")):
+            STEPS[f"newton-{_dev}-start-{_tname}-{_rel}"] = _newton(
+                f"{_dev}_05v0", _tau, _rel, _abs
+            )
 
 
 def _git(*args: str) -> str:
