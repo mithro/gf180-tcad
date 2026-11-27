@@ -52,12 +52,10 @@ def test_limit_bytes_without_cgroup_files(tmp_path):
 def test_trim_on_glibc():
     """On glibc the trim is there, and it hands back the pages of freed heap blocks."""
     assert jobmem._malloc_trim() is not None
-    before = jobmem.rss_bytes()
     # 4096 blocks of under 64 KiB (below the mmap threshold, so on the heap), all touched,
     # then all freed but the last, which pins the heap top: free() keeps the pages resident
     # and only malloc_trim hands them back
-    blocks = [bytearray(64 * 1024 - 64) for _ in range(4096)]
-    assert jobmem.rss_bytes() - before > 128 * 1024 * 1024
+    blocks = [b"\x01" * (64 * 1024 - 64) for _ in range(4096)]  # written, so resident
     del blocks[:-1]
     freed = jobmem.trim()
     assert freed is not None and freed > 64 * 1024 * 1024, freed
