@@ -240,7 +240,7 @@ where
 - $\|\delta x\|_{\mathrm{WRMS}}$ is the WRMS norm of the update, dimensionless;
 - $N$ is the number of unknowns, dimensionless;
 - $i$ numbers the unknowns, dimensionless;
-- $\delta x_i$ is the update of unknown $i$ in one Newton iteration, dimensionless;
+- $\delta x_i$ is the update of unknown $i$ in one {term}`Newton iteration`, dimensionless;
 - $x_i$ is unknown $i$ before that update, in Charon's scaled units, dimensionless;
 - $r$ is the relative tolerance, dimensionless;
 - $a$ is the absolute tolerance, dimensionless.
