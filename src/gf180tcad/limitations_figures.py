@@ -116,6 +116,8 @@ STYLE = {
     "metric_headroom": 1.25,
     # Log axes with a labelled criterion line reach this factor above the line or the data.
     "criterion_headroom": 3.0,
+    # The decimals of a level's largest change (%) the mesh-convergence page prints.
+    "meshconv_change_digits": 3,
     # The plugin record: bar width (V) of the region ranges.
     "bar_width": 0.02,
     "hatch": "//",
@@ -932,6 +934,66 @@ def meshconv_2d_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     return _meshconv_figure(2, palette, roots)
 
 
+#: The records of the 2D mesh-convergence check at the fitted poly length bias
+#: (``experiments/meshconv-fitted/record.py``; plan Task E3, Decision 5), one per device.
+MESHCONV_FITTED_ROOT = REPO_ROOT / "results" / "meshconv-fitted"
+
+
+def meshconv_fitted_root(roots: Roots = DEFAULT_ROOTS) -> Path:
+    """The fitted-bias mesh-convergence records of ``roots``: ``meshconv-fitted`` beside its SPICE
+    tree, so the committed :data:`MESHCONV_FITTED_ROOT` for the committed trees."""
+    return Path(roots.spice).parent / "meshconv-fitted"
+
+
+def meshconv_fitted(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
+    """The committed fitted-bias mesh-convergence record of ``device``."""
+    return json.loads((meshconv_fitted_root(roots) / f"{device}.json").read_text("utf-8"))
+
+
+def meshconv_2d_fitted_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Per device: the change |C / C_finer - 1| of the 2D levels 0 and 1 at the fitted poly
+    length bias and the calibrated values (solid), the committed study's selected level at the
+    start values (dashed), and the 1 % criterion."""
+    pal = ef.PALETTES[palette]
+    lw = ef.STYLE["line_width"]
+    start = meshconv_curves(2, roots)
+    colours = ("electron", "hole")
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(STYLE["tall_in"])
+        axes = fig.subplots(len(_DEVICES), 1, sharex=True)
+        for ax, device in zip(axes, _DEVICES, strict=True):
+            rec = meshconv_fitted(device, roots)
+            rep = rec["report"]
+            u = DEVICES[device].polarity * np.asarray(rep["vg"])
+            tops = [rec["check"]["criterion"]]
+            for i, lv in enumerate(rep["levels"]):
+                if lv["rel_change"] is None:
+                    continue
+                change = np.abs(lv["rel_change"])
+                tops.append(float(np.max(change)))
+                ax.plot(u, change, color=pal[colours[i]], lw=lw,
+                        label=f"level {i}, fitted bias", gid=f"{device} fitted level {i}")  # fmt: skip
+            c = start[device]
+            (sel,) = [lv for lv in c["levels"] if lv["level"] == c["selected"]]
+            tops.append(float(np.max(sel["change"])))
+            ax.plot(c["u"], sel["change"], color=pal[colours[c["selected"]]], lw=lw, ls="--",
+                    label=f"level {c['selected']}, start values, drawn poly",
+                    gid=f"{device} start level {c['selected']}")  # fmt: skip
+            crit = rec["check"]["criterion"]
+            ax.axhline(crit, color=pal["text"], lw=ef.STYLE["edge_width"], ls="--",
+                       gid=f"{device} criterion")  # fmt: skip
+            ax.text(u[0], crit, f" {crit * UNITS['percent']:g} %", ha="left", va="bottom")
+            ax.set_yscale("log")
+            ax.set_ylim(top=max(tops) * STYLE["criterion_headroom"])
+            ax.set_ylabel(f"{_SHORT[device]}: change\nto next level")
+            ax.grid(True)
+        axes[-1].set_xlabel("u = polarity × Vg (V)")
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
 # --- the 2D edge sensitivity (issue #189) ---------------------------------------------------------
 
 #: The committed edge-sensitivity records (``experiments/edge-sensitivity/record.py``): one per
@@ -1403,6 +1465,29 @@ def _plain(v: float) -> str:
     return f"{v:.{STYLE['input_digits']}g}".replace("e+", "e")
 
 
+def _meshconv_fitted_substitutions(roots: Roots) -> dict[str, str]:
+    """The fitted-bias mesh-convergence numbers of the mesh-convergence page, per device
+    (``<dev>`` is ``nfet`` or ``pfet``): ``lim_mcfit_<dev>_change_<i>`` the largest change of
+    level ``i`` against the next finer one (%), ``lim_mcfit_<dev>_nodes_<i>`` each level's node
+    count, ``lim_mcfit_<dev>_selected`` the committed study's selected level,
+    ``lim_mcfit_<dev>_cell`` the largest relative difference of that level from the committed
+    calibrated cell, and ``lim_mcfit_criterion`` the criterion (%)."""
+    digits = STYLE["meshconv_change_digits"]
+    out = {}
+    for device in _DEVICES:
+        dev, rec = _SHORT[device], meshconv_fitted(device, roots)
+        out["lim_mcfit_criterion"] = f"{rec['check']['criterion'] * UNITS['percent']:g}"
+        for i, lv in enumerate(rec["report"]["levels"]):
+            out[f"lim_mcfit_{dev}_nodes_{i}"] = f"{lv['node_count']:,}"
+            if lv["max_rel_change"] is not None:
+                out[f"lim_mcfit_{dev}_change_{i}"] = (
+                    f"{lv['max_rel_change'] * UNITS['percent']:.{digits}f}"
+                )
+        out[f"lim_mcfit_{dev}_selected"] = f"{rec['check']['selected_level']}"
+        out[f"lim_mcfit_{dev}_cell"] = _sci(rec["cell"]["max_rel_diff"])
+    return out
+
+
 def _abrupt_substitutions(roots: Roots) -> dict[str, str]:
     """The plugin-history page's abrupt-junction numbers (``lim_abrupt_*``), from
     :func:`abrupt_junction` and the v0.8.0 records: the inputs (dopings, temperature, constants),
@@ -1479,6 +1564,7 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
         **_edge_substitutions(roots),
         **_charon_substitutions(roots),
         **_abrupt_substitutions(roots),
+        **_meshconv_fitted_substitutions(roots),
     }
 
 
@@ -2642,6 +2728,7 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "mesh-grading": _svg_of(mesh_grading_figure),
     "meshconv-1d": _svg_of(meshconv_1d_figure),
     "meshconv-2d": _svg_of(meshconv_2d_figure),
+    "meshconv-2d-fitted": _svg_of(meshconv_2d_fitted_figure),
     "pn-slab": _svg_of(pn_slab_figure),
     "pin-depletion": _svg_of(pin_depletion_figure),
     "abrupt-junction": _svg_of(abrupt_junction_figure),

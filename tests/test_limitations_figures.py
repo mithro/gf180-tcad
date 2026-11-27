@@ -51,6 +51,7 @@ FIGURES = [
     "mesh-grading",
     "meshconv-1d",
     "meshconv-2d",
+    "meshconv-2d-fitted",
     "pn-slab",
     "pin-depletion",
     "abrupt-junction",
@@ -752,6 +753,26 @@ def check_meshconv_2d(fig):
     _check_meshconv(fig, 2)
 
 
+def check_meshconv_2d_fitted(fig):
+    """Per device: the fitted-bias record's levels 0 and 1 change against the next finer level,
+    the committed study's selected level dashed beside them, and the record's criterion."""
+    d = Drawn(fig)
+    for ax, device in zip(fig.axes, DEV, strict=True):
+        rec = _json("meshconv-fitted", f"{device}.json")
+        pol = DEVICES[device].polarity
+        rep = rec["report"]
+        for i, lv in enumerate(rep["levels"]):
+            if lv["rel_change"] is not None:
+                d.line(f"{device} fitted level {i}", pol * np.asarray(rep["vg"]),
+                       np.abs(lv["rel_change"]), ax)  # fmt: skip
+        start = _json("tcad", "meshconv", "moscap2d", device, "report.json")
+        sel = start["selected"]["level"]
+        d.line(f"{device} start level {sel}", pol * np.asarray(start["vg"]),
+               np.abs(start["levels"][sel]["rel_change"]), ax)  # fmt: skip
+        d.hline(f"{device} criterion", rec["check"]["criterion"], ax)
+    d.done()
+
+
 def _plugin() -> dict[str, dict]:
     out = {}
     for file in ("v0.8.0.json", "v0.8.0-mesh0p5.json"):
@@ -1184,6 +1205,7 @@ CHECKS = {
     "mesh-grading": (lf.mesh_grading_figure, check_mesh_grading),
     "meshconv-1d": (lf.meshconv_1d_figure, check_meshconv_1d),
     "meshconv-2d": (lf.meshconv_2d_figure, check_meshconv_2d),
+    "meshconv-2d-fitted": (lf.meshconv_2d_fitted_figure, check_meshconv_2d_fitted),
     "pn-slab": (lf.pn_slab_figure, check_pn_slab),
     "pin-depletion": (lf.pin_depletion_figure, check_pin_depletion),
     "abrupt-junction": (lf.abrupt_junction_figure, check_abrupt_junction),
