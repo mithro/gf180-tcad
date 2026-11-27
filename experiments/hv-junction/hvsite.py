@@ -97,6 +97,10 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0, ring_grou
             if s["nat_gap"] > 0.01 and pr["nat_strip"]:
                 # and in the strip that rule NAT.3 leaves between an N-well and the NAT layer
                 pfield += _boxes(edge, edge + s["nat_gap"], pr["pw"])
+                # and in the 0.6 um strips the NAT layer leaves on each side of a ring
+                for ra, rb in ring_spans:
+                    pfield += _boxes(ra - 0.6, ra, pr["pw"])
+                    pfield += _boxes(rb, rb + 0.6, pr["pw"])
         else:
             start = edge + (1.5 if s["kind"] == "dnw" else 0.0)
         # the generated P-well is the complement of the N-well layer: none where a ring is
@@ -115,7 +119,7 @@ def section(struct, process=None, corner=None, vmax=140.0, gate_v=0.0, ring_grou
     for layer, length in s["plates"].items():
         y0, y1 = LAYER_Y[layer]
         if s["gate"]:
-            x0 = edge - 1.0
+            x0 = edge - 0.5
         else:
             x0 = edge - inset + 0.4 if layer == "poly" else edge - inset - w
         plates.append({"x0": x0, "x1": edge + length, "y0": y0, "y1": y1,
