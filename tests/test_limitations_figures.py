@@ -1068,36 +1068,46 @@ def check_charon_checks(fig):
 
 
 def check_charon_newton(fig):
-    """Issue #223: each stalled case's WRMS norms per iteration at the looser re-solve, and per
-    case row the smallest WRMS norms, floor_x, the last residual and its round-off scale and the
-    condition numbers, from hard-range.json; the limit lines at NOX's tolerance and 1/eps."""
+    """Issue #223: per stalled case, the failed solve (the repeat at its sweep's tolerance): its
+    WRMS norm and condition number of J per iteration; per case row the smallest WRMS norm and
+    floor_x, and for both repeats the last residual over its round-off scale and the condition
+    number of D^-1 J, from hard-range.json; the limit lines at NOX's tolerance and 1/eps."""
     newton = _charon("hard-range")["newton"]
-    its, wr, res, cond = fig.axes
+    wr_it, zoom, cond_it, wr, res, cond = fig.axes
     d = Drawn(fig)
     stalled = {n: r for n, r in newton.items() if r["stalled"]}
-    tols = sorted({t for r in stalled.values() for t in r["solves"]}, key=float)
-    tight, loose = tols[0], tols[-1]
     rows = np.arange(len(stalled))
 
-    def last(r, tol, key):
-        return r["solves"][tol]["iterations"][-1][key]
+    def own(r):
+        return r["solves"][f"{r['search_rel']:g}"]
+
+    def other(r):
+        (t,) = [t for t in r["solves"] if t != f"{r['search_rel']:g}"]
+        return r["solves"][t]
 
     for name, r in stalled.items():
-        sv = r["solves"][loose]["iterations"]
-        d.line(f"wrms {name}", [it["iteration"] for it in sv], [it["wrms"] for it in sv], its)
-    d.hline("wrms limit", 1.0, its)
-    for tol in (loose, tight):
-        d.points(f"smallest wrms {tol}", [min(it["wrms"] for it in r["solves"][tol]["iterations"])
-                                          for r in stalled.values()], rows, wr)  # fmt: skip
-    d.points(f"floor_x {loose}", [r["solves"][loose]["last"]["floor_x"] for r in stalled.values()],
-             rows, wr)  # fmt: skip
+        sv = own(r)["iterations"]
+        assert not own(r)["converged"], name
+        x = [it["iteration"] for it in sv]
+        d.line(f"wrms {name}", x, [it["wrms"] for it in sv], wr_it)
+        d.line(f"cond {name}", x, [it["cond1"] for it in sv], cond_it)
+        if min(it["wrms"] for it in sv) < lf.STYLE["newton_inset_top"]:  # the inset's plateaus
+            w = lf.STYLE["newton_cycle_window"]
+            d.line(f"plateau {name}", x[-w:], [it["wrms"] for it in sv][-w:], zoom)
+        else:
+            assert not [ln for ln in zoom.get_lines() if ln.get_gid() == f"plateau {name}"]
+    d.hline("wrms limit", 1.0, wr_it)
+    d.points("smallest wrms failed", [min(it["wrms"] for it in own(r)["iterations"])
+                                      for r in stalled.values()], rows, wr)  # fmt: skip
+    d.points("floor_x failed", [own(r)["last"]["floor_x"] for r in stalled.values()], rows, wr)
     d.vline("wrms limit rows", 1.0, wr)
-    d.points("residual", [last(r, loose, "f_2") for r in stalled.values()], rows, res)
-    d.points("residual round-off", [r["solves"][loose]["last"]["f_roundoff_2"]
-                                    for r in stalled.values()], rows, res)  # fmt: skip
-    d.points("condition", [last(r, loose, "cond1") for r in stalled.values()], rows, cond)
-    d.points("condition row scaled", [last(r, loose, "cond1_row_scaled") for r in stalled.values()],
-             rows, cond)  # fmt: skip
+    for which, pick in (("failed", own), ("other", other)):
+        d.points(f"residual ratio {which}",
+                 [pick(r)["iterations"][-1]["f_2"] / pick(r)["last"]["f_roundoff_2"]
+                  for r in stalled.values()], rows, res)  # fmt: skip
+        d.points(f"condition row scaled {which}",
+                 [pick(r)["iterations"][-1]["cond1_row_scaled"] for r in stalled.values()], rows,
+                 cond)  # fmt: skip
     d.vline("inverse eps", 1 / np.finfo(float).eps, cond)
     d.done()
 

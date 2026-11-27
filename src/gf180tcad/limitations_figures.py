@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -27,6 +28,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.lines
 import matplotlib.patches
+import matplotlib.ticker
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
@@ -52,8 +54,19 @@ STYLE = {
     # holds the long study labels
     "checks_in": (8.0, 11.0),
     # the Newton figure: the iteration panel, then three panels of one row per case
-    "newton_in": (8.0, 13.0),
-    "newton_rows": (1.3, 1.0, 1.0, 1.0),
+    "newton_in": (8.0, 18.0),
+    "newton_rows": (1.3, 1.0, 1.3, 1.0, 1.0, 1.0),
+    # one marker per failed solve in the Newton figure's iteration panels
+    "newton_markers": ("o", "s", "^", "v", "D", "P", "X", "*"),
+    # A failed solve alternates (a period-two cycle) when, over its last iterations, the
+    # condition number of J on even and on odd iterations each repeats within the parity
+    # spread, and the two values differ by at least the ratio.
+    "newton_cycle_window": 20,
+    # the Newton figure's second panel shows the solves whose smallest WRMS norm is below this,
+    # over the last newton_cycle_window iterations
+    "newton_inset_top": 2.0,
+    "newton_cycle_parity": 0.01,
+    "newton_cycle_ratio": 2.0,
     "legend_beside": (1.01, 1.0),
     "tolerance_rows": (1.0, 1.4),
     # exact zeros of a relative change are drawn this factor below its smallest nonzero value
@@ -1725,6 +1738,23 @@ def _charon_substitutions(roots: Roots) -> dict[str, str]:
     }
 
 
+def newton_cycle(sv: dict) -> dict:
+    """Whether a failed solve's last STYLE["newton_cycle_window"] iterations alternate: the
+    1-norm condition number of J on even and on odd iterations each repeats within
+    STYLE["newton_cycle_parity"] (``parity``, the larger relative spread), and the two values
+    differ by at least STYLE["newton_cycle_ratio"] (``ratio``); ``dx``: the relative spread of
+    the update's 2-norm over the window (max / min - 1)."""
+    its = sv["iterations"][-STYLE["newton_cycle_window"] :]
+    c = np.asarray([it["cond1"] for it in its])
+    d = np.asarray([it["dx_2"] for it in its])
+    even, odd = c[0::2], c[1::2]
+    parity = max(even.max() / even.min(), odd.max() / odd.min()) - 1
+    ratio = max(even.mean(), odd.mean()) / min(even.mean(), odd.mean())
+    return {"parity": float(parity), "ratio": float(ratio), "dx": float(d.max() / d.min() - 1),
+            "alternates": bool(parity < STYLE["newton_cycle_parity"]
+                               and ratio >= STYLE["newton_cycle_ratio"])}  # fmt: skip
+
+
 def _charon_newton_substitutions(roots: Roots) -> dict[str, str]:
     """The numbers of issues #223 and #224 on the Charon page (``lim_charon_trap_*``,
     ``lim_charon_newton_*``), from ``probes.json`` (``deck_traps``) and ``hard-range.json``
@@ -1746,8 +1776,22 @@ def _charon_newton_substitutions(roots: Roots) -> dict[str, str]:
     def signed(v: float) -> str:
         return f"{v:g}".replace("-", "\u2212")
 
-    res = [at(n, "f_2") / n["solves"][loose]["last"]["f_roundoff_2"] for n in stalled]
-    cond = [at(n, "cond1_row_scaled") for n in stalled]
+    def own(n):  # the repeat at the tolerance the sweep failed at
+        return n["solves"][f"{n['search_rel']:g}"]
+
+    def other(n):
+        (t,) = [t for t in n["solves"] if t != f"{n['search_rel']:g}"]
+        return n["solves"][t]
+
+    def ratio(sv):
+        return sv["iterations"][-1]["f_2"] / sv["last"]["f_roundoff_2"]
+
+    def kappa(sv):
+        return sv["iterations"][-1]["cond1_row_scaled"]
+
+    failed = [own(n) for n in stalled]
+    conv = [sv for n in stalled for sv in (own(n), other(n)) if sv["converged"]]
+    cycles = [c for c in (newton_cycle(sv) for sv in failed) if c["alternates"]]
     (pfet_v,) = {n["failed_at_v"] for n in stalled
                  if n["device"] == "pfet_05v0" and n["search_rel"] == loose_rel}  # fmt: skip
     pfet = [n for n in stalled if n["device"] == "pfet_05v0" and n["search_rel"] == loose_rel]
@@ -1765,16 +1809,27 @@ def _charon_newton_substitutions(roots: Roots) -> dict[str, str]:
         "lim_charon_newton_floor_x_tight": _sci(
             max(n["solves"][tight]["last"]["floor_x"] for n in stalled)
         ),
-        "lim_charon_newton_res_lo": f"{min(res):.2g}",
-        "lim_charon_newton_res_hi": f"{max(res):.2g}",
-        "lim_charon_newton_cond_lo": _sci(min(cond)),
-        "lim_charon_newton_cond_hi": _sci(max(cond)),
+        "lim_charon_newton_res_lo": f"{min(ratio(sv) for sv in failed):.2g}",
+        "lim_charon_newton_res_hi": f"{max(ratio(sv) for sv in failed):.2g}",
+        "lim_charon_newton_cond_lo": _sci(min(kappa(sv) for sv in failed)),
+        "lim_charon_newton_cond_hi": _sci(max(kappa(sv) for sv in failed)),
+        "lim_charon_newton_conv_res_lo": f"{min(ratio(sv) for sv in conv):.2g}",
+        "lim_charon_newton_conv_res_hi": f"{max(ratio(sv) for sv in conv):.2g}",
+        "lim_charon_newton_conv_cond_lo": _sci(min(kappa(sv) for sv in conv)),
+        "lim_charon_newton_conv_cond_hi": _sci(max(kappa(sv) for sv in conv)),
+        "lim_charon_newton_failed": f"{len(failed)}",
+        "lim_charon_newton_cycles": f"{len(cycles)}",
+        "lim_charon_newton_cycle_window": f"{STYLE['newton_cycle_window']}",
+        "lim_charon_newton_cycle_parity": f"{max(c['parity'] for c in cycles) * UNITS['percent']:.1g}",
+        "lim_charon_newton_cycle_lo": f"{min(c['ratio'] for c in cycles):.2g}",
+        "lim_charon_newton_cycle_hi": f"{max(c['ratio'] for c in cycles):.2g}",
+        "lim_charon_newton_cycle_dx": f"{max(c['dx'] for c in cycles) * UNITS['percent']:.2g}",
         "lim_charon_newton_conv_hi": f"{max(smallest(n) for n in tight_sweeps):.2g}",
         "lim_charon_newton_pfet_v": f"{pfet_v:g}",
         "lim_charon_newton_pfet_floor": f"{max(smallest(n) for n in pfet):.3g}",
         "lim_charon_newton_nfet_v": f"{nfet['failed_at_v']:g}",
         "lim_charon_newton_nfet_floor": _sci(smallest(nfet)),
-        "lim_charon_newton_nfet_cond": _sci(at(nfet, "cond1_row_scaled")),
+        "lim_charon_newton_nfet_cond": _sci(kappa(own(nfet))),
         "lim_charon_newton_tight_v": ", ".join(ramps[:-1]) + " and " + ramps[-1],
         "lim_charon_newton_v0": f"{scales['V0']:g}",
         "lim_charon_newton_c0": _sci(scales["C0"]),
@@ -2225,123 +2280,139 @@ def charon_structures_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 
 def _newton_label(rec: dict) -> str:
     """A Newton case's row label from its record: device, lifetime, the sweep's tolerance and
-    the solve that failed."""
+    the solve that failed (a device bias, or the equilibrium)."""
     tau = f"τ {rec['tau']} s" if rec["tau"] else "project τ"
-    where = "equilibrium" if rec["deck"] == "eq" else f"{rec['failed_at_v']:g} V"
+    where = ("equilibrium" if rec["deck"] == "eq"
+             else f"{rec['failed_at_v']:g} V".replace("-", "\u2212"))  # fmt: skip
     return f"{_SHORT[rec['device']]}, {tau}, {rec['search_rel']:g}, {where}"
+
+
+def _newton_solve(sv: dict) -> dict:
+    its = sv["iterations"]
+    return {
+        "converged": sv["converged"],
+        "iteration": np.asarray([it["iteration"] for it in its]),
+        "wrms": np.asarray([it["wrms"] for it in its]),
+        "cond1_per_iteration": np.asarray([it["cond1"] for it in its]),
+        "smallest": min(it["wrms"] for it in its),
+        "floor_x": sv["last"]["floor_x"],
+        "res_ratio": its[-1]["f_2"] / sv["last"]["f_roundoff_2"],
+        "cond1_row_scaled": its[-1]["cond1_row_scaled"],
+    }
 
 
 def charon_newton(roots: Roots = DEFAULT_ROOTS) -> dict:
     """The Newton diagnostics of issue #223 (``hard-range.json``, ``newton``), per stalled case in
-    the record's order. ``looser`` and ``tighter`` name the two re-solves by their relative
-    tolerance; per case, per re-solve: the WRMS norm per iteration, its smallest value, floor_x,
-    and at the last iteration the residual 2-norm, its round-off scale and the 1-norm condition
-    numbers of the Jacobian, as written and row-scaled. ``passed``: the cases whose sweep reached
-    the end of its grid."""
+    the record's order. ``failed``: the repeat at the tolerance the case's sweep failed at, which
+    fails again; ``other``: the repeat at the other tolerance. Per repeat: the WRMS norm and
+    the 1-norm condition number of J per iteration, the smallest WRMS norm, floor_x, and at the
+    last iteration the residual over its round-off scale and the condition number of D^-1 J.
+    ``passed``: the cases whose sweep reached the end of its grid."""
     rec = charon_record("hard-range", charon_root(roots))["newton"]
     cases, passed = {}, []
     for name, n in rec.items():
         if not n["stalled"]:
             passed.append(name)
             continue
-        solves = {}
-        for tol, sv in n["solves"].items():
-            its = sv["iterations"]
-            solves[tol] = {
-                "iteration": np.asarray([it["iteration"] for it in its]),
-                "wrms": np.asarray([it["wrms"] for it in its]),
-                "smallest": min(it["wrms"] for it in its),
-                "converged": sv["converged"],
-                "floor_x": sv["last"]["floor_x"],
-                "f_2": its[-1]["f_2"],
-                "f_roundoff_2": sv["last"]["f_roundoff_2"],
-                "cond1": its[-1]["cond1"],
-                "cond1_row_scaled": its[-1]["cond1_row_scaled"],
-                "share": sv["last"]["wrms_share_by_field"],
-            }
+        own = f"{n['search_rel']:g}"
+        (other,) = [t for t in n["solves"] if t != own]
         cases[name] = {"label": _newton_label(n), "device": n["device"], "tau": n["tau"],
-                       "search_rel": n["search_rel"], "solves": solves}  # fmt: skip
-    tols = sorted({t for c in cases.values() for t in c["solves"]}, key=float)
-    return {"cases": cases, "tighter": tols[0], "looser": tols[-1], "passed": passed}
+                       "failed": _newton_solve(n["solves"][own]),
+                       "other": _newton_solve(n["solves"][other])}  # fmt: skip
+    return {"cases": cases, "passed": passed}
 
 
 def charon_newton_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
-    """Issue #223: top, the WRMS norm per Newton iteration of every stalled case, re-solved at the
-    looser tolerance, against the test's limit; below, one row per case: the smallest WRMS norm
-    at both tolerances beside floor_x, the round-off of the unknowns; the last residual beside
-    its round-off scale; the condition numbers beside 1/eps."""
+    """Issue #223. Top three panels: per Newton iteration of every failed solve, at the tolerance
+    its sweep failed at, the WRMS norm against the test's limit, the same over the last
+    iterations for the solves that come close to it, and the condition number of J.
+    Below, one row per case: the smallest WRMS norm beside floor_x; the last residual over its
+    round-off scale; the condition number of D^-1 J beside 1/eps. Filled: the failed repeat;
+    hollow: the repeat at the other tolerance."""
     pal = ef.PALETTES[palette]
     k = charon_newton(roots)
-    cases, loose, tight = k["cases"], k["looser"], k["tighter"]
+    cases = k["cases"]
     names = list(cases)
     y = np.arange(len(names))
     lw = ef.STYLE["line_width"]
     ms = STYLE["marker_pt"] ** 2
-    # the sweep's tolerance by marker: the looser sweeps circles, the tighter squares
-    loosest = max(c["search_rel"] for c in cases.values())
     colour = {"nfet_05v0": pal["electron"], "pfet_05v0": pal["hole"]}
+    small = ef.STYLE["text_pt"] * STYLE["legend_scale"]
     with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["newton_in"])
-        its, wr, res, cond = fig.subplots(len(CHARON_NEWTON_PANELS), 1,
-                                          height_ratios=STYLE["newton_rows"])  # fmt: skip
-        for name, c in cases.items():
-            s = c["solves"][loose]
-            its.plot(s["iteration"], s["wrms"], color=colour[c["device"]], lw=lw,
-                     ls="-" if c["tau"] else "--", marker="o" if c["search_rel"] == loosest
-                     else "s", ms=STYLE["point_ms"],
-                     label=c["label"], gid=f"wrms {name}")  # fmt: skip
-        its.axhline(TOOLS["nox_wrms_tolerance"], color=pal["text"], lw=lw, ls=":",
-                    label="the WRMS test's limit", gid="wrms limit")  # fmt: skip
-        its.set_yscale("log")
-        its.set_xlabel("Newton iteration")
-        its.set_ylabel(f"WRMS norm at {loose}")
+        wr_it, zoom, cond_it, wr, res, cond = fig.subplots(
+            len(CHARON_NEWTON_PANELS), 1, height_ratios=STYLE["newton_rows"]
+        )
+        for i, (name, c) in enumerate(cases.items()):
+            f = c["failed"]
+            style = {"color": colour[c["device"]], "lw": lw, "ls": "-" if c["tau"] else "--",
+                     "marker": STYLE["newton_markers"][i], "ms": STYLE["small_marker_pt"],
+                     "mfc": "none"}  # fmt: skip
+            wr_it.plot(f["iteration"], f["wrms"], label=c["label"], gid=f"wrms {name}", **style)
+            cond_it.plot(f["iteration"], f["cond1_per_iteration"], gid=f"cond {name}", **style)
+        wr_it.axhline(TOOLS["nox_wrms_tolerance"], color=pal["text"], lw=lw, ls=":",
+                      label="the WRMS test's limit", gid="wrms limit")  # fmt: skip
+        # the plateaus close to the limit, over the last iterations, on a linear axis
+        window = STYLE["newton_cycle_window"]
+        for i, (name, c) in enumerate(cases.items()):
+            f = c["failed"]
+            if f["smallest"] < STYLE["newton_inset_top"]:
+                zoom.plot(f["iteration"][-window:], f["wrms"][-window:], color=colour[c["device"]],
+                          lw=lw, ls="-" if c["tau"] else "--", marker=STYLE["newton_markers"][i],
+                          ms=STYLE["small_marker_pt"], mfc="none", gid=f"plateau {name}")  # fmt: skip
+        for ax, ylabel in zip((wr_it, zoom, cond_it), CHARON_NEWTON_PANELS[:3], strict=True):
+            ax.set_ylabel(ylabel)
+            ax.grid(True)
+        wr_it.set_yscale("log")
+        cond_it.set_yscale("log")
+        cond_it.set_xlabel("Newton iteration of the failed solve")
 
-        def rows(ax, key, values, marker, face, label):
-            if face == "none":  # hollow: the outline only
-                colours = {"facecolors": face, "edgecolors": pal["highlight"]}
-            else:  # filled, or a line marker (x), which has no face
-                colours = {"color": face}
+        def rows(ax, key, values, marker, filled, label):
+            if filled:
+                colours = {"color": pal["highlight"]}
+            else:  # hollow: the outline only
+                colours = {"facecolors": "none", "edgecolors": pal["highlight"]}
             ax.scatter(values, y, marker=marker, s=ms, label=label, gid=key, **colours)
 
-        rows(wr, f"smallest wrms {loose}", [cases[n]["solves"][loose]["smallest"] for n in names],
-             "o", pal["highlight"], f"smallest WRMS norm, re-solved at {loose}")  # fmt: skip
-        rows(wr, f"smallest wrms {tight}", [cases[n]["solves"][tight]["smallest"] for n in names],
-             "s", pal["electron"], f"smallest WRMS norm, re-solved at {tight}")  # fmt: skip
-        rows(wr, f"floor_x {loose}", [cases[n]["solves"][loose]["floor_x"] for n in names],
-             "o", "none", f"floor_x, the round-off of the unknowns, at {loose}")  # fmt: skip
+        rows(wr, "smallest wrms failed", [cases[n]["failed"]["smallest"] for n in names], "o",
+             True, "smallest WRMS norm of the failed solve")  # fmt: skip
+        rows(wr, "floor_x failed", [cases[n]["failed"]["floor_x"] for n in names], "s", False,
+             "floor_x of the failed solve")  # fmt: skip
         wr.axvline(TOOLS["nox_wrms_tolerance"], color=pal["text"], lw=lw, ls=":",
                    gid="wrms limit rows")  # fmt: skip
-        rows(res, "residual", [cases[n]["solves"][loose]["f_2"] for n in names], "o",
-             pal["highlight"], "residual two-norm at the last iteration")  # fmt: skip
-        rows(res, "residual round-off", [cases[n]["solves"][loose]["f_roundoff_2"]
-                                         for n in names], "x", pal["text"],
-             "its round-off scale, two-norm of eps·|J|·|x|")  # fmt: skip
-        rows(cond, "condition", [cases[n]["solves"][loose]["cond1"] for n in names], "o",
-             pal["highlight"], "one-norm condition number of J")  # fmt: skip
-        rows(cond, "condition row scaled", [cases[n]["solves"][loose]["cond1_row_scaled"]
-                                        for n in names], "s", pal["electron"],
-             "the same, each row divided by its sum of magnitudes")  # fmt: skip
-        cond.axvline(1 / np.finfo(np.float64).eps, color=pal["text"], lw=lw, ls=":",
+        for which, filled, words in (
+            ("failed", True, "the failed solve"),
+            ("other", False, "the repeat at the other tolerance"),
+        ):
+            rows(res, f"residual ratio {which}", [cases[n][which]["res_ratio"] for n in names],
+                 "D", filled, f"residual over its round-off scale, {words}")  # fmt: skip
+            rows(cond, f"condition row scaled {which}",
+                 [cases[n][which]["cond1_row_scaled"] for n in names], "^", filled,
+                 f"condition number of D⁻¹J, {words}")  # fmt: skip
+        cond.axvline(1 / np.finfo(np.float64).eps, color=pal["text"], lw=lw, ls="-.",
                      label="inverse of eps", gid="inverse eps")  # fmt: skip
-        for ax, title in zip((wr, res, cond), CHARON_NEWTON_PANELS[1:], strict=True):
+        for ax, title in zip((wr, res, cond), CHARON_NEWTON_PANELS[3:], strict=True):
             ax.set_xscale("log")
-            ax.set_yticks(y, [cases[n]["label"] for n in names],
-                          fontsize=ef.STYLE["text_pt"] * STYLE["legend_scale"])  # fmt: skip
+            ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+            ax.set_yticks(y, [cases[n]["label"] for n in names], fontsize=small)
             ax.invert_yaxis()
             ax.set_xlabel(title)
             ax.grid(True, axis="x")
         handles, labels = [], []
-        for ax in (its, wr, res, cond):
+        for ax in (wr_it, wr, res, cond):
             h, lab = ax.get_legend_handles_labels()
             handles += h
             labels += lab
         fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
-                   frameon=False, fontsize=ef.STYLE["text_pt"] * STYLE["legend_scale"])  # fmt: skip
+                   frameon=False, fontsize=small)  # fmt: skip
         return fig
 
 
-#: The panels of the Newton figure, top to bottom (their x-axis titles below the first).
-CHARON_NEWTON_PANELS = ("WRMS norm per iteration", "WRMS norm", "residual, two-norm",
+#: The panels of the Newton figure, top to bottom: the y-axis titles of the three iteration
+#: panels, then the x-axis titles of the three row panels.
+CHARON_NEWTON_PANELS = ("WRMS norm", "WRMS norm near the limit", "condition number of J",
+                        "WRMS norm",
+                        "residual over its round-off scale",
                         "condition number at the last iteration")  # fmt: skip
 
 
@@ -2384,10 +2455,23 @@ def charon_traps_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
 # --- the registry -------------------------------------------------------------------------------
 
 
+#: A clip path's id in matplotlib's SVG, where it is defined and where it is used.
+_CLIP_ID = re.compile(rb'(?<=id=")p[a-f\d]+(?=")|(?<=url\(#)p[a-f\d]+(?=\))')
+
+
+def _stable_clip_ids(svg: bytes) -> bytes:
+    """``svg`` with each clip path's id replaced by its order of first appearance. matplotlib
+    hashes a clip rectangle's float bounds into the id, and constrained layout can move those
+    bounds in their last bits between processes (the charon-newton figure did, one hash seed in
+    about eight), though the drawn coordinates stay the same."""
+    ids: dict[bytes, bytes] = {}
+    return _CLIP_ID.sub(lambda m: ids.setdefault(m.group(0), f"clip{len(ids)}".encode()), svg)
+
+
 def _svg_of(draw: Callable) -> Callable[[str, Roots], bytes]:
     def svg(palette: str, roots: Roots = DEFAULT_ROOTS) -> bytes:
         with matplotlib.rc_context(ef.palette_rc(palette)):
-            return ef.svg_bytes(draw(palette, roots))
+            return _stable_clip_ids(ef.svg_bytes(draw(palette, roots)))
 
     svg.__doc__ = f":func:`{draw.__name__}` as SVG bytes, saved inside the palette's rc context."
     return svg

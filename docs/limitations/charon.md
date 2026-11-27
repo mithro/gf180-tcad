@@ -215,7 +215,7 @@ The backend's 1e-9 passes on all four cases and gives the same C as 1e-10 within
 ### Why Newton stops
 
 The `newton-*` steps of {repo}`run.py <experiments/charon-backend/run.py>` sweep the start
-values of both devices, at both lifetimes and both tolerances, one factor at a time. Where a
+values of both devices. For each device they change the lifetime and the tolerance one at a time. Where a
 sweep fails, {repo}`b7n.py <experiments/charon-backend/b7n.py>` repeats the failed Newton solve
 at 1e-10 and at 1e-11. Its `write linear system is on` line makes Charon write the Jacobian J,
 the iterate and the residual after every iteration.
@@ -226,6 +226,10 @@ estimators, `KLU_condest` and `KLU_rcond`
 ([`klu2_diagnostics.hpp`](https://github.com/trilinos/Trilinos/blob/81e9581a3c5f701d41e6828d0f0e5affcef5373a/packages/amesos2/src/KLU2/Source/klu2_diagnostics.hpp)). So
 {repo}`b7n.py <experiments/charon-backend/b7n.py>` computes the condition number from the
 written J. J's LU factors solve for every column of J⁻¹.
+
+A condition number near or above
+$1/\varepsilon$ gives its order of magnitude only. At that size the LU solve that computes it
+keeps few correct digits.
 
 NOX's convergence test asks the WRMS norm of the update to fall below 1,
 {math:numref}`eq-charon-wrms`
@@ -274,57 +278,74 @@ $$ (eq-charon-cond)
 where
 
 - $\kappa_1(A)$ is the 1-norm condition number of the matrix $A$, dimensionless;
+- $\|A\|_1$ is the matrix 1-norm, the largest sum of magnitudes in a column of $A$,
+  dimensionless;
 - $J$ is the Jacobian, as in {math:numref}`eq-charon-floors`, dimensionless;
 - $D$ is the diagonal matrix of the row sums of $|J|$, dimensionless.
 
 $s_F$ takes the terms of each residual row to have the size of the matching entry of
 $|J|\,|x|$.
 
-{numref}`fig-charon-newton` shows every failed solve. NOX takes the full Newton step at every
-iteration, so the line search plays no part. The round-off of the unknowns is not the limit.
-Its floor_x is at most {{ lim_charon_newton_floor_x }} at 1e-10 and
-{{ lim_charon_newton_floor_x_tight }} at 1e-11.
+{numref}`fig-charon-newton` shows each failed solve, repeated at the tolerance its sweep failed
+at. The decks set NOX's line search to `Full Step`, and every iteration takes step 1. The
+round-off of the unknowns is not the limit. Its floor_x is at most
+{{ lim_charon_newton_floor_x }} at 1e-10 and {{ lim_charon_newton_floor_x_tight }} at 1e-11.
 
 ```{figure} /_generated/limitations/charon-newton-light.svg
 :name: fig-charon-newton
 :figclass: only-light
-:alt: Top, the WRMS norm per Newton iteration of seven failed solves, falling to a plateau near 1 or staying far above it. Below, one row per solve: the smallest WRMS norms beside a much smaller round-off floor; the last residual beside its round-off scale; two condition numbers on a log axis beside a dotted line at 1/eps.
+:alt: Six panels. Top three, per Newton iteration of seven failed solves: the WRMS norm with a dotted line at 1. Then its last iterations near 1, and the condition number of J. Bottom three: one row per solve, with markers on log axes beside dotted or dash-dot lines.
 
-Top: the WRMS norm per Newton iteration of each failed solve, repeated at 1e-10; nfet blue,
-pfet orange, dashed with the project's lifetime, circles for the sweeps at 1e-10 and squares
-at 1e-11. Below, one row per solve, named by device, lifetime, sweep tolerance and failed bias:
-the smallest WRMS norm at both tolerances and floor_x; the last residual and its round-off
-scale; the condition numbers of J and D⁻¹J
+Top three panels: each failed solve, repeated at the tolerance its sweep failed at, per Newton
+iteration. They show the WRMS norm, its last iterations where it stays near 1, and the
+condition number of J. Colour gives the device; dashes
+mark the project's lifetime; each solve has its own marker. Below, one row per solve, named by
+device, lifetime, sweep tolerance and failed bias. Filled markers are the failed solve, hollow
+ones the repeat at the other tolerance
 ({repo}`results/charon-experiments/hard-range.json`, `newton`).
 ```
 
 ```{figure} /_generated/limitations/charon-newton-dark.svg
 :figclass: only-dark
-:alt: Top, the WRMS norm per Newton iteration of seven failed solves, falling to a plateau near 1 or staying far above it. Below, one row per solve: the smallest WRMS norms beside a much smaller round-off floor; the last residual beside its round-off scale; two condition numbers on a log axis beside a dotted line at 1/eps.
+:alt: Six panels. Top three, per Newton iteration of seven failed solves: the WRMS norm with a dotted line at 1. Then its last iterations near 1, and the condition number of J. Bottom three: one row per solve, with markers on log axes beside dotted or dash-dot lines.
 
-Top: the WRMS norm per Newton iteration of each failed solve, repeated at 1e-10; nfet blue,
-pfet orange, dashed with the project's lifetime, circles for the sweeps at 1e-10 and squares
-at 1e-11. Below, one row per solve, named by device, lifetime, sweep tolerance and failed bias:
-the smallest WRMS norm at both tolerances and floor_x; the last residual and its round-off
-scale; the condition numbers of J and D⁻¹J
+Top three panels: each failed solve, repeated at the tolerance its sweep failed at, per Newton
+iteration. They show the WRMS norm, its last iterations where it stays near 1, and the
+condition number of J. Colour gives the device; dashes
+mark the project's lifetime; each solve has its own marker. Below, one row per solve, named by
+device, lifetime, sweep tolerance and failed bias. Filled markers are the failed solve, hollow
+ones the repeat at the other tolerance
 ({repo}`results/charon-experiments/hard-range.json`, `newton`).
 ```
 
-The residual is at its round-off scale. At the last iteration its 2-norm is
-{{ lim_charon_newton_res_lo }} to {{ lim_charon_newton_res_hi }} times $s_F$. Each further
-update is $J^{-1}$ applied to that residual, so its size follows J's conditioning. At the last
-iteration $\kappa_1(D^{-1}J)$ is {{ lim_charon_newton_cond_lo }} to
-{{ lim_charon_newton_cond_hi }}.
+The residual of a failed solve ends at its round-off scale. At the last iteration its 2-norm is
+{{ lim_charon_newton_res_lo }} to {{ lim_charon_newton_res_hi }} times $s_F$. There
+$\kappa_1(D^{-1}J)$ is {{ lim_charon_newton_cond_lo }} to {{ lim_charon_newton_cond_hi }}.
+
+Neither number separates the failing solves from the converging ones. The repeats that converge
+end at {{ lim_charon_newton_conv_res_lo }} to {{ lim_charon_newton_conv_res_hi }} times
+$s_F$. Their $\kappa_1(D^{-1}J)$ is {{ lim_charon_newton_conv_cond_lo }} to
+{{ lim_charon_newton_conv_cond_hi }}.
+
+In {{ lim_charon_newton_cycles }} of the {{ lim_charon_newton_failed }} failed solves the
+condition number of J alternates. Over the last {{ lim_charon_newton_cycle_window }} iterations,
+$\kappa_1(J)$ takes one value on even iterations and another on odd ones. Each repeats within
+{{ lim_charon_newton_cycle_parity }} %. The two differ by a factor of
+{{ lim_charon_newton_cycle_lo }} to {{ lim_charon_newton_cycle_hi }}. The update's 2-norm
+changes by at most {{ lim_charon_newton_cycle_dx }} % over the same iterations.
 
 The tolerance does not change the iterates. Both repeats take the same updates for as long as
-both run. At each such iteration the WRMS norm at 1e-11 is ten times the one at 1e-10.
+both run. At each such iteration the WRMS norm at 1e-11 is ten times the one at 1e-10. What sets
+the size of the update where it stops shrinking is
+[issue #223](https://github.com/mithro/gf180-tcad/issues/223).
 
 Each failure of a 1e-11 sweep converges when repeated at 1e-10, with a WRMS norm of at most
 {{ lim_charon_newton_conv_hi }}. The failures of the 1e-10 sweeps stay above 1 at both
-tolerances. At 1e-11 every sweep fails. The nfet with the project's lifetime fails at
-equilibrium, the others at device biases of {{ lim_charon_newton_tight_v }} V.
+tolerances. At 1e-11 every sweep fails, at device biases of {{ lim_charon_newton_tight_v }} V.
+The nfet with the project's lifetime fails earlier, at equilibrium. Whether the start potential
+at the oxide interfaces plays a part is [issue #232](https://github.com/mithro/gf180-tcad/issues/232).
 
-The lifetime and the doping act differently on the two devices. At 1e-10 the pfet sweep fails at
+The two devices respond differently to the lifetime. At 1e-10 the pfet sweep fails at
 {{ lim_charon_newton_pfet_v }} V with either lifetime. Its WRMS norm stalls at
 {{ lim_charon_newton_pfet_floor }} at most. The nfet sweep reaches the end of its grid with
 1e-15 s.
@@ -471,7 +492,8 @@ blocks they name are those of {numref}`fig-charon-strip`:
 - The body's side set is named `body_contact`, never `body`, the name of its element block.
   Each script renames it, as {repo}`b2.py <experiments/charon-backend/b2.py>` does. With the
   side set named `body`, `charon_mp.exe` exits with code {{ lim_charon_trap_side_exit }} while
-  it reads the mesh. Its log ends in "Error: Different entity rank has already been set on Part".
+  it reads the mesh. Charon's last message is "Error: Different entity rank has already been set
+  on Part", followed by Open MPI's `MPI_ABORT` notice.
 - Each uniform doping block is named `Function1`, `Function2` and so on
   ({repo}`decks.py <experiments/charon-backend/decks.py>`). With that naming the nodal doping
   matches the description (B5, {numref}`fig-charon-doping`). A body block named `BodyDoping`

@@ -18022,6 +18022,16 @@
       "tau": "1e-15"
     }
   },
+  "newton_fields": {
+    "cond1": "1-norm condition number of J, ||J||_1 ||J^-1||_1, with J^-1 from J's LU factors; near or above 1/eps the LU solve keeps few correct digits, so such values give the order of magnitude only",
+    "cond1_row_scaled": "the same for D^-1 J, D the row sums of |J|",
+    "dx_2": "2-norm of update k, x_k - x_(k-1), in Charon's scaled units",
+    "f_2": "2-norm of the residual F written with update k, the unweighted F at the iterate before update k (Charon's f_<k-1>.mm, in matrix order)",
+    "last": "computed from the files of the last update only, the only ones b7n.py keeps",
+    "linear_rel_residual": "||J dx + f|| / ||f||: at the first update a check of the vector order; later, with f at its round-off scale, it does not separate the orders",
+    "log_fnorm": "NOX's printed F-norm in the status test after update k: its own weighted norm of F at the iterate after update k",
+    "log_wrms": "NOX's printed WRMS norm of update k; NOX evaluates it only once its F-norm test passes, and prints 1e12 before that"
+  },
   "nlp": {
     "points": [
       {
@@ -18134,7 +18144,7 @@
       }
     ]
   },
-  "record_py_sha256": "34b0fc4562a8f0a1a3ee929e6fb330c3906e69a67970a23c247d30e3bf22d032",
+  "record_py_sha256": "28ef77407a42cb7c252eeeb51a4dbb2a52ccb2eeb338a1d928cd4aa7ab5d97fa",
   "schema": 1,
   "scripts_sha256": {
     "b1.py": "ee6692158b67e50071c78e72ae52db9f145cd8829edba5ed2ca51cdd2f4925b3",

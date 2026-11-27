@@ -113,7 +113,27 @@ def hard_range(work: Path) -> dict:
             for p in sorted(work.glob("study-*"))
         },
         "newton": newton(work),
+        "newton_fields": NEWTON_FIELDS,
     }
+
+
+#: What the fields of ``newton`` hold where the names alone could mislead (b7n.py writes them).
+NEWTON_FIELDS = {
+    "f_2": "2-norm of the residual F written with update k, the unweighted F at the iterate "
+    "before update k (Charon's f_<k-1>.mm, in matrix order)",
+    "log_fnorm": "NOX's printed F-norm in the status test after update k: its own weighted norm "
+    "of F at the iterate after update k",
+    "log_wrms": "NOX's printed WRMS norm of update k; NOX evaluates it only once its F-norm test "
+    "passes, and prints 1e12 before that",
+    "dx_2": "2-norm of update k, x_k - x_(k-1), in Charon's scaled units",
+    "cond1": "1-norm condition number of J, ||J||_1 ||J^-1||_1, with J^-1 from J's LU factors; "
+    "near or above 1/eps the LU solve keeps few correct digits, so such values give the order of "
+    "magnitude only",
+    "cond1_row_scaled": "the same for D^-1 J, D the row sums of |J|",
+    "linear_rel_residual": "||J dx + f|| / ||f||: at the first update a check of the vector "
+    "order; later, with f at its round-off scale, it does not separate the orders",
+    "last": "computed from the files of the last update only, the only ones b7n.py keeps",
+}
 
 
 def newton(work: Path) -> dict:

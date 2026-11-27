@@ -27,8 +27,8 @@ the strip and the 2D mesh.
 | [`b4.py`](b4.py) | B4: the harmonic-balance current columns on the poly-gate stack. |
 | [`b4pp.py`](b4pp.py), [`b4mg.py`](b4mg.py) | B4: the same columns on an oxide-only parallel plate and on a metal-gate MOS capacitor. |
 | [`b5.py`](b5.py) | B5: the nodal doping and the intrinsic density. |
-| [`b7n.py`](b7n.py) | The Newton iterations of each failed solve, repeated with the linear system written ([issue #223](https://github.com/mithro/gf180-tcad/issues/223)). |
-| [`traps.py`](traps.py) | The two decks that break the deck rules ([issue #224](https://github.com/mithro/gf180-tcad/issues/224)). |
+| [`b7n.py`](b7n.py) | The Newton iterations of each failed solve, repeated with the linear system written (issue #223). |
+| [`traps.py`](traps.py) | The two decks that break the deck rules (issue #224). |
 | [`diag.py`](diag.py), [`ncdump.py`](ncdump.py) | Diagnostics: one solve's profiles, a netCDF header dump. |
 
 ## Rebuild the records
