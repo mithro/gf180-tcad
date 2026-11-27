@@ -738,10 +738,10 @@ def test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell():
     comp = width_scaled_two_d(NFET, "w10p0_l0p70", "w1p6_l0p70")
     v = comp["verdicts"]
     assert comp["verdict"] == "Disagree"
-    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.0755, abs=5e-5)
-    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.1385, abs=5e-5)
-    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1938, abs=5e-5)
-    assert v["dv_inv"]["dv_v"] == pytest.approx(-0.0335, abs=5e-5)
+    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.0711, abs=5e-5)
+    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.0543, abs=5e-5)
+    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1603, abs=5e-5)
+    assert v["dv_inv"]["dv_v"] == pytest.approx(-0.0218, abs=5e-5)
     assert [v[k]["verdict"] for k in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv")] == [
         "Same process", "Same process", "Disagree", "Agree",
     ]  # fmt: skip
@@ -776,7 +776,7 @@ def test_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
 
 def test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
     """The committed pfet W1.6/L0.7 2D job gives what the derivation from W10/L0.7 gives: the
-    same mesh, the same cv.meta.json apart from the width (so the same round-off entry), the same
+    same mesh, the same cv.meta.json apart from the width (so the same round-off entries: none), the same
     per-width Cgg, and the same comparison in the validation file."""
     root = cv.MOSCAP2D_ROOT / PFET / "calibrated"
     metas = [
@@ -784,14 +784,14 @@ def test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
         for gid in ("w10p0_l0p70", "w1p6_l0p70")
     ]
     assert metas[0]["mesh_sha256"] == metas[1]["mesh_sha256"]
-    # The metas differ only in the width, so both jobs record the same round-off entry
+    # The metas differ only in the width, so both jobs record the same round-off entries
     # (docs/limitations/moscap2d.md).
     assert (metas[0]["w_um"], metas[1]["w_um"]) == (10.0, 1.6)
     assert (metas[0]["geometry"]["w_um"], metas[1]["geometry"]["w_um"]) == (10.0, 1.6)
     for m in metas:
         del m["w_um"], m["geometry"]["w_um"]
     assert metas[0] == metas[1]
-    assert len(metas[1]["sweep"]["qs_roundoff_accepted"]) == 1
+    assert metas[1]["sweep"]["qs_roundoff_accepted"] == []
     a, _ = io.read_csv(root / "w10p0_l0p70" / "cv.csv")
     b, _ = io.read_csv(root / "w1p6_l0p70" / "cv.csv")
     assert list(a["cgg_per_um"]) == list(b["cgg_per_um"])
@@ -807,12 +807,12 @@ def test_pfet_w1p6_l0p70_two_d():
     comp = width_scaled_two_d(PFET, "w10p0_l0p70", "w1p6_l0p70")
     v = comp["verdicts"]
     assert comp["verdict"] == "Same process"
-    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.1063, abs=5e-5)
-    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.0988, abs=5e-5)
-    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1091, abs=5e-5)
-    assert v["dv_inv"]["dv_v"] == pytest.approx(0.0065, abs=5e-5)
+    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.0460, abs=5e-5)
+    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.0392, abs=5e-5)
+    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.0559, abs=5e-5)
+    assert v["dv_inv"]["dv_v"] == pytest.approx(0.0208, abs=5e-5)
     assert [v[k]["verdict"] for k in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv")] == [
-        "Same process", "Same process", "Same process", "Agree",
+        "Agree", "Agree", "Same process", "Agree",
     ]  # fmt: skip
 
 
