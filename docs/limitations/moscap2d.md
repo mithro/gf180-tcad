@@ -360,12 +360,16 @@ bound, as a {term}`strict expected failure` at both lengths on the sensitivity a
   and 147 ({ref}`moscap2d-calibrated`). The same command was rerun on the same `--resume`,
   three attempts in all ({ref}`tcad-provenance`). The calibrated pfet L = 2 µm cell finished in one attempt,
   with a peak of 9.8 GiB.
-- **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
-  every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
-  sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
-  hypotheses are open: something only the source/drain cell has (four contacts, the inter-layer
-  dielectric region), or memory-allocator fragmentation at large node counts. The resume
-  mechanism works around it; the cause is open (issue #59).
+- **The memory growth's cause is not settled.** The nfet L = 2 µm sweep grows with every
+  point, in the C library's main heap
+  ([issue #233](https://github.com/mithro/gf180-tcad/issues/233)). The uniform stack holds
+  steady (101k nodes, 30 biases: 1321 to 1331 MB), and so do the coarser source/drain meshes
+  of issue #233.
+- **A 2D sweep restarts itself before the memory limit.** After every saved point the job
+  trims the heap and logs its memory ({py:mod}`gf180tcad.tcad.jobmem`). Past
+  {py:data}`~gf180tcad.tcad.jobmem.BUDGET_FRACTION` (75 %) of the limit, after
+  {py:data}`~gf180tcad.tcad.jobmem.GROWTH_FRACTION` (20 %) growth, it restarts in a fresh
+  process. That process resumes at the next point; `resumed` counts each restart.
 
 The resumed start cells are the dotted QS curves of {numref}`fig-moscap2d-ccox`, with no AC points.
 

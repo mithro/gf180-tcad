@@ -60,6 +60,11 @@ records that and how often each sweep was resumed. ``--mem`` sets the sandbox jo
 time) to ``progress_qs.log`` or ``progress_ac.log`` in its scratch directory, whose path the
 host prints when the job starts; ``--progress-log FILE`` copies the finished log(s) there.
 Runtimes stay out of the results.
+
+**Memory.** After each saved point a 2D sweep trims its heap and logs its memory
+(:func:`gf180tcad.tcad.jobmem.after_point`). Near the container's limit the sweep restarts in a
+fresh process on the same scratch directory and resumes at the next point (issue #233); each
+restart is a resume that the job files count.
 """
 
 from __future__ import annotations
@@ -67,11 +72,12 @@ from __future__ import annotations
 import argparse
 import json
 import multiprocessing
+import os
 import shutil
 import sys
 import tempfile
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -89,6 +95,7 @@ from gf180tcad.tcad import (
     edgefit,
     gplugins_commit,
     image_ref,
+    jobmem,
     meshconv,
     moscap1d,
     moscap2d,
@@ -113,6 +120,16 @@ MESHCONV_JOB_MEM = {1: JOB_MEM, 2: JOB_MEM_2D}
 LEVEL_NAME = "level.json"
 AGREEMENT_NAME = "agreement.json"
 PROGRESS_NAME = "progress.log"
+
+#: The environment variable that counts a 2D job's restarts: a sweep restarts itself in a fresh
+#: process when its memory passes the budget (:mod:`gf180tcad.tcad.jobmem`, issue #233).
+RESTARTS_ENV = "GF180TCAD_SWEEP_RESTARTS"
+#: The most restarts of one job; each restart follows at least one new saved point.
+MAX_RESTARTS = 50
+#: A test hook: maps a restart's ``moscap-job`` command line and sweep method to the command
+#: that runs instead (the restart test's driver, which sets its small case up again). None in
+#: production.
+RESTART_ARGV: Callable[[list[str], str], list[str]] | None = None
 
 # The steps of a 2D moscap job (run_job_2d): both sweeps and the job files in one job, one sweep
 # alone (two jobs that can run in parallel on one scratch dir), the job files from both, or
@@ -211,6 +228,30 @@ def geometry_of(device: str, gid: str) -> Geometry:
     return found[0]
 
 
+def _restart_sweep(
+    device: str, params: str, gid: str, out: Path, m: str, log, reached: jobmem.BudgetReached
+) -> None:
+    """Replace this process with ``moscap-job --method m`` on the same scratch dir (issue #233).
+
+    The sweep resumes at the point after the saved ``reached.index`` in a fresh process, which
+    starts from an empty heap. The process id stays, so a ``both`` job's parent still waits for
+    it. Each restart follows at least one new saved point; :data:`MAX_RESTARTS` caps them.
+    """
+    restarts = int(os.environ.get(RESTARTS_ENV, "0")) + 1
+    if restarts > MAX_RESTARTS:
+        raise RuntimeError(f"the {m} sweep reached its memory budget {restarts} times") from reached
+    log(f"restart {restarts} in a fresh process: {reached}")
+    argv = [
+        sys.executable, "-m", "gf180tcad.tcad", "moscap-job", "--device", device, "--dim", "2",
+        "--params", params, "--geometry", gid, "--out", str(out), "--method", m,
+    ]  # fmt: skip
+    if RESTART_ARGV is not None:
+        argv = RESTART_ARGV(argv, m)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execve(argv[0], argv, {**os.environ, RESTARTS_ENV: str(restarts)})
+
+
 def run_job_2d(device: str, params: str, gid: str, out: Path, method: str = "both") -> None:
     """``moscap-job --dim 2``: QS and 1 MHz AC sweeps of the 2D MOS capacitor into ``out``.
 
@@ -234,10 +275,14 @@ def run_job_2d(device: str, params: str, gid: str, out: Path, method: str = "bot
     }  # fmt: skip
 
     def sweep(m: str) -> None:
-        cv = moscap2d.simulate(
-            proc, geometry, with_sd=True, method=m, mesh=mesh, state_dir=out / f"state_{m}",
-            log=_Progress(out, f"{tag}/{m}", f"progress_{m}.log"), **sweeps[m],
-        )  # fmt: skip
+        log = _Progress(out, f"{tag}/{m}", f"progress_{m}.log")
+        try:
+            cv = moscap2d.simulate(
+                proc, geometry, with_sd=True, method=m, mesh=mesh, state_dir=out / f"state_{m}",
+                log=log, **sweeps[m],
+            )  # fmt: skip
+        except jobmem.BudgetReached as e:
+            _restart_sweep(device, params, gid, out, m, log, e)
         io.write_json(out / f"{m}.json", moscap2d.to_dict(cv))
         print(f"{tag}/{m}: {len(cv.vg)} points", flush=True)
 

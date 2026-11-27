@@ -58,6 +58,7 @@ from typing import Literal
 
 from gf180tcad import io
 from gf180tcad.devices import Geometry, geometry_id
+from gf180tcad.tcad import jobmem
 from gf180tcad.tcad import stack as stack_mod
 from gf180tcad.tcad.analytic import f_per_cm2_to_ff_per_um2
 from gf180tcad.tcad.calibration import param_sha256
@@ -578,6 +579,9 @@ def _sweep_points(dd, vg_solve, state: SweepState, progress, kwargs, log):
         saved[i] = point
         if AFTER_POINT is not None:
             AFTER_POINT(i)
+        # Trim the heap, log the memory, and near the container's limit raise
+        # jobmem.BudgetReached so the job restarts from this saved point (issue #233).
+        jobmem.after_point(i, last=i == len(vg_solve) - 1, log=log)
     if len(units) > 1:
         raise RuntimeError(f"the per-point sweeps report different units: {sorted(units)}")
     ordered = [saved[i] for i in range(len(vg_solve))]
