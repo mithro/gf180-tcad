@@ -212,7 +212,7 @@ CASES = [
     ),
     (
         SPEC_PAGE,
-        rf"differs from it by {NUM} mV \(n\) and {NUM} mV \(p\)",
+        rf"differs from `vt_lin_maxgm` by {NUM} mV \(n\) and {NUM} mV \(p\)",
         lambda: [
             1000 * abs(metric(N, NLMIN, "vt_lin_cc") - metric(N, NLMIN, "vt_lin_maxgm")),
             1000 * abs(metric(P, PLMIN, "vt_lin_cc") - metric(P, PLMIN, "vt_lin_maxgm")),
