@@ -134,6 +134,14 @@ STYLE = {
     "strip_span_nm": (-20.0, 40.0),
     "edge_slope_digits": 5,
     "edge_delta_digits": 1,
+    # The rerun check of the fitted poly length bias (plan Task E3, Decision 4): the share of
+    # slope × δ allowed for the record's linearity (bias60 is twice bias30 within it), and the
+    # record's variant lengths (nm) whose quadratic bounds the gain's non-linearity at δ.
+    "edge_linearity": 0.02,
+    "edge_quadratic_nm": (30, 60),
+    # The digits of the tolerances and their sum of weights the page prints.
+    "edge_weight_digits": 2,
+    "edge_tol_digits": 4,
     # The abrupt-junction figure and numbers: significant digits of a width (µm) and of V_t,
     # of V_bi (as the page's junction drops), of a width difference, and the x span past the
     # widest bar (fraction) that leaves room for its value.
@@ -499,9 +507,9 @@ def c_over_cox_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         return fig
 
 
-# The cells of the 2D validation figure: the shortest nfet cell and the pfet L = 1 µm cell,
+# The cells of the 2D validation figure: the shortest nfet cell and the pfet L = 2 µm cell,
 # both Disagree on the depletion crossing.
-VALIDATION_CELLS = (("nfet_05v0", "w10p0_l0p60"), ("pfet_05v0", "w10p0_l1p00"))
+VALIDATION_CELLS = (("nfet_05v0", "w10p0_l0p60"), ("pfet_05v0", "w10p0_l2p00"))
 
 
 def validation_record(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
@@ -1078,6 +1086,111 @@ def edge_sensitivity_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         return fig
 
 
+def edge_nonlinearity(device: str, gid: str, fit: dict, roots: Roots = DEFAULT_ROOTS) -> float:
+    """The record's bound (fF/µm) on how far the gain at the fit's applied δ departs from
+    slope × δ: the quadratic through 0 and the two record variants of
+    :data:`STYLE` ``edge_quadratic_nm``, against the fitted line, worst plateau."""
+    rec = edge_record(device, gid, edge_root(roots))["variants"]
+    pol = DEVICES[device].polarity
+
+    def at(v: dict) -> list[float]:
+        by_u = {pol * vg: c for vg, c in zip(v["vg"], v["cgg_ff_per_um"], strict=True)}
+        return [by_u[u] for u in STYLE["edge_u_v"]]
+
+    n1, n2 = STYLE["edge_quadratic_nm"]
+    base, g1, g2 = at(rec["base"]), at(rec[f"bias{n1}"]), at(rec[f"bias{n2}"])
+    delta, slope = fit["poly_bias_nm"], fit["slope_ff_per_um_per_nm"]
+    worst = 0.0
+    for b, c1, c2 in zip(base, g1, g2, strict=True):
+        y1, y2 = c1 - b, c2 - b
+        quad = (y2 * n1 - y1 * n2) / (n1 * n2 * (n2 - n1))
+        lin = (y1 - quad * n1**2) / n1
+        worst = max(worst, abs(lin * delta + quad * delta**2 - slope * delta))
+    return worst
+
+
+def edge_rerun(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
+    """The check of the cells rerun at the committed poly length bias fit (plan Task E3,
+    Decision 4), from the fit file's frozen δ = 0 rows and today's cells.
+
+    Per W = 10 µm cell (``cells``): its length, its gain over the frozen δ = 0 Cgg per unit width
+    at each plateau of :data:`STYLE` ``edge_u_v`` (fF/µm), and its tolerance there: the 2D mesh
+    criterion (:data:`gf180tcad.tcad.meshconv.CRITERION` of the cell's Cgg) plus
+    :func:`edge_nonlinearity`. ``want`` is slope × δ. Per device: the live edge split's ``gap``
+    (SPICE minus 2D ``C_edge``) at each plateau, the fit's frozen ``residual`` and the ``bound``
+    on their difference, Σ|wᵢ| × the largest per-cell tolerance plus :data:`STYLE`
+    ``edge_linearity`` × slope × δ (wᵢ: the intercept's least-squares weights, ``weights``)."""
+    from gf180tcad.calibrate import edge
+    from gf180tcad.tcad import edgefit
+
+    fit = edgefit.read(device, Path(roots.tcad) / "edgefit")
+    if fit is None:
+        raise FileNotFoundError(f"{device}: no poly length bias fit under {roots.tcad}")
+    gid = edge.RECORD_CELLS[device]
+    nonlin = edge_nonlinearity(device, gid, fit, roots)
+    want = fit["slope_ff_per_um_per_nm"] * fit["poly_bias_nm"]
+    geoms = {geometry_id(g): g for g in DEVICES[device].geometries}
+    rows, cells = [], []
+    for frozen in fit["cells"]:
+        row = edge.cell_row(device, geoms[frozen["gid"]], roots.spice, roots.tcad)
+        rows.append(row)
+        cells.append({
+            "gid": row["gid"],
+            "l_um": row["l_um"],
+            "gain": [c - c0 for c, c0 in zip(row["two_d"], frozen["two_d"], strict=True)],
+            "tol": [meshconv.CRITERION * c + nonlin for c in row["two_d"]],
+        })  # fmt: skip
+    spice, two_d = edge.intercepts(rows, "spice"), edge.intercepts(rows, "two_d")
+    weights = float(np.abs(edge.intercept_weights(rows)).sum())
+    bound = [
+        weights * max(c["tol"][i] for c in cells) + STYLE["edge_linearity"] * want
+        for i in range(len(STYLE["edge_u_v"]))
+    ]
+    return {
+        "cells": cells,
+        "applied_nm": float(fit["poly_bias_nm"]),
+        "want": want,
+        "nonlinearity": nonlin,
+        "weights": weights,
+        "gap": [a - b for a, b in zip(spice, two_d, strict=True)],
+        "residual": [float(r) for r in fit["residual_ff_per_um"]],
+        "bound": bound,
+    }
+
+
+def edge_rerun_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Per device: each rerun W = 10 µm cell's gain over its δ = 0 Cgg per unit width against L,
+    at both plateaus, with slope × δ and each plateau's tolerance band around it."""
+    pal = ef.PALETTES[palette]
+    lo_u, hi_u = STYLE["edge_u_v"]
+    sides = ((f"u = {lo_u:+g} V".replace("-", "\u2212"), "electron", "o"),
+             (f"u = {hi_u:+g} V", "hole", "s"))  # fmt: skip
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(ef.STYLE["size_in"])
+        axes = fig.subplots(1, len(EDGE_CELLS))
+        for ax, (device, _gid) in zip(axes, EDGE_CELLS, strict=True):
+            r = edge_rerun(device, roots)
+            lengths = [c["l_um"] for c in r["cells"]]
+            ax.axhline(r["want"], color=pal["text"], lw=ef.STYLE["line_width"],
+                       label="slope × δ", gid=f"{device} want")  # fmt: skip
+            for i, (label, colour, marker) in enumerate(sides):
+                tol = np.array([c["tol"][i] for c in r["cells"]])
+                ax.fill_between(lengths, r["want"] - tol, r["want"] + tol, color=pal[colour],
+                                alpha=ef.STYLE["band_alpha"]["highlight"], lw=0,
+                                label=f"tolerance at {label}", gid=f"{device} tol {i}")  # fmt: skip
+                ax.plot(lengths, [c["gain"][i] for c in r["cells"]], ls="none", marker=marker,
+                        ms=STYLE["marker_pt"], color=pal[colour], label=f"gain at {label}",
+                        gid=f"{device} gain {i}")  # fmt: skip
+            ax.set_title(_SHORT[device], fontsize=ef.STYLE["text_pt"])
+            ax.set_xlabel("L (µm)")
+            ax.set_ylabel("gain over the drawn poly (fF/µm)")
+            ax.grid(True)
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
 # --- the plugin history ---------------------------------------------------------------------------
 
 # The committed records of the plugin-history page: the release at its own mesh, then at half it.
@@ -1403,6 +1516,20 @@ def _edge_substitutions(roots: Roots) -> dict[str, str]:
     for i, side in enumerate(("acc", "inv")):
         lo, hi = (fmt(f([gains[n][i] for n in ldd])) for f in (min, max))
         out[f"lim_edge_ldd_{side}"] = lo if lo == hi else f"{lo} to {hi}"
+    tol = STYLE["edge_tol_digits"]
+    for device, _gid in EDGE_CELLS:
+        dev, r = _SHORT[device], edge_rerun(device, roots)
+        out[f"lim_edge_{dev}_want"] = fmt(r["want"])
+        out[f"lim_edge_{dev}_applied"] = f"{r['applied_nm']:g}"
+        miss = max(abs(g - r["want"]) for c in r["cells"] for g in c["gain"])
+        out[f"lim_edge_{dev}_rerun_miss"] = f"{miss:.{tol}f}"
+        out[f"lim_edge_{dev}_rerun_tol"] = f"{min(t for c in r['cells'] for t in c['tol']):.{tol}f}"
+        out[f"lim_edge_{dev}_nonlin"] = f"{r['nonlinearity']:.{tol}f}"
+        out[f"lim_edge_{dev}_weights"] = f"{r['weights']:.{STYLE['edge_weight_digits']}f}"
+        for i, side in enumerate(("acc", "inv")):
+            out[f"lim_edge_{dev}_gap_{side}"] = fmt(r["gap"][i])
+            out[f"lim_edge_{dev}_gap_off_{side}"] = f"{abs(r['gap'][i] - r['residual'][i]):.{tol}f}"
+            out[f"lim_edge_{dev}_gap_bound_{side}"] = f"{r['bound'][i]:.{tol}f}"
     return out
 
 
@@ -2519,6 +2646,7 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "pin-depletion": _svg_of(pin_depletion_figure),
     "abrupt-junction": _svg_of(abrupt_junction_figure),
     "edge-sensitivity": _svg_of(edge_sensitivity_figure),
+    "edge-rerun": _svg_of(edge_rerun_figure),
     "charon-strip": _svg_of(charon_strip_figure),
     "charon-cv": _svg_of(charon_cv_figure),
     "charon-hard-range": _svg_of(charon_hard_range_figure),

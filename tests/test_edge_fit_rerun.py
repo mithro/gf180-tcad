@@ -143,3 +143,36 @@ def test_live_edge_gap_is_the_frozen_residual(device):
         per_cell = max(_per_cell_tolerance(device, fit, r["two_d"][i]) for r in rows)
         bound = weights * per_cell + LINEARITY * shift
         assert abs(gap - fit["residual_ff_per_um"][i]) <= bound, (u, gap, bound)
+
+
+@pytest.mark.parametrize("device", DEVICE_IDS)
+def test_page_check_is_this_check(device):
+    """The numbers docs/limitations/moscap2d.md prints for the rerun check
+    (limitations_figures.edge_rerun) are the gains, tolerances, gap and bound of the tests
+    above."""
+    from gf180tcad import limitations_figures as lf
+
+    fit = _fit(device)
+    got = lf.edge_rerun(device)
+    want = fit["slope_ff_per_um_per_nm"] * fit[edgefit.PARAM]
+    assert got["want"] == pytest.approx(want, rel=1e-12)
+    assert got["applied_nm"] == fit[edgefit.PARAM]
+    assert got["nonlinearity"] == pytest.approx(_nonlinearity_ff_per_um(device, fit), rel=1e-9)
+    for row, cell in zip(fit["cells"], got["cells"], strict=True):
+        job = CELLS / device / edge.CELL_PARAMS / row["gid"]
+        now = _plateaus(device, io.read_csv(job / "cv.csv")[0], row["w_um"])
+        assert cell["gid"] == row["gid"]
+        assert cell["gain"] == pytest.approx(
+            [c - c0 for c, c0 in zip(now, row["two_d"])], rel=1e-12
+        )
+        assert cell["tol"] == pytest.approx([_per_cell_tolerance(device, fit, c) for c in now],
+                                            rel=1e-9)  # fmt: skip
+    rows = [edge.cell_row(device, g) for g in edge.wide_geometries(device)]
+    spice, two_d = edge.intercepts(rows, "spice"), edge.intercepts(rows, "two_d")
+    assert got["gap"] == pytest.approx([a - b for a, b in zip(spice, two_d)], rel=1e-12)
+    assert got["residual"] == list(fit["residual_ff_per_um"])
+    weights = np.abs(edge.intercept_weights(rows)).sum()
+    assert got["weights"] == pytest.approx(weights, rel=1e-12)
+    for i in range(len(edge.EDGE_U_V)):
+        per_cell = max(_per_cell_tolerance(device, fit, r["two_d"][i]) for r in rows)
+        assert got["bound"][i] == pytest.approx(weights * per_cell + LINEARITY * want, rel=1e-9)

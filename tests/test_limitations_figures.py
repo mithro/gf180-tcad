@@ -55,6 +55,7 @@ FIGURES = [
     "pin-depletion",
     "abrupt-junction",
     "edge-sensitivity",
+    "edge-rerun",
     "charon-strip",
     "charon-cv",
     "charon-hard-range",
@@ -189,18 +190,21 @@ def test_c_over_cox_figure_draws_the_committed_curves():
 
 
 def test_two_d_metrics_are_the_validation_files():
-    """Every compared 2D cell lies below SPICE on both plateaus (issue #77) and has its depletion
-    crossing below SPICE's (issue #108); the Disagree cells are the five of the limitations
-    index."""
+    """At the fitted poly length bias every compared nfet cell lies above SPICE on the
+    accumulation plateau and below it on the inversion plateau, and every 2D depletion crossing
+    but the pfet W10/L0.5 one lies below SPICE's (issue #108), as the moscap2d page's figure
+    text says; the Disagree cells are the four of the limitations index."""
     rows = lf.two_d_metrics()
     assert len(rows) == 10
-    assert all(r["acc"] < 0 and r["inv"] < 0 and r["dv_dep_mv"] < 0 for r in rows)
+    assert all(r["acc"] > 0 > r["inv"] for r in rows if r["device"] == "nfet_05v0")
+    above = {(r["device"], geometry_id(r["geometry"])) for r in rows if r["dv_dep_mv"] >= 0}
+    assert above == {("pfet_05v0", "w10p0_l0p50")}
     disagree = {
         (r["device"], geometry_id(r["geometry"])) for r in rows if r["verdict"] == "Disagree"
     }
     assert disagree == {
         ("nfet_05v0", "w10p0_l0p60"), ("nfet_05v0", "w10p0_l0p70"), ("nfet_05v0", "w1p6_l0p70"),
-        ("pfet_05v0", "w10p0_l1p00"), ("pfet_05v0", "w10p0_l2p00"),
+        ("pfet_05v0", "w10p0_l2p00"),
     }  # fmt: skip
     for r in rows:
         rec = lf.validation_record(r["device"])["two_d"][geometry_id(r["geometry"])]
@@ -839,6 +843,45 @@ def check_edge_sensitivity(fig):
     d.done()
 
 
+def check_edge_rerun(fig):
+    """Per device: each rerun W = 10 µm cell's gain is its committed cv.csv per unit width minus
+    the fit file's frozen δ = 0 row at each plateau, the line is the fit's slope × δ, and each
+    plateau's band is slope × δ ± (1 % of the cell's Cgg + the record's quadratic bound at δ)."""
+    d = Drawn(fig)
+    for ax, (device, gid) in zip(fig.axes, lf.EDGE_CELLS, strict=True):
+        fit = _json("tcad", "edgefit", f"{device}.json")
+        pol = DEVICES[device].polarity
+        rec = _json("edge-sensitivity", f"{device}-{gid}.json")["variants"]
+
+        def at(v, pol=pol):
+            by_u = {pol * vg: c for vg, c in zip(v["vg"], v["cgg_ff_per_um"], strict=True)}
+            return [by_u[-5.0], by_u[5.0]]
+
+        delta, slope = fit["poly_bias_nm"], fit["slope_ff_per_um_per_nm"]
+        nonlin = 0.0
+        for b, c30, c60 in zip(at(rec["base"]), at(rec["bias30"]), at(rec["bias60"]), strict=True):
+            quad = ((c60 - b) - 2 * (c30 - b)) / (2 * 30.0**2)
+            lin = ((c30 - b) - quad * 30.0**2) / 30.0
+            nonlin = max(nonlin, abs(lin * delta + quad * delta**2 - slope * delta))
+        want = slope * delta
+        d.hline(f"{device} want", want, ax)
+        lengths, gains, tols = [], [[], []], [[], []]
+        for row in fit["cells"]:
+            cols = io.read_csv(REPO_ROOT / "results" / "tcad" / "moscap2d" / device
+                               / "calibrated" / row["gid"] / "cv.csv")[0]  # fmt: skip
+            u = pol * np.asarray(cols["vg"])
+            lengths.append(row["l_um"])
+            for i, x in enumerate((-5.0, 5.0)):
+                c = float(np.asarray(cols["cgg_total"])[u == x][0]) / row["w_um"]
+                gains[i].append(c - row["two_d"][i])
+                tols[i].append(meshconv.CRITERION * c + nonlin)
+        for i in range(2):
+            d.line(f"{device} gain {i}", lengths, gains[i], ax)
+            tol = np.array(tols[i])
+            d.fill(f"{device} tol {i}", lengths, want - tol, want + tol, ax)
+    d.done()
+
+
 def _charon(name: str) -> dict:
     return _json("charon-experiments", f"{name}.json")
 
@@ -1145,6 +1188,7 @@ CHECKS = {
     "pin-depletion": (lf.pin_depletion_figure, check_pin_depletion),
     "abrupt-junction": (lf.abrupt_junction_figure, check_abrupt_junction),
     "edge-sensitivity": (lf.edge_sensitivity_figure, check_edge_sensitivity),
+    "edge-rerun": (lf.edge_rerun_figure, check_edge_rerun),
     "charon-strip": (lf.charon_strip_figure, check_charon_strip),
     "charon-cv": (lf.charon_cv_figure, check_charon_cv),
     "charon-hard-range": (lf.charon_hard_range_figure, check_charon_hard_range),

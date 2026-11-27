@@ -356,12 +356,14 @@ bound, as a {term}`strict expected failure` at both lengths on the sensitivity a
   the pfet after points 34, 73, 113 and 162. The hand-off between points is the saved state, so a resumed sweep agrees
   with an uninterrupted one within 1e-12 (the solver tolerance) but is not byte-identical to it.
   The restart counts in these job files were written after the runs, from the progress logs.
-- **The calibrated nfet cell is resumed too.** Its job file records 2 restarts, after points 67
-  and 147 ({ref}`moscap2d-calibrated`). The same command was rerun on the same `--resume`,
-  three attempts in all ({ref}`tcad-provenance`). The calibrated pfet L = 2 µm cell finished in one attempt,
-  with a peak of 9.8 GiB.
+- **The calibrated cells are resumed too.** Each job file records 3 restarts in `resumed`
+  ({ref}`moscap2d-calibrated`). The nfet restarts after points 44, 108 and 171, the pfet after
+  points 63, 120 and 189. The same command was rerun on the same `--resume`, four attempts in all.
+  Each earlier attempt was killed at the 16 GiB cap.
 - **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
-  every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
+  every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). On the calibrated
+  nfet cell, 512,591 nodes, it grows by 0.19 GiB per point
+  ([issue #233](https://github.com/mithro/gf180-tcad/issues/233)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
   sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
   hypotheses are open: something only the source/drain cell has (four contacts, the inter-layer
   dielectric region), or memory-allocator fragmentation at large node counts. The resume
@@ -523,9 +525,9 @@ Two of them are compared with SPICE in {numref}`fig-moscap2d-validation`. Every 
 ```{figure} /_generated/limitations/twod-validation-light.svg
 :name: fig-moscap2d-validation
 :figclass: only-light
-:alt: Two panels of gate capacitance against voltage. In each a dashed 2D curve lies below a black SPICE curve inside a grey band on both plateaus, and a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
+:alt: Two panels of gate capacitance against voltage, each with a black SPICE curve inside a grey band and a dashed 2D curve. In the nfet panel the 2D curve lies above SPICE on the accumulation plateau and below it on the inversion plateau; in the pfet panel the two nearly meet. In each, a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
 
-{term}`Cgg` of the calibrated 2D cells nfet W10/L0.6 (top) and pfet W10/L1 (bottom) against u =
+{term}`Cgg` of the calibrated 2D cells nfet W10/L0.6 (top) and pfet W10/L2 (bottom) against u =
 polarity × Vg. The black line is SPICE at the {term}`typical corner`, inside the grey band of its five
 {term}`corners <corner>`; the dashed line is the 2D cell. The ring and the dot are the depletion crossings of SPICE
 and of the 2D cell at the level C_mid (dotted), labelled with their shift
@@ -534,9 +536,9 @@ and of the 2D cell at the level C_mid (dotted), labelled with their shift
 
 ```{figure} /_generated/limitations/twod-validation-dark.svg
 :figclass: only-dark
-:alt: Two panels of gate capacitance against voltage. In each a dashed 2D curve lies below a black SPICE curve inside a grey band on both plateaus, and a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
+:alt: Two panels of gate capacitance against voltage, each with a black SPICE curve inside a grey band and a dashed 2D curve. In the nfet panel the 2D curve lies above SPICE on the accumulation plateau and below it on the inversion plateau; in the pfet panel the two nearly meet. In each, a filled dot on a dotted level line sits left of a hollow ring on the SPICE curve.
 
-{term}`Cgg` of the calibrated 2D cells nfet W10/L0.6 (top) and pfet W10/L1 (bottom) against u =
+{term}`Cgg` of the calibrated 2D cells nfet W10/L0.6 (top) and pfet W10/L2 (bottom) against u =
 polarity × Vg. The black line is SPICE at the {term}`typical corner`, inside the grey band of its five
 {term}`corners <corner>`; the dashed line is the 2D cell. The ring and the dot are the depletion crossings of SPICE
 and of the 2D cell at the level C_mid (dotted), labelled with their shift
@@ -546,7 +548,7 @@ and of the 2D cell at the level C_mid (dotted), labelled with their shift
 ```{figure} /_generated/limitations/twod-metrics-light.svg
 :name: fig-moscap2d-metrics
 :figclass: only-light
-:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV, four of those markers hollow. Bottom: every plateau difference lies below zero, most below a grey band of ±5 %, all of those hollow.
+:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift but one lies below zero, all but two outside a grey band of ±50 mV, four of those markers hollow. Bottom: the nfet accumulation differences lie above zero and its inversion differences below, seven of them outside a grey band of ±5 %, all hollow; every pfet difference lies inside the band.
 
 Every compared calibrated 2D cell ({repo}`results/tcad/validation`). Top: the shift of its depletion
 crossing from SPICE's, with the ±50 mV tolerance shaded. Bottom: its largest signed difference from
@@ -557,7 +559,7 @@ A filled marker outside the band is {term}`Disagree`.
 
 ```{figure} /_generated/limitations/twod-metrics-dark.svg
 :figclass: only-dark
-:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift lies below zero, all but one below a grey band of ±50 mV, four of those markers hollow. Bottom: every plateau difference lies below zero, most below a grey band of ±5 %, all of those hollow.
+:alt: Two panels with one column per 2D cell, nfet in blue and pfet in orange. Top: every depletion-crossing shift but one lies below zero, all but two outside a grey band of ±50 mV, four of those markers hollow. Bottom: the nfet accumulation differences lie above zero and its inversion differences below, seven of them outside a grey band of ±5 %, all hollow; every pfet difference lies inside the band.
 
 Every compared calibrated 2D cell ({repo}`results/tcad/validation`). Top: the shift of its depletion
 crossing from SPICE's, with the ±50 mV tolerance shaded. Bottom: its largest signed difference from
@@ -566,62 +568,38 @@ A hollow marker is a {term}`Same process` verdict: outside the tolerance, inside
 A filled marker outside the band is {term}`Disagree`.
 ```
 
-{numref}`tab-moscap2d-cell-times` gives the node count and sweep times of each committed cell, and
-{numref}`tab-moscap2d-cell-memory` its peak memory and attempts.
+{numref}`tab-moscap2d-cell-times` gives the node count, the sweep times and the QS attempts of
+each committed cell.
 
-~~~{table} The node count and sweep times of each committed calibrated 2D cell.
+~~~{table} The node count, sweep times and QS attempts of each committed calibrated 2D cell.
 :name: tab-moscap2d-cell-times
 
-| Cell | Nodes | QS sweep (min) | AC sweep (min) | Job total (min) |
+| Cell | Nodes | QS sweep (min) | AC sweep (min) | QS attempts |
 |---|---|---|---|---|
-| nfet `w10p0_l0p60` | 225964 | 102 | 86 | 189 |
-| nfet `w10p0_l0p70` | 245515 | 112 | 97 | 210 |
-| nfet `w10p0_l1p00` | 306136 | 133 | 120 | 253 |
-| nfet `w10p0_l2p00` | 506292 | 244 | none | 246 |
-| nfet `w1p6_l0p70` | 245515 | 102 | 95 | 197 |
-| pfet `w10p0_l0p50` | 205520 | 85 | 76 | 162 |
-| pfet `w10p0_l0p70` | 244880 | 105 | 93 | 198 |
-| pfet `w10p0_l1p00` | 304781 | 131 | 123 | 255 |
-| pfet `w10p0_l2p00` | 503672 | 236 | none | 236 |
-| pfet `w1p6_l0p70` | 244880 | 102 | 91 | 193 |
+| nfet `w10p0_l0p60` | 233559 | 101 | 96 | 1 |
+| nfet `w10p0_l0p70` | 253994 | 119 | 107 | 1 |
+| nfet `w10p0_l1p00` | 313521 | 146 | 131 | 1 |
+| nfet `w10p0_l2p00` | 512591 | 259 | none | 4 |
+| nfet `w1p6_l0p70` | 253994 | 113 | 108 | 1 |
+| pfet `w10p0_l0p50` | 217724 | 93 | 89 | 1 |
+| pfet `w10p0_l0p70` | 257472 | 113 | 106 | 1 |
+| pfet `w10p0_l1p00` | 317011 | 138 | 126 | 1 |
+| pfet `w10p0_l2p00` | 514879 | 257 | none | 4 |
+| pfet `w1p6_l0p70` | 257472 | 121 | 106 | 1 |
 ~~~
 
-~~~{table} The peak memory and attempts of each committed calibrated 2D cell.
-:name: tab-moscap2d-cell-memory
-
-| Cell | Peak memory (GiB) | Attempts |
-|---|---|---|
-| nfet `w10p0_l0p60` | 7.8 | 1 |
-| nfet `w10p0_l0p70` | 5.9 | 1 |
-| nfet `w10p0_l1p00` | 6.1 | 1 |
-| nfet `w10p0_l2p00` | 16.0 | 3 |
-| nfet `w1p6_l0p70` | 5.5 | 1 |
-| pfet `w10p0_l0p50` | 7.4 | 1 |
-| pfet `w10p0_l0p70` | 5.4 | 1 |
-| pfet `w10p0_l1p00` | 7.8 | 1 |
-| pfet `w10p0_l2p00` | 9.8 | 1 |
-| pfet `w1p6_l0p70` | 5.4 | 1 |
-~~~
-
-The sweep times are the last `elapsed` of each sweep's progress log, meshing included. QS has
-201 points and AC 21. The job total is the wall time of the host command.
+The node count is the `node_count` of each cell's
+{repo}`cv.meta.json <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.meta.json>`. The
+sweep times are the last `elapsed` of each sweep's progress log, meshing included, summed over the
+attempts. QS has 201 points and AC 21. The QS attempts are one more than the meta's `resumed`
+count.
 
 Neither L = 2 µm cell has an AC sweep ({ref}`moscap2d-l2`).
-The nfet L = 2 µm QS time is the sum over its three attempts. Its first two attempts reached the 16 GiB cap and were killed.
+In each L = 2 µm cell the first three QS attempts reached the 16 GiB cap and were killed.
+The fourth resumed at its last saved point and finished.
 
-The peak memory is the {term}`cgroup` `memory.peak` of the job's container, sampled every 15 s.
-The run record, with the exit code and the image, is on {ref}`tcad-provenance`.
-
-No job had an extended-precision fallback.
-
-Two jobs each accepted one solve at round-off: pfet `w10p0_l0p70` and pfet `w1p6_l0p70`, on the same mesh.
-In each job the solve is on the ramp to the first QS point (+5 V).
-Its gate was at 4.487 V; the update was 2.6e-16 V, in the body.
-
-The +5 V point itself converged to the full tolerance, so no committed Cgg comes from that solve.
-Each job's {repo}`cv.meta.json <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p70/cv.meta.json>` records it in `qs_roundoff_accepted` ({ref}`moscap2d-solver` gives the conditions).
-The two entries are identical ({test}`tests/test_calibrate_cv.py::test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell`).
-The entry's `vg` is a ramp bias, not a grid point ([issue #102](https://github.com/mithro/gf180-tcad/issues/102)).
+No job had an extended-precision fallback, and no job accepted a solve at round-off
+(`qs_roundoff_accepted` is empty in every meta; {ref}`moscap2d-solver` gives the conditions).
 
 Each meshed oxide is the calibrated value:
 16.05 nm for the nfet and 15.721 nm for the pfet. The meshes are not committed ({ref}`moscap2d-meshes`); the output cache
@@ -683,12 +661,12 @@ Its comparison is {term}`Same process`
 
 ## What the 2D edge needs
 
-The calibrated 2D cells have less edge capacitance than {term}`SPICE` on both plateaus
-({ref}`cv-agreement-edge`).
-The edge-sensitivity harness ({repo}`experiments/edge-sensitivity`) changes one feature of a
-committed cell's cross-section. It then solves {term}`QS <C–V>` at u = −5 V and +5 V, the two
-plateaus. Its base variant reproduces the committed cell's Cgg to 1e-9
-({test}`tests/test_edge_sensitivity.py::test_record_base_is_the_committed_cell`).
+At the drawn poly length, δ = 0, the calibrated 2D cells have less edge capacitance than
+{term}`SPICE` on both plateaus. The edge-sensitivity harness ({repo}`experiments/edge-sensitivity`)
+changes one feature of a δ = 0 cell's cross-section. It then solves {term}`QS <C–V>` at u = −5 V
+and +5 V, the two plateaus. Its base variant reproduces the δ = 0 cell's Cgg to 1e-9
+({test}`tests/test_edge_sensitivity.py::test_record_base_is_the_committed_cell`). That cell is the
+one the fit read, at the fit's commit.
 
 Each variant's gain over the base is in {numref}`fig-moscap2d-edge`, in fF/µm of Cgg per unit width:
 
@@ -712,14 +690,14 @@ The card's bias-dependent overlap (CGSL with CKAPPA) therefore has no counterpar
 :figclass: only-light
 :alt: Two panels, nfet and pfet, each plotting a point's gain at +5 V against its gain at −5 V. A diagonal line of equal gain runs from the origin. The longer-poly circles lie on it, the contact-plug triangle sits just below the origin, and the nfet's extension squares lie just below the line. A star marks the target, off the line for the nfet, near it for the pfet, and an open ring on the line marks the fitted bias.
 
-Each variant's gain in Cgg per unit width over the committed cell, at u = +5 V against u = −5 V, where u = polarity × Vg: nfet W10/L0.6 (left) and pfet W10/L0.5 (right). The diagonal is equal gain on both plateaus. The star is the target, SPICE minus 2D edge ({ref}`cv-agreement-edge`); the open ring is the fitted bias δ ({repo}`records <results/edge-sensitivity>`).
+Each variant's gain in Cgg per unit width over the δ = 0 cell, at u = +5 V against u = −5 V, where u = polarity × Vg: nfet W10/L0.6 (left) and pfet W10/L0.5 (right). The diagonal is equal gain on both plateaus. The star is the target, SPICE minus the δ = 0 cells' 2D edge, frozen in the fit ({repo}`results/tcad/edgefit`); the open ring is the fitted bias δ ({repo}`records <results/edge-sensitivity>`).
 ```
 
 ```{figure} /_generated/limitations/edge-sensitivity-dark.svg
 :figclass: only-dark
 :alt: Two panels, nfet and pfet, each plotting a point's gain at +5 V against its gain at −5 V. A diagonal line of equal gain runs from the origin. The longer-poly circles lie on it, the contact-plug triangle sits just below the origin, and the nfet's extension squares lie just below the line. A star marks the target, off the line for the nfet, near it for the pfet, and an open ring on the line marks the fitted bias.
 
-Each variant's gain in Cgg per unit width over the committed cell, at u = +5 V against u = −5 V, where u = polarity × Vg: nfet W10/L0.6 (left) and pfet W10/L0.5 (right). The diagonal is equal gain on both plateaus. The star is the target, SPICE minus 2D edge ({ref}`cv-agreement-edge`); the open ring is the fitted bias δ ({repo}`records <results/edge-sensitivity>`).
+Each variant's gain in Cgg per unit width over the δ = 0 cell, at u = +5 V against u = −5 V, where u = polarity × Vg: nfet W10/L0.6 (left) and pfet W10/L0.5 (right). The diagonal is equal gain on both plateaus. The star is the target, SPICE minus the δ = 0 cells' 2D edge, frozen in the fit ({repo}`results/tcad/edgefit`); the open ring is the fitted bias δ ({repo}`records <results/edge-sensitivity>`).
 ```
 
 The best single change is a poly length bias δ at each end, fitted to both plateaus at once,
@@ -750,7 +728,92 @@ miss is a plateau the fit overfills. The misses are in {numref}`tab-moscap2d-edg
 | pfet | {{ lim_edge_pfet_slope }} | {{ lim_edge_pfet_delta }} | {{ lim_edge_pfet_miss_acc }} | {{ lim_edge_pfet_miss_inv }} |
 ~~~
 
-The committed calibrated cells are solved at the drawn poly length, δ = 0.
+The fit is frozen in {repo}`results/tcad/edgefit`, with every input it used
+({py:mod}`gf180tcad.calibrate.edge`). The calibrated 2D cells are solved at δ rounded to the 1 nm layout
+grid. That is {{ lim_edge_nfet_applied }} nm (nfet) and {{ lim_edge_pfet_applied }} nm (pfet). Each
+plateau's miss is tagged `spice-fit`: the card's bias-dependent overlap.
+
+**The cells rerun at the fitted bias.** Each rerun W = 10 µm cell gains s δ at both plateaus,
+as {numref}`fig-moscap2d-edge-rerun` shows. That is {{ lim_edge_nfet_want }} fF/µm (nfet) and
+{{ lim_edge_pfet_want }} fF/µm (pfet). The largest miss is
+{{ lim_edge_nfet_rerun_miss }} fF/µm (nfet) and {{ lim_edge_pfet_rerun_miss }} fF/µm (pfet).
+{test}`tests/test_edge_fit_rerun.py::test_each_rerun_cell_gains_slope_times_delta` checks it. The record
+measured the gain at one length only, so this also shows that the gain does not depend on L.
+
+```{figure} /_generated/limitations/edge-rerun-light.svg
+:name: fig-moscap2d-edge-rerun
+:figclass: only-light
+:alt: Two panels, nfet and pfet, of each rerun cell's gain against its gate length. A horizontal line marks slope times delta. Circles and squares for the two plateaus lie on or next to it, inside two shaded tolerance bands that widen with length.
+
+Each rerun W = 10 µm cell's gain in Cgg per unit width over its δ = 0 value, at u = −5 V (circles)
+and +5 V (squares), against the drawn gate length: nfet (left) and pfet (right). The line is
+s δ; each band is its tolerance $t$ at that plateau ({repo}`results/tcad/edgefit`,
+{repo}`results/tcad/moscap2d`).
+```
+
+```{figure} /_generated/limitations/edge-rerun-dark.svg
+:figclass: only-dark
+:alt: Two panels, nfet and pfet, of each rerun cell's gain against its gate length. A horizontal line marks slope times delta. Circles and squares for the two plateaus lie on or next to it, inside two shaded tolerance bands that widen with length.
+
+Each rerun W = 10 µm cell's gain in Cgg per unit width over its δ = 0 value, at u = −5 V (circles)
+and +5 V (squares), against the drawn gate length: nfet (left) and pfet (right). The line is
+s δ; each band is its tolerance $t$ at that plateau ({repo}`results/tcad/edgefit`,
+{repo}`results/tcad/moscap2d`).
+```
+
+A cell's tolerance at a plateau is {math:numref}`eq-moscap2d-edge-tol`:
+
+$$
+t = 0.01\,C + q
+$$ (eq-moscap2d-edge-tol)
+
+where
+
+- $t$ is the tolerance on the cell's gain, in fF/µm;
+- $0.01$ is the 2D mesh criterion, 1 % ({py:data}`gf180tcad.tcad.meshconv.CRITERION`), dimensionless;
+- $C$ is the rerun cell's Cgg per unit width at that plateau, in fF/µm;
+- $q$ is the record's bound on the gain's departure from s δ: {{ lim_edge_nfet_nonlin }} (nfet)
+  and {{ lim_edge_pfet_nonlin }} (pfet), in fF/µm.
+
+The bound $q$ comes from the quadratic through the base, `bias30` and `bias60` of the record.
+
+The smallest tolerance is {{ lim_edge_nfet_rerun_tol }} fF/µm (nfet) and
+{{ lim_edge_pfet_rerun_tol }} fF/µm (pfet).
+
+The edge split of the rerun cells leaves at each plateau the gap the fit predicted, its miss at
+the applied δ ({test}`tests/test_edge_fit_rerun.py::test_live_edge_gap_is_the_frozen_residual`).
+The difference is held to {math:numref}`eq-moscap2d-edge-gap`:
+
+$$
+\left| g - m \right| \le W \, t_{\max} + 0.02 \, s \, \delta
+$$ (eq-moscap2d-edge-gap)
+
+where
+
+- $g$ is the live gap, SPICE minus 2D $C_{\mathrm{edge}}$ ({ref}`cv-agreement-edge`), in fF/µm;
+- $m$ is the fit's miss at the applied δ, in fF/µm;
+- $W$ is the sum of the absolute weights of the four gate lengths in the least-squares
+  intercept, dimensionless;
+- $t_{\max}$ is the largest per-cell tolerance at that plateau, in fF/µm;
+- $0.02$ is the record's linearity, `bias60` gaining twice what `bias30` does within 2 %, dimensionless;
+- $s$ is the slope of {math:numref}`eq-moscap2d-edge-bias`, in fF/(µm·nm);
+- $\delta$ is the applied bias at each gate end, in nm.
+
+The sum $W$ is {{ lim_edge_nfet_weights }} (nfet) and {{ lim_edge_pfet_weights }} (pfet).
+
+{numref}`tab-moscap2d-edge-gap` gives each plateau's gap, its difference from the fit's miss,
+and the bound.
+
+~~~{table} The live edge gap of the rerun cells against the fit's miss.
+:name: tab-moscap2d-edge-gap
+
+| Device | u (V) | Gap g (fF/µm) | abs(g − m) (fF/µm) | Bound (fF/µm) |
+|---|---|---|---|---|
+| nfet | −5 | {{ lim_edge_nfet_gap_acc }} | {{ lim_edge_nfet_gap_off_acc }} | {{ lim_edge_nfet_gap_bound_acc }} |
+| nfet | +5 | {{ lim_edge_nfet_gap_inv }} | {{ lim_edge_nfet_gap_off_inv }} | {{ lim_edge_nfet_gap_bound_inv }} |
+| pfet | −5 | {{ lim_edge_pfet_gap_acc }} | {{ lim_edge_pfet_gap_off_acc }} | {{ lim_edge_pfet_gap_bound_acc }} |
+| pfet | +5 | {{ lim_edge_pfet_gap_inv }} | {{ lim_edge_pfet_gap_off_inv }} | {{ lim_edge_pfet_gap_bound_inv }} |
+~~~
 
 (moscap2d-l10)=
 
