@@ -40,7 +40,19 @@ PAGE = REPO_ROOT / "docs" / "results" / "hv-junction.md"
 Q, EPS, UM = 1.602176634e-19, 11.7 * 8.8541878128e-14, 1e-4
 
 # The records record.py writes, and every record a file under results/hv-junction/ may be.
-SWEEP_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "gaps", "sharp", "family", "family3", "p5", "checks")
+SWEEP_RECORDS = (
+    "main",
+    "rest",
+    "rest2",
+    "rest3",
+    "mem",
+    "gaps",
+    "sharp",
+    "family",
+    "family3",
+    "p5",
+    "checks",
+)
 # The prediction records, in the order a later one replaces the cases of an earlier one.
 PREDICTION_RECORDS = ("main", "rest", "rest2", "rest3", "mem", "gaps", "sharp", "family", "family3")
 CHARON_RECORDS = ("charon-firstpass", "charon")
