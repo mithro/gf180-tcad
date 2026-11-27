@@ -22,6 +22,10 @@
   "device": "pfet_05v0",
   "dim": 2,
   "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
+  "edge_fit": {
+    "poly_bias_nm": 61.0,
+    "sha256": "bfefbbd19bcd7106d94092d02a9c89709077c8b45d87acab322233d986cf4f95"
+  },
   "geometry": {
     "l_um": 2,
     "role": "calibration",
@@ -35,18 +39,18 @@
     "h_si_bulk_nm": 70.71067811865476,
     "h_si_surface_nm": 0.3535533905932738
   },
-  "mesh_sha256": "f31e0f46e9bc3d37d0671e79e988b9799268f79426e60f5352c7455bc97eba64",
+  "mesh_sha256": "b0de43bb1ba8fe2aba5bcf412180b6884d7b3b2402bac97fd0d4472f3f2aff1b",
   "mesh_source": "results/tcad/meshconv/moscap2d/pfet_05v0/selected.json",
-  "meshed_l_um": 1.9999999999999998,
+  "meshed_l_um": 2.122,
   "meshed_t_ox_nm": 15.720999999999998,
-  "node_count": 503672,
+  "node_count": 514879,
   "normalisation": "c_per_area = Cgg per unit width / drawn L; cgg_total = per unit width * drawn W; no DLC or BSIM4 parasitics",
   "param_sha256": "4b850baac972f26280b60ee7d5871852f4612ebd060da2af1a99db2809fb5cbf",
   "params": "calibrated",
   "point_tolerance_um": 1e-06,
   "points": 201,
   "resumed": {
-    "qs": 0
+    "qs": 3
   },
   "sd_peak_cm3": 1e+20,
   "sweep": {
