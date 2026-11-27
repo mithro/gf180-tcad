@@ -65,6 +65,8 @@ STYLE = {
     # the Newton figure's second panel shows the solves whose smallest WRMS norm is below this,
     # over the last newton_cycle_window iterations
     "newton_inset_top": 2.0,
+    # the minor ticks labelled on the Newton figure's residual-ratio axis, per decade
+    "newton_res_subs": (2.0, 5.0),
     "newton_cycle_parity": 0.01,
     "newton_cycle_ratio": 2.0,
     "legend_beside": (1.01, 1.0),
@@ -2369,7 +2371,9 @@ def charon_newton_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             ax.grid(True)
         wr_it.set_yscale("log")
         cond_it.set_yscale("log")
-        cond_it.set_xlabel("Newton iteration of the failed solve")
+        for ax in (wr_it, zoom, cond_it):
+            ax.set_xlabel("Newton iteration of the failed solve")
+        zoom.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
 
         def rows(ax, key, values, marker, filled, label):
             if filled:
@@ -2404,6 +2408,11 @@ def charon_newton_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             ax.invert_yaxis()
             ax.set_xlabel(title)
             ax.grid(True, axis="x")
+        # the residual ratios span less than two decades: label the 2s and 5s between them too
+        res.xaxis.set_minor_locator(matplotlib.ticker.LogLocator(subs=STYLE["newton_res_subs"]))
+        plain = matplotlib.ticker.FuncFormatter(lambda v, _pos: f"{v:g}")
+        res.xaxis.set_major_formatter(plain)
+        res.xaxis.set_minor_formatter(plain)
         handles, labels = [], []
         for ax in (wr_it, wr, res, cond):
             h, lab = ax.get_legend_handles_labels()

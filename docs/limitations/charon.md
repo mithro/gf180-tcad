@@ -215,7 +215,7 @@ The backend's 1e-9 passes on all four cases and gives the same C as 1e-10 within
 ### Why Newton stops
 
 The `newton-*` steps of {repo}`run.py <experiments/charon-backend/run.py>` sweep the start
-values of both devices. For each device they change the lifetime and the tolerance one at a time. Where a
+values of both devices, at each combination of lifetime and tolerance. Where a
 sweep fails, {repo}`b7n.py <experiments/charon-backend/b7n.py>` repeats the failed Newton solve
 at 1e-10 and at 1e-11. Its `write linear system is on` line makes Charon write the Jacobian J,
 the iterate and the residual after every iteration.
@@ -294,28 +294,32 @@ round-off of the unknowns is not the limit. Its floor_x is at most
 ```{figure} /_generated/limitations/charon-newton-light.svg
 :name: fig-charon-newton
 :figclass: only-light
-:alt: Six panels. Top three, per Newton iteration of seven failed solves: the WRMS norm with a dotted line at 1. Then its last iterations near 1, and the condition number of J. Bottom three: one row per solve, with markers on log axes beside dotted or dash-dot lines.
+:alt: Six panels. Three plot the WRMS norm and the condition number of J per Newton iteration of seven failed solves. Three hold one row of markers per solve.
 
 Top three panels: each failed solve, repeated at the tolerance its sweep failed at, per Newton
 iteration. They show the WRMS norm, its last iterations where it stays near 1, and the
-condition number of J. Colour gives the device; dashes
-mark the project's lifetime; each solve has its own marker. Below, one row per solve, named by
-device, lifetime, sweep tolerance and failed bias. Filled markers are the failed solve, hollow
-ones the repeat at the other tolerance
-({repo}`results/charon-experiments/hard-range.json`, `newton`).
+condition number of J. Colour gives the device; dashes mark the project's lifetime; each solve
+has its own marker. Below, one row per solve, named by device, lifetime, sweep tolerance and
+failed bias. The WRMS panel shows the failed solve's smallest WRMS norm (filled) and its floor_x
+(hollow square). In the residual and condition panels, filled markers are the failed solve and
+hollow ones the repeat at the other tolerance. For a 1e-10 sweep both repeats take the same
+iterates, so the hollow marker sits under the filled one. The hollow markers in view are the
+repeats that converge ({repo}`results/charon-experiments/hard-range.json`, `newton`).
 ```
 
 ```{figure} /_generated/limitations/charon-newton-dark.svg
 :figclass: only-dark
-:alt: Six panels. Top three, per Newton iteration of seven failed solves: the WRMS norm with a dotted line at 1. Then its last iterations near 1, and the condition number of J. Bottom three: one row per solve, with markers on log axes beside dotted or dash-dot lines.
+:alt: Six panels. Three plot the WRMS norm and the condition number of J per Newton iteration of seven failed solves. Three hold one row of markers per solve.
 
 Top three panels: each failed solve, repeated at the tolerance its sweep failed at, per Newton
 iteration. They show the WRMS norm, its last iterations where it stays near 1, and the
-condition number of J. Colour gives the device; dashes
-mark the project's lifetime; each solve has its own marker. Below, one row per solve, named by
-device, lifetime, sweep tolerance and failed bias. Filled markers are the failed solve, hollow
-ones the repeat at the other tolerance
-({repo}`results/charon-experiments/hard-range.json`, `newton`).
+condition number of J. Colour gives the device; dashes mark the project's lifetime; each solve
+has its own marker. Below, one row per solve, named by device, lifetime, sweep tolerance and
+failed bias. The WRMS panel shows the failed solve's smallest WRMS norm (filled) and its floor_x
+(hollow square). In the residual and condition panels, filled markers are the failed solve and
+hollow ones the repeat at the other tolerance. For a 1e-10 sweep both repeats take the same
+iterates, so the hollow marker sits under the filled one. The hollow markers in view are the
+repeats that converge ({repo}`results/charon-experiments/hard-range.json`, `newton`).
 ```
 
 The residual of a failed solve ends at its round-off scale. At the last iteration its 2-norm is
@@ -336,13 +340,13 @@ changes by at most {{ lim_charon_newton_cycle_dx }} % over the same iterations.
 
 The tolerance does not change the iterates. Both repeats take the same updates for as long as
 both run. At each such iteration the WRMS norm at 1e-11 is ten times the one at 1e-10. What sets
-the size of the update where it stops shrinking is
+the size of the update where it stops shrinking is open; see
 [issue #223](https://github.com/mithro/gf180-tcad/issues/223).
 
 Each failure of a 1e-11 sweep converges when repeated at 1e-10, with a WRMS norm of at most
 {{ lim_charon_newton_conv_hi }}. The failures of the 1e-10 sweeps stay above 1 at both
-tolerances. At 1e-11 every sweep fails, at device biases of {{ lim_charon_newton_tight_v }} V.
-The nfet with the project's lifetime fails earlier, at equilibrium. Whether the start potential
+tolerances. At 1e-11 every sweep fails. Three fail at device biases of
+{{ lim_charon_newton_tight_v }} V; the nfet with the project's lifetime fails at equilibrium. Whether the start potential
 at the oxide interfaces plays a part is [issue #232](https://github.com/mithro/gf180-tcad/issues/232).
 
 The two devices respond differently to the lifetime. At 1e-10 the pfet sweep fails at
