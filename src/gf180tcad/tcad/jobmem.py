@@ -9,8 +9,8 @@ saved point (:func:`gf180tcad.tcad.moscap2d.simulate` with ``state_dir``):
 - it hands the heap's free pages back with glibc's ``malloc_trim(0)`` and reports how much that
   freed, which tells heap fragmentation (freed) from memory still in use (not freed);
 - it reports the resident memory (VmRSS) and the container's memory limit;
-- once the resident memory passes :data:`BUDGET_FRACTION` of the limit, and has grown by at
-  least :data:`GROWTH_FRACTION` of the limit since this process's first point, it raises
+- once the resident memory passes :data:`~gf180tcad.tcad.jobmem.BUDGET_FRACTION` of the limit, and has grown by at
+  least :data:`~gf180tcad.tcad.jobmem.GROWTH_FRACTION` of the limit since this process's first point, it raises
   :class:`BudgetReached`, and the job restarts itself in a fresh process
   (:func:`gf180tcad.tcad.__main__.run_job_2d`), which resumes at the next point.
 
@@ -54,7 +54,7 @@ class BudgetReached(RuntimeError):
 
     def __init__(self, index: int, rss: int, limit: int) -> None:
         super().__init__(
-            f"resident memory {rss // _MIB} MiB after point {index} is above "
+            f"resident memory {rss // _MIB} MiB after point {index + 1} is above "
             f"{BUDGET_FRACTION:g} of the {limit // _MIB} MiB limit"
         )
         self.index = index
@@ -108,7 +108,7 @@ def trim() -> int:
 
 def over_budget(rss: int, first_rss: int, limit: int | None) -> bool:
     """Whether a job at resident memory ``rss`` (``first_rss`` after its first point) should
-    restart: above :data:`BUDGET_FRACTION` of ``limit`` and grown by :data:`GROWTH_FRACTION`."""
+    restart: above :data:`~gf180tcad.tcad.jobmem.BUDGET_FRACTION` of ``limit`` and grown by :data:`~gf180tcad.tcad.jobmem.GROWTH_FRACTION`."""
     if limit is None:
         return False
     return rss > BUDGET_FRACTION * limit and rss - first_rss >= GROWTH_FRACTION * limit

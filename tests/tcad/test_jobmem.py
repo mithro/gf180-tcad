@@ -77,7 +77,7 @@ def test_after_point_logs_and_raises_on_growth(readings):
     readings["rss"] = [4 * GIB, 8 * GIB, 13 * GIB]
     jobmem.after_point(0, last=False, log=lines.append)
     jobmem.after_point(1, last=False, log=lines.append)
-    with pytest.raises(jobmem.BudgetReached, match="after point 2") as e:
+    with pytest.raises(jobmem.BudgetReached, match="after point 3") as e:
         jobmem.after_point(2, last=False, log=lines.append)
     assert e.value.index == 2
     assert lines[0] == "memory after point 1: rss 4096 MiB, trim freed 3 MiB, limit 16384 MiB"
@@ -139,7 +139,7 @@ def test_budget_restarts_the_sweep_in_a_fresh_process(restart):
     ]  # fmt: skip
     assert env[cli.RESTARTS_ENV] == "1"
     log = (out / "progress_qs.log").read_text(encoding="utf-8")
-    assert "restart 1 in a fresh process" in log and "after point 41" in log
+    assert "restart 1 in a fresh process" in log and "after point 42" in log
     # the job command line parses to the same job
     a = cli._parser().parse_args(argv[3:])
     assert (a.command, a.device, a.dim, a.params, a.geometry, a.method) == (
