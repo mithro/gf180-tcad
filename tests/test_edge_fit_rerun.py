@@ -14,6 +14,7 @@ bias fit (results/tcad/edgefit) and the calibrated 2D cells rerun at it.
 
 import hashlib
 import json
+import math
 import subprocess
 
 import numpy as np
@@ -24,6 +25,23 @@ from gf180tcad.calibrate import edge
 from gf180tcad.devices import DEVICES
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import edgefit, meshconv
+
+# The relative tolerance of a refit against the frozen fit: the least squares runs through
+# numpy's LAPACK, whose last bits differ between hosts (CI's runner against the project's host).
+REFIT_REL = 1e-12
+
+
+def _same(a, b, rel: float = REFIT_REL) -> bool:
+    """``a`` equals ``b``, floats to ``rel`` (relative), everything else exactly."""
+    if isinstance(a, float) or isinstance(b, float):
+        return isinstance(a, (int, float)) and isinstance(b, (int, float)) and math.isclose(
+            a, b, rel_tol=rel, abs_tol=0.0)  # fmt: skip
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_same(a[k], b[k], rel) for k in a)
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return len(a) == len(b) and all(_same(x, y, rel) for x, y in zip(a, b, strict=True))
+    return a == b
+
 
 DEVICE_IDS = tuple(edge.RECORD_CELLS)
 CELLS = REPO_ROOT / "results" / "tcad" / "moscap2d"
@@ -80,7 +98,7 @@ def test_fit_inputs_are_the_cells_at_the_fit_commit(device, tmp_path):
     assert hashlib.sha256(rec_path.read_bytes()).hexdigest() == fit["record"]["sha256"]
     again = edge.fit(device, json.loads(rec_path.read_text("utf-8")), rows)
     assert again[edgefit.PARAM] == fit[edgefit.PARAM]
-    assert again["least_squares"] == fit["least_squares"]
+    assert _same(again["least_squares"], fit["least_squares"])
 
 
 def _nonlinearity_ff_per_um(device: str, fit: dict) -> float:

@@ -278,11 +278,11 @@ values and the committed fit ({repo}`experiments/meshconv-fitted`). It runs the 
 on the same 201 biases. The study's second criterion, the uniform stack's agreement with 1D, is
 not rerun. That stack has no gate end, so the bias does not enter it.
 
-{numref}`tab-meshconv-2d-fitted` gives each level's node count and its largest change against the
+{numref}`tab-meshconv-2d-fitted-levels` gives each level's node count and its largest change against the
 next level ({repo}`records <results/meshconv-fitted>`).
 
 ~~~{table} The node count of each 2D level at the fitted poly length bias, and its change against the next level.
-:name: tab-meshconv-2d-fitted
+:name: tab-meshconv-2d-fitted-levels
 
 | Level | nfet: nodes | nfet: change to next level (%) | pfet: nodes | pfet: change to next level (%) |
 |---|---|---|---|---|

@@ -1111,7 +1111,7 @@ These folders were regenerated with their own commands, in this order:
 5. The manifest of every results file, by `make manifest`.
 
 The checks that the rerun did what the fit predicts are in
-{test}`tests/test_edge_fit_rerun.py`.
+{repo}`tests/test_edge_fit_rerun.py`.
 
 (cross-host-determinism)=
 

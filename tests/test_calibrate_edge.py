@@ -16,6 +16,23 @@ from gf180tcad.calibrate import edge
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import edgefit
 
+# The relative tolerance of a refit against the frozen fit: the least squares runs through
+# numpy's LAPACK, whose last bits differ between hosts (CI's runner against the project's host).
+REFIT_REL = 1e-12
+
+
+def _same(a, b, rel: float = REFIT_REL) -> bool:
+    """``a`` equals ``b``, floats to ``rel`` (relative), everything else exactly."""
+    if isinstance(a, float) or isinstance(b, float):
+        return isinstance(a, (int, float)) and isinstance(b, (int, float)) and math.isclose(
+            a, b, rel_tol=rel, abs_tol=0.0)  # fmt: skip
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_same(a[k], b[k], rel) for k in a)
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return len(a) == len(b) and all(_same(x, y, rel) for x, y in zip(a, b, strict=True))
+    return a == b
+
+
 DEVICES = tuple(edge.RECORD_CELLS)
 
 
@@ -43,7 +60,9 @@ def test_fit_is_the_edge_study_s_least_squares(device, tmp_path):
     print), to round-off."""
     committed, root = _frozen_tree(device, tmp_path)
     d = edge.build(device, tcad_root=root, commit=committed["commit"])
-    assert json.loads(json.dumps(d)) == committed
+    # the applied δ is on the layout grid, so it must match exactly; the rest to round-off
+    assert d[edgefit.PARAM] == committed[edgefit.PARAM]
+    assert _same(json.loads(json.dumps(d)), committed)
     ref = lf.edge_fit(device, edge.RECORD_CELLS[device])
     ls = d["least_squares"]
     assert math.isclose(ls[edgefit.PARAM], ref["delta_nm"], rel_tol=1e-12)
