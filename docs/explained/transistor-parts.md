@@ -14,7 +14,7 @@ read {doc}`silicon-and-carriers`. It names each part and leaves out how the tran
 The 2D cell of the {term}`nfet_05v0` with {term}`geometry id` `w10p0_l0p70`, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type. The oxide thickness and the
 body doping are fitted to the {term}`SPICE` model. The junction depth is the
-{term}`model card`'s value. The gate and
+{term}`model card`'s value. The gate is longer than drawn by the fitted poly length bias at each end. The gate and
 body depths are project choices. The source and drain widths come from the cell's
 {ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_parts_cell_scale }}
 ```
@@ -26,7 +26,7 @@ body depths are project choices. The source and drain widths come from the cell'
 The 2D cell of the {term}`nfet_05v0` with {term}`geometry id` `w10p0_l0p70`, cut along the
 gate's length. Blue parts are n-type and the orange body is p-type. The oxide thickness and the
 body doping are fitted to the {term}`SPICE` model. The junction depth is the
-{term}`model card`'s value. The gate and
+{term}`model card`'s value. The gate is longer than drawn by the fitted poly length bias at each end. The gate and
 body depths are project choices. The source and drain widths come from the cell's
 {ref}`reduced mesh artefact <moscap2d-mesh-artefact>`. {{ x_fig_parts_cell_scale }}
 ```
