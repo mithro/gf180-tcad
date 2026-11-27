@@ -27,17 +27,17 @@ make manifest
 
 and the same for `pfet_05v0`. Run one 16 GiB level at a time and nothing else beside it. The work
 directory must be outside the repository, because the sandbox refuses the repository. A level
-whose `level.json` exists is skipped. A level that was cut off, for example killed at its memory
-limit, resumes at its last saved point when the same command runs again. Each level writes its
-log to `<workdir>/<device>/level<i>/level.log` and its progress to `progress.log` beside it.
+with a finished result is skipped. A level that was cut off, for example at its memory limit,
+resumes at its last saved point when the same command runs again. Each level keeps its log and
+its progress beside its result in the work directory.
 
-Run `run.py` from a checkout that stays at one commit for the whole run, for example a detached
-worktree: a level's pins hold the commit, and a run whose checkout changed is refused. That
-commit must stay on `main`'s history.
+Run [`run.py`](run.py) from a checkout that stays at one commit for the whole run. A detached
+worktree does that. A level's pins hold the commit, and a run whose checkout changed is refused.
+That commit must stay on `main`'s history.
 
-A record holds the report of `gf180tcad.tcad.meshconv.converge` over the three levels and the
-check the plan asks for: the selected level's largest change against the next finer level, and
-whether it is below the 1 % criterion. It also compares that level's curve with the committed
-calibrated cell of the same geometry, which ran on the same mesh. The study's second criterion,
-the uniform stack's agreement with 1D, is not rerun: that stack has no gate end, so the poly
-length bias does not enter it.
+A record holds the report of `gf180tcad.tcad.meshconv.converge` over the three levels. It also
+holds the plan's check: the selected level's largest change against the next finer
+level, and whether it is below the 1 % criterion. And it compares that level's capacitance with
+the committed calibrated cell of the same geometry, on the same mesh. The study's second
+criterion is the uniform stack's agreement with 1D. That stack has no gate end, so the poly
+length bias does not enter it, and it is not rerun.
