@@ -1,25 +1,49 @@
 # SPDX-License-Identifier: Apache-2.0
 """The poly length bias fit (gf180tcad.calibrate.edge): it reproduces the edge study's least
-squares from the committed cells, freezes its inputs, and refuses an uncommitted checkout."""
+squares from the δ = 0 cells it was made from, freezes its inputs, and refuses an uncommitted
+checkout."""
 
+import hashlib
 import json
 import math
+import subprocess
 
 import numpy as np
 import pytest
 
 from gf180tcad import limitations_figures as lf
 from gf180tcad.calibrate import edge
+from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import edgefit
 
 DEVICES = tuple(edge.RECORD_CELLS)
 
 
+def _frozen_tree(device: str, tmp_path):
+    """A TCAD tree of the δ = 0 cells the committed fit was made from: each cell's cv.csv at the
+    fit's commit (``git show``), its sha256 checked against the fit file."""
+    fit = edgefit.read(device)
+    assert fit is not None, f"{device}: no committed fit under results/tcad/edgefit"
+    root = tmp_path / "tcad"
+    for row in fit["cells"]:
+        rel = f"results/tcad/moscap2d/{device}/{edge.CELL_PARAMS}/{row['gid']}/cv.csv"
+        data = subprocess.run(["git", "show", f"{fit['commit']}:{rel}"], cwd=REPO_ROOT,
+                              check=True, capture_output=True).stdout  # fmt: skip
+        assert hashlib.sha256(data).hexdigest() == row["cv_csv_sha256"], row["gid"]
+        dest = root / "moscap2d" / device / edge.CELL_PARAMS / row["gid"] / "cv.csv"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+    return fit, root
+
+
 @pytest.mark.parametrize("device", DEVICES)
-def test_fit_is_the_edge_study_s_least_squares(device):
-    """On the committed cells the fit gives the δ, slope, targets and residuals of
-    limitations_figures.edge_fit (the numbers the docs print), to round-off."""
-    d = edge.build(device, commit="0" * 40)
+def test_fit_is_the_edge_study_s_least_squares(device, tmp_path):
+    """On the δ = 0 cells it was made from, the fit is the committed fit file, and it gives the
+    δ, slope, targets and residuals of limitations_figures.edge_fit (the numbers the docs
+    print), to round-off."""
+    committed, root = _frozen_tree(device, tmp_path)
+    d = edge.build(device, tcad_root=root, commit=committed["commit"])
+    assert json.loads(json.dumps(d)) == committed
     ref = lf.edge_fit(device, edge.RECORD_CELLS[device])
     ls = d["least_squares"]
     assert math.isclose(ls[edgefit.PARAM], ref["delta_nm"], rel_tol=1e-12)
