@@ -951,7 +951,7 @@ def meshconv_fitted(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
 
 
 def meshconv_2d_fitted_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
-    """Per device: the change |C / C_finer - 1| of the 2D levels 0 and 1 at the fitted poly
+    """Per device: the change ``|C / C_finer - 1|`` of the 2D levels 0 and 1 at the fitted poly
     length bias and the calibrated values (solid), the committed study's selected level at the
     start values (dashed), and the 1 % criterion."""
     pal = ef.PALETTES[palette]
