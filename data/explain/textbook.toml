@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+# Textbook values of the explainer pages (gf180tcad.explain.numbers, kind "textbook"), in the
+# layout of data/render/display.toml: one table of values per material, its units, and a
+# sources table whose entry for each value cites an anchor of docs/limitations/literature.md.
+# No simulation reads this file.
+
+[silicon]
+atom_density_cm3 = 5e22
+
+[silicon.units]
+atom_density_cm3 = "cm^-3"
+
+[silicon.sources]
+atom_density_cm3 = "Ioffe NSM archive (lit-ioffe-basic), Si, Basic Parameters at 300 K: 'Number of atoms in 1 cm3: 5·10^22'"
+
+# The majority-carrier mobility of heavily doped silicon (10^18 cm^-3 and up) at room
+# temperature, mu = mu_0 + mu_1 / (1 + (N / N_ref)^alpha), with N the donor density, for
+# electrons (the source gives a second fit for holes, which no page uses).
+[mobility_fit]
+electron_mu0_cm2_per_vs = 65.0
+electron_mu1_cm2_per_vs = 1265.0
+electron_nref_cm3 = 8.5e16
+electron_alpha = 0.72
+n_min_cm3 = 1e18
+
+[mobility_fit.units]
+electron_mu0_cm2_per_vs = "cm^2/(V s)"
+electron_mu1_cm2_per_vs = "cm^2/(V s)"
+electron_nref_cm3 = "cm^-3"
+electron_alpha = ""
+n_min_cm3 = "cm^-3"
+
+[mobility_fit.sources]
+electron_mu0_cm2_per_vs = "Wikipedia, Electron mobility (lit-wikipedia-mobility), 'Doping concentration dependence in heavily-doped silicon', majority carriers: mu_n(N_D) = 65 + 1265 / (1 + (N_D / 8.5e16)^0.72), citing Caughey and Thomas 1967"
+electron_mu1_cm2_per_vs = "Wikipedia, Electron mobility (lit-wikipedia-mobility), majority carriers, mu_n(N_D): the 1265 of the fit"
+electron_nref_cm3 = "Wikipedia, Electron mobility (lit-wikipedia-mobility), majority carriers, mu_n(N_D): the 8.5e16 of the fit"
+electron_alpha = "Wikipedia, Electron mobility (lit-wikipedia-mobility), majority carriers, mu_n(N_D): the exponent 0.72 of the fit"
+n_min_cm3 = "Wikipedia, Electron mobility (lit-wikipedia-mobility): the fit characterises 'heavily doped substrates (i.e. 10^18 cm-3 and up)'"

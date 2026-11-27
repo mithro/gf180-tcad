@@ -231,6 +231,9 @@ linkcheck_ignore = [
     r"https://doi\.org/10\.1115/1\.2910291",
     r"https://doi\.org/10\.1115/1\.2960953",
     r"https://doi\.org/10\.1098/rsta\.1911\.0009",
+    # dl.acm.org (doi:10.1145/...) answers 403 to automated clients. The DOI was checked against
+    # its Crossref record when added: Gao et al., ACM TODAES (2026), docs/limitations/literature.md.
+    r"https://doi\.org/10\.1145/3766551",
     # Flaky host: man7.org (the Linux man pages, docs/reproduce/sandbox.md) intermittently hits
     # linkcheck's read timeout from GitHub-hosted runners, even with retries; the pages were
     # fetched (HTTP 200) when they were added.
@@ -272,6 +275,15 @@ _limits = _limitations.substitutions()
 if _clash := sorted(set(_limits) & set(myst_substitutions)):
     raise ValueError(f"limitations substitutions clash with the others: {_clash}")
 myst_substitutions.update(_limits)
+
+# The reproduce pages print the numbers beside their figures by substitution, {{ repro_<name> }},
+# from the records the figures draw (gf180tcad.reproduce_figures.substitutions).
+from gf180tcad import reproduce_figures as _reproduce  # after the sys.path line above
+
+_repro = _reproduce.substitutions()
+if _clash := sorted(set(_repro) & set(myst_substitutions)):
+    raise ValueError(f"reproduce substitutions clash with the others: {_clash}")
+myst_substitutions.update(_repro)
 
 _generated = Path(__file__).parent / "_generated"
 _lock_path = Path(__file__).parent / ".generated.lock"

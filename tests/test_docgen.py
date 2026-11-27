@@ -40,6 +40,7 @@ EXPLAINED_FIGURES = [
     "bands-stack",
     "bands-flat",
     "parts-cell",
+    "parts-mesh",
     "junction-cell",
     "junction-panels",
     "moscap-cell",
@@ -54,6 +55,7 @@ EXPLAINED_FIGURES = [
     "cv-parts",
     "silicon-bonds",
     "silicon-dopants",
+    "silicon-resistivity",
     "junction-profile",
     "ldd-cell",
     "cv-overview",
@@ -545,6 +547,11 @@ def test_moscap_page_per_device_geometry(generated_pages):
         for dim in ("1d", "2d"):
             assert (root / name / f"meshconv_{dim}-light.svg").is_file()
             assert f"```{{figure}} meshconv_{dim}-light.svg" in index
+            # the levels table has its own identifier, not the figure's (issue #212)
+            stem = f"tcad-{name.replace('_', '-')}-meshconv-{dim}"
+            assert f":name: fig-{stem}\n" in index
+            assert f":name: tab-{stem}-levels\n" in index
+            assert f":name: tab-{stem}\n" not in index
     summary = (root / "index.md").read_text(encoding="utf-8")
     for name, device in DEVICES.items():
         for g in device.geometries:

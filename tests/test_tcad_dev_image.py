@@ -23,6 +23,7 @@ from test_tcad_image import (
     MESHWELL_SQUARE,
     TCAD_KEYS,
     _base_path,
+    _cell_mesh_probe_is_the_record,
 )
 
 from gf180tcad import sandbox
@@ -258,6 +259,12 @@ def test_tcad_dev_meshwell_square_is_the_record(tmp_path):
     assert record.pop("image") == _image()
     res = _run(["python3", "/work/src/tools/meshwell-square", "probe"], tmp_path)
     assert json.loads(res.stdout.splitlines()[-1]) == record
+
+
+@pytest.mark.sandbox
+def test_tcad_dev_cell_mesh_is_the_record(tmp_path):
+    """The dev-HEAD image meshes the 2D cell as data/images/cell-mesh/ records it (#157)."""
+    _cell_mesh_probe_is_the_record("dev", _run, _image(), tmp_path)
 
 
 # The same meshwell mesh as _GMSH_MESH, with only the meshio read-back of the finished mesh

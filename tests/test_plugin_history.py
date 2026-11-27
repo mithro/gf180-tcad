@@ -463,3 +463,35 @@ def test_latest_refuses_an_unpinned_or_dirty_submodule(monkeypatch, tmp_path):
     with pytest.raises(tcad.ProvenanceError, match="local changes"):
         history.run_latest(tmp_path / "out", workdir=tmp_path / "wd")
     assert not ran
+
+
+# --- the ideal abrupt-junction depletion width (issue #80) -----------------------------------
+
+
+def _abrupt():
+    spec = importlib.util.spec_from_file_location(
+        "abrupt_junction", EXPERIMENT / "abrupt_junction.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_abrupt_junction_record_is_recomputed(tmp_path):
+    mod = _abrupt()
+    assert mod.main(["--out", str(tmp_path)]) == 0
+    assert (tmp_path / mod.NAME).read_bytes() == (RESULTS / mod.NAME).read_bytes()
+
+
+def test_abrupt_junction_matches_the_rib_and_the_probe():
+    rec = _load("abrupt-junction.json")
+    # the same Boltzmann built-in potential as the floating rib's junction drop
+    assert rec["v_bi_v"] == pytest.approx(_VBI_RIB, rel=1e-12)
+    for name in COMMITTED[:2]:
+        drop = _load(name)["ddcomponent"]["equilibrium"]["junction"]["drop_v"]
+        assert abs(rec["v_bi_v"] - drop) < 1e-4
+    # symmetric junction: each side is half the width; the inner span is narrower
+    assert rec["x_n_um"] == rec["x_p_um"] == pytest.approx(rec["width_um"] / 2, rel=1e-15)
+    assert 0 < rec["inner_width_um"] < rec["width_um"]
+    # the fork's test quotes 0.0666 um for this definition
+    assert round(rec["inner_width_um"], 4) == 0.0666

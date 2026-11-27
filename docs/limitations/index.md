@@ -34,11 +34,12 @@ there.
 - **One TCAD backend.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
   for {{ Charon }} in parallel on every {term}`job`, with a per-job cross-comparison
   ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
-  Both Charon images are built and pinned, and no Charon job has run ({ref}`numerical-acceptance`,
-  {ref}`charon-images`,
+  Both Charon images are built and pinned. In experiments, Charon's 1D C–V matches DEVSIM's
+  within {{ lim_charon_nfet_devsim }} (nfet) and {{ lim_charon_pfet_devsim }} (pfet)
+  ({doc}`charon`). No Charon job has run ({ref}`numerical-acceptance`, {ref}`charon-images`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
-- **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
-  open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
+- **Related work.** OpenTCAD calibrates a {{ DEVSIM }} transistor to the SkyWater SKY130
+  `nfet_01v8` {term}`card <model card>`. The search that found it is in {ref}`lit-search-bsim`.
 
 The 2D cells against SPICE are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-validation>`. The crossing shift and plateau gap of every 2D cell are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-metrics>`.
 
@@ -79,10 +80,11 @@ The resumed sweeps are the dotted curves of {numref}`Figure %s of The 2D MOS cap
   {term}`stable TCAD image` (PyPI releases) is the release baseline and is used for
   debugging. A dev HEAD can break what the release did; such drift is reported, never hidden
   by a looser {term}`tolerance`. See {ref}`tcad-dev-image`.
-- **2D results are on the stable image.** The 1D results are made on the dev-HEAD
-  image, byte-identical to the stable image's. The 2D MOS capacitor is on the stable image,
-  because {{ gmsh }} 5 meshes the 2D cells differently. Its {term}`mesh convergence` has not been
-  rerun on the dev image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)). See
+- **2D results are on the stable image.** The 1D results are made on the dev-HEAD image,
+  byte-identical to the stable image's. Its {{ gmsh }} 5 writes another mesh file for the cell
+  `w10p0_l0p70`: the same triangles, renumbered, {{ repro_cell_moved }} points moved by rounding
+  ({numref}`Figure %s of Base image <fig-cell-mesh>`). The 2D {term}`mesh convergence`
+  has not been rerun there ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)). See
   {ref}`tcad-results-image`.
 - **Two dev-HEAD packages are forks.** The dev-HEAD image runs the full flow. To get there,
   {{ meshwell }} and the {{ gf180mcu_gdsfactory }} come from mithro forks of their upstream
@@ -228,4 +230,5 @@ plugin-history
 mesh-convergence
 moscap2d
 corners
+charon
 ```
