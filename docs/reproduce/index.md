@@ -1106,7 +1106,9 @@ These folders were regenerated with their own commands, in this order:
 2. {repo}`results/tcad/validation`, by `make tcad-validate`.
 3. {repo}`results/tcad/meshes/stable`, by the `tcad-meshes` commands with `--cache` naming a
    checkout of the output cache that holds the rerun meshes.
-4. The manifest of every results file, by `make manifest`.
+4. The 2D mesh-convergence check at the fitted bias, by the commands of
+   {repo}`experiments/meshconv-fitted` ({ref}`mesh-convergence-2d-fitted`).
+5. The manifest of every results file, by `make manifest`.
 
 The checks that the rerun did what the fit predicts are in
 {test}`tests/test_edge_fit_rerun.py`.

@@ -268,6 +268,60 @@ Against u = polarity × Vg, nfet above and pfet below ({repo}`results/tcad/meshc
 ```
 
 
+(mesh-convergence-2d-fitted)=
+
+## 2D result at the fitted poly length bias
+
+The calibrated 2D cells carry the fitted poly length bias, which moves each gate end
+({ref}`moscap2d-edge`). So the 2D study was rerun at each device's Lmin cell with the calibrated
+values and the committed fit ({repo}`experiments/meshconv-fitted`). It runs the same three levels
+on the same 201 biases. The study's second criterion, the uniform stack's agreement with 1D, is
+not rerun. That stack has no gate end, so the bias does not enter it.
+
+{numref}`tab-meshconv-2d-fitted` gives each level's node count and its largest change against the
+next level ({repo}`records <results/meshconv-fitted>`).
+
+~~~{table} The node count of each 2D level at the fitted poly length bias, and its change against the next level.
+:name: tab-meshconv-2d-fitted
+
+| Level | nfet: nodes | nfet: change to next level (%) | pfet: nodes | pfet: change to next level (%) |
+|---|---|---|---|---|
+| 0 | {{ lim_mcfit_nfet_nodes_0 }} | {{ lim_mcfit_nfet_change_0 }} | {{ lim_mcfit_pfet_nodes_0 }} | {{ lim_mcfit_pfet_change_0 }} |
+| 1 | {{ lim_mcfit_nfet_nodes_1 }} | {{ lim_mcfit_nfet_change_1 }} | {{ lim_mcfit_pfet_nodes_1 }} | {{ lim_mcfit_pfet_change_1 }} |
+| 2 | {{ lim_mcfit_nfet_nodes_2 }} | (finest) | {{ lim_mcfit_pfet_nodes_2 }} | (finest) |
+~~~
+
+The selected level is level {{ lim_mcfit_nfet_selected }} for the nfet and
+{{ lim_mcfit_pfet_selected }} for the pfet. It still changes by less than
+{{ lim_mcfit_criterion }} % against the next level
+({test}`tests/test_meshconv_fitted.py::test_selected_level_still_meets_the_criterion`).
+{numref}`fig-meshconv-2d-fitted` plots the change at every bias.
+
+Level 1 is the mesh of the committed calibrated Lmin cell, and its C per area is that cell's,
+bit for bit ({test}`tests/test_meshconv_fitted.py::test_selected_level_is_the_committed_cell`).
+
+```{figure} /_generated/limitations/meshconv-2d-fitted-light.svg
+:name: fig-meshconv-2d-fitted
+:figclass: only-light
+:alt: Two panels on log axes, nfet above and pfet below. Solid lines for levels 0 and 1 at the fitted bias and a dashed line for the start study's level 1 lie below a dashed 1 % line at every bias.
+
+The 2D relative change |C / C_finer − 1| of levels 0 and 1 at the fitted poly length bias and
+the calibrated values (solid), with the committed study's selected level at the start values and
+the drawn poly (dashed) and the 1 % criterion. Against u = polarity × Vg, nfet above and pfet
+below ({repo}`results/meshconv-fitted`).
+```
+
+```{figure} /_generated/limitations/meshconv-2d-fitted-dark.svg
+:figclass: only-dark
+:alt: Two panels on log axes, nfet above and pfet below. Solid lines for levels 0 and 1 at the fitted bias and a dashed line for the start study's level 1 lie below a dashed 1 % line at every bias.
+
+The 2D relative change |C / C_finer − 1| of levels 0 and 1 at the fitted poly length bias and
+the calibrated values (solid), with the committed study's selected level at the start values and
+the drawn poly (dashed) and the 1 % criterion. Against u = polarity × Vg, nfet above and pfet
+below ({repo}`results/meshconv-fitted`).
+```
+
+
 ## Limitations
 
 - **Numbers from one image per dimension.** The 1D results are from the dev-HEAD TCAD image

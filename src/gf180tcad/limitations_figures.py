@@ -1469,9 +1469,8 @@ def _meshconv_fitted_substitutions(roots: Roots) -> dict[str, str]:
     """The fitted-bias mesh-convergence numbers of the mesh-convergence page, per device
     (``<dev>`` is ``nfet`` or ``pfet``): ``lim_mcfit_<dev>_change_<i>`` the largest change of
     level ``i`` against the next finer one (%), ``lim_mcfit_<dev>_nodes_<i>`` each level's node
-    count, ``lim_mcfit_<dev>_selected`` the committed study's selected level,
-    ``lim_mcfit_<dev>_cell`` the largest relative difference of that level from the committed
-    calibrated cell, and ``lim_mcfit_criterion`` the criterion (%)."""
+    count, ``lim_mcfit_<dev>_selected`` the committed study's selected level, and
+    ``lim_mcfit_criterion`` the criterion (%)."""
     digits = STYLE["meshconv_change_digits"]
     out = {}
     for device in _DEVICES:
@@ -1484,7 +1483,6 @@ def _meshconv_fitted_substitutions(roots: Roots) -> dict[str, str]:
                     f"{lv['max_rel_change'] * UNITS['percent']:.{digits}f}"
                 )
         out[f"lim_mcfit_{dev}_selected"] = f"{rec['check']['selected_level']}"
-        out[f"lim_mcfit_{dev}_cell"] = _sci(rec["cell"]["max_rel_diff"])
     return out
 
 

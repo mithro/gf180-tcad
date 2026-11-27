@@ -56,6 +56,7 @@ page that explains it. The generated pages of every result are {doc}`/_generated
 | 2D C–V curves, start values and the ten calibrated cells | {repo}`results/tcad/moscap2d` | {doc}`moscap2d` |
 | Reduced mesh artefact of each calibrated 2D cell | {repo}`results/tcad/meshes/stable` | {ref}`moscap2d-mesh-artefact` |
 | {term}`Mesh convergence`, 1D and 2D | {repo}`results/tcad/meshconv` | {doc}`mesh-convergence` |
+| 2D mesh convergence at the fitted poly length bias | {repo}`results/meshconv-fitted` | {ref}`mesh-convergence-2d-fitted` |
 | 1D calibration against the SPICE {term}`Cgg`–Vg | {repo}`results/tcad/calibration` | {doc}`/comparison/cv-agreement` |
 | Validation at the {term}`held-out geometries <held-out geometry>` | {repo}`results/tcad/validation` | {ref}`cv-agreement-validation` |
 | The 1D fit at the four other SPICE {term}`corners <corner>` | {repo}`results/tcad/corners` | {doc}`corners` |

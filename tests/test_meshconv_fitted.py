@@ -91,8 +91,9 @@ def test_report_is_the_levels(device):
 @pytest.mark.parametrize("device", DEVICES)
 def test_selected_level_is_the_committed_cell(device):
     """The selected level is the committed calibrated cell's mesh at the same geometry: its node
-    count is the cell's, and its C per area agrees with the cell's within the solver's round-off
-    of a resumed sweep (the record's ``cell``)."""
+    count is the cell's, and its C per area is the cell's bit for bit (the record's ``cell``;
+    docs/limitations/mesh-convergence.md says so). Both sweeps save each point and hand the
+    state on in the same way."""
     rec = _rec(device)
     gid = geometry_id(meshconv.geometry_2d(device))
     assert rec["geometry"] == gid
@@ -106,7 +107,8 @@ def test_selected_level_is_the_committed_cell(device):
     assert tuple(vg) == tuple(rec["report"]["vg"])
     diff = max(abs(a / b - 1) for a, b in zip(lv["c_per_area_ff_um2"], c, strict=True))
     assert rec["cell"]["max_rel_diff"] == diff
-    assert diff < meshconv.NOISE_K * moscap1d.REL_TOL
+    assert diff == 0.0
+    assert list(lv["c_per_area_ff_um2"]) == list(c)
 
 
 @pytest.mark.parametrize("device", DEVICES)
