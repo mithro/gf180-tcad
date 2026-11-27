@@ -64,9 +64,10 @@ Each device and each metric gets one of three verdicts:
   - 10/{term}`Lmin` (n: 0.6, p: 0.5), 10/0.7, 10/1, 10/2,
     10/10;
   - a narrow 1.6/0.7, the geometry of the taped-out `nfet_06v0` and
-    `pfet_06v0` test devices ({doc}`../limitations/silicon-validation`);
-  - the {term}`bin`
-    boundary at L = 0.7 µm is deliberately included.
+    `pfet_06v0` test devices ({doc}`../limitations/silicon-validation`).
+
+  The {term}`bin`
+  boundary at L = 0.7 µm is deliberately included.
 - **Bias**: Vgs and Vds from 0 to 5 V (mirrored for p); Vbs of 0, -1 and -2 V
   (mirrored for p). Temperature is 25 °C; −40 °C and 125 °C are on the
   {doc}`roadmap </roadmap>` ([issue #71](https://github.com/mithro/gf180-tcad/issues/71)).
@@ -201,7 +202,7 @@ silently.
 Where the PDK publishes a spec min-max, the window covers both the published
 spec and the {term}`corner envelope`; otherwise the corner envelope is used.
 Covering both means their {term}`combined range`: the lowest lower bound and the
-highest upper bound. The page shows which one sets it (spec, envelope, or both).
+highest upper bound. Where a spec exists, the page shows which one sets it (spec, envelope, or both).
 
 The corner envelope is the envelope of the TT,
 {term}`FF`, {term}`SS <SS corner>`, {term}`FS` and {term}`SF` SPICE corners. It is taken at the same

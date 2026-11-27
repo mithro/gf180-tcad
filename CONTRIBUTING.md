@@ -44,7 +44,7 @@ PRs but is not a merge blocker.
   every status page the change affects. The first is the [status page](docs/limitations/status.md).
   Then come the "Where it stands" lists of [docs/index.md](docs/index.md) and [README.md](README.md),
   and the task checkboxes of the plan in [docs/superpowers/plans](docs/superpowers/plans).
-- Those two
+- The two "Where it stands"
   lists give the same overview, and a checkbox is ticked with the PR number and merge date. The
   author also updates the [limitations index](docs/limitations/index.md) and the results and
   comparison pages whose content the change alters.

@@ -31,9 +31,9 @@ for both devices.
 - **VT0.** The page only says "Linear {term}`threshold voltage <Vt>`" and gives no bias or current
   criterion. It is compared with {term}`vt_lin_maxgm` (Vds = 0.1 V, linear extrapolation at
   maximum {term}`gm`). That is the textbook linear Vt and the closest of our metrics.
-  - The
-    constant-current {term}`vt_lin_cc` (100 nA * W/L) differs from it by 25 mV (n) and 58 mV (p).
-    But it is also inside the {term}`spec window`.
+- **VT0, constant current.** The
+  constant-current {term}`vt_lin_cc` (100 nA * W/L) differs from `vt_lin_maxgm` by 25 mV (n) and 58 mV (p).
+  But it is also inside the {term}`spec window`.
 - **Idsat.** |Vds| = |Vgs| = 5 V on the page; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0.
   Same definition.
 - **Ioff.** |Vds| = 5.5 V at 25 C on the page; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C. Same

@@ -23,8 +23,8 @@ The threshold is not loosened.
 
 **Twelve of the 36 cases fail:** `idvg_lin`
 (0.555 to 0.562 %) and `idvg_sat` (0.56 to 0.61 %) for all six `nfet_05v0` geometries. They are marked as
-{term}`strict expected failures <strict expected failure>` that point to this page (listed in
-{py:data}`gf180tcad.known.KNOWN_ENGINE_DIFFS`). So a fix would show up as an
+{term}`strict expected failures <strict expected failure>` (listed in
+{py:data}`gf180tcad.known.KNOWN_ENGINE_DIFFS`) that point to this page. So a fix would show up as an
 unexpected pass. The engine difference of every sweep and geometry is plotted against the
 threshold in {numref}`fig-engine-diff`.
 
@@ -134,8 +134,8 @@ identically to scratch copies of both libraries.
   | `idvd` | 3.27e-3 | 1.03e-7 |
   ~~~
 
-  At Vds = 5 V the remaining 3.6e-3 is at the ~6 pA off-state floor, at
-  Vgs = 0.01 V. That floor is set by gmin
+  At Vds = 5 V the remaining 3.6e-3 is at Vgs = 0.01 V, on the ~6 pA off-state floor.
+  That floor is set by gmin
   leakage (≈ 1e-12 S × 5 V) plus junction leakage. The subthreshold gate-voltage shift becomes 0.000 mV.
 
 With ngspice forced to 4.6, every nfet geometry agrees:

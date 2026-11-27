@@ -80,22 +80,23 @@ Other properties of the container, by kind.
   ({py:data}`gf180tcad.sandbox.SOURCE_MOUNT`). Project
   code is run from it with `PYTHONPATH=/work/src/src`; it is not baked into the
   image;
-- the working directory is mounted read-write at `/work/out`. It must exist and must not be
-  the filesystem root or `$HOME`, or an ancestor of it. Here `$HOME` is taken from the passwd entry when `$HOME` is unset; if neither
-  gives a directory, nothing runs;
-- nor may the working directory be, be inside, or be an
-  ancestor of any directory whose contents run on the host:
-  - the repository;
-  - its git dir and
-    git common dir (`git rev-parse --git-dir` / `--git-common-dir`), which for a
-    [git worktree](https://git-scm.com/docs/git-worktree) lie outside the repository and hold
-    the hooks every worktree runs;
-  - the main working tree that owns the common dir.
-- if the
-  repository is a git checkout and git cannot locate those directories, nothing runs;
-- unrelated directories are fine: scratch directories under `$TMPDIR`, or sibling checkouts
-  next to the repository. An allowed sibling git checkout used as a working directory is
-  writable, its own `.git` included, so use a scratch directory instead.
+- the working directory is mounted read-write at `/work/out`, under these rules:
+  - It must exist and must not be
+    the filesystem root or `$HOME`, or an ancestor of it. Here `$HOME` is taken from the passwd entry when `$HOME` is unset; if neither
+    gives a directory, nothing runs.
+  - Nor may the working directory be, be inside, or be an
+    ancestor of any directory whose contents run on the host:
+    - the repository;
+    - its git dir and
+      git common dir (`git rev-parse --git-dir` / `--git-common-dir`), which for a
+      [git worktree](https://git-scm.com/docs/git-worktree) lie outside the repository and hold
+      the hooks every worktree runs;
+    - the main working tree that owns the common dir.
+  - If the
+    repository is a git checkout and git cannot locate those directories, nothing runs.
+  - Unrelated directories are fine: scratch directories under `$TMPDIR`, or sibling checkouts
+    next to the repository. An allowed sibling git checkout used as a working directory is
+    writable, its own `.git` included, so use a scratch directory instead.
 
 **Environment and image:**
 
@@ -123,7 +124,7 @@ this. The function {py:func}`gf180tcad.sandbox.check_confined` must also prove t
 - `/work/src` is mounted read-only;
 - no network interface but `lo` exists.
 
-Otherwise
+If any of them fails,
 {py:class}`~gf180tcad.sandbox.SandboxNotConfined` is raised and nothing runs. The working
 directory follows the same rules as above ({py:func}`gf180tcad.sandbox.check_workdir`).
 
