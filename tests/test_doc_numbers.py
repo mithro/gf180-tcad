@@ -185,7 +185,7 @@ CASES = [
     ),
     (
         ENGINE_PAGE,
-        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\): {NUM} to {NUM} mV of",
+        rf"comparison \(\{{doc\}}`\.\./comparison/agreement`\)\. It is {NUM} to {NUM} mV of",
         lambda: [shift_mv(1e-9), shift_mv(1e-6)],
     ),
     # pdk-spec-check.md: the TT column
@@ -212,7 +212,7 @@ CASES = [
     ),
     (
         SPEC_PAGE,
-        rf"differs from it by {NUM} mV \(n\) and {NUM} mV \(p\)",
+        rf"differs from `vt_lin_maxgm` by {NUM} mV \(n\) and {NUM} mV \(p\)",
         lambda: [
             1000 * abs(metric(N, NLMIN, "vt_lin_cc") - metric(N, NLMIN, "vt_lin_maxgm")),
             1000 * abs(metric(P, PLMIN, "vt_lin_cc") - metric(P, PLMIN, "vt_lin_maxgm")),

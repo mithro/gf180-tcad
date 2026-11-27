@@ -43,21 +43,28 @@ PRs but is not a merge blocker.
 - The documentation is updated in the same PR as the change, never later. The author updates
   every status page the change affects. The first is the [status page](docs/limitations/status.md).
   Then come the "Where it stands" lists of [docs/index.md](docs/index.md) and [README.md](README.md),
-  and the task checkboxes of the plan in [docs/superpowers/plans](docs/superpowers/plans). The two
+  and the task checkboxes of the plan in [docs/superpowers/plans](docs/superpowers/plans).
+- The two "Where it stands"
   lists give the same overview, and a checkbox is ticked with the PR number and merge date. The
   author also updates the [limitations index](docs/limitations/index.md) and the results and
-  comparison pages whose content the change alters. [`tests/test_docs_status.py`](tests/test_docs_status.py)
+  comparison pages whose content the change alters.
+- The test [`tests/test_docs_status.py`](tests/test_docs_status.py)
   catches two narrow cases: a top-level results tree the status page does not name, and known
   stale phrases. Passing it says nothing about whether the pages are current.
 - Every review checks that those pages were updated correctly at the same time. A PR whose
   documentation lags behind the change is "needs fixes", like any other finding.
+
+How docs pages are written and checked:
+
 - Docs pages follow the writing rules of the [design spec, section 10.3](docs/superpowers/specs/2026-10-18-gf180-tcad-design.md).
   Those rules are the user's `writing-sourced-docs` and `docs-writing` skills, from the user's
   [mithro/dot-claude](https://github.com/mithro/dot-claude) repository. `docs-writing` is on its
-  `docs-writing-skill` branch. A reader page states only what a source backs, with the source
+  `docs-writing-skill` branch.
+- A reader page states only what a source backs, with the source
   linked in the sentence. It carries no hedge or unknown word (`not yet`, `unverified`, `not public`,
   `probably`, `likely`, `about` before a number and the others listed in section 10.3). An
-  unsourced statement is removed and filed as an issue. Before handing a page over, run
+  unsourced statement is removed and filed as an issue.
+- Before handing a page over, run
   `uv run --no-project python -I tools/measure_docs.py <page>` ([`tools/measure_docs.py`](tools/measure_docs.py)), `uv run --no-project python -I tools/docs_lint.py --no-front-matter <page>` ([`tools/docs_lint.py`](tools/docs_lint.py)) and the docs tests
   ([`tests/test_doc_style.py`](tests/test_doc_style.py),
   [`tests/test_doc_measure.py`](tests/test_doc_measure.py)); a PR that fixes pages lowers
@@ -116,7 +123,7 @@ PRs but is not a merge blocker.
   check at 400 px wide, because no test sees the rendered width. Build the docs, then take a
   screenshot of the page with
   `google-chrome --headless=new --hide-scrollbars --window-size=400,1800 --screenshot=tmp/shot.png file://$PWD/tmp/docs-html/<page>.html`.
-  The table must not scroll sideways and no number may break across lines
+- In the screenshot, the table must not scroll sideways and no number may break across lines
   ([`docs/_static/narrow.css`](docs/_static/narrow.css) sets the narrow-screen table style).
   Attach the screenshots to the PR.
 
