@@ -278,17 +278,21 @@
       "files": 4,
       "sha256": "62f541265ee51e4a71ec97a4b9d092225d18cd8589e1c90ca51bbd43bb2627fd"
     },
+    "tcad/edgefit": {
+      "files": 2,
+      "sha256": "b74b487246b3193f2031ebea86ee720f01ab65e768858a11b63e7a8811e172a4"
+    },
     "tcad/meshconv/moscap1d": {
       "files": 4,
       "sha256": "1f79a69ac97cdb022d0c870f2b4b98aa8b561b119917ec83848ec9f7c5e4f3ad"
     },
     "tcad/moscap2d/nfet_05v0/calibrated": {
       "files": 14,
-      "sha256": "3a059cd48b0777cdf5cb0c6f974f34ffa08e3686014bf1622de67a82e7034621"
+      "sha256": "41fe901b358d7e698627afcb63a54bf52c6c05c7565b55b58af4ba716c631a02"
     },
     "tcad/moscap2d/pfet_05v0/calibrated": {
       "files": 14,
-      "sha256": "1f8e11d5d8a759086104eb883ba46f648baf3871b9e717ffb57a2513d119f311"
+      "sha256": "96a871fb76cfd1d428ded70b16a5e6ea83a92ba7ef94d24747cab6b4c03ee9fb"
     }
   }
 }
