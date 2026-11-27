@@ -60,6 +60,11 @@ records that and how often each sweep was resumed. ``--mem`` sets the sandbox jo
 time) to ``progress_qs.log`` or ``progress_ac.log`` in its scratch directory, whose path the
 host prints when the job starts; ``--progress-log FILE`` copies the finished log(s) there.
 Runtimes stay out of the results.
+
+**Memory.** After each saved point a 2D sweep trims its heap and logs its memory
+(:func:`gf180tcad.tcad.jobmem.after_point`). Near the container's limit the sweep restarts in a
+fresh process on the same scratch directory and resumes at the next point (issue #233); each
+restart is a resume that the job files count.
 """
 
 from __future__ import annotations
