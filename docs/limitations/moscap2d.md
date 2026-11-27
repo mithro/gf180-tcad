@@ -653,12 +653,12 @@ For the nfet W1.6/L0.7 the result is {term}`Disagree`
 ~~~{table} The comparison of the nfet W1.6/L0.7 cell with SPICE.
 :name: tab-moscap2d-nfet-narrow
 
-| Check | Value | Verdict |
+| Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau, worst difference (%) | 7.6 | {term}`Same process` |
-| Inversion plateau, worst difference (%) | 13.8 | Same process |
-| Depletion crossing shift (mV) | −194 | Disagree |
-| Inversion crossing shift (mV) | −33 | {term}`Agree` |
+| Accumulation plateau (%) | 7.1 | {term}`Same process` |
+| Inversion plateau (%) | 5.4 | Same process |
+| Depletion crossing shift (mV) | −160 | Disagree |
+| Inversion crossing shift (mV) | −22 | {term}`Agree` |
 ~~~
 
 The pfet W1.6/L0.7 job is committed. Its mesh is the pfet W10/L0.7 mesh, and its `cgg_per_um` equals that
@@ -671,12 +671,12 @@ Its comparison is {term}`Same process`
 ~~~{table} The comparison of the pfet W1.6/L0.7 cell with SPICE.
 :name: tab-moscap2d-pfet-narrow
 
-| Check | Value | Verdict |
+| Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau, worst difference (%) | 10.6 | Same process |
-| Inversion plateau, worst difference (%) | 9.9 | Same process |
-| Depletion crossing shift (mV) | −109 | Same process |
-| Inversion crossing shift (mV) | +7 | Agree |
+| Accumulation plateau (%) | 4.6 | Agree |
+| Inversion plateau (%) | 3.9 | Agree |
+| Depletion crossing shift (mV) | −56 | Same process |
+| Inversion crossing shift (mV) | +21 | Agree |
 ~~~
 
 (moscap2d-edge)=

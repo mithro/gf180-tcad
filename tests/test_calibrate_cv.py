@@ -683,6 +683,55 @@ def test_docs_quote_the_committed_results(device):
     assert res.bound_hits == {} and "No value is within 1e-3 of a bound" in text
 
 
+# The pages' tables of the 2D checks, per (device, geometry): the page and the table name.
+TWO_D_TABLES = {
+    ("nfet_05v0", "w10p0_l0p60"): ("comparison/cv-agreement.md", "tab-cv-2d-nfet-l0p6"),
+    ("nfet_05v0", "w10p0_l0p70"): ("comparison/cv-agreement.md", "tab-cv-2d-nfet-l0p7"),
+    ("nfet_05v0", "w10p0_l1p00"): ("comparison/cv-agreement.md", "tab-cv-2d-nfet-l1"),
+    ("nfet_05v0", "w10p0_l2p00"): ("comparison/cv-agreement.md", "tab-cv-2d-nfet-l2"),
+    ("nfet_05v0", "w1p6_l0p70"): ("limitations/moscap2d.md", "tab-moscap2d-nfet-narrow"),
+    ("pfet_05v0", "w10p0_l0p50"): ("comparison/cv-agreement.md", "tab-cv-2d-pfet-l0p5"),
+    ("pfet_05v0", "w10p0_l0p70"): ("comparison/cv-agreement.md", "tab-cv-2d-pfet-l0p7"),
+    ("pfet_05v0", "w10p0_l1p00"): ("comparison/cv-agreement.md", "tab-cv-2d-pfet-l1"),
+    ("pfet_05v0", "w10p0_l2p00"): ("comparison/cv-agreement.md", "tab-cv-2d-pfet-l2"),
+    ("pfet_05v0", "w1p6_l0p70"): ("limitations/moscap2d.md", "tab-moscap2d-pfet-narrow"),
+}
+
+
+def _verdict_cell(verdict: str) -> set[str]:
+    """How a verdict may be written in a table cell: plain, or as its glossary term."""
+    return {verdict, f"{{term}}`{verdict}`"}
+
+
+@pytest.mark.parametrize(("device", "gid"), sorted(TWO_D_TABLES))
+def test_docs_quote_the_2d_checks(device, gid):
+    """Each table of a calibrated 2D cell's checks holds the validation file's values, rounded
+    as written (plateaus in % to 0.1, crossing shifts in mV to 1, signed), and its verdicts."""
+    page, name = TWO_D_TABLES[device, gid]
+    text = (cv.REPO_ROOT / "docs" / page).read_text(encoding="utf-8")
+    body = text.split(f":name: {name}\n", 1)[1].split("~~~", 1)[0]
+    rows = {}
+    for line in body.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) == 3 and cells[0] not in ("Check", "---"):
+            rows[cells[0]] = (cells[1], cells[2])
+    v = json.loads((cv.VALIDATION_ROOT / f"{device}.json").read_bytes())["two_d"][gid]["verdicts"]
+
+    def mv(x: float) -> str:
+        return f"{1000 * x:+.0f}".replace("-", "\u2212")
+
+    want = {
+        "Accumulation plateau (%)": (f"{100 * v['plateau_acc']['max_rel']:.1f}", v["plateau_acc"]),
+        "Inversion plateau (%)": (f"{100 * v['plateau_inv']['max_rel']:.1f}", v["plateau_inv"]),
+        "Depletion crossing shift (mV)": (mv(v["dv_dep"]["dv_v"]), v["dv_dep"]),
+        "Inversion crossing shift (mV)": (mv(v["dv_inv"]["dv_v"]), v["dv_inv"]),
+    }
+    assert sorted(rows) == sorted(want), name
+    for check, (value, entry) in want.items():
+        assert rows[check][0] == value, (name, check, rows[check][0], value)
+        assert rows[check][1] in _verdict_cell(entry["verdict"]), (name, check)
+
+
 # --- in the TCAD image ---------------------------------------------------------------------------
 
 
