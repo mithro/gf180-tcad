@@ -169,7 +169,9 @@ complementary MOS (CMOS) process flow. That flow is in chapter 2 of Plummer, Dea
 
 **Which card bin each geometry uses.** The files cite the first L bin of each 6 V model. The nfet
 model has two, `nfet_06v0.0` (L 0.7–50 µm) and `nfet_06v0.1` (L 0.6–0.7 µm). The pfet model has one,
-`pfet_06v0.0` (L 0.5–50 µm) ({py:data}`gf180tcad.tcad.process.CARD_BINS`). The simulator {{ ngspice }} accepts
+`pfet_06v0.0` (L 0.5–50 µm). Both models' bins are in {py:data}`gf180tcad.tcad.process.CARD_BINS`.
+
+The simulator {{ ngspice }} accepts
 a length inside a bin or within 1e-9 m of either bound (`in_range` in
 [`inpgmod.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/parser/inpgmod.c)). So L = 0.7 µm lies in both nfet bins, and ngspice takes the
 first in its model table ({py:func}`gf180tcad.tcad.process.card_bins`):
