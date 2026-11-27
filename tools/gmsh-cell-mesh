@@ -46,7 +46,7 @@ OUT = REPO / "data" / "images" / "cell-mesh"
 RECORD = OUT / "record.json"
 PINS = {"stable": REPO / "docker" / "TCAD_IMAGE", "dev": REPO / "docker" / "TCAD_DEV_IMAGE"}
 JOB = "results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p70"
-BOX_CENTRE_UM = (0.771, 0.0068)
+BOX_CENTRE_UM = (0.7695, 0.0066)
 """The box's centre (x, y in um), in the gate oxide, beside two of the points that gmsh
 4.15.2 and gmsh 5 place differently (the record's ``comparison.moved``)."""
 BOX_HALF_UM = 0.001
