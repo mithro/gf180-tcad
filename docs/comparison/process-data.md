@@ -12,8 +12,8 @@ CF, names the parameters it is `derived_from`.
 
 The card is `sm141064.ngspice` in the pinned base image ({repo}`docker/IMAGE`, which the {term}`TCAD`
 image {repo}`docker/TCAD_IMAGE` is built on). Its sha256 is recorded in
-{repo}`docker/base/versions.json` and in each file's `[card]` table. {{ open_pdks }} installs
-it from
+{repo}`docker/base/versions.json` and in each file's `[card]` table. The card is installed by {{ open_pdks }}
+from
 [`models/ngspice/sm141064.spice`](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice)
 of the {{ gf180mcu_models }} at the pinned commit. The two files are byte-identical: both have
 sha256 `69a7ab877344a6d477fdd11440457f64e7ad88a624504a737a161da463de8bc8`. So the line numbers
@@ -26,10 +26,13 @@ below link into that file.
 The values come from the {term}`nfet_06v0` and {term}`pfet_06v0` cards: `.model nfet_06v0.0`
 at card line [37055](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37055) and `.model pfet_06v0.0` at line [38091](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38091). These
 are the {term}`L bin` from 0.7 µm (nfet) and 0.5 µm (pfet) up to 50 µm. Several card entries are
-expressions in {term}`corner` parameters, such as `toxe='1.52e-008+nfet_06v0_tox'`. They are
+expressions in {term}`corner` parameters, such as `toxe='1.52e-008+nfet_06v0_tox'`.
+
+The expressions are
 evaluated with the `.param` values of the card's `.lib typical` section ({term}`TT`, from line
-[105](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L105)) by {py:func}`gf180tcad.tcad.process.eval_card_expr`, and the source cites both
-lines. {test}`tests/tcad/test_process.py::test_card_values_and_lines` re-reads every cited line
+[105](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L105)).
+The function {py:func}`gf180tcad.tcad.process.eval_card_expr` evaluates them, and the source cites both
+lines. The test {test}`tests/tcad/test_process.py::test_card_values_and_lines` re-reads every cited line
 from the card in the image. It checks that each line lies inside the right `.model` block, and
 that the value is right. The `crosscheck` workflow runs it ({repo}`.github/workflows/crosscheck.yml`).
 
@@ -148,7 +151,7 @@ the nfet card and CF on both cards are not set; their values are derived.
 | {term}`XW` | 1D bookkeeping, fixed |
 ~~~
 
-CF is not on either card, so {term}`BSIM4` uses its default, 2·EPSROX·ε0/π·ln(1 + 4e-7/TOXE)
+CF is not on either card. So {term}`BSIM4` uses its default, 2·EPSROX·ε0/π·ln(1 + 4e-7/TOXE)
 ([BSIM4.5.0 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), `doc/BSIM450_Manu.tar`, eq. 7.5.1).
 
 The nfet ACDE is on line [37059](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37059). Line [37397](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37397) has the same value, but it
@@ -165,10 +168,12 @@ complementary MOS (CMOS) process flow. That flow is in chapter 2 of Plummer, Dea
 (process-data-bins)=
 
 **Which card bin each geometry uses.** The files cite the first L bin of each 6 V model. The nfet
-model has two, `nfet_06v0.0` (L 0.7–50 µm) and `nfet_06v0.1` (L 0.6–0.7 µm); the pfet one,
-`pfet_06v0.0` (L 0.5–50 µm) ({py:data}`gf180tcad.tcad.process.CARD_BINS`). {{ ngspice }} accepts
+model has two, `nfet_06v0.0` (L 0.7–50 µm) and `nfet_06v0.1` (L 0.6–0.7 µm). The pfet model has one,
+`pfet_06v0.0` (L 0.5–50 µm). Both models' bins are in {py:data}`gf180tcad.tcad.process.CARD_BINS`.
+
+The simulator {{ ngspice }} accepts
 a length inside a bin or within 1e-9 m of either bound (`in_range` in
-[`inpgmod.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/parser/inpgmod.c)), so L = 0.7 µm lies in both nfet bins and ngspice takes the
+[`inpgmod.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/parser/inpgmod.c)). So L = 0.7 µm lies in both nfet bins, and ngspice takes the
 first in its model table ({py:func}`gf180tcad.tcad.process.card_bins`):
 
 {numref}`tab-process-data-nfet-bins` gives the nfet {term}`SPICE` geometries (L = 0.6 µm is the nfet {term}`Lmin`; *both* means `nfet_06v0.0` and `nfet_06v0.1`, at their boundary).
@@ -201,21 +206,24 @@ first in its model table ({py:func}`gf180tcad.tcad.process.card_bins`):
 | 10 | 10 | `pfet_06v0.0` |
 ~~~
 
-Every card key the nfet file uses has the same {term}`TT` value in both nfet bins, so the
+Every card key the nfet file uses has the same {term}`TT` value in both nfet bins. So the
 process data does not depend on the bin
 ({test}`tests/tcad/test_process.py::test_card_bins_agree_on_the_used_keys`, which also checks the
 bin bounds against the card).
 
 **Reference-model bookkeeping.** DLC, DWC, XL, XW, CGSO, CGDO, CGSL, CGDL, CKAPPAS, CKAPPAD,
-CGBO and CF describe how BSIM4 splits the {term}`SPICE` {term}`Cgg` into an intrinsic part and
-extrinsic parts: the intrinsic part scales with the capacitance area (L + XL − 2·DLC)·(W + XW −
-2·DWC), as {{ ngspice }} computes LeffCV and WeffCV ([`b4temp.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c)), and the
-overlap, fringe and gate-bulk parts are added to it
+CGBO and CF are bookkeeping parameters. They
+describe how BSIM4 splits the {term}`SPICE` {term}`Cgg` into an intrinsic part and
+extrinsic parts. The intrinsic part scales with the capacitance area (L + XL − 2·DLC)·(W + XW −
+2·DWC), as {{ ngspice }} computes LeffCV and WeffCV ([`b4temp.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4temp.c)).
+The overlap, fringe and gate-bulk parts are added to it
 ({py:func}`gf180tcad.tcad.moscap1d.parasitic_ff`).
 
-The pfet card sets no DWC, so its DWC is
+The pfet card sets no DWC. So its DWC is
 the {term}`BSIM4` default, WINT ([`b4set.c`](https://sourceforge.net/p/ngspice/ngspice/ci/ngspice-47/tree/src/spicelib/devices/bsim4/b4set.c): `BSIM4dwc = BSIM4Wint` when DWC
-is not given; [BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A). They are not process
+is not given; [BSIM4 manual](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), Appendix A).
+
+The bookkeeping parameters are not process
 data, so they carry the role `reference-bookkeeping`. They are used only in the 1D comparison,
 where the 1D structure has no source or drain. In 2D, the source/drain geometry gives the overlap
 physically. They are fixed and are not part of the {term}`parameter budget`.
@@ -300,10 +308,10 @@ Where each comes from (the same for both devices):
 - `n_ch_cm3`: start card (NDEP); lower and upper bound project choice.
 - `dv_fb_v`: start, lower and upper bound all project choice.
 
-- **The `n_ch_cm3` lower bound** is 0.5 × the doping that K1 implies,
-  N = (K1·{term}`Cox`(TOXE))²/(2·q·ε_si·ε0) ({py:func}`gf180tcad.tcad.process.k1_doping_cm3`), with the
-  constants in {py:data}`gf180tcad.tcad.process.CONSTANTS`. **The factor 0.5 is a project
-  choice.** It is a margin, because K1 equals the body factor γ₁ = √(2·q·ε_si·N)/Cox only when
+- **The `n_ch_cm3` lower bound** is 0.5 × the doping that K1 implies.
+  That doping is N = (K1·{term}`Cox`(TOXE))²/(2·q·ε_si·ε0) ({py:func}`gf180tcad.tcad.process.k1_doping_cm3`).
+  The constants are in {py:data}`gf180tcad.tcad.process.CONSTANTS`. **The factor 0.5 is a project
+  choice**. It is a margin, because K1 equals the body factor γ₁ = √(2·q·ε_si·N)/Cox only when
   K2 = 0, and both cards have K2 ≠ 0.
 - **The `n_ch_cm3` upper bound** of 2 × NDEP is a project choice, because no public channel
   profile exists.
@@ -314,16 +322,18 @@ Where each comes from (the same for both devices):
 
 ## The charge-centroid allowance Δ
 
-The upper bound of `t_ox_eff_nm` is TOXP + Δ, and {py:func}`gf180tcad.tcad.process.load`
-checks that equality against the file's `[centroid_allowance]` table. Δ allows for the charge
-centroid only: the {term}`inversion` or {term}`accumulation` charge sits a distance X_DC below the interface.
+The upper bound of `t_ox_eff_nm` is TOXP + Δ. The loader {py:func}`gf180tcad.tcad.process.load`
+checks that equality against the file's `[centroid_allowance]` table. The allowance Δ is for the charge
+centroid only. The {term}`inversion` or {term}`accumulation` charge sits a distance X_DC below the interface.
+
 {term}`Poly depletion <poly depletion>` is never part of Δ, because the poly-gate region of the {term}`TCAD` structure
 simulates it.
 
 Δ comes from the BSIM4 charge-thickness model (CTM), which the cards select with `capMod=2`.
 The source is the BSIM4.5.0 user's manual, §7.3
 ([BSIM4.5.0 release](https://web.archive.org/web/20260420023056/https://bsim.berkeley.edu/BSIM4/BSIM450.zip), `doc/BSIM450_Manu.tar`).
-{py:func}`gf180tcad.tcad.process.centroid_allowance_nm` evaluates it at Vbs = 0, using the gate
+The function {py:func}`gf180tcad.tcad.process.centroid_allowance_nm` evaluates it at Vbs = 0.
+It uses the gate
 biases of the SPICE {term}`cv` sweep (50 mV steps) that lie on the two plateaus which set the
 effective oxide:
 - accumulation, polarity·Vg ≤ −2 V;
@@ -356,8 +366,8 @@ Each dot is the largest X_DC in the accumulation window. The dotted lines are th
 bounds ({py:func}`gf180tcad.tcad.process.ctm_x_dc_inv_sup_m`).
 ```
 
-- **Accumulation**, eqs. 7.3.2 and 7.3.3: X_DC = Ldebye/3·exp(ACDE·(NDEP/2e16)^−0.25·E),
-  where E = (Vg − Vfbzb)/TOXP in MV/cm. It is smoothed to stay below Xmax = Ldebye/3. X_DC grows
+- **Accumulation**, eqs. 7.3.2 and 7.3.3: X_DC = Ldebye/3·exp(ACDE·(NDEP/2e16)^−0.25·E).
+  Here E = (Vg − Vfbzb)/TOXP in MV/cm. It is smoothed to stay below Xmax = Ldebye/3. X_DC grows
   towards flat band, so its plateau maximum is at the window edge, polarity·Vg = −2 V.
 - **Strong inversion**, eq. 7.3.4: X_DC = 1.9 nm/(1 + ((Vgsteff + 4(VTH0 − VFB − Φs))/(2·TOXP))^0.7).
   This falls as Vgsteff rises. The value at Vgsteff → 0 is used as an upper bound for the
@@ -375,8 +385,8 @@ this code. Each difference is settled by the code:
 - Eq. 7.3.2 prints VFBeff in the exponent; `b4ld.c` uses Vfbzb. VFBeff tracks Vgb in
   accumulation, so with it X_DC could not change with bias there.
 - The manual gives no formula for Ldebye; `b4temp.c` uses √(ε_si·vt/(q·NDEP)).
-- The manual gives δx = 10⁻³·TOXE; `b4ld.c` uses LINK = 10⁻³·TOXP. They differ for the nfet:
-  with the manual's δx its X_DC would be 2.845 nm instead of 2.841 nm. Δ is 0.95 nm either way.
+- The manual gives δx = 10⁻³·TOXE; `b4ld.c` uses LINK = 10⁻³·TOXP. They differ for the nfet.
+  With the manual's δx its X_DC would be 2.845 nm instead of 2.841 nm. Δ is 0.95 nm either way.
 
 The gate bias is used in place of Vgse, so the poly-depletion drop is ignored. That only makes
 Δ larger. The inputs and Δ of each device are in {numref}`tab-process-data-delta`.
@@ -402,11 +412,11 @@ The pfet Vfbzb is given with the NMOS-equivalent sign. The last two rows show wh
 the whole sweep, depletion included, counted; it does not.
 
 The pfet card is BSIM4 version 4.6 (line [38268](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38268)). Its CTM equations are those of
-4.5.0. §7.3 of the BSIM4.6.0 manual, and the X_DC code of its `b4ld.c`, have the same form
+4.5.0. The BSIM4.6.0 manual's §7.3, and the X_DC code of its `b4ld.c`, have the same form
 ([BSIM4.6.0 release](https://web.archive.org/web/20260420023101/https://bsim.berkeley.edu/BSIM4/BSIM460.zip)).
 
-**Unbinned, long-channel values.** Δ uses the unbinned card values: those with no L, W or P
-term, evaluated at Vbs = 0, with the short-channel terms of Vfbzb dropped. The terms left out are:
+**Unbinned, long-channel values.** Δ uses the unbinned card values, those with no L, W or P
+term. They are evaluated at Vbs = 0, with the short-channel terms of Vfbzb dropped. The terms left out are:
 - LPHIN, on the pfet only (0.1408, line [38180](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38180));
 - LPE0, the lateral non-uniform doping term ([37182](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37182) and [38178](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38178));
 - K3, the narrow-width term ([37150](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L37150) and [38164](https://github.com/fossi-foundation/globalfoundries-pdk-libs-gf180mcu_fd_pr/blob/4e132a23aea61dc035b9dbcd5f081dee23a7b691/models/ngspice/sm141064.spice#L38164)), with W = 10 µm;
@@ -429,7 +439,7 @@ for LPHIN).
 Lmin is 0.5 µm for the pfet and 0.6 µm for the nfet.
 
 With LPHIN the pfet Δ would round up to 0.80 nm at L = 10 µm and to 0.88 nm at Lmin. The
-nfet Lmin of 0.6 µm lies in the other bin, `nfet_06v0.1`, which these files do not use. Δ is one
+nfet Lmin of 0.6 µm lies in the other bin, `nfet_06v0.1`. These files do not use that bin. Δ is one
 bound per device for the long-channel 1D calibration, so the unbinned values are used.
 
 {test}`tests/tcad/test_process.py::test_centroid_allowance_hand_point` checks the nfet numbers
@@ -483,9 +493,11 @@ is the poly as drawn. Why the 2D cells need it is in {ref}`moscap2d-edge`.
 
 ## No calibrated values in the files
 
-The files hold only starts and bounds. {py:func}`gf180tcad.tcad.process.load` requires the
-`calibrated` tag on exactly the tunables, each with its start and bounds sources and kinds, and
-rejects it on every fixed parameter. The calibration writes the fitted values to its own result
+The files hold only starts and bounds. The loader {py:func}`gf180tcad.tcad.process.load` requires the
+`calibrated` tag on exactly the tunables, each with its start and bounds sources and kinds. It
+rejects that tag on every fixed parameter.
+
+The calibration writes the fitted values to its own result
 files under {repo}`results/tcad/`, not to these files. The method
 {py:meth}`gf180tcad.tcad.process.ProcessDescription.with_values` applies such values to a loaded
 description. It refuses fixed parameters, non-numbers and values outside the bounds.

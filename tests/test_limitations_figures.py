@@ -1339,8 +1339,8 @@ def test_engine_page_forced_values_are_the_record():
     remaining = re.search(r"At Vds = 5 V the remaining (\S+) is", page)
     assert remaining and _shown(remaining[1], l06["idvg_sat"]["forced_4p6"])
     # the summary: the forced values' range of each sweep
-    m = re.search(r"every nfet geometry agrees: `idvg_lin` (\S+) to\s+(\S+), `idvg_sat` (\S+) to "
-                  r"(\S+), `idvd` (\S+) to (\S+)\.", page)  # fmt: skip
+    m = re.search(r"every nfet geometry agrees:\n\n- `idvg_lin` (\S+) to (\S+);\n- `idvg_sat` (\S+) to "
+                  r"(\S+);\n- `idvd` (\S+) to (\S+)\.", page)  # fmt: skip
     assert m, "summary sentence"
     for k, sweep in enumerate(("idvg_lin", "idvg_sat", "idvd")):
         vals = [cases[gid][sweep]["forced_4p6"] for gid in cases]
