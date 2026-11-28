@@ -67,6 +67,19 @@ def mentions_stripped(line):
     return line
 
 
+# --- LOCAL (gf180-tcad): mentions_stripped in two halves, for the sentence count
+def _quotes_stripped(line):
+    line = re.sub(r"\"[^\"]*\"", " X ", line)
+    return re.sub(r"“[^”]*”", " X ", line)
+
+
+def _links_and_code_stripped(text):
+    text = IMAGE.sub(" ", text)
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    return re.sub(r"`[^`]*`", " X ", text)
+# --- end LOCAL
+
+
 class Page:
     def __init__(self, path, args):
         self.path = pathlib.Path(path)
@@ -268,7 +281,11 @@ class Page:
         def flush():
             if not para:
                 return
-            joined = mentions_stripped(" ".join(l.strip() for l in para))  # LOCAL: across lines
+            # LOCAL (gf180-tcad): quotes are stripped per line, so a lone " (an inch mark, a typo)
+            # cannot hide the rest of the paragraph; links and code spans over the joined
+            # paragraph, so one that wraps across lines is a mention.
+            joined = " ".join(_quotes_stripped(l).strip() for l in para)  # LOCAL
+            joined = _links_and_code_stripped(joined)  # LOCAL
             joined = re.sub(r"^\s*(\d+[.)]|[-*+])\s+", "", joined)
             sents = [x for x in re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(“])", joined.strip()) if x.strip()]
             for x in sents:

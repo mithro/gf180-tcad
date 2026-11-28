@@ -1080,3 +1080,15 @@ def test_a_link_wrapped_across_lines_is_counted_by_its_text(tmp_path):
           J. Appl. Phys. 93(3), 1598-1604, 2003.
         """
     assert _sentence_fails(tmp_path, page) == []
+
+
+def test_a_lone_quote_does_not_hide_the_next_lines(tmp_path):
+    """An unmatched straight quote (an inch mark) hides nothing beyond its own line."""
+    page = """
+        # T
+
+        The chuck holds a 3.5" wafer.
+        The wafer is held on the chuck by a vacuum that the operator checks before every run with a gauge on the side of the tool.
+        The tool is "quoted" here.
+        """
+    assert len(_sentence_fails(tmp_path, page)) == 1
