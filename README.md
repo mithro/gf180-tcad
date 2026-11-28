@@ -74,6 +74,10 @@ under an open licence, and every input is pinned to an exact version.
   process or Agree at the rest.
 - **The 2D cross-sections are mixed.** Each calibrated 2D cross-section is Same process or
   Disagree.
+- **[Charon](https://charon.sandia.gov/) agrees with [DEVSIM](https://devsim.org/) in 1D.**
+  Its 1D C–V is within 3.0e-5 (nfet) and 5.4e-5 (pfet) of DEVSIM's
+  ([the Charon page](https://gf180-tcad.readthedocs.io/en/latest/limitations/charon.html)). Every
+  committed TCAD result is DEVSIM's.
 - **No chip has been measured.** No silicon data exists to check either model against.
 
 The [project status](https://gf180-tcad.readthedocs.io/en/latest/limitations/status.html) lists every committed result, its folder and its verdict.

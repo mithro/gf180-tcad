@@ -13,6 +13,7 @@ gf180tcad.calibrate
 gf180tcad.calibrate.__main__
 gf180tcad.calibrate.corners
 gf180tcad.calibrate.cv
+gf180tcad.calibrate.edge
 gf180tcad.comparison_figures
 gf180tcad.derive
 gf180tcad.devices
@@ -64,6 +65,7 @@ gf180tcad.tcad
 gf180tcad.tcad.__main__
 gf180tcad.tcad.analytic
 gf180tcad.tcad.calibration
+gf180tcad.tcad.edgefit
 gf180tcad.tcad.mesh
 gf180tcad.tcad.meshconv
 gf180tcad.tcad.moscap1d

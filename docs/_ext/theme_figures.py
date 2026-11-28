@@ -8,9 +8,10 @@ Sphinx numbers both, so a ``{numref}`` would name the one a dark-theme reader ne
 the light figure, gives each image its theme class and drops the dark figure. The figure keeps
 the light one's name, so it is numbered once and shows its caption in either theme.
 
-Sphinx counts figures across the whole site when the toctree is not numbered. Once it has
-assigned its numbers, :func:`renumber_per_page` numbers each page's figures from 1, keeping their
-order, so the first figure on every page is Figure 1.
+The merge runs before Sphinx numbers the figures, so stable_ids (docs/_ext/stable_ids.py) sees
+one figure with the light twin's label and shows that label as its identifier.
+
+A dark twin with a ``:name:`` is a warning too: the pair has the light twin's label only.
 
 A pair that cannot be merged (no twin directly after the light one, other captions, or more than
 one image in a twin) is a Sphinx warning, so ``sphinx-build -W`` fails rather than numbering the
@@ -44,6 +45,14 @@ def merge_twins(doctree: nodes.Node, warn=None) -> int:
             warn(light, "an only-light figure with no only-dark twin directly after it")
             continue
         paired.add(id(dark))
+        if dark["names"]:
+            # The dark twin is dropped below, and its label with it: a {numref} to that label
+            # would name no figure, and the label would be a second name for the pair.
+            warn(
+                dark,
+                f"the only-dark twin carries the label {dark['names'][0]!r}; remove its "
+                ":name: (the light twin carries the pair's label)",
+            )
         if _caption(light) is None or _caption(light) != _caption(dark):
             warn(
                 light,
@@ -78,23 +87,6 @@ def _on_doctree_read(app, doctree):
     merge_twins(doctree, warn=lambda node, msg: logger.warning(msg, location=node))
 
 
-def renumber_per_page(app, env) -> list[str]:
-    """Number each page's figures (and tables and code blocks) from 1 per type, in the order
-    Sphinx gave them; return the pages whose numbers changed, so Sphinx writes them again."""
-    changed = []
-    for docname, types in env.toc_fignumbers.items():
-        new = {
-            figtype: {fid: (n,) for n, fid in enumerate(sorted(ids, key=ids.get), start=1)}
-            for figtype, ids in types.items()
-        }
-        if new != types:
-            env.toc_fignumbers[docname] = new
-            changed.append(docname)
-    return changed
-
-
 def setup(app):
     app.connect("doctree-read", _on_doctree_read)
-    # After Sphinx's own numbering: its toctree collector listens at the default priority, 500.
-    app.connect("env-get-updated", renumber_per_page, priority=900)
     return {"parallel_read_safe": True, "parallel_write_safe": True, "version": "1"}

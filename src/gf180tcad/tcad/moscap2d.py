@@ -606,6 +606,7 @@ def write(
     params: str,
     mesh_source: str,
     calibration_sha256: str | None = None,
+    edge_fit: dict | None = None,
     resumed: dict[str, int] | None = None,
 ) -> None:
     """Write :data:`CV_CSV` (the QS sweep ``qs``), :data:`CGX_CSV` (the AC sweep ``ac``) and
@@ -613,6 +614,9 @@ def write(
 
     ``ac`` None (no AC sweep, :data:`AC_INFEASIBLE`) writes no :data:`CGX_CSV`. ``resumed``
     gives how often each sweep was resumed (:func:`resume_count`), recorded in the meta.
+    ``edge_fit`` (:func:`gf180tcad.tcad.edgefit.apply`) is recorded as the meta's ``edge_fit``
+    when a frozen poly length bias was applied; without one the key is absent, so the cells of
+    δ = 0 keep their bytes.
     """
     out = Path(out)
     if qs.method != "qs" or qs.device != proc.device or (ac is not None and ac.method != "ac"):
@@ -637,48 +641,50 @@ def write(
     if ac is not None:
         _write_cgx(out, ac, params, contacts)
     origins = tunable_origins(proc, params, calibration_sha256)
-    io.write_json(
-        out / META_JSON,
-        {
-            "ac": AC_INFEASIBLE if ac is None else "computed",
-            "ac_freq_hz": None if ac is None else ac.freq_hz,
-            "ac_points": 0 if ac is None else len(ac.vg),
-            "constants": constants_dict(qs.constants),
-            "contacts": ["gate", *contacts],
-            "resumed": dict(resumed or {}),
-            "device": qs.device,
-            "dim": 2,
-            "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
-            "geometry": None if qs.geometry is None else asdict(qs.geometry),
-            "l_um": qs.l_um,
-            "mesh": qs.mesh.as_dict(),
-            "mesh_sha256": hashlib.sha256((out / MESH_FILE).read_bytes()).hexdigest(),
-            "mesh_source": mesh_source,
-            "meshed_l_um": qs.meshed_l_um,
-            "meshed_t_ox_nm": qs.meshed_t_ox_nm,
-            "node_count": qs.node_count,
-            "normalisation": "c_per_area = Cgg per unit width / drawn L; cgg_total = per unit "
-            "width * drawn W; no DLC or BSIM4 parasitics",
-            "param_sha256": param_sha256({n: o["value"] for n, o in origins.items()}),
-            "params": params,
-            "points": len(qs.vg),
-            "point_tolerance_um": stack_mod.POINT_TOLERANCE_UM,
-            "sd_peak_cm3": qs.sd_peak_cm3,
-            "sweep": {
-                "abs_tol_v": ABS_TOL,
-                "dv_qs_v": DV_QS,
-                "max_iterations": MAX_ITERATIONS,
-                "qs_extended_fallback_points": list(qs.extended_fallback),
-                "qs_roundoff_accepted": [dict(r) for r in qs.roundoff_accepted],
-                "qs_extended_precision": False,
-                "rel_tol": qs.rel_tol,
-            },
-            "t_ox_nm": qs.t_ox_nm,
-            "tunables": origins,
-            "w_um": qs.w_um,
-            "with_sd": qs.with_sd,
+    meta = {
+        "ac": AC_INFEASIBLE if ac is None else "computed",
+        "ac_freq_hz": None if ac is None else ac.freq_hz,
+        "ac_points": 0 if ac is None else len(ac.vg),
+        "constants": constants_dict(qs.constants),
+        "contacts": ["gate", *contacts],
+        "resumed": dict(resumed or {}),
+        "device": qs.device,
+        "dim": 2,
+        "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
+        "geometry": None if qs.geometry is None else asdict(qs.geometry),
+        "l_um": qs.l_um,
+        "mesh": qs.mesh.as_dict(),
+        "mesh_sha256": hashlib.sha256((out / MESH_FILE).read_bytes()).hexdigest(),
+        "mesh_source": mesh_source,
+        "meshed_l_um": qs.meshed_l_um,
+        "meshed_t_ox_nm": qs.meshed_t_ox_nm,
+        "node_count": qs.node_count,
+        "normalisation": "c_per_area = Cgg per unit width / drawn L; cgg_total = per unit "
+        "width * drawn W; no DLC or BSIM4 parasitics",
+        "param_sha256": param_sha256({n: o["value"] for n, o in origins.items()}),
+        "params": params,
+        "points": len(qs.vg),
+        "point_tolerance_um": stack_mod.POINT_TOLERANCE_UM,
+        "sd_peak_cm3": qs.sd_peak_cm3,
+        "sweep": {
+            "abs_tol_v": ABS_TOL,
+            "dv_qs_v": DV_QS,
+            "max_iterations": MAX_ITERATIONS,
+            "qs_extended_fallback_points": list(qs.extended_fallback),
+            "qs_roundoff_accepted": [dict(r) for r in qs.roundoff_accepted],
+            "qs_extended_precision": False,
+            "rel_tol": qs.rel_tol,
         },
-    )
+        "t_ox_nm": qs.t_ox_nm,
+        "tunables": origins,
+        "w_um": qs.w_um,
+        "with_sd": qs.with_sd,
+    }
+    if edge_fit is not None:
+        if params != "calibrated":
+            raise ValueError("a poly length bias fit applies to calibrated 2D jobs only")
+        meta["edge_fit"] = dict(edge_fit)
+    io.write_json(out / META_JSON, meta)
 
 
 def _write_cgx(out: Path, ac: MoscapCV2D, params: str, contacts) -> None:

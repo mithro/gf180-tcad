@@ -529,6 +529,25 @@ def test_poly_bias_figure_draws_the_bias(palette):
     assert page.count(f"strip of poly and oxide {bias_um * 1e3:g} nm wide") == 2
 
 
+def test_poly_bias_figure_starts_from_the_drawn_gate_of_a_fitted_cell(monkeypatch):
+    """Plan Task E3: once the cell is meshed with a fitted poly length bias, the figure still
+    starts the bias it draws at the drawn gate end (L / 2), so δ is never drawn twice."""
+    import dataclasses
+
+    from gf180tcad.explain import model
+
+    real = model.cell
+    monkeypatch.setattr(
+        model, "cell", lambda *a, **k: dataclasses.replace(real(*a, **k), poly_bias_um=0.04)
+    )
+    c = real("nfet_05v0", "calibrated", "w10p0_l0p70", scales={})
+    half = c.l_um / 2
+    assert cf.poly_bias_cell().gate_um == pytest.approx(c.l_um)
+    fig = cf.poly_bias_figure("light")
+    assert _close(_artist(fig, "drawn end").get_xdata(), [half, half])
+    assert _close(_fill_box(_artist(fig, "bias gate"))[0], half)
+
+
 def literal_digits(source: str, allowed: set[str]) -> list[tuple[int, str]]:
     """(line, text) of each string literal inside a function (f-string parts included) that holds
     a digit once the ``allowed`` names are taken out; docstrings and raise messages are skipped.

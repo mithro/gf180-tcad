@@ -16,6 +16,7 @@ No number is typed below except in :data:`STYLE` (sizes, offsets, axis spans) an
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import pathlib
 from collections.abc import Callable
@@ -211,9 +212,13 @@ def poly_bias_um(device: str = "nfet_05v0") -> float:
 
 
 def poly_bias_cell() -> model.Cell:
-    """The cell of :func:`process_cell_model` with no scale factors, every length as meshed."""
+    """The cell of :func:`process_cell_model` with no scale factors and its gate as drawn: the
+    poly length bias the cell may have been meshed with (a fitted one, plan Task E3) is set to 0,
+    so the figure adds the bias it draws to the drawn gate end only once."""
     c = process_cell_model()
-    return model.cell(c.name, c.params, c.geometry, scales={})
+    return dataclasses.replace(
+        model.cell(c.name, c.params, c.geometry, scales={}), poly_bias_um=0.0
+    )
 
 
 def poly_bias_figure(palette: str, roots: Roots = DEFAULT_ROOTS):

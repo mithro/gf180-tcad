@@ -142,7 +142,7 @@ def test_each_quantity_has_a_table_in_its_section(quantity):
               "silicon.nv_cm3": "display-dos-masses"}.get(quantity, "display-oxide-sources")  # fmt: skip
     section = page[page.rindex("\n## ", 0, page.index(include)) :]
     section = section[: section.find("\n## ", 1) if "\n## " in section[1:] else len(section)]
-    assert f":name: {figure}\n" in section, quantity
+    assert f":name: fig-{figure}\n" in section, quantity
 
 
 def test_table_refuses_an_unknown_quantity():

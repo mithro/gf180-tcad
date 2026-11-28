@@ -11,7 +11,7 @@ there.
 - **{term}`TCAD`: {term}`MOS capacitors <MOSCAP>` only, no MOSFET TCAD.** The
   {term}`SPICE reference <SPICE reference results>` dataset of {term}`Phases 0 and 1` is complete. The 1D and 2D MOS capacitors
   exist with the start values on mesh-converged meshes
-  ({numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-2d-figure>`, {doc}`moscap2d`), the 1D one also
+  ({numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <fig-meshconv-2d>`, {doc}`moscap2d`), the 1D one also
   with the calibrated values ({doc}`/_generated/tcad/index`, limits {ref}`below <limitations-moscap>`).
 - **The {term}`C–V` calibration is 1D only, and the pfet disagrees.** The 1D MOS capacitor is calibrated
   against the {term}`SPICE` {term}`Cgg`–Vg
@@ -34,18 +34,19 @@ there.
 - **One TCAD backend.** Every TCAD result is from {{ DEVSIM }}. The design spec asks
   for {{ Charon }} in parallel on every {term}`job`, with a per-job cross-comparison
   ({repo}`section 12.1 <docs/superpowers/specs/2026-10-18-gf180-tcad-design.md#121-dual-backend-cross-comparison-devsim-and-charon>`).
-  Both Charon images are built and pinned, and no Charon job has run ({ref}`numerical-acceptance`,
-  {ref}`charon-images`,
+  Both Charon images are built and pinned. In experiments, Charon's 1D C–V matches DEVSIM's
+  within {{ lim_charon_nfet_devsim }} (nfet) and {{ lim_charon_pfet_devsim }} (pfet)
+  ({doc}`charon`). No Charon job has run ({ref}`numerical-acceptance`, {ref}`charon-images`,
   [issue #44](https://github.com/mithro/gf180-tcad/issues/44)).
-- **Novelty.** No published {{ DEVSIM }}- or {{ Charon }}-versus-BSIM comparison for any
-  open {term}`PDK` was found, and no {term}`gf180mcu <GF180MCU>` TCAD paper was found. See {doc}`literature`.
+- **Related work.** OpenTCAD calibrates a {{ DEVSIM }} transistor to the SkyWater SKY130
+  `nfet_01v8` {term}`card <model card>`. The search that found it is in {ref}`lit-search-bsim`.
 
-The 2D cells against SPICE are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-validation-figure>`. The crossing shift and plateau gap of every 2D cell are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-metrics-figure>`.
+The 2D cells against SPICE are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-validation>`. The crossing shift and plateau gap of every 2D cell are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-metrics>`.
 
 The high-voltage junction predictions rest on assumptions. Their well doping is a family set
 against published values, the foundry's P-well generation is assumed, and each value is a 2D
 section ({ref}`hvj-limits`,
-{numref}`Figure %s of High-voltage junction terminations <hvj-section-figure>`).
+{numref}`Figure %s of High-voltage junction terminations <fig-hvj-section>`).
 
 The design-spec requirements that are not built are listed under {ref}`limitations-spec-deviations`.
 
@@ -71,7 +72,7 @@ The design-spec requirements that are not built are listed under {ref}`limitatio
   ({ref}`cross-host-determinism`). On an AMD EPYC 9V45 runner only an 8-job subset has passed,
   and that run did not have the {{ numpy }} fix described there.
 
-The resumed sweeps are the dotted curves of {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-ccox-figure>`.
+The resumed sweeps are the dotted curves of {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-ccox>`.
 
 ## Software stacks
 
@@ -84,10 +85,11 @@ The resumed sweeps are the dotted curves of {numref}`Figure %s of The 2D MOS cap
   {term}`stable TCAD image` (PyPI releases) is the release baseline and is used for
   debugging. A dev HEAD can break what the release did; such drift is reported, never hidden
   by a looser {term}`tolerance`. See {ref}`tcad-dev-image`.
-- **2D results are on the stable image.** The 1D results are made on the dev-HEAD
-  image, byte-identical to the stable image's. The 2D MOS capacitor is on the stable image,
-  because {{ gmsh }} 5 meshes the 2D cells differently. Its {term}`mesh convergence` has not been
-  rerun on the dev image ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)). See
+- **2D results are on the stable image.** The 1D results are made on the dev-HEAD image,
+  byte-identical to the stable image's. Its {{ gmsh }} 5 writes another mesh file for the cell
+  `w10p0_l0p70`: the same triangles, renumbered, {{ repro_cell_moved }} points moved by rounding
+  ({numref}`Figure %s of Base image <fig-cell-mesh>`). The 2D {term}`mesh convergence`
+  has not been rerun there ([issue #67](https://github.com/mithro/gf180-tcad/issues/67)). See
   {ref}`tcad-results-image`.
 - **Two dev-HEAD packages are forks.** The dev-HEAD image runs the full flow. To get there,
   {{ meshwell }} and the {{ gf180mcu_gdsfactory }} come from mithro forks of their upstream
@@ -101,7 +103,7 @@ The resumed sweeps are the dotted curves of {numref}`Figure %s of The 2D MOS cap
   URL. A file that disappears from both stops the build; it cannot change it silently. See
   {ref}`tcad-dev-mirror`.
 
-The 2D mesh-convergence study of the stable image is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-2d-figure>`.
+The 2D mesh-convergence study of the stable image is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <fig-meshconv-2d>`.
 
 ## The SPICE reference and the numerics
 
@@ -119,7 +121,7 @@ The 2D mesh-convergence study of the stable image is in {numref}`Figure %s of Me
   {doc}`mesh-convergence` and {doc}`moscap2d`. The moscap2d page also explains the C/Cox > 1
   artefact of the {{ meshwell }} default mesh, which rounds the oxide to 1 nm.
 
-The engine difference is in {numref}`Figure %s of SPICE engine cross-check (ngspice vs Xyce) <engine-diff-figure>`. The mesh convergence is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-1d-figure>` and {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <meshconv-2d-figure>`.
+The engine difference is in {numref}`Figure %s of SPICE engine cross-check (ngspice vs Xyce) <fig-engine-diff>`. The mesh convergence is in {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <fig-meshconv-1d>` and {numref}`Figure %s of Mesh convergence of the TCAD MOS capacitors <fig-meshconv-2d>`.
 
 (limitations-moscap)=
 
@@ -181,7 +183,7 @@ values are not read as more physical than they are.
   guarantee of the same bytes on another computer. The latest-stack records are rebuilt on a
   GitHub-hosted runner by the TCAD cross-check ({doc}`plugin-history`).
 
-The QS curves and the small-signal AC points of the 2D cells are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <moscap2d-ccox-figure>`. The bookkeeping split of the 1D Cgg is in {numref}`Figure %s of Process data for the MOS capacitors <process-data-split-figure>`.
+The QS curves and the small-signal AC points of the 2D cells are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-ccox>`. The bookkeeping split of the 1D Cgg is in {numref}`Figure %s of Process data for the MOS capacitors <fig-process-data-split>`.
 
 (limitations-spec-deviations)=
 
@@ -220,7 +222,7 @@ Recorded and accepted: the first two at the end of {term}`Phases 0 and 1`, the o
   transition a relative-C metric measures the slope of the curve, not agreement; the numbers
   are on {doc}`/comparison/cv-agreement`. The depletion error is still reported.
 
-The schematic-default instance of the reference is drawn in {numref}`Figure %s of Definition of agreement <agreement-instance-figure>`.
+The schematic-default instance of the reference is drawn in {numref}`Figure %s of Definition of agreement <fig-agreement-instance>`.
 
 ```{toctree}
 :maxdepth: 1
@@ -233,4 +235,5 @@ plugin-history
 mesh-convergence
 moscap2d
 corners
+charon
 ```

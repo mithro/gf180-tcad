@@ -155,8 +155,9 @@ def figure_label(*parts: str) -> str:
 
 
 def numref(label: str, page_title: str | None = None) -> str:
-    """A ``{numref}`` citation of figure ``label``: "Figure N" on its own page, "Figure N of
-    <title>" from another page (``page_title``), as tests/test_doc_links.py requires."""
+    """A ``{numref}`` citation of figure ``label``: "Figure <id>" on its own page, "Figure <id> of
+    <title>" from another page (``page_title``), as tests/test_doc_links.py requires; <id> is
+    the label less its "fig-" prefix (docs/_ext/stable_ids.py)."""
     if page_title is None:
         return f"{{numref}}`{label}`"
     return f"{{numref}}`Figure %s of {page_title} <{label}>`"
@@ -487,7 +488,7 @@ def _engine_table(root) -> list[str]:
 
 
 #: The Results page (docs/results/index.md), its title and its C-V figure of both transistors.
-RESULTS_CV = ("Results", "results-cv-figure")
+RESULTS_CV = ("Results", "fig-results-cv")
 #: The figure of the summary page: the engine difference of every sweep and geometry.
 ENGINE_LABEL = figure_label("spice", "engine-diff")
 
@@ -725,7 +726,7 @@ def _no_artefact(params: str) -> str:
 _MESH_ALT = (
     "The mesh around the gate of the 2D cell: thousands of small triangles, densest in a thin "
     "band at the silicon surface under the gate, coloured by region: the gate on top, the gate "
-    "oxide under it, the insulator beside the gate and the silicon body below."
+    "oxide under it, the insulator beside the gate, the grey contacts and the silicon body below."
 )
 
 
@@ -803,7 +804,8 @@ class _Device:
 
 def _check_rows(rec: dict, overlay: str) -> list[str]:
     """The plateau checks and the crossing checks, as two tables of bare values; ``overlay`` is
-    the label of the page's C-V figure, whose curves the crossings are on."""
+    the label of the page's C-V figure, whose curves the crossings are on; each table's label
+    is that label with "tab-" in place of "fig-"."""
     m, reg, tc = rec["metrics"], rec["spice_regions"], rec["tcad_crossings"]
     if set(rec["verdicts"]) != {key for key, _ in CHECKS}:
         raise ValueError(f"checks {sorted(rec['verdicts'])} are not docgen.CHECKS")
@@ -842,7 +844,7 @@ def _check_rows(rec: dict, overlay: str) -> list[str]:
                  num(w["lo"]) if w else na, num(w["hi"]) if w else na]
             )  # fmt: skip
     t_plateau, t_p_window, t_p_tight, t_crossing, t_c_window = (
-        table_label(overlay, part)
+        table_label(overlay.removeprefix("fig-"), part)
         for part in (
             "plateaus",
             "plateau-window",
@@ -1163,7 +1165,7 @@ def _mesh_section(d: _Device, gid: str, ddir: Path) -> list[str]:
             "triangles, kept by the window rule ({ref}`mesh-artefact`). Drawn to scale from "
             f"{{repo}}`{rel}`; full mesh sha256 `{meta['full_mesh_sha256']}`."
         )
-        target = f"mesh-{name}-{gid}-{params}"
+        target = figure_label("mesh", name, gid, params)
         lines += [f"{{numref}}`{target}` shows the mesh of the 2D cell at the {params} values.", ""]
         for palette in figures.PALETTES:
             svg = f"{gid}_mesh_{params}-{palette}.svg"
@@ -1671,7 +1673,7 @@ def _tcad_device_page(roots: rf.Roots, d: _Device, out: Path) -> None:
                 "(top) and the change against the next finer level (bottom).",
                 roots,
             ),
-            *_meshconv_rows(report, table_label("tcad", name, "meshconv", dim)),
+            *_meshconv_rows(report, table_label("tcad", name, "meshconv", dim, "levels")),
             "",
         ]
         for ex in report.get("excluded_levels", []):

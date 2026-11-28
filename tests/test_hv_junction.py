@@ -674,7 +674,7 @@ def test_anchors_are_the_profiles(hf):
     assert list(hf.LAYER_SHIFTS_UM.values()) == [-1.0, -0.25, 0.25, 1.0]
 
 
-def test_page_states_the_code_constants():
+def test_page_states_the_code_constants(hf):
     """The model constants the page types are the ones of the code."""
     page = " ".join(PAGE.read_text("utf-8").split())
     pr = hvsite.DEFAULT_PROCESS
@@ -701,7 +701,7 @@ def test_page_states_the_code_constants():
     assert hf_anchor("nw")["cj0"] == 1.4914e-8 and hf_anchor("dnw_model_bv") == 30.48
 
 
-def hf_anchor(key: str):
+def hf_anchor(key: str):  # called only by a test that takes the fixture hf
     from gf180tcad import hvjunction_figures
 
     return hvjunction_figures.ANCHORS[key]

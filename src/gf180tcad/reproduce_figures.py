@@ -9,7 +9,8 @@ and the committed 2D job records, the render-manifest fixture
 (``data/render/display.toml``) and every value their public sources give
 (``data/render/display-sources.toml``), the dev-HEAD image's input list
 (``docker/tcad-dev/upstream.json``), meshwell's mesh of the unit square in each TCAD image
-(``data/images/meshwell-square.json``) and :data:`gf180tcad.tcad.RESULTS_IMAGE`.
+(``data/images/meshwell-square.json``), one 2D cell's mesh in each TCAD image
+(``data/images/cell-mesh/``) and :data:`gf180tcad.tcad.RESULTS_IMAGE`.
 
 The box diagrams use the colours and boxes of :mod:`gf180tcad.imagefig`, whose contrast is
 tested; the plots use those of the explainer figures (:mod:`gf180tcad.explain.figures`).
@@ -97,6 +98,17 @@ STYLE = {
     "square_in": (6.4, 3.7),
     "edge_width": 1.2,
     "square_margin": 0.08,
+    # The cell-mesh figure: its size, and the width (pt) of a triangle's edges and of a region
+    # boundary.
+    "cell_mesh_in": (6.4, 5.2),
+    "cell_edge_width": 0.5,
+    "cell_boundary_width": 1.6,
+    # its ringed points' marker area (pt²), its point labels' size (pt) and their box padding
+    "cell_ring_area": 500.0,
+    # the margin round the kept triangles' points, as a fraction of their larger extent
+    "cell_margin": 0.1,
+    "cell_label_pt": 7,
+    "cell_label_pad": 0.15,
     # The display-source figures: their size, the marker area (pt²) and the number of points of
     # a drawn formula.
     "sources_in": (6.4, 4.6),
@@ -156,6 +168,13 @@ GITMODULES = REPO_ROOT / ".gitmodules"
 MESHWELL_SQUARE = REPO_ROOT / "data" / "images" / "meshwell-square.json"
 #: The panels of :func:`meshwell_square_figure`: the record's key and the image's name.
 SQUARE_PANELS = (("stable", "stable image"), ("dev", "dev-HEAD image"))
+
+#: One 2D cell meshed in each TCAD image, recorded by ``tools/gmsh-cell-mesh``: the record and
+#: one npz per image, of the triangles in a box in the gate oxide (``BOX_CENTRE_UM`` of the tool).
+CELL_MESH = REPO_ROOT / "data" / "images" / "cell-mesh"
+
+#: The legend entry of the cell-mesh figure's rings.
+CELL_RING_LABEL = "a point the other image places differently (rounding)"
 
 #: The example of a partial run on the reproduce page: one engine, one corner, one device.
 EXAMPLE_RUN = {"engine": "ngspice", "corner": "typical", "device": "nfet_05v0"}
@@ -850,6 +869,118 @@ def meshwell_square_figure(palette: str):
     return fig
 
 
+def cell_mesh(root: Path = CELL_MESH) -> dict:
+    """The record of ``tools/gmsh-cell-mesh`` with, per image, its box's arrays (``box``: the npz
+    members of :meth:`gf180tcad.meshcut.window.Window.arrays`), each npz checked against the
+    sha256 the record gives it."""
+    import hashlib
+
+    from gf180tcad.meshcut import npz
+
+    record = json.loads((root / "record.json").read_text(encoding="utf-8"))
+    for key, entry in record["images"].items():
+        path = root / f"{key}.npz"
+        got = hashlib.sha256(path.read_bytes()).hexdigest()
+        if got != entry["box_npz_sha256"]:
+            raise ValueError(f"{path}: sha256 {got}, the record gives {entry['box_npz_sha256']}")
+        entry["box"] = npz.read_npz(path)
+    return record
+
+
+def _loops(xy: np.ndarray, cells: np.ndarray) -> np.ndarray:
+    """The polylines of ``cells`` (rows of point numbers into ``xy``), each closed and followed
+    by a NaN row, as one array: one line draws them all."""
+    closed = np.concatenate([cells, cells[:, :1]], axis=1) if cells.shape[1] > 2 else cells
+    seg = xy[closed]
+    gaps = np.full((len(seg), 1, 2), np.nan)
+    return np.concatenate([seg, gaps], axis=1).reshape(-1, 2)
+
+
+def cell_mesh_moved(record: dict, key: str) -> np.ndarray:
+    """The points (nm) of image ``key``'s box that the other image places differently: the
+    record's ``comparison.moved`` points of that image inside the box."""
+    entry = record["images"][key]
+    side = [k for k, _ in SQUARE_PANELS].index(key)
+    pts = np.array([pair[side] for pair in record["comparison"]["moved"]]) * _nm_per_mesh_unit()
+    nm = UNITS["nm_per"]["um"]
+    (x0, x1), (y0, y1) = (np.array(entry["box_x_um"]) * nm), (np.array(entry["box_y_um"]) * nm)
+    inside = (pts[:, 0] >= x0) & (pts[:, 0] <= x1) & (pts[:, 1] >= y0) & (pts[:, 1] <= y1)
+    return pts[inside]
+
+
+def _nm_per_mesh_unit() -> float:
+    """nm per unit of the mesh files' coordinates (cm)."""
+    from gf180tcad.meshcut import UM_PER_MSH_UNIT
+
+    return UM_PER_MSH_UNIT * UNITS["nm_per"]["um"]
+
+
+def cell_mesh_figure(palette: str):
+    """The 2D cell's mesh in a box in the gate oxide, in the stable image (left) and the
+    dev-HEAD image (right): each triangle's edges, each point at its place with its number in
+    that image's mesh, and the points the other image places differently ringed. The title
+    gives the comparison of the two full meshes. Lengths in nm."""
+    pal = ef.PALETTES[palette]
+    record = cell_mesh()
+    cmp = record["comparison"]
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = Figure(figsize=STYLE["cell_mesh_in"], layout="constrained")
+        FigureCanvasAgg(fig)
+        axes = fig.subplots(1, len(SQUARE_PANELS), sharey=True)
+        for ax, (key, name) in zip(axes, SQUARE_PANELS, strict=True):
+            entry = record["images"][key]
+            box = entry["box"]
+            xy = box["nodes_cm"] * _nm_per_mesh_unit()
+            tri = _loops(xy, box["triangles"])
+            ax.plot(tri[:, 0], tri[:, 1], color=pal["muted"], lw=STYLE["cell_edge_width"],
+                    gid=f"{key} triangles")  # fmt: skip
+            moved = cell_mesh_moved(record, key)
+            ax.scatter(moved[:, 0], moved[:, 1], s=STYLE["cell_ring_area"], facecolors="none",
+                       edgecolors=pal["highlight"], linewidths=STYLE["cell_boundary_width"],
+                       gid=f"{key} moved", label=CELL_RING_LABEL)  # fmt: skip
+            for (x, y), number in zip(xy, box["node_id"], strict=True):
+                ax.text(x, y, f"{number}", ha="center", va="center", gid=f"{key} point {number}",
+                        fontsize=STYLE["cell_label_pt"],
+                        bbox={"boxstyle": "round", "fc": pal["background"], "ec": pal["text"],
+                              "pad": STYLE["cell_label_pad"]})  # fmt: skip
+            ax.set_title(f"{name},\ngmsh {entry['gmsh']}")
+            # every point of the kept triangles, with a margin for its label
+            (x0, y0), (x1, y1) = xy.min(axis=0), xy.max(axis=0)
+            pad = STYLE["cell_margin"] * max(x1 - x0, y1 - y0)
+            ax.set_xlim(x0 - pad, x1 + pad)
+            ax.set_ylim(y0 - pad, y1 + pad)
+            ax.set_aspect("equal")
+            ax.set_xlabel("position across the cell (nm)")
+        axes[0].set_ylabel("height (nm)")
+        handle = [c for c in axes[0].collections if c.get_gid() == f"{SQUARE_PANELS[0][0]} moved"]
+        fig.legend(handles=handle, loc="outside lower center", frameon=False)
+        same = "the same triangles" if cmp["same_triangles"] else "different triangles"
+        fig.suptitle(
+            f"Full meshes: {same};\n{cmp['same_number']} of {cmp['node_count']} points keep "
+            f"their number;\n{len(cmp['moved'])} points differ, by at most "
+            f"{cmp['largest_relative_move']:.2g} of a coordinate"
+        )
+    return fig
+
+
+def substitutions(root: Path = CELL_MESH) -> dict[str, str]:
+    """``{"repro_<name>": text}``: the numbers the image page prints beside the cell-mesh figure,
+    from the record it draws. ``repro_cell_gmsh_stable`` and ``repro_cell_gmsh_dev``: each
+    image's gmsh version; ``repro_cell_node_count``: the points of each full mesh;
+    ``repro_cell_same_number``: the points that keep their number; ``repro_cell_moved``: the
+    points placed differently; ``repro_cell_largest_move``: their largest relative move."""
+    record = json.loads((root / "record.json").read_text(encoding="utf-8"))
+    cmp = record["comparison"]
+    return {
+        "repro_cell_gmsh_stable": record["images"]["stable"]["gmsh"],
+        "repro_cell_gmsh_dev": record["images"]["dev"]["gmsh"],
+        "repro_cell_node_count": f"{cmp['node_count']}",
+        "repro_cell_same_number": f"{cmp['same_number']}",
+        "repro_cell_moved": f"{len(cmp['moved'])}",
+        "repro_cell_largest_move": f"{cmp['largest_relative_move']:.2g}",
+    }
+
+
 def _svg_of(draw: Callable) -> Callable[[str], bytes]:
     def svg(palette: str = "light") -> bytes:
         return _svg(draw(palette), palette)
@@ -862,6 +993,7 @@ def _svg_of(draw: Callable) -> Callable[[str], bytes]:
 DRAW: dict[str, Callable] = {
     "image-forks": forks_figure,
     "meshwell-square": meshwell_square_figure,
+    "cell-mesh": cell_mesh_figure,
     "results-images": results_images_figure,
     "reproduce-targets": reproduce_figure,
     "reference-jobs": jobs_figure,

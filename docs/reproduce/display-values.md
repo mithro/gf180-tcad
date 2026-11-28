@@ -4,7 +4,7 @@
 
 The file {repo}`data/render/display.toml` holds six display-only values. A render band diagram
 draws three of them: silicon's {term}`band gap` and the two Si/SiO₂ band offsets
-({numref}`Figure %s of The render manifest <render-band-offsets>`). The oxide's band gap is cited
+({numref}`Figure %s of The render manifest <fig-render-band-offsets>`). The oxide's band gap is cited
 beside them, and N_c and N_v size the error of the midgap approximation
 ({py:func}`gf180tcad.derive.midgap_offset`). No simulation reads them.
 
@@ -43,7 +43,7 @@ where
 - $T$ is the temperature, in K;
 - $h$ is the Planck constant, in J·s.
 
-The sources use the same formula with different masses. {numref}`display-dos-masses` draws $N$
+The sources use the same formula with different masses. {numref}`fig-display-dos-masses` draws $N$
 against $m^*$ at 300 K. Each source's number sits on the curve at its own mass, to the figures
 the source prints. The test
 {test}`tests/test_display_sources.py::test_each_density_of_states_is_the_formula_at_its_mass`
@@ -77,7 +77,7 @@ Wikipedia's 300 K masses, which its table cites to Green (1990) among others.
 ~~~
 
 ```{figure} /_generated/reproduce/display-dos-masses-light.svg
-:name: display-dos-masses
+:name: fig-display-dos-masses
 :figclass: only-light
 :alt: A rising curve of density of states against mass. Six markers sit on it: three electron markers near the upper right, two hole markers lower left at the same mass, and one hole marker high on the curve.
 
@@ -119,7 +119,7 @@ formula's value to two decimals, and the Colorado sheet lists 1.124 eV. Wikipedi
 at 302 K, where the formula gives 1.1240 eV (this repo's arithmetic). The two papers on the oxide
 give 1.1 eV and 1.2 eV, to one decimal.
 
-The file takes Ioffe's 1.12 eV. {numref}`display-silicon-gap` draws the formula and the three
+The file takes Ioffe's 1.12 eV. {numref}`fig-display-silicon-gap` draws the formula and the three
 numbers that state a temperature. Its sources are in
 {numref}`tab-display-silicon-band-gap-ev`, where T is the temperature a source gives with its number.
 
@@ -131,7 +131,7 @@ numbers that state a temperature. Its sources are in
 ~~~
 
 ```{figure} /_generated/reproduce/display-silicon-gap-light.svg
-:name: display-silicon-gap
+:name: fig-display-silicon-gap
 :figclass: only-light
 :alt: A straight falling line of band gap against temperature from 250 to 350 K. At 300 K one marker sits just under the line and one on it; a third marker at 302 K sits well above the line.
 
@@ -165,7 +165,7 @@ numbers do not add up: 1.2 + 4.3 + 3.1 = 8.6 eV (this repo's arithmetic). Wikipe
 ({ref}`Wikipedia <lit-wikipedia-band-gap>`).
 
 The file takes the three numbers of Alkauskas et al. A band diagram's oxide gap is then silicon's
-gap plus both offsets. That is 1.12 + 3.4 + 4.4 = 8.92 eV (this repo's arithmetic). {numref}`display-oxide-sources` draws each
+gap plus both offsets. That is 1.12 + 3.4 + 4.4 = 8.92 eV (this repo's arithmetic). {numref}`fig-display-oxide-sources` draws each
 source's number.
 
 {numref}`tab-display-sio2-band-gap-ev` gives the SiO₂ band gap.
@@ -196,7 +196,7 @@ source's number.
 ~~~
 
 ```{figure} /_generated/reproduce/display-oxide-sources-light.svg
-:name: display-oxide-sources
+:name: fig-display-oxide-sources
 :figclass: only-light
 :alt: Three stacked panels with one marker per source. Top, the oxide band gap: two markers at the left end, one at the right. Middle and bottom, the two offsets: one marker at each end of each panel.
 

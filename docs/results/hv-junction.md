@@ -5,7 +5,7 @@ at the well edge. The experiment {repo}`experiments/hv-junction` simulates that 
 structures of a test die of the [evampire](https://github.com/mithro/evampire) project. The
 structure list is {repo}`experiments/hv-junction/structures.json`. Each structure is an {term}`N-well <n-well>`
 or a {term}`deep N-well` in the P substrate, surrounded by one edge termination. The simulated
-section of one structure is in {numref}`hvj-section-figure`.
+section of one structure is in {numref}`fig-hvj-section`.
 
 The numbers here are predictions of a 2D model under stated process assumptions. Each
 assumption is one typical process; no {term}`process corner <corner>` is simulated. No measured
@@ -22,11 +22,11 @@ breakdown voltage of these structures exists ({doc}`/limitations/silicon-validat
 ({repo}`experiments/hv-junction/structure.py`). The section has one silicon region, the trench
 oxide ({term}`STI`), the dielectric above it and the conductor plates. Its left edge is a
 symmetry plane 8 µm inside the well edge. The section of a structure with one
-{term}`floating ring` and one {term}`field plate` is in {numref}`hvj-section-figure`.
+{term}`floating ring` and one {term}`field plate` is in {numref}`fig-hvj-section`.
 
 ```{figure} /_generated/hv-junction/section-light.svg
 :figclass: only-light
-:name: hvj-section-figure
+:name: fig-hvj-section
 :alt: Cross-section with depth downwards. An N-well on the left, a floating N-well ring, a P-well beyond the well edge, trench oxide at the surface, a Metal1 plate above, and two contacts.
 
 The simulated section of an N-well with one floating ring and a Metal1 plate, under assumption
@@ -118,7 +118,7 @@ where
 A {term}`fixed oxide charge` is a sheet of positive charge on the silicon surface nodes. The
 well contact and every plate tied to it
 are then swept upwards together, one {term}`sweep` per case ({repo}`experiments/hv-junction/sweep.py`). The curves of
-{numref}`hvj-integral-figure` are such sweeps.
+{numref}`fig-hvj-integral` are such sweeps.
 
 ### Breakdown criterion
 
@@ -157,11 +157,11 @@ For holes they are 1.582e6 cm⁻¹ and 2.036e6 V/cm up to 4e5 V/cm. Above that f
 6.71e5 cm⁻¹ and 1.693e6 V/cm.
 
 The crossing of 1 is interpolated between two bias steps on the logarithm of the integral.
-The integral of four cases against the bias is in {numref}`hvj-integral-figure`.
+The integral of four cases against the bias is in {numref}`fig-hvj-integral`.
 
 ```{figure} /_generated/hv-junction/integral-light.svg
 :figclass: only-light
-:name: hvj-integral-figure
+:name: fig-hvj-integral
 :alt: Four rising curves of the ionisation integral on a logarithmic axis against reverse bias. Each ends where it crosses a dashed line at 1.
 
 The largest electron ionisation integral against the reverse bias of the well, for four cases
@@ -184,7 +184,7 @@ process assumption and its shape. The dashed line at 1 defines the breakdown vol
 
 ### Doping family
 
-The PDK publishes no well doping profile. The wells of {numref}`hvj-section-figure` are
+The PDK publishes no well doping profile. The wells of {numref}`fig-hvj-section` are
 therefore one member of a family of profiles, `DEFAULT_PROCESS` of
 {repo}`experiments/hv-junction/hvsite.py`. The N-well and the P-well are each a shallow heavy
 implant and a deeper light one. The substrate is uniform at 3.56e15 cm⁻³.
@@ -249,7 +249,7 @@ The family's abutting junction lies {{ hvj_abut_pct }} % above the typical value
 The foundry generates the P-well (LVPWELL) from the drawn layers
 ([design manual 4.4](https://gf180mcu-pdk.readthedocs.io/en/latest/physical_verification/design_manual/drm_04_4.html)).
 The generation rule is unpublished, so each structure is simulated under several assumptions
-about the {term}`generated P-well`. {numref}`hvj-section-figure` is drawn under assumption AL.
+about the {term}`generated P-well`. {numref}`fig-hvj-section` is drawn under assumption AL.
 A process name joins one letter group for the P-well with one for the deep P layer:
 
 - **A.** A P-well lies wherever no N-well, deep N-well or {term}`NAT` layer is. It abuts an
@@ -277,7 +277,7 @@ under D. The cases of the doping family add two suffixes:
 ### 1D diodes
 
 An abrupt N⁺/P diode has a known answer. In the depletion approximation its field is a
-triangle, the shape that the curves of {numref}`hvj-integral-figure` integrate over. The
+triangle, the shape that the curves of {numref}`fig-hvj-integral` integrate over. The
 integral {math:numref}`eq-hvj-integral` over that triangle reaches 1 at one junction potential.
 The applied bias is that potential less the {term}`built-in potential`.
 {repo}`experiments/hv-junction/diode1d.py` solves the same diode in {{ DEVSIM }}. The two are
@@ -300,7 +300,7 @@ A dash in a table of these pages marks a value whose record is not committed
 
 The check cases of {repo}`experiments/hv-junction/checks.py` repeat one section with one
 setting changed. The bare cases are an N-well edge in uniform substrate. The abutting cases
-are the section of {numref}`hvj-section-figure` without ring or plate. Their values are in
+are the section of {numref}`fig-hvj-section` without ring or plate. Their values are in
 {numref}`tab-hvj-checks`.
 
 ~~~{table} Breakdown voltage of the check cases.
@@ -338,7 +338,7 @@ more processes and shapes of each structure than the tables print.
 
 A value written `> V` is a sweep whose integral stayed below 1 up to V, the highest bias
 solved. The sweep ends at 60 V for a case with an abutting P-well and at 150 V otherwise.
-Each value comes from a curve like those of {numref}`hvj-integral-figure`.
+Each value comes from a curve like those of {numref}`fig-hvj-integral`.
 
 The main set has {{ hvj_n_cases }} cases. No record holds {{ hvj_n_absent }} of them with the
 present parameters; they print a dash. In {{ hvj_n_open }} more the solve stopped converging
@@ -363,7 +363,7 @@ Some structures are copies or controls of another and have its section. A name e
 or `c` is a further copy. A name ending in `L` has a wider lead, and NT20V lies in the 6 V
 gate-oxide area. NM1_6C0 is NM1_6 with sharp corners. The values are in
 {numref}`tab-hvj-bare`, and the corner values are plotted against the radius in
-{numref}`hvj-corners-figure`.
+{numref}`fig-hvj-corners`.
 
 ~~~{table} Breakdown voltage (V) of the plain terminations.
 :name: tab-hvj-bare
@@ -384,7 +384,7 @@ gate-oxide area. NM1_6C0 is NM1_6 with sharp corners. The values are in
 
 ```{figure} /_generated/hv-junction/corners-light.svg
 :figclass: only-light
-:name: hvj-corners-figure
+:name: fig-hvj-corners
 :alt: Breakdown voltage against corner radius from 1 to 15 µm, for an N-well and a deep N-well, each with a horizontal line at its straight-edge value.
 
 Breakdown voltage of the corner section against its radius, under assumption BL, for the plain
@@ -405,7 +405,7 @@ edges ({repo}`records <results/hv-junction>`).
 
 NW structures draw a P-well at the named distance from the N-well edge. The values are in
 {numref}`tab-hvj-pwell`. Assumption BL is plotted against the distance in
-{numref}`hvj-pwell-figure`. Under assumption A the generated P-well abuts the N-well at every
+{numref}`fig-hvj-pwell-graph`. Under assumption A the generated P-well abuts the N-well at every
 distance.
 
 ~~~{table} Breakdown voltage (V) of the N-wells with a drawn P-well.
@@ -422,7 +422,7 @@ distance.
 
 ```{figure} /_generated/hv-junction/pwell-distance-light.svg
 :figclass: only-light
-:name: hvj-pwell-figure
+:name: fig-hvj-pwell-graph
 :alt: Breakdown voltage against the drawn P-well distance from 0 to 6 µm, for the straight edge and the corner of an N-well and of a deep N-well.
 
 Breakdown voltage against the distance of a drawn P-well from the well edge, under assumption
@@ -443,7 +443,7 @@ BL: the straight edge (solid) and the corner section (dashed) of an N-well and o
 
 NA structures draw a NAT layer at the named distance from the N-well edge, as far as the
 substrate tap. Under assumption An no P-well lies beside the well, as on the right of
-{numref}`hvj-section-figure` with the P-well removed. The values are in
+{numref}`fig-hvj-section` with the P-well removed. The values are in
 {numref}`tab-hvj-nat`. The rows with M1, M2 or GM1 in the name also carry the plate of the
 next section.
 
@@ -472,7 +472,7 @@ layers.
 
 A gated structure (NGM1, NGP4) has its plate on its own pad. The suffix `@g0` holds the plate at
 0 V, and `@gw` ties it to the well. The values are in {numref}`tab-hvj-plates`. The single
-plates are plotted against their length in {numref}`hvj-plates-figure`.
+plates are plotted against their length in {numref}`fig-hvj-plates-graph`.
 
 ~~~{table} Breakdown voltage (V) of the N-wells with field plates.
 :name: tab-hvj-plates
@@ -499,7 +499,7 @@ plates are plotted against their length in {numref}`hvj-plates-figure`.
 
 ```{figure} /_generated/hv-junction/plates-light.svg
 :figclass: only-light
-:name: hvj-plates-figure
+:name: fig-hvj-plates-graph
 :alt: Breakdown voltage against plate length from 0 to 12 µm, one pair of lines for each of Poly2, Metal1 and Metal2: the straight edge and the corner.
 
 Breakdown voltage against the reach of one field plate beyond the N-well edge, under assumption
@@ -520,7 +520,7 @@ BL, by layer: the straight edge (solid) and the corner section (dashed). Length 
 
 NR structures surround the N-well with floating N-well rings. The digit after NR is the number
 of rings. The values are in {numref}`tab-hvj-rings`. Assumption BL is plotted against the ring
-count and against the gap of a single ring in {numref}`hvj-rings-figure`.
+count and against the gap of a single ring in {numref}`fig-hvj-rings-graph`.
 
 A ring-sense structure (NR1S, NR4S) brings its first ring out to a pad. NR1S names the gap of
 its one ring. With that ring held at 0 V the well-to-ring gap alone carries the bias.
@@ -573,7 +573,7 @@ record. Its cases are never mixed with the floating-ring cases of {numref}`tab-h
 
 ```{figure} /_generated/hv-junction/rings-light.svg
 :figclass: only-light
-:name: hvj-rings-figure
+:name: fig-hvj-rings-graph
 :alt: Two panels of breakdown voltage for the straight edge and the corner: left against the number of floating rings, right against the gap of a single ring.
 
 Breakdown voltage under assumption BL against the number of 2 µm wide floating rings whose
@@ -596,7 +596,7 @@ D structures repeat the terminations around a deep N-well: DT (termination lengt
 (corner radius), DW (drawn P-well), DM and DPM (plates), DGM (gated plate). DAo1 structures
 draw a NAT layer that overlaps the deep N-well edge by 1 µm. The values are in
 {numref}`tab-hvj-deep`. Their corner and P-well values are also in
-{numref}`hvj-corners-figure` and {numref}`hvj-pwell-figure`.
+{numref}`fig-hvj-corners` and {numref}`fig-hvj-pwell-graph`.
 
 ~~~{table} Breakdown voltage (V) of the deep N-well structures.
 :name: tab-hvj-deep
@@ -618,7 +618,7 @@ Some structures are rerun under the family members of {ref}`hvj-assumptions`. Th
 dopings are in {numref}`tab-hvj-family-l` and {numref}`tab-hvj-family-d`. The oxide charge and
 the generated P-well are in {numref}`tab-hvj-family-other`. All hold the straight edge. The
 spread along a row is the range that the unpublished doping leaves open, on the section of
-{numref}`hvj-section-figure`.
+{numref}`fig-hvj-section`.
 
 ~~~{table} Breakdown voltage (V) under the substrate dopings, deep P layer under deep N-well only.
 :name: tab-hvj-family-l
@@ -691,7 +691,7 @@ breakdown voltage:
 Charon's control-volume scheme takes the hole coefficient's low-field values at every field
 ({repo}`experiments/hv-junction/charon_deck.py`). The electron coefficient is that of
 {math:numref}`eq-hvj-alpha`. Each case's DEVSIM curve is of the kind in
-{numref}`hvj-integral-figure`.
+{numref}`fig-hvj-integral`.
 
 The six cases of {numref}`tab-hvj-charon-first` were run on an earlier member of the doping
 family, under its process names A and B. They compare the two simulators on one section each.
@@ -729,13 +729,13 @@ trend.
 ## Limits
 
 - **2D sections.** Each value is one radial section. A corner is a smooth cylinder about one
-  axis ({numref}`hvj-corners-figure`). A cut corner has 135° vertices, which no section
+  axis ({numref}`fig-hvj-corners`). A cut corner has 135° vertices, which no section
   holds, so its value is an upper bound. A square corner is a cylinder of 1 µm radius, far
   narrower than its depletion region. The field converges on it from every side, as it
   does not on a 90° vertex, so its value is a lower bound.
 - **The criterion.** The integral reaching 1 marks the onset of avalanche on DEVSIM's
   potential. The solve carries no avalanche current, so it gives no current-voltage curve
-  beyond that bias ({numref}`hvj-integral-figure`).
+  beyond that bias ({numref}`fig-hvj-integral`).
 - **The absolute level.** The family's abutting junction lies {{ hvj_abut_pct }} % above the
   published typical value ({numref}`tab-hvj-anchors`). No correction is applied to any value.
 - **The doping.** The wells are a family set against published values, not measured profiles.
@@ -743,7 +743,7 @@ trend.
   assumptions, and its depth moves the ceiling under D ({ref}`hvj-process`).
 - **The floating rings.** A field line ends where the field falls under 2e3 V/cm, inside each
   ring. The integral is therefore taken gap by gap, and multiplication in one gap is not
-  carried into the next ({numref}`hvj-rings-figure`).
+  carried into the next ({numref}`fig-hvj-rings-graph`).
 - **The second simulator.** {{ Charon }} takes DEVSIM's nodes, doping and ionisation
   coefficients. It checks the solve and the breakdown criterion, not the physical model
   ({ref}`hvj-charon`).
@@ -759,7 +759,7 @@ Every run goes through {repo}`tools/sandbox-run` with a pinned image
 Each holds the commit, the image and the sha256 of every file of the experiment that its runs
 shared. The record writer {repo}`experiments/hv-junction/record.py` refuses runs whose pins
 differ. {repo}`experiments/hv-junction/README.md` gives the command of each record. The curves
-of {numref}`hvj-integral-figure` are read from the main record.
+of {numref}`fig-hvj-integral` are read from the main record.
 
 - **main** ({repo}`main.json <results/hv-junction/main.json>`) holds the first batch of the
   main set: every structure under the main assumptions.

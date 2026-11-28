@@ -19,7 +19,7 @@ W/L 10/0.5). Our values are the {{ ngspice }} {term}`TT` (typical, 25 C) results
 
 The page publishes pfet currents and voltages with their sign (PE2 {term}`Idsat`
 -280/-240/-200 uA/um). Our `vt_*` metrics ({py:mod}`gf180tcad.metrics`) are signed by
-polarity, so {term}`VT0` is compared as published; every other metric is a magnitude, so the
+polarity, so {term}`VT0` is compared as published. Every other metric is a magnitude, so the
 pfet spec is compared as its absolute value (Idsat 200 to 280 uA/um). One-sided limits become
 an interval from 0 (a magnitude cannot be negative): {term}`Ioff` `<= 10` pA/um is `[0, 10]`
 for both devices.
@@ -30,14 +30,15 @@ for both devices.
 
 - **VT0.** The page only says "Linear {term}`threshold voltage <Vt>`" and gives no bias or current
   criterion. It is compared with {term}`vt_lin_maxgm` (Vds = 0.1 V, linear extrapolation at
-  maximum {term}`gm`), the textbook linear Vt and the closest of our metrics. The
-  constant-current {term}`vt_lin_cc` (100 nA * W/L) differs from it by 25 mV (n) and 58 mV (p)
-  but is also inside the {term}`spec window`.
+  maximum {term}`gm`). That is the textbook linear Vt and the closest of our metrics.
+- **VT0, constant current.** The
+  constant-current {term}`vt_lin_cc` (100 nA * W/L) differs from `vt_lin_maxgm` by 25 mV (n) and 58 mV (p).
+  But it is also inside the {term}`spec window`.
 - **Idsat.** |Vds| = |Vgs| = 5 V on the page; ours is |Id|/W at |Vgs| = |Vds| = 5 V, |Vbs| = 0.
   Same definition.
 - **Ioff.** |Vds| = 5.5 V at 25 C on the page; ours is Id/W at Vgs = 0, Vds = 5.5 V, 25 C. Same
   definition.
-- **{term}`BVDSS`** (n: min 8.5, typ 11; p: typ -10.5, max -8.5 V) is published but breakdown is not
+- **{term}`BVDSS`** (n: min 8.5, typ 11; p: typ -10.5, max -8.5 V) is published. But breakdown is not
   simulated, so it is not compared.
 
 (pdk-tt-against-spec)=
@@ -103,8 +104,8 @@ For each metric the "Same process" window covers both
 
 1. the PDK spec min-max (above), and
 2. the {term}`corner envelope`: the min and max of the metric over the TT, {term}`FF`,
-   {term}`SS <SS corner>`, {term}`FS` and {term}`SF` {term}`corners <corner>`, per engine,
-   device and geometry, published as {repo}`results/spice/envelope.json` (only for entries
+   {term}`SS <SS corner>`, {term}`FS` and {term}`SF` {term}`corners <corner>`. It is taken per engine,
+   device and geometry, and published as {repo}`results/spice/envelope.json` (only for entries
    where all five corners were generated).
 
 The window is their {term}`combined range`: the lowest lower bound and the highest upper bound.

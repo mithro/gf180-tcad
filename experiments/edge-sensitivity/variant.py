@@ -147,6 +147,11 @@ def main(argv: list[str]) -> int:
     device, gid, variant, out = argv
     bias_um, plugs, ldd = parse(variant)
     proc, _ = load_params(device, "calibrated")
+    # Every variant is measured from the poly as drawn, δ = 0 (plan Task E3, "Design"):
+    # load_params gives the 1D calibration and the process file's start value of the poly length
+    # bias; a committed fit (gf180tcad.tcad.edgefit) applies only to the 2D jobs.
+    if proc.values()["poly_bias_nm"] != 0.0:
+        raise SystemExit(f"{device}: poly_bias_nm is {proc.values()['poly_bias_nm']}, not 0")
     geometry = geometry_of(device, gid)
     pol = 1.0 if proc.polarity == "n" else -1.0
     vg = (-5.0 * pol, 5.0 * pol)  # from accumulation, as the jobs sweep

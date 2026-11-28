@@ -315,10 +315,16 @@ house rules (--rules all, or a comma-separated subset of figure,equation,filelin
             "both tables", "the second table", "the table gives/has/lists/...". Each paragraph
             is read with its lines joined. Another document's table ("the tables of the PDK
             manual") and "table-driven" are left alone. Cite the table with {numref}.
+  NUMBER-REF  (with figure, Sphinx pages only) "Figure 3", "Fig. 3" or "Table 12" written by
+            hand in prose, a caption or a table cell. Each figure and table is identified by
+            its label ("Table poe-pairs", docs/_ext/stable_ids.py), so no number names one:
+            cite it with {numref}. Another document's item ("Table 2-1 of the user manual")
+            is left alone.
   FIGURE-FORM  a {figure} with no :name:, no caption, or no {numref} on the page citing it.
             The only-dark twin of a light/dark pair is exempt (the light twin carries the name).
             A {numref} to a target not on the page needs the page's title in its text
-            ({numref}`Figure %s of <title> <name>`): numbers restart on each page.
+            ({numref}`Figure %s of <title> <name>`), so the reader knows where the link
+            leads before following it.
             Labels of a file the page {include}s count as on the page (docs/_generated after a
             build); a "tab-" target is reported as a table ("Table %s of <title>").
   EQUATION  a display math block that is not in the house form: $$ ... $$ (label), then a line
@@ -697,7 +703,7 @@ def figure_form_findings(lines, include_text=None):
                 cited.add(m.group(2))
                 refs.append((i, m.group(1), m.group(2)))
     out = []
-    # Numbers restart on each page: a {numref} to another page's figure names the page.
+    # A {numref} to another page's figure names that page, so the reader knows where it leads.
     targets = {opts["name"] for _, opts, _ in _figure_blocks(lines) if opts.get("name")}
     targets |= {re.match(r"^\s*\(([\w.:-]+)\)=", ln).group(1) for _, ln, k in lines if k == "label"
                 and re.match(r"^\s*\(([\w.:-]+)\)=", ln)}
@@ -718,8 +724,8 @@ def figure_form_findings(lines, include_text=None):
         elif len(words) < 2:
             what = ("a table", "Table") if target.startswith("tab-") else ("a figure", "Figure")
             out.append((i, "FIGURE-FORM", f"{{numref}} to '{target}', {what[0]} on another page: "
-                                          "numbers restart on each page, so write the page's "
-                                          f"title in the text, {{numref}}`{what[1]} %s of <title> "
+                                          "write the page's title in the text, so the reader "
+                                          f"knows where it leads, {{numref}}`{what[1]} %s of <title> "
                                           f"<{target}>`"))
     for i, opts, caption in _figure_blocks(lines):
         if "only-dark" in opts.get("figclass", "").split():
@@ -867,21 +873,30 @@ def _bare_prose(line):
     return line
 
 
-# A table named without a {numref}: by its place, by "the table" doing something, by ordinal.
-# "tables?(?!-)" leaves "table-driven" alone; "(?!\s+of\b)" leaves another document's table
-# ("in the tables of the PDK manual", "these tables of Green's paper") alone.
+# A table named without a {numref}: by its place, by "the table" doing something, by ordinal
+# or count, by its parts. "tables?(?!-)" leaves "table-driven" alone; "(?!\s+of\b)" leaves
+# another document's table ("in the tables of the PDK manual", "these tables of Green's paper",
+# "the second table of the user manual") alone, and "of the table" counts only where the
+# sentence ends on it.
 _TABLE = r"tables?\b(?!-)"
+_OF_ANOTHER = r"(?!\s+of\b)"
 _TABLE_VERBS = (r"(?:gives?|lists?|shows?|holds?|asks?|says?|repeats?|has|have|contains?|records?"
-                r"|compares?|sums?|covers?|sets?)")
+                r"|reports?|compares?|sums?|covers?|sets?)")
 _TABLE_REF = re.compile(
     "(" + "|".join([
         rf"\b{_TABLE}\s+(?:above|below)\b",
         rf"\b(?:the|these)\s+(?:following|next|previous)\s+{_TABLE}",
-        rf"\b(?:this|these|those)\s+{_TABLE}(?!\s+of\b)",
-        rf"\b(?:in|see)\s+the\s+{_TABLE}(?!\s+of\b)",
-        rf"\bboth\s+{_TABLE}",
-        rf"\bthe\s+(?:first|second|third|fourth|fifth|last|other)\s+{_TABLE}",
+        rf"\b(?:this|these|those)\s+{_TABLE}{_OF_ANOTHER}",
+        rf"\b(?:in|see)\s+the\s+{_TABLE}{_OF_ANOTHER}",
+        rf"\bboth\s+{_TABLE}{_OF_ANOTHER}",
+        rf"\bthe\s+(?:first|second|third|fourth|fifth|last|other|two|three|four|five)\s+"
+        rf"{_TABLE}{_OF_ANOTHER}",
         rf"\bthe\s+{_TABLE}\s+{_TABLE_VERBS}\b",
+        r"\bthe\s+table['\u2019]s\b",
+        rf"\bthe\s+{_TABLE}\s+at\s+the\s+(?:end|top|bottom|start|foot|head)\b",
+        rf"\b(?:rows?|columns?|cells?|entries|captions?|headers?)\s+of\s+the\s+{_TABLE}"
+        rf"{_OF_ANOTHER}",
+        rf"\bof\s+the\s+{_TABLE}(?=\s*(?:[.;:!?]|$))",
     ]) + ")",
     flags=re.I,
 )
@@ -914,9 +929,11 @@ def _paragraphs(lines, kinds=("prose", "caption")):
 
 def table_ref_findings(lines):
     """TABLE-REF: a table named without a {numref}: by its place ("the table below", "the
-    following table"), as "this/these/those table(s)", "in/see the table", "both tables", "the
-    second table", or "the table gives/has/lists/...". Each paragraph is read with its wrapped
-    lines joined, so a phrase split across a line break is found too."""
+    following table", "the table at the end"), as "this/these/those table(s)", "in/see the
+    table", "both tables", "the second table", "the two tables", "the table's", "the rows of
+    the table", "of the table" ending a sentence, or "the table gives/has/lists/reports/...".
+    A table followed by "of" is another document's and is left alone. Each paragraph is read
+    with its wrapped lines joined, so a phrase split across a line break is found too."""
     out = []
     for text, starts in _paragraphs(lines):
         for m in _TABLE_REF.finditer(text):
@@ -924,6 +941,29 @@ def table_ref_findings(lines):
             phrase = " ".join(m.group(1).split())
             out.append((line, "TABLE-REF", f"'{phrase}': cite the table with {{numref}} "
                                            "(give it a {table} directive with a :name:)"))
+    return out
+
+
+# A figure or table cited by a number typed by hand. Figures and tables are identified by their
+# labels (docs/_ext/stable_ids.py), so no number of this site's own exists to cite. Another
+# document's item, which a citation names with "of" ("Table 2-1 of the user manual"), is left
+# alone.
+_NUMBER_REF = re.compile(
+    r"\b((?:Fig(?:ure)?s?\.?|Tables?|Tab\.)\s+\d+(?:[-.]\d+)*)\b(?![-.]?\d)(?!\s+of\b)")
+
+
+def number_ref_findings(lines):
+    """NUMBER-REF: "Figure 3" or "Table 12" written by hand in prose, a caption or a table cell.
+    Each figure and table is identified by its label, so a number names nothing on the site:
+    cite the item with {numref}. "Table 2-1 of the user manual", another document's table, is
+    left alone. Each paragraph is read with its lines joined, as TABLE-REF reads it."""
+    out = []
+    for text, starts in _paragraphs(lines, kinds=("prose", "caption", "table")):
+        for m in _NUMBER_REF.finditer(text):
+            line = max((n for off, n in starts if off <= m.start()), default=starts[0][1])
+            phrase = " ".join(m.group(1).split())
+            out.append((line, "NUMBER-REF", f"'{phrase}': figures and tables are identified by "
+                                            "their labels, not numbers; cite it with {numref}"))
     return out
 
 
@@ -963,6 +1003,8 @@ def rule_findings(text, rules=RULES, sphinx=True, include_text=None):
         out += figure_findings(lines, sphinx)
         out += figure_form_findings(lines, include_text)
         out += table_ref_findings(lines)
+        if sphinx:  # README.md and CONTRIBUTING.md number their own figures by hand
+            out += number_ref_findings(lines)
     if "equation" in rules:
         out += equation_findings(lines)
     if "filelink" in rules:

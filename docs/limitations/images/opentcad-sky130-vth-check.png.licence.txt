@@ -1,0 +1,11 @@
+opentcad-sky130-vth-check.png
+
+What:    "SKY130 nfet_01v8 Vth check" figure (validation/sky130/vth_check.png) of the OpenTCAD
+         repository, copied unchanged.
+Source:  https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/validation/sky130/vth_check.png
+Page:    https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/validation/sky130/README.md
+Author:  the OpenTCAD authors (abhineet-agarwal/opentcad).
+Licence: Apache License 2.0, the licence of the abhineet-agarwal/opentcad repository:
+         https://github.com/abhineet-agarwal/opentcad/blob/0ea3326ed1dffb760ee0186ab914ed48115251c0/LICENSE
+Fetched: 2026-11-26, GitHub contents API, 102303 bytes,
+         sha256 97d752c7f661752820a28c17681700ed62df75d911715452bb6947e87c7bc056.

@@ -1,0 +1,31 @@
+{
+  "constants": {
+    "eps_0_f_per_cm": 8.85e-14,
+    "eps_si": 11.1,
+    "k_j_per_k": 1.3806503e-23,
+    "n_i_cm3": 10000000000.0,
+    "q_c": 1.6e-19,
+    "source": "https://github.com/devsim/devsim/blob/ec9905bbfdfacaf66e0cae7f2d98748f9bb8aeb0/python_packages/simple_physics.py#L34-L41"
+  },
+  "doping": {
+    "n_a_cm3": 1e+17,
+    "n_d_cm3": 1e+17,
+    "source": "https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/doping.py#L29-L33"
+  },
+  "formulas": {
+    "inner_width": "W - sqrt(2 eps_si eps_0 V_t ln(1/f) / (q N_D)) - sqrt(2 eps_si eps_0 V_t ln(1/f) / (q N_A))",
+    "v_bi": "V_t ln(N_A N_D / n_i^2)",
+    "v_t": "k T / q",
+    "width": "sqrt(2 eps_si eps_0 V_bi (N_A + N_D) / (q N_A N_D))"
+  },
+  "fraction": 0.01,
+  "inner_width_definition_source": "https://github.com/mithro/gplugins/blob/400f8423d7b0d1aac48eea1c0145342d0c1f766a/gplugins/devsim/tests/test_mesh.py#L210-L225",
+  "inner_width_um": 0.0666371142247725,
+  "t_k": 300.0,
+  "t_source": "https://github.com/mithro/gplugins/blob/624574ced6d9407306878c9fd00bede825640d94/gplugins/devsim/get_solver.py#L152-L154",
+  "v_bi_v": 0.8345045098471614,
+  "v_t_v": 0.025887193125000003,
+  "width_um": 0.1431586100491653,
+  "x_n_um": 0.07157930502458265,
+  "x_p_um": 0.07157930502458265
+}

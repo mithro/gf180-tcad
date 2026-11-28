@@ -62,11 +62,11 @@ make reproduce
 ```
 
 This target of the {repo}`Makefile` regenerates every committed result in place, in dependency
-order ({numref}`reproduce-targets`), and then runs `python -m gf180tcad.manifest verify results/` ({py:mod}`gf180tcad.manifest`).
+order ({numref}`fig-reproduce-targets`), and then runs `python -m gf180tcad.manifest verify results/` ({py:mod}`gf180tcad.manifest`).
 Each step is a target of its own, which can also be run alone:
 
 ```{figure} /_generated/reproduce/reproduce-targets-light.svg
-:name: reproduce-targets
+:name: fig-reproduce-targets
 :figclass: only-light
 :alt: A column of boxes joined by downward arrows: one box per make target in the order make reproduce runs them, each naming the results folders it writes, and a last box with the manifest check.
 
@@ -84,10 +84,10 @@ lists them. Each box names the results folders its target writes. The last box i
 {term}`manifest` check.
 ```
 
-{numref}`tab-reproduce-targets` lists the same targets, what each runs and what it writes.
+{numref}`tab-reproduce-target-steps` lists the same targets, what each runs and what it writes.
 
 ~~~{table} The targets of make reproduce, what each runs and the folders it writes.
-:name: tab-reproduce-targets
+:name: tab-reproduce-target-steps
 
 | target | runs | writes |
 |---|---|---|
@@ -183,10 +183,10 @@ uv run --locked python -m gf180tcad spice-reference --engine ngspice \
     --corner typical --device nfet_05v0 --out /tmp/nfet-typical
 ```
 
-Its jobs are the highlighted squares of {numref}`reference-jobs`.
+Its jobs are the highlighted squares of {numref}`fig-reference-jobs`.
 
 ```{figure} /_generated/reproduce/reference-jobs-light.svg
-:name: reference-jobs
+:name: fig-reference-jobs
 :figclass: only-light
 :alt: A grid of squares, one per job: columns are the devices and geometries, rows are the engines and corners. The six squares of the row ngspice typical under the nfet columns are highlighted.
 
@@ -251,7 +251,7 @@ results/spice/<engine>/<corner>/<device>/<geometry_id>/metrics.json
 Browse it: {repo}`results/spice`.
 
 Three of the sweep files of one geometry are plotted in
-{numref}`Figure %s of Results <results-sweeps-figure>`.
+{numref}`Figure %s of Results <fig-results-sweeps>`.
 
 - Each sweep file, such as {repo}`idvg_lin.csv <results/spice/ngspice/typical/nfet_05v0/w10p0_l0p60/idvg_lin.csv>`, holds the simulated columns (`vd vg vb id ig ib`, or `vg cgg`
   for `cv`). Its `# key: value` header holds only engine, corner, device,
@@ -303,7 +303,6 @@ against −1 nm at ff and +1 nm at ss ({repo}`data/pdk_corners.json`).
 
 ```{figure} /_generated/explained/corner-cv-dark.svg
 :figclass: only-dark
-:name: fig-corner-cv-dark
 :alt: Gate capacitance against gate voltage for five model corners: a solid light typical curve, a dashed blue fast curve above it, a dashed orange slow curve below it, a dotted grey fs curve between typical and fast, and a dash-dotted grey sf curve between typical and slow.
 
 The gate capacitance of the {term}`nfet_05v0` at `w10p0_l10p00` in the five SPICE corners
@@ -335,7 +334,6 @@ wide, carry the overlap capacitances of {math:numref}`eq-corner-overlap`.
 
 ```{figure} /_generated/explained/corner-area-dark.svg
 :figclass: only-dark
-:name: fig-corner-area-dark
 :alt: The gate seen from above: a solid drawn outline, a dashed corner outline longer and narrower than it, a filled capacitance area inside the dashed outline, and two thin strips at its left and right ends labelled source overlap and drain overlap, with the lengths L, L plus X_L, L_c, D_L and the widths W, W plus X_W, W_c, D_W dimensioned.
 
 The gate seen from above at a corner $c$, drawn with the signs of the nfet's ss offsets: longer
@@ -517,10 +515,10 @@ results folder to name its writer and to carry that writer's current hash.
 **The generator registry.** It is a data file, {repo}`src/gf180tcad/generators.json`. It holds
 the module lists, each results folder's writer, the images and the calibration folder. At
 import, {py:mod}`gf180tcad.tcad` reads it once into the dicts named above.
-{numref}`tcad-registry` draws its entry points and results folders.
+{numref}`fig-tcad-registry` draws its entry points and results folders.
 
 ```{figure} /_generated/reproduce/tcad-registry-light.svg
-:name: tcad-registry
+:name: fig-tcad-registry
 :figclass: only-light
 :alt: Boxes in two columns. Left, the entry points of the generator registry, each with the number of modules its hash covers. Right, the results folders, each joined by an arrow from the entry point that writes it.
 
@@ -607,7 +605,7 @@ then `--method combine-qs`. The validation is regenerated after the calibration 
 **Input results folders** ([issue #188](https://github.com/mithro/gf180-tcad/issues/188)).
 Three results folders record their input results folders: the calibration, the validation and
 the corner fits. They read the ngspice {term}`SPICE reference <SPICE reference results>`, the selected 1D meshes, the
-calibration and the calibrated 2D cells. {numref}`tcad-inputs` draws which folder reads which.
+calibration and the calibrated 2D cells. {numref}`fig-tcad-inputs` draws which folder reads which.
 
 Each of the three records a digest of every input folder, under `inputs` in its
 {repo}`provenance.json <results/tcad/calibration/provenance.json>`. The digest is the sha256 of
@@ -623,7 +621,7 @@ the mesh's sha256. The mesh artefacts record their source job and the sha256 of 
 C–V meta. The provenance records the calibration applied.
 
 ```{figure} /_generated/reproduce/tcad-inputs-light.svg
-:name: tcad-inputs
+:name: fig-tcad-inputs
 :figclass: only-light
 :alt: Boxes in two columns. Left, the input results folders. Right, the calibration, corner-fit and validation folders, each joined by an arrow from every input folder it reads.
 
@@ -1051,6 +1049,48 @@ No data changed. The evidence, all at commit
 - The other folders were not rerun. Their writers' hashes moved only through the process files
   and the code above, which compute the same at δ = 0.
 
+**The poly length bias fit, dormant ([issue #189](https://github.com/mithro/gf180-tcad/issues/189)).**
+The change adds the code that applies a fitted poly length bias δ to the calibrated 2D jobs.
+It applies δ only once a fit file is committed, which this change does not do. The modules are
+{py:mod}`gf180tcad.tcad.edgefit` and {py:mod}`gf180tcad.calibrate.edge`.
+
+The validation and the mesh artefact jobs check a cell's fit against the committed one. The
+change also rewords the `sd_peak_cm3` note of the pfet process file
+([issue #203](https://github.com/mithro/gf180-tcad/issues/203)). Every writer's hash moved.
+
+The folders were not regenerated: {repo}`tools/restamp-tcad-provenance` set each
+`generator_sha256`. The hashes before and after are in {numref}`tab-restamp-edge-fit`.
+
+~~~{table} The generator hashes before and after the restamp for the dormant poly length bias fit.
+:name: tab-restamp-edge-fit
+
+| results folder | writer | before | after |
+|---|---|---|---|
+| {repo}`results/tcad/moscap1d` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `055faaf25cee53deac4ebb40c1ed78d25c249e0a64c0d2a8f08b1bd6597394c9` |
+| {repo}`results/tcad/moscap2d` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `055faaf25cee53deac4ebb40c1ed78d25c249e0a64c0d2a8f08b1bd6597394c9` |
+| {repo}`results/tcad/meshconv` | {py:mod}`gf180tcad.tcad.__main__` | `fe26a46d72e53069b41d83134634a58f4773d561f5ad5bdfb1ba01126974ce6d` | `055faaf25cee53deac4ebb40c1ed78d25c249e0a64c0d2a8f08b1bd6597394c9` |
+| {repo}`results/tcad/calibration` | {py:mod}`gf180tcad.calibrate.__main__` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` | `21770cd5fbc277e212064a4236cecf78f942361002691c746b6cae26076be19a` |
+| {repo}`results/tcad/validation` | {py:mod}`gf180tcad.calibrate.__main__` | `e4ccecb126be1a092cace06b05893a15c75ed546e9217b60ba28609738578807` | `21770cd5fbc277e212064a4236cecf78f942361002691c746b6cae26076be19a` |
+| {repo}`results/tcad/corners` | {py:mod}`gf180tcad.calibrate.corners` | `748acf7b51df9ec48f9956660d8a7aa1c2c10f196c6349d68900167265279391` | `40d410358de4522b86685f14005f84096bf4f3a641879002604b7cd36c7ee6b9` |
+| {repo}`results/tcad/meshes/stable` | {py:mod}`gf180tcad.meshcut.__main__` | `74ac12581ee2c0e69051887b70c88762ac9e2c7c293945f30bf87a09f2f0637e` | `e36dfbd2fe7fe3af622f8b7de8ca14d4da733553029ff0b10c9eab57ec0bf33a` |
+~~~
+
+No data changed. The evidence ran at commit
+[0abab9f](https://github.com/mithro/gf180-tcad/commit/0abab9f6f48b2bf678c7b5bb4d108289af59fbec), the first
+restamp. After it, the docstrings of {py:mod}`gf180tcad.tcad.__main__` and
+{py:mod}`gf180tcad.tcad.edgefit` changed, which moved the hashes once more. No other file that
+a results folder's writer hashes changed.
+
+- The jobs of the `crosscheck-tcad` subset were rerun on the project's host. Their 26 files are
+  byte-identical to the committed ones, including {repo}`results/tcad/moscap1d/provenance.json`
+  and {repo}`results/tcad/meshes/stable/provenance.json`.
+- The 1D sandbox tests passed, 12 of them.
+- {test}`tests/test_edge_sensitivity.py::test_rerun_reproduces_the_record` reran the `base` and
+  `bias30` variants of both edge-sensitivity records. Every Cgg and node count is the one recorded.
+  The records are pinned to the commit they ran at, so they were not rerun in full.
+- The other folders were not rerun. No fit file is committed, so every 2D job computes what it
+  computed before.
+
 (cross-host-determinism)=
 
 ## The same bytes on another computer
@@ -1118,10 +1158,10 @@ The workflow runs weekly, on demand, and on a pull request that changes one of t
 - the results, either subset file and the TCAD tests;
 - the workflow itself.
 
-The steps of its SPICE job, `crosscheck`, are drawn in {numref}`crosscheck-steps`:
+The steps of its SPICE job, `crosscheck`, are drawn in {numref}`fig-crosscheck-steps`:
 
 ```{figure} /_generated/reproduce/crosscheck-steps-light.svg
-:name: crosscheck-steps
+:name: fig-crosscheck-steps
 :figclass: only-light
 :alt: A column of boxes joined by downward arrows: the steps of the crosscheck job in order. The last two boxes are dashed.
 
@@ -1194,10 +1234,10 @@ It then rebuilds the two latest-stack plugin-history records,
 ({ref}`plugin-history-latest`), with {repo}`tools/crosscheck-history-run`. The command
 `python -m gf180tcad.manifest verify-files` requires each to equal its manifest entry.
 
-Its steps are drawn in {numref}`crosscheck-tcad-steps`:
+Its steps are drawn in {numref}`fig-crosscheck-tcad-steps`:
 
 ```{figure} /_generated/reproduce/crosscheck-tcad-steps-light.svg
-:name: crosscheck-tcad-steps
+:name: fig-crosscheck-tcad-steps
 :figclass: only-light
 :alt: A column of boxes joined by downward arrows: the steps of the crosscheck-tcad job in order. The last two boxes are dashed.
 
@@ -1264,7 +1304,7 @@ Large regenerable files that are not committed, such as the 2D meshes, go into a
 content-addressed cache repository. Its tool, {repo}`tools/output-cache`, has a `pull` that fetches one and checks it against
 the sha256 the committed results name. It holds the meshes of the calibrated 2D nfet and pfet cells,
 W1.6/L0.7 included; {doc}`output-cache` lists them. A mesh goes in with `push` and comes back with
-`pull`, as {numref}`Figure %s of The output cache <output-cache-flow>` shows.
+`pull`, as {numref}`Figure %s of The output cache <fig-output-cache-flow>` shows.
 
 (mesh-artefact)=
 
@@ -1272,13 +1312,13 @@ W1.6/L0.7 included; {doc}`output-cache` lists them. A mesh goes in with `push` a
 
 A mesh figure of a 2D job is drawn from a committed reduced artefact, not from the full mesh.
 The command line {py:mod}`gf180tcad.meshcut.__main__` cuts a window around the gate out of the
-job's mesh, as {numref}`mesh-window-figure` shows. It writes the window's arrays to
+job's mesh, as {numref}`fig-mesh-window` shows. It writes the window's arrays to
 {py:data}`mesh-window.npz <gf180tcad.meshcut.ARTEFACT>` and their record to
 {py:data}`mesh-window.meta.json <gf180tcad.meshcut.META>`. Every kept element is an element of
 the full mesh, with its node coordinates copied bit for bit.
 
 ```{figure} /_generated/explained/mesh-window-light.svg
-:name: mesh-window-figure
+:name: fig-mesh-window
 :figclass: only-light
 :alt: Cross-section of the transistor: a gate on a thin oxide in the middle, a source on the left and a drain on the right at the surface, a large body below. A dashed rectangle covers the gate, the gate oxide and a thin strip of silicon under them, and reaches a little past each gate edge into the source and the drain.
 

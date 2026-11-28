@@ -237,7 +237,7 @@ provenance = "literature"
 source = "https://openlibrary.org/isbn/0130850373"
 fixed = true
 role = "process"
-note = "Peak (surface) doping of the p+ source/drain of the 2D structure, the same Gaussian and lateral-straggle model as the nfet. Literature: Plummer, Deal & Griffin, Silicon VLSI Technology (Prentice Hall, 2000, ISBN 0-13-085037-3), ch. 2, the CMOS process flow's p+ source/drain implant. The card's NSD = 6e16 (sm141064.ngspice:38207) is no S/D doping and is not used. The value is not load-bearing for C-V: tests/tcad/test_moscap2d.py::test_pfet_sd_doping_insensitive."
+note = "Peak (surface) doping of the p+ source/drain of the 2D structure, the same Gaussian and lateral-straggle model as the nfet. Literature: Plummer, Deal & Griffin, Silicon VLSI Technology (Prentice Hall, 2000, ISBN 0-13-085037-3), ch. 2, the CMOS process flow's p+ source/drain implant. The card's NSD = 6e16 (sm141064.ngspice:38207) is no S/D doping and is not used. The value is load-bearing for the 2D C-V: with XJ fixed it sets the straggle and so how far the p+ edge reaches under the gate. docs/limitations/moscap2d.md (section moscap2d-sd) gives the measured change of Cgg at L = 0.5 and 2 um for 5e19 and 2e20 (issue #203)."
 
 [param.epsrox]
 value = 3.9
