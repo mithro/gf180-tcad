@@ -51,10 +51,12 @@ FIGURES = [
     "mesh-grading",
     "meshconv-1d",
     "meshconv-2d",
+    "meshconv-2d-fitted",
     "pn-slab",
     "pin-depletion",
     "abrupt-junction",
     "edge-sensitivity",
+    "edge-rerun",
     "charon-strip",
     "charon-cv",
     "charon-hard-range",
@@ -189,18 +191,21 @@ def test_c_over_cox_figure_draws_the_committed_curves():
 
 
 def test_two_d_metrics_are_the_validation_files():
-    """Every compared 2D cell lies below SPICE on both plateaus (issue #77) and has its depletion
-    crossing below SPICE's (issue #108); the Disagree cells are the five of the limitations
-    index."""
+    """At the fitted poly length bias every compared nfet cell lies above SPICE on the
+    accumulation plateau and below it on the inversion plateau, and every 2D depletion crossing
+    but the pfet W10/L0.5 one lies below SPICE's (issue #108), as the moscap2d page's figure
+    text says; the Disagree cells are the four of the limitations index."""
     rows = lf.two_d_metrics()
     assert len(rows) == 10
-    assert all(r["acc"] < 0 and r["inv"] < 0 and r["dv_dep_mv"] < 0 for r in rows)
+    assert all(r["acc"] > 0 > r["inv"] for r in rows if r["device"] == "nfet_05v0")
+    above = {(r["device"], geometry_id(r["geometry"])) for r in rows if r["dv_dep_mv"] >= 0}
+    assert above == {("pfet_05v0", "w10p0_l0p50")}
     disagree = {
         (r["device"], geometry_id(r["geometry"])) for r in rows if r["verdict"] == "Disagree"
     }
     assert disagree == {
         ("nfet_05v0", "w10p0_l0p60"), ("nfet_05v0", "w10p0_l0p70"), ("nfet_05v0", "w1p6_l0p70"),
-        ("pfet_05v0", "w10p0_l1p00"), ("pfet_05v0", "w10p0_l2p00"),
+        ("pfet_05v0", "w10p0_l2p00"),
     }  # fmt: skip
     for r in rows:
         rec = lf.validation_record(r["device"])["two_d"][geometry_id(r["geometry"])]
@@ -748,6 +753,31 @@ def check_meshconv_2d(fig):
     _check_meshconv(fig, 2)
 
 
+def check_meshconv_2d_fitted(fig):
+    """Per device: the fitted-bias record's levels 0 and 1 change against the next finer level,
+    the committed study's selected level dashed beside them, and the record's criterion."""
+    d = Drawn(fig)
+    for row, device in enumerate(DEV):
+        ax, ax2 = fig.axes[2 * row], fig.axes[2 * row + 1]
+        rec = _json("meshconv-fitted", f"{device}.json")
+        pol = DEVICES[device].polarity
+        rep = rec["report"]
+        for i, lv in enumerate(rep["levels"]):
+            if lv["rel_change"] is not None:
+                d.line(f"{device} fitted level {i}", pol * np.asarray(rep["vg"]),
+                       np.abs(lv["rel_change"]), ax)  # fmt: skip
+        start = _json("tcad", "meshconv", "moscap2d", device, "report.json")
+        sel = start["selected"]["level"]
+        d.line(f"{device} start level {sel}", pol * np.asarray(start["vg"]),
+               np.abs(start["levels"][sel]["rel_change"]), ax)  # fmt: skip
+        d.hline(f"{device} criterion", rec["check"]["criterion"], ax)
+        for i, lv in enumerate(rep["levels"]):
+            cur = lv["agreement_1d_curve"]
+            d.line(f"{device} agreement {i}", pol * np.asarray(cur["vg"]), np.abs(cur["rel"]), ax2)
+        d.hline(f"{device} agreement criterion", rec["check"]["agreement_criterion"], ax2)
+    d.done()
+
+
 def _plugin() -> dict[str, dict]:
     out = {}
     for file in ("v0.8.0.json", "v0.8.0-mesh0p5.json"):
@@ -836,6 +866,45 @@ def check_edge_sensitivity(fig):
         d.line(f"{device} fit", [g], [g], ax)
         top = lf.STYLE["edge_headroom"] * max([*fit["targets"], *np.ravel(list(gains.values()))])
         d.line(f"{device} equal", [0, top], [0, top], ax)
+    d.done()
+
+
+def check_edge_rerun(fig):
+    """Per device: each rerun W = 10 µm cell's gain is its committed cv.csv per unit width minus
+    the fit file's frozen δ = 0 row at each plateau, the line is the fit's slope × δ, and each
+    plateau's band is slope × δ ± (1 % of the cell's Cgg + the record's quadratic bound at δ)."""
+    d = Drawn(fig)
+    for ax, (device, gid) in zip(fig.axes, lf.EDGE_CELLS, strict=True):
+        fit = _json("tcad", "edgefit", f"{device}.json")
+        pol = DEVICES[device].polarity
+        rec = _json("edge-sensitivity", f"{device}-{gid}.json")["variants"]
+
+        def at(v, pol=pol):
+            by_u = {pol * vg: c for vg, c in zip(v["vg"], v["cgg_ff_per_um"], strict=True)}
+            return [by_u[-5.0], by_u[5.0]]
+
+        delta, slope = fit["poly_bias_nm"], fit["slope_ff_per_um_per_nm"]
+        nonlin = 0.0
+        for b, c30, c60 in zip(at(rec["base"]), at(rec["bias30"]), at(rec["bias60"]), strict=True):
+            quad = ((c60 - b) - 2 * (c30 - b)) / (2 * 30.0**2)
+            lin = ((c30 - b) - quad * 30.0**2) / 30.0
+            nonlin = max(nonlin, abs(lin * delta + quad * delta**2 - slope * delta))
+        want = slope * delta
+        d.hline(f"{device} want", want, ax)
+        lengths, gains, tols = [], [[], []], [[], []]
+        for row in fit["cells"]:
+            cols = io.read_csv(REPO_ROOT / "results" / "tcad" / "moscap2d" / device
+                               / "calibrated" / row["gid"] / "cv.csv")[0]  # fmt: skip
+            u = pol * np.asarray(cols["vg"])
+            lengths.append(row["l_um"])
+            for i, x in enumerate((-5.0, 5.0)):
+                c = float(np.asarray(cols["cgg_total"])[u == x][0]) / row["w_um"]
+                gains[i].append(c - row["two_d"][i])
+                tols[i].append(meshconv.CRITERION * c + nonlin)
+        for i in range(2):
+            d.line(f"{device} gain {i}", lengths, gains[i], ax)
+            tol = np.array(tols[i])
+            d.fill(f"{device} tol {i}", lengths, want - tol, want + tol, ax)
     d.done()
 
 
@@ -1141,10 +1210,12 @@ CHECKS = {
     "mesh-grading": (lf.mesh_grading_figure, check_mesh_grading),
     "meshconv-1d": (lf.meshconv_1d_figure, check_meshconv_1d),
     "meshconv-2d": (lf.meshconv_2d_figure, check_meshconv_2d),
+    "meshconv-2d-fitted": (lf.meshconv_2d_fitted_figure, check_meshconv_2d_fitted),
     "pn-slab": (lf.pn_slab_figure, check_pn_slab),
     "pin-depletion": (lf.pin_depletion_figure, check_pin_depletion),
     "abrupt-junction": (lf.abrupt_junction_figure, check_abrupt_junction),
     "edge-sensitivity": (lf.edge_sensitivity_figure, check_edge_sensitivity),
+    "edge-rerun": (lf.edge_rerun_figure, check_edge_rerun),
     "charon-strip": (lf.charon_strip_figure, check_charon_strip),
     "charon-cv": (lf.charon_cv_figure, check_charon_cv),
     "charon-hard-range": (lf.charon_hard_range_figure, check_charon_hard_range),
@@ -1271,8 +1342,12 @@ def test_page_numbers_are_the_committed_files():
     assert subs["lim_ccox_inv"] == f"{ratio[np.argmax(qs['vg'])]:.3f}" == "1.087"
     page = (REPO_ROOT / "docs/limitations/moscap2d.md").read_text("utf-8")
     # the Charon page's numbers: tests/test_charon_experiments.py::test_page_numbers_are_the_records;
-    # the plugin-history page's: test_abrupt_junction_numbers_are_the_record
-    for key in (k for k in subs if not k.startswith(("lim_charon_", "lim_abrupt_"))):
+    # the plugin-history page's: test_abrupt_junction_numbers_are_the_record; the mesh-convergence
+    # page's: tests/test_meshconv_fitted.py::test_page_prints_the_records
+    # and the C-V page's: tests/test_two_d_validation_numbers.py and
+    # tests/test_comparison_figures.py::test_cv_page_prints_the_edge_split
+    skip = ("lim_charon_", "lim_abrupt_", "lim_mcfit_", "lim_v2d_", "lim_split_", "lim_cell_")
+    for key in (k for k in subs if not k.startswith(skip)):
         assert f"{{{{ {key} }}}}" in page, key
     for old in ("2.7e-8", "1.071", "1.090"):
         assert old not in page, old

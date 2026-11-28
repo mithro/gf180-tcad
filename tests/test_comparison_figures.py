@@ -839,7 +839,7 @@ def _edge_numbers() -> dict:
     c = out["check"]
     out["fill"] = {
         "AREA_MAX": f"{max(out['area']):.1f}",
-        "EDGE_MIN": f"{min(out['gap']):.2f}",
+        "EDGE_MIN": f"{min(out['gap']):.2f}".replace("-", "−"),
         "EDGE_MAX": f"{max(out['gap']):.2f}",
         "NFET_SPICE": f"{out['nfet_total'][0]:.2f}",
         "NFET_TWO_D": f"{out['nfet_total'][1]:.2f}",
@@ -857,23 +857,24 @@ def _edge_numbers() -> dict:
     return out
 
 
-# Each placeholder of the section and the words around it on the page.
-_EDGE_PHRASES = {
-    "AREA_MAX": "agrees within {} %",
-    "EDGE_MIN": "is {} to",
-    "EDGE_MAX": "to {} fF/µm below SPICE",
-    "NFET_SPICE": "give {} fF (SPICE)",
-    "NFET_TWO_D": "and {} fF (2D)",
-    "PFET_EDGE": "the gap is {} fF",
-    "PFET_AREA": "per-area part\n{} fF.",
-    "NFET_CHECK": "to within {} fF/µm",
-    "DLC_NM": "The card's DLC, {} nm",
-    "PFET_ACC": "by {} fF/µm (accumulation)",
-    "PFET_INV": "and {} fF/µm (inversion)",
-    "PFET_RMS": "up to {} fF/µm rms",
-    "NFET_RMS": "against {} fF/µm for the",
-    "NFET_2D_INV": "inversion side, {} fF/µm",
-    "CF_EDGE": "\n{} fF/µm per edge",
+# Each number of the section and the page substitution that prints it
+# (gf180tcad.limitations_figures._edge_split_substitutions).
+_EDGE_SUBS = {
+    "AREA_MAX": "lim_split_area_max",
+    "EDGE_MIN": "lim_split_gap_min",
+    "EDGE_MAX": "lim_split_gap_max",
+    "NFET_SPICE": "lim_split_nfet_spice",
+    "NFET_TWO_D": "lim_split_nfet_two_d",
+    "PFET_EDGE": "lim_split_pfet_edge",
+    "PFET_AREA": "lim_split_pfet_area",
+    "NFET_CHECK": "lim_split_nfet_check",
+    "DLC_NM": "lim_split_dlc_nm",
+    "PFET_ACC": "lim_split_pfet_acc",
+    "PFET_INV": "lim_split_pfet_inv",
+    "PFET_RMS": "lim_split_pfet_rms",
+    "NFET_RMS": "lim_split_nfet_rms",
+    "NFET_2D_INV": "lim_split_nfet_2d_inv",
+    "CF_EDGE": "lim_split_cf",
 }
 
 
@@ -889,13 +890,21 @@ def test_cv_page_prints_the_edge_split():
         assert area in page, area
     assert "accumulation at u = −5 V, inversion at u = +5 V" in page
     assert {u for _d, _s, u, _e, _a in n["rows"]} == {-5.0, 5.0}
-    assert sorted(_EDGE_PHRASES) == sorted(n["fill"])
-    for key, phrase in _EDGE_PHRASES.items():
-        assert phrase.format(n["fill"][key]) in page, (key, phrase.format(n["fill"][key]))
+    from gf180tcad import limitations_figures as lf
+
+    subs = lf.substitutions()
+    assert sorted(_EDGE_SUBS) == sorted(n["fill"])
+    for key, sub in _EDGE_SUBS.items():
+        assert f"{{{{ {sub} }}}}" in page, sub
+        assert subs[sub] == n["fill"][key], (key, subs[sub], n["fill"][key])
     # the nfet check holds; the pfet's misses (issue #194), and the per-area part opposes the edge
     assert all(abs(n["check"]["nfet_05v0", k]) < 1e-3 for k in ("accumulation", "inversion"))
     assert all(n["check"]["pfet_05v0", k] > 0.01 for k in ("accumulation", "inversion"))
     assert n["pfet_parts"][0] > 0 > n["pfet_parts"][1]
+    # at the fitted poly length bias the 2D edge is above SPICE's at accumulation and below it at
+    # inversion, for both devices (the page's "larger at accumulation and smaller at inversion")
+    for device, side, _u, e, _a in n["rows"]:
+        assert (e["two_d"] > e["spice"]) == (side == "accumulation"), (device, side)
 
 
 @pytest.mark.parametrize("device", ["nfet_05v0", "pfet_05v0"])

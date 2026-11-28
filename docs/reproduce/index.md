@@ -1091,6 +1091,25 @@ a results folder's writer hashes changed.
 - The other folders were not rerun. No fit file is committed, so every 2D job computes what it
   computed before.
 
+**The poly length bias fit, applied.**
+The fit files are in {repo}`results/tcad/edgefit`. They were written by `python -m
+gf180tcad.calibrate.edge` at commit
+`61cc886`,
+from the δ = 0 cells committed there. With a fit committed, every calibrated 2D job applies δ.
+No writer's hash moved, so nothing was restamped.
+
+These folders were regenerated with their own commands, in this order:
+
+1. The ten calibrated cells in {repo}`results/tcad/moscap2d`, by the 2D commands of `make
+   tcad-calibrated`. Each ran as one 16 GiB job at a time, and each cell was
+   committed as it finished.
+2. {repo}`results/tcad/validation`, by `make tcad-validate`.
+3. {repo}`results/tcad/meshes/stable`, by the `tcad-meshes` commands with `--cache` naming a
+   checkout of the output cache that holds the rerun meshes.
+4. The 2D mesh-convergence check at the fitted bias, by the commands of
+   {repo}`experiments/meshconv-fitted`.
+5. The manifest of every results file, by `make manifest`.
+
 (cross-host-determinism)=
 
 ## The same bytes on another computer

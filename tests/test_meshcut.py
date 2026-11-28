@@ -790,6 +790,8 @@ def test_load_params_refuses_a_job_from_another_edge_fit(tmp_path, monkeypatch):
     d = tmp_path / "nfet_05v0" / "calibrated" / "w10p0_l0p60"
     d.mkdir(parents=True)
     cv_meta = json.loads((L0P60 / "cv.meta.json").read_bytes())
+    cv_meta.pop("edge_fit", None)
+    monkeypatch.setattr(edgefit, "TREE_ROOT", tmp_path / "no-fit")
     job.load_params(d, cv_meta)  # the control: no fit committed, none recorded
     with pytest.raises(job.JobMismatch, match="poly length bias fit"):
         job.load_params(d, {**cv_meta, "edge_fit": {"poly_bias_nm": 40.0, "sha256": "f" * 64}})
@@ -1183,8 +1185,10 @@ def test_cut_of_the_real_mesh(tmp_path):
     (out / "mesh.msh").symlink_to(L0P60 / "mesh.msh")
     from gf180tcad.tcad.moscap1d import POLY_UM
 
+    # the drawn gate is 0.44 to 1.04 um; the rerun cell's poly is longer by its fit at each end
+    bias_um = cv_meta["edge_fit"]["poly_bias_nm"] * 1e-3
     xs = _fixture_xs(
-        gate_u=(0.44, 1.04),
+        gate_u=(0.44 - bias_um, 1.04 + bias_um),
         t_ox_nm=cv_meta["t_ox_nm"],
         levels={"gate_poly": ((1003, 0), cv_meta["t_ox_nm"] * 1e-3, POLY_UM, "si")},
         doping={"body": ((), (_Lin(cv_meta["tunables"]["n_ch_cm3"]["value"]),)),
@@ -1199,6 +1203,6 @@ def test_cut_of_the_real_mesh(tmp_path):
     idx = np.searchsorted(full.node_id, w.node_id)
     assert np.array_equal(full.node_id[idx], w.node_id)
     assert np.array_equal(_bits(full.nodes[idx]), _bits(w.nodes_cm))
-    assert meta["node_count"] == 84_728  # the part 1 measurement of this window
+    assert meta["node_count"] == 94_620  # this window on the cell rerun at the fitted bias
     body = np.array([w.regions[r] for r in w.region]) == "body"
     assert body.any()

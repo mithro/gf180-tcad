@@ -638,8 +638,11 @@ def _check_cell_mesh_record(record):
     pairs = np.array(cmp["moved"], dtype=float)  # (n, 2 images, 2 coordinates)
     a, b = pairs[:, 0], pairs[:, 1]
     assert np.all(np.any(a != b, axis=1)), "a moved pair that does not move"
-    # rounding: each coordinate within two units in the last place of the stable value
-    assert np.all(np.abs(a - b) <= 2 * np.spacing(np.abs(a))), "a move larger than rounding"
+    # rounding: each coordinate within two units in the last place of the point's larger
+    # stable coordinate. gmsh computes a point from coordinates of that size, so a height of
+    # a few nm beside a position of hundreds of nm rounds at the position's scale.
+    scale = np.abs(a).max(axis=1, keepdims=True)
+    assert np.all(np.abs(a - b) <= 2 * np.spacing(scale)), "a move larger than rounding"
     rel = np.abs(a - b) / np.maximum(np.abs(a), np.finfo(float).tiny)
     assert cmp["largest_relative_move"] == float(rel.max())
     assert images["stable"]["full_mesh_sha256"] != images["dev"]["full_mesh_sha256"]
@@ -651,7 +654,7 @@ def _check_cell_mesh_record(record):
 def check_cell_mesh(fig):
     """Each panel draws its image's box from data/images/cell-mesh/: every triangle's edges in
     nm, every point at its place with its number, the points the other image places
-    differently ringed, the limits round the points and the image's gmsh version; the title
+    differently ringed, the limits round the points (y shared by both panels) and the image's gmsh version; the title
     gives the record's comparison of the two full meshes. The record names the committed 2D
     job and its mesh, the stable image's mesh is that mesh, and the box holds a moved point."""
     from gf180tcad.meshcut import UM_PER_MSH_UNIT
@@ -673,7 +676,7 @@ def check_cell_mesh(fig):
     pins = {"stable": "TCAD_IMAGE", "dev": "TCAD_DEV_IMAGE"}
     assert set(record["images"]) == set(names)
     assert len(fig.axes) == len(names)
-    want = {}
+    want, ylims = {}, []
     for side, (ax, (key, name)) in enumerate(zip(fig.axes, names.items(), strict=True)):
         entry = record["images"][key]
         assert entry["image"] == (REPO_ROOT / "docker" / pins[key]).read_text("utf-8").strip()
@@ -714,8 +717,11 @@ def check_cell_mesh(fig):
         (x0, y0), (x1, y1) = xy.min(axis=0), xy.max(axis=0)
         pad = rf.STYLE["cell_margin"] * max(x1 - x0, y1 - y0)
         assert ax.get_xlim() == (x0 - pad, x1 + pad), key
-        assert ax.get_ylim() == (y0 - pad, y1 + pad), key
+        ylims.append((y0 - pad, y1 + pad))
         assert ax.get_xlabel() == "position across the cell (nm)"
+    # the panels share y, round both images' points
+    shared = (min(lo for lo, _ in ylims), max(hi for _, hi in ylims))
+    assert all(ax.get_ylim() == shared for ax in fig.axes)
     assert_texts(fig, want)
     assert fig.axes[0].get_ylabel() == "height (nm)"
     (legend,) = fig.legends

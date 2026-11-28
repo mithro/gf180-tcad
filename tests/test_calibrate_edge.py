@@ -1,32 +1,93 @@
 # SPDX-License-Identifier: Apache-2.0
 """The poly length bias fit (gf180tcad.calibrate.edge): it reproduces the edge study's least
-squares from the committed cells, freezes its inputs, and refuses an uncommitted checkout."""
+squares from the δ = 0 cells it was made from, freezes its inputs, and refuses an uncommitted
+checkout."""
 
+import hashlib
 import json
 import math
+import subprocess
 
 import numpy as np
 import pytest
 
 from gf180tcad import limitations_figures as lf
 from gf180tcad.calibrate import edge
+from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import edgefit
+
+# The relative tolerance of a refit's least-squares outputs against the frozen fit: they run
+# through numpy's BLAS/LAPACK, whose last bits differ between hosts. On the CI runner they differed
+# from the project host's by up to 6e-15 relative (run 46080249276).
+REFIT_REL = 1e-12
+
+# The fit file's keys that are its inputs, the δ on the layout grid and its identity: compared
+# exactly. Every other key is a least-squares output (slope, intercepts, weights, residuals).
+EXACT_KEYS = ("cell_params", "cells", "commit", "device", "edge_u_v", edgefit.PARAM, "record",
+              "schema", "spice")  # fmt: skip
+
+
+def _same(a, b, rel: float = REFIT_REL) -> bool:
+    """``a`` equals ``b``, floats to ``rel`` (relative), everything else exactly."""
+    if isinstance(a, float) or isinstance(b, float):
+        return isinstance(a, (int, float)) and isinstance(b, (int, float)) and math.isclose(
+            a, b, rel_tol=rel, abs_tol=0.0)  # fmt: skip
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_same(a[k], b[k], rel) for k in a)
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return len(a) == len(b) and all(_same(x, y, rel) for x, y in zip(a, b, strict=True))
+    return a == b
+
 
 DEVICES = tuple(edge.RECORD_CELLS)
 
 
+def _frozen_tree(device: str, tmp_path):
+    """A TCAD tree of the δ = 0 cells the committed fit was made from: each cell's cv.csv at the
+    fit's commit (``git show``), its sha256 checked against the fit file."""
+    fit = edgefit.read(device)
+    assert fit is not None, f"{device}: no committed fit under results/tcad/edgefit"
+    root = tmp_path / "tcad"
+    for row in fit["cells"]:
+        rel = f"results/tcad/moscap2d/{device}/{edge.CELL_PARAMS}/{row['gid']}/cv.csv"
+        data = subprocess.run(["git", "show", f"{fit['commit']}:{rel}"], cwd=REPO_ROOT,
+                              check=True, capture_output=True).stdout  # fmt: skip
+        assert hashlib.sha256(data).hexdigest() == row["cv_csv_sha256"], row["gid"]
+        dest = root / "moscap2d" / device / edge.CELL_PARAMS / row["gid"] / "cv.csv"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+    return fit, root
+
+
 @pytest.mark.parametrize("device", DEVICES)
-def test_fit_is_the_edge_study_s_least_squares(device):
-    """On the committed cells the fit gives the δ, slope, targets and residuals of
-    limitations_figures.edge_fit (the numbers the docs print), to round-off."""
-    d = edge.build(device, commit="0" * 40)
+def test_fit_is_the_edge_study_s_least_squares(device, tmp_path):
+    """On the δ = 0 cells it was made from, the fit is the committed fit file, and it gives the
+    δ, slope, targets and residuals of limitations_figures.edge_fit (the numbers the docs
+    print), to round-off."""
+    committed, root = _frozen_tree(device, tmp_path)
+    d = edge.build(device, tcad_root=root, commit=committed["commit"])
+    d_json = json.loads(json.dumps(d))
+    assert d_json.keys() == committed.keys()
+    for key in EXACT_KEYS:
+        assert d_json[key] == committed[key], key
+    for key in d_json.keys() - set(EXACT_KEYS):
+        assert _same(d_json[key], committed[key]), key
     ref = lf.edge_fit(device, edge.RECORD_CELLS[device])
-    assert math.isclose(d[edgefit.PARAM], ref["delta_nm"], rel_tol=1e-12)
+    ls = d["least_squares"]
+    assert math.isclose(ls[edgefit.PARAM], ref["delta_nm"], rel_tol=1e-12)
+    # the applied δ is the least-squares one on the layout grid
+    assert d[edgefit.PARAM] == round(ref["delta_nm"] / edge.LAYOUT_GRID_NM) * edge.LAYOUT_GRID_NM
+    assert abs(d[edgefit.PARAM] - ref["delta_nm"]) <= edge.LAYOUT_GRID_NM / 2
     assert math.isclose(d["slope_ff_per_um_per_nm"], ref["slope"], rel_tol=1e-12)
     for got, want in zip(d["targets_ff_per_um"], ref["targets"], strict=True):
         assert math.isclose(got, want, rel_tol=1e-9, abs_tol=1e-12)
-    for got, want in zip(d["residual_ff_per_um"], ref["residual"], strict=True):
+    for got, want in zip(ls["residual_ff_per_um"], ref["residual"], strict=True):
         assert math.isclose(got, want, rel_tol=1e-9, abs_tol=1e-12)
+    # the residual at the applied δ moves by slope × the rounding, at most half a grid step
+    slope = d["slope_ff_per_um_per_nm"]
+    for got, want in zip(d["residual_ff_per_um"], ls["residual_ff_per_um"], strict=True):
+        assert math.isclose(got - want, slope * (ls[edgefit.PARAM] - d[edgefit.PARAM]),
+                            rel_tol=1e-9, abs_tol=1e-15)  # fmt: skip
 
 
 @pytest.mark.parametrize("device", DEVICES)

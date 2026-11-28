@@ -55,6 +55,7 @@ WRITERS = {
     "tcad/validation": CALIBRATE_MAIN,
     "tcad/meshes/stable": MESHCUT_MAIN,
     "tcad/corners": CORNERS_MAIN,
+    "tcad/edgefit": EDGE_MAIN,
 }
 # The tree roots of the plan's results layout (Global Constraints, "Result files"; Task 16a),
 # and the per-image tree of reduced mesh artefacts (renders plan, Task R0).
@@ -66,6 +67,7 @@ TREE_ROOTS = (
     "validation",
     "meshes/stable",
     "corners",
+    "edgefit",
 )
 REGENERATE = (
     "regenerate the tree for each device with `uv run --locked python -m ...`: "
@@ -847,6 +849,9 @@ def _expected_images(root: Path) -> dict[str, str]:
     kind ``meshes`` (the image that made its source 2D jobs, in which the cut runs)."""
     if _key(root).startswith("tcad/meshes/"):
         return {"meshes": root.name}
+    if _key(root) == "tcad/edgefit":
+        # the poly length bias fit runs on the host from committed files; no image makes it
+        return {}
     kinds = _result_kinds(root)
     assert kinds, root
     return {k: tcad.RESULTS_IMAGE[k] for k in kinds}
@@ -907,6 +912,8 @@ READS = {
         "tcad/calibration",
         # cv.devsim_2d_results: the calibrated 2D cells (cv.MOSCAP2D_ROOT)
         "tcad/moscap2d/nfet_05v0/calibrated", "tcad/moscap2d/pfet_05v0/calibrated",
+        # cv._two_d through edgefit.apply: the committed poly length bias fit (plan Task E3)
+        "tcad/edgefit",
     },
     "tcad/corners": {"spice/ngspice", "tcad/meshconv/moscap1d", "tcad/calibration"},
 }  # fmt: skip

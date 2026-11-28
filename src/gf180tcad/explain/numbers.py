@@ -182,6 +182,7 @@ _ENTRIES = (
     # The transistor's parts (transistor-parts.md): the calibrated nfet 2D cell w10p0_l0p70.
     Number("l_cell", "committed", "µm", 1, _CELL, {"json": ["geometry", "l_um"]}),
     Number("w_cell", "committed", "µm", 2, _CELL, {"json": ["geometry", "w_um"]}),
+    Number("poly_bias_cell", "committed", "nm", 2, _CELL, {"json": ["edge_fit", "poly_bias_nm"]}),
     Number("t_ox_cell", "committed", "nm", 4, _CELL, {"json": ["meshed_t_ox_nm"]}),
     Number("node_count_cell", "committed", "", 3, _CELL, {"json": ["node_count"]}),
     Number("node_count_window", "committed", "", 3, _CELL_MESH, {"json": ["node_count"]}),

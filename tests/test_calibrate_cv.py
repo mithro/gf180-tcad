@@ -13,6 +13,7 @@ SPICE bookkeeping (DLC, overlaps, fringe) is the real one (``MoscapCV.area_scale
 import dataclasses
 import json
 import math
+import re
 from types import MappingProxyType
 
 import pytest
@@ -304,9 +305,13 @@ def _write_2d(root, device, geometry, vg, cgg, param_sha256):
     io.write_json(job / moscap2d.META_JSON, {"device": device, "param_sha256": param_sha256})
 
 
-def test_validate_two_d(fit, tmp_path):
+def test_validate_two_d(fit, tmp_path, monkeypatch):
     """cv._two_d compares the committed calibrated 2D results it finds (drawn-area Cox window, no
-    parasitic term), refuses one computed with other values, and lists the rest as not run."""
+    parasitic term), refuses one computed with other values, and lists the rest as not run.
+    The synthetic results carry no poly length bias fit, so the committed fit is hidden."""
+    from gf180tcad.tcad import edgefit
+
+    monkeypatch.setattr(edgefit, "TREE_ROOT", tmp_path / "no-fit")
     res, _, _ = fit
     res.write(tmp_path / "cal")
     frozen = cv.load_frozen(NFET, tmp_path / "cal")
@@ -679,6 +684,60 @@ def test_docs_quote_the_committed_results(device):
     assert res.bound_hits == {} and "No value is within 1e-3 of a bound" in text
 
 
+# The pages' tables of the 2D checks, per (device, geometry): the page and the table name.
+TWO_D_TABLES = {
+    ("nfet_05v0", "w10p0_l0p60"): ("comparison/cv-agreement.md", "tab-cv-2d-nfet-l0p6"),
+    ("nfet_05v0", "w10p0_l0p70"): ("comparison/cv-agreement.md", "tab-cv-2d-nfet-l0p7"),
+    ("nfet_05v0", "w10p0_l1p00"): ("comparison/cv-agreement.md", "tab-cv-2d-nfet-l1"),
+    ("nfet_05v0", "w10p0_l2p00"): ("comparison/cv-agreement.md", "tab-cv-2d-nfet-l2"),
+    ("nfet_05v0", "w1p6_l0p70"): ("limitations/moscap2d.md", "tab-moscap2d-nfet-narrow"),
+    ("pfet_05v0", "w10p0_l0p50"): ("comparison/cv-agreement.md", "tab-cv-2d-pfet-l0p5"),
+    ("pfet_05v0", "w10p0_l0p70"): ("comparison/cv-agreement.md", "tab-cv-2d-pfet-l0p7"),
+    ("pfet_05v0", "w10p0_l1p00"): ("comparison/cv-agreement.md", "tab-cv-2d-pfet-l1"),
+    ("pfet_05v0", "w10p0_l2p00"): ("comparison/cv-agreement.md", "tab-cv-2d-pfet-l2"),
+    ("pfet_05v0", "w1p6_l0p70"): ("limitations/moscap2d.md", "tab-moscap2d-pfet-narrow"),
+}
+
+
+def _verdict_cell(verdict: str) -> set[str]:
+    """How a verdict may be written in a table cell: plain, or as its glossary term."""
+    return {verdict, f"{{term}}`{verdict}`"}
+
+
+@pytest.mark.parametrize(("device", "gid"), sorted(TWO_D_TABLES))
+def test_docs_quote_the_2d_checks(device, gid):
+    """Each table of a calibrated 2D cell's checks holds the validation file's values, rounded
+    as written (plateaus in % to 0.1, crossing shifts in mV to 1, signed), and its verdicts."""
+    from gf180tcad import limitations_figures as lf
+
+    subs = lf.substitutions()
+    page, name = TWO_D_TABLES[device, gid]
+    text = (cv.REPO_ROOT / "docs" / page).read_text(encoding="utf-8")
+    # the page prints the values through substitutions; read the table as it renders
+    text = re.sub(r"\{\{ (lim_\w+) \}\}", lambda m: subs[m.group(1)], text)
+    body = text.split(f":name: {name}\n", 1)[1].split("~~~", 1)[0]
+    rows = {}
+    for line in body.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) == 3 and cells[0] not in ("Check", "---"):
+            rows[cells[0]] = (cells[1], cells[2])
+    v = json.loads((cv.VALIDATION_ROOT / f"{device}.json").read_bytes())["two_d"][gid]["verdicts"]
+
+    def mv(x: float) -> str:
+        return f"{1000 * x:+.0f}".replace("-", "\u2212")
+
+    want = {
+        "Accumulation plateau (%)": (f"{100 * v['plateau_acc']['max_rel']:.1f}", v["plateau_acc"]),
+        "Inversion plateau (%)": (f"{100 * v['plateau_inv']['max_rel']:.1f}", v["plateau_inv"]),
+        "Depletion crossing shift (mV)": (mv(v["dv_dep"]["dv_v"]), v["dv_dep"]),
+        "Inversion crossing shift (mV)": (mv(v["dv_inv"]["dv_v"]), v["dv_inv"]),
+    }
+    assert sorted(rows) == sorted(want), name
+    for check, (value, entry) in want.items():
+        assert rows[check][0] == value, (name, check, rows[check][0], value)
+        assert rows[check][1] in _verdict_cell(entry["verdict"]), (name, check)
+
+
 # --- in the TCAD image ---------------------------------------------------------------------------
 
 
@@ -734,10 +793,10 @@ def test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell():
     comp = width_scaled_two_d(NFET, "w10p0_l0p70", "w1p6_l0p70")
     v = comp["verdicts"]
     assert comp["verdict"] == "Disagree"
-    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.0755, abs=5e-5)
-    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.1385, abs=5e-5)
-    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1938, abs=5e-5)
-    assert v["dv_inv"]["dv_v"] == pytest.approx(-0.0335, abs=5e-5)
+    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.0711, abs=5e-5)
+    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.0543, abs=5e-5)
+    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1603, abs=5e-5)
+    assert v["dv_inv"]["dv_v"] == pytest.approx(-0.0218, abs=5e-5)
     assert [v[k]["verdict"] for k in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv")] == [
         "Same process", "Same process", "Disagree", "Agree",
     ]  # fmt: skip
@@ -772,7 +831,7 @@ def test_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
 
 def test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
     """The committed pfet W1.6/L0.7 2D job gives what the derivation from W10/L0.7 gives: the
-    same mesh, the same cv.meta.json apart from the width (so the same round-off entry), the same
+    same mesh, the same cv.meta.json apart from the width (so the same round-off entries: none), the same
     per-width Cgg, and the same comparison in the validation file."""
     root = cv.MOSCAP2D_ROOT / PFET / "calibrated"
     metas = [
@@ -780,14 +839,14 @@ def test_pfet_w1p6_l0p70_job_equals_the_width_scaled_w10_l0p70_cell():
         for gid in ("w10p0_l0p70", "w1p6_l0p70")
     ]
     assert metas[0]["mesh_sha256"] == metas[1]["mesh_sha256"]
-    # The metas differ only in the width, so both jobs record the same round-off entry
+    # The metas differ only in the width, so both jobs record the same round-off entries
     # (docs/limitations/moscap2d.md).
     assert (metas[0]["w_um"], metas[1]["w_um"]) == (10.0, 1.6)
     assert (metas[0]["geometry"]["w_um"], metas[1]["geometry"]["w_um"]) == (10.0, 1.6)
     for m in metas:
         del m["w_um"], m["geometry"]["w_um"]
     assert metas[0] == metas[1]
-    assert len(metas[1]["sweep"]["qs_roundoff_accepted"]) == 1
+    assert metas[1]["sweep"]["qs_roundoff_accepted"] == []
     a, _ = io.read_csv(root / "w10p0_l0p70" / "cv.csv")
     b, _ = io.read_csv(root / "w1p6_l0p70" / "cv.csv")
     assert list(a["cgg_per_um"]) == list(b["cgg_per_um"])
@@ -803,18 +862,22 @@ def test_pfet_w1p6_l0p70_two_d():
     comp = width_scaled_two_d(PFET, "w10p0_l0p70", "w1p6_l0p70")
     v = comp["verdicts"]
     assert comp["verdict"] == "Same process"
-    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.1063, abs=5e-5)
-    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.0988, abs=5e-5)
-    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.1091, abs=5e-5)
-    assert v["dv_inv"]["dv_v"] == pytest.approx(0.0065, abs=5e-5)
+    assert v["plateau_acc"]["max_rel"] == pytest.approx(0.0460, abs=5e-5)
+    assert v["plateau_inv"]["max_rel"] == pytest.approx(0.0392, abs=5e-5)
+    assert v["dv_dep"]["dv_v"] == pytest.approx(-0.0559, abs=5e-5)
+    assert v["dv_inv"]["dv_v"] == pytest.approx(0.0208, abs=5e-5)
     assert [v[k]["verdict"] for k in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv")] == [
-        "Same process", "Same process", "Same process", "Agree",
+        "Agree", "Agree", "Same process", "Agree",
     ]  # fmt: skip
 
 
 def test_simulate_is_injectable_and_defaults_to_devsim(fit, tmp_path, monkeypatch):
     """Charon plan Task B0: both simulators are parameters, so another backend calibrates and
     validates without editing calibrate.cv; omitted, they are the DEVSIM ones."""
+    from gf180tcad.tcad import edgefit as _edgefit
+
+    # the synthetic 2D results carry no poly length bias fit: hide the committed one
+    monkeypatch.setattr(_edgefit, "TREE_ROOT", tmp_path / "no-fit")
     import inspect
 
     for fn in (cv.calibrate_cv, cv.validate_cv):

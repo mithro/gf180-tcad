@@ -268,6 +268,80 @@ Against u = polarity × Vg, nfet above and pfet below ({repo}`results/tcad/meshc
 ```
 
 
+(mesh-convergence-2d-fitted)=
+
+## 2D result at the fitted poly length bias
+
+The calibrated 2D cells carry the fitted poly length bias, which moves each gate end
+({ref}`moscap2d-edge`). So the 2D study was rerun at each device's Lmin cell with the calibrated
+values and the committed fit ({repo}`experiments/meshconv-fitted`). It runs the same three levels
+on the same 201 biases.
+
+It also reruns the second criterion, the uniform stack's agreement
+with 1D. That stack has no gate end, so the bias does not enter it. But the calibrated oxide,
+doping and flat-band shift do.
+
+{numref}`tab-meshconv-2d-fitted-levels` gives each nfet level's node count, its largest change
+against the next level and its largest difference from 1D ({repo}`records <results/meshconv-fitted>`).
+
+~~~{table} The nfet levels at the fitted poly length bias: node count, change against the next level, difference from 1D.
+:name: tab-meshconv-2d-fitted-levels
+
+| Level | Nodes | Change to next level (%) | Against 1D (%) |
+|---|---|---|---|
+| 0 | {{ lim_mcfit_nfet_nodes_0 }} | {{ lim_mcfit_nfet_change_0 }} | {{ lim_mcfit_nfet_agree_0 }} |
+| 1 | {{ lim_mcfit_nfet_nodes_1 }} | {{ lim_mcfit_nfet_change_1 }} | {{ lim_mcfit_nfet_agree_1 }} |
+| 2 | {{ lim_mcfit_nfet_nodes_2 }} | (finest) | {{ lim_mcfit_nfet_agree_2 }} |
+~~~
+
+{numref}`tab-meshconv-2d-fitted-pfet` gives the same for the pfet.
+
+~~~{table} The pfet levels at the fitted poly length bias: node count, change against the next level, difference from 1D.
+:name: tab-meshconv-2d-fitted-pfet
+
+| Level | Nodes | Change to next level (%) | Against 1D (%) |
+|---|---|---|---|
+| 0 | {{ lim_mcfit_pfet_nodes_0 }} | {{ lim_mcfit_pfet_change_0 }} | {{ lim_mcfit_pfet_agree_0 }} |
+| 1 | {{ lim_mcfit_pfet_nodes_1 }} | {{ lim_mcfit_pfet_change_1 }} | {{ lim_mcfit_pfet_agree_1 }} |
+| 2 | {{ lim_mcfit_pfet_nodes_2 }} | (finest) | {{ lim_mcfit_pfet_agree_2 }} |
+~~~
+
+The selected level is level {{ lim_mcfit_nfet_selected }} for the nfet and
+{{ lim_mcfit_pfet_selected }} for the pfet. It still changes by less than
+{{ lim_mcfit_criterion }} % against the next level, and differs from 1D by less than
+{{ lim_mcfit_agreement }} %.
+
+Level 0 still misses the second criterion. So level 1 is the coarsest level that meets both
+({test}`tests/test_meshconv_fitted.py::test_selected_level_still_meets_the_criterion`).
+{numref}`fig-meshconv-2d-fitted` plots both at every bias.
+
+Level 1 is the mesh of the committed calibrated Lmin cell, and its C per area is that cell's,
+bit for bit ({test}`tests/test_meshconv_fitted.py::test_selected_level_is_the_committed_cell`).
+
+```{figure} /_generated/limitations/meshconv-2d-fitted-light.svg
+:name: fig-meshconv-2d-fitted
+:figclass: only-light
+:alt: Four panels on log axes, nfet above and pfet below. Left: solid lines for levels 0 and 1 at the fitted bias and a dashed line for the start study's level 1 lie below a dashed 1 % line at every bias. Right: the 2D-against-1D difference of levels 0 to 2, level 0 reaching a dashed 0.5 % line.
+
+The 2D relative change |C / C_finer − 1| of levels 0 and 1 at the fitted poly length bias and
+the calibrated values (solid), with the committed study's selected level at the start values and
+the drawn poly (dashed) and the 1 % criterion (left). The uniform stack's largest difference from
+1D at each level at the calibrated values, with the 0.5 % criterion (right). Against u =
+polarity × Vg, nfet above and pfet below ({repo}`results/meshconv-fitted`).
+```
+
+```{figure} /_generated/limitations/meshconv-2d-fitted-dark.svg
+:figclass: only-dark
+:alt: Four panels on log axes, nfet above and pfet below. Left: solid lines for levels 0 and 1 at the fitted bias and a dashed line for the start study's level 1 lie below a dashed 1 % line at every bias. Right: the 2D-against-1D difference of levels 0 to 2, level 0 reaching a dashed 0.5 % line.
+
+The 2D relative change |C / C_finer − 1| of levels 0 and 1 at the fitted poly length bias and
+the calibrated values (solid), with the committed study's selected level at the start values and
+the drawn poly (dashed) and the 1 % criterion (left). The uniform stack's largest difference from
+1D at each level at the calibrated values, with the 0.5 % criterion (right). Against u =
+polarity × Vg, nfet above and pfet below ({repo}`results/meshconv-fitted`).
+```
+
+
 ## Limitations
 
 - **Numbers from one image per dimension.** The 1D results are from the dev-HEAD TCAD image

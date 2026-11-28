@@ -116,6 +116,23 @@ STYLE = {
     "metric_headroom": 1.25,
     # Log axes with a labelled criterion line reach this factor above the line or the data.
     "criterion_headroom": 3.0,
+    # The C-V page's 2D validation numbers: decimals of a Cgg (fF), of a crossing (V), of a
+    # plateau difference (%), of a crossing's move (V), of an envelope's width (V; short and
+    # long form) and of the edge split's lines (fF/µm and fF), its per-area agreement (%), its
+    # DLC (nm), its check, its rms and its pfet check.
+    "v2d_cgg_digits": 2,
+    "v2d_u_digits": 3,
+    "v2d_pct_digits": 1,
+    "v2d_move_digits": 3,
+    "v2d_width_digits": (2, 3),
+    "split_gap_digits": 2,
+    "split_total_digits": 2,
+    "split_area_digits": 1,
+    "split_dlc_digits": 0,
+    "split_check_digits": 4,
+    "split_line_digits": 3,
+    # The decimals of a level's largest change (%) the mesh-convergence page prints.
+    "meshconv_change_digits": 3,
     # The plugin record: bar width (V) of the region ranges.
     "bar_width": 0.02,
     "hatch": "//",
@@ -134,6 +151,14 @@ STYLE = {
     "strip_span_nm": (-20.0, 40.0),
     "edge_slope_digits": 5,
     "edge_delta_digits": 1,
+    # The rerun check of the fitted poly length bias (plan Task E3, Decision 4): the share of
+    # slope × δ allowed for the record's linearity (bias60 is twice bias30 within it), and the
+    # record's variant lengths (nm) whose quadratic bounds the gain's non-linearity at δ.
+    "edge_linearity": 0.02,
+    "edge_quadratic_nm": (30, 60),
+    # The digits of the tolerances and their sum of weights the page prints.
+    "edge_weight_digits": 2,
+    "edge_tol_digits": 4,
     # The abrupt-junction figure and numbers: significant digits of a width (µm) and of V_t,
     # of V_bi (as the page's junction drops), of a width difference, and the x span past the
     # widest bar (fraction) that leaves room for its value.
@@ -152,6 +177,8 @@ UNITS = {
     "percent": 100.0,
     "nm_per_um": 1e3,
     "mv_per_v": 1e3,
+    "um_per_m": 1e6,
+    "ff_per_f": 1e15,
     "pa_per_a": 1e12,
     "hz_per_mhz": 1e6,
 }
@@ -499,9 +526,9 @@ def c_over_cox_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         return fig
 
 
-# The cells of the 2D validation figure: the shortest nfet cell and the pfet L = 1 µm cell,
+# The cells of the 2D validation figure: the shortest nfet cell and the pfet L = 2 µm cell,
 # both Disagree on the depletion crossing.
-VALIDATION_CELLS = (("nfet_05v0", "w10p0_l0p60"), ("pfet_05v0", "w10p0_l1p00"))
+VALIDATION_CELLS = (("nfet_05v0", "w10p0_l0p60"), ("pfet_05v0", "w10p0_l2p00"))
 
 
 def validation_record(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
@@ -638,7 +665,7 @@ def two_d_metrics_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         ]  # fmt: skip
         (ptol,) = {r[f"tol_{part}"] for r in rows for part in ("acc", "inv")}
         bottom.axhspan(-ptol, ptol, color=pal["band"], lw=0, gid="plateau tolerance")
-        bottom.text(x[-1], ptol, f"±{ptol:g} %", ha="right", va="top")
+        bottom.text(x[0], ptol, f"±{ptol:g} %", ha="left", va="top")  # clear of the last cells
         for part, marker in (("acc", "o"), ("inv", "s")):
             bottom.scatter(x, [r[part] for r in rows], facecolors=_faces(rows, part, colours),
                            edgecolors=colours, marker=marker, s=size,
@@ -924,6 +951,86 @@ def meshconv_2d_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     return _meshconv_figure(2, palette, roots)
 
 
+#: The records of the 2D mesh-convergence check at the fitted poly length bias
+#: (``experiments/meshconv-fitted/record.py``; plan Task E3, Decision 5), one per device.
+MESHCONV_FITTED_ROOT = REPO_ROOT / "results" / "meshconv-fitted"
+
+
+def meshconv_fitted_root(roots: Roots = DEFAULT_ROOTS) -> Path:
+    """The fitted-bias mesh-convergence records of ``roots``: ``meshconv-fitted`` beside its SPICE
+    tree, so the committed :data:`MESHCONV_FITTED_ROOT` for the committed trees."""
+    return Path(roots.spice).parent / "meshconv-fitted"
+
+
+def meshconv_fitted(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
+    """The committed fitted-bias mesh-convergence record of ``device``."""
+    return json.loads((meshconv_fitted_root(roots) / f"{device}.json").read_text("utf-8"))
+
+
+def meshconv_2d_fitted_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Per device: the change ``|C / C_finer - 1|`` of the 2D levels 0 and 1 at the fitted poly
+    length bias and the calibrated values (solid), the committed study's selected level at the
+    start values (dashed), and the 1 % criterion (left); the uniform stack's 2D-against-1D
+    difference at each level at the calibrated values, with the 0.5 % criterion (right)."""
+    pal = ef.PALETTES[palette]
+    lw = ef.STYLE["line_width"]
+    start = meshconv_curves(2, roots)
+    colours = ("electron", "hole", "highlight")
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(STYLE["tall_in"])
+        grid = fig.subplots(len(_DEVICES), 2, sharex="col")
+        for (ax, ax2), device in zip(grid, _DEVICES, strict=True):
+            rec = meshconv_fitted(device, roots)
+            rep = rec["report"]
+            u = DEVICES[device].polarity * np.asarray(rep["vg"])
+            tops = [rec["check"]["criterion"]]
+            for i, lv in enumerate(rep["levels"]):
+                if lv["rel_change"] is None:
+                    continue
+                change = np.abs(lv["rel_change"])
+                tops.append(float(np.max(change)))
+                ax.plot(u, change, color=pal[colours[i]], lw=lw,
+                        label=f"level {i}, fitted bias", gid=f"{device} fitted level {i}")  # fmt: skip
+            c = start[device]
+            (sel,) = [lv for lv in c["levels"] if lv["level"] == c["selected"]]
+            tops.append(float(np.max(sel["change"])))
+            ax.plot(c["u"], sel["change"], color=pal[colours[c["selected"]]], lw=lw, ls="--",
+                    label=f"level {c['selected']}, start values, drawn poly",
+                    gid=f"{device} start level {c['selected']}")  # fmt: skip
+            crit = rec["check"]["criterion"]
+            ax.axhline(crit, color=pal["text"], lw=ef.STYLE["edge_width"], ls="--",
+                       gid=f"{device} criterion")  # fmt: skip
+            ax.text(u[0], crit, f" {crit * UNITS['percent']:g} %", ha="left", va="bottom")
+            ax.set_yscale("log")
+            ax.set_ylim(top=max(tops) * STYLE["criterion_headroom"])
+            ax.set_ylabel(f"{_SHORT[device]}: change\nto next level")
+            ax.grid(True)
+            tops = [rec["check"]["agreement_criterion"]]
+            for i, lv in enumerate(rep["levels"]):
+                cur = lv["agreement_1d_curve"]
+                rel = np.abs(cur["rel"])
+                tops.append(float(np.max(rel)))
+                ax2.plot(DEVICES[device].polarity * np.asarray(cur["vg"]), rel,
+                         color=pal[colours[i]], lw=lw, marker="o", ms=STYLE["small_marker_pt"],
+                         label=f"level {i}, against 1D", gid=f"{device} agreement {i}")  # fmt: skip
+            crit = rec["check"]["agreement_criterion"]
+            ax2.axhline(crit, color=pal["text"], lw=ef.STYLE["edge_width"], ls="--",
+                        gid=f"{device} agreement criterion")  # fmt: skip
+            ax2.text(u[0], crit, f" {crit * UNITS['percent']:g} %", ha="left", va="bottom")
+            ax2.set_yscale("log")
+            ax2.set_ylim(top=max(tops) * STYLE["criterion_headroom"])
+            ax2.set_ylabel("2D against 1D")
+            ax2.grid(True)
+        for ax in grid[-1]:
+            ax.set_xlabel("u = polarity × Vg (V)")
+        handles, labels = grid[0][0].get_legend_handles_labels()
+        h2, l2 = grid[0][1].get_legend_handles_labels()
+        handles, labels = handles + h2, labels + l2
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
 # --- the 2D edge sensitivity (issue #189) ---------------------------------------------------------
 
 #: The committed edge-sensitivity records (``experiments/edge-sensitivity/record.py``): one per
@@ -985,8 +1092,19 @@ def edge_gains(device: str, gid: str, root: Path = EDGE_ROOT) -> dict[str, tuple
 
 
 def edge_targets(device: str, roots: Roots = DEFAULT_ROOTS) -> tuple[float, float]:
-    """The 2D edge's shortfall against SPICE (fF/µm) at u = -5 and +5 V: the SPICE minus the 2D
-    ``C_edge`` of :func:`gf180tcad.comparison_figures.edge_split`."""
+    """The 2D edge's shortfall against SPICE (fF/µm) at u = -5 and +5 V that the poly length
+    bias is fitted to: the SPICE minus the 2D ``C_edge`` of the δ = 0 cells.
+
+    Once the fit is committed (``<tcad root>/edgefit``, :mod:`gf180tcad.tcad.edgefit`), they are
+    its frozen targets, because the committed cells are then the fitted ones (plan Task E3).
+    For a results tree without a fit, they come from the live edge split of its cells
+    (:func:`gf180tcad.comparison_figures.edge_split`)."""
+    from gf180tcad.tcad import edgefit
+
+    fit = edgefit.read(device, Path(roots.tcad) / "edgefit")
+    if fit is not None:
+        lo, hi = fit["targets_ff_per_um"]
+        return float(lo), float(hi)
     from gf180tcad.comparison_figures import edge_split
 
     s = edge_split(device, roots.spice, roots.tcad)
@@ -1060,6 +1178,111 @@ def edge_sensitivity_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             lo_u, hi_u = STYLE["edge_u_v"]
             ax.set_xlabel(f"gain at u = {lo_u:+g} V (fF/µm)".replace("-", "−"))
             ax.set_ylabel(f"gain at u = {hi_u:+g} V (fF/µm)")
+            ax.grid(True)
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
+                   frameon=False)  # fmt: skip
+        return fig
+
+
+def edge_nonlinearity(device: str, gid: str, fit: dict, roots: Roots = DEFAULT_ROOTS) -> float:
+    """The record's bound (fF/µm) on how far the gain at the fit's applied δ departs from
+    slope × δ: the quadratic through 0 and the two record variants of
+    :data:`STYLE` ``edge_quadratic_nm``, against the fitted line, worst plateau."""
+    rec = edge_record(device, gid, edge_root(roots))["variants"]
+    pol = DEVICES[device].polarity
+
+    def at(v: dict) -> list[float]:
+        by_u = {pol * vg: c for vg, c in zip(v["vg"], v["cgg_ff_per_um"], strict=True)}
+        return [by_u[u] for u in STYLE["edge_u_v"]]
+
+    n1, n2 = STYLE["edge_quadratic_nm"]
+    base, g1, g2 = at(rec["base"]), at(rec[f"bias{n1}"]), at(rec[f"bias{n2}"])
+    delta, slope = fit["poly_bias_nm"], fit["slope_ff_per_um_per_nm"]
+    worst = 0.0
+    for b, c1, c2 in zip(base, g1, g2, strict=True):
+        y1, y2 = c1 - b, c2 - b
+        quad = (y2 * n1 - y1 * n2) / (n1 * n2 * (n2 - n1))
+        lin = (y1 - quad * n1**2) / n1
+        worst = max(worst, abs(lin * delta + quad * delta**2 - slope * delta))
+    return worst
+
+
+def edge_rerun(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
+    """The check of the cells rerun at the committed poly length bias fit (plan Task E3,
+    Decision 4), from the fit file's frozen δ = 0 rows and today's cells.
+
+    Per W = 10 µm cell (``cells``): its length, its gain over the frozen δ = 0 Cgg per unit width
+    at each plateau of :data:`STYLE` ``edge_u_v`` (fF/µm), and its tolerance there: the 2D mesh
+    criterion (:data:`gf180tcad.tcad.meshconv.CRITERION` of the cell's Cgg) plus
+    :func:`edge_nonlinearity`. ``want`` is slope × δ. Per device: the live edge split's ``gap``
+    (SPICE minus 2D ``C_edge``) at each plateau, the fit's frozen ``residual`` and the ``bound``
+    on their difference, Σ|wᵢ| × the largest per-cell tolerance plus :data:`STYLE`
+    ``edge_linearity`` × slope × δ (wᵢ: the intercept's least-squares weights, ``weights``)."""
+    from gf180tcad.calibrate import edge
+    from gf180tcad.tcad import edgefit
+
+    fit = edgefit.read(device, Path(roots.tcad) / "edgefit")
+    if fit is None:
+        raise FileNotFoundError(f"{device}: no poly length bias fit under {roots.tcad}")
+    gid = edge.RECORD_CELLS[device]
+    nonlin = edge_nonlinearity(device, gid, fit, roots)
+    want = fit["slope_ff_per_um_per_nm"] * fit["poly_bias_nm"]
+    geoms = {geometry_id(g): g for g in DEVICES[device].geometries}
+    rows, cells = [], []
+    for frozen in fit["cells"]:
+        row = edge.cell_row(device, geoms[frozen["gid"]], roots.spice, roots.tcad)
+        rows.append(row)
+        cells.append({
+            "gid": row["gid"],
+            "l_um": row["l_um"],
+            "gain": [c - c0 for c, c0 in zip(row["two_d"], frozen["two_d"], strict=True)],
+            "tol": [meshconv.CRITERION * c + nonlin for c in row["two_d"]],
+        })  # fmt: skip
+    spice, two_d = edge.intercepts(rows, "spice"), edge.intercepts(rows, "two_d")
+    weights = float(np.abs(edge.intercept_weights(rows)).sum())
+    bound = [
+        weights * max(c["tol"][i] for c in cells) + STYLE["edge_linearity"] * want
+        for i in range(len(STYLE["edge_u_v"]))
+    ]
+    return {
+        "cells": cells,
+        "applied_nm": float(fit["poly_bias_nm"]),
+        "want": want,
+        "nonlinearity": nonlin,
+        "weights": weights,
+        "gap": [a - b for a, b in zip(spice, two_d, strict=True)],
+        "residual": [float(r) for r in fit["residual_ff_per_um"]],
+        "bound": bound,
+    }
+
+
+def edge_rerun_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
+    """Per device: each rerun W = 10 µm cell's gain over its δ = 0 Cgg per unit width against L,
+    at both plateaus, with slope × δ and each plateau's tolerance band around it."""
+    pal = ef.PALETTES[palette]
+    lo_u, hi_u = STYLE["edge_u_v"]
+    sides = ((f"u = {lo_u:+g} V".replace("-", "\u2212"), "electron", "o"),
+             (f"u = {hi_u:+g} V", "hole", "s"))  # fmt: skip
+    with matplotlib.rc_context(ef.palette_rc(palette)):
+        fig = _figure(ef.STYLE["size_in"])
+        axes = fig.subplots(1, len(EDGE_CELLS))
+        for ax, (device, _gid) in zip(axes, EDGE_CELLS, strict=True):
+            r = edge_rerun(device, roots)
+            lengths = [c["l_um"] for c in r["cells"]]
+            ax.axhline(r["want"], color=pal["text"], lw=ef.STYLE["line_width"],
+                       label="slope × δ", gid=f"{device} want")  # fmt: skip
+            for i, (label, colour, marker) in enumerate(sides):
+                tol = np.array([c["tol"][i] for c in r["cells"]])
+                ax.fill_between(lengths, r["want"] - tol, r["want"] + tol, color=pal[colour],
+                                alpha=ef.STYLE["band_alpha"]["highlight"], lw=0,
+                                label=f"tolerance at {label}", gid=f"{device} tol {i}")  # fmt: skip
+                ax.plot(lengths, [c["gain"][i] for c in r["cells"]], ls="none", marker=marker,
+                        ms=STYLE["marker_pt"], color=pal[colour], label=f"gain at {label}",
+                        gid=f"{device} gain {i}")  # fmt: skip
+            ax.set_title(_SHORT[device], fontsize=ef.STYLE["text_pt"])
+            ax.set_xlabel("L (µm)")
+            ax.set_ylabel("gain over the drawn poly (fF/µm)")
             ax.grid(True)
         handles, labels = axes[0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
@@ -1279,6 +1502,224 @@ def _plain(v: float) -> str:
     return f"{v:.{STYLE['input_digits']}g}".replace("e+", "e")
 
 
+# The verdict names in the order the pages count them, and the number words they print.
+_VERDICTS = ("Agree", "Same process", "Disagree")
+_WORDS = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+
+
+def _signed(v: float, digits: int) -> str:
+    """``v`` with its sign, the minus as the page's minus sign."""
+    return f"{v:+.{digits}f}".replace("-", "\u2212")
+
+
+def _minus(v: float, digits: int) -> str:
+    return f"{v:.{digits}f}".replace("-", "\u2212")
+
+
+def _join(items: list[str]) -> str:
+    """``a``, ``a and b``, ``a, b and c``."""
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _two_d_validation_substitutions(roots: Roots) -> dict[str, str]:
+    """The C-V page's 2D validation prose and the Status lines, from the validation files, the
+    calibrated cells and the pfet calibration result (``lim_v2d_<name>``).
+
+    Counts and lists: ``disagree_count`` (a word), ``disagree_cells`` (the Disagree cells, by
+    device), ``<dev>_others`` (that device's other cells by verdict), ``count_<verdict>`` over
+    both devices (``agree``, ``same``, ``disagree``, words). Per cell ``<dev>_<gid>``: the 2D
+    Cgg (fF) and the SPICE plateau level at each gate end, ``cgg_acc``/``cgg_inv`` and
+    ``spice_acc``/``spice_inv`` (the nfet by u, accumulation then inversion; the pfet by Vg,
+    +5 V then -5 V, which is accumulation then inversion too), and its depletion crossing, its
+    corner envelope's ends and widths, and the 2D-only shift (2D minus 1D crossing at the same
+    values, mV)."""
+    mv, pct = UNITS["mv_per_v"], UNITS["percent"]
+    cgg, ud, pd, md = (STYLE[k] for k in ("v2d_cgg_digits", "v2d_u_digits", "v2d_pct_digits",
+                                          "v2d_move_digits"))  # fmt: skip
+    w_short, w_long = STYLE["v2d_width_digits"]
+    out: dict[str, str] = {}
+    counts = dict.fromkeys(_VERDICTS, 0)
+    disagree = []
+    cal = json.loads(
+        (Path(roots.tcad) / "calibration" / "pfet_05v0.result.json").read_text("utf-8")
+    )
+    for device in _DEVICES:
+        dev = _SHORT[device]
+        val = validation_record(device, roots)
+        pol = DEVICES[device].polarity
+        by_verdict = {v: [] for v in _VERDICTS}
+        for gid, e in val["two_d"].items():
+            if e["status"] != "compared":
+                continue
+            by_verdict[e["verdict"]].append(_geometry(device, gid))
+            counts[e["verdict"]] += 1
+            key = f"lim_v2d_{dev}_{gid}"
+            cols = io.read_csv(Path(roots.tcad) / "moscap2d" / device / "calibrated" / gid
+                               / "cv.csv")[0]  # fmt: skip
+            u = pol * np.asarray(cols["vg"])
+            lo_u, hi_u = STYLE["edge_u_v"]
+            c = np.asarray(cols["cgg_total"])
+            out[f"{key}_cgg_acc"] = f"{float(c[u == lo_u][0]):.{cgg}f}"
+            out[f"{key}_cgg_inv"] = f"{float(c[u == hi_u][0]):.{cgg}f}"
+            sr = e["spice_regions"]
+            out[f"{key}_spice_acc"] = f"{sr['c_acc']:.{cgg}f}"
+            out[f"{key}_spice_inv"] = f"{sr['c_inv']:.{cgg}f}"
+            u_dep = e["tcad_crossings"]["u_dep"]
+            out[f"{key}_u_dep"] = _minus(u_dep, ud)
+            out[f"{key}_spice_u_dep"] = _minus(sr["u_dep"], ud)
+            win = e["verdicts"]["dv_dep"]["window"]
+            out[f"{key}_env_lo"] = _minus(win["lo"], ud)
+            out[f"{key}_env_hi"] = _minus(win["hi"], ud)
+            out[f"{key}_env_width"] = f"{win['hi'] - win['lo']:.{w_short}f}"
+            out[f"{key}_env_width_long"] = f"{win['hi'] - win['lo']:.{w_long}f}"
+            out[f"{key}_past_ff_mv"] = f"{abs(win['lo'] - u_dep) * mv:.0f}"
+            dv = e["verdicts"]["dv_dep"]["dv_v"]
+            out[f"{key}_dv_dep_mv"] = _signed(dv * mv, 0)
+            one_d = val["one_d"].get(gid)
+            if one_d is None and device == "pfet_05v0" and gid in cal["per_geometry"]:
+                one_d = cal["per_geometry"][gid]
+            if one_d is not None:
+                u1 = one_d["tcad_crossings"]["u_dep"]
+                out[f"{key}_u_dep_1d"] = _minus(u1, ud)
+                out[f"{key}_only_2d_mv"] = f"{abs(u_dep - u1) * mv:.0f}"
+                out[f"{key}_1d_inside_mv"] = f"{abs(u1 - win['lo']) * mv:.0f}"
+                out[f"{key}_1d_off_mv"] = f"{abs(u1 - sr['u_dep']) * mv:.0f}"
+                m1 = one_d["metrics"]
+                out[f"{key}_1d_acc_pct"] = f"{m1['plateau_acc_max_rel'] * pct:.{pd}f}"
+                out[f"{key}_1d_inv_pct"] = f"{m1['plateau_inv_max_rel'] * pct:.{pd}f}"
+                out[f"{key}_1d_dv_dep_mv"] = _signed(m1["dv_dep_v"] * mv, 0)
+            m2 = e["metrics"]
+            out[f"{key}_acc_pct"] = f"{m2['plateau_acc_max_rel'] * pct:.{pd}f}"
+            out[f"{key}_inv_pct"] = f"{m2['plateau_inv_max_rel'] * pct:.{pd}f}"
+            out[f"{key}_dv_inv_mv"] = _signed(e["verdicts"]["dv_inv"]["dv_v"] * mv, 0)
+            for check in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv"):
+                out[f"{key}_{check}_verdict"] = e["verdicts"][check]["verdict"]
+        disagree.append((dev, [_label(g) for g in sorted(by_verdict["Disagree"],
+                                                          key=lambda g: (-g.w_um, g.l_um))]))  # fmt: skip
+        parts = []
+        for verdict in ("Agree", "Same process"):
+            gs = sorted(by_verdict[verdict], key=lambda g: (-g.w_um, g.l_um))
+            if gs:
+                verb = "is" if len(gs) == 1 else "are"
+                parts.append(f"{_join([_label(g) for g in gs])} {verb} {verdict}")
+        out[f"lim_v2d_{dev}_others"] = _join(parts)
+    out["lim_v2d_disagree_count"] = _WORDS[counts["Disagree"]]
+    out["lim_v2d_disagree_cells"] = ", and ".join(
+        f"{dev} {_join(cells)}" for dev, cells in disagree if cells
+    )
+    for verdict, name in zip(_VERDICTS, ("agree", "same", "disagree"), strict=True):
+        out[f"lim_v2d_count_{name}"] = _WORDS[counts[verdict]]
+    # how the pfet crossing moves from one length to the next (SPICE and 2D, V and mV)
+    pv = validation_record("pfet_05v0", roots)["two_d"]
+    pairs = (("w10p0_l0p70", "w10p0_l1p00"), ("w10p0_l1p00", "w10p0_l2p00"))
+    for a, b in pairs:
+        key = f"lim_v2d_pfet_{a}_{b}"
+        for where, name in (("spice_regions", "spice"), ("tcad_crossings", "two_d")):
+            move = pv[b][where]["u_dep"] - pv[a][where]["u_dep"]
+            out[f"{key}_{name}_move"] = _signed(move, md)
+            out[f"{key}_{name}_move_mv"] = _signed(move * mv, 0)
+    return out
+
+
+def _edge_split_substitutions(roots: Roots) -> dict[str, str]:
+    """The C-V page's edge-split sentences (``lim_split_<name>``), from
+    :func:`gf180tcad.comparison_figures.edge_split` and the process files: the largest per-area
+    difference (%), the range of SPICE minus 2D edge (fF/µm), the two lines' Cgg at nfet
+    W10/L0.6 and u = +5 V (fF), the pfet W10/L2 parts of the gap at u = +5 V (fF), the nfet
+    check of the SPICE edge against the card (fF/µm), the card's DLC (nm), the pfet check at
+    each plateau, the rms of the SPICE plateaus off their line, the nfet 2D edge at inversion and
+    the card's CF (fF/µm)."""
+    from gf180tcad.comparison_figures import edge_split
+
+    gap_d, tot_d, area_d, dlc_d, chk_d, line_d = (
+        STYLE[k] for k in ("split_gap_digits", "split_total_digits", "split_area_digits",
+                           "split_dlc_digits", "split_check_digits", "split_line_digits")
+    )  # fmt: skip
+    nm_per_m = UNITS["nm_per_um"] * UNITS["um_per_m"]
+    ff_um_per_f_m = UNITS["ff_per_f"] / UNITS["um_per_m"]
+    lo_u, hi_u = STYLE["edge_u_v"]
+    areas, gaps, out, checks, rms = [], [], {}, {}, {}
+    for device in _DEVICES:
+        s = edge_split(device, roots.spice, roots.tcad)
+        card = process.load(device).card_values()
+        dlc_um = card["dlc"] * UNITS["um_per_m"]
+        for side, u in (("acc", lo_u), ("inv", hi_u)):
+            (i,) = np.flatnonzero(s["u"] == u)
+            e = {k: float(s[k]["edge"][i]) for k in ("spice", "two_d", "extrinsic")}
+            a = {k: float(s[k]["area"][i]) for k in ("spice", "two_d")}
+            areas.append(abs(a["two_d"] / a["spice"] - 1) * UNITS["percent"])
+            gaps.append(e["spice"] - e["two_d"])
+            checks[device, side] = e["spice"] - (e["extrinsic"] - 2 * dlc_um * a["spice"])
+            rms[device, side] = float(s["spice"]["rms"][i])
+            if (device, side) == ("nfet_05v0", "inv"):
+                g = _geometry(device, EDGE_CELLS[0][1])
+                w, l_um = g.w_um, g.l_um
+                out["lim_split_nfet_spice"] = f"{w * (e['spice'] + a['spice'] * l_um):.{tot_d}f}"
+                out["lim_split_nfet_two_d"] = f"{w * (e['two_d'] + a['two_d'] * l_um):.{tot_d}f}"
+                out["lim_split_nfet_2d_inv"] = f"{e['two_d']:.{line_d}f}"
+            if (device, side) == ("pfet_05v0", "inv"):
+                g = _geometry(device, EDGE_CELLS[1][1])  # the pfet cells are W = 10 µm
+                longest = float(s["lengths"].max())
+                out["lim_split_pfet_edge"] = _minus(g.w_um * (e["spice"] - e["two_d"]), tot_d)
+                out["lim_split_pfet_area"] = _minus(
+                    g.w_um * (a["spice"] - a["two_d"]) * longest, tot_d)  # fmt: skip
+    out["lim_split_area_max"] = f"{max(areas):.{area_d}f}"
+    out["lim_split_gap_min"] = _minus(min(gaps), gap_d)
+    out["lim_split_gap_max"] = _minus(max(gaps), gap_d)
+    out["lim_split_nfet_check"] = (
+        f"{max(abs(checks['nfet_05v0', k]) for k in ('acc', 'inv')):.{chk_d}f}"
+    )
+    nfet = process.load("nfet_05v0").card_values()
+    out["lim_split_dlc_nm"] = f"{nfet['dlc'] * nm_per_m:.{dlc_d}f}"
+    out["lim_split_pfet_acc"] = f"{checks['pfet_05v0', 'acc']:.{line_d}f}"
+    out["lim_split_pfet_inv"] = f"{checks['pfet_05v0', 'inv']:.{line_d}f}"
+    out["lim_split_pfet_rms"] = f"{max(rms['pfet_05v0', k] for k in ('acc', 'inv')):.{chk_d}f}"
+    out["lim_split_nfet_rms"] = f"{max(rms['nfet_05v0', k] for k in ('acc', 'inv')):.{chk_d}f}"
+    out["lim_split_cf"] = f"{nfet['cf'] * ff_um_per_f_m:.{line_d}f}"
+    return out
+
+
+def _cell_substitutions(roots: Roots) -> dict[str, str]:
+    """The moscap2d page's per-cell numbers from each committed 2D job's ``cv.meta.json``
+    (``lim_cell_<dev>_<params>_<gid>_<name>``): its node count (``nodes``) and, for a QS sweep
+    that was resumed, its attempts (``attempts``, one more than ``resumed``)."""
+    out = {}
+    root = Path(roots.tcad) / "moscap2d"
+    for device in _DEVICES:
+        for params in ("start", "calibrated"):
+            for job in sorted((root / device / params).glob("*/cv.meta.json")):
+                meta = json.loads(job.read_text("utf-8"))
+                key = f"lim_cell_{_SHORT[device]}_{params}_{job.parent.name}"
+                out[f"{key}_nodes"] = f"{meta['node_count']:,}"
+                out[f"{key}_attempts"] = f"{meta.get('resumed', {}).get('qs', 0) + 1}"
+    return out
+
+
+def _meshconv_fitted_substitutions(roots: Roots) -> dict[str, str]:
+    """The fitted-bias mesh-convergence numbers of the mesh-convergence page, per device
+    (``<dev>`` is ``nfet`` or ``pfet``): ``lim_mcfit_<dev>_change_<i>`` the largest change of
+    level ``i`` against the next finer one (%), ``lim_mcfit_<dev>_nodes_<i>`` each level's node
+    count, ``lim_mcfit_<dev>_selected`` the committed study's selected level, and
+    ``lim_mcfit_criterion`` the criterion (%)."""
+    digits = STYLE["meshconv_change_digits"]
+    out = {}
+    for device in _DEVICES:
+        dev, rec = _SHORT[device], meshconv_fitted(device, roots)
+        out["lim_mcfit_criterion"] = f"{rec['check']['criterion'] * UNITS['percent']:g}"
+        out["lim_mcfit_agreement"] = f"{rec['check']['agreement_criterion'] * UNITS['percent']:g}"
+        for i, lv in enumerate(rec["report"]["levels"]):
+            out[f"lim_mcfit_{dev}_nodes_{i}"] = f"{lv['node_count']:,}"
+            if lv["max_rel_change"] is not None:
+                out[f"lim_mcfit_{dev}_change_{i}"] = (
+                    f"{lv['max_rel_change'] * UNITS['percent']:.{digits}f}"
+                )
+            out[f"lim_mcfit_{dev}_agree_{i}"] = (
+                f"{lv['agreement_1d'] * UNITS['percent']:.{digits}f}"
+            )
+        out[f"lim_mcfit_{dev}_selected"] = f"{rec['check']['selected_level']}"
+    return out
+
+
 def _abrupt_substitutions(roots: Roots) -> dict[str, str]:
     """The plugin-history page's abrupt-junction numbers (``lim_abrupt_*``), from
     :func:`abrupt_junction` and the v0.8.0 records: the inputs (dopings, temperature, constants),
@@ -1355,6 +1796,10 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
         **_edge_substitutions(roots),
         **_charon_substitutions(roots),
         **_abrupt_substitutions(roots),
+        **_meshconv_fitted_substitutions(roots),
+        **_cell_substitutions(roots),
+        **_two_d_validation_substitutions(roots),
+        **_edge_split_substitutions(roots),
     }
 
 
@@ -1392,6 +1837,20 @@ def _edge_substitutions(roots: Roots) -> dict[str, str]:
     for i, side in enumerate(("acc", "inv")):
         lo, hi = (fmt(f([gains[n][i] for n in ldd])) for f in (min, max))
         out[f"lim_edge_ldd_{side}"] = lo if lo == hi else f"{lo} to {hi}"
+    tol = STYLE["edge_tol_digits"]
+    for device, _gid in EDGE_CELLS:
+        dev, r = _SHORT[device], edge_rerun(device, roots)
+        out[f"lim_edge_{dev}_want"] = fmt(r["want"])
+        out[f"lim_edge_{dev}_applied"] = f"{r['applied_nm']:g}"
+        miss = max(abs(g - r["want"]) for c in r["cells"] for g in c["gain"])
+        out[f"lim_edge_{dev}_rerun_miss"] = f"{miss:.{tol}f}"
+        out[f"lim_edge_{dev}_rerun_tol"] = f"{min(t for c in r['cells'] for t in c['tol']):.{tol}f}"
+        out[f"lim_edge_{dev}_nonlin"] = f"{r['nonlinearity']:.{tol}f}"
+        out[f"lim_edge_{dev}_weights"] = f"{r['weights']:.{STYLE['edge_weight_digits']}f}"
+        for i, side in enumerate(("acc", "inv")):
+            out[f"lim_edge_{dev}_gap_{side}"] = fmt(r["gap"][i])
+            out[f"lim_edge_{dev}_gap_off_{side}"] = f"{abs(r['gap'][i] - r['residual'][i]):.{tol}f}"
+            out[f"lim_edge_{dev}_gap_bound_{side}"] = f"{r['bound'][i]:.{tol}f}"
     return out
 
 
@@ -2504,10 +2963,12 @@ FIGURES: dict[str, Callable[[str, Roots], bytes]] = {
     "mesh-grading": _svg_of(mesh_grading_figure),
     "meshconv-1d": _svg_of(meshconv_1d_figure),
     "meshconv-2d": _svg_of(meshconv_2d_figure),
+    "meshconv-2d-fitted": _svg_of(meshconv_2d_fitted_figure),
     "pn-slab": _svg_of(pn_slab_figure),
     "pin-depletion": _svg_of(pin_depletion_figure),
     "abrupt-junction": _svg_of(abrupt_junction_figure),
     "edge-sensitivity": _svg_of(edge_sensitivity_figure),
+    "edge-rerun": _svg_of(edge_rerun_figure),
     "charon-strip": _svg_of(charon_strip_figure),
     "charon-cv": _svg_of(charon_cv_figure),
     "charon-hard-range": _svg_of(charon_hard_range_figure),

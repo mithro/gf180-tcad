@@ -25,6 +25,10 @@
   "device": "nfet_05v0",
   "dim": 2,
   "dv_fb_shift": "rigid: solved at vg - dv_fb_v, reported at vg",
+  "edge_fit": {
+    "poly_bias_nm": 40.0,
+    "sha256": "3425b4c4d2040931f80f355173f1f500d6e0e787cf16f4e660bf8eec3d43f32b"
+  },
   "geometry": {
     "l_um": 1,
     "role": "validation",
@@ -38,11 +42,11 @@
     "h_si_bulk_nm": 70.71067811865476,
     "h_si_surface_nm": 0.3535533905932738
   },
-  "mesh_sha256": "3715e9d78507b83bc32e51d15b071d25dc8865b8815fb20154f7f15407db0a48",
+  "mesh_sha256": "4cb88198012aeac1c30ad8c752c951b2208355043fd469be1ae79efc68289083",
   "mesh_source": "results/tcad/meshconv/moscap2d/nfet_05v0/selected.json",
-  "meshed_l_um": 0.9999999999999998,
+  "meshed_l_um": 1.08,
   "meshed_t_ox_nm": 16.05,
-  "node_count": 306136,
+  "node_count": 313521,
   "normalisation": "c_per_area = Cgg per unit width / drawn L; cgg_total = per unit width * drawn W; no DLC or BSIM4 parasitics",
   "param_sha256": "791e01ae1b48d92cc287e575324a83aa1cf9b60987a76f06fe57468c0941125c",
   "params": "calibrated",

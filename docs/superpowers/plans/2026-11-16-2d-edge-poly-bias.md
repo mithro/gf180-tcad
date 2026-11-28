@@ -113,7 +113,7 @@ Design as built (changed from the first draft, which put δ in `process.TUNABLES
 
 E4 follows E3b.
 
-- [ ] **E3a** (code, dormant until the fit file exists): one reviewed PR.
+- [x] **E3a** (code, dormant until the fit file exists): one reviewed PR.
   - [x] `gf180tcad.calibrate.edge`, its own entry point. The `tcad/edgefit` tree row is added in E3b, with the tree.
   - [x] `gf180tcad.tcad.edgefit`. `load_params_2d` and `meshcut` apply δ to calibrated 2D jobs when the file exists. A job's meta gets an `edge_fit` key (δ and the file's sha256) only then, so the δ = 0 cells keep their bytes.
   - [x] The 1D `param_sha256` stays the 1D calibration's. δ is recorded and checked separately, which deviates from the first draft's "δ in `tunables`".
@@ -121,10 +121,12 @@ E4 follows E3b.
   - [x] The validation and the explainer: each 2D cell's `edge_fit` is checked against the committed fit (or none), and the cell's gate is drawn as meshed.
   - [x] `variant.py` from δ = 0, the record pin rules (record's own commit, ancestry, sandbox rerun of both records), the CONTRIBUTING no-rebase rule, and the #203 note.
   - [x] The restamp, with its evidence (docs/reproduce/index.md, "The poly length bias fit, dormant").
-- [ ] **E3b** (one PR, cell by cell): the two `edgefit` files, then the 10 calibrated 2D cells at the fitted δ, one 16 GiB job at a time (W10 at each calibrated L and W1.6/L0.7, per device; the L2 cells QS only).
-  - Then the Lmin mesh-convergence check, the validation, the recut mesh artefacts, the post-rerun checks, `MANIFEST` and the docs. The residual at each plateau is tagged `spice-fit` (the card's bias-dependent overlap).
-  - The tests that need the committed fit: the host test of the fit from `git show <fit commit>:…/cv.csv` (each sha256 checked, then `edge_split(tcad_root=…)`), and `test_record_base_is_the_committed_cell` against the frozen δ = 0 cell instead of the live one.
-  - The registry: the `tcad/edgefit` tree row, and `tcad/edgefit` in the validation's input trees.
+- [x] **E3b** (one PR, cell by cell, PR #214): the two `edgefit` files, then the 10 calibrated 2D cells at the fitted δ, one 16 GiB job at a time (W10 at each calibrated L and W1.6/L0.7, per device; the L2 cells QS only).
+  - [x] Then the Lmin mesh-convergence check, the validation, the recut mesh artefacts, the post-rerun checks, `MANIFEST` and the docs. The residual at each plateau is tagged `spice-fit` (the card's bias-dependent overlap).
+    - As built: the mesh-convergence check is a harness outside the hashed modules, `experiments/meshconv-fitted` (records in `results/meshconv-fitted/`), so no writer's hash moves and nothing is restamped. It reruns the study's three levels at the calibrated values and the fit; the 1D-agreement criterion is rerun too, at the calibrated values (`agreement.py`, 16 GiB jobs): the uniform stack has no gate end, so δ does not enter it, but the calibrated oxide, doping and flat-band shift do. Level 0 still misses it, so the selection is level 1 on both criteria. The selected level 1 changes by 0.126 % (nfet) and 0.098 % (pfet) against level 2.
+    - As built: δ is applied on the 1 nm layout grid, nfet 40 nm and pfet 61 nm (least squares 40.21 and 61.47 nm; `gf180tcad.calibrate.edge.LAYOUT_GRID_NM`). The record's quadratic bound on the gain's non-linearity at the applied δ is 0.0015 fF/µm (nfet) and 0.0044 fF/µm (pfet), not the 0.0008 fF/µm the design estimated; the per-cell tolerance uses the measured bound (`tests/test_edge_fit_rerun.py`).
+  - [x] The tests that need the committed fit: the host test of the fit from `git show <fit commit>:…/cv.csv` (each sha256 checked, then `edge_split(tcad_root=…)`), and `test_record_base_is_the_committed_cell` against the frozen δ = 0 cell instead of the live one.
+  - [x] The registry: the `tcad/edgefit` tree row, and `tcad/edgefit` in the validation's input trees.
 - [ ] **E3c** (#203): the source/drain harness and records at the fitted δ; the measured-value tests replace the 0.1 % bound; the pages' numbers from the records.
 
 ## Task E4: check the depletion crossing

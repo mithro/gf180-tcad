@@ -20,9 +20,9 @@ there.
   fitted and held out; the pfet is {term}`Disagree`, because one length-independent stack cannot
   follow the SPICE pfet's {term}`depletion` edge, which moves by 0.57 V with gate length
   ({ref}`mismatch analysis <cv-agreement-mismatch>`).
-- **2D validation: {term}`Disagree` at five cells,** nfet W10/L0.6, W10/L0.7 and W1.6/L0.7, pfet W10/L1 and W10/L2.
-  All five fail on the 2D-only depletion shift ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
-  Every 2D plateau is low: too little edge capacitance ({ref}`moscap2d-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
+- **2D validation: {term}`Disagree` at {{ lim_v2d_disagree_count }} cells,** {{ lim_v2d_disagree_cells }}.
+  All {{ lim_v2d_disagree_count }} fail on the 2D-only depletion shift ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
+  A fitted poly length bias supplies the edge capacitance ({ref}`moscap2d-edge`, [issue #189](https://github.com/mithro/gf180-tcad/issues/189)).
   The L = 2 µm AC solve and the L = 10 µm equilibrium solve fail
   ([issue #59](https://github.com/mithro/gf180-tcad/issues/59), [issue #58](https://github.com/mithro/gf180-tcad/issues/58);
   {ref}`cv-agreement-validation`, {doc}`moscap2d`).

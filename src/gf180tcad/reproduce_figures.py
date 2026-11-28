@@ -927,6 +927,7 @@ def cell_mesh_figure(palette: str):
         fig = Figure(figsize=STYLE["cell_mesh_in"], layout="constrained")
         FigureCanvasAgg(fig)
         axes = fig.subplots(1, len(SQUARE_PANELS), sharey=True)
+        ylims = []
         for ax, (key, name) in zip(axes, SQUARE_PANELS, strict=True):
             entry = record["images"][key]
             box = entry["box"]
@@ -948,9 +949,12 @@ def cell_mesh_figure(palette: str):
             (x0, y0), (x1, y1) = xy.min(axis=0), xy.max(axis=0)
             pad = STYLE["cell_margin"] * max(x1 - x0, y1 - y0)
             ax.set_xlim(x0 - pad, x1 + pad)
-            ax.set_ylim(y0 - pad, y1 + pad)
+            ylims.append((y0 - pad, y1 + pad))
             ax.set_aspect("equal")
             ax.set_xlabel("position across the cell (nm)")
+        # the panels share y: the limits hold both images' points (a moved point may be the
+        # lowest or highest of its box)
+        axes[0].set_ylim(min(lo for lo, _ in ylims), max(hi for _, hi in ylims))
         axes[0].set_ylabel("height (nm)")
         handle = [c for c in axes[0].collections if c.get_gid() == f"{SQUARE_PANELS[0][0]} moved"]
         fig.legend(handles=handle, loc="outside lower center", frameon=False)
