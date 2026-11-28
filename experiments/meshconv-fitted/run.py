@@ -2,6 +2,11 @@
 """Run levels of the 2D mesh-convergence check at the fitted poly length bias, one at a time.
 
     uv run --locked python experiments/meshconv-fitted/run.py WORKDIR DEVICE LEVEL...
+    uv run --locked python experiments/meshconv-fitted/run.py --agreement WORKDIR DEVICE LEVEL...
+
+With ``--agreement`` each level runs agreement.py instead (the 2D-equals-1D check at the
+calibrated values, in 2 GiB: the uniform stack has no source or drain), into
+WORKDIR/DEVICE/agreement<i>/, and its pins add the sha256 of agreement.py.
 
 Each level runs level.py in the sandbox (16 GiB, one CPU, the stable TCAD image) and writes
 WORKDIR/DEVICE/level<i>/level.json, its log level.log and pins.json beside them. A level whose
@@ -65,34 +70,50 @@ def pins(device: str) -> dict:
     }
 
 
+# The memory of each agreement job (the uniform stack, 21 biases).
+AGREEMENT_MEM = "2g"
+
+
+def agreement_pins(device: str) -> dict:
+    """:func:`pins` and the sha256 of agreement.py."""
+    sha = hashlib.sha256((HERE / "agreement.py").read_bytes()).hexdigest()
+    return {**pins(device), "agreement_py_sha256": sha}
+
+
 def main(argv: list[str]) -> int:
-    work, device, *levels = argv
+    agreement = argv[:1] == ["--agreement"]
+    work, device, *levels = argv[1:] if agreement else argv
+    kind, result, script, mem = (
+        ("agreement", "agreement.json", "agreement.py", AGREEMENT_MEM) if agreement
+        else ("level", "level.json", "level.py", MEM)
+    )  # fmt: skip
+    pin = agreement_pins if agreement else pins
     rc = 0
     for level in levels:
-        out = Path(work).expanduser().resolve() / device / f"level{int(level)}"
+        out = Path(work).expanduser().resolve() / device / f"{kind}{int(level)}"
         out.mkdir(parents=True, exist_ok=True)
-        if (out / "level.json").is_file():
-            print(f"level{level}: done before", flush=True)
+        if (out / result).is_file():
+            print(f"{kind}{level}: done before", flush=True)
             continue
-        before = pins(device)
+        before = pin(device)
         if (out / "pins.json").is_file() and json.loads((out / "pins.json").read_bytes()) != before:
             raise SystemExit(f"{out}: a cut-off run with other pins; remove the directory")
         io.write_json(out / "pins.json", before)
         cmd = [
             str(REPO / "tools" / "sandbox-run"),
-            "--mem", MEM, "--cpus", "1", "--image", before["image"], "--workdir", str(out),
+            "--mem", mem, "--cpus", "1", "--image", before["image"], "--workdir", str(out),
             "--",
-            "python3", "/work/src/experiments/meshconv-fitted/level.py", device, str(int(level)),
-            "/work/out",
+            "python3", f"/work/src/experiments/meshconv-fitted/{script}", device,
+            str(int(level)), "/work/out",
         ]  # fmt: skip
-        with (out / "level.log").open("a", encoding="utf-8") as log:
+        with (out / f"{kind}.log").open("a", encoding="utf-8") as log:
             r = subprocess.run(cmd, check=False, stdout=log, stderr=subprocess.STDOUT)
-        if pins(device) != before:
-            (out / "level.json").unlink(missing_ok=True)
-            print(f"level{level}: the checkout changed during the run; result removed", flush=True)
+        if pin(device) != before:
+            (out / result).unlink(missing_ok=True)
+            print(f"{kind}{level}: the checkout changed during the run; result removed", flush=True)
             rc = rc or 1
             continue
-        print(f"level{level}: exit {r.returncode} ({out / 'level.log'})", flush=True)
+        print(f"{kind}{level}: exit {r.returncode} ({out / f'{kind}.log'})", flush=True)
         rc = rc or r.returncode
         if r.returncode:
             break  # the next level waits until this one resumes and finishes
