@@ -281,17 +281,29 @@ It also reruns the second criterion, the uniform stack's agreement
 with 1D. That stack has no gate end, so the bias does not enter it. But the calibrated oxide,
 doping and flat-band shift do.
 
-{numref}`tab-meshconv-2d-fitted-levels` gives each level's node count, its largest change against
-the next level and its largest difference from 1D ({repo}`records <results/meshconv-fitted>`).
+{numref}`tab-meshconv-2d-fitted-levels` gives each nfet level's node count, its largest change
+against the next level and its largest difference from 1D ({repo}`records <results/meshconv-fitted>`).
 
-~~~{table} The node count of each 2D level at the fitted poly length bias, its change against the next level and its difference from 1D.
+~~~{table} The nfet levels at the fitted poly length bias: node count, change against the next level, difference from 1D.
 :name: tab-meshconv-2d-fitted-levels
 
-| Level | nfet: nodes | nfet: change to next level (%) | nfet: against 1D (%) | pfet: nodes | pfet: change to next level (%) | pfet: against 1D (%) |
-|---|---|---|---|---|---|---|
-| 0 | {{ lim_mcfit_nfet_nodes_0 }} | {{ lim_mcfit_nfet_change_0 }} | {{ lim_mcfit_nfet_agree_0 }} | {{ lim_mcfit_pfet_nodes_0 }} | {{ lim_mcfit_pfet_change_0 }} | {{ lim_mcfit_pfet_agree_0 }} |
-| 1 | {{ lim_mcfit_nfet_nodes_1 }} | {{ lim_mcfit_nfet_change_1 }} | {{ lim_mcfit_nfet_agree_1 }} | {{ lim_mcfit_pfet_nodes_1 }} | {{ lim_mcfit_pfet_change_1 }} | {{ lim_mcfit_pfet_agree_1 }} |
-| 2 | {{ lim_mcfit_nfet_nodes_2 }} | (finest) | {{ lim_mcfit_nfet_agree_2 }} | {{ lim_mcfit_pfet_nodes_2 }} | (finest) | {{ lim_mcfit_pfet_agree_2 }} |
+| Level | Nodes | Change to next level (%) | Against 1D (%) |
+|---|---|---|---|
+| 0 | {{ lim_mcfit_nfet_nodes_0 }} | {{ lim_mcfit_nfet_change_0 }} | {{ lim_mcfit_nfet_agree_0 }} |
+| 1 | {{ lim_mcfit_nfet_nodes_1 }} | {{ lim_mcfit_nfet_change_1 }} | {{ lim_mcfit_nfet_agree_1 }} |
+| 2 | {{ lim_mcfit_nfet_nodes_2 }} | (finest) | {{ lim_mcfit_nfet_agree_2 }} |
+~~~
+
+{numref}`tab-meshconv-2d-fitted-pfet` gives the same for the pfet.
+
+~~~{table} The pfet levels at the fitted poly length bias: node count, change against the next level, difference from 1D.
+:name: tab-meshconv-2d-fitted-pfet
+
+| Level | Nodes | Change to next level (%) | Against 1D (%) |
+|---|---|---|---|
+| 0 | {{ lim_mcfit_pfet_nodes_0 }} | {{ lim_mcfit_pfet_change_0 }} | {{ lim_mcfit_pfet_agree_0 }} |
+| 1 | {{ lim_mcfit_pfet_nodes_1 }} | {{ lim_mcfit_pfet_change_1 }} | {{ lim_mcfit_pfet_agree_1 }} |
+| 2 | {{ lim_mcfit_pfet_nodes_2 }} | (finest) | {{ lim_mcfit_pfet_agree_2 }} |
 ~~~
 
 The selected level is level {{ lim_mcfit_nfet_selected }} for the nfet and

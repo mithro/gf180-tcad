@@ -343,10 +343,7 @@ bound, as a {term}`strict expected failure` at both lengths on the sensitivity a
 
 ## The L = 2 µm cells: QS only, resumed, with a memory growth that is not fixed
 
-- **QS only.** The L = 2 µm cells have no AC result. The start cells have
-  {{ lim_cell_nfet_start_w10p0_l2p00_nodes }} nodes (nfet) and {{ lim_cell_pfet_start_w10p0_l2p00_nodes }} (pfet).
-  The calibrated ones have {{ lim_cell_nfet_calibrated_w10p0_l2p00_nodes }} and
-  {{ lim_cell_pfet_calibrated_w10p0_l2p00_nodes }}. Their {repo}`folders <results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00>` hold no {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>` like Lmin's. Their AC
+- **QS only.** The L = 2 µm cells have no AC result. Their {repo}`folders <results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00>` hold no {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>` like Lmin's. Their AC
   sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
   solver ({term}`UMFPACK` 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
@@ -360,18 +357,20 @@ bound, as a {term}`strict expected failure` at both lengths on the sensitivity a
   with an uninterrupted one within 1e-12 (the solver tolerance) but is not byte-identical to it.
   The restart counts in these job files were written after the runs, from the progress logs.
 - **The calibrated L = 2 µm cells are resumed too.** Each job file's `resumed` is one less than its
-  attempts in {numref}`tab-moscap2d-cell-times`
-  ({ref}`moscap2d-calibrated`). Their progress logs show the nfet restarting after points 44, 108 and 171, the pfet after
-  points 63, 120 and 189. The same command was rerun on the same `--resume`, four attempts in all.
-  Each earlier attempt was killed at the 16 GiB cap.
-- **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
-  every point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78)). On the calibrated
-  nfet cell, 512,591 nodes, it grows by 0.19 GiB per point
-  ([issue #233](https://github.com/mithro/gf180-tcad/issues/233)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
+  attempts in {numref}`tab-moscap2d-cell-times`. Their progress logs show the nfet restarting
+  after points 44, 108 and 171, the pfet after 63, 120 and 189. Each restart followed a kill at
+  the 16 GiB cap.
+- **The per-point memory growth is unresolved.** The L = 2 µm sweeps' memory grows with every
+  point ([issue #78](https://github.com/mithro/gf180-tcad/issues/78),
+  [issue #233](https://github.com/mithro/gf180-tcad/issues/233)). It is flat on the uniform stack (101k nodes, 30 biases: 1321 to 1331 MB) and in repeated
   sweeps, so it is not in the per-point path as such; it appears on the source/drain cells. Two
   hypotheses are open: something only the source/drain cell has (four contacts, the inter-layer
   dielectric region), or memory-allocator fragmentation at large node counts. The resume
   mechanism works around it; the cause is open (issue #59).
+
+The start L = 2 µm cells have {{ lim_cell_nfet_start_w10p0_l2p00_nodes }} nodes (nfet) and
+{{ lim_cell_pfet_start_w10p0_l2p00_nodes }} (pfet). The calibrated ones have
+{{ lim_cell_nfet_calibrated_w10p0_l2p00_nodes }} and {{ lim_cell_pfet_calibrated_w10p0_l2p00_nodes }}.
 
 The resumed start cells are the dotted QS curves of {numref}`fig-moscap2d-ccox`, with no AC points.
 

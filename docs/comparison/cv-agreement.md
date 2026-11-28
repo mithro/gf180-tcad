@@ -596,16 +596,30 @@ there is at SPICE's, so the whole shift is one that only the 2D cell has.
 At pfet W10/L2 the 2D crossing lies past the ff end, and the 1D crossing lies inside it. So a 2D-only shift larger
 than that margin moves the crossing out of the envelope, and W10/L2 is Disagree.
 
-~~~{table} The depletion crossings of the calibrated 2D cells beside SPICE, the 1D stack at the same values, and the SPICE corner envelope.
+~~~{table} The depletion crossings of the calibrated 2D cells beside SPICE and the 1D stack at the same values.
 :name: tab-cv-2d-crossings
 
-| Cell | SPICE (V) | 2D (V) | 1D (V) | Envelope, ff end (V) | Envelope, ss end (V) | 2D-only shift (mV) |
-|---|---|---|---|---|---|---|
-| nfet W10/L0.7 | {{ lim_v2d_nfet_w10p0_l0p70_spice_u_dep }} | {{ lim_v2d_nfet_w10p0_l0p70_u_dep }} | {{ lim_v2d_nfet_w10p0_l0p70_u_dep_1d }} | {{ lim_v2d_nfet_w10p0_l0p70_env_lo }} | {{ lim_v2d_nfet_w10p0_l0p70_env_hi }} | {{ lim_v2d_nfet_w10p0_l0p70_only_2d_mv }} |
-| nfet W10/L1 | {{ lim_v2d_nfet_w10p0_l1p00_spice_u_dep }} | {{ lim_v2d_nfet_w10p0_l1p00_u_dep }} | {{ lim_v2d_nfet_w10p0_l1p00_u_dep_1d }} | {{ lim_v2d_nfet_w10p0_l1p00_env_lo }} | {{ lim_v2d_nfet_w10p0_l1p00_env_hi }} | {{ lim_v2d_nfet_w10p0_l1p00_only_2d_mv }} |
-| pfet W10/L0.7 | {{ lim_v2d_pfet_w10p0_l0p70_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l0p70_u_dep }} | {{ lim_v2d_pfet_w10p0_l0p70_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l0p70_env_lo }} | {{ lim_v2d_pfet_w10p0_l0p70_env_hi }} | {{ lim_v2d_pfet_w10p0_l0p70_only_2d_mv }} |
-| pfet W10/L1 | {{ lim_v2d_pfet_w10p0_l1p00_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l1p00_u_dep }} | {{ lim_v2d_pfet_w10p0_l1p00_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l1p00_env_lo }} | {{ lim_v2d_pfet_w10p0_l1p00_env_hi }} | {{ lim_v2d_pfet_w10p0_l1p00_only_2d_mv }} |
-| pfet W10/L2 | {{ lim_v2d_pfet_w10p0_l2p00_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l2p00_u_dep }} | {{ lim_v2d_pfet_w10p0_l2p00_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l2p00_env_lo }} | {{ lim_v2d_pfet_w10p0_l2p00_env_hi }} | {{ lim_v2d_pfet_w10p0_l2p00_only_2d_mv }} |
+| Cell | SPICE (V) | 2D (V) | 1D (V) | 2D-only shift (mV) |
+|---|---|---|---|---|
+| nfet W10/L0.7 | {{ lim_v2d_nfet_w10p0_l0p70_spice_u_dep }} | {{ lim_v2d_nfet_w10p0_l0p70_u_dep }} | {{ lim_v2d_nfet_w10p0_l0p70_u_dep_1d }} | {{ lim_v2d_nfet_w10p0_l0p70_only_2d_mv }} |
+| nfet W10/L1 | {{ lim_v2d_nfet_w10p0_l1p00_spice_u_dep }} | {{ lim_v2d_nfet_w10p0_l1p00_u_dep }} | {{ lim_v2d_nfet_w10p0_l1p00_u_dep_1d }} | {{ lim_v2d_nfet_w10p0_l1p00_only_2d_mv }} |
+| pfet W10/L0.7 | {{ lim_v2d_pfet_w10p0_l0p70_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l0p70_u_dep }} | {{ lim_v2d_pfet_w10p0_l0p70_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l0p70_only_2d_mv }} |
+| pfet W10/L1 | {{ lim_v2d_pfet_w10p0_l1p00_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l1p00_u_dep }} | {{ lim_v2d_pfet_w10p0_l1p00_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l1p00_only_2d_mv }} |
+| pfet W10/L2 | {{ lim_v2d_pfet_w10p0_l2p00_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l2p00_u_dep }} | {{ lim_v2d_pfet_w10p0_l2p00_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l2p00_only_2d_mv }} |
+~~~
+
+{numref}`tab-cv-2d-envelopes` gives the SPICE corner envelope of each of these crossings.
+
+~~~{table} The SPICE corner envelope of the depletion crossing at the same cells.
+:name: tab-cv-2d-envelopes
+
+| Cell | ff end (V) | ss end (V) |
+|---|---|---|
+| nfet W10/L0.7 | {{ lim_v2d_nfet_w10p0_l0p70_env_lo }} | {{ lim_v2d_nfet_w10p0_l0p70_env_hi }} |
+| nfet W10/L1 | {{ lim_v2d_nfet_w10p0_l1p00_env_lo }} | {{ lim_v2d_nfet_w10p0_l1p00_env_hi }} |
+| pfet W10/L0.7 | {{ lim_v2d_pfet_w10p0_l0p70_env_lo }} | {{ lim_v2d_pfet_w10p0_l0p70_env_hi }} |
+| pfet W10/L1 | {{ lim_v2d_pfet_w10p0_l1p00_env_lo }} | {{ lim_v2d_pfet_w10p0_l1p00_env_hi }} |
+| pfet W10/L2 | {{ lim_v2d_pfet_w10p0_l2p00_env_lo }} | {{ lim_v2d_pfet_w10p0_l2p00_env_hi }} |
 ~~~
 
 The crossings are u = polarity × Vg. The 2D crossing and SPICE's are the `tcad_crossings` and
