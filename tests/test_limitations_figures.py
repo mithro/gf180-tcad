@@ -757,7 +757,8 @@ def check_meshconv_2d_fitted(fig):
     """Per device: the fitted-bias record's levels 0 and 1 change against the next finer level,
     the committed study's selected level dashed beside them, and the record's criterion."""
     d = Drawn(fig)
-    for ax, device in zip(fig.axes, DEV, strict=True):
+    for row, device in enumerate(DEV):
+        ax, ax2 = fig.axes[2 * row], fig.axes[2 * row + 1]
         rec = _json("meshconv-fitted", f"{device}.json")
         pol = DEVICES[device].polarity
         rep = rec["report"]
@@ -770,6 +771,10 @@ def check_meshconv_2d_fitted(fig):
         d.line(f"{device} start level {sel}", pol * np.asarray(start["vg"]),
                np.abs(start["levels"][sel]["rel_change"]), ax)  # fmt: skip
         d.hline(f"{device} criterion", rec["check"]["criterion"], ax)
+        for i, lv in enumerate(rep["levels"]):
+            cur = lv["agreement_1d_curve"]
+            d.line(f"{device} agreement {i}", pol * np.asarray(cur["vg"]), np.abs(cur["rel"]), ax2)
+        d.hline(f"{device} agreement criterion", rec["check"]["agreement_criterion"], ax2)
     d.done()
 
 

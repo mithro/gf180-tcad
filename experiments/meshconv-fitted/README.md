@@ -25,7 +25,10 @@ uv run --locked python experiments/meshconv-fitted/record.py \
 make manifest
 ```
 
-and the same for `pfet_05v0`. Run one 16 GiB level at a time and nothing else beside it. The work
+and the same for `pfet_05v0`, then the same [`run.py`](run.py) with `--agreement` before the record.
+Run one 16 GiB level at a time and nothing else beside it.
+
+The work
 directory must be outside the repository, because the sandbox refuses the repository. A level
 with a finished result is skipped. A level that was cut off, for example at its memory limit,
 resumes at its last saved point when the same command runs again. Each level keeps its log and
@@ -35,9 +38,11 @@ Run [`run.py`](run.py) from a checkout that stays at one commit for the whole ru
 worktree does that. A level's pins hold the commit, and a run whose checkout changed is refused.
 That commit must stay on `main`'s history.
 
-A record holds the report of `gf180tcad.tcad.meshconv.converge` over the three levels. It also
-holds the plan's check: the selected level's largest change against the next finer
-level, and whether it is below the 1 % criterion. And it compares that level's capacitance with
-the committed calibrated cell of the same geometry, on the same mesh. The study's second
-criterion is the uniform stack's agreement with 1D. That stack has no gate end, so the poly
-length bias does not enter it, and it is not rerun.
+A record holds the report of `gf180tcad.tcad.meshconv.converge` over the three levels, with
+both criteria of the committed study. The second is the 2D-equals-1D check, which
+[`agreement.py`](agreement.py) computes at the calibrated values (`run.py --agreement`, 16 GiB
+jobs). The poly length bias does not enter that check, but the calibrated values do.
+
+The record also holds the plan's check. That is the selected level's change against the next
+finer level and its agreement with 1D, and whether each meets its criterion. And it compares
+that level's capacitance with the committed calibrated cell of the same geometry.

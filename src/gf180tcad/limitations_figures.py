@@ -970,15 +970,16 @@ def meshconv_fitted(device: str, roots: Roots = DEFAULT_ROOTS) -> dict:
 def meshconv_2d_fitted_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
     """Per device: the change ``|C / C_finer - 1|`` of the 2D levels 0 and 1 at the fitted poly
     length bias and the calibrated values (solid), the committed study's selected level at the
-    start values (dashed), and the 1 % criterion."""
+    start values (dashed), and the 1 % criterion (left); the uniform stack's 2D-against-1D
+    difference at each level at the calibrated values, with the 0.5 % criterion (right)."""
     pal = ef.PALETTES[palette]
     lw = ef.STYLE["line_width"]
     start = meshconv_curves(2, roots)
-    colours = ("electron", "hole")
+    colours = ("electron", "hole", "highlight")
     with matplotlib.rc_context(ef.palette_rc(palette)):
         fig = _figure(STYLE["tall_in"])
-        axes = fig.subplots(len(_DEVICES), 1, sharex=True)
-        for ax, device in zip(axes, _DEVICES, strict=True):
+        grid = fig.subplots(len(_DEVICES), 2, sharex="col")
+        for (ax, ax2), device in zip(grid, _DEVICES, strict=True):
             rec = meshconv_fitted(device, roots)
             rep = rec["report"]
             u = DEVICES[device].polarity * np.asarray(rep["vg"])
@@ -1004,8 +1005,27 @@ def meshconv_2d_fitted_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
             ax.set_ylim(top=max(tops) * STYLE["criterion_headroom"])
             ax.set_ylabel(f"{_SHORT[device]}: change\nto next level")
             ax.grid(True)
-        axes[-1].set_xlabel("u = polarity × Vg (V)")
-        handles, labels = axes[0].get_legend_handles_labels()
+            tops = [rec["check"]["agreement_criterion"]]
+            for i, lv in enumerate(rep["levels"]):
+                cur = lv["agreement_1d_curve"]
+                rel = np.abs(cur["rel"])
+                tops.append(float(np.max(rel)))
+                ax2.plot(DEVICES[device].polarity * np.asarray(cur["vg"]), rel,
+                         color=pal[colours[i]], lw=lw, marker="o", ms=STYLE["small_marker_pt"],
+                         label=f"level {i}, against 1D", gid=f"{device} agreement {i}")  # fmt: skip
+            crit = rec["check"]["agreement_criterion"]
+            ax2.axhline(crit, color=pal["text"], lw=ef.STYLE["edge_width"], ls="--",
+                        gid=f"{device} agreement criterion")  # fmt: skip
+            ax2.text(u[0], crit, f" {crit * UNITS['percent']:g} %", ha="left", va="bottom")
+            ax2.set_yscale("log")
+            ax2.set_ylim(top=max(tops) * STYLE["criterion_headroom"])
+            ax2.set_ylabel("2D against 1D")
+            ax2.grid(True)
+        for ax in grid[-1]:
+            ax.set_xlabel("u = polarity × Vg (V)")
+        handles, labels = grid[0][0].get_legend_handles_labels()
+        h2, l2 = grid[0][1].get_legend_handles_labels()
+        handles, labels = handles + h2, labels + l2
         fig.legend(handles, labels, loc="outside lower center", ncols=STYLE["legend_cols"],
                    frameon=False)  # fmt: skip
         return fig
@@ -1501,7 +1521,6 @@ def _join(items: list[str]) -> str:
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
 
-
 def _two_d_validation_substitutions(roots: Roots) -> dict[str, str]:
     """The C-V page's 2D validation prose and the Status lines, from the validation files, the
     calibrated cells and the pfet calibration result (``lim_v2d_<name>``).
@@ -1687,12 +1706,16 @@ def _meshconv_fitted_substitutions(roots: Roots) -> dict[str, str]:
     for device in _DEVICES:
         dev, rec = _SHORT[device], meshconv_fitted(device, roots)
         out["lim_mcfit_criterion"] = f"{rec['check']['criterion'] * UNITS['percent']:g}"
+        out["lim_mcfit_agreement"] = f"{rec['check']['agreement_criterion'] * UNITS['percent']:g}"
         for i, lv in enumerate(rec["report"]["levels"]):
             out[f"lim_mcfit_{dev}_nodes_{i}"] = f"{lv['node_count']:,}"
             if lv["max_rel_change"] is not None:
                 out[f"lim_mcfit_{dev}_change_{i}"] = (
                     f"{lv['max_rel_change'] * UNITS['percent']:.{digits}f}"
                 )
+            out[f"lim_mcfit_{dev}_agree_{i}"] = (
+                f"{lv['agreement_1d'] * UNITS['percent']:.{digits}f}"
+            )
         out[f"lim_mcfit_{dev}_selected"] = f"{rec['check']['selected_level']}"
     return out
 
