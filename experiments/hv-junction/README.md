@@ -150,6 +150,11 @@ ok       NT20c|BD|corner (rest3): rerun 62.1643 V, record 62.1643 V, difference 
 ok       DT20b|BL|edge (main): rerun 32.3078 V, record 32.3539 V, difference -0.0461 V; bias points differ
 ```
 
+The tolerance was set after a first pass at 0.05 V, in which one case of `main` was 0.067 V
+away. `--sample` draws from the cases that take minutes unless `--slow` is given, so the ring
+cases and the 128-bit cases are not spot-checked by default. A stored result in the work
+directory is compared without a rerun, and one made with other parameters is refused.
+
 A case of a record made with the present sweep code reproduces exactly, with equal bias
 points. The record `main` was run with an earlier voltage ramp. Its cases visit other bias
 points, and the breakdown voltage, interpolated between them, differs by up to 0.07 V in the

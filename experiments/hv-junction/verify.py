@@ -3,7 +3,7 @@
 
     uv run --locked python experiments/hv-junction/verify.py WORKDIR CASE [CASE ...]
     uv run --locked python experiments/hv-junction/verify.py WORKDIR --sample N [--seed S]
-    options: [--jobs N] [--mem 8g] [--tol VOLTS] [--allow-dirty]
+    options: [--slow] [--jobs N] [--mem 8g] [--tol VOLTS] [--allow-dirty]
 
 A case is named as in the records, for example 'NT20|BL|edge'. Each named case is rebuilt from
 predict.py, checked to be the case the records hold (same parameter hash), run in the sandbox
@@ -20,10 +20,12 @@ One line per case goes to standard output and to WORKDIR/verify.log. The exit st
 when every case agrees in breakdown voltage, 1 when one differs or fails, and 2 when a named
 case is not in the records with its present parameters. --sample picks N cases at random
 from those that have a breakdown value, hold no floating ring and run in double precision:
-the cases that take minutes, not hours.
+the cases that take minutes, not hours. With --slow the ring cases and the 128-bit cases are
+drawn from too; they take up to hours each and some need --mem 24g.
 
 WORKDIR must be outside the repository (the sandbox refuses the repository). A case whose
-result.json exists there is not run again, so remove WORKDIR to force a rerun.
+result.json exists there is not run again, so remove WORKDIR to force a rerun. A stored
+result made with other parameters than the case has now is refused (exit status 2).
 """
 
 from __future__ import annotations
@@ -89,6 +91,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("cases", nargs="*")
     ap.add_argument("--sample", type=int, default=0)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--slow", action="store_true")
     ap.add_argument("--jobs", type=int, default=8)
     ap.add_argument("--mem", default="8g")
     ap.add_argument("--tol", type=float, default=0.1)
@@ -103,8 +106,10 @@ def main(argv: list[str]) -> int:
             c
             for c, r in rows.items()
             if r["bv_v"] is not None
-            and not now[c].get("extended")
-            and not struct[c.split("|")[0].split("@")[0]]["rings"]
+            and (
+                args.slow
+                or not (now[c].get("extended") or struct[c.split("|")[0].split("@")[0]]["rings"])
+            )
         )
         names += random.Random(args.seed).sample(quick, min(args.sample, len(quick)))
     if not names:
@@ -122,6 +127,19 @@ def main(argv: list[str]) -> int:
 
     work = pathlib.Path(args.workdir).expanduser().resolve()
     work.mkdir(parents=True, exist_ok=True)
+    stale = []
+    for n in names:
+        old = work / batch.safe(n)
+        if (old / "result.json").is_file() and (
+            not (old / "params.json").is_file()
+            or json.loads((old / "params.json").read_text()) != now[n]
+        ):
+            stale.append(n)
+    if stale:
+        for n in stale:
+            print(f"{n}: {work / batch.safe(n)} holds a result made with other parameters")
+        print("remove those directories, or name an empty WORKDIR")
+        return 2
     (work / "cases.json").write_text(json.dumps({n: now[n] for n in names}, indent=1))
     flags = ["--jobs", str(args.jobs), "--mem", args.mem] + (
         ["--allow-dirty"] if args.allow_dirty else []
