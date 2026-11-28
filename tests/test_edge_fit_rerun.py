@@ -27,7 +27,8 @@ from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import edgefit, meshconv
 
 # The relative tolerance of a refit against the frozen fit: the least squares runs through
-# numpy's LAPACK, whose last bits differ between hosts (CI's runner against the project's host).
+# numpy's BLAS/LAPACK, whose last bits differ between hosts: on the CI runner by up to 6e-15
+# relative (run 46080249276). The rows (inputs) and the applied δ are compared exactly.
 REFIT_REL = 1e-12
 
 

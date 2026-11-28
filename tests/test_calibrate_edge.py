@@ -16,9 +16,15 @@ from gf180tcad.calibrate import edge
 from gf180tcad.sandbox import REPO_ROOT
 from gf180tcad.tcad import edgefit
 
-# The relative tolerance of a refit against the frozen fit: the least squares runs through
-# numpy's LAPACK, whose last bits differ between hosts (CI's runner against the project's host).
+# The relative tolerance of a refit's least-squares outputs against the frozen fit: they run
+# through numpy's BLAS/LAPACK, whose last bits differ between hosts. On the CI runner they differed
+# from the project host's by up to 6e-15 relative (run 46080249276).
 REFIT_REL = 1e-12
+
+# The fit file's keys that are its inputs, the δ on the layout grid and its identity: compared
+# exactly. Every other key is a least-squares output (slope, intercepts, weights, residuals).
+EXACT_KEYS = ("cell_params", "cells", "commit", "device", "edge_u_v", edgefit.PARAM, "record",
+              "schema", "spice")  # fmt: skip
 
 
 def _same(a, b, rel: float = REFIT_REL) -> bool:
@@ -60,9 +66,12 @@ def test_fit_is_the_edge_study_s_least_squares(device, tmp_path):
     print), to round-off."""
     committed, root = _frozen_tree(device, tmp_path)
     d = edge.build(device, tcad_root=root, commit=committed["commit"])
-    # the applied δ is on the layout grid, so it must match exactly; the rest to round-off
-    assert d[edgefit.PARAM] == committed[edgefit.PARAM]
-    assert _same(json.loads(json.dumps(d)), committed)
+    d_json = json.loads(json.dumps(d))
+    assert d_json.keys() == committed.keys()
+    for key in EXACT_KEYS:
+        assert d_json[key] == committed[key], key
+    for key in d_json.keys() - set(EXACT_KEYS):
+        assert _same(d_json[key], committed[key]), key
     ref = lf.edge_fit(device, edge.RECORD_CELLS[device])
     ls = d["least_squares"]
     assert math.isclose(ls[edgefit.PARAM], ref["delta_nm"], rel_tol=1e-12)
