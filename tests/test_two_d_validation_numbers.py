@@ -266,3 +266,8 @@ def test_cell_numbers_are_the_metas():
         )
         want = meta["node_count"] if name == "nodes" else meta.get("resumed", {}).get("qs", 0) + 1
         assert int(subs[key].replace(",", "")) == want, key
+
+
+def test_the_moscap2d_page_s_narrow_cell_statement_holds():
+    """docs/limitations/moscap2d.md: the nfet W1.6/L0.7 cell's inversion crossing is Agree."""
+    assert _e("nfet_05v0", "w1p6_l0p70")["verdicts"]["dv_inv"]["verdict"] == "Agree"

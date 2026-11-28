@@ -630,7 +630,7 @@ The W10/L0.7 `cgg_per_um`
 is compared with the {term}`TT` {{ ngspice }} target by {py:func}`~gf180tcad.calibrate.cv.compare`.
 For the nfet W1.6/L0.7 the result is {term}`Disagree`
 ({test}`tests/test_calibrate_cv.py::test_w1p6_l0p70_two_d_from_the_w10_l0p70_cell`), as
-{numref}`tab-moscap2d-nfet-narrow` shows.
+{numref}`tab-moscap2d-nfet-narrow` shows. Its inversion crossing is {term}`Agree`.
 
 ~~~{table} The comparison of the nfet W1.6/L0.7 cell with SPICE.
 :name: tab-moscap2d-nfet-narrow
