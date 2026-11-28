@@ -43,6 +43,11 @@ there.
 
 The 2D cells against SPICE are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-validation>`. The crossing shift and plateau gap of every 2D cell are in {numref}`Figure %s of The 2D MOS capacitor and the C/Cox > 1 artefact <fig-moscap2d-metrics>`.
 
+The high-voltage junction predictions rest on assumptions. Their well doping is a family set
+against published values, and the foundry's P-well generation is assumed. Each value is a 2D
+section ({ref}`hvj-limits`,
+{numref}`Figure %s of High-voltage junction terminations <fig-hvj-section>`).
+
 The design-spec requirements that are not built are listed under {ref}`limitations-spec-deviations`.
 
 ## Reproducing the results

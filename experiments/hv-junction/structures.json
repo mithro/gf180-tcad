@@ -1,0 +1,1469 @@
+{
+ "CVD": {
+  "block": false,
+  "corner": 20.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 100.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 6.0
+ },
+ "CVN": {
+  "block": false,
+  "corner": 20.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 100.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 6.0
+ },
+ "CVN2": {
+  "block": false,
+  "corner": 20.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 50.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 6.0
+ },
+ "CVNA": {
+  "block": "ring",
+  "corner": 20.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 50.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "CVNA2": {
+  "block": "ring",
+  "corner": 20.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 100.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 11.0
+ },
+ "DAo1": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "lead_w": 6.0,
+  "nat_gap": -1.0,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DAo1M1_6": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "lead_w": 6.0,
+  "nat_gap": -1.0,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DC0": {
+  "block": true,
+  "corner": 0.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DM1_6": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DT20": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DT20b": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "DT2p6": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "dnw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 2.6
+ },
+ "NA0p6": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NA0p6C0": {
+  "block": true,
+  "corner": 0.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NA0p6T10": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 10.0
+ },
+ "NA0p6b": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NAGM1": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": true,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NAM1_10": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 10.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NAM1_3": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 3.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NAM1_6": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NAM2_12": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m2": 12.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NAR1S3": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    3.0,
+    2.0
+   ]
+  ],
+  "sense": true,
+  "term": 20.0
+ },
+ "NAR1S8": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    8.0,
+    2.0
+   ]
+  ],
+  "sense": true,
+  "term": 28.0
+ },
+ "NAR1_2": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 20.0
+ },
+ "NAR3_2": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": 0.6,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    2.0
+   ],
+   [
+    2.5,
+    2.0
+   ],
+   [
+    3.0,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 30.0
+ },
+ "NC0": {
+  "block": true,
+  "corner": 0.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NC0b": {
+  "block": true,
+  "corner": 0.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NC15": {
+  "block": true,
+  "corner": 15.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NGM1": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": true,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NGP4": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": true,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "poly": 4.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NM1_10": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 10.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NM1_3": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 3.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NM1_6": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NM1_6C0": {
+  "block": true,
+  "corner": 0.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NM1_6L": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 30.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NM1_6b": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NM2_12": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m2": 12.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NM2_6": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m2": 6.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NP1": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "poly": 1.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NP2": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "poly": 2.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NP4": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "poly": 4.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NPM12": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 5.0,
+   "m2": 9.0,
+   "poly": 2.0
+  },
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NR1S12": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    12.0,
+    2.0
+   ]
+  ],
+  "sense": true,
+  "term": 32.0
+ },
+ "NR1S2": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    2.0
+   ]
+  ],
+  "sense": true,
+  "term": 20.0
+ },
+ "NR1S3": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    3.0,
+    2.0
+   ]
+  ],
+  "sense": true,
+  "term": 20.0
+ },
+ "NR1S5": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    5.0,
+    2.0
+   ]
+  ],
+  "sense": true,
+  "term": 25.0
+ },
+ "NR1S8": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    8.0,
+    2.0
+   ]
+  ],
+  "sense": true,
+  "term": 28.0
+ },
+ "NR1_1p4": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    1.4,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 20.0
+ },
+ "NR1_2": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 20.0
+ },
+ "NR1_2L": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 30.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 20.0
+ },
+ "NR1_3": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    3.0,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 20.0
+ },
+ "NR3M1": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {
+   "m1": 3.0
+  },
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    2.0
+   ],
+   [
+    2.5,
+    2.0
+   ],
+   [
+    3.0,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 30.0
+ },
+ "NR3W1": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    1.0
+   ],
+   [
+    2.5,
+    1.0
+   ],
+   [
+    3.0,
+    1.0
+   ]
+  ],
+  "sense": false,
+  "term": 30.0
+ },
+ "NR3W3": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    3.0
+   ],
+   [
+    2.5,
+    3.0
+   ],
+   [
+    3.0,
+    3.0
+   ]
+  ],
+  "sense": false,
+  "term": 35.0
+ },
+ "NR3_1p5": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    1.5,
+    2.0
+   ],
+   [
+    2.0,
+    2.0
+   ],
+   [
+    2.5,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 30.0
+ },
+ "NR3_2": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    2.0
+   ],
+   [
+    2.5,
+    2.0
+   ],
+   [
+    3.0,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 30.0
+ },
+ "NR4S": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    1.6,
+    2.0
+   ],
+   [
+    2.0,
+    2.0
+   ],
+   [
+    2.5,
+    2.0
+   ],
+   [
+    3.0,
+    2.0
+   ]
+  ],
+  "sense": true,
+  "term": 35.0
+ },
+ "NR5_1p4": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    1.4,
+    2.0
+   ],
+   [
+    1.7,
+    2.0
+   ],
+   [
+    2.0,
+    2.0
+   ],
+   [
+    2.4,
+    2.0
+   ],
+   [
+    2.8,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 36.0
+ },
+ "NR5_2": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [
+   [
+    2.0,
+    2.0
+   ],
+   [
+    2.5,
+    2.0
+   ],
+   [
+    3.0,
+    2.0
+   ],
+   [
+    3.5,
+    2.0
+   ],
+   [
+    4.0,
+    2.0
+   ]
+  ],
+  "sense": false,
+  "term": 40.0
+ },
+ "NT1": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 1.0
+ },
+ "NT20": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NT20L": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 30.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NT20V": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": true,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NT20b": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NT20c": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NT5": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 5.0
+ },
+ "NW0": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": 0.0,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NW0b": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": 0.0,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NW1p5": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": 1.5,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NW3": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": 3.0,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "NW6": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "nw",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": 6.0,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ },
+ "OPEN": {
+  "block": true,
+  "corner": 8.0,
+  "dualgate": false,
+  "gate": false,
+  "half": 15.0,
+  "inset": 2.0,
+  "kind": "open",
+  "lead_w": 6.0,
+  "nat_gap": null,
+  "ncomp_w": 2.0,
+  "plates": {},
+  "pwell_gap": null,
+  "rings": [],
+  "sense": false,
+  "term": 20.0
+ }
+}

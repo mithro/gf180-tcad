@@ -607,8 +607,15 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     :func:`gf180tcad.reproduce_figures.write_all`), the figures of the comparison pages under
     ``out_dir/comparison`` (:func:`gf180tcad.comparison_figures.write_all`) and those of the
     limitations pages under ``out_dir/limitations``
-    (:func:`gf180tcad.limitations_figures.write_all`)."""
-    from gf180tcad import comparison_figures, imagefig, limitations_figures, reproduce_figures
+    (:func:`gf180tcad.limitations_figures.write_all`). The figures of the high-voltage junction
+    page go under ``out_dir/hv-junction`` (:func:`gf180tcad.hvjunction_figures.write_all`)."""
+    from gf180tcad import (
+        comparison_figures,
+        hvjunction_figures,
+        imagefig,
+        limitations_figures,
+        reproduce_figures,
+    )
     from gf180tcad.explain import figures as explained_figures
 
     out = Path(out_dir)
@@ -635,6 +642,8 @@ def generate(out_dir: Path, results_root: Path = RESULTS, tcad_root: Path | None
     comparison_figures.write_all(out / "comparison", roots)
     shutil.rmtree(out / "limitations", ignore_errors=True)
     limitations_figures.write_all(out / "limitations", roots)
+    shutil.rmtree(out / "hv-junction", ignore_errors=True)
+    hvjunction_figures.write_all(out / "hv-junction")
 
 
 # --- TCAD MOS capacitor pages (Task 13a) ------------------------------------------------------

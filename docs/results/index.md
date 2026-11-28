@@ -115,9 +115,13 @@ calibrated 2D cell from its committed {ref}`reduced mesh artefact <moscap2d-mesh
 The 2D start cells have no artefact, and their pages say why
 ([issue #149](https://github.com/mithro/gf180-tcad/issues/149)).
 
+The reverse {term}`breakdown voltage` of well edges with edge terminations is predicted in
+{doc}`hv-junction`, from the records of {repo}`results/hv-junction`.
+
 ```{toctree}
 :maxdepth: 2
 
 ../_generated/results/index
 ../_generated/tcad/index
+hv-junction
 ```

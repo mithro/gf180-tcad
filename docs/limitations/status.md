@@ -99,3 +99,10 @@ C–V matches DEVSIM's within {{ lim_charon_nfet_devsim }} (nfet) and
 {{ lim_charon_pfet_devsim }} (pfet) ({doc}`charon`). No Charon {term}`job` of the
 results trees has run. No measured silicon data exists ({doc}`silicon-validation`). Planned work, each item
 with its issue, is on the {doc}`/roadmap`.
+
+## The high-voltage junction study
+
+The {term}`breakdown voltages <breakdown voltage>` of well edges with edge terminations are predicted in
+{doc}`/results/hv-junction`, from the records of {repo}`results/hv-junction`. They are 2D
+predictions under an assumed doping family, with no silicon data
+({ref}`limits <hvj-limits>`, {numref}`Figure %s of High-voltage junction terminations <fig-hvj-section>`).

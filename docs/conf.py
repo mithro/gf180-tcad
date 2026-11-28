@@ -276,6 +276,15 @@ if _clash := sorted(set(_limits) & set(myst_substitutions)):
     raise ValueError(f"limitations substitutions clash with the others: {_clash}")
 myst_substitutions.update(_limits)
 
+# The high-voltage junction page prints every number by substitution, {{ hvj_<name> }}, from the
+# committed records of experiments/hv-junction (gf180tcad.hvjunction_figures.substitutions).
+from gf180tcad import hvjunction_figures as _hvjunction  # after the sys.path line above
+
+_hvj = _hvjunction.substitutions()
+if _clash := sorted(set(_hvj) & set(myst_substitutions)):
+    raise ValueError(f"hv-junction substitutions clash with the others: {_clash}")
+myst_substitutions.update(_hvj)
+
 # The reproduce pages print the numbers beside their figures by substitution, {{ repro_<name> }},
 # from the records the figures draw (gf180tcad.reproduce_figures.substitutions).
 from gf180tcad import reproduce_figures as _reproduce  # after the sys.path line above
