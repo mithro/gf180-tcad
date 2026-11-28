@@ -5,7 +5,7 @@
     uv run --locked python experiments/meshconv-fitted/run.py --agreement WORKDIR DEVICE LEVEL...
 
 With ``--agreement`` each level runs agreement.py instead (the 2D-equals-1D check at the
-calibrated values, in 2 GiB: the uniform stack has no source or drain), into
+calibrated values, in 16 GiB as the committed study's), into
 WORKDIR/DEVICE/agreement<i>/, and its pins add the sha256 of agreement.py.
 
 Each level runs level.py in the sandbox (16 GiB, one CPU, the stable TCAD image) and writes
@@ -70,8 +70,10 @@ def pins(device: str) -> dict:
     }
 
 
-# The memory of each agreement job (the uniform stack, 21 biases).
-AGREEMENT_MEM = "2g"
+# The memory of each agreement job, as the committed study's agreement jobs
+# (gf180tcad.tcad.__main__.MESHCONV_JOB_MEM[2]): a 2 GiB job holds level 0 of the uniform stack
+# (102k nodes) but is killed at level 1 (197k nodes).
+AGREEMENT_MEM = "16g"
 
 
 def agreement_pins(device: str) -> dict:
