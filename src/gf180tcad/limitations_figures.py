@@ -665,7 +665,7 @@ def two_d_metrics_figure(palette: str, roots: Roots = DEFAULT_ROOTS):
         ]  # fmt: skip
         (ptol,) = {r[f"tol_{part}"] for r in rows for part in ("acc", "inv")}
         bottom.axhspan(-ptol, ptol, color=pal["band"], lw=0, gid="plateau tolerance")
-        bottom.text(x[-1], ptol, f"±{ptol:g} %", ha="right", va="top")
+        bottom.text(x[0], ptol, f"±{ptol:g} %", ha="left", va="top")  # clear of the last cells
         for part, marker in (("acc", "o"), ("inv", "s")):
             bottom.scatter(x, [r[part] for r in rows], facecolors=_faces(rows, part, colours),
                            edgecolors=colours, marker=marker, s=size,
