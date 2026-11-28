@@ -1056,3 +1056,27 @@ def test_code_fence_indented_under_a_list_item_is_skipped(tmp_path):
           ```
         """
     assert _sentence_fails(tmp_path, page) == []
+
+
+def test_indented_pipe_lines_without_a_delimiter_row_are_prose(tmp_path):
+    """Negative control: a wrapped prose line that starts and ends with a pipe is not a table."""
+    page = """
+        # T
+
+        - The relative error of the update in every node of the device that the solver checks is
+          |update| / |psi|
+          summed over the equations and the regions.
+        """
+    assert len(_sentence_fails(tmp_path, page)) == 1
+
+
+def test_a_link_wrapped_across_lines_is_counted_by_its_text(tmp_path):
+    """The URL of a link that wraps onto a second line is not counted as words."""
+    page = """
+        # T
+
+        - Altermatt, Schenk, Geelhaar and Heiser, "[Reassessment of the intrinsic carrier density in
+          crystalline silicon in view of band-gap narrowing](https://doi.org/10.1063/1.1529297)".
+          J. Appl. Phys. 93(3), 1598-1604, 2003.
+        """
+    assert _sentence_fails(tmp_path, page) == []

@@ -7,7 +7,9 @@
 # Copyright Tim Ansell; Apache License 2.0 (the LICENSE at the root of that branch).
 # Local additions: the block between "--- LOCAL" and "--- end LOCAL" and the lines marked
 # "# LOCAL" (the --rules option: the house rules FIGURE, EQUATION and FILELINK of gf180-tcad
-# spec §10.3). Everything else is the upstream file unchanged. Update by copying the new
+# spec §10.3; {table} directives read as tables; fences, directives and pipe tables indented
+# under a list item; links, code and quotes stripped over the joined paragraph, so one that
+# wraps across lines is a mention). Everything else is the upstream file unchanged. Update by copying the new
 # upstream file below this header, changing the commit and sha256, and carrying the LOCAL
 # parts over.
 """Check Markdown documentation pages against the writing-docs rules.
@@ -121,6 +123,16 @@ class Page:
         table_fence = None    # LOCAL (gf180-tcad): the fence of an open {table} directive
         in_callout = 0
         callout_fence = []
+        # LOCAL (gf180-tcad): the line numbers of indented pipe tables (a block of lines that
+        # start with | after their indent and hold a |---| delimiter row).
+        indented_rows, block = set(), []
+        for j, row in enumerate([*self.lines, ""], 1):
+            if row.startswith((" ", "\t")) and row.lstrip().startswith("|"):
+                block.append(j)
+                continue
+            if any(re.match(r"^\|[\s:|-]*-[\s:|-]*\|$", self.lines[k - 1].strip()) for k in block):
+                indented_rows.update(block)
+            block = []
         for i, line in enumerate(self.lines, 1):
             if i == 1 and line.strip() == "---":
                 in_fm = True
@@ -130,7 +142,7 @@ class Page:
                     in_fm = False
                 continue
             if fence:
-                if line.lstrip().startswith(fence[:3]) and line.strip() == fence.strip():
+                if line.lstrip().startswith(fence[:3]) and line.strip() == fence.strip():  # LOCAL
                     fence = None
                 continue
             # LOCAL (gf180-tcad): a {table} directive holds a pipe table and its caption, which
@@ -159,7 +171,7 @@ class Page:
                 else:
                     fence = mark
                 continue
-            f = FENCE.match(line.lstrip())
+            f = FENCE.match(line.lstrip())  # LOCAL
             if f:
                 mark = f.group(1)
                 if callout_fence and mark[:3] == callout_fence[-1][:3] and line.strip() == mark:
@@ -173,8 +185,9 @@ class Page:
             if re.match(r"^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]", line, flags=re.I):
                 out.append((i, line, "callout-open"))
                 continue
-            # An indented row must also end in a pipe: a wrapped prose line can start with |x|.
-            if line.startswith("|") or (line.lstrip().startswith("|") and line.rstrip().endswith("|")):
+            # LOCAL (gf180-tcad): an indented pipe line is a table row only in a block of such
+            # lines with a delimiter row; a wrapped prose line can start with |x|.
+            if line.startswith("|") or i in indented_rows:
                 out.append((i, line, "table"))
                 continue
             if line.startswith("#"):
@@ -255,7 +268,7 @@ class Page:
         def flush():
             if not para:
                 return
-            joined = " ".join(mentions_stripped(l).strip() for l in para)
+            joined = mentions_stripped(" ".join(l.strip() for l in para))  # LOCAL: across lines
             joined = re.sub(r"^\s*(\d+[.)]|[-*+])\s+", "", joined)
             sents = [x for x in re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(“])", joined.strip()) if x.strip()]
             for x in sents:
