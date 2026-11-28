@@ -13,6 +13,7 @@ SPICE bookkeeping (DLC, overlaps, fringe) is the real one (``MoscapCV.area_scale
 import dataclasses
 import json
 import math
+import re
 from types import MappingProxyType
 
 import pytest
@@ -707,8 +708,13 @@ def _verdict_cell(verdict: str) -> set[str]:
 def test_docs_quote_the_2d_checks(device, gid):
     """Each table of a calibrated 2D cell's checks holds the validation file's values, rounded
     as written (plateaus in % to 0.1, crossing shifts in mV to 1, signed), and its verdicts."""
+    from gf180tcad import limitations_figures as lf
+
+    subs = lf.substitutions()
     page, name = TWO_D_TABLES[device, gid]
     text = (cv.REPO_ROOT / "docs" / page).read_text(encoding="utf-8")
+    # the page prints the values through substitutions; read the table as it renders
+    text = re.sub(r"\{\{ (lim_\w+) \}\}", lambda m: subs[m.group(1)], text)
     body = text.split(f":name: {name}\n", 1)[1].split("~~~", 1)[0]
     rows = {}
     for line in body.splitlines():

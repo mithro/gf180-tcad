@@ -633,10 +633,10 @@ For the nfet W1.6/L0.7 the result is {term}`Disagree`
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 7.1 | {term}`Same process` |
-| Inversion plateau (%) | 5.4 | Same process |
-| Depletion crossing shift (mV) | −160 | Disagree |
-| Inversion crossing shift (mV) | −22 | {term}`Agree` |
+| Accumulation plateau (%) | {{ lim_v2d_nfet_w1p6_l0p70_acc_pct }} | {{ lim_v2d_nfet_w1p6_l0p70_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_nfet_w1p6_l0p70_inv_pct }} | {{ lim_v2d_nfet_w1p6_l0p70_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_nfet_w1p6_l0p70_dv_dep_mv }} | {{ lim_v2d_nfet_w1p6_l0p70_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_nfet_w1p6_l0p70_dv_inv_mv }} | {{ lim_v2d_nfet_w1p6_l0p70_dv_inv_verdict }} |
 ~~~
 
 The pfet W1.6/L0.7 job is committed. Its mesh is the pfet W10/L0.7 mesh, and its `cgg_per_um` equals that
@@ -651,10 +651,10 @@ Its comparison is {term}`Same process`
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 4.6 | Agree |
-| Inversion plateau (%) | 3.9 | Agree |
-| Depletion crossing shift (mV) | −56 | Same process |
-| Inversion crossing shift (mV) | +21 | Agree |
+| Accumulation plateau (%) | {{ lim_v2d_pfet_w1p6_l0p70_acc_pct }} | {{ lim_v2d_pfet_w1p6_l0p70_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_pfet_w1p6_l0p70_inv_pct }} | {{ lim_v2d_pfet_w1p6_l0p70_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_pfet_w1p6_l0p70_dv_dep_mv }} | {{ lim_v2d_pfet_w1p6_l0p70_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_pfet_w1p6_l0p70_dv_inv_mv }} | {{ lim_v2d_pfet_w1p6_l0p70_dv_inv_verdict }} |
 ~~~
 
 (moscap2d-edge)=

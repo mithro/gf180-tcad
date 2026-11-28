@@ -116,6 +116,21 @@ STYLE = {
     "metric_headroom": 1.25,
     # Log axes with a labelled criterion line reach this factor above the line or the data.
     "criterion_headroom": 3.0,
+    # The C-V page's 2D validation numbers: decimals of a Cgg (fF), of a crossing (V), of a
+    # plateau difference (%), of a crossing's move (V), of an envelope's width (V; short and
+    # long form) and of the edge split's lines (fF/µm and fF), its per-area agreement (%), its
+    # DLC (nm), its check, its rms and its pfet check.
+    "v2d_cgg_digits": 2,
+    "v2d_u_digits": 3,
+    "v2d_pct_digits": 1,
+    "v2d_move_digits": 3,
+    "v2d_width_digits": (2, 3),
+    "split_gap_digits": 2,
+    "split_total_digits": 2,
+    "split_area_digits": 1,
+    "split_dlc_digits": 0,
+    "split_check_digits": 4,
+    "split_line_digits": 3,
     # The decimals of a level's largest change (%) the mesh-convergence page prints.
     "meshconv_change_digits": 3,
     # The plugin record: bar width (V) of the region ranges.
@@ -162,6 +177,8 @@ UNITS = {
     "percent": 100.0,
     "nm_per_um": 1e3,
     "mv_per_v": 1e3,
+    "um_per_m": 1e6,
+    "ff_per_f": 1e15,
     "pa_per_a": 1e12,
     "hz_per_mhz": 1e6,
 }
@@ -1465,6 +1482,184 @@ def _plain(v: float) -> str:
     return f"{v:.{STYLE['input_digits']}g}".replace("e+", "e")
 
 
+# The verdict names in the order the pages count them, and the number words they print.
+_VERDICTS = ("Agree", "Same process", "Disagree")
+_WORDS = ("no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+
+
+def _signed(v: float, digits: int) -> str:
+    """``v`` with its sign, the minus as the page's minus sign."""
+    return f"{v:+.{digits}f}".replace("-", "\u2212")
+
+
+def _minus(v: float, digits: int) -> str:
+    return f"{v:.{digits}f}".replace("-", "\u2212")
+
+
+def _join(items: list[str]) -> str:
+    """``a``, ``a and b``, ``a, b and c``."""
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+
+def _two_d_validation_substitutions(roots: Roots) -> dict[str, str]:
+    """The C-V page's 2D validation prose and the Status lines, from the validation files, the
+    calibrated cells and the pfet calibration result (``lim_v2d_<name>``).
+
+    Counts and lists: ``disagree_count`` (a word), ``disagree_cells`` (the Disagree cells, by
+    device), ``<dev>_others`` (that device's other cells by verdict), ``count_<verdict>`` over
+    both devices (``agree``, ``same``, ``disagree``, words). Per cell ``<dev>_<gid>``: the 2D
+    Cgg (fF) and the SPICE plateau level at each gate end, ``cgg_acc``/``cgg_inv`` and
+    ``spice_acc``/``spice_inv`` (the nfet by u, accumulation then inversion; the pfet by Vg,
+    +5 V then -5 V, which is accumulation then inversion too), and its depletion crossing, its
+    corner envelope's ends and widths, and the 2D-only shift (2D minus 1D crossing at the same
+    values, mV)."""
+    mv, pct = UNITS["mv_per_v"], UNITS["percent"]
+    cgg, ud, pd, md = (STYLE[k] for k in ("v2d_cgg_digits", "v2d_u_digits", "v2d_pct_digits",
+                                          "v2d_move_digits"))  # fmt: skip
+    w_short, w_long = STYLE["v2d_width_digits"]
+    out: dict[str, str] = {}
+    counts = dict.fromkeys(_VERDICTS, 0)
+    disagree = []
+    cal = json.loads(
+        (Path(roots.tcad) / "calibration" / "pfet_05v0.result.json").read_text("utf-8")
+    )
+    for device in _DEVICES:
+        dev = _SHORT[device]
+        val = validation_record(device, roots)
+        pol = DEVICES[device].polarity
+        by_verdict = {v: [] for v in _VERDICTS}
+        for gid, e in val["two_d"].items():
+            if e["status"] != "compared":
+                continue
+            by_verdict[e["verdict"]].append(_geometry(device, gid))
+            counts[e["verdict"]] += 1
+            key = f"lim_v2d_{dev}_{gid}"
+            cols = io.read_csv(Path(roots.tcad) / "moscap2d" / device / "calibrated" / gid
+                               / "cv.csv")[0]  # fmt: skip
+            u = pol * np.asarray(cols["vg"])
+            lo_u, hi_u = STYLE["edge_u_v"]
+            c = np.asarray(cols["cgg_total"])
+            out[f"{key}_cgg_acc"] = f"{float(c[u == lo_u][0]):.{cgg}f}"
+            out[f"{key}_cgg_inv"] = f"{float(c[u == hi_u][0]):.{cgg}f}"
+            sr = e["spice_regions"]
+            out[f"{key}_spice_acc"] = f"{sr['c_acc']:.{cgg}f}"
+            out[f"{key}_spice_inv"] = f"{sr['c_inv']:.{cgg}f}"
+            u_dep = e["tcad_crossings"]["u_dep"]
+            out[f"{key}_u_dep"] = _minus(u_dep, ud)
+            out[f"{key}_spice_u_dep"] = _minus(sr["u_dep"], ud)
+            win = e["verdicts"]["dv_dep"]["window"]
+            out[f"{key}_env_lo"] = _minus(win["lo"], ud)
+            out[f"{key}_env_hi"] = _minus(win["hi"], ud)
+            out[f"{key}_env_width"] = f"{win['hi'] - win['lo']:.{w_short}f}"
+            out[f"{key}_env_width_long"] = f"{win['hi'] - win['lo']:.{w_long}f}"
+            out[f"{key}_past_ff_mv"] = f"{abs(win['lo'] - u_dep) * mv:.0f}"
+            dv = e["verdicts"]["dv_dep"]["dv_v"]
+            out[f"{key}_dv_dep_mv"] = _signed(dv * mv, 0)
+            one_d = val["one_d"].get(gid)
+            if one_d is None and device == "pfet_05v0" and gid in cal["per_geometry"]:
+                one_d = cal["per_geometry"][gid]
+            if one_d is not None:
+                u1 = one_d["tcad_crossings"]["u_dep"]
+                out[f"{key}_u_dep_1d"] = _minus(u1, ud)
+                out[f"{key}_only_2d_mv"] = f"{abs(u_dep - u1) * mv:.0f}"
+                out[f"{key}_1d_inside_mv"] = f"{abs(u1 - win['lo']) * mv:.0f}"
+                out[f"{key}_1d_off_mv"] = f"{abs(u1 - sr['u_dep']) * mv:.0f}"
+                m1 = one_d["metrics"]
+                out[f"{key}_1d_acc_pct"] = f"{m1['plateau_acc_max_rel'] * pct:.{pd}f}"
+                out[f"{key}_1d_inv_pct"] = f"{m1['plateau_inv_max_rel'] * pct:.{pd}f}"
+                out[f"{key}_1d_dv_dep_mv"] = _signed(m1["dv_dep_v"] * mv, 0)
+            m2 = e["metrics"]
+            out[f"{key}_acc_pct"] = f"{m2['plateau_acc_max_rel'] * pct:.{pd}f}"
+            out[f"{key}_inv_pct"] = f"{m2['plateau_inv_max_rel'] * pct:.{pd}f}"
+            out[f"{key}_dv_inv_mv"] = _signed(e["verdicts"]["dv_inv"]["dv_v"] * mv, 0)
+            for check in ("plateau_acc", "plateau_inv", "dv_dep", "dv_inv"):
+                out[f"{key}_{check}_verdict"] = e["verdicts"][check]["verdict"]
+        disagree.append((dev, [_label(g) for g in sorted(by_verdict["Disagree"],
+                                                          key=lambda g: (-g.w_um, g.l_um))]))  # fmt: skip
+        parts = []
+        for verdict in ("Agree", "Same process"):
+            gs = sorted(by_verdict[verdict], key=lambda g: (-g.w_um, g.l_um))
+            if gs:
+                verb = "is" if len(gs) == 1 else "are"
+                parts.append(f"{_join([_label(g) for g in gs])} {verb} {verdict}")
+        out[f"lim_v2d_{dev}_others"] = _join(parts)
+    out["lim_v2d_disagree_count"] = _WORDS[counts["Disagree"]]
+    out["lim_v2d_disagree_cells"] = ", and ".join(
+        f"{dev} {_join(cells)}" for dev, cells in disagree if cells
+    )
+    for verdict, name in zip(_VERDICTS, ("agree", "same", "disagree"), strict=True):
+        out[f"lim_v2d_count_{name}"] = _WORDS[counts[verdict]]
+    # how the pfet crossing moves from one length to the next (SPICE and 2D, V and mV)
+    pv = validation_record("pfet_05v0", roots)["two_d"]
+    pairs = (("w10p0_l0p70", "w10p0_l1p00"), ("w10p0_l1p00", "w10p0_l2p00"))
+    for a, b in pairs:
+        key = f"lim_v2d_pfet_{a}_{b}"
+        for where, name in (("spice_regions", "spice"), ("tcad_crossings", "two_d")):
+            move = pv[b][where]["u_dep"] - pv[a][where]["u_dep"]
+            out[f"{key}_{name}_move"] = _signed(move, md)
+            out[f"{key}_{name}_move_mv"] = _signed(move * mv, 0)
+    return out
+
+
+def _edge_split_substitutions(roots: Roots) -> dict[str, str]:
+    """The C-V page's edge-split sentences (``lim_split_<name>``), from
+    :func:`gf180tcad.comparison_figures.edge_split` and the process files: the largest per-area
+    difference (%), the range of SPICE minus 2D edge (fF/µm), the two lines' Cgg at nfet
+    W10/L0.6 and u = +5 V (fF), the pfet W10/L2 parts of the gap at u = +5 V (fF), the nfet
+    check of the SPICE edge against the card (fF/µm), the card's DLC (nm), the pfet check at
+    each plateau, the rms of the SPICE plateaus off their line, the nfet 2D edge at inversion and
+    the card's CF (fF/µm)."""
+    from gf180tcad.comparison_figures import edge_split
+
+    gap_d, tot_d, area_d, dlc_d, chk_d, line_d = (
+        STYLE[k] for k in ("split_gap_digits", "split_total_digits", "split_area_digits",
+                           "split_dlc_digits", "split_check_digits", "split_line_digits")
+    )  # fmt: skip
+    nm_per_m = UNITS["nm_per_um"] * UNITS["um_per_m"]
+    ff_um_per_f_m = UNITS["ff_per_f"] / UNITS["um_per_m"]
+    lo_u, hi_u = STYLE["edge_u_v"]
+    areas, gaps, out, checks, rms = [], [], {}, {}, {}
+    for device in _DEVICES:
+        s = edge_split(device, roots.spice, roots.tcad)
+        card = process.load(device).card_values()
+        dlc_um = card["dlc"] * UNITS["um_per_m"]
+        for side, u in (("acc", lo_u), ("inv", hi_u)):
+            (i,) = np.flatnonzero(s["u"] == u)
+            e = {k: float(s[k]["edge"][i]) for k in ("spice", "two_d", "extrinsic")}
+            a = {k: float(s[k]["area"][i]) for k in ("spice", "two_d")}
+            areas.append(abs(a["two_d"] / a["spice"] - 1) * UNITS["percent"])
+            gaps.append(e["spice"] - e["two_d"])
+            checks[device, side] = e["spice"] - (e["extrinsic"] - 2 * dlc_um * a["spice"])
+            rms[device, side] = float(s["spice"]["rms"][i])
+            if (device, side) == ("nfet_05v0", "inv"):
+                g = _geometry(device, EDGE_CELLS[0][1])
+                w, l_um = g.w_um, g.l_um
+                out["lim_split_nfet_spice"] = f"{w * (e['spice'] + a['spice'] * l_um):.{tot_d}f}"
+                out["lim_split_nfet_two_d"] = f"{w * (e['two_d'] + a['two_d'] * l_um):.{tot_d}f}"
+                out["lim_split_nfet_2d_inv"] = f"{e['two_d']:.{line_d}f}"
+            if (device, side) == ("pfet_05v0", "inv"):
+                g = _geometry(device, EDGE_CELLS[1][1])  # the pfet cells are W = 10 µm
+                longest = float(s["lengths"].max())
+                out["lim_split_pfet_edge"] = _minus(g.w_um * (e["spice"] - e["two_d"]), tot_d)
+                out["lim_split_pfet_area"] = _minus(
+                    g.w_um * (a["spice"] - a["two_d"]) * longest, tot_d)  # fmt: skip
+    out["lim_split_area_max"] = f"{max(areas):.{area_d}f}"
+    out["lim_split_gap_min"] = _minus(min(gaps), gap_d)
+    out["lim_split_gap_max"] = _minus(max(gaps), gap_d)
+    out["lim_split_nfet_check"] = (
+        f"{max(abs(checks['nfet_05v0', k]) for k in ('acc', 'inv')):.{chk_d}f}"
+    )
+    nfet = process.load("nfet_05v0").card_values()
+    out["lim_split_dlc_nm"] = f"{nfet['dlc'] * nm_per_m:.{dlc_d}f}"
+    out["lim_split_pfet_acc"] = f"{checks['pfet_05v0', 'acc']:.{line_d}f}"
+    out["lim_split_pfet_inv"] = f"{checks['pfet_05v0', 'inv']:.{line_d}f}"
+    out["lim_split_pfet_rms"] = f"{max(rms['pfet_05v0', k] for k in ('acc', 'inv')):.{chk_d}f}"
+    out["lim_split_nfet_rms"] = f"{max(rms['nfet_05v0', k] for k in ('acc', 'inv')):.{chk_d}f}"
+    out["lim_split_cf"] = f"{nfet['cf'] * ff_um_per_f_m:.{line_d}f}"
+    return out
+
+
 def _meshconv_fitted_substitutions(roots: Roots) -> dict[str, str]:
     """The fitted-bias mesh-convergence numbers of the mesh-convergence page, per device
     (``<dev>`` is ``nfet`` or ``pfet``): ``lim_mcfit_<dev>_change_<i>`` the largest change of
@@ -1563,6 +1758,8 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
         **_charon_substitutions(roots),
         **_abrupt_substitutions(roots),
         **_meshconv_fitted_substitutions(roots),
+        **_two_d_validation_substitutions(roots),
+        **_edge_split_substitutions(roots),
     }
 
 

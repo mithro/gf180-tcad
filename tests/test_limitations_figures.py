@@ -1339,7 +1339,9 @@ def test_page_numbers_are_the_committed_files():
     # the Charon page's numbers: tests/test_charon_experiments.py::test_page_numbers_are_the_records;
     # the plugin-history page's: test_abrupt_junction_numbers_are_the_record; the mesh-convergence
     # page's: tests/test_meshconv_fitted.py::test_page_prints_the_records
-    skip = ("lim_charon_", "lim_abrupt_", "lim_mcfit_")
+    # and the C-V page's: tests/test_two_d_validation_numbers.py and
+    # tests/test_comparison_figures.py::test_cv_page_prints_the_edge_split
+    skip = ("lim_charon_", "lim_abrupt_", "lim_mcfit_", "lim_v2d_", "lim_split_")
     for key in (k for k in subs if not k.startswith(skip)):
         assert f"{{{{ {key} }}}}" in page, key
     for old in ("2.7e-8", "1.071", "1.090"):

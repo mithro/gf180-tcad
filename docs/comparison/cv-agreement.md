@@ -449,11 +449,14 @@ fitted values of the calibration. None of these geometries was in the fit.
   L = 0.7 µm and 1.6/0.7, both from the depletion-side crossing (+124 and +132 mV, inside the
   corner window) and, at 1.6/0.7, the accumulation plateau (6.12 %).
 
-**2D: {term}`Disagree` at four cells:** nfet W10/L0.6, W10/L0.7 and W1.6/L0.7, and pfet W10/L2.
-All four fail on the depletion crossing alone ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The
+**2D: {term}`Disagree` at {{ lim_v2d_disagree_count }} cells:** {{ lim_v2d_disagree_cells }}.
+All {{ lim_v2d_disagree_count }} fail on the depletion crossing alone ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)). The
 {repo}`nfet validation file <results/tcad/validation/nfet_05v0.json>` compares each calibrated 2D
-cell with the TT ngspice Cgg; W10/L1 is {term}`Same process` and W10/L2 is {term}`Agree`. The
-{repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>` does the same for the pfet cells. W10/L0.5 is Agree, and W10/L0.7, W10/L1 and W1.6/L0.7 are Same process.
+cell with the TT ngspice Cgg. Of the other nfet cells, {{ lim_v2d_nfet_others }}.
+
+The
+{repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>` does the same for the pfet
+cells. Of the other pfet cells, {{ lim_v2d_pfet_others }}.
 
 A cell is one 2D {term}`job` with source and drain, QS, on the selected 2D mesh and the SPICE
 grid ({ref}`moscap2d-calibrated`). Its poly is longer by the fitted poly length bias at each
@@ -468,10 +471,10 @@ fit, is in {numref}`tab-cv-2d-nfet-l0p6`.
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 8.1 | {term}`Same process` |
-| Inversion plateau (%) | 6.2 | Same process |
-| Depletion crossing shift (mV) | −189 | Disagree |
-| Inversion crossing shift (mV) | −24 | {term}`Agree` |
+| Accumulation plateau (%) | {{ lim_v2d_nfet_w10p0_l0p60_acc_pct }} | {{ lim_v2d_nfet_w10p0_l0p60_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_nfet_w10p0_l0p60_inv_pct }} | {{ lim_v2d_nfet_w10p0_l0p60_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_nfet_w10p0_l0p60_dv_dep_mv }} | {{ lim_v2d_nfet_w10p0_l0p60_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_nfet_w10p0_l0p60_dv_inv_mv }} | {{ lim_v2d_nfet_w10p0_l0p60_dv_inv_verdict }} |
 ~~~
 
 The W10/L0.7 cell is in {numref}`tab-cv-2d-nfet-l0p7`.
@@ -481,10 +484,10 @@ The W10/L0.7 cell is in {numref}`tab-cv-2d-nfet-l0p7`.
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 7.1 | Same process |
-| Inversion plateau (%) | 5.4 | Same process |
-| Depletion crossing shift (mV) | −169 | Disagree |
-| Inversion crossing shift (mV) | −29 | Agree |
+| Accumulation plateau (%) | {{ lim_v2d_nfet_w10p0_l0p70_acc_pct }} | {{ lim_v2d_nfet_w10p0_l0p70_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_nfet_w10p0_l0p70_inv_pct }} | {{ lim_v2d_nfet_w10p0_l0p70_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_nfet_w10p0_l0p70_dv_dep_mv }} | {{ lim_v2d_nfet_w10p0_l0p70_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_nfet_w10p0_l0p70_dv_inv_mv }} | {{ lim_v2d_nfet_w10p0_l0p70_dv_inv_verdict }} |
 ~~~
 
 The W10/L1 cell is in {numref}`tab-cv-2d-nfet-l1`.
@@ -494,10 +497,10 @@ The W10/L1 cell is in {numref}`tab-cv-2d-nfet-l1`.
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 5.2 | Same process |
-| Inversion plateau (%) | 4.0 | Agree |
-| Depletion crossing shift (mV) | −119 | Same process |
-| Inversion crossing shift (mV) | −23 | Agree |
+| Accumulation plateau (%) | {{ lim_v2d_nfet_w10p0_l1p00_acc_pct }} | {{ lim_v2d_nfet_w10p0_l1p00_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_nfet_w10p0_l1p00_inv_pct }} | {{ lim_v2d_nfet_w10p0_l1p00_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_nfet_w10p0_l1p00_dv_dep_mv }} | {{ lim_v2d_nfet_w10p0_l1p00_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_nfet_w10p0_l1p00_dv_inv_mv }} | {{ lim_v2d_nfet_w10p0_l1p00_dv_inv_verdict }} |
 ~~~
 
 W10/L2 is a calibration geometry of the 1D fit, run with QS only ({ref}`moscap2d-l2`).
@@ -511,115 +514,125 @@ Its plateau gap is the cells' edge capacitance ({ref}`cv-agreement-edge`), not t
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 3.0 | Agree |
-| Inversion plateau (%) | 2.1 | Agree |
-| Depletion crossing shift (mV) | −43 | Agree |
-| Inversion crossing shift (mV) | +1 | Agree |
+| Accumulation plateau (%) | {{ lim_v2d_nfet_w10p0_l2p00_acc_pct }} | {{ lim_v2d_nfet_w10p0_l2p00_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_nfet_w10p0_l2p00_inv_pct }} | {{ lim_v2d_nfet_w10p0_l2p00_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_nfet_w10p0_l2p00_dv_dep_mv }} | {{ lim_v2d_nfet_w10p0_l2p00_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_nfet_w10p0_l2p00_dv_inv_mv }} | {{ lim_v2d_nfet_w10p0_l2p00_dv_inv_verdict }} |
 ~~~
 
-The nfet 2D Cgg lies above SPICE on the accumulation plateau and below it on the inversion plateau.
-At W10/L0.6 it is 15.49 fF at −5 V and 15.71 fF at +5 V
-({repo}`cv.csv <results/tcad/moscap2d/nfet_05v0/calibrated/w10p0_l0p60/cv.csv>`). The
-SPICE levels there are 14.33 and 16.70 fF (`spice_regions` in the validation file). The gap
-shrinks as the gate gets longer. It is the residual of the fitted poly length bias at each
-plateau ({ref}`cv-agreement-edge`).
+The nfet 2D Cgg lies above SPICE on the accumulation plateau and below it on the inversion
+plateau, as {numref}`tab-cv-2d-plateaus` shows. The gap shrinks as the gate gets longer. It is
+the residual of the fitted poly length bias at each plateau ({ref}`cv-agreement-edge`).
 
 **The pfet cell, W10/L0.5.** It is a calibration geometry, and the 1D fit is {term}`Disagree` there,
 on the depletion crossing ({repo}`pfet calibration file <results/tcad/calibration/pfet_05v0.result.json>`).
-So the 2D cell is no held-out evidence. Every 2D check is Agree, as {numref}`tab-cv-2d-pfet-l0p5` shows.
+So the 2D cell is no held-out evidence. Its checks are in {numref}`tab-cv-2d-pfet-l0p5`.
 
 ~~~{table} The 2D checks of the pfet W10/L0.5 cell.
 :name: tab-cv-2d-pfet-l0p5
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 1.0 | Agree |
-| Inversion plateau (%) | 1.3 | Agree |
-| Depletion crossing shift (mV) | +31 | Agree |
-| Inversion crossing shift (mV) | +4 | Agree |
+| Accumulation plateau (%) | {{ lim_v2d_pfet_w10p0_l0p50_acc_pct }} | {{ lim_v2d_pfet_w10p0_l0p50_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_pfet_w10p0_l0p50_inv_pct }} | {{ lim_v2d_pfet_w10p0_l0p50_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_pfet_w10p0_l0p50_dv_dep_mv }} | {{ lim_v2d_pfet_w10p0_l0p50_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_pfet_w10p0_l0p50_dv_inv_mv }} | {{ lim_v2d_pfet_w10p0_l0p50_dv_inv_verdict }} |
 ~~~
 
-The cell gives 14.41 fF at Vg = +5 V and 14.35 fF at Vg = −5 V
-({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p50/cv.csv>`). SPICE gives 14.26 and 14.53 fF.
-
 **The pfet cell, W10/L0.7.** It is a {term}`held-out geometry`; the 1D validation there is {term}`Same process`,
-on the depletion crossing. The 2D cell is Same process, on the same check, as {numref}`tab-cv-2d-pfet-l0p7` shows.
+on the depletion crossing. The 2D checks are in {numref}`tab-cv-2d-pfet-l0p7`.
 
 ~~~{table} The 2D checks of the pfet W10/L0.7 cell.
 :name: tab-cv-2d-pfet-l0p7
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 1.1 | Agree |
-| Inversion plateau (%) | 0.4 | Agree |
-| Depletion crossing shift (mV) | −64 | Same process |
-| Inversion crossing shift (mV) | +9 | Agree |
+| Accumulation plateau (%) | {{ lim_v2d_pfet_w10p0_l0p70_acc_pct }} | {{ lim_v2d_pfet_w10p0_l0p70_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_pfet_w10p0_l0p70_inv_pct }} | {{ lim_v2d_pfet_w10p0_l0p70_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_pfet_w10p0_l0p70_dv_dep_mv }} | {{ lim_v2d_pfet_w10p0_l0p70_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_pfet_w10p0_l0p70_dv_inv_mv }} | {{ lim_v2d_pfet_w10p0_l0p70_dv_inv_verdict }} |
 ~~~
 
-The cell gives 18.71 fF at Vg = +5 V and 18.53 fF at Vg = −5 V
-({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p70/cv.csv>`). SPICE gives 18.51 and 18.52 fF.
+Both plateaus agree closer in 2D than in 1D ({numref}`tab-cv-pfet-errors`). The 2D depletion
+crossing lies below SPICE's, where the 1D one lies above it.
 No start-value pfet cell exists at L = 0.7 µm.
 
-The 1D validation here has plateaus of 4.3 % and 2.3 % and a depletion shift of +124 mV.
-In 2D they are 1.1 %, 0.4 % and −64 mV.
-The 2D cell agrees on both plateaus and the inversion crossing; the depletion crossing moves the other way from 1D's.
-
 **The pfet cell, W10/L1.** It is a {term}`held-out geometry`, and the 1D validation there is {term}`Agree` on all four checks.
-The 2D cell is {term}`Same process`, on the depletion crossing, as {numref}`tab-cv-2d-pfet-l1` shows.
+Its 2D checks are in {numref}`tab-cv-2d-pfet-l1`.
 
 ~~~{table} The 2D checks of the pfet W10/L1 cell.
 :name: tab-cv-2d-pfet-l1
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 0.9 | Agree |
-| Inversion plateau (%) | 1.0 | Agree |
-| Depletion crossing shift (mV) | −127 | Same process |
-| Inversion crossing shift (mV) | +6 | Agree |
+| Accumulation plateau (%) | {{ lim_v2d_pfet_w10p0_l1p00_acc_pct }} | {{ lim_v2d_pfet_w10p0_l1p00_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_pfet_w10p0_l1p00_inv_pct }} | {{ lim_v2d_pfet_w10p0_l1p00_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_pfet_w10p0_l1p00_dv_dep_mv }} | {{ lim_v2d_pfet_w10p0_l1p00_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_pfet_w10p0_l1p00_dv_inv_mv }} | {{ lim_v2d_pfet_w10p0_l1p00_dv_inv_verdict }} |
 ~~~
 
-The corner envelope of the depletion crossing runs from −0.970 V (the ff corner) to −0.682 V (ss).
-The 2D crossing is at −0.954 V, 16 mV inside the ff end. The 1D crossing there is within 1 mV of SPICE.
-So the whole −127 mV is a shift that only the 2D cell has.
-
-At W10/L0.7 and W10/L1, in both devices, the 2D crossing lies below the 1D crossing at the same parameters.
-The gap is 188 mV at pfet W10/L0.7 and 127 mV at W10/L1. It is 137 and 91 mV at the same nfet cells.
-
-The shift shrinks with L, but the SPICE pfet edge moves faster with L.
-From L = 0.7 to 1 µm, the SPICE crossing moves +0.134 V and the 2D crossing +0.071 V
-({repo}`pfet validation file <results/tcad/validation/pfet_05v0.json>`).
-The corner envelope also narrows, from 0.33 V wide at L = 0.7 µm to 0.29 V at 1 µm
-([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
-
-The cell gives 25.17 fF at Vg = +5 V and 24.81 fF at Vg = −5 V
-({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l1p00/cv.csv>`). SPICE gives 25.00 and 24.61 fF.
-
-**The pfet cell, W10/L2.** It is a calibration geometry, run with QS only ({ref}`moscap2d-l2`). The 1D fit there is
-{term}`Same process`, on the depletion crossing (−128 mV). The 2D cell is {term}`Disagree`, on the same check, as
-{numref}`tab-cv-2d-pfet-l2` shows.
+**The pfet cell, W10/L2.** It is a calibration geometry, run with QS only ({ref}`moscap2d-l2`).
+The 1D fit there is {term}`Same process`, on the depletion crossing ({{ lim_v2d_pfet_w10p0_l2p00_1d_dv_dep_mv }} mV).
+Its 2D checks are in {numref}`tab-cv-2d-pfet-l2`.
 
 ~~~{table} The 2D checks of the pfet W10/L2 cell.
 :name: tab-cv-2d-pfet-l2
 
 | Check | 2D | Verdict |
 |---|---|---|
-| Accumulation plateau (%) | 1.7 | Agree |
-| Inversion plateau (%) | 1.4 | Agree |
-| Depletion crossing shift (mV) | −188 | Disagree |
-| Inversion crossing shift (mV) | −2 | Agree |
+| Accumulation plateau (%) | {{ lim_v2d_pfet_w10p0_l2p00_acc_pct }} | {{ lim_v2d_pfet_w10p0_l2p00_plateau_acc_verdict }} |
+| Inversion plateau (%) | {{ lim_v2d_pfet_w10p0_l2p00_inv_pct }} | {{ lim_v2d_pfet_w10p0_l2p00_plateau_inv_verdict }} |
+| Depletion crossing shift (mV) | {{ lim_v2d_pfet_w10p0_l2p00_dv_dep_mv }} | {{ lim_v2d_pfet_w10p0_l2p00_dv_dep_verdict }} |
+| Inversion crossing shift (mV) | {{ lim_v2d_pfet_w10p0_l2p00_dv_inv_mv }} | {{ lim_v2d_pfet_w10p0_l2p00_dv_inv_verdict }} |
 ~~~
 
-The corner envelope of the depletion crossing runs from −0.820 V (the ff corner) to −0.558 V (ss).
-The 2D crossing is at −0.876 V, 56 mV past the ff end.
-The 1D crossing at the same parameters is at −0.816 V, 3 mV inside the ff end.
-So any shift of more than 3 mV that only the 2D cell has moves the crossing out of the envelope.
+At W10/L0.7 and W10/L1 the 2D depletion crossing lies below the 1D one at the same values. {numref}`tab-cv-2d-crossings` gives them. That 2D-only
+shift shrinks with L. But the SPICE pfet edge moves faster with L than the 2D crossing, and the corner
+envelope narrows ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
 
-That 2D-only shift is 60 mV here. It shrinks with L: 188, 127 and 60 mV at L = 0.7, 1 and 2 µm.
-From L = 1 µm to 2 µm the SPICE TT edge moves by +139 mV and the 2D crossing by +78 mV.
-The envelope narrows from 0.288 V to 0.262 V wide ([issue #108](https://github.com/mithro/gf180-tcad/issues/108)).
+At pfet W10/L1 the 2D crossing lies inside the corner envelope, near its ff end. The 1D crossing
+there is at SPICE's, so the whole shift is one that only the 2D cell has.
 
-The cell gives 46.71 fF at Vg = +5 V and 45.72 fF at Vg = −5 V
-({repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l2p00/cv.csv>`). SPICE gives 46.83 and 45.14 fF.
+At pfet W10/L2 the 2D crossing lies past the ff end, and the 1D crossing lies inside it. So a 2D-only shift larger
+than that margin moves the crossing out of the envelope, and W10/L2 is Disagree.
+
+~~~{table} The depletion crossings of the calibrated 2D cells beside SPICE, the 1D stack at the same values, and the SPICE corner envelope.
+:name: tab-cv-2d-crossings
+
+| Cell | SPICE (V) | 2D (V) | 1D (V) | Envelope, ff end (V) | Envelope, ss end (V) | 2D-only shift (mV) |
+|---|---|---|---|---|---|---|
+| nfet W10/L0.7 | {{ lim_v2d_nfet_w10p0_l0p70_spice_u_dep }} | {{ lim_v2d_nfet_w10p0_l0p70_u_dep }} | {{ lim_v2d_nfet_w10p0_l0p70_u_dep_1d }} | {{ lim_v2d_nfet_w10p0_l0p70_env_lo }} | {{ lim_v2d_nfet_w10p0_l0p70_env_hi }} | {{ lim_v2d_nfet_w10p0_l0p70_only_2d_mv }} |
+| nfet W10/L1 | {{ lim_v2d_nfet_w10p0_l1p00_spice_u_dep }} | {{ lim_v2d_nfet_w10p0_l1p00_u_dep }} | {{ lim_v2d_nfet_w10p0_l1p00_u_dep_1d }} | {{ lim_v2d_nfet_w10p0_l1p00_env_lo }} | {{ lim_v2d_nfet_w10p0_l1p00_env_hi }} | {{ lim_v2d_nfet_w10p0_l1p00_only_2d_mv }} |
+| pfet W10/L0.7 | {{ lim_v2d_pfet_w10p0_l0p70_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l0p70_u_dep }} | {{ lim_v2d_pfet_w10p0_l0p70_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l0p70_env_lo }} | {{ lim_v2d_pfet_w10p0_l0p70_env_hi }} | {{ lim_v2d_pfet_w10p0_l0p70_only_2d_mv }} |
+| pfet W10/L1 | {{ lim_v2d_pfet_w10p0_l1p00_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l1p00_u_dep }} | {{ lim_v2d_pfet_w10p0_l1p00_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l1p00_env_lo }} | {{ lim_v2d_pfet_w10p0_l1p00_env_hi }} | {{ lim_v2d_pfet_w10p0_l1p00_only_2d_mv }} |
+| pfet W10/L2 | {{ lim_v2d_pfet_w10p0_l2p00_spice_u_dep }} | {{ lim_v2d_pfet_w10p0_l2p00_u_dep }} | {{ lim_v2d_pfet_w10p0_l2p00_u_dep_1d }} | {{ lim_v2d_pfet_w10p0_l2p00_env_lo }} | {{ lim_v2d_pfet_w10p0_l2p00_env_hi }} | {{ lim_v2d_pfet_w10p0_l2p00_only_2d_mv }} |
+~~~
+
+The crossings are u = polarity × Vg. The 2D crossing and SPICE's are the `tcad_crossings` and
+`spice_regions` of each validation file. The pfet W10/L2 1D crossing is the
+{repo}`pfet calibration file <results/tcad/calibration/pfet_05v0.result.json>`'s.
+
+**The plateaus.** {numref}`tab-cv-2d-plateaus` gives each cell's Cgg at u = −5 V and +5 V
+beside SPICE's plateau level there. The 2D values are each cell's
+{repo}`cv.csv <results/tcad/moscap2d/pfet_05v0/calibrated/w10p0_l0p50/cv.csv>`, and SPICE's the
+`spice_regions` of the validation file.
+
+~~~{table} The Cgg of each calibrated 2D cell at u = −5 V (accumulation) and +5 V (inversion), beside SPICE's plateau level.
+:name: tab-cv-2d-plateaus
+
+| Cell | 2D at −5 V (fF) | SPICE at −5 V (fF) | 2D at +5 V (fF) | SPICE at +5 V (fF) |
+|---|---|---|---|---|
+| nfet W10/L0.6 | {{ lim_v2d_nfet_w10p0_l0p60_cgg_acc }} | {{ lim_v2d_nfet_w10p0_l0p60_spice_acc }} | {{ lim_v2d_nfet_w10p0_l0p60_cgg_inv }} | {{ lim_v2d_nfet_w10p0_l0p60_spice_inv }} |
+| nfet W10/L0.7 | {{ lim_v2d_nfet_w10p0_l0p70_cgg_acc }} | {{ lim_v2d_nfet_w10p0_l0p70_spice_acc }} | {{ lim_v2d_nfet_w10p0_l0p70_cgg_inv }} | {{ lim_v2d_nfet_w10p0_l0p70_spice_inv }} |
+| nfet W10/L1 | {{ lim_v2d_nfet_w10p0_l1p00_cgg_acc }} | {{ lim_v2d_nfet_w10p0_l1p00_spice_acc }} | {{ lim_v2d_nfet_w10p0_l1p00_cgg_inv }} | {{ lim_v2d_nfet_w10p0_l1p00_spice_inv }} |
+| nfet W10/L2 | {{ lim_v2d_nfet_w10p0_l2p00_cgg_acc }} | {{ lim_v2d_nfet_w10p0_l2p00_spice_acc }} | {{ lim_v2d_nfet_w10p0_l2p00_cgg_inv }} | {{ lim_v2d_nfet_w10p0_l2p00_spice_inv }} |
+| nfet W1.6/L0.7 | {{ lim_v2d_nfet_w1p6_l0p70_cgg_acc }} | {{ lim_v2d_nfet_w1p6_l0p70_spice_acc }} | {{ lim_v2d_nfet_w1p6_l0p70_cgg_inv }} | {{ lim_v2d_nfet_w1p6_l0p70_spice_inv }} |
+| pfet W10/L0.5 | {{ lim_v2d_pfet_w10p0_l0p50_cgg_acc }} | {{ lim_v2d_pfet_w10p0_l0p50_spice_acc }} | {{ lim_v2d_pfet_w10p0_l0p50_cgg_inv }} | {{ lim_v2d_pfet_w10p0_l0p50_spice_inv }} |
+| pfet W10/L0.7 | {{ lim_v2d_pfet_w10p0_l0p70_cgg_acc }} | {{ lim_v2d_pfet_w10p0_l0p70_spice_acc }} | {{ lim_v2d_pfet_w10p0_l0p70_cgg_inv }} | {{ lim_v2d_pfet_w10p0_l0p70_spice_inv }} |
+| pfet W10/L1 | {{ lim_v2d_pfet_w10p0_l1p00_cgg_acc }} | {{ lim_v2d_pfet_w10p0_l1p00_spice_acc }} | {{ lim_v2d_pfet_w10p0_l1p00_cgg_inv }} | {{ lim_v2d_pfet_w10p0_l1p00_spice_inv }} |
+| pfet W10/L2 | {{ lim_v2d_pfet_w10p0_l2p00_cgg_acc }} | {{ lim_v2d_pfet_w10p0_l2p00_spice_acc }} | {{ lim_v2d_pfet_w10p0_l2p00_cgg_inv }} | {{ lim_v2d_pfet_w10p0_l2p00_spice_inv }} |
+| pfet W1.6/L0.7 | {{ lim_v2d_pfet_w1p6_l0p70_cgg_acc }} | {{ lim_v2d_pfet_w1p6_l0p70_spice_acc }} | {{ lim_v2d_pfet_w1p6_l0p70_cgg_inv }} | {{ lim_v2d_pfet_w1p6_l0p70_spice_inv }} |
+~~~
 
 (cv-agreement-edge)=
 
@@ -694,31 +707,35 @@ accumulation at u = −5 V, inversion at u = +5 V.
 | pfet | inversion | 2.044 | 2.092 |
 ~~~
 
-The capacitance per area agrees within 2.3 % on both plateaus of both devices. The 2D cells
+The capacitance per area agrees within {{ lim_split_area_max }} % on both plateaus of both devices. The 2D cells
 are solved with the fitted poly length bias ({ref}`moscap2d-edge`). SPICE minus the
-2D edge is −0.11 to
-0.11 fF/µm. The 2D edge is larger at accumulation and smaller at inversion.
+2D edge is {{ lim_split_gap_min }} to
+{{ lim_split_gap_max }} fF/µm. The 2D edge is larger at accumulation and smaller at inversion.
+
 At nfet
-W10/L0.6 and u = +5 V, the two lines give 16.70 fF (SPICE) and 15.71 fF (2D).
+W10/L0.6 and u = +5 V, SPICE's line gives {{ lim_split_nfet_spice }} fF.
+The 2D line gives {{ lim_split_nfet_two_d }} fF there.
 
 The per-area difference grows with L, and in three of the four cases it works against the edge.
-At pfet W10/L2 and u = +5 V, the edge part of the gap is 0.35 fF and the per-area part
-−0.96 fF.
+At pfet W10/L2 and u = +5 V, the edge part of the gap is {{ lim_split_pfet_edge }} fF.
+The per-area part is {{ lim_split_pfet_area }} fF.
 
 For the nfet, the SPICE edge is the card's extrinsic terms less 2·DLC·$C_{\mathrm{area}}$,
-to within 0.0003 fF/µm. The card's DLC, 54 nm ({repo}`data/process/nfet_05v0.toml`),
+to within {{ lim_split_nfet_check }} fF/µm. The card's DLC, {{ lim_split_dlc_nm }} nm ({repo}`data/process/nfet_05v0.toml`),
 shortens the length that BSIM4 multiplies by $C_{\mathrm{area}}$. So the nfet's SPICE edge is
 the card's overlap and fringe terms.
 
 For the pfet the same check misses. Its SPICE edge exceeds the card's terms less
-2·DLC·$C_{\mathrm{area}}$ by 0.051 fF/µm (accumulation) and 0.055 fF/µm (inversion). Its SPICE
-plateaus also lie off their line by up to 0.0053 fF/µm rms, against 0.0001 fF/µm for the
-nfet. Which pfet card terms add this length-dependent part is
+2·DLC·$C_{\mathrm{area}}$ by {{ lim_split_pfet_acc }} fF/µm at accumulation.
+At inversion it exceeds them by {{ lim_split_pfet_inv }} fF/µm. Its SPICE plateaus also lie off
+their line by up to {{ lim_split_pfet_rms }} fF/µm rms. The nfet's lie off by {{ lim_split_nfet_rms }} fF/µm.
+
+Which pfet card terms add this length-dependent part is
 [issue #194](https://github.com/mithro/gf180-tcad/issues/194).
 
-The 2D edge on the inversion side, 0.312 fF/µm, includes the fitted bias at both gate ends.
+The 2D edge on the inversion side, {{ lim_split_nfet_2d_inv }} fF/µm, includes the fitted bias at both gate ends.
 The card's outer fringe CF is
-0.073 fF/µm per edge. The 2D cross-section has no lightly doped
+{{ lim_split_cf }} fF/µm per edge. The 2D cross-section has no lightly doped
 extension and no spacer ({py:mod}`gf180tcad.tcad.stack`).
 
 It was tried with
