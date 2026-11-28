@@ -176,13 +176,13 @@ def test_readme_status_line_is_the_counts():
     readme = " ".join((REPO_ROOT / "README.md").read_text("utf-8").split())
     want = (
         f"Of them, {subs['lim_v2d_count_agree']} are Agree, {subs['lim_v2d_count_same']} Same "
-        f"process and {subs['lim_v2d_count_disagree']} Disagree, each on the"
+        f"process and {subs['lim_v2d_count_disagree']} Disagree. Each Disagree is on the"
     )
     assert want in readme, want
     index = " ".join((REPO_ROOT / "docs/index.md").read_text("utf-8").split())
     assert (
         "Of them, {{ lim_v2d_count_agree }} are Agree, {{ lim_v2d_count_same }} Same process and "
-        "{{ lim_v2d_count_disagree }} Disagree, each on the {term}`depletion` crossing."
+        "{{ lim_v2d_count_disagree }} Disagree. Each Disagree is on the {term}`depletion` crossing."
     ) in index
 
 

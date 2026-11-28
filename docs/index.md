@@ -89,8 +89,8 @@ under an open licence, and every input is pinned to an exact version.
   pfet disagrees at two of its three fitted sizes ({numref}`fig-index-cv`) and is Same
   process or Agree at the rest.
 - **The 2D cross-sections are mixed.** The calibrated 2D cross-sections carry a fitted poly
-  length bias. Of them, {{ lim_v2d_count_agree }} are Agree, {{ lim_v2d_count_same }} Same process and
-  {{ lim_v2d_count_disagree }} Disagree, each on the {term}`depletion` crossing.
+  length bias. Of them, {{ lim_v2d_count_agree }} are Agree, {{ lim_v2d_count_same }} Same process
+  and {{ lim_v2d_count_disagree }} Disagree. Each Disagree is on the {term}`depletion` crossing.
 - **{{ Charon }} agrees with {{ DEVSIM }} in 1D.** In experiments the C differs by at most
   {{ lim_charon_nfet_devsim }} (nfet) and {{ lim_charon_pfet_devsim }} (pfet). Every committed
   TCAD result is DEVSIM's ({doc}`limitations/charon`).
