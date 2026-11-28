@@ -1001,3 +1001,94 @@ def test_number_ref_skips_pages_read_on_github():
     page = "# T\n\n![a](a.svg)\n\nAs Figure 1 shows.\n"
     assert [c for _, c, _ in lint().rule_findings(page, sphinx=False) if c == "NUMBER-REF"] == []
     assert [c for _, c, _ in lint().rule_findings(page) if c == "NUMBER-REF"]
+
+
+# --- Blocks indented under a list item -----------------------------------------------------
+
+
+def _sentence_fails(tmp_path, text: str) -> list[str]:
+    page = tmp_path / "page.md"
+    page.write_text(textwrap.dedent(text).lstrip("\n"), encoding="utf-8")
+    out = _run("--no-front-matter", str(page)).stdout
+    return [ln for ln in out.splitlines() if "FAIL sentence" in ln]
+
+
+def test_table_indented_under_a_list_item_is_a_table(tmp_path):
+    """A {table} directive inside a list item: its rows are a table, its caption a sentence."""
+    page = """
+        # T
+
+        - An item that gives a table.
+
+          ~~~{table} The values.
+          :name: tab-a
+
+          | Sweep | ngspice 4.5 (PDK as published) | ngspice 4.6 (forced version) | the difference of the two settings |
+          |---|---|---|---|
+          | `idvg_lin` | 5.62e-3 | 1.47e-4 | 1 |
+          ~~~
+        """
+    assert _sentence_fails(tmp_path, page) == []
+    long_caption = page.replace("The values.", "The values " + "of the sweep " * 9 + "here.")
+    assert len(_sentence_fails(tmp_path, long_caption)) == 1
+
+
+def test_wrapped_prose_line_starting_with_a_pipe_is_prose(tmp_path):
+    """Negative control: an indented line that starts with |x| but does not end in a pipe."""
+    page = """
+        # T
+
+        - The relative error is
+          |update| / (|psi| + 1e-10 V) per node, summed over the equations and the regions of
+          the device and over every node of every region in it.
+        """
+    assert len(_sentence_fails(tmp_path, page)) == 1
+
+
+def test_code_fence_indented_under_a_list_item_is_skipped(tmp_path):
+    page = """
+        # T
+
+        - Run this.
+
+          ```
+          a very long command line that has far more than twenty five words in it so that it would fail as prose if it were read as a sentence by the linter
+          ```
+        """
+    assert _sentence_fails(tmp_path, page) == []
+
+
+def test_indented_pipe_lines_without_a_delimiter_row_are_prose(tmp_path):
+    """Negative control: a wrapped prose line that starts and ends with a pipe is not a table."""
+    page = """
+        # T
+
+        - The relative error of the update in every node of the device that the solver checks is
+          |update| / |psi|
+          summed over the equations and the regions.
+        """
+    assert len(_sentence_fails(tmp_path, page)) == 1
+
+
+def test_a_link_wrapped_across_lines_is_counted_by_its_text(tmp_path):
+    """The URL of a link that wraps onto a second line is not counted as words."""
+    page = """
+        # T
+
+        - Altermatt, Schenk, Geelhaar and Heiser, "[Reassessment of the intrinsic carrier density in
+          crystalline silicon in view of band-gap narrowing](https://doi.org/10.1063/1.1529297)".
+          J. Appl. Phys. 93(3), 1598-1604, 2003.
+        """
+    assert _sentence_fails(tmp_path, page) == []
+
+
+def test_a_lone_quote_does_not_hide_the_next_lines(tmp_path):
+    """An unmatched straight quote (an inch mark) hides nothing beyond its own line."""
+    page = """
+        # T
+
+        The chuck holds a 3.5" wafer.
+        The wafer is held on the chuck by a vacuum that the operator checks before every run with a gauge on the side of the tool.
+        The tool is "quoted" here.
+        """
+    assert len(_sentence_fails(tmp_path, page)) == 1

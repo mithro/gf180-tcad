@@ -7,7 +7,9 @@
 # Copyright Tim Ansell; Apache License 2.0 (the LICENSE at the root of that branch).
 # Local additions: the block between "--- LOCAL" and "--- end LOCAL" and the lines marked
 # "# LOCAL" (the --rules option: the house rules FIGURE, EQUATION and FILELINK of gf180-tcad
-# spec §10.3). Everything else is the upstream file unchanged. Update by copying the new
+# spec §10.3; {table} directives read as tables; fences, directives and pipe tables indented
+# under a list item; links, code and quotes stripped over the joined paragraph, so one that
+# wraps across lines is a mention). Everything else is the upstream file unchanged. Update by copying the new
 # upstream file below this header, changing the commit and sha256, and carrying the LOCAL
 # parts over.
 """Check Markdown documentation pages against the writing-docs rules.
@@ -63,6 +65,19 @@ def mentions_stripped(line):
     line = re.sub(r"\"[^\"]*\"", " X ", line)              # quoted spans are mentions
     line = re.sub(r"“[^”]*”", " X ", line)
     return line
+
+
+# --- LOCAL (gf180-tcad): mentions_stripped in two halves, for the sentence count
+def _quotes_stripped(line):
+    line = re.sub(r"\"[^\"]*\"", " X ", line)
+    return re.sub(r"“[^”]*”", " X ", line)
+
+
+def _links_and_code_stripped(text):
+    text = IMAGE.sub(" ", text)
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    return re.sub(r"`[^`]*`", " X ", text)
+# --- end LOCAL
 
 
 class Page:
@@ -121,6 +136,16 @@ class Page:
         table_fence = None    # LOCAL (gf180-tcad): the fence of an open {table} directive
         in_callout = 0
         callout_fence = []
+        # LOCAL (gf180-tcad): the line numbers of indented pipe tables (a block of lines that
+        # start with | after their indent and hold a |---| delimiter row).
+        indented_rows, block = set(), []
+        for j, row in enumerate([*self.lines, ""], 1):
+            if row.startswith((" ", "\t")) and row.lstrip().startswith("|"):
+                block.append(j)
+                continue
+            if any(re.match(r"^\|[\s:|-]*-[\s:|-]*\|$", self.lines[k - 1].strip()) for k in block):
+                indented_rows.update(block)
+            block = []
         for i, line in enumerate(self.lines, 1):
             if i == 1 and line.strip() == "---":
                 in_fm = True
@@ -130,7 +155,7 @@ class Page:
                     in_fm = False
                 continue
             if fence:
-                if line.startswith(fence[:3]) and line.strip() == fence.strip():
+                if line.lstrip().startswith(fence[:3]) and line.strip() == fence.strip():  # LOCAL
                     fence = None
                 continue
             # LOCAL (gf180-tcad): a {table} directive holds a pipe table and its caption, which
@@ -141,10 +166,12 @@ class Page:
                     continue
                 if re.match(r"^\s*:[\w-]+:", line):
                     continue
-            d = DIRECTIVE.match(line)
+            # LOCAL (gf180-tcad): a fence, a directive or a pipe table may sit indented under a
+            # list item, as CommonMark and MyST allow; it is read as if it started the line.
+            d = DIRECTIVE.match(line.lstrip())
             if d and d.group(2).lower() == "table" and not table_fence:
                 table_fence = d.group(1)
-                caption = line[d.end():].strip()
+                caption = line.lstrip()[d.end():].strip()
                 if caption:
                     out.append((i, caption, "prose"))
                 continue
@@ -157,7 +184,7 @@ class Page:
                 else:
                     fence = mark
                 continue
-            f = FENCE.match(line)
+            f = FENCE.match(line.lstrip())  # LOCAL
             if f:
                 mark = f.group(1)
                 if callout_fence and mark[:3] == callout_fence[-1][:3] and line.strip() == mark:
@@ -171,7 +198,9 @@ class Page:
             if re.match(r"^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]", line, flags=re.I):
                 out.append((i, line, "callout-open"))
                 continue
-            if line.startswith("|"):
+            # LOCAL (gf180-tcad): an indented pipe line is a table row only in a block of such
+            # lines with a delimiter row; a wrapped prose line can start with |x|.
+            if line.startswith("|") or i in indented_rows:
                 out.append((i, line, "table"))
                 continue
             if line.startswith("#"):
@@ -252,7 +281,11 @@ class Page:
         def flush():
             if not para:
                 return
-            joined = " ".join(mentions_stripped(l).strip() for l in para)
+            # LOCAL (gf180-tcad): quotes are stripped per line, so a lone " (an inch mark, a typo)
+            # cannot hide the rest of the paragraph; links and code spans over the joined
+            # paragraph, so one that wraps across lines is a mention.
+            joined = " ".join(_quotes_stripped(l).strip() for l in para)  # LOCAL
+            joined = _links_and_code_stripped(joined)  # LOCAL
             joined = re.sub(r"^\s*(\d+[.)]|[-*+])\s+", "", joined)
             sents = [x for x in re.split(r"(?<=[.!?])\s+(?=[A-Z\"'(“])", joined.strip()) if x.strip()]
             for x in sents:

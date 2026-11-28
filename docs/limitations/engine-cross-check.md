@@ -115,9 +115,10 @@ identically to scratch copies of both libraries.
 
 - **Xyce `version` set to 4.6.1, 4.7, 4.8 (4.8.2) or removed:** no change in
   Xyce's result. The engine_diff stays 5.6191e-3 for `idvg_lin`.
-- **`toxp = toxe`, no `ngate`, `dvt2 = 0`, no `vbm`, all `jts*` = 0, no
-  `lp`/`up`/`eu`, `w0 = 0`, `lint = ll = 0`, `k3 = 0`, `etab = 0`, no
-  `dsub`, `dvt0 = 0`, `nfactor = 1`:** engine_diff stays 5.57e-3 to 5.62e-3.
+- **Other model parameters:** `toxp = toxe`, no `ngate`, `dvt2 = 0`, no `vbm`,
+  all `jts*` = 0, no `lp`/`up`/`eu` and `w0 = 0`. Also `lint = ll = 0`, `k3 = 0`,
+  `etab = 0`, no `dsub`, `dvt0 = 0` and `nfactor = 1`. With these changes, engine_diff
+  stays 5.57e-3 to 5.62e-3.
   `lpe0 = 0` makes it larger (3.1e-2). The parameters are described in the
   {ref}`BSIM4 manual <lit-bsim4>`.
 - **ngspice `version` set to 4.6, 4.7 or 4.8** (all three give identical
