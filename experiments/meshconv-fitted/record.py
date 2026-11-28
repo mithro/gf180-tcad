@@ -83,7 +83,7 @@ def record(work: Path, device: str, repo: Path) -> dict:
     same = {
         k: v for k, v in agreement_pins[0].items() if k not in ("commit", "agreement_py_sha256")
     }
-    if same != {k: v for k, v in pinned[0].items() if k not in ("commit", "level_py_sha256")}:
+    if same != {k: v for k, v in pinned[0].items() if k != "commit"}:
         raise ValueError("the agreement jobs ran with other inputs than the levels")
     curves = {meshconv.MeshSpec(**lv["spec"]): _Curve(lv) for lv in data}
     rep = meshconv.converge(
