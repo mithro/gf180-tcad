@@ -1001,3 +1001,58 @@ def test_number_ref_skips_pages_read_on_github():
     page = "# T\n\n![a](a.svg)\n\nAs Figure 1 shows.\n"
     assert [c for _, c, _ in lint().rule_findings(page, sphinx=False) if c == "NUMBER-REF"] == []
     assert [c for _, c, _ in lint().rule_findings(page) if c == "NUMBER-REF"]
+
+
+# --- Blocks indented under a list item -----------------------------------------------------
+
+
+def _sentence_fails(tmp_path, text: str) -> list[str]:
+    page = tmp_path / "page.md"
+    page.write_text(textwrap.dedent(text).lstrip("\n"), encoding="utf-8")
+    out = _run("--no-front-matter", str(page)).stdout
+    return [ln for ln in out.splitlines() if "FAIL sentence" in ln]
+
+
+def test_table_indented_under_a_list_item_is_a_table(tmp_path):
+    """A {table} directive inside a list item: its rows are a table, its caption a sentence."""
+    page = """
+        # T
+
+        - An item that gives a table.
+
+          ~~~{table} The values.
+          :name: tab-a
+
+          | Sweep | ngspice 4.5 (PDK as published) | ngspice 4.6 (forced version) | the difference of the two settings |
+          |---|---|---|---|
+          | `idvg_lin` | 5.62e-3 | 1.47e-4 | 1 |
+          ~~~
+        """
+    assert _sentence_fails(tmp_path, page) == []
+    long_caption = page.replace("The values.", "The values " + "of the sweep " * 9 + "here.")
+    assert len(_sentence_fails(tmp_path, long_caption)) == 1
+
+
+def test_wrapped_prose_line_starting_with_a_pipe_is_prose(tmp_path):
+    """Negative control: an indented line that starts with |x| but does not end in a pipe."""
+    page = """
+        # T
+
+        - The relative error is
+          |update| / (|psi| + 1e-10 V) per node, summed over the equations and the regions of
+          the device and over every node of every region in it.
+        """
+    assert len(_sentence_fails(tmp_path, page)) == 1
+
+
+def test_code_fence_indented_under_a_list_item_is_skipped(tmp_path):
+    page = """
+        # T
+
+        - Run this.
+
+          ```
+          a very long command line that has far more than twenty five words in it so that it would fail as prose if it were read as a sentence by the linter
+          ```
+        """
+    assert _sentence_fails(tmp_path, page) == []

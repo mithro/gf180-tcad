@@ -130,7 +130,7 @@ class Page:
                     in_fm = False
                 continue
             if fence:
-                if line.startswith(fence[:3]) and line.strip() == fence.strip():
+                if line.lstrip().startswith(fence[:3]) and line.strip() == fence.strip():
                     fence = None
                 continue
             # LOCAL (gf180-tcad): a {table} directive holds a pipe table and its caption, which
@@ -141,10 +141,12 @@ class Page:
                     continue
                 if re.match(r"^\s*:[\w-]+:", line):
                     continue
-            d = DIRECTIVE.match(line)
+            # LOCAL (gf180-tcad): a fence, a directive or a pipe table may sit indented under a
+            # list item, as CommonMark and MyST allow; it is read as if it started the line.
+            d = DIRECTIVE.match(line.lstrip())
             if d and d.group(2).lower() == "table" and not table_fence:
                 table_fence = d.group(1)
-                caption = line[d.end():].strip()
+                caption = line.lstrip()[d.end():].strip()
                 if caption:
                     out.append((i, caption, "prose"))
                 continue
@@ -157,7 +159,7 @@ class Page:
                 else:
                     fence = mark
                 continue
-            f = FENCE.match(line)
+            f = FENCE.match(line.lstrip())
             if f:
                 mark = f.group(1)
                 if callout_fence and mark[:3] == callout_fence[-1][:3] and line.strip() == mark:
@@ -171,7 +173,8 @@ class Page:
             if re.match(r"^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]", line, flags=re.I):
                 out.append((i, line, "callout-open"))
                 continue
-            if line.startswith("|"):
+            # An indented row must also end in a pipe: a wrapped prose line can start with |x|.
+            if line.startswith("|") or (line.lstrip().startswith("|") and line.rstrip().endswith("|")):
                 out.append((i, line, "table"))
                 continue
             if line.startswith("#"):
