@@ -22,6 +22,7 @@ ionisation integral along a field line reaches 1. The records are in
 | [`fieldline.py`](fieldline.py), [`ionize.py`](ionize.py) | The field-line trace and the ionisation integral (numpy and scipy only). |
 | [`profile1d.py`](profile1d.py) | Sheet resistance and capacitance of a well profile, for the doping anchors. |
 | [`diode1d.py`](diode1d.py) | Three abrupt 1D diodes. It runs inside the sandbox. |
+| [`capacitance.py`](capacitance.py) | Writes the N-well's capacitance under the two deep-layer assumptions, against the published model (host, numpy). |
 | [`verify.py`](verify.py) | Reruns recorded cases and compares them with the records. |
 | [`run.py`](run.py) | Runs one script through [`tools/sandbox-run`](../../tools/sandbox-run) (8 GiB, one CPU) and gives a run's pins. |
 | [`batch.py`](batch.py) | Runs a case set, one container per case, and writes each case's pins. |
@@ -89,6 +90,9 @@ uv run --locked python experiments/hv-junction/record.py $W/checks $W/checks-cas
 uv run --locked python experiments/hv-junction/checks.py diodes $W/diodes
 uv run --locked python experiments/hv-junction/checks.py record $W/diodes \
     results/hv-junction/diodes.json
+
+# capacitance: the N-well's area capacitance with and without the deep P layer (host, a second)
+uv run --locked python experiments/hv-junction/capacitance.py results/hv-junction/capacitance.json
 
 # charon: cases of main on Charon (16 GiB each), compared with the committed DEVSIM record
 uv run --locked python experiments/hv-junction/charon_batch.py $W/charon2 $W/main-cases.json \

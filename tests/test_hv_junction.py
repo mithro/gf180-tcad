@@ -24,6 +24,7 @@ HERE = REPO_ROOT / "experiments" / "hv-junction"
 sys.path.append(str(HERE))  # the experiment's modules import each other by bare name
 
 import batch
+import capacitance
 import charon_deck
 import charon_mesh
 import charon_record
@@ -72,7 +73,7 @@ PREDICTION_RECORDS = (
     "family3",
 )
 CHARON_RECORDS = ("charon-firstpass", "charon")
-ALL_RECORDS = (*SWEEP_RECORDS, "diodes", *CHARON_RECORDS)
+ALL_RECORDS = (*SWEEP_RECORDS, "diodes", "capacitance", *CHARON_RECORDS)
 # The case the sandbox test reruns and its tolerance in volts. It is a case of the record
 # rest3, whose runs used the sweep code as it is now (later commits only reformatted it);
 # main.json's runs used an earlier ramp, which solves other bias points.
@@ -288,6 +289,19 @@ def test_records_are_known_files():
     assert "main.json" in files
 
 
+def test_capacitance_record_is_the_profiles():
+    """capacitance.json is what capacitance.py computes now from the present profiles, and its
+    ratios to the model at 10 V tell the two deep-layer assumptions apart."""
+    doc = json.loads((ROOT / "capacitance.json").read_text("utf-8"))
+    assert doc["pins"] == capacitance.pins() and doc["model"] == capacitance.MODEL
+    now = capacitance.compute()
+    assert doc["bias_v"] == now["bias_v"] == list(capacitance.BIAS_V)
+    for key in ("L", "D"):
+        assert doc[key]["over_model"] == pytest.approx(now[key]["over_model"], rel=1e-9)
+    assert doc["L"]["over_model"][-1] == pytest.approx(0.83, abs=0.005)
+    assert 0.96 <= min(doc["D"]["over_model"]) and max(doc["D"]["over_model"]) <= 1.03
+
+
 def _files_at(commit: str, files: dict[str, str]) -> None:
     """Each file of the experiment has the recorded sha256 at ``commit``, an ancestor of HEAD."""
     assert _git("cat-file", "-e", commit + "^{commit}").returncode == 0, commit
@@ -315,6 +329,9 @@ def test_record_pins_what_the_runs_used(name):
     pins one commit and every file of the experiment at it."""
     rec = _load(name)
     pins = rec["pins"]
+    if name == "capacitance":  # a host computation: test_capacitance_record_is_the_profiles
+        assert pins == capacitance.pins()
+        return
     if name == "diodes":
         assert rec["schema"] == 1 and pins["dirty"] is False
         assert set(pins) == {"commit", "dirty", "files_sha256", "image"}
