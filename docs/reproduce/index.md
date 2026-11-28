@@ -1091,7 +1091,7 @@ a results folder's writer hashes changed.
 - The other folders were not rerun. No fit file is committed, so every 2D job computes what it
   computed before.
 
-**The poly length bias fit, applied ([issue #189](https://github.com/mithro/gf180-tcad/issues/189)).**
+**The poly length bias fit, applied.**
 The fit files are in {repo}`results/tcad/edgefit`. They were written by `python -m
 gf180tcad.calibrate.edge` at commit
 `61cc886`,
@@ -1107,11 +1107,8 @@ These folders were regenerated with their own commands, in this order:
 3. {repo}`results/tcad/meshes/stable`, by the `tcad-meshes` commands with `--cache` naming a
    checkout of the output cache that holds the rerun meshes.
 4. The 2D mesh-convergence check at the fitted bias, by the commands of
-   {repo}`experiments/meshconv-fitted` ({ref}`mesh-convergence-2d-fitted`).
+   {repo}`experiments/meshconv-fitted`.
 5. The manifest of every results file, by `make manifest`.
-
-The checks that the rerun did what the fit predicts are in
-{repo}`tests/test_edge_fit_rerun.py`.
 
 (cross-host-determinism)=
 
