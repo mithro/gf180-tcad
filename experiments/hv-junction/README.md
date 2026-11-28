@@ -22,6 +22,7 @@ ionisation integral along a field line reaches 1. The records are in
 | [`fieldline.py`](fieldline.py), [`ionize.py`](ionize.py) | The field-line trace and the ionisation integral (numpy and scipy only). |
 | [`profile1d.py`](profile1d.py) | Sheet resistance and capacitance of a well profile, for the doping anchors. |
 | [`diode1d.py`](diode1d.py) | Three abrupt 1D diodes. It runs inside the sandbox. |
+| [`verify.py`](verify.py) | Reruns recorded cases and compares them with the records. |
 | [`run.py`](run.py) | Runs one script through [`tools/sandbox-run`](../../tools/sandbox-run) (8 GiB, one CPU) and gives a run's pins. |
 | [`batch.py`](batch.py) | Runs a case set, one container per case, and writes each case's pins. |
 | [`record.py`](record.py) | Writes a record from a batch's run directories. |
@@ -127,6 +128,34 @@ to `PREDICTION_RECORDS` in
 set. Its cases carry the names of ordinary cases with other parameters, so it is never merged
 with the others and has its own table. `charon-firstpass.json` holds six sections of the
 first doping family, against the `main.json` of commit 1b6e59f.
+
+## Check a rerun against the records
+
+[`verify.py`](verify.py) reruns recorded cases in the sandbox and compares each with its row in
+the last prediction record that holds it:
+
+```sh
+# named cases
+uv run --locked python experiments/hv-junction/verify.py $W/verify 'NT20|BL|edge' 'NW0|BD|edge'
+# eight cases drawn at random from those that take minutes (no rings, double precision)
+uv run --locked python experiments/hv-junction/verify.py $W/verify --sample 8 --seed 1
+```
+
+It prints one line per case and exits 0 when every breakdown voltage agrees within `--tol`
+(0.1 V unless given), 1 when one differs or a rerun fails, and 2 when a named case is not in
+the records with its present parameters. A line reads:
+
+```text
+ok       NT20c|BD|corner (rest3): rerun 62.1643 V, record 62.1643 V, difference +0.0000 V; bias points equal
+ok       DT20b|BL|edge (main): rerun 32.3078 V, record 32.3539 V, difference -0.0461 V; bias points differ
+```
+
+A case of a record made with the present sweep code reproduces exactly, with equal bias
+points. The record `main` was run with an earlier voltage ramp. Its cases visit other bias
+points, and the breakdown voltage, interpolated between them, differs by up to 0.07 V in the
+nine cases tried. The sandbox test of [`tests/test_hv_junction.py`](../../tests/test_hv_junction.py)
+(`pytest -m sandbox`) reruns one case to 1e-6 V. The same file's other tests check that every
+number and table of the docs page is the records' own.
 
 ## Run times
 
