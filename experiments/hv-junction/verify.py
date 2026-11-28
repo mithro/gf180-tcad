@@ -16,7 +16,8 @@ as batch.py runs it, and compared with its row in the last prediction record tha
 One line per case goes to standard output and to WORKDIR/verify.log. The exit status is 0
 when every case agrees in breakdown voltage, 1 when one differs or fails, and 2 when a named
 case is not in the records with its present parameters. --sample picks N cases at random
-from those that have a breakdown value and ran in under 15 minutes.
+from those that have a breakdown value, hold no floating ring and run in double precision:
+the cases that take minutes, not hours.
 
 WORKDIR must be outside the repository (the sandbox refuses the repository). A case whose
 result.json exists there is not run again, so remove WORKDIR to force a rerun.
@@ -35,7 +36,6 @@ import predict
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 ROOT = REPO / "results" / "hv-junction"
-QUICK_SECONDS = 900.0
 
 
 def record_order() -> tuple[str, ...]:
@@ -79,7 +79,9 @@ def compare(want: dict, got: dict, tol: float) -> tuple[bool, str]:
 
 
 def main(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    ap = argparse.ArgumentParser(
+        description="Rerun recorded cases and compare them with the records."
+    )
     ap.add_argument("workdir")
     ap.add_argument("cases", nargs="*")
     ap.add_argument("--sample", type=int, default=0)
@@ -93,8 +95,13 @@ def main(argv: list[str]) -> int:
     now, rows = recorded()
     names = list(args.cases)
     if args.sample:
+        struct = predict.structures()
         quick = sorted(
-            c for c, r in rows.items() if r["bv_v"] is not None and r["seconds"] < QUICK_SECONDS
+            c
+            for c, r in rows.items()
+            if r["bv_v"] is not None
+            and not now[c].get("extended")
+            and not struct[c.split("|")[0].split("@")[0]]["rings"]
         )
         names += random.Random(args.seed).sample(quick, min(args.sample, len(quick)))
     if not names:
