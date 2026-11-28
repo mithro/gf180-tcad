@@ -117,7 +117,7 @@ identically to scratch copies of both libraries.
   Xyce's result. The engine_diff stays 5.6191e-3 for `idvg_lin`.
 - **Other model parameters:** `toxp = toxe`, no `ngate`, `dvt2 = 0`, no `vbm`,
   all `jts*` = 0, no `lp`/`up`/`eu` and `w0 = 0`. Also `lint = ll = 0`, `k3 = 0`,
-  `etab = 0`, no `dsub`, `dvt0 = 0` and `nfactor = 1`. With these, engine_diff
+  `etab = 0`, no `dsub`, `dvt0 = 0` and `nfactor = 1`. With these changes, engine_diff
   stays 5.57e-3 to 5.62e-3.
   `lpe0 = 0` makes it larger (3.1e-2). The parameters are described in the
   {ref}`BSIM4 manual <lit-bsim4>`.
