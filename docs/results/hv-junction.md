@@ -728,11 +728,10 @@ trend.
 
 ## Limits
 
-- **2D sections.** Each value is one radial section. A corner is a smooth cylinder about one
-  axis ({numref}`fig-hvj-corners`). A cut corner has 135° vertices, which no section
-  holds, so its value is an upper bound. A square corner is a cylinder of 1 µm radius, far
-  narrower than its depletion region. The field converges on it from every side, as it
-  does not on a 90° vertex, so its value is a lower bound.
+- **2D sections.** Each value is one radial section, with a corner as a cylinder about one
+  axis ({numref}`fig-hvj-corners`). A cut corner's 135° vertices are in no section, so its
+  value is an upper bound. A square corner is a 1 µm cylinder, narrower than its
+  {term}`depletion` region, so its value is a lower bound.
 - **The criterion.** The integral reaching 1 marks the onset of avalanche on DEVSIM's
   potential. The solve carries no avalanche current, so it gives no current-voltage curve
   beyond that bias ({numref}`fig-hvj-integral`).
