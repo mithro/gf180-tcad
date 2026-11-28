@@ -195,3 +195,19 @@ def test_page_check_is_this_check(device):
     for i in range(len(edge.EDGE_U_V)):
         per_cell = max(_per_cell_tolerance(device, fit, r["two_d"][i]) for r in rows)
         assert got["bound"][i] == pytest.approx(weights * per_cell + LINEARITY * want, rel=1e-9)
+
+
+@pytest.mark.parametrize("device", DEVICE_IDS)
+def test_the_bound_is_set_by_the_longest_cell(device):
+    """docs/limitations/moscap2d.md: the per-device bound is set by the W10/L2 cell, whose 1 % of
+    Cgg is the largest per-cell tolerance and, times Σ|wᵢ|, most (over half) of the bound."""
+    fit = _fit(device)
+    rows = [edge.cell_row(device, g) for g in edge.wide_geometries(device)]
+    weights = np.abs(edge.intercept_weights(rows)).sum()
+    shift = fit["slope_ff_per_um_per_nm"] * fit[edgefit.PARAM]
+    for i in range(len(edge.EDGE_U_V)):
+        tols = {r["gid"]: _per_cell_tolerance(device, fit, r["two_d"][i]) for r in rows}
+        assert max(tols, key=tols.get) == "w10p0_l2p00"
+        longest = next(r for r in rows if r["gid"] == "w10p0_l2p00")
+        bound = weights * max(tols.values()) + LINEARITY * shift
+        assert weights * meshconv.CRITERION * longest["two_d"][i] > bound / 2

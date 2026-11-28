@@ -1341,7 +1341,7 @@ def test_page_numbers_are_the_committed_files():
     # page's: tests/test_meshconv_fitted.py::test_page_prints_the_records
     # and the C-V page's: tests/test_two_d_validation_numbers.py and
     # tests/test_comparison_figures.py::test_cv_page_prints_the_edge_split
-    skip = ("lim_charon_", "lim_abrupt_", "lim_mcfit_", "lim_v2d_", "lim_split_")
+    skip = ("lim_charon_", "lim_abrupt_", "lim_mcfit_", "lim_v2d_", "lim_split_", "lim_cell_")
     for key in (k for k in subs if not k.startswith(skip)):
         assert f"{{{{ {key} }}}}" in page, key
     for old in ("2.7e-8", "1.071", "1.090"):

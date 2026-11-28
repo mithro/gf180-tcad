@@ -343,7 +343,10 @@ bound, as a {term}`strict expected failure` at both lengths on the sensitivity a
 
 ## The L = 2 µm cells: QS only, resumed, with a memory growth that is not fixed
 
-- **QS only.** The L = 2 µm cells (501k nodes for the nfet, 504k for the pfet) have no AC result. Their {repo}`folders <results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00>` hold no {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>` like Lmin's. Their AC
+- **QS only.** The L = 2 µm cells have no AC result. The start cells have
+  {{ lim_cell_nfet_start_w10p0_l2p00_nodes }} nodes (nfet) and {{ lim_cell_pfet_start_w10p0_l2p00_nodes }} (pfet).
+  The calibrated ones have {{ lim_cell_nfet_calibrated_w10p0_l2p00_nodes }} and
+  {{ lim_cell_pfet_calibrated_w10p0_l2p00_nodes }}. Their {repo}`folders <results/tcad/moscap2d/nfet_05v0/start/w10p0_l2p00>` hold no {repo}`cgx.csv <results/tcad/moscap2d/nfet_05v0/start/w10p0_l0p60/cgx.csv>` like Lmin's. Their AC
   sweep needs the {term}`drift-diffusion` small-signal solve, and that fails in {{ DEVSIM }}'s direct
   solver ({term}`UMFPACK` 5.1, "umfpack numeric failed") at this size, as the L = 10 µm cell's equilibrium
   solve does ({ref}`moscap2d-l10`). The {term}`job` files record it (`ac` is
@@ -356,8 +359,9 @@ bound, as a {term}`strict expected failure` at both lengths on the sensitivity a
   the pfet after points 34, 73, 113 and 162. The hand-off between points is the saved state, so a resumed sweep agrees
   with an uninterrupted one within 1e-12 (the solver tolerance) but is not byte-identical to it.
   The restart counts in these job files were written after the runs, from the progress logs.
-- **The calibrated cells are resumed too.** Each job file records 3 restarts in `resumed`
-  ({ref}`moscap2d-calibrated`). The nfet restarts after points 44, 108 and 171, the pfet after
+- **The calibrated L = 2 µm cells are resumed too.** Each job file's `resumed` is one less than its
+  attempts in {numref}`tab-moscap2d-cell-times`
+  ({ref}`moscap2d-calibrated`). Their progress logs show the nfet restarting after points 44, 108 and 171, the pfet after
   points 63, 120 and 189. The same command was rerun on the same `--resume`, four attempts in all.
   Each earlier attempt was killed at the 16 GiB cap.
 - **The per-point memory growth is unresolved.** The nfet L = 2 µm sweep's memory grows with
@@ -518,7 +522,8 @@ committed `mesh_sha256`.
 ## The calibrated 2D cells
 
 The calibrated 2D jobs ({ref}`cv-agreement-validation`, issue #35) run the committed
-cells with `--params calibrated`, one 16 GiB {term}`job` at a time.
+cells with `--params calibrated`, one 16 GiB {term}`job` at a time. Each cell's poly is longer
+by the fitted poly length bias at each gate end ({ref}`moscap2d-edge`).
 
 Two of them are compared with SPICE in {numref}`fig-moscap2d-validation`. Every compared cell's crossing shift and plateau difference is in {numref}`fig-moscap2d-metrics`.
 
@@ -576,16 +581,16 @@ each committed cell.
 
 | Cell | Nodes | QS sweep (min) | AC sweep (min) | QS attempts |
 |---|---|---|---|---|
-| nfet `w10p0_l0p60` | 233559 | 101 | 96 | 1 |
-| nfet `w10p0_l0p70` | 253994 | 119 | 107 | 1 |
-| nfet `w10p0_l1p00` | 313521 | 146 | 131 | 1 |
-| nfet `w10p0_l2p00` | 512591 | 259 | none | 4 |
-| nfet `w1p6_l0p70` | 253994 | 113 | 108 | 1 |
-| pfet `w10p0_l0p50` | 217724 | 93 | 89 | 1 |
-| pfet `w10p0_l0p70` | 257472 | 113 | 106 | 1 |
-| pfet `w10p0_l1p00` | 317011 | 138 | 126 | 1 |
-| pfet `w10p0_l2p00` | 514879 | 257 | none | 4 |
-| pfet `w1p6_l0p70` | 257472 | 121 | 106 | 1 |
+| nfet `w10p0_l0p60` | {{ lim_cell_nfet_calibrated_w10p0_l0p60_nodes }} | 101 | 96 | {{ lim_cell_nfet_calibrated_w10p0_l0p60_attempts }} |
+| nfet `w10p0_l0p70` | {{ lim_cell_nfet_calibrated_w10p0_l0p70_nodes }} | 119 | 107 | {{ lim_cell_nfet_calibrated_w10p0_l0p70_attempts }} |
+| nfet `w10p0_l1p00` | {{ lim_cell_nfet_calibrated_w10p0_l1p00_nodes }} | 146 | 131 | {{ lim_cell_nfet_calibrated_w10p0_l1p00_attempts }} |
+| nfet `w10p0_l2p00` | {{ lim_cell_nfet_calibrated_w10p0_l2p00_nodes }} | 259 | none | {{ lim_cell_nfet_calibrated_w10p0_l2p00_attempts }} |
+| nfet `w1p6_l0p70` | {{ lim_cell_nfet_calibrated_w1p6_l0p70_nodes }} | 113 | 108 | {{ lim_cell_nfet_calibrated_w1p6_l0p70_attempts }} |
+| pfet `w10p0_l0p50` | {{ lim_cell_pfet_calibrated_w10p0_l0p50_nodes }} | 93 | 89 | {{ lim_cell_pfet_calibrated_w10p0_l0p50_attempts }} |
+| pfet `w10p0_l0p70` | {{ lim_cell_pfet_calibrated_w10p0_l0p70_nodes }} | 113 | 106 | {{ lim_cell_pfet_calibrated_w10p0_l0p70_attempts }} |
+| pfet `w10p0_l1p00` | {{ lim_cell_pfet_calibrated_w10p0_l1p00_nodes }} | 138 | 126 | {{ lim_cell_pfet_calibrated_w10p0_l1p00_attempts }} |
+| pfet `w10p0_l2p00` | {{ lim_cell_pfet_calibrated_w10p0_l2p00_nodes }} | 257 | none | {{ lim_cell_pfet_calibrated_w10p0_l2p00_attempts }} |
+| pfet `w1p6_l0p70` | {{ lim_cell_pfet_calibrated_w1p6_l0p70_nodes }} | 121 | 106 | {{ lim_cell_pfet_calibrated_w1p6_l0p70_attempts }} |
 ~~~
 
 The node count is the `node_count` of each cell's
@@ -802,7 +807,8 @@ where
 The sum $W$ is {{ lim_edge_nfet_weights }} (nfet) and {{ lim_edge_pfet_weights }} (pfet).
 
 {numref}`tab-moscap2d-edge-gap` gives each plateau's gap, its difference from the fit's miss,
-and the bound.
+and the bound. The W10/L2 cell sets the bound. Its 1 % of Cgg is the largest per-cell
+tolerance, and Σ|wᵢ| times it is most of the bound.
 
 ~~~{table} The live edge gap of the rerun cells against the fit's miss.
 :name: tab-moscap2d-edge-gap

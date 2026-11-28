@@ -246,3 +246,23 @@ def test_the_c_v_page_s_statements_hold():
     assert abs(_one_d_u_dep("pfet_05v0", "w10p0_l1p00") - l1["spice_regions"]["u_dep"]) < 1e-3
     w2 = l2["verdicts"]["dv_dep"]["window"]
     assert l2["tcad_crossings"]["u_dep"] < w2["lo"] < _one_d_u_dep("pfet_05v0", "w10p0_l2p00")
+
+
+def test_cell_numbers_are_the_metas():
+    """The moscap2d page's ``lim_cell_*`` numbers are each job's cv.meta.json: its node count
+    and its QS attempts (``resumed`` plus one)."""
+    subs = lf.substitutions()
+    text = (REPO_ROOT / "docs/limitations/moscap2d.md").read_text("utf-8")
+    used = set(re.findall(r"\{\{ (lim_cell_[a-z0-9_]+) \}\}", text))
+    assert used
+    for key in used:
+        m = re.fullmatch(
+            r"lim_cell_(nfet|pfet)_(start|calibrated)_(w\w+?_l\w+?)_(nodes|attempts)", key
+        )
+        assert m, key
+        dev, params, gid, name = m.groups()
+        meta = json.loads(
+            (TCAD / "moscap2d" / f"{dev}_05v0" / params / gid / "cv.meta.json").read_text("utf-8")
+        )
+        want = meta["node_count"] if name == "nodes" else meta.get("resumed", {}).get("qs", 0) + 1
+        assert int(subs[key].replace(",", "")) == want, key

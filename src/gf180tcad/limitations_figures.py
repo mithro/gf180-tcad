@@ -1660,6 +1660,22 @@ def _edge_split_substitutions(roots: Roots) -> dict[str, str]:
     return out
 
 
+def _cell_substitutions(roots: Roots) -> dict[str, str]:
+    """The moscap2d page's per-cell numbers from each committed 2D job's ``cv.meta.json``
+    (``lim_cell_<dev>_<params>_<gid>_<name>``): its node count (``nodes``) and, for a QS sweep
+    that was resumed, its attempts (``attempts``, one more than ``resumed``)."""
+    out = {}
+    root = Path(roots.tcad) / "moscap2d"
+    for device in _DEVICES:
+        for params in ("start", "calibrated"):
+            for job in sorted((root / device / params).glob("*/cv.meta.json")):
+                meta = json.loads(job.read_text("utf-8"))
+                key = f"lim_cell_{_SHORT[device]}_{params}_{job.parent.name}"
+                out[f"{key}_nodes"] = f"{meta['node_count']:,}"
+                out[f"{key}_attempts"] = f"{meta.get('resumed', {}).get('qs', 0) + 1}"
+    return out
+
+
 def _meshconv_fitted_substitutions(roots: Roots) -> dict[str, str]:
     """The fitted-bias mesh-convergence numbers of the mesh-convergence page, per device
     (``<dev>`` is ``nfet`` or ``pfet``): ``lim_mcfit_<dev>_change_<i>`` the largest change of
@@ -1758,6 +1774,7 @@ def substitutions(roots: Roots = DEFAULT_ROOTS) -> dict[str, str]:
         **_charon_substitutions(roots),
         **_abrupt_substitutions(roots),
         **_meshconv_fitted_substitutions(roots),
+        **_cell_substitutions(roots),
         **_two_d_validation_substitutions(roots),
         **_edge_split_substitutions(roots),
     }
