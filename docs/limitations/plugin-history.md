@@ -235,8 +235,9 @@ at half mesh.
 | rib/slab Potential jump (V) | 0.46 | 0.73 |
 ~~~
 
-In {numref}`tab-plugin-history-ramp` and {numref}`tab-plugin-history-ramp-half`, "span" is the PN-slab Potential span over the silicon, "anode −
-cathode" the anode − cathode contact potential and "drop" the junction drop, all in V.
+In {numref}`tab-plugin-history-ramp` and {numref}`tab-plugin-history-ramp-half`, "span" is the PN-slab
+Potential span over the silicon, in V. In both, "anode − cathode" is the anode − cathode contact
+potential and "drop" the junction drop, both in V.
 
 ~~~{table} The PN slab during the ramp, v0.8.0.
 :name: tab-plugin-history-ramp
