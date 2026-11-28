@@ -51,9 +51,9 @@ The project models no {term}`LDD`: its modelled source/drain doping under the ga
 (lit-sze)=
 
 - Sze and Ng, *Physics of Semiconductor Devices*, 3rd ed., Wiley, 2006,
-  {doi}`10.1002/0470068329`: ch. 2, the p-n junction ({term}`built-in potential`, the
-  {term}`depletion approximation`, the {term}`ideality factor`); ch. 1, carrier statistics
-  ({term}`Boltzmann statistics`); ch. 3, metal-semiconductor and {term}`ohmic contacts <ohmic contact>`.
+  {doi}`10.1002/0470068329`. Its ch. 2 is the p-n junction ({term}`built-in potential`, the
+  {term}`depletion approximation`, the {term}`ideality factor`). Its ch. 1 gives carrier statistics
+  ({term}`Boltzmann statistics`). Its ch. 3 is metal-semiconductor and {term}`ohmic contacts <ohmic contact>`.
 - Its ch. 1, "Physics and Properties of Semiconductors—A Review": the explainer pages'
   carriers, {term}`dopants <dopant>`, the mass-action law and Fermi–Dirac statistics ({ref}`explained-silicon`).
 - Its ch. 4, the ideal MIS capacitor: {term}`accumulation`, {term}`depletion`, {term}`inversion`,
