@@ -55,8 +55,16 @@ def test_selected_level_still_meets_the_criterion(device):
         "selected_level": sel,
         "max_rel_change": lv["max_rel_change"],
         "meets_criterion": True,
+        "agreement_criterion": meshconv.AGREEMENT_1D,
+        "agreement_1d": lv["agreement_1d"],
+        "meets_agreement": True,
+        "report_selected": sel,
     }
     assert max(lv["rel_change"]) == lv["max_rel_change"] < meshconv.CRITERION
+    # the second criterion at the calibrated values: the selected level meets it, the coarser
+    # one does not, so the report selects the committed study's level on both criteria
+    assert lv["agreement_1d"] <= meshconv.AGREEMENT_1D
+    assert rec["report"]["selected"]["level"] == sel
 
 
 @pytest.mark.parametrize("device", DEVICES)
@@ -81,7 +89,13 @@ def test_report_is_the_levels(device):
     again = meshconv.converge(
         curves.__getitem__, meshconv.START[2], levels, rel_tol=moscap1d.REL_TOL,
         refine_grading=meshconv.REFINE_GRADING[2],
+        agreement=[lv["agreement_1d"] for lv in rep["levels"]],
+        agreement_curves=[lv["agreement_1d_curve"] for lv in rep["levels"]],
     )  # fmt: skip
+    for lv in rep["levels"]:
+        cur = lv["agreement_1d_curve"]
+        rel = [a / b - 1 for a, b in zip(cur["c2d"], cur["c1d"], strict=True)]
+        assert cur["rel"] == rel and cur["max"] == max(abs(r) for r in rel) == lv["agreement_1d"]
     want = meshconv.report_dict(again, device=device, dim=2, settings={})
     del want["settings"], want["excluded_levels"]
     want["params"] = "calibrated"
@@ -129,6 +143,15 @@ def test_record_pins_what_the_runs_used(device):
     assert rec["gplugins_commit"] == tree[2]
     level = _at(commit, "experiments/meshconv-fitted/level.py")
     assert rec["level_py_sha256"] == hashlib.sha256(level).hexdigest()
+    # the agreement jobs ran later, at their own commit, with the same other inputs (record.py
+    # refuses otherwise)
+    acommit = rec["agreement_pins"]["commit"]
+    subprocess.run(["git", "merge-base", "--is-ancestor", acommit, "HEAD"], cwd=REPO_ROOT,
+                   check=True)  # fmt: skip
+    script = _at(acommit, "experiments/meshconv-fitted/agreement.py")
+    assert rec["agreement_pins"]["agreement_py_sha256"] == hashlib.sha256(script).hexdigest()
+    aprov = json.loads(_at(acommit, "results/tcad/moscap2d/provenance.json"))
+    assert aprov["generator_sha256"] == rec["generator_sha256"]
     assert rec["edge_fit_sha256"] == edgefit.sha256(device)
     assert rec["edge_fit"] == {
         edgefit.PARAM: edgefit.read(device)[edgefit.PARAM], "sha256": edgefit.sha256(device),

@@ -9,12 +9,14 @@ WORKDIR/DEVICE/level<i>/, and every level must have the same pins; the record ho
 
 The record holds the report of :func:`gf180tcad.tcad.meshconv.converge` over the levels (the
 relative change of each level against the next finer one, the observed order and the
-Richardson extrapolation), without the second criterion of the committed study (the uniform
-stack's agreement with 1D: that stack has no gate end, so the poly length bias does not enter
-it). ``check`` holds the plan's question (Task E3, Decision 5): the level the committed study
-selected, its largest change against the next finer level at the fitted bias, and whether that
-is below :data:`gf180tcad.tcad.meshconv.CRITERION`. ``cell`` compares that level's curve with
-the committed calibrated cell of the same geometry, which ran on the same mesh.
+Richardson extrapolation) with both criteria of the committed study. The second, the uniform
+stack's agreement with 1D, comes from WORKDIR/DEVICE/agreement<i>/ (run.py --agreement): the
+bias does not enter that stack, but the calibrated oxide, doping and flat-band shift do.
+``check`` holds the plan's question (Task E3, Decision 5): the level the committed study
+selected, its largest change against the next finer level and its agreement with 1D at the
+calibrated values and the fitted bias, whether each meets its criterion, and the level the
+report itself selects. ``cell`` compares that level's curve with the committed calibrated cell
+of the same geometry, which ran on the same mesh.
 """
 
 import json
@@ -64,10 +66,30 @@ def record(work: Path, device: str, repo: Path) -> dict:
     edge = {json.dumps(lv["edge_fit"], sort_keys=True) for lv in data}
     if len(edge) != 1:
         raise ValueError(f"the levels used different fits: {sorted(edge)}")
+    agreement, agreement_pins = [], []
+    for i, scale in enumerate(levels):
+        d = Path(work) / device / f"agreement{i}"
+        if not (d / "agreement.json").is_file() or not (d / "pins.json").is_file():
+            raise ValueError(f"{d}: no agreement.json and pins.json (run run.py --agreement)")
+        a = json.loads((d / "agreement.json").read_bytes())
+        spec = meshconv.START[2].scaled(scale, refine_grading=meshconv.REFINE_GRADING[2])
+        if a["scale"] != scale or meshconv.MeshSpec(**a["spec"]) != spec:
+            raise ValueError(f"{d}: agreement.json is not level {i} of the start spec")
+        agreement.append(a)
+        agreement_pins.append(json.loads((d / "pins.json").read_bytes()))
+    for i, p in enumerate(agreement_pins):
+        if p != agreement_pins[0]:
+            raise ValueError(f"agreement{i} ran with other pins than agreement0")
+    same = {
+        k: v for k, v in agreement_pins[0].items() if k not in ("commit", "agreement_py_sha256")
+    }
+    if same != {k: v for k, v in pinned[0].items() if k not in ("commit", "level_py_sha256")}:
+        raise ValueError("the agreement jobs ran with other inputs than the levels")
     curves = {meshconv.MeshSpec(**lv["spec"]): _Curve(lv) for lv in data}
     rep = meshconv.converge(
         curves.__getitem__, meshconv.START[2], levels,
         rel_tol=moscap1d.REL_TOL, refine_grading=meshconv.REFINE_GRADING[2],
+        agreement=[a["max"] for a in agreement], agreement_curves=agreement,
     )  # fmt: skip
     committed = json.loads(
         (repo / meshconv.job_dir(meshconv.TREE_ROOT, device, 2) / meshconv.REPORT_NAME).read_bytes()
@@ -89,11 +111,19 @@ def record(work: Path, device: str, repo: Path) -> dict:
         "edge_fit": data[0]["edge_fit"],
         "calibration_sha256": data[0]["calibration_sha256"],
         **pinned[0],
+        "agreement_pins": {
+            "commit": agreement_pins[0]["commit"],
+            "agreement_py_sha256": agreement_pins[0]["agreement_py_sha256"],
+        },
         "check": {
             "criterion": meshconv.CRITERION,
             "selected_level": selected,
             "max_rel_change": worst,
             "meets_criterion": worst < meshconv.CRITERION,
+            "agreement_criterion": meshconv.AGREEMENT_1D,
+            "agreement_1d": agreement[selected]["max"],
+            "meets_agreement": agreement[selected]["max"] <= meshconv.AGREEMENT_1D,
+            "report_selected": rep.selected,
         },
         "cell": {
             "job": cell_dir(device).as_posix(),
